@@ -2,8 +2,10 @@ import streamlit as st
 import os
 from PIL import Image
 from streamlit_image_comparison import image_comparison
+from moviepy.editor import *
 import cv2
 import re
+from moviepy.video.io.VideoFileClip import VideoFileClip
 import csv
 import pandas as pd
 import replicate
@@ -11,33 +13,116 @@ import urllib
 import requests as r
 import base64
 import time
-
-def move_frame(project_name, index_of_current_item, distance_to_move, input_video,frame_time):
-
-    frame_number = calculate_frame_number_at_time(input_video, frame_time) + distance_to_move
-    print(frame_number)
-    extract_frame(index_of_current_item, project_name, input_video, frame_number)
-    st.experimental_rerun()
+import shutil
+import ffmpeg
 
 
-def swap_background():
-    print('Run')
-# Create a function for the main view
 
 
-def get_key_settings(csv_file):
+def remove_existing_timing(project_name):
 
-    key_settings = {}
+    df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
 
-    with open(csv_file, 'r') as f:
+    df = df.drop(df.index[0:])
+
+    df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
+
+
+def move_frame(project_name, index_of_current_item, distance_to_move, timing_details,input_video):
+
+    print("----------------------------------------------------")
+    print(project_name, index_of_current_item, distance_to_move,input_video)
+    
+    current_frame_number = int(calculate_frame_number_at_time(input_video, timing_details[index_of_current_item]["frame_time"], project_name))
+
+    if distance_to_move == 0:
+                        
+        extract_frame(index_of_current_item, project_name, input_video, current_frame_number,timing_details)
+
+        new_frame_number = current_frame_number
+
+        
+    
+    elif distance_to_move > 0:    
+
+        next_frame_number = int(calculate_frame_number_at_time(input_video, timing_details[index_of_current_item + 1]["frame_time"],project_name))
+
+        abs_distance_to_move = abs(distance_to_move) / 100
+
+        difference_between_frames = abs(next_frame_number - current_frame_number)
+
+        new_frame_number = current_frame_number + (difference_between_frames * abs_distance_to_move)
+
+        extract_frame(index_of_current_item, project_name, input_video, new_frame_number,timing_details)
+
+
+            
+    elif distance_to_move < 0:
+
+        last_frame_number = int(calculate_frame_number_at_time(input_video, timing_details[index_of_current_item - 1]["frame_time"],project_name))
+
+        abs_distance_to_move = abs(distance_to_move) / 100
+
+        difference_between_frames = abs(current_frame_number - last_frame_number)
+
+        new_frame_number = current_frame_number - (difference_between_frames * abs_distance_to_move)
+
+        extract_frame(index_of_current_item, project_name, input_video, new_frame_number,timing_details)
+
+    df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
+
+    new_time = calculate_time_at_frame_number(input_video, new_frame_number, project_name)
+
+    df.iloc[index_of_current_item, [16,1]] = [int(distance_to_move),new_time]
+    
+    df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
+
+        
+            
+
+def get_app_settings():
+
+    app_settings = {}
+
+    with open("app_settings.csv") as f:
 
         lines = [line.split(',') for line in f.read().splitlines()]
 
-    for i in range(1, 24):
+    for i in range(1, 4):
 
-        key_settings[lines[i][11]] = lines[i][12]
+        app_settings[lines[i][0]] = lines[i][1]
 
-    return key_settings
+    return app_settings
+
+def get_project_settings(project_name):
+
+    project_settings = {}
+
+    with open("videos/" + str(project_name)  + "/settings.csv") as f:
+
+        lines = [line.split(',') for line in f.read().splitlines()]
+
+    for i in range(1, 7):
+
+        project_settings[lines[i][0]] = lines[i][1]
+
+    return project_settings
+
+
+def get_model_details(model_name):
+
+    with open('models.csv', 'r') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            if row[0] == model_name:
+                model_details = {
+                    'name': row[0],
+                    'id': row[1],
+                    'keyword': row[2],
+                    'training_images': row[3],
+                }
+                return model_details
+
 
 def create_working_assets(video_name):
 
@@ -45,9 +130,9 @@ def create_working_assets(video_name):
 
     os.mkdir("videos/" + video_name + "/assets/frames")
 
-    os.mkdir("videos/" + video_name + "/assets/frames/0_extracted")
-    os.mkdir("videos/" + video_name + "/assets/frames/1_character_pipeline_completed")
-    os.mkdir("videos/" + video_name + "/assets/frames/2_backdrop_pipeline_completed")
+    os.mkdir("videos/" + video_name + "/assets/frames/1_selected")
+    os.mkdir("videos/" + video_name + "/assets/frames/2_character_pipeline_completed")
+    os.mkdir("videos/" + video_name + "/assets/frames/3_backdrop_pipeline_completed")
 
     os.mkdir("videos/" + video_name + "/assets/resources")
 
@@ -55,43 +140,74 @@ def create_working_assets(video_name):
     os.mkdir("videos/" + video_name + "/assets/resources/masks")
     os.mkdir("videos/" + video_name + "/assets/resources/music")
     os.mkdir("videos/" + video_name + "/assets/resources/training_data")
+    os.mkdir("videos/" + video_name + "/assets/resources/input_videos")
 
     os.mkdir("videos/" + video_name + "/assets/videos")
 
     os.mkdir("videos/" + video_name + "/assets/videos/0_raw")
     os.mkdir("videos/" + video_name + "/assets/videos/1_final")
 
-def update_key_setting(key, pair_value, project_name):
+    data = {'key': ['number_of_interpolation_steps', 'what_to_append_to_each_prompt','base_prompt','song', 'input_type', 'input_video'],
+        'value': ['', '', '','', '', '']}
+
+    df = pd.DataFrame(data)
+
+    df.to_csv(f'videos/{video_name}/settings.csv', index=False)
+
+    df = pd.DataFrame(columns=['index_number','time','frame_number','primary_image','alt_image_1','alt_image_2','alt_image_3','alt_image_4','alt_image_5','alt_image_6','model','prompt','notes','ending_frame','interpolation_style','strength','frame_adjustment'])
+
+    df.loc[0] = [1, 0, 0, '', '', '', '', '', '', '', '', '', '', '', '','']
+
+    df.to_csv(f'videos/{video_name}/timings.csv', index=False)
+
+def update_project_setting(key, pair_value, project_name):
     
     csv_file_path = f'videos/{project_name}/settings.csv'
     
     with open(csv_file_path, 'r') as csv_file:
+
         csv_reader = csv.reader(csv_file)
 
         rows = []
 
         for row in csv_reader:
-            if row[11] == key:            
-                row_number = csv_reader.line_num - 2
-                print(row_number)
+            if row[0] == key:            
+                row_number = csv_reader.line_num - 2            
                 new_value = pair_value        
     
-    # open the csv file in write mode
-    # Load the CSV file into a pandas DataFrame
     df = pd.read_csv(csv_file_path)
 
-    # Update the value on the 10th row of the 12th column
-    df.iat[row_number, 12] = new_value
+    df.iat[row_number, 1] = new_value
 
-    # Save the updated DataFrame to a new CSV file
     df.to_csv(csv_file_path, index=False)
 
+def prompt_interpolation_model(img1, img2, video_name, video_number, interpolation_steps, replicate_api_key):
+
+    os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
+
+    model = replicate.models.get("google-research/frame-interpolation")
+
+    output = model.predict(frame1=open(img1, "rb"), frame2=open(
+        img2, "rb"), times_to_interpolate=interpolation_steps)
+
+    video_name = "videos/" + video_name + \
+        "/assets/videos/0_raw/" + str(video_number) + ".mp4"
+
+    try:
+
+        urllib.request.urlretrieve(output, video_name)
+
+    except Exception as e:
+
+        print(e)
+
+    clip = VideoFileClip(video_name)
 
 def get_timing_details(video_name):
 
     timing_details = []
 
-    with open(("videos/" + str(video_name) + "/settings.csv"), 'r') as f:
+    with open(("videos/" + str(video_name) + "/timings.csv"), 'r') as f:
 
         lines = [line.split(',') for line in f.read().splitlines()]
 
@@ -106,25 +222,47 @@ def get_timing_details(video_name):
 
         if current_frame["frame_time"] != "":
             
-            current_frame["total_duration_of_clip"] = ""
-            current_frame["model_id"] = lines[i][2]
-            current_frame["prompt"] = lines[i][3]
-            current_frame["duration_of_static_time"] = lines[i][4]
-            current_frame["duration_of_morph_time"] = ""
-            current_frame["background"] = lines[i][8]
-            current_frame["mask"] = lines[i][9]
-            current_frame["notes"] = lines[i][5]
-            current_frame["whats_happening"] = lines[i][6]
-            current_frame["shot"] = lines[i][7]
+            current_frame["frame_number"] = lines[i][2]
+            current_frame["primary_image"] = lines[i][3]
+            current_frame["alt_image_1"] = lines[i][4]
+            current_frame["alt_image_2"] = lines[i][5]
+            current_frame["alt_image_3"] = lines[i][6]
+            current_frame["alt_image_4"] = lines[i][7]
+            current_frame["alt_image_5"] = lines[i][8]
+            current_frame["alt_image_6"] = lines[i][9]
+            current_frame["model_id"] = lines[i][10]            
+            current_frame["notes"] = lines[i][12]
+            current_frame["interpolation_style"] = lines[i][13]
+            current_frame["strength"] = lines[i][11]
+            current_frame["prompt"] = lines[i][15]        
 
             timing_details.append(current_frame)
 
     return timing_details
 
+def calculate_time_at_frame_number(input_video, frame_number, project_name):
 
-def calculate_frame_number_at_time(input_video, time_of_frame):
+    input_video = "videos/" + str(project_name) + "/assets/resources/input_videos/" + str(input_video)
+
+    video = cv2.VideoCapture(input_video)
+
+    frame_count = float(video.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    frame_percentage = float(frame_number / frame_count)
+
+    fps = int(video.get(cv2.CAP_PROP_FPS))
+
+    length_of_video = float(frame_count / fps)
+
+    time_at_frame = float(frame_percentage * length_of_video)
+
+    return time_at_frame
+
+def calculate_frame_number_at_time(input_video, time_of_frame, project_name):
 
     time_of_frame = float(time_of_frame)
+
+    input_video = "videos/" + str(project_name) + "/assets/resources/input_videos/" + str(input_video)
 
     video = cv2.VideoCapture(input_video)
 
@@ -147,16 +285,12 @@ def calculate_frame_number_at_time(input_video, time_of_frame):
 
 def extract_all_frames(input_video, project_name, timing_details, time_per_frame):
 
-    folder = 'videos/' + str(project_name) + '/assets/frames/0_extracted'
+    folder = 'videos/' + str(project_name) + '/assets/frames/1_selected'
 
     for filename in os.listdir(folder):
         os.remove(os.path.join(folder, filename))
 
-    update_key_setting('time_per_frame', time_per_frame, project_name)
-
-    key_settings = get_key_settings("videos/" + str(project_name) + "/settings.csv")
-
-    timing_details = get_timing_details(input_video,float(key_settings["time_per_frame"]), key_settings["model_id"],key_settings["master_prompt"], int(key_settings["static_time"]), key_settings["background_image"], key_settings["custom_or_stable"], project_name)
+    timing_details = get_timing_details(project_name)
 
     for i in timing_details:
 
@@ -164,35 +298,50 @@ def extract_all_frames(input_video, project_name, timing_details, time_per_frame
     
         time_of_frame = float(timing_details[index_of_current_item]["frame_time"])
 
-        extract_frame_number = calculate_frame_number_at_time(input_video, time_of_frame)
+        extract_frame_number = calculate_frame_number_at_time(input_video, time_of_frame, project_name)
 
-        extract_frame(index_of_current_item, project_name, input_video, extract_frame_number)
+        extract_frame(index_of_current_item, project_name, input_video, extract_frame_number,timing_details)
 
-def extract_frame(frame_number, video_name, input_video_file, extract_frame_number):
+def extract_frame(frame_number, video_name, input_video, extract_frame_number,timing_details):
 
-    input_video_file = cv2.VideoCapture(input_video_file)
+    input_video = "videos/" + str(video_name) + "/assets/resources/input_videos/" + str(input_video)
 
-    input_video_file.set(cv2.CAP_PROP_POS_FRAMES, extract_frame_number)
+    input_video = cv2.VideoCapture(input_video)
 
-    ret, frame = input_video_file.read()
+    total_frames = input_video.get(cv2.CAP_PROP_FRAME_COUNT)
 
-    cv2.imwrite("videos/" + video_name + "/assets/frames/0_extracted/" + str(frame_number) + ".png", frame)
+    if extract_frame_number == total_frames:
 
-    img = Image.open("videos/" + video_name + "/assets/frames/0_extracted/" + str(frame_number) + ".png")
+        extract_frame_number = int(total_frames - 1)
 
-    img.save("videos/" + video_name + "/assets/frames/0_extracted/" + str(frame_number) + ".png")
+    input_video.set(cv2.CAP_PROP_POS_FRAMES, extract_frame_number)
 
-    print(f"{frame_number}.png extracted!")
+    ret, frame = input_video.read()
+
+    df = pd.read_csv("videos/" + str(video_name) + "/timings.csv")
+
+    if timing_details[frame_number]["frame_number"] == "":
+    
+        df.iloc[frame_number, [2]] = [extract_frame_number]
+
+    df.to_csv("videos/" + str(video_name) + "/timings.csv", index=False)
+
+    cv2.imwrite("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png", frame)
+
+    img = Image.open("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
+
+    img.save("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
 
     return str(frame_number) + ".png"
 
-def touch_up_images(video_name, replicate_api_key, index_of_current_item, type_of_touch_up, custom_touch_up_query, dreamstudio_ai_api_key, original_prompt):
+
+def touch_up_images(video_name, replicate_api_key, index_of_current_item):
 
     os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
 
     model = replicate.models.get("tencentarc/gfpgan")
 
-    image = "videos/" + str(video_name) + "/assets/frames/1_character_pipeline_completed/" + str(index_of_current_item) + ".png"
+    image = "videos/" + str(video_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png"
 
     output = model.predict(img=open(image, "rb"))
 
@@ -202,15 +351,15 @@ def touch_up_images(video_name, replicate_api_key, index_of_current_item, type_o
 
     except Exception as e:
 
-        print("Error:")
+        print("Error in touching up image: " + str(e))
 
 def resize_image(video_name, image_number, new_width,new_height):
 
-    image = Image.open("videos/" + str(video_name) + "/assets/frames/1_character_pipeline_completed/" + str(image_number) + ".png")
+    image = Image.open("videos/" + str(video_name) + "/assets/frames/2_character_pipeline_completed/" + str(image_number) + ".png")
 
     resized_image = image.resize((new_width, new_height))
 
-    resized_image.save("videos/" + str(video_name) + "/assets/frames/1_character_pipeline_completed/" + str(image_number) + ".png")
+    resized_image.save("videos/" + str(video_name) + "/assets/frames/2_character_pipeline_completed/" + str(image_number) + ".png")
 
     return resized_image
 
@@ -222,13 +371,13 @@ def face_swap(replicate_api_key, video_name, index_of_current_item,stablediffusi
 
     version = model.versions.get("106df0aaf9690354379d8cd291ad337f6b3ea02fe07d90feb1dafd64820066fa")
 
-    source_face = upload_image("videos/" + str(video_name) + "/face.png", stablediffusionapi_com_api_key)
+    source_face = upload_image("videos/" + str(video_name) + "/face.png")
 
-    target_face = upload_image("videos/" + str(video_name) + "/assets/frames/0_extracted/" + str(index_of_current_item) + ".png", stablediffusionapi_com_api_key)
+    target_face = upload_image("videos/" + str(video_name) + "/assets/frames/1_selected/" + str(index_of_current_item) + ".png")
 
     output = version.predict(source_path=source_face, target_path=target_face,use_sr=0)
 
-    new_image = "videos/" + str(video_name) + "/assets/frames/1_character_pipeline_completed/" + str(index_of_current_item) + ".png"
+    new_image = "videos/" + str(video_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png"
     
     try:
 
@@ -238,63 +387,52 @@ def face_swap(replicate_api_key, video_name, index_of_current_item,stablediffusi
 
         print(e)
 
-def prompt_model_stability(videoname, image_number, prompt, dreamstudio_ai_api_key, apend_to_prompt):
+def prompt_model_stability(videoname, image_number, prompt, dreamstudio_ai_api_key):
 
-    os.environ['STABILITY_HOST'] = 'grpc.stability.ai:443'
+    print("YOU NEED TO FIX BASIC PROMPTING!!!!!!")
 
-    os.environ['STABILITY_KEY'] = dreamstudio_ai_api_key
 
-    # Set up our connection to the API.
-    stability_api = client.StabilityInference(
-        key=os.environ['STABILITY_KEY'],  # API Key reference.
-        verbose=True,  # Print debug messages.
-        engine="stable-diffusion-v1-5",
-    )
+def delete_frame(video_name, image_number):
 
-    with open("videos/" + videoname + "/assets/frames/2_background_added/" + str(image_number) + ".png", "rb") as image:
-        # extract binary from image
-        image_bytes = image.read()
+    os.remove("videos/" + str(video_name) + "/assets/frames/1_selected/" + str(image_number) + ".png")
 
-    # convert binary to base64
-    img = Image.open(io.BytesIO(image_bytes))
+    df = pd.read_csv("videos/" + str(video_name) + "/timings.csv")
 
-    prompt = str(prompt) + "," + str(apend_to_prompt)
+    
 
-    response = stability_api.generate(
-        prompt=prompt,
-        init_image=img,
-        start_schedule=0.6,
-        steps=50,
-        cfg_scale=10.0,
-        width=1280,
-        height=704,
-        sampler=generation.SAMPLER_K_DPM_2_ANCESTRAL
-    )
 
-    print(response)
+    for i in range(int(image_number)+1, len(os.listdir("videos/" + str(video_name) + "/assets/frames/1_selected"))+1):
+            
+        os.rename("videos/" + str(video_name) + "/assets/frames/1_selected/" + str(i) + ".png", "videos/" + str(video_name) + "/assets/frames/1_selected/" + str(i - 1) + ".png")
 
-    for resp in response:
-        for artifact in resp.artifacts:
-            if artifact.finish_reason == generation.FILTER:
-                warnings.warn(
-                    "Your request activated the API's safety filters and could not be processed."
-                    "Please modify the prompt and try again.")
-            if artifact.type == generation.ARTIFACT_IMAGE:
-                img2 = Image.open(io.BytesIO(artifact.binary))
-                img2.save("videos/" + videoname +
-                          "/assets/frames/3_restyled/" + str(image_number) + ".png")
+        df.iloc[i, [0]] = str(i - 1)
 
-def prompt_model_dreambooth(strength, folder_name,video_name, image_number, init_image, prompt, model_id, sd_api_key, apend_to_prompt, mask_image):
+    # remove the row from the timings.csv file using pandas
+
+    df = df.drop([int(image_number)])
+
+    df.to_csv("videos/" + str(video_name) + "/timings.csv", index=False)
+
+    
+
+    
+
+
+
+
+
+
+
+def prompt_model_dreambooth(strength, folder_name,video_name, image_number, init_image, prompt, model_id, sd_api_key):
 
 
     sd_url = "https://stablediffusionapi.com/api/v4/dreambooth/img2img"
 
-    init_image = upload_image("videos/" + str(video_name) + "/assets/frames/" + str(folder_name) + "/" + str(image_number) + ".png", sd_api_key)
+    init_image = upload_image("videos/" + str(video_name) + "/assets/frames/" + str(folder_name) + "/" + str(image_number) + ".png")
         
     payload = {
         "key": sd_api_key,
-        "prompt": "bukowski man. a close up of a person wearing a shirt. a character portrait. inspired by Paul Cadmus. behance contest winner. gigachad meme. in style of disney animation. smiling at the viewer. photography photorealistic. naturalistic technique. discord profile picture. blair armitage. silvio berlusconi. vladimir volego",
-        # "prompt": str(prompt) + "," + str(apend_to_prompt),
+        "prompt": str(prompt),
         "width": "720",
         "height": "480",
         "samples": "1",
@@ -352,7 +490,7 @@ def prompt_model_dreambooth(strength, folder_name,video_name, image_number, init
     return completed
 
 
-def upload_image(image_location, sd_api_key):
+def upload_image(image_location):
 
     upload_success = "false"
 
@@ -360,7 +498,7 @@ def upload_image(image_location, sd_api_key):
 
     while upload_success == "false":
 
-        sd_api_key = sd_api_key
+        sd_api_key = "JH5O46WRabTIbn11Q9xOcKXucoMuGsMbvrctrbE6Zsc6ANtrHwhXWOob5pAy"
 
         sd_url = "https://stablediffusionapi.com/api/v3/base64_crop"
 
@@ -385,9 +523,7 @@ def upload_image(image_location, sd_api_key):
 
         if response.json()["status"] == "success":
 
-            upload_success = "true"
-
-            print (response.json()["link"])
+            upload_success = "true"    
 
             return response.json()["link"]
 
@@ -396,6 +532,153 @@ def upload_image(image_location, sd_api_key):
             time.sleep(30)
 
             print(response.text)
+
+def update_slice_of_video_speed(video_name, input_video, desired_speed_change):
+
+    clip = VideoFileClip("videos/" + str(video_name) +
+                         "/assets/videos/0_raw/" + str(input_video))
+
+    clip_location = "videos/" + \
+        str(video_name) + "/assets/videos/0_raw/" + str(input_video)
+
+    desired_speed_change_text = str(desired_speed_change) + "*PTS"
+
+    video_stream = ffmpeg.input(str(clip_location))
+
+    video_stream = video_stream.filter('setpts', desired_speed_change_text)
+
+    ffmpeg.output(video_stream, "videos/" + str(video_name) +
+                  "/assets/videos/0_raw/output_" + str(input_video)).run()
+
+    video_capture = cv2.VideoCapture(
+        "videos/" + str(video_name) + "/assets/videos/0_raw/output_" + str(input_video))
+
+    os.remove("videos/" + str(video_name) +
+              "/assets/videos/0_raw/" + str(input_video))
+    os.rename("videos/" + str(video_name) + "/assets/videos/0_raw/output_" + str(input_video),
+              "videos/" + str(video_name) + "/assets/videos/0_raw/" + str(input_video))
+
+def slice_part_of_video(video_name, video_number, video_start_percentage, video_end_percentage, slice_name):
+
+    input_video = "videos/" + \
+        str(video_name) + "/assets/videos/0_raw/" + str(video_number) + ".mp4"
+
+    video_capture = cv2.VideoCapture(input_video)
+
+    frame_rate = video_capture.get(cv2.CAP_PROP_FPS)
+
+    total_duration_of_clip = video_capture.get(
+        cv2.CAP_PROP_FRAME_COUNT) / frame_rate
+
+    start_time = float(video_start_percentage) * float(total_duration_of_clip)
+
+    end_time = float(video_end_percentage) * float(total_duration_of_clip)
+
+    clip = VideoFileClip(input_video).subclip(
+        t_start=start_time, t_end=end_time)
+
+    output_video = "videos/" + \
+        str(video_name) + "/assets/videos/0_raw/" + str(slice_name) + ".mp4"
+
+    clip.write_videofile(output_video, audio=False)
+
+def update_video_speed(video_name, video_number, duration_of_static_time, total_duration_of_clip):
+
+    input_video = "videos/" + \
+        str(video_name) + "/assets/videos/0_raw/" + str(video_number) + ".mp4"
+
+    slice_part_of_video(video_name, video_number, 0, .1, "static")
+
+    slice_part_of_video(video_name, video_number, 0, 1, "moving")
+
+    video_capture = cv2.VideoCapture(
+        "videos/" + str(video_name) + "/assets/videos/0_raw/static.mp4")
+
+    frame_rate = video_capture.get(cv2.CAP_PROP_FPS)
+
+    total_duration_of_static = video_capture.get(
+        cv2.CAP_PROP_FRAME_COUNT) / frame_rate
+
+    desired_speed_change_of_static = float(
+        duration_of_static_time) / float(total_duration_of_static)
+
+    update_slice_of_video_speed(
+        video_name, "static.mp4", desired_speed_change_of_static)
+
+    video_capture = cv2.VideoCapture(
+        "videos/" + str(video_name) + "/assets/videos/0_raw/moving.mp4")
+
+    frame_rate = video_capture.get(cv2.CAP_PROP_FPS)
+
+    total_duration_of_moving = video_capture.get(
+        cv2.CAP_PROP_FRAME_COUNT) / frame_rate
+
+    total_duration_of_moving = float(total_duration_of_moving)
+
+    total_duration_of_clip = float(total_duration_of_clip)
+
+    duration_of_static_time = float(duration_of_static_time)
+
+    desired_speed_change_of_moving = (
+        total_duration_of_clip - duration_of_static_time) / total_duration_of_moving
+
+    update_slice_of_video_speed(
+        video_name, "moving.mp4", desired_speed_change_of_moving)
+
+    final_clip = concatenate_videoclips([VideoFileClip("videos/" + str(video_name) + "/assets/videos/0_raw/static.mp4"),
+                                        VideoFileClip("videos/" + str(video_name) + "/assets/videos/0_raw/moving.mp4")])
+
+    final_clip.write_videofile(
+        "videos/" + str(video_name) + "/assets/videos/0_raw/full_output.mp4", fps=30)
+
+    os.remove("videos/" + str(video_name) + "/assets/videos/0_raw/moving.mp4")
+    os.remove("videos/" + str(video_name) + "/assets/videos/0_raw/static.mp4")
+    os.rename("videos/" + str(video_name) + "/assets/videos/0_raw/full_output.mp4",
+              "videos/" + str(video_name) + "/assets/videos/1_final/" + str(video_number) + ".mp4")
+
+def calculate_desired_duration_of_each_clip(timing_details):
+
+    number_of_items = len(timing_details)
+
+    for i in range(0, number_of_items):
+
+        index_of_item = i
+        length_of_list = len(timing_details)
+
+        if index_of_item == (length_of_list - 1):
+
+            time_of_frame = timing_details[index_of_item]["frame_time"]
+
+            duration_of_static_time = 0.2
+
+            end_duration_of_frame = float(
+                time_of_frame) + float(duration_of_static_time)
+
+            total_duration_of_frame = float(
+                end_duration_of_frame) - float(time_of_frame)
+
+        else:
+
+            time_of_frame = timing_details[index_of_item]["frame_time"]
+
+            time_of_next_frame = timing_details[index_of_item +
+                                                1]["frame_time"]
+
+            total_duration_of_frame = float(
+                time_of_next_frame) - float(time_of_frame)
+
+        duration_of_static_time = 0.2
+
+        duration_of_morph = float(
+            total_duration_of_frame) - float(duration_of_static_time)
+
+        timing_details[index_of_item]["total_duration_of_clip"] = total_duration_of_frame
+
+        timing_details[index_of_item]["duration_of_morph_time"] = duration_of_morph
+
+        timing_details[index_of_item]["duration_of_static_time"] = duration_of_static_time
+
+    return timing_details
 
 def hair_swap(replicate_api_key, video_name, index_of_current_item,stablediffusionapi_com_api_key):
 
@@ -407,11 +690,11 @@ def hair_swap(replicate_api_key, video_name, index_of_current_item,stablediffusi
 
     source_hair = upload_image("videos/" + str(video_name) + "/face.png", stablediffusionapi_com_api_key)
 
-    target_hair = upload_image("videos/" + str(video_name) + "/assets/frames/1_character_pipeline_completed/" + str(index_of_current_item) + ".png", stablediffusionapi_com_api_key)
+    target_hair = upload_image("videos/" + str(video_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png")
 
     output = version.predict(source_image=source_hair, target_image=target_hair)
 
-    new_image = "videos/" + str(video_name) + "/assets/frames/1_character_pipeline_completed/" + str(index_of_current_item) + ".png"
+    new_image = "videos/" + str(video_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png"
 
     try:
 
@@ -421,36 +704,89 @@ def hair_swap(replicate_api_key, video_name, index_of_current_item,stablediffusi
 
         print(e)
 
-def restyle_images(strength, folder_name,video_name, frame_number, prompt, model_id, stablediffusionapi_com_api_key, dreamstudio_ai_api_key, apend_to_prompt, mask):
+def prompt_model_depth2img(strength,video_name, image_number, replicate_api_key, timing_details):
+
+    
+    os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
+
+    prompt = timing_details[image_number]["prompt"]
+
+    print(prompt)
+
+    model = replicate.models.get("jagilley/stable-diffusion-depth2img")
+
+    version = model.versions.get("68f699d395bc7c17008283a7cef6d92edc832d8dc59eb41a6cafec7fc70b85bc")
+
+    image = f"videos/{video_name}/assets/frames/1_selected/{image_number}.png"
+
+    image = upload_image(image)
+
+    output = version.predict(input_image=image, prompt_strength=str(strength), prompt=prompt, negative_prompt = "writing, text")
+
+    new_image = "videos/" + str(video_name) + "/assets/frames/2_character_pipeline_completed/" + str(image_number) + ".png"
+    
+    try:
+
+        urllib.request.urlretrieve(output[0], new_image)
+
+    except Exception as e:
+
+        print(e)
+
+
+def restyle_images(strength, folder_name,video_name, frame_number, prompt, model_id, stablediffusionapi_com_api_key, dreamstudio_ai_api_key,replicate_api_key, timing_details):
 
     if model_id == "sd":
-        prompt_model_stability(strength, folder_name,video_name, frame_number,prompt, dreamstudio_ai_api_key, apend_to_prompt)
+        prompt_model_stability(strength, folder_name,video_name, frame_number,prompt, dreamstudio_ai_api_key)
+
+    elif model_id == "depth2img":
+        prompt_model_depth2img(strength,video_name, frame_number,replicate_api_key, timing_details)
+
 
     else:
-        prompt_model_dreambooth(strength, folder_name,video_name, frame_number, str(frame_number) + ".png", prompt, model_id, stablediffusionapi_com_api_key, apend_to_prompt, mask)
+        prompt_model_dreambooth(strength, folder_name,video_name, frame_number, str(frame_number) + ".png", timing_details, model_id, stablediffusionapi_com_api_key)
 
 
 
-def character_pipeline(index_of_current_item, project_name, key_settings, timing_details):
+def character_pipeline(index_of_current_item, project_name, app_settings, project_settings, timing_details):
 
-    print("Running character pipeline on " + str(index_of_current_item) + ".png")
 
-    face_swap(key_settings["replicate_com_api_key"], project_name, index_of_current_item, key_settings["stablediffusionapi_com_api_key"])
+    if timing_details[index_of_current_item]["model_id"] != "depth2img":
 
-    touch_up_images(project_name, key_settings["replicate_com_api_key"], index_of_current_item, key_settings["type_of_touch_up"],key_settings["custom_touch_up_query"], key_settings["dreamstudio_ai_api_key"], timing_details[index_of_current_item]["prompt"])
+        face_swap(app_settings["replicate_com_api_key"], project_name, index_of_current_item, app_settings["stablediffusionapi_com_api_key"])
 
-    resize_image(project_name, index_of_current_item, 704,512)
+        touch_up_images(project_name, app_settings["replicate_com_api_key"], index_of_current_item)
+
+        resize_image(project_name, index_of_current_item, 704,512)
 
     # hair_swap(key_settings["replicate_com_api_key"],video_name,index_of_current_item,key_settings["stablediffusionapi_com_api_key"])
 
     # INSERT CLOTHES SWAP
 
-    restyle_images(0.25,"1_character_pipeline_completed",project_name, index_of_current_item, timing_details[index_of_current_item]["prompt"], timing_details[index_of_current_item]["model_id"], key_settings["stablediffusionapi_com_api_key"], key_settings["dreamstudio_ai_api_key"], key_settings["what_to_apend_to_each_prompt"], timing_details[index_of_current_item]["mask"])
+    restyle_images(timing_details[index_of_current_item]["strength"],"2_character_pipeline_completed",project_name, index_of_current_item, timing_details[index_of_current_item]["prompt"], timing_details[index_of_current_item]["model_id"], app_settings["stablediffusionapi_com_api_key"], app_settings["dreamstudio_ai_api_key"],app_settings["replicate_com_api_key"],timing_details)
 
-    st.experimental_rerun()
+
+def get_models():
+
+    df = pd.read_csv('models.csv')
+
+    models = df[df.columns[0]].tolist()
+
+    return models
+
+
+def update_timing_values(project_name, index_of_current_item,prompt, strength, model):
+
+    df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
+
+    df.iloc[index_of_current_item, [15,11,10]] = [prompt,strength,model]
+    
+    df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
 
 
 def main():
+
+    app_settings = get_app_settings()
 
     if 'stage' not in st.session_state:
         st.session_state['stage'] = ''
@@ -479,11 +815,6 @@ def main():
 
         timing_details = get_timing_details(project_name)
 
-        print(timing_details)
-
-        # video = cv2.VideoCapture(input_video)
-
-        # frame_count = float(video.get(cv2.CAP_PROP_FRAME_COUNT))
 
         st.session_state.stage = st.sidebar.radio("Select an option",
                                     ["Project Settings",
@@ -491,91 +822,177 @@ def main():
                                     "Key Frame Selection",
                                     "Background Replacement",
                                     "Frame Styling",
-                                    "Frame Interpolation"])
+                                    "Frame Interpolation",
+                                    "Video Rendering"])
 
         st.header(st.session_state.stage)
         
         if st.session_state.stage == "Key Frame Selection":
 
+            timing_details = get_timing_details(project_name)
+
             images_list = [f for f in os.listdir(f'videos/{project_name}/assets/frames/0_extracted') if f.endswith('.png')]
     
             images_list.sort(key=lambda f: int(re.sub('\D', '', f)))
 
+            st.sidebar.subheader("Extract key frames from video")
 
-            if len(images_list) == 0:
+            granularity = st.sidebar.slider("Choose frame granularity", min_value=5, max_value=50, step=5, value = 10)
 
-                st.header("<------- Extract Key Frames Here")
+            input_video_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/input_videos') if f.endswith('.mp4')]                
+                
+            input_video = st.sidebar.selectbox("Input video:", input_video_list)
+
+            input_video_cv2 = cv2.VideoCapture(f'videos/{project_name}/assets/resources/input_videos/{input_video}')
+
+            total_frames = input_video_cv2.get(cv2.CAP_PROP_FRAME_COUNT)
+
+            fps = input_video_cv2.get(cv2.CAP_PROP_FPS)
+    
+            if st.sidebar.checkbox("I understand that running this will remove all existing frames"):
+
+                if st.sidebar.button("Update granularity"):
+
+                    remove_existing_timing(project_name)
+
+                    # remove all .pngs from 0_extracted
+
+                    for f in os.listdir(f'videos/{project_name}/assets/frames/0_extracted'):
+                        os.remove(f'videos/{project_name}/assets/frames/0_extracted/{f}')
                     
-            else:                
+                    for i in range(0, int(input_video_cv2.get(cv2.CAP_PROP_FRAME_COUNT)), int(granularity)):
 
-                st.sidebar.subheader("Extract key frames from video")
+                        input_video_cv2.set(cv2.CAP_PROP_POS_FRAMES, i)
 
-                time_per_frame = st.sidebar.number_input("How many seconds per key frame?", value = 0.5)
+                        ret, frame = input_video_cv2.read()
 
-                input_video_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/input_videos') if f.endswith('.mp4')]
+                        cv2.imwrite(f"videos/{project_name}/assets/frames/0_extracted/" + str(i) + ".png", frame)
+
+                        st.session_state['select_frames'] = []
+
+                    cv2.imwrite(f"videos/{project_name}/assets/frames/0_extracted/" + str(int(float(total_frames))) + ".png", int(float(total_frames)))
+
+                    st.experimental_rerun()
+            else:
+                st.sidebar.button("Update granularity", disabled=True)
+
+            st.sidebar.write(f"This video is {total_frames} frames long and has a framerate of {fps} fps.")
+
+            st.sidebar.video(f'videos/{project_name}/assets/resources/input_videos/{input_video}')
+
+            timing_details = get_timing_details(project_name)
+
+            if len(timing_details) == 0:
+
+                st.header("<------- Extract Frames To Select From Here")
+                    
+            else:
+                            
+                for image_name in timing_details:
+
+                    index_of_current_item = timing_details.index(image_name)
                 
-                background_list = os.listdir(f'videos/{project_name}/assets/resources/backgrounds')
-                
-
-                input_video = st.sidebar.selectbox("Input video:", input_video_list)
-
-                if st.sidebar.checkbox("I understand that running this will remove all existing frames"):
-
-                    if st.sidebar.button("Extract Key Frames"):
-
-                        replace_existing_timing(project_name, input_video, time_per_frame)
-
-                        get_timing_details(project_name)
-
-                        extract_all_frames(input_video, project_name, timing_details,time_per_frame)
-
-                        st.experimental_rerun()
-                else:
-
-                    st.sidebar.button("Extract Key Frames", disabled=True)
-
-
-                for image_name in images_list:
-                
-                    image = Image.open(f'videos/{project_name}/assets/frames/0_extracted/{image_name}')            
-                    st.subheader(f'Image Name: {image_name}')                
+                    image = Image.open(f'videos/{project_name}/assets/frames/1_selected/{index_of_current_item}.png')            
+                    st.subheader(f'Image Name: {index_of_current_item}')                
                     st.image(image, use_column_width=True)
                     
-                    col1, col2,col3, col4 = st.columns(4)
+                    col1, col2,col3 = st.columns([2,1,1])
 
+                    current_item =  str(index_of_current_item) + "_lad"
+
+                    
                     with col1:
 
-                        if st.button(f'-10 Frames ({image_name})'):                                    
-                            image_number = int(image_name.replace(".png", ""))
-                            frame_time = timing_details[image_number]['frame_time']
-                            move_frame(project_name, image_number, -10,input_video,frame_time)
+                       st.write(timing_details[index_of_current_item]["frame_time"])
+                
 
                     with col2:
 
-                        if st.button(f'-5 Frames ({image_name})'):
-                            image_number = int(image_name.replace(".png", ""))
-                            frame_time = timing_details[image_number]['frame_time']
-                            move_frame(project_name, image_number, -5,input_video,frame_time)
+                        delete_confirmed = 'false'
+
+                        if st.checkbox(f"Confirm you want to delete {index_of_current_item}"):
+                            delete_confirmed = 'true'
+                            
 
                     with col3:
 
-                        if st.button(f'+5 Frame ({image_name})'):
-                            image_number = int(image_name.replace(".png", ""))
-                            frame_time = timing_details[image_number]['frame_time']
-                            move_frame(project_name, image_number, 5,input_video,frame_time)
+                        if delete_confirmed == 'true':
+                            if st.button(f"Delete {index_of_current_item} Frame", disabled=False):
+                                delete_frame(project_name, index_of_current_item)
+                                st.experimental_rerun()
 
-                    with col4:
+                        else: 
+                            st.button(f"Delete {index_of_current_item} Frame", type="secondary", disabled=True)
 
-                        if st.button(f'+10 Frame ({image_name})'):
-                            image_number = int(image_name.replace(".png", ""))
-                            frame_time = timing_details[image_number]['frame_time']
-                            move_frame(project_name, image_number, 10,input_video,frame_time)
+
+            st.title('Add key frames to your project')
+
+            st.write("Select a frame from the slider below and click 'Add Frame' it to the end of your project")
+
+            images = os.listdir(f"videos/{project_name}/assets/frames/0_extracted")
+
+            # remove .png from the file name
+
+            images = [i.replace(".png", "") for i in images]
+
+            images.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
+
+            # extract the name of the seond item in the list
+            #granularity = int(images[1])
+
+            if timing_details == []:
+                min_frames = 0
+            else:
+                length_of_timing_details = len(timing_details) - 1
+                print(timing_details[length_of_timing_details])
+                print(len(timing_details))
+                print(timing_details[length_of_timing_details]["frame_number"])
+                min_frames= int(float(timing_details[length_of_timing_details]["frame_number"]))
+
+            # make max_frames equal to the number that's multiplied by the granularity
+            max_frames = int((float(total_frames) / float(granularity))) * int(granularity)
+    
+            slider = st.slider("Choose Frame", max_value= min_frames+ 100, min_value=min_frames,step=granularity, value = min_frames + granularity)
+
+
+
+            st.image(f"videos/{project_name}/assets/frames/0_extracted/{slider}.png")
+
+            if st.button(f"Add Frame {slider} to Project"):     
+
+                frame_time = calculate_time_at_frame_number(input_video, float(slider),project_name)
+
+                df = pd.read_csv(f'videos/{project_name}/timings.csv')
+
+                # find the legnth of timing_details + 1
+
+                last_index = len(timing_details)
+
+                new_row = {'index_number': last_index, 'frame_time': frame_time, 'frame_number': slider}
+
+                df.loc[last_index] = new_row
+
+                df.to_csv(f'videos/{project_name}/timings.csv', index=False)
+
+                # copy the file called slider .png from 0_extracted to the folder called 1_selected and name it last_index.png
+
+                shutil.copy(f"videos/{project_name}/assets/frames/0_extracted/{slider}.png", f"videos/{project_name}/assets/frames/1_selected/{last_index}.png")
+
+
+                
+
+                st.experimental_rerun()
+
+
+
+
+    
 
 
 
         elif st.session_state.stage == "Background Replacement":
                       
-            images_list = [f for f in os.listdir(f'videos/{project_name}/assets/frames/0_extracted') if f.endswith('.png')]
+            images_list = [f for f in os.listdir(f'videos/{project_name}/assets/frames/1_selected') if f.endswith('.png')]
 
             images_list = sorted(images_list)
 
@@ -619,7 +1036,7 @@ def main():
 
             for image_name in images_list:
             
-                image = Image.open(f'videos/{project_name}/assets/frames/0_extracted/{image_name}')            
+                image = Image.open(f'videos/{project_name}/assets/frames/1_selected/{image_name}')            
             
                 st.subheader(f'{image_name}')                
 
@@ -629,82 +1046,242 @@ def main():
 
        
         elif st.session_state.stage == "Frame Styling":
-        
-            images_list = [f for f in os.listdir(f'videos/{project_name}/assets/frames/1_character_pipeline_completed') if f.endswith('.png')]
+
+            timing_details = get_timing_details(project_name)
+    
+            project_settings = get_project_settings(project_name)
+
+            images_list = [f for f in os.listdir(f'videos/{project_name}/assets/frames/2_character_pipeline_completed') if f.endswith('.png')]
     
             images_list.sort(key=lambda f: int(re.sub('\D', '', f)))
 
             if len(images_list) == 0:
-                st.write("No frames extracted yet")
-                if st.button("Styling Frames"):
-                    st.write("Styling frames")
+                st.write("<------- Restyle Frames Here")
 
-            else:
-                st.sidebar.header("Batch style")
-                st.sidebar.text_input(f"Batch prompt", value="", placeholder=None, label_visibility="visible")
-                st.sidebar.number_input(f"Batch strength")
-                st.sidebar.selectbox(f"Batch model", ["SD", "style2", "style3"])                    
+            st.sidebar.header("Restyle Frames")
 
-                range_start = st.sidebar.slider('Update From', 0, len(images_list), 1)
+            restyle1, restyle2, restyle3 = st.sidebar.tabs(["Character Restyling", "Scene Restyling", "Image Editing"])
 
-                range_end = st.sidebar.slider('Update To', 0, len(images_list), 1)
+            with restyle1:
+                
+                prompt = st.sidebar.text_area(f"Prompt", value=project_settings["base_prompt"], label_visibility="visible")
+
+                strength = st.sidebar.number_input(f"Batch strength", value =0.25)
+
+                models = get_models()
+
+                models.append('sd')
+
+                model = st.sidebar.selectbox(f"Model", models)
+                
+                if model != "sd":
+
+                    model_details = get_model_details(model)
+
+                    st.sidebar.write(f"Must include '{model_details['keyword']}' in the prompt when running this model")
+
+                range_start = st.sidebar.slider('Update From', 0, len(timing_details) -1, 0)
+
+                range_end = st.sidebar.slider('Update To', 0, len(timing_details) - 1, 1)
+
+
+                range_end = range_end + 1
+
+                project_settings = get_project_settings(project_name)
+
+                app_settings = get_app_settings()
+
+                if 'restyle_button' not in st.session_state:
+                    st.session_state['restyle_button'] = ''
+                    st.session_state['item_to_restyle'] = ''
+
 
                 if range_start <= range_end:
 
-                    if st.sidebar.button(f'Batch restyle'):
+                    if st.sidebar.button(f'Batch restyle') or st.session_state['restyle_button'] == 'yes':
 
-                        for i in range(range_start, range_end):
-                            character_pipeline(int(i), project_name, key_settings, timing_details)
+                        if st.session_state['restyle_button'] == 'yes':
+                            range_start = int(st.session_state['item_to_restyle'])
+                            range_end = range_start + 1
+                            st.session_state['restyle_button'] = ''
+                            st.session_state['item_to_restyle'] = ''
+
+                        for i in range(range_start, range_end): 
+                                                
+
+                            index_of_current_item = i
+                            get_model_details(model)                
+                            update_timing_values(project_name, index_of_current_item, prompt, strength, model_details['id'])                                                    
+                            timing_details = get_timing_details(project_name)
+                            character_pipeline(index_of_current_item, project_name, app_settings, project_settings, timing_details)
+                                                    
 
                         st.experimental_rerun()
 
                 else:
                         
                         st.sidebar.write("Select a valid range")
-            
-                for image_name in images_list:
-                                
-                    image = Image.open(f'videos/{project_name}/assets/frames/0_extracted/{image_name}')            
-                    st.subheader(f'Image Name: {image_name}')            
-                    image_comparison(
-                        img1=f'videos/{project_name}/assets/frames/0_extracted/{image_name}',
-                        img2=f'videos/{project_name}/assets/frames/1_character_pipeline_completed/{image_name}')
-                    
-                    option1, option2,option3,option4 = st.columns(4)
 
-                    with option1:
-                        st.text_input(f"Prompt - {image_name}", value="", placeholder=None, label_visibility="visible")
+            with restyle2:
 
-                    with option2:
-                        st.number_input(f"Strength - {image_name}")
+                st.sidebar.write("Scene Restyling")
 
-                    with option3:
-                        st.selectbox(f"Model - {image_name}", ["SD", "style2", "style3"])                    
+            with restyle3:
+                
+                st.sidebar.write("Image Editing")
+        
+            for i in timing_details:
 
-                    with option4:
-                        st.text("")
-                        st.text("")
-                        if st.button(f'Re-run {image_name} styling'):
-                            # remove .png from the image name
-                            image_name = image_name[:-4]
-                            character_pipeline(int(image_name), project_name, key_settings, timing_details)
-                            st.experimental_rerun()
+                # set image number to the current image number                
+                index_of_current_item = timing_details.index(i)
+                image_name = str(timing_details.index(i)) + ".png"
+                            
+                image = Image.open(f'videos/{project_name}/assets/frames/1_selected/{index_of_current_item}.png')            
+                st.subheader(f'Image #: {index_of_current_item}') 
+                if os.path.exists(f'videos/{project_name}/assets/frames/2_character_pipeline_completed/{index_of_current_item}.png'):
+                    img2=f'videos/{project_name}/assets/frames/2_character_pipeline_completed/{index_of_current_item}.png'
+                else:
+                    img2='https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'          
+                image_comparison(starting_position=10,
+                    img1=f'videos/{project_name}/assets/frames/1_selected/{index_of_current_item}.png',
+                    img2=img2)
+
+
+                col1, col2, col3, col4 = st.columns(4)
+
+                with col1:
+
+                    if st.button("Generate New Variations", key=f"new_variations_{index_of_current_item}"):
+                        st.session_state['restyle_button'] = 'yes'
+                        st.session_state['item_to_restyle'] = index_of_current_item                        
+                        st.experimental_rerun()
+
+                with col2:
+
+                    st.button("<- Previous Variaton", key=f"previous_variation_{index_of_current_item}", disabled=True)
+
+                with col3:
+                        
+                    st.button("Next Variation ->", key=f"next_variation_{index_of_current_item}")
+
+                with col4:
+
+                    st.button("Promote Current Variation", key=f"prompte_current_{index_of_current_item}", disabled=True)
+
 
 
 
         elif st.session_state.stage == "Frame Interpolation":
             st.write("This is the frame interpolation view")
-            if st.button("Interpolate Videos"):
-                st.write("Interpolate Video")
+            timing_details = get_timing_details(project_name)
+            key_settings = get_app_settings()
+            total_number_of_videos = len(timing_details) - 1
 
-        elif st.session_state.stage == "Video Speed":
-            st.write("This is the video speed view")
-            if st.button("Video Speed"):
-                st.write("Speeding Videos Video")
+            interpolation_steps = st.slider("Number of interpolation steps", min_value=1, max_value=8, value=4)
+
+            if st.button("Interpolate Videos"):
+                for i in timing_details:
+
+                    index_of_current_item = timing_details.index(i)
+
+                    if index_of_current_item <= total_number_of_videos:
+
+                        if not os.path.exists("videos/" + str(project_name) + "/assets/videos/0_raw/" + str(index_of_current_item) + ".mp4"):
+
+                            if total_number_of_videos == index_of_current_item:
+
+                                current_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png"
+
+                                final_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(key_settings["ending_image"])
+
+                                prompt_interpolation_model(current_image_location, final_image_location, project_name, index_of_current_item,
+                                                        interpolation_steps, key_settings["replicate_com_api_key"])
+
+                            else:
+
+                                current_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png"
+
+                                next_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item+1) + ".png"
+
+                                prompt_interpolation_model(current_image_location, next_image_location, project_name, index_of_current_item,
+                                                        interpolation_steps, key_settings["replicate_com_api_key"])
+
+          
+
+               
+
+
+        elif st.session_state.stage == "Video Rendering":
+            final_video_name = st.text_input("What would you like to name this video?")
+
+            if st.button("Render Video"):
+                timing_details = get_timing_details(project_name)
+                total_number_of_videos = len(timing_details) - 1
+                timing_details = calculate_desired_duration_of_each_clip(timing_details)
+
+                for i in timing_details:
+
+                    index_of_current_item = timing_details.index(i)
+
+                    if index_of_current_item <= total_number_of_videos:
+
+                        if not os.path.exists("videos/" + str(project_name) + "/assets/videos/1_final/" + str(index_of_current_item) + ".mp4"):
+
+                            total_duration_of_clip = timing_details[index_of_current_item]['total_duration_of_clip']
+
+                            total_duration_of_clip = float(total_duration_of_clip)
+
+                            if index_of_current_item == total_number_of_videos:
+
+                                total_duration_of_clip = timing_details[index_of_current_item]['total_duration_of_clip']
+                                duration_of_static_time = 0.2
+                                duration_of_static_time = float(
+                                    duration_of_static_time) / 2
+
+                            elif index_of_current_item == 0:
+
+                                duration_of_static_time = 0
+
+                            else:
+
+                                duration_of_static_time = 0.2
+
+                                duration_of_static_time = float(
+                                    duration_of_static_time)
+
+                            update_video_speed(project_name, index_of_current_item, duration_of_static_time, total_duration_of_clip)
+
+                video_list = []
+
+                for i in timing_details:
+
+                    index_of_current_item = timing_details.index(i)
+
+                    if index_of_current_item < total_number_of_videos:
+
+                        index_of_current_item = timing_details.index(i)
+
+                        video_list.append("videos/" + str(project_name) +
+                                        "/assets/videos/1_final/" + str(index_of_current_item) + ".mp4")
+
+                video_clips = [VideoFileClip(v) for v in video_list]
+
+                finalclip = concatenate_videoclips(video_clips)
+
+                # finalclip = finalclip.set_audio(AudioFileClip(
+                #  "videos/" + video_name + "/assets/resources/music/" + key_settings["song"]))
+
+                finalclip.write_videofile("videos/" + project_name + "/" + final_video_name +
+                                        ".mp4", fps=60,  audio_bitrate="1000k", bitrate="4000k", codec="libx264")
+
+                video = VideoFileClip("videos/" + project_name +
+                                    "/" + final_video_name + ".mp4")
 
 
         elif st.session_state.stage == "Project Settings":
-            st.write("This is the settings view")
+
+            print("Project Settings")
+            
 
         elif st.session_state.stage == "Train Model":
 
