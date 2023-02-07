@@ -11,8 +11,6 @@ import pandas as pd
 import replicate
 import urllib
 import requests as r
-import base64
-import time
 import shutil
 import ffmpeg
 import datetime
@@ -22,7 +20,14 @@ import boto3
 import zipfile
 import random
 import uuid
+import time
+from pathlib import Path
+import base64
+from io import BytesIO
 
+
+
+st.set_page_config(page_title="Banodoco")
 
 
 def train_model(app_settings, images_list, instance_prompt,class_prompt, max_train_steps, model_name,project_name):
@@ -79,8 +84,6 @@ def train_model(app_settings, images_list, instance_prompt,class_prompt, max_tra
 
     response = (response.json())
 
-    print(response)
-
     training_status = response["status"]
 
     model_id = response["id"]
@@ -114,13 +117,9 @@ def remove_existing_timing(project_name):
 
     df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
 
-    print("details removed")
 
 
 def move_frame(project_name, index_of_current_item, distance_to_move, timing_details,input_video):
-
-    print("----------------------------------------------------")
-    print(project_name, index_of_current_item, distance_to_move,input_video)
     
     current_frame_number = int(calculate_frame_number_at_time(input_video, timing_details[index_of_current_item]["frame_time"], project_name))
 
@@ -180,8 +179,6 @@ def get_app_settings():
     for i in range(1, number_of_rows):
 
         app_settings[lines[i][0]] = lines[i][1]
-
-    print(app_settings)
 
     return app_settings
 
@@ -265,14 +262,14 @@ def create_working_assets(video_name):
     os.mkdir("videos/" + video_name + "/assets/videos/1_final")
     os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
 
-    data = {'key': ['number_of_interpolation_steps', 'what_to_append_to_each_prompt','base_prompt','song', 'input_type', 'input_video','extraction_type','width','height'],
-        'value': ['', '', '','', 'video', '','Regular intervals','','']}
+    data = {'key': ['last_prompt', 'last_model','last_strength','last_character_pipeline','song', 'input_type', 'input_video','extraction_type','width','height'],
+        'value': ['prompt', 'sd', '0.5','no','', 'video', '','Regular intervals','','']}
 
     df = pd.DataFrame(data)
 
     df.to_csv(f'videos/{video_name}/settings.csv', index=False)
 
-    df = pd.DataFrame(columns=['index_number','frame_time','frame_number','primary_image','alt_image_1','alt_image_2','alt_image_3','alt_image_4','alt_image_5','alt_image_6','model_id','strength','notes','ending_frame','interpolation_style','static_time', 'duration_of_clip','prompt'])
+    df = pd.DataFrame(columns=['index_number','frame_time','frame_number','primary_image','alternative_images','character_pipeline','alt_image_3','alt_image_4','alt_image_5','alt_image_6','model_id','strength','notes','ending_frame','interpolation_style','static_time', 'duration_of_clip','prompt'])
 
     df.loc[0] = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
 
@@ -335,8 +332,6 @@ def get_timing_details(video_name):
     for i in range(1, number_of_rows):        
 
         current_frame = {}
-        print(f"LINE {i}:")
-        print(lines[i][1])
 
         current_frame["frame_time"] = lines[i][1]
 
@@ -404,6 +399,30 @@ def calculate_frame_number_at_time(input_video, time_of_frame, project_name):
 
     return frame_number
 
+def remove_background(project_name, image_number, image_folder, save_removed_background):
+    app_settings = get_app_settings()
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
+    model = replicate.models.get("pollinations/modnet")
+    image = f"videos/{project_name}/assets/frames/{image_folder}/{image_number}.png"
+    if save_removed_background == "yes":
+        shutil.copy(image, f"videos/{project_name}/assets/resources/backgrounds/{image_number}.png")
+    output = model.predict(image=open(image, "rb"))
+    image = f"videos/{project_name}/assets/frames/{image_folder}/{image_number}.png"
+    try:
+        urllib.request.urlretrieve(output, image)
+        print(f"{image_number}.png background removed!")
+    except Exception as e:
+        print("Error:")
+
+
+
+def replace_background(video_name, image_number, background_image, image_folder):
+
+    background_image = Image.open(f"videos/{video_name}/assets/resources/backgrounds/{background_image}")
+    foreground_image = Image.open(f"videos/{video_name}/assets/frames/{image_folder}/{image_number}.png")
+    background_image.paste(foreground_image, (0, 0), foreground_image)
+    background_image.save(f"videos/{video_name}/assets/frames/{image_folder}/{image_number}.png")
+    
 
 
 def extract_all_frames(input_video, project_name, timing_details, time_per_frame):
@@ -424,6 +443,8 @@ def extract_all_frames(input_video, project_name, timing_details, time_per_frame
         extract_frame_number = calculate_frame_number_at_time(input_video, time_of_frame, project_name)
 
         extract_frame(index_of_current_item, project_name, input_video, extract_frame_number,timing_details)
+
+
 
 def extract_frame(frame_number, video_name, input_video, extract_frame_number,timing_details):
 
@@ -458,9 +479,11 @@ def extract_frame(frame_number, video_name, input_video, extract_frame_number,ti
     return str(frame_number) + ".png"
 
 
-def touch_up_images(video_name, replicate_api_key, index_of_current_item):
+def touch_up_images(video_name, index_of_current_item):
 
-    os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
+    app_settings = get_app_settings()
+
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
 
     model = replicate.models.get("tencentarc/gfpgan")
 
@@ -486,9 +509,11 @@ def resize_image(video_name, image_number, new_width,new_height):
 
     return resized_image
 
-def face_swap(replicate_api_key, video_name, index_of_current_item,stablediffusionapi_com_api_key):
+def face_swap(video_name, index_of_current_item):
+
+    app_settings = get_app_settings()
     
-    os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
 
     model = replicate.models.get("arielreplicate/ghost_face_swap")
 
@@ -510,24 +535,27 @@ def face_swap(replicate_api_key, video_name, index_of_current_item,stablediffusi
 
         print(e)
 
-def prompt_model_stability(project_name, image_number, project_settings, app_settings, timing_details):
+def prompt_model_stability(folder_name,project_name, index_of_current_item, timing_details, strength):
 
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_api_key"]
+    app_settings = get_app_settings()
+    project_settings = get_project_settings(project_name)
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
 
-    prompt = timing_details[image_number]["prompt"]
-    strength = timing_details[image_number]["strength"]
+    index_of_current_item = int(index_of_current_item)
+
+    prompt = timing_details[index_of_current_item]["prompt"]
 
     model = replicate.models.get("cjwbw/stable-diffusion-img2img-v2.1")
 
     version = model.versions.get("650c347f19a96c8a0379db998c4cd092e0734534591b16a60df9942d11dec15b")
 
-    input_image = f"videos/{project_name}/assets/frames/1_selected/{image_number}.png"
+    input_image = f"videos/{project_name}/assets/frames/1_selected/{index_of_current_item}.png"
 
     input_image = upload_image(input_image)
 
     output = version.predict(image=input_image, prompt_strength=str(strength), prompt=prompt, negative_prompt = "pink", width = project_settings["width"], height = project_settings["height"])
 
-    new_image = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(image_number) + ".png"
+    new_image = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png"
     
     try:
 
@@ -563,11 +591,11 @@ def delete_frame(video_name, image_number):
 
 def prompt_model_dreambooth(project_name, image_number, model_name, app_settings,timing_details, project_settings):
 
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_api_key"]
-    replicate_api_key = app_settings["replicate_api_key"]
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
+    replicate_api_key = app_settings["replicate_com_api_key"]
     image_number = int(image_number)
     prompt = timing_details[image_number]["prompt"]
-    strength = int(timing_details[image_number]["strength"])
+    strength = float(timing_details[image_number]["strength"])
     model = replicate.models.get(f"peter942/{model_name}")
     model_details = get_model_details(model_name)
     model_id = model_details["id"]
@@ -578,36 +606,38 @@ def prompt_model_dreambooth(project_name, image_number, model_name, app_settings
         response = r.get(url, headers=headers)
         version = (response.json()["version"])
         models_df = pd.read_csv("models.csv")    
-        row_number = models_df[models_df["model_id"] == model_id].index[0]        
+        row_number = models_df[models_df["id"] == model_id].index[0]        
         models_df.iloc[row_number, [3]] = version        
         models_df.to_csv("models.csv", index=False)
-        print(response.json())
     else:
         version = model_details["version"]
 
     version = model.versions.get(version)
-    input_image = f"videos/{[project_name]}/assets/frames/1_selected/{image_number}.png"
+    input_image = f"videos/{project_name}/assets/frames/2_character_pipeline_completed/{image_number}.png"
     input_image = upload_image(input_image)
-    output = version.predict(image=input_image, prompt=prompt, prompt_strength=strength, height = project_settings["height"], width = project_settings["width"])
+    output = version.predict(image=input_image, prompt=prompt, prompt_strength=strength, height = project_settings["height"], width = project_settings["width"], disable_safety_check=True)
 
     new_image = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(image_number) + ".png"
     
     try:
 
-        urllib.request.urlretrieve(output, new_image)
+        urllib.request.urlretrieve(output[0], new_image)
 
     except Exception as e:
 
         print(e)
 
 
-def upload_image(image_location, app_settings):
+def upload_image(image_location):
+
+    app_settings = get_app_settings()
 
     unique_file_name = str(uuid.uuid4()) + ".png"
     s3_file = f"input_images/{unique_file_name}"
     s3 = boto3.client('s3', aws_access_key_id=app_settings['aws_access_key_id'],
                       aws_secret_access_key=app_settings['aws_secret_access_key'])
     s3.upload_file(image_location, "banodoco", s3_file)
+    s3.put_object_acl(ACL='public-read', Bucket='banodoco', Key=s3_file)
     return f"https://s3.amazonaws.com/banodoco/{s3_file}"
 
 def update_slice_of_video_speed(video_name, input_video, desired_speed_change):
@@ -639,26 +669,15 @@ def slice_part_of_video(video_name, video_number, video_start_percentage, video_
 
     input_video = "videos/" + \
         str(video_name) + "/assets/videos/0_raw/" + str(video_number) + ".mp4"
-
     video_capture = cv2.VideoCapture(input_video)
-
     frame_rate = video_capture.get(cv2.CAP_PROP_FPS)
-
-    print("Frame rate: " + str(frame_rate))
-    print("Total duration of clip: " + str(video_capture.get(cv2.CAP_PROP_FRAME_COUNT)))
-
     total_duration_of_clip = video_capture.get(cv2.CAP_PROP_FRAME_COUNT) / frame_rate
-
     start_time = float(video_start_percentage) * float(total_duration_of_clip)
-
     end_time = float(video_end_percentage) * float(total_duration_of_clip)
-
     clip = VideoFileClip(input_video).subclip(
         t_start=start_time, t_end=end_time)
-
     output_video = "videos/" + \
         str(video_name) + "/assets/videos/0_raw/" + str(slice_name) + ".mp4"
-
     clip.write_videofile(output_video, audio=False)
 
 def update_video_speed(video_name, video_number, duration_of_static_time, total_duration_of_clip):
@@ -771,7 +790,7 @@ def hair_swap(replicate_api_key, video_name, index_of_current_item,stablediffusi
 
     version = model.versions.get("c4c7e5a657e2e1abccd57625093522a9928edeccee77e3f55d57c664bcd96fa2")
 
-    source_hair = upload_image("videos/" + str(video_name) + "/face.png", stablediffusionapi_com_api_key)
+    source_hair = upload_image("videos/" + str(video_name) + "/face.png")
 
     target_hair = upload_image("videos/" + str(video_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png")
 
@@ -792,8 +811,6 @@ def prompt_model_depth2img(strength,video_name, image_number, replicate_api_key,
     os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
 
     prompt = timing_details[image_number]["prompt"]
-
-    print(prompt)
 
     model = replicate.models.get("jagilley/stable-diffusion-depth2img")
 
@@ -844,49 +861,44 @@ def prompt_model_pix2pix(strength,video_name, image_number, timing_details, repl
         print(e)
 
 
-def restyle_images(strength, folder_name,video_name, image_number, prompt, model_id, stablediffusionapi_com_api_key, dreamstudio_ai_api_key,replicate_api_key, timing_details):
-
-    print("HERE'S THE MODEL ID")
-    print(model_id)
-
+def restyle_images(folder_name,project_name, index_of_current_item, timing_details):
+    
+    prompt = timing_details[index_of_current_item]["prompt"]
+    model_name = timing_details[index_of_current_item]["model_id"]
+    strength = timing_details[index_of_current_item]["strength"]
     app_settings = get_app_settings()
-    project_settings = get_project_settings(video_name)
+    project_settings = get_project_settings(project_name)
 
-    if model_id == "sd":
-        prompt_model_stability(strength, folder_name,video_name, image_number,prompt, dreamstudio_ai_api_key)
-
-    elif model_id == "depth2img":
-        print("FUCKKKKKK")
-        prompt_model_depth2img(strength,video_name, image_number,replicate_api_key, timing_details)
-
-    elif model_id == "pix2pix":
-        prompt_model_pix2pix(strength,video_name, image_number, timing_details, replicate_api_key)
-
+    if model_name == "sd":
+        prompt_model_stability(folder_name,project_name, index_of_current_item,timing_details)
+    elif model_name == "depth2img":    
+        prompt_model_depth2img(strength,project_name, index_of_current_item,app_settings, timing_details)
+    elif model_name == "pix2pix":
+        prompt_model_pix2pix(strength,project_name, index_of_current_item, timing_details, app_settings)
     else:
-        prompt_model_dreambooth(video_name, image_number, model_name, app_settings,timing_details, project_settings)
+        prompt_model_dreambooth(project_name, index_of_current_item, model_name, app_settings,timing_details, project_settings)
 
 
 
-def character_pipeline(index_of_current_item, project_name, app_settings, project_settings, timing_details):
+def character_pipeline(index_of_current_item, project_name, project_settings, timing_details):
 
-    print("CHARACTER PIPELINE")
+    prompt = timing_details[index_of_current_item]["prompt"]
+    model_name = timing_details[index_of_current_item]["model_id"]
+    strength = timing_details[index_of_current_item]["strength"]
+    app_settings = get_app_settings()
+    project_settings = get_project_settings(project_name)
 
-    print(timing_details[index_of_current_item]["strength"],"2_character_pipeline_completed",project_name, index_of_current_item, timing_details[index_of_current_item]["prompt"], timing_details[index_of_current_item]["model_id"], app_settings["stablediffusionapi_com_api_key"], app_settings["dreamstudio_ai_api_key"],app_settings["replicate_com_api_key"])
-
-
-    #if timing_details[index_of_current_item]["model_id"] != "depth2img" and timing_details[index_of_current_item]["model_id"] != "sd" and timing_details[index_of_current_item]["model_id"] != "pix2pix":
-
-     #   face_swap(app_settings["replicate_com_api_key"], project_name, index_of_current_item, app_settings["stablediffusionapi_com_api_key"])
-
-      #  touch_up_images(project_name, app_settings["replicate_com_api_key"], index_of_current_item)
-
-       # resize_image(project_name, index_of_current_item, 704,512)
-
+    # remove_background(project_name, index_of_current_item, "2_character_pipeline_completed", "yes")
+    # replace_background(project_name, index_of_current_item, str(index_of_current_item) + ".png", "2_character_pipeline_completed")
+    face_swap(project_name, index_of_current_item)
     # hair_swap(key_settings["replicate_com_api_key"],video_name,index_of_current_item,key_settings["stablediffusionapi_com_api_key"])
+    touch_up_images(project_name, index_of_current_item)
+    resize_image(project_name, index_of_current_item, int(project_settings["width"]),int(project_settings["height"]))
+    prompt_model_dreambooth(project_name, index_of_current_item, model_name, app_settings,timing_details, project_settings)
+    # remove_background(project_name, index_of_current_item, "2_character_pipeline_completed", "no")
+    # replace_background(project_name, index_of_current_item, str(index_of_current_item) + ".png", "2_character_pipeline_completed")
+    # prompt_model_stability("2_character_pipeline_completed",project_name, index_of_current_item,timing_details, "0.2")
 
-    # INSERT CLOTHES SWAP
-
-    restyle_images(timing_details[index_of_current_item]["strength"],"2_character_pipeline_completed",project_name, index_of_current_item, timing_details[index_of_current_item]["prompt"], timing_details[index_of_current_item]["model_id"], app_settings["stablediffusionapi_com_api_key"], app_settings["dreamstudio_ai_api_key"],app_settings["replicate_com_api_key"],timing_details)
 
 def create_timings_row_at_frame_number(project_name, input_video, extract_frame_number, timing_details):
 
@@ -914,11 +926,11 @@ def get_models():
     return models
 
 
-def update_timing_values(project_name, index_of_current_item,prompt, strength, model):
+def update_timing_values(project_name, index_of_current_item,prompt, strength, model, character_pipeline):
 
     df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
 
-    df.iloc[index_of_current_item, [17,11,10]] = [prompt,strength,model]
+    df.iloc[index_of_current_item, [17,11,10,5]] = [prompt,strength,model,character_pipeline]
     
     df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
 
@@ -930,16 +942,14 @@ def main():
 
     st.sidebar.title("Banodoco")
 
-    if 'project_set' not in st.session_state:
-        st.session_state['project_set'] = ''
-        st.session_state["index_of_project_name"] = ''
-        st.session_state["project_name"] = ''
-
-    if app_settings["previous_project"] != "" and st.session_state['project_set'] != "Done":
+    if app_settings["previous_project"] != "":
         st.session_state["project_name"] = project_name = app_settings["previous_project"]
         video_list = os.listdir("videos")
         st.session_state["index_of_project_name"] = video_list.index(project_name)
         st.session_state['project_set'] = 'Done'
+    else:
+        st.session_state["project_name"] = project_name = ""
+        st.session_state["index_of_project_name"] = ""
 
             
     st.session_state["project_name"] = st.sidebar.selectbox("Select which project you'd like to work on:", os.listdir("videos"),index=st.session_state["index_of_project_name"], on_change=update_app_setting("previous_project", st.session_state["project_name"]))
@@ -970,13 +980,18 @@ def main():
                                     "Background Replacement",
                                     "Frame Styling",
                                     "Frame Interpolation",
-                                    "Video Rendering"])
+                                    "Video Rendering",
+                                    "Image Editing"])
 
         st.header(st.session_state.stage)
         
         if st.session_state.stage == "Key Frame Selection":
 
             timing_details = get_timing_details(project_name)
+
+            if len(timing_details) == 0:            
+                st.info("You first need to select key frames from your input video on the left.")
+               
 
             project_settings = get_project_settings(project_name)
 
@@ -1170,9 +1185,6 @@ def main():
                     min_frames = 0
                 else:
                     length_of_timing_details = len(timing_details) - 1
-                    print(timing_details[length_of_timing_details])
-                    print(len(timing_details))
-                    print(timing_details[length_of_timing_details]["frame_number"])
                     min_frames= int(float(timing_details[length_of_timing_details]["frame_number"]))
 
                 # make max_frames equal to the number that's multiplied by the granularity
@@ -1204,9 +1216,13 @@ def main():
         elif st.session_state.stage == "App Settings":
             app_settings = get_app_settings()
 
-            replicate_com_api_key = st.text_input("replicate_com_api_key", value = app_settings["replicate_com_api_key"])
-            aws_access_key_id = st.text_input("aws_access_key_id", value = app_settings["aws_access_key_id"])
-            aws_secret_access_key = st.text_input("aws_secret_access_key", value = app_settings["aws_secret_access_key"])
+            st.write("API Keys:")
+
+            with st.expander("Reveal API Keys:"):
+
+                replicate_com_api_key = st.text_input("replicate_com_api_key", value = app_settings["replicate_com_api_key"])
+                aws_access_key_id = st.text_input("aws_access_key_id", value = app_settings["aws_access_key_id"])
+                aws_secret_access_key = st.text_input("aws_secret_access_key", value = app_settings["aws_secret_access_key"])
 
             if st.button("Save Settings"):
                 update_app_setting("replicate_com_api_key", replicate_com_api_key)
@@ -1218,67 +1234,97 @@ def main():
             new_project_name = st.text_input("Project Name", value="")
             width = st.selectbox("Select video width", options=["512","704","1024"], key="video_width")
             height = st.selectbox("Select video height", options=["512","704","1024"], key="video_height")
+            input_type = st.radio("Select input type", options=["Video","Image"], key="input_type", help="This will determine whether you guide the AI with a video or a series of images. You can always change this later.")
+
             if st.button("Create New Project"):                         
                 create_working_assets(new_project_name)
                 project_name = new_project_name
                 update_project_setting("width", width, project_name)
-                update_project_setting("height", height, project_name)       
+                update_project_setting("height", height, project_name)  
+                update_project_setting("input_type", input_type, project_name)
+                st.session_state["project_name"] = project_name
+                st.session_state["project_set"] = "Yes"            
+                st.success("Project created - you can select it on the left.")
+                time.sleep(1)
                 st.experimental_rerun()
-                st.write("Project created - you can select it on the left.")    
                 
 
             
 
 
         elif st.session_state.stage == "Background Replacement":
+
+            if len(timing_details) == 0:
+                st.info("You first need to select key frames at the Key Frame Selection stage.")
                       
-            images_list = [f for f in os.listdir(f'videos/{project_name}/assets/frames/1_selected') if f.endswith('.png')]
-
-            images_list = sorted(images_list)
-
-            images_list.sort(key=lambda f: int(re.sub('\D', '', f)))
+            timing_details = get_timing_details(project_name)
+            project_settings = get_project_settings(project_name)
             
-            background_list = os.listdir(f'videos/{project_name}/assets/resources/backgrounds')
+            # put all.pngs in f'videos/{project_name}/assets/resources/backgrounds' into background_list
+            background_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/backgrounds') if f.endswith('.png')]
+
+            print(background_list)
             
             st.sidebar.header("Batch background replacement")
 
-            range_start = st.sidebar.slider('Update From', 0, len(images_list), 1)
+            which_stage = st.sidebar.radio("Which stage would you like to remove the backgrounds of?", options=["Unedited Frames", "Edited Frames"])
 
-            range_end = st.sidebar.slider('Update To', 0, len(images_list), 1)
+            if which_stage == "Unedited Frames":
+                image_folder = "1_selected"
+            elif which_stage == "Edited Frames":
+                image_folder = "2_character_pipeline_completed"
+
+            range_start = st.sidebar.slider('Update From', 0, len(timing_details) -1, 0)
+
+            range_end = st.sidebar.slider('Update To', 0, len(timing_details) - 1, 1) + 1
 
             background_image = st.sidebar.selectbox("Range background", background_list)
 
-            st.sidebar.image(f"videos/{project_name}/assets/resources/backgrounds/{background_image}", use_column_width=True)
+            if background_list != []:
 
-            if range_start <= range_end:
+                st.sidebar.image(f"videos/{project_name}/assets/resources/backgrounds/{background_image}", use_column_width=True)
 
-                if st.sidebar.button(f'Swap background'):
+                if range_start <= range_end:
 
-                    for i in range(range_start, range_end):
-                        swap_background()
+                    if st.sidebar.button(f'Swap background'):
 
+                        for i in range(range_start, range_end):
+                            index_of_current_item = i
+                            remove_background(project_name, index_of_current_item, image_folder, "no")
+                            replace_background(project_name, index_of_current_item, background_image, image_folder)
+
+                else:
+                        
+                        st.sidebar.write("Select a valid range")
             else:
-                    
-                    st.sidebar.write("Select a valid range")
-
+                st.sidebar.button("Swap background", disabled=True, help="No background images found for this project. Upload some below.")
+            
             uploaded_files = st.sidebar.file_uploader("Add more background images here", accept_multiple_files=True)
+            width = project_settings["width"]
+            height = project_settings["height"]
+            st.sidebar.info(f"Please make sure files are .png format and are the same size as your project - {width} x {height} pixels in size.")
             if uploaded_files is not None:
                 for uploaded_file in uploaded_files:
                     file_details = {"FileName":uploaded_file.name,"FileType":uploaded_file.type}
-                    st.write(file_details)
+                    st.sidebar.write(file_details)
                     img = Image.open(uploaded_file)        
                     with open(os.path.join(f"videos/{project_name}/assets/resources/backgrounds",uploaded_file.name),"wb") as f: 
-                        f.write(uploaded_file.getbuffer())         
-                        st.success("Saved File") 
-                        # apend the image to the list
-                        images_list.append(uploaded_file.name)
+                             
+                        st.sidebar.success("Your backgrounds are uploaded file, refresh the page to see them.")                     
+                        background_list.append(uploaded_file.name)
+                # uploaded_files = None
+                # st.experimental_rerun()
+                
+                        
             
 
-            for image_name in images_list:
+            for i in timing_details:
+
+                index_of_current_item = timing_details.index(i)
+                                                
+                image = Image.open(f"videos/{project_name}/assets/frames/{image_folder}/{index_of_current_item}.png")            
             
-                image = Image.open(f'videos/{project_name}/assets/frames/1_selected/{image_name}')            
-            
-                st.subheader(f'{image_name}')                
+                st.subheader(f'{index_of_current_item}')                
 
                 st.image(image, use_column_width=True)
                                         
@@ -1291,92 +1337,96 @@ def main():
     
             project_settings = get_project_settings(project_name)
 
-            images_list = [f for f in os.listdir(f'videos/{project_name}/assets/frames/2_character_pipeline_completed') if f.endswith('.png')]
-    
-            images_list.sort(key=lambda f: int(re.sub('\D', '', f)))
-
-            if len(images_list) == 0:
-                st.write("<------- Restyle Frames Here")
+            if len(timing_details) == 0:
+                st.info("You first need to select key frames at the Key Frame Selection stage.")
 
             st.sidebar.header("Restyle Frames")
-
-            restyle1, restyle2, restyle3 = st.sidebar.tabs(["Character Restyling", "Scene Restyling", "Image Editing"])
-
-            with restyle1:
                 
-                prompt = st.sidebar.text_area(f"Prompt", value=project_settings["base_prompt"], label_visibility="visible")
+            prompt = st.sidebar.text_area(f"Prompt", value=project_settings["last_prompt"], label_visibility="visible")
+            
+            strength = st.sidebar.number_input(f"Batch strength", value=float(project_settings["last_strength"]))
 
-                strength = st.sidebar.number_input(f"Batch strength", value =0.25)
+            models = get_models()
 
-                models = get_models()
+            models.append('sd')
+            models.append('depth2img')
+            models.append('pix2pix')
 
-                models.append('sd')
-                models.append('depth2img')
-                models.append('pix2pix')
+            # find the index of last_model in models
 
-                model = st.sidebar.selectbox(f"Model", models)
-                
-                if model != "sd" and model != "depth2img" and model != "pix2pix":
+            index_of_last_model = models.index(project_settings["last_model"])
 
-                    model_details = get_model_details(model)
+            model = st.sidebar.selectbox(f"Model", models,index=index_of_last_model)
 
-                    st.sidebar.write(f"Must include '{model_details['keyword']}' in the prompt when running this model")
+            if project_settings["last_character_pipeline"] == "no":
+                index_of_run_character_pipeline = 1
+            else:
+                index_of_run_character_pipeline = 0
+            
 
-                    model_id = model_details['id']
-                
-                else:                    
-                    model_id = model
+            run_character_pipeline = st.sidebar.radio("Run character pipeline?", options=["Yes", "No"], index=index_of_run_character_pipeline)
+            
+            if model != "sd" and model != "depth2img" and model != "pix2pix":
 
-                range_start = st.sidebar.slider('Update From', 0, len(timing_details) -1, 0)
+                model_details = get_model_details(model)
 
-                range_end = st.sidebar.slider('Update To', 0, len(timing_details) - 1, 1)
+                st.sidebar.info(f"Must include '{model_details['keyword']}' in the prompt when running this model")
+
+                model_id = model_details['id']
+            
+            else:                    
+                model_id = model
+
+            range_start = st.sidebar.slider('Update From', 0, len(timing_details) -1, 0)
+
+            range_end = st.sidebar.slider('Update To', 0, len(timing_details) - 1, 1)
+
+            range_end = range_end + 1
+
+            project_settings = get_project_settings(project_name)
+
+            app_settings = get_app_settings()
+
+            if 'restyle_button' not in st.session_state:
+                st.session_state['restyle_button'] = ''
+                st.session_state['item_to_restyle'] = ''
 
 
-                range_end = range_end + 1
+            if range_start <= range_end:
 
-                project_settings = get_project_settings(project_name)
+                if st.sidebar.button(f'Batch restyle') or st.session_state['restyle_button'] == 'yes':
 
-                app_settings = get_app_settings()
+                    if st.session_state['restyle_button'] == 'yes':
+                        range_start = int(st.session_state['item_to_restyle'])
+                        range_end = range_start + 1
+                        st.session_state['restyle_button'] = ''
+                        st.session_state['item_to_restyle'] = ''
 
-                if 'restyle_button' not in st.session_state:
-                    st.session_state['restyle_button'] = ''
-                    st.session_state['item_to_restyle'] = ''
+                    for i in range(range_start, range_end): 
+                                            
 
-
-                if range_start <= range_end:
-
-                    if st.sidebar.button(f'Batch restyle') or st.session_state['restyle_button'] == 'yes':
-
-                        if st.session_state['restyle_button'] == 'yes':
-                            range_start = int(st.session_state['item_to_restyle'])
-                            range_end = range_start + 1
-                            st.session_state['restyle_button'] = ''
-                            st.session_state['item_to_restyle'] = ''
-
-                        for i in range(range_start, range_end): 
+                        index_of_current_item = i
+                        get_model_details(model)                    
+                        prompt = prompt.replace(",", ".")                              
+                        prompt = prompt.replace("\n", "")
+                        update_project_setting("last_prompt", prompt, project_name)
+                        update_project_setting("last_strength", strength,project_name)
+                        update_project_setting("last_model", model, project_name)
+                        update_project_setting("last_character_pipeline", run_character_pipeline, project_name)
+                        update_timing_values(project_name, index_of_current_item, prompt, strength, model,run_character_pipeline)                                                    
+                        timing_details = get_timing_details(project_name)
+                        if run_character_pipeline == "Yes":                        
+                            character_pipeline(index_of_current_item, project_name, project_settings, timing_details)
+                        else:
+                            restyle_images(index_of_current_item, project_name, project_settings, timing_details)
                                                 
 
-                            index_of_current_item = i
-                            get_model_details(model)                    
-                            prompt = prompt.replace(",", ".")                
-                            update_timing_values(project_name, index_of_current_item, prompt, strength, model)                                                    
-                            timing_details = get_timing_details(project_name)
-                            character_pipeline(index_of_current_item, project_name, app_settings, project_settings, timing_details)
-                                                    
+                    st.experimental_rerun()
 
-                        st.experimental_rerun()
-
-                else:
-                        
-                        st.sidebar.write("Select a valid range")
-
-            with restyle2:
-
-                st.sidebar.write("Scene Restyling")
-
-            with restyle3:
-                
-                st.sidebar.write("Image Editing")
+            else:
+                    
+                    st.sidebar.write("Select a valid range")
+    
         
             for i in timing_details:
 
@@ -1393,6 +1443,11 @@ def main():
                 image_comparison(starting_position=10,
                     img1=f'videos/{project_name}/assets/frames/1_selected/{index_of_current_item}.png',
                     img2=img2)
+                
+                with st.expander("Show/Hide Details", expanded=False):
+                    st.write(f"Prompt: {i['prompt']}")
+                    st.write(f"Strength: {i['strength']}")
+                    st.write(f"Model: {i['model_id']}") 
 
 
                 col1, col2, col3, col4 = st.columns(4)
@@ -1420,63 +1475,66 @@ def main():
 
 
         elif st.session_state.stage == "Frame Interpolation":
-            st.write("This is the frame interpolation view")
-            timing_details = get_timing_details(project_name)
-            key_settings = get_app_settings()
-            total_number_of_videos = len(timing_details) - 1
-
-            interpolation_steps = st.slider("Number of interpolation steps", min_value=1, max_value=8, value=4)
-            with st.expander("Unsure what to pick? Click to see what this means."):
-                st.write("Interpolation steps are the number of frames to generate between each frame. We recommend varying the number of interpolation steps roughly based on how long the gap between each frame is is.")
-                st.write("0.17 seconds = 2 steps")
-                st.write("0.3 seconds = 3 steps")
-                st.write("0.57 seconds = 4 steps")
-                st.write("1.1 seconds = 5 steps")
-                st.write("2.17 seconds = 6 steps")
-                st.write("4.3 seconds = 7 steps")
-                st.write("8.57 seconds = 8 steps")
-
-            which_video = st.select_slider("Which video to interpolate", options=["All","Single"])
-
-            if which_video == "All":
-
-                if st.button("Interpolate All Videos"):
-
-                    for i in range(0, total_number_of_videos):
-
-                        index_of_current_item = i
-                        
-                        if not os.path.exists("videos/" + str(project_name) + "/assets/videos/0_raw/" + str(index_of_current_item) + ".mp4"):
-
-                            if total_number_of_videos == index_of_current_item:
-
-                                current_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png"
-
-                                final_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(key_settings["ending_image"])
-
-                                prompt_interpolation_model(current_image_location, final_image_location, project_name, index_of_current_item,
-                                                        interpolation_steps, key_settings["replicate_com_api_key"])
-
-                            else:
-
-                                current_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png"
-
-                                next_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item+1) + ".png"
-
-                                prompt_interpolation_model(current_image_location, next_image_location, project_name, index_of_current_item,
-                                                        interpolation_steps, key_settings["replicate_com_api_key"])
-
+            if len(timing_details) == 0:
+                st.info("You first need to select key frames and restyle them.")
             else:
-                specific_video = st.number_input("Which video to interpolate", min_value=0, max_value=total_number_of_videos, value=0)
+                st.write("This is the frame interpolation view")
+                timing_details = get_timing_details(project_name)
+                key_settings = get_app_settings()
+                total_number_of_videos = len(timing_details) - 1
 
-                if st.button("Interpolate this video"):
-                    
-                    current_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(specific_video) + ".png"
+                interpolation_steps = st.slider("Number of interpolation steps", min_value=1, max_value=8, value=4)
+                with st.expander("Unsure what to pick? Click to see what this means."):
+                    st.write("Interpolation steps are the number of frames to generate between each frame. We recommend varying the number of interpolation steps roughly based on how long the gap between each frame is is.")
+                    st.write("0.17 seconds = 2 steps")
+                    st.write("0.3 seconds = 3 steps")
+                    st.write("0.57 seconds = 4 steps")
+                    st.write("1.1 seconds = 5 steps")
+                    st.write("2.17 seconds = 6 steps")
+                    st.write("4.3 seconds = 7 steps")
+                    st.write("8.57 seconds = 8 steps")
 
-                    next_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(specific_video+1) + ".png"
+                which_video = st.select_slider("Which video to interpolate", options=["All","Single"])
 
-                    prompt_interpolation_model(current_image_location, next_image_location, project_name, specific_video,
-                                                        interpolation_steps, key_settings["replicate_com_api_key"])
+                if which_video == "All":
+
+                    if st.button("Interpolate All Videos"):
+
+                        for i in range(0, total_number_of_videos):
+
+                            index_of_current_item = i
+                            
+                            if not os.path.exists("videos/" + str(project_name) + "/assets/videos/0_raw/" + str(index_of_current_item) + ".mp4"):
+
+                                if total_number_of_videos == index_of_current_item:
+
+                                    current_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png"
+
+                                    final_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(key_settings["ending_image"])
+
+                                    prompt_interpolation_model(current_image_location, final_image_location, project_name, index_of_current_item,
+                                                            interpolation_steps, key_settings["replicate_com_api_key"])
+
+                                else:
+
+                                    current_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png"
+
+                                    next_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item+1) + ".png"
+
+                                    prompt_interpolation_model(current_image_location, next_image_location, project_name, index_of_current_item,
+                                                            interpolation_steps, key_settings["replicate_com_api_key"])
+
+                else:
+                    specific_video = st.number_input("Which video to interpolate", min_value=0, max_value=total_number_of_videos, value=0)
+
+                    if st.button("Interpolate this video"):
+                        
+                        current_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(specific_video) + ".png"
+
+                        next_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(specific_video+1) + ".png"
+
+                        prompt_interpolation_model(current_image_location, next_image_location, project_name, specific_video,
+                                                            interpolation_steps, key_settings["replicate_com_api_key"])
 
 
             
@@ -1498,9 +1556,7 @@ def main():
                 timing_details = get_timing_details(project_name)
         
                 for i in timing_details:
-
-                    print(f'current item: {i}')
-
+                    
                     index_of_current_item = timing_details.index(i)
 
                     if index_of_current_item <= total_number_of_videos:
@@ -1534,7 +1590,7 @@ def main():
 
                     index_of_current_item = timing_details.index(i)
 
-                    if index_of_current_item < total_number_of_videos:
+                    if index_of_current_item <= total_number_of_videos:
 
                         index_of_current_item = timing_details.index(i)
 
@@ -1593,7 +1649,7 @@ def main():
 
         elif st.session_state.stage == "Project Settings":
 
-            print("Project Settings")
+            st.write("Project Settings")
             
 
         elif st.session_state.stage == "Train Model":
@@ -1608,9 +1664,6 @@ def main():
                 images_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/training_data')]
         
                 images_list.sort(key=lambda f: int(re.sub('\D', '', f)))
-
-                if len(images_list) == 0:
-                    st.write("No frames extracted yet")
                 
                 files_uploaded = ''
 
@@ -1667,7 +1720,111 @@ def main():
                 st.write("This is the tab 2")
 
                   
+        elif st.session_state.stage == "Image Editing":
 
+            timing_details = get_timing_details(project_name)
+
+            which_stage = st.selectbox('Select stage', ["Unedited", "Edited"])
+            which_image = slider = st.slider('Select image to edit', 0, len(timing_details)-1, 0)
+
+            tab1, tab2 = st.tabs(["Edit Image", "See Existing Models"])
+
+            if which_stage == "Unedited":
+                folder = "1_selected"
+            else:
+                folder = "2_character_pipeline_completed"
+
+
+            st_image= Image.open(f'videos/{project_name}/assets/frames/{folder}/{which_image}.png')
+
+            st.write("Image Editing")
+
+            from streamlit_drawable_canvas import st_canvas
+
+            try:
+                Path("tmp/").mkdir()
+            except FileExistsError:
+                pass
+
+            # Regular deletion of tmp files
+            # Hopefully callback makes this better
+            now = time.time()
+            N_HOURS_BEFORE_DELETION = 1
+            for f in Path("tmp/").glob("*.png"):
+                st.write(f, os.stat(f).st_mtime, now)
+                if os.stat(f).st_mtime < now - N_HOURS_BEFORE_DELETION * 3600:
+                    Path.unlink(f)
+
+            if "button_id" not in st.session_state:
+                st.session_state["button_id"] = ""
+
+            if st.session_state["button_id"] == "":
+                st.session_state["button_id"] = re.sub(
+                    "\d+", "", str(uuid.uuid4()).replace("-", "")
+                )
+
+            button_id = st.session_state["button_id"]
+            file_path = f"tmp/{button_id}.png"
+
+            custom_css = f""" 
+                <style>
+                    #{button_id} {{
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        background-color: rgb(255, 255, 255);
+                        color: rgb(38, 39, 48);
+                        padding: .25rem .75rem;
+                        position: relative;
+                        text-decoration: none;
+                        border-radius: 4px;
+                        border-width: 1px;
+                        border-style: solid;
+                        border-color: rgb(230, 234, 241);
+                        border-image: initial;
+                    }} 
+                    #{button_id}:hover {{
+                        border-color: rgb(246, 51, 102);
+                        color: rgb(246, 51, 102);
+                    }}
+                    #{button_id}:active {{
+                        box-shadow: none;
+                        background-color: rgb(246, 51, 102);
+                        color: white;
+                        }}
+                </style> """
+
+            data = st_canvas(background_image = st_image,width=704, height=512,update_streamlit=False, key="png_export")
+            if data is not None and data.image_data is not None:
+                img_data = data.image_data
+                im = Image.fromarray(img_data.astype("uint8"), mode="RGBA")
+                im.save(file_path, "PNG")
+
+                buffered = BytesIO()
+                im.save(buffered, format="PNG")
+                img_data = buffered.getvalue()
+                try:
+                    # some strings <-> bytes conversions necessary here
+                    b64 = base64.b64encode(img_data.encode()).decode()
+                except AttributeError:
+                    b64 = base64.b64encode(img_data).decode()
+
+                dl_link = (
+                    custom_css
+                    + f'<a download="{file_path}" id="{button_id}" href="data:file/txt;base64,{b64}">Export PNG</a><br></br>'
+                )
+                st.markdown(dl_link, unsafe_allow_html=True)
+
+            
+     
+
+
+            with tab1:
+                st.write("This is the tab 1")
+
+            with tab2:
+                st.write("This is the tab 2")
+            
 if __name__ == '__main__':
     main()
 
