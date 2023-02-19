@@ -17,6 +17,7 @@ import datetime
 import string
 import json
 import boto3
+import time
 import zipfile
 import random
 import uuid
@@ -50,9 +51,11 @@ def inpainting(video_name, image_url, prompt, negative_prompt):
     return output[0]
 
 def add_image_variant(image_url, index_of_current_item, project_name, timing_details):
+    
 
     if str(timing_details[index_of_current_item]["alternative_images"]) == "":
         alternative_images = f"['{image_url}']"
+        additions = []
     else:
         alternative_images = []
 
@@ -333,8 +336,8 @@ def create_working_assets(video_name):
     os.mkdir("videos/" + video_name + "/assets/videos/1_final")
     os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
 
-    data = {'key': ['last_prompt', 'last_model','last_strength','last_character_pipeline','song', 'input_type', 'input_video','extraction_type','width','height','last_negative_prompt','last_guidance_scale','last_seed','last_num_inference_steps'],
-        'value': ['prompt', 'sd', '0.5','no','', 'video', '','Regular intervals','','','',7.5,0,50]}
+    data = {'key': ['last_prompt', 'last_model','last_strength','last_character_pipeline','song', 'input_type', 'input_video','extraction_type','width','height','last_negative_prompt','last_guidance_scale','last_seed','last_num_inference_steps','last_which_stage_to_run_on'],
+        'value': ['prompt', 'sd', '0.5','no','', 'video', '','Regular intervals','','','',7.5,0,50,'Extracted Frames']}
 
     df = pd.DataFrame(data)
 
@@ -374,9 +377,6 @@ def prompt_interpolation_model(img1, img2, video_name, video_number, interpolati
     os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
 
     model = replicate.models.get("google-research/frame-interpolation")
-
-    # output = model.predict(frame1=open(img1, "rb"), frame2=open(
-    #    img2, "rb"), times_to_interpolate=interpolation_steps)
 
     output = model.predict(frame1=img1, frame2=img2, times_to_interpolate=interpolation_steps)
 
@@ -625,6 +625,7 @@ def prompt_model_dreambooth(project_name, image_number, model_name, app_settings
     num_inference_steps = int(timing_details[image_number]["num_inference_steps"])    
     model = replicate.models.get(f"peter942/{model_name}")
     model_details = get_model_details(model_name)
+    print(model)
     model_id = model_details["id"]
 
     if model_details["version"] == "":
@@ -851,6 +852,44 @@ def prompt_model_depth2img(strength,video_name, image_number, replicate_api_key,
     
     return output[0]
 
+def prompt_model_blip2(source_image, query):
+    app_settings = get_app_settings()
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]        
+    model = replicate.models.get("salesforce/blip-2")
+    version = model.versions.get("4b32258c42e9efd4288bb9910bc532a69727f9acd26aa08e175713a0a857a608")
+    output = version.predict(image=source_image, question=query)
+    print (output)
+    return output
+
+def facial_expression_recognition(source_image):
+    app_settings = get_app_settings()
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]        
+    model = replicate.models.get("phamquiluan/facial-expression-recognition")
+    version = model.versions.get("b16694d5bfed43612f1bfad7015cf2b7883b732651c383fe174d4b7783775ff5")
+    output = version.predict(input_path=source_image)
+    emo_label = output[0]["emo_label"]
+    if emo_label == "disgust":
+        emo_label = "disgusted"
+    elif emo_label == "fear":
+        emo_label = "fearful"
+    elif emo_label == "surprised":
+        emo_label = "surprised"
+    emo_proba = output[0]["emo_proba"]
+    if emo_proba > 0.95:
+        emotion = (f"very {emo_label} expression")
+    elif emo_proba > 0.85:
+        emotion = (f"{emo_label} expression")
+    elif emo_proba > 0.75:
+        emotion = (f"somewhat {emo_label} expression")
+    elif emo_proba > 0.65:
+        emotion = (f"slightly {emo_label} expression")
+    elif emo_proba > 0.55:
+        emotion = (f"{emo_label} expression")
+    else:
+        emotion = (f"neutral expression")
+    return emotion
+    
+
 def prompt_model_pix2pix(strength,video_name, image_number, timing_details, replicate_api_key, source_image):
     app_settings = get_app_settings()
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
@@ -861,8 +900,7 @@ def prompt_model_pix2pix(strength,video_name, image_number, timing_details, repl
     model = replicate.models.get("arielreplicate/instruct-pix2pix")
     version = model.versions.get("10e63b0e6361eb23a0374f4d9ee145824d9d09f7a31dcd70803193ebc7121430")
     image = source_image
-    output = version.predict(input_image=image, instruction_text=prompt, seed=seed, cfg_image=1.2, cfg_text = guidance_scale, resolution=704)
-    new_image = "videos/" + str(video_name) + "/assets/frames/2_character_pipeline_completed/" + str(image_number) + ".png"
+    output = version.predict(input_image=image, instruction_text=prompt, seed=seed, cfg_image=1.2, cfg_text = guidance_scale, resolution=704)    
 
     return output
 
@@ -890,13 +928,29 @@ def restyle_images(index_of_current_item,project_name, project_settings, timing_
 
     add_image_variant(output_url, index_of_current_item, project_name, timing_details)
 
+
+
+
 def character_pipeline(index_of_current_item, project_name, project_settings, timing_details, source_image):
 
     prompt = timing_details[index_of_current_item]["prompt"]
     model_name = timing_details[index_of_current_item]["model_id"]
-    strength = timing_details[index_of_current_item]["strength"]
+
     app_settings = get_app_settings()
     project_settings = get_project_settings(project_name)
+    
+    if "[expression]" in prompt:
+        prompt_expression = facial_expression_recognition(source_image)
+        prompt = prompt.replace("[expression]", prompt_expression)
+        update_specific_timing_value(project_name, index_of_current_item, "prompt", prompt)
+        timing_details = get_timing_details(project_name)
+
+    if "[location]" in prompt:
+        prompt_location = prompt_model_blip2(source_image, "What's surrounding the character?")
+        prompt = prompt.replace("[location]", prompt_location)
+        update_specific_timing_value(project_name, index_of_current_item, "prompt", prompt)
+        timing_details = get_timing_details(project_name)
+    
 
     # remove_background(project_name, index_of_current_item, "2_character_pipeline_completed", "yes")
     # replace_background(project_name, index_of_current_item, str(index_of_current_item) + ".png", "2_character_pipeline_completed")
@@ -929,7 +983,7 @@ def create_timings_row_at_frame_number(project_name, input_video, extract_frame_
 
 
 def get_models():
-
+    
     df = pd.read_csv('models.csv')
 
     models = df[df.columns[0]].tolist()
@@ -961,10 +1015,38 @@ def update_source_image(project_name, index_of_current_item,source_image):
     df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
 
 
+
+def update_specific_timing_value(project_name, index_of_current_item, parameter, value):
+    
+    df = pd.read_csv(f"videos/{project_name}/timings.csv")
+    
+    try:
+        col_index = df.columns.get_loc(parameter)
+    except KeyError:
+        raise ValueError(f"Invalid parameter: {parameter}")
+
+    
+    df.iloc[index_of_current_item, col_index] = value
+
+    
+    numeric_cols = ["primary_image", "seed", "num_inference_steps"]
+    for col in numeric_cols:
+        df[col] = pd.to_numeric(df[col], downcast="integer", errors="coerce")
+        df[col].fillna(0, inplace=True)
+        df[col] = df[col].astype(int)
+
+    
+    df.to_csv(f"videos/{project_name}/timings.csv", index=False)
+
+
+
 def update_timing_values(project_name, index_of_current_item,prompt, strength, model, character_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps, source_image):
 
     df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
 
+    print("HERE IT IS!!!")
+
+    print(prompt,strength,model,character_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps, source_image)
     df.iloc[index_of_current_item, [17,11,10,5,6,7,8,9,13]] = [prompt,strength,model,character_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps, source_image]
 
     # Convert the "primary_image" column to numeric
@@ -1007,17 +1089,121 @@ def create_gif_preview(project_name, timing_details):
         index_of_current_item = list_of_images.index(url)
         draw.text((frame.width - 60, frame.height - 60), str(index_of_current_item), font=font, fill=(255, 255, 255, 255))
         frames.append(np.array(frame))
-    imageio.mimsave(f'videos/{project_name}/preview_gif.gif', frames, fps=1)
-    
+    imageio.mimsave(f'videos/{project_name}/preview_gif.gif', frames, fps=0.5)
 
+
+def create_depth_mask_image(image_url,layer):
+    
+    app_settings = get_app_settings()
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]            
+    model = replicate.models.get("cjwbw/midas")
+    version = model.versions.get("a6ba5798f04f80d3b314de0f0a62277f21ab3503c60c84d4817de83c5edfdae0")
+    output = version.predict(image=image_url, model_type="dpt_beit_large_512")
+    try:
+        urllib.request.urlretrieve(output, "depth.png")    
+    except Exception as e:
+        print(e)
+
+    depth_map = Image.open("depth.png")
+    depth_map = depth_map.convert("L")  # Convert to grayscale image
+    pixels = depth_map.load()
+    mask = Image.new("L", depth_map.size)
+    mask_pixels = mask.load()
+
+    for i in range(depth_map.size[0]):
+        for j in range(depth_map.size[1]):
+            depth_value = pixels[i, j]
+            if layer == "Foreground":
+                mask_pixels[i, j] = 0 if depth_value > 200 else 255  # Set foreground pixels to black
+            elif layer == "Middleground":
+                mask_pixels[i, j] = 0 if depth_value <= 200 and depth_value > 50 else 255  # Set middleground pixels to black
+            elif layer == "Background":
+                mask_pixels[i, j] = 0 if depth_value <= 50 else 255  # Set background pixels to black
+
+    mask.save("mask.png") 
+
+def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, prompt, negative_prompt, width, height, layer):
+    if type_of_mask_selection == "Automated Background Selection":  
+        removed_background = remove_background(project_name, bg_image)
+        response = r.get(removed_background)                                
+        with open("masked_image.png", "wb") as f:
+            f.write(response.content)    
+        if type_of_mask_replacement == "Replace With Image":                                               
+            replace_background(project_name, "masked_image.png", background_image) 
+            edited_image = upload_image(f"videos/{project_name}/replaced_bg.png") 
+        elif type_of_mask_replacement == "Inpainting":
+            image = Image.open("masked_image.png")
+            converted_image = Image.new("RGB", image.size, (255, 255, 255))
+            for x in range(image.width):
+                for y in range(image.height):
+                    pixel = image.getpixel((x, y))
+                    if pixel[3] == 0:                                    
+                        converted_image.putpixel((x, y), (0,0,0))
+                    else:                                    
+                        converted_image.putpixel((x, y), (255, 255, 255))                                            
+            converted_image.save("mask.png")
+            edited_image = inpainting(project_name, bg_image, prompt, negative_prompt)                                                                                                
+                
+    elif type_of_mask_selection == "Manual Background Selection":
+        if type_of_mask_replacement == "Replace With Image":    
+            response = r.get(bg_image)
+            bg_img = Image.open(BytesIO(response.content))                        
+            mask_img = Image.open("mask.png")                                
+            result_img = Image.new("RGBA", bg_img.size, (255, 255, 255, 0))                                
+            for x in range(bg_img.size[0]):
+                for y in range(bg_img.size[1]):                                        
+                    if mask_img.getpixel((x, y)) == (0, 0, 0, 255):                                            
+                        result_img.putpixel((x, y), (255, 255, 255, 0))
+                    else:                                            
+                        result_img.putpixel((x, y), bg_img.getpixel((x, y)))                                
+            result_img.save("masked_image.png")                                                                                                                                                   
+            replace_background(project_name, "masked_image.png", background_image)
+            edited_image = upload_image(f"videos/{project_name}/replaced_bg.png")
+        elif type_of_mask_replacement == "Inpainting":
+            im = Image.open("mask.png")
+            mask = Image.new('RGB', (width, height), color = (255, 255, 255))
+            mask.paste(im, (0, 0), im)                                    
+            mask.save("mask.png")
+            edited_image = inpainting(project_name, bg_image, prompt, negative_prompt)
+    elif type_of_mask_selection == "Automated Layer Selection":
+        create_depth_mask_image(bg_image,layer)
+        if type_of_mask_replacement == "Replace With Image":
+            mask = Image.open("mask.png").convert('1')
+
+            response = r.get(bg_image)
+            bg_img = Image.open(BytesIO(response.content)).convert('RGBA')    
+            
+
+            # Apply the mask on the background image
+            masked_img = Image.composite(bg_img, Image.new('RGBA', bg_img.size, (0,0,0,0)), mask)
+
+            # Save the result as masked_image.png
+            masked_img.save("masked_image.png")
+                                                                                                                  
+            replace_background(project_name, "masked_image.png", background_image)
+            edited_image = upload_image(f"videos/{project_name}/replaced_bg.png")
+            
+        elif type_of_mask_replacement == "Inpainting":
+            edited_image = inpainting(project_name, bg_image, prompt, negative_prompt)
+                        
+
+    return edited_image
 
 
 def main():
+    
+    def project_changed():
+        st.session_state["project_changed"] = True
+
+    if "project_changed" not in st.session_state:
+        st.session_state["project_changed"] = False
+
+    if st.session_state["project_changed"] == True:
+        update_app_setting("previous_project", st.session_state["project_name"])
+        st.session_state["project_changed"] = False
 
     app_settings = get_app_settings()
-
     st.sidebar.title("Banodoco")
-
     if app_settings["previous_project"] != "":
         st.session_state["project_name"] = project_name = app_settings["previous_project"]
         video_list = os.listdir("videos")
@@ -1025,71 +1211,41 @@ def main():
         st.session_state['project_set'] = 'Done'
     else:
         st.session_state["project_name"] = project_name
-        st.session_state["index_of_project_name"] = ""
-
-            
-    st.session_state["project_name"] = st.sidebar.selectbox("Select which project you'd like to work on:", os.listdir("videos"),index=st.session_state["index_of_project_name"], on_change=update_app_setting("previous_project", st.session_state["project_name"]))
-    
-
+        st.session_state["index_of_project_name"] = ""            
+    st.session_state["project_name"] = st.sidebar.selectbox("Select which project you'd like to work on:", os.listdir("videos"),index=st.session_state["index_of_project_name"], on_change=project_changed())    
     project_name = st.session_state["project_name"]
 
+
+    
     if project_name == "":
-
         st.write("No projects found")
-
-    else:
-
-        #key_settings = get_key_settings("videos/" + str(project_name) + "/settings.csv")
-
+    else:        
         if not os.path.exists("videos/" + project_name + "/assets"):
-
             create_working_assets(project_name)
-
         timing_details = get_timing_details(project_name)
-
-
         st.session_state.stage = st.sidebar.radio("Select an option",
-                                    ["App Settings",
-                                    "New Project",
-                                    "Project Settings",
-                                    "Train Model",
-                                    "Key Frame Selection",
-                                    "Background Replacement",
-                                    "Frame Styling",
-                                    "Frame Interpolation",
-                                    "Video Rendering",
-                                    "Image Editing"])
+                                    ["App Settings","New Project","Project Settings","Custom Models","Key Frame Selection",
+                                     "Frame Styling","Frame Editing","Frame Interpolation","Timing Adjustment","Video Rendering"])
+        st.header(st.session_state.stage)   
 
-        st.header(st.session_state.stage)
-        
+     
         if st.session_state.stage == "Key Frame Selection":
+            
+
 
             timing_details = get_timing_details(project_name)
-
-            if len(timing_details) == 0:            
-                st.info("You first need to select key frames from your input video on the left.")
-               
-
+            # if videos/{project_name}/assets/frames/1_selected/0.pngdoesn't exist, give a warning
+                  
             project_settings = get_project_settings(project_name)
-
-            images_list = [f for f in os.listdir(f'videos/{project_name}/assets/frames/0_extracted') if f.endswith('.png')]
-    
+            images_list = [f for f in os.listdir(f'videos/{project_name}/assets/frames/0_extracted') if f.endswith('.png')]    
             images_list.sort(key=lambda f: int(re.sub('\D', '', f)))
-
-            st.sidebar.subheader("Extract key frames from video")
-                
+            st.sidebar.subheader("Extract key frames from video")                
             input_video_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/input_videos') if f.endswith('.mp4')]
-
-            # find the index of the value at input_video in the input_video_list
-
+            
             if project_settings["input_video"] != "": 
-
-                input_video_index = input_video_list.index(project_settings["input_video"])
-                
+                input_video_index = input_video_list.index(project_settings["input_video"])                
                 input_video = st.sidebar.selectbox("Input video:", input_video_list, index = input_video_index)
-
                 st.sidebar.video(f'videos/{project_name}/assets/resources/input_videos/{input_video}')
-
             else:
                 input_video = st.sidebar.selectbox("Input video:", input_video_list)
 
@@ -1100,34 +1256,20 @@ def main():
                     with open(f'videos/{project_name}/assets/resources/input_videos/{uploaded_file.name}', 'wb') as f:
                         f.write(uploaded_file.getbuffer())
             type_of_extraction = project_settings["extraction_type"]
-
-            types_of_extraction = ["Extract manually", "Regular intervals", "Extract from csv"]
-
-            # find the index of the value at type_of_extraction in the types_of_extraction
-
-            type_of_extraction_index = types_of_extraction.index(type_of_extraction)
-            
+            types_of_extraction = ["Extract manually", "Regular intervals", "Extract from csv"]            
+            type_of_extraction_index = types_of_extraction.index(type_of_extraction)            
             type_of_extraction = st.sidebar.radio("Choose type of key frame extraction", types_of_extraction, index = type_of_extraction_index)
-
             input_video_cv2 = cv2.VideoCapture(f'videos/{project_name}/assets/resources/input_videos/{input_video}')
-
             total_frames = input_video_cv2.get(cv2.CAP_PROP_FRAME_COUNT)
-
             fps = input_video_cv2.get(cv2.CAP_PROP_FPS)
-
             st.sidebar.caption(f"This video is {total_frames} frames long and has a framerate of {fps} fps.")
 
             if type_of_extraction == "Regular intervals":
-
                 frequency_of_extraction = st.sidebar.slider("How frequently would you like to extract frames?", min_value=5, max_value=100, step=5, value = 10, help=f"This will extract frames at regular intervals. For example, if you choose 15 it'll extract every 15th frame.")
-
-                if st.sidebar.checkbox("I understand that running this will remove all existing frames"):
-                    
+                if st.sidebar.checkbox("I understand that running this will remove all existing frames"):                    
                     if st.sidebar.button("Extract frames"):
-
                         update_project_setting("extraction_type", "Regular intervals",project_name)
                         update_project_setting("input_video", input_video,project_name)
-
                         number_of_extractions = int(total_frames/frequency_of_extraction)
                         remove_existing_timing(project_name)
 
@@ -1136,167 +1278,140 @@ def main():
                             extract_frame_number = i * frequency_of_extraction
                             create_timings_row_at_frame_number(project_name, input_video, extract_frame_number, timing_details)
                             timing_details = get_timing_details(project_name)
-                            extract_frame(i, project_name, input_video, extract_frame_number,timing_details)                        
-                            
-                                            
+                            extract_frame(i, project_name, input_video, extract_frame_number,timing_details)                                                                                                
                         st.experimental_rerun()
-
-
-                else:
-                    
+                else:                    
                     st.sidebar.button("Extract frames", disabled=True)
 
                     
 
             elif type_of_extraction == "Extract manually":
-
                 granularity = st.sidebar.slider("Choose frame granularity", min_value=5, max_value=50, step=5, value = 10, help=f"This will extract frames for you to manually choose from. For example, if you choose 15 it'll extract every 15th frame.")
-
                 if st.sidebar.checkbox("I understand that running this will remove all existing frames"):
-
                     if st.sidebar.button("Update granularity"):
-
                         update_project_setting("extraction_type", "Extract manually",project_name)
                         update_project_setting("input_video", input_video,project_name)
-
                         remove_existing_timing(project_name)
-
                         for f in os.listdir(f'videos/{project_name}/assets/frames/0_extracted'):
-                            os.remove(f'videos/{project_name}/assets/frames/0_extracted/{f}')
-                        
+                            os.remove(f'videos/{project_name}/assets/frames/0_extracted/{f}')                        
                         for i in range(0, int(input_video_cv2.get(cv2.CAP_PROP_FRAME_COUNT)), int(granularity)):
-
                             input_video_cv2.set(cv2.CAP_PROP_POS_FRAMES, i)
-
                             ret, frame = input_video_cv2.read()
-
                             cv2.imwrite(f"videos/{project_name}/assets/frames/0_extracted/" + str(i) + ".png", frame)
-
                             st.session_state['select_frames'] = []
-
                         cv2.imwrite(f"videos/{project_name}/assets/frames/0_extracted/" + str(int(float(total_frames))) + ".png", int(float(total_frames)))
-
                         st.experimental_rerun()
                 else:
                     st.sidebar.button("Update granularity", disabled=True)
 
 
             elif type_of_extraction == "Extract from csv":
-
                 st.sidebar.subheader("Re-extract key frames using existing timings file")
-
                 st.sidebar.write("This will re-extract all frames based on the timings file. This is useful if you've changed the granularity of your key frames manually.")
-
                 if st.sidebar.checkbox("I understand that running this will remove every existing frame"):
-
                     if st.sidebar.button("Re-extract frames"):
-
                         update_project_setting("extraction_type", "Extract from csv",project_name)
                         update_project_setting("input_video", input_video,project_name)
-
                         get_timing_details(project_name)                                            
-    
                         for f in os.listdir(f'videos/{project_name}/assets/frames/0_extracted'):
                             os.remove(f'videos/{project_name}/assets/frames/0_extracted/{f}')
-    
                         for i in timing_details:
-
                             index_of_current_item = timing_details.index(i)                                                
-
-                            extract_frame(index_of_current_item, project_name, input_video, int(float(timing_details[index_of_current_item]['frame_number'])),timing_details)
-
-                                        
+                            extract_frame(index_of_current_item, project_name, input_video, int(float(timing_details[index_of_current_item]['frame_number'])),timing_details)                                        
                 else:
                     st.sidebar.button("Re-extract frames",disabled=True)                  
-
                                     
             timing_details = get_timing_details(project_name)
                     
-                            
-            for image_name in timing_details:
+            if not os.path.exists(f"videos/{project_name}/assets/frames/1_selected/0.png") and not os.path.exists(f"videos/{project_name}/assets/frames/1_selected/0.png"):                    
+                st.info("You need to add  key frames first in the Key Frame Selection section.")
+            else:         
+                for image_name in timing_details:
 
-                index_of_current_item = timing_details.index(image_name)
-            
-                image = Image.open(f'videos/{project_name}/assets/frames/1_selected/{index_of_current_item}.png')            
-                st.subheader(f'Image Name: {index_of_current_item}')                
-                st.image(image, use_column_width=True)
+                    index_of_current_item = timing_details.index(image_name)
                 
-                col1, col2,col3 = st.columns([2,1,1])
+                    image = Image.open(f'videos/{project_name}/assets/frames/1_selected/{index_of_current_item}.png')            
+                    st.subheader(f'Image Name: {index_of_current_item}')                
+                    st.image(image, use_column_width=True)
+                    
+                    col1, col2,col3, col4 = st.columns([1,1,1,1])
 
-                current_item =  str(index_of_current_item) + "_lad"
+                    current_item =  str(index_of_current_item) + "_lad"
 
-                
-                with col1:
-
-                    st.write(timing_details[index_of_current_item]["frame_time"])
-            
-
-                with col2:
-
-                    delete_confirmed = 'false'
-
-                    if st.checkbox(f"Confirm you want to delete {index_of_current_item}"):
-                        delete_confirmed = 'true'
+                    
+                    with col1:
+                        frame_time = round(float(timing_details[index_of_current_item]['frame_time']),2)                                    
+                        st.markdown(f"Frame Time: {frame_time}")
                         
+                    with col2:
+                        # return frame number to 2 decimal places
+                        frame_number = round(float(timing_details[index_of_current_item]['frame_number']),2)                                    
+                        st.markdown(f"Frame Number: {frame_number}")
 
-                with col3:
+                
 
-                    if delete_confirmed == 'true':
-                        if st.button(f"Delete {index_of_current_item} Frame", disabled=False):
-                            delete_frame(project_name, index_of_current_item)
+                    with col3:
+                        if st.button(f"Reset Key Frame #{index_of_current_item}", help="This will reset the base key frame to the original unedited version. This will not affect the video."):
+                            extract_frame(int(index_of_current_item), project_name, project_settings["input_video"], timing_details[index_of_current_item]["frame_number"],timing_details)
+                            new_source_image = upload_image(f"videos/{project_name}/assets/frames/1_selected/{index_of_current_item}.png")
+                            update_source_image(project_name, index_of_current_item, new_source_image)
                             st.experimental_rerun()
+                            
+                    with col4:                    
+                        if st.button(f"Delete {index_of_current_item} Frame", disabled=False, help="This will delete the key frame from your project. This will not affect the video."):
+                            delete_frame(project_name, index_of_current_item)
+                            st.experimental_rerun()                    
 
-                    else: 
-                        st.button(f"Delete {index_of_current_item} Frame", type="secondary", disabled=True)
+                if type_of_extraction == "Extract manually":
 
-            if type_of_extraction == "Extract manually":
+                    st.subheader('Manually add key frames to your project')
+                    st.write("Select a frame from the slider below and click 'Add Frame' it to the end of your project")
+                    images = os.listdir(f"videos/{project_name}/assets/frames/0_extracted")
+                    images = [i.replace(".png", "") for i in images]
 
-                st.title('Manually add key frames to your project')
+                    images.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
+                                
+                    if timing_details == []:
+                        min_frames = 0
+                    else:
+                        length_of_timing_details = len(timing_details) - 1
+                        min_frames= int(float(timing_details[length_of_timing_details]["frame_number"]))
 
-                st.write("Select a frame from the slider below and click 'Add Frame' it to the end of your project")
+                    max_frames = int((float(total_frames) / float(granularity))) * int(granularity)
 
-                images = os.listdir(f"videos/{project_name}/assets/frames/0_extracted")
-
-                images = [i.replace(".png", "") for i in images]
-
-                images.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
-
-                # extract the name of the seond item in the list
-                #granularity = int(images[1])
-
-                if timing_details == []:
-                    min_frames = 0
-                else:
-                    length_of_timing_details = len(timing_details) - 1
-                    min_frames= int(float(timing_details[length_of_timing_details]["frame_number"]))
-
-                # make max_frames equal to the number that's multiplied by the granularity
+                    if max_frames > int(float(total_frames)):
+                        max_frames = int(float(total_frames))
+            
+                    slider = st.slider("Choose Frame", max_value= min_frames+ 100, min_value=min_frames,step=granularity, value = min_frames + granularity)
 
 
-                max_frames = int((float(total_frames) / float(granularity))) * int(granularity)
 
-                if max_frames > int(float(total_frames)):
-                    max_frames = int(float(total_frames))
+                    st.image(f"videos/{project_name}/assets/frames/0_extracted/{slider}.png")
+
+                    if st.button(f"Add Frame {slider} to Project"):     
+                        
+                        last_index = len(timing_details)
+
+                        shutil.copy(f"videos/{project_name}/assets/frames/0_extracted/{slider}.png", f"videos/{project_name}/assets/frames/1_selected/{last_index}.png")
+
+                        create_timings_row_at_frame_number(project_name, input_video, slider,timing_details)
+                        
+                        st.experimental_rerun()
+
+                
+                st.header("Load existing selections for styling and editing:")
+                st.write("This will load up the existing selections for styling and editing. This will update the source image if there's one already available.")
+
+                if st.button("Load up existing selections"):
+                        for i in timing_details:                    
+                            index_of_current_item = timing_details.index(i)
+                            source_image = upload_image(f"videos/{project_name}/assets/frames/1_selected/{index_of_current_item}.png")                        
+                            update_source_image(project_name, index_of_current_item, source_image)
+                        st.success("Loaded up existing selections!")
         
-                slider = st.slider("Choose Frame", max_value= min_frames+ 100, min_value=min_frames,step=granularity, value = min_frames + granularity)
-
-
-
-                st.image(f"videos/{project_name}/assets/frames/0_extracted/{slider}.png")
-
-                if st.button(f"Add Frame {slider} to Project"):     
-                    
-                    last_index = len(timing_details)
-
-                    shutil.copy(f"videos/{project_name}/assets/frames/0_extracted/{slider}.png", f"videos/{project_name}/assets/frames/1_selected/{last_index}.png")
-
-                    create_timings_row_at_frame_number(project_name, input_video, slider,timing_details)
-                    
-                    st.experimental_rerun()
-
-
 
         elif st.session_state.stage == "App Settings":
+
             app_settings = get_app_settings()
 
             st.write("API Keys:")
@@ -1312,7 +1427,12 @@ def main():
                 update_app_setting("aws_access_key_id", aws_access_key_id)
                 update_app_setting("aws_secret_access_key", aws_secret_access_key)
                 st.experimental_rerun()
+
+           
             
+                
+
+
         elif st.session_state.stage == "New Project":
             new_project_name = st.text_input("Project Name", value="")
             width = st.selectbox("Select video width", options=["512","704","1024"], key="video_width")
@@ -1332,354 +1452,247 @@ def main():
                 st.experimental_rerun()
                 
 
-            
-
-
-        elif st.session_state.stage == "Background Replacement":
-
-            if len(timing_details) == 0:
-                st.info("You first need to select key frames at the Key Frame Selection stage.")
-                      
-            timing_details = get_timing_details(project_name)
-            project_settings = get_project_settings(project_name)
-
-            which_stage = st.sidebar.radio("Which stage would you like to remove the backgrounds of?", options=["Unedited Frames", "Edited Frames"])
-            
-            background_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/backgrounds') if f.endswith('.png')]                    
-            type_of_bg_replacement = st.sidebar.radio("What would you like to do?", options=["Automated background removal", "Manual image editing"], key="background_replacement_type")
-            replace_with = st.sidebar.radio("Replace with:", options=["AI-Generated Background", "Uploaded Background"], key="replace_with")
-
-            if which_stage == "Unedited Frames":
-                image_folder = "1_selected"
-            elif which_stage == "Edited Frames":
-                image_folder = "2_character_pipeline_completed"     
-
-            if type_of_bg_replacement == "Automated background removal":
-                st.sidebar.header("Batch background replacement")
-
-                range_start = st.sidebar.slider('Update From', 0, len(timing_details) -1, 0)
-                range_end = st.sidebar.slider('Update To', 0, len(timing_details) - 1, 1) + 1
-                
-                                                        
-                for i in timing_details:
-                    index_of_current_item = timing_details.index(i)                                                    
-                    image = Image.open(f"videos/{project_name}/assets/frames/{image_folder}/{index_of_current_item}.png")                            
-                    st.subheader(f'{index_of_current_item}')                
-
-                    st.image(image, use_column_width=True)
-            elif type_of_bg_replacement == "Manual image editing":
-                print("Manual background replacement")  
-
-            if replace_with == "Uploaded Background":
-                
-                              
-                background_image = st.sidebar.selectbox("Range background", background_list)
-                if background_list != []:
-                    st.sidebar.image(f"videos/{project_name}/assets/resources/backgrounds/{background_image}", use_column_width=True)
-                    if range_start <= range_end:
-                        if st.sidebar.button(f'Swap background'):
-                            for i in range(range_start, range_end):
-                                index_of_current_item = i
-                                remove_background(project_name, index_of_current_item, image_folder, "no")
-                                replace_background(project_name, index_of_current_item, background_image, image_folder)
-                    else:                            
-                            st.sidebar.write("Select a valid range")
-                else:
-                    st.sidebar.button("Swap background", disabled=True, help="No background images found for this project. Upload some below.")
-                uploaded_files = st.sidebar.file_uploader("Add more background images here", accept_multiple_files=True)
-                width = project_settings["width"]
-                height = project_settings["height"]
-                st.info(f"Please make sure files are .png format and are the same size as your project - {width} x {height} pixels in size.")
-                if uploaded_files is not None:
-                    for uploaded_file in uploaded_files:
-                        file_details = {"FileName":uploaded_file.name,"FileType":uploaded_file.type}
-                        st.sidebar.write(file_details)
-                        img = Image.open(uploaded_file)        
-                        with open(os.path.join(f"videos/{project_name}/assets/resources/backgrounds",uploaded_file.name),"wb") as f:                                 
-                            st.sidebar.success("Your backgrounds are uploaded file, refresh the page to see them.")                     
-                            background_list.append(uploaded_file.name)
-            elif replace_with == "AI-Generated Background":
-                btn1, btn2 = st.sidebar.columns([1,1])
-                with btn1:
-                    prompt = st.text_input("Prompt:", help="Describe the whole image, but focus on the details you want changed!")
-                with btn2:
-                    negative_prompt = st.text_input("Negative Prompt:", help="Enter any things you want to make the model avoid!")
-                
-                if st.sidebar.button("Trigger Transformation"):
-                    im = Image.open("mask.png")
-                    bg_img = Image.new('RGB', (704, 512), color = (255, 255, 255))
-                    bg_img.paste(im, (0, 0), im)                    
-                    bg_img.save("mask.png")
-
-                    output = inpainting(project_name, which_image, prompt, negative_prompt)
-                    add_image_variant(output, which_image, project_name, timing_details)
-                    st.sidebar.success("To promote it to the main image, click the button below! This will dissapear once you make changes but will be .")
-                    st.sidebar.image(output)
-                    st.session_state['image_created'] = "yes"
-
-                if st.session_state['image_created'] == "yes":
-                    if st.sidebar.button("Promote Last Image"):
-                        variant_to_promote = len(variants)-1
-                        promote_image_variant(which_image, project_name, variant_to_promote)
-                        st.sidebar.success("Image promoted!")
-                        st.sidebar.session_state['image_created'] = "no"
-                
-                
-                            
-                
-
-               
-                                        
-
-
+                                                    
        
-        elif st.session_state.stage == "Frame Styling":
-
-            if st.button("Create gif of current main variants"):
-                create_gif_preview(project_name, timing_details)
-                st.image(f"videos/{project_name}/preview_gif.gif", use_column_width=True)
-                # download button for gif
-                st.balloons()
-                
-                
-
-            timing_details = get_timing_details(project_name)
-            for i in timing_details:
-                print("----------------")
-                print(i)
-                print("----------------")
-    
+        elif st.session_state.stage == "Frame Styling":  
+            # if project_name/assets/frames/1_selected/0.png or project_name/assets/frames/1_selected/1.png exist, then we can proceed to the next stage 
+            
+            
             project_settings = get_project_settings(project_name)
 
-            if len(timing_details) == 0:
-                st.info("You first need to select key frames at the Key Frame Selection stage.")
-
-            st.sidebar.header("Restyle Frames")
-                            
-            
-
-            models = get_models()
-
-            models.append('sd')
-            models.append('depth2img')
-            models.append('pix2pix')
-
-            # find the index of last_model in models
-
-            index_of_last_model = models.index(project_settings["last_model"])
-
-            model = st.sidebar.selectbox(f"Model", models,index=index_of_last_model)
-
-            prompt = st.sidebar.text_area(f"Prompt", value=project_settings["last_prompt"], label_visibility="visible")
-            if model != "sd" and model != "depth2img" and model != "pix2pix":
-
-                model_details = get_model_details(model)
-
-                st.sidebar.info(f"Must include '{model_details['keyword']}' to run this model")
-
-                model_id = model_details['id']
-            else:
-                if model == "pix2pix":
-                    st.sidebar.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")
-
-                model_id = model       
-            strength = st.sidebar.number_input(f"Batch strength", value=float(project_settings["last_strength"]))
-
-            if project_settings["last_character_pipeline"] == "No":
-                index_of_run_character_pipeline = 1
-            else:
-                index_of_run_character_pipeline = 0
-
-            with st.sidebar.expander("Advanced settings 😏"):
-                negative_prompt = st.text_area(f"Negative prompt", value=project_settings["last_negative_prompt"], label_visibility="visible")
-                guidance_scale = st.number_input(f"Guidance scale", value=float(project_settings["last_guidance_scale"]))
-                seed = st.number_input(f"Seed", value=int(project_settings["last_seed"]))
-                num_inference_steps = st.number_input(f"Inference steps", value=int(project_settings["last_num_inference_steps"]))
-                
-
-            
-            run_character_pipeline = st.sidebar.radio("Run character pipeline?", options=["Yes", "No"], index=index_of_run_character_pipeline, horizontal=True)
-            
-                        
-            range_start = st.sidebar.slider('Update From', 0, len(timing_details) -1, 0)
-
-            range_end = st.sidebar.slider('Update To', 0, len(timing_details) - 1, 1)
-
-            if project_settings["last_which_stage_to_run_on"] == "Current Main Variant":
-                index_of_which_stage_to_run_on = 1
-            else:
-                index_of_which_stage_to_run_on = 0
-
-            which_stage_to_run_on = st.sidebar.radio("What stage of images would you like to run this on?", options=["Extracted Frames", "Current Main Variant"], horizontal=True, index = index_of_which_stage_to_run_on, help="Extracted frames means the original frames from the video.")
-
-            promote_new_generation = st.sidebar.checkbox("Promote new generation to main variant", value=False, key="promote_new_generation_to_main_variant")
-
-            range_end = range_end + 1
-
-            project_settings = get_project_settings(project_name)
-
-            app_settings = get_app_settings()
-
-            if 'restyle_button' not in st.session_state:
-                st.session_state['restyle_button'] = ''
-                st.session_state['item_to_restyle'] = ''
-
-
-            if range_start <= range_end:
-
-                if st.sidebar.button(f'Batch restyle') or st.session_state['restyle_button'] == 'yes':
-
-                    if st.session_state['restyle_button'] == 'yes':
-                        range_start = int(st.session_state['item_to_restyle'])
-                        range_end = range_start + 1
-                        st.session_state['restyle_button'] = ''
-                        st.session_state['item_to_restyle'] = ''
-
-                    for i in range(range_start, range_end): 
-                                            
-
-                        index_of_current_item = i
-                        get_model_details(model)                    
-                        prompt = prompt.replace(",", ".")                              
-                        prompt = prompt.replace("\n", "")
-                        update_project_setting("last_prompt", prompt, project_name)
-                        update_project_setting("last_strength", strength,project_name)
-                        update_project_setting("last_model", model, project_name)
-                        update_project_setting("last_character_pipeline", run_character_pipeline, project_name)
-                        update_project_setting("last_negative_prompt", negative_prompt, project_name)
-                        update_project_setting("last_guidance_scale", guidance_scale, project_name)
-                        update_project_setting("last_seed", seed, project_name)
-                        update_project_setting("last_num_inference_steps", num_inference_steps, project_name)   
-                        update_project_setting("last_which_stage_to_run_on", which_stage_to_run_on, project_name)                       
-                        if timing_details[index_of_current_item]["source_image"] == "":
-                            source_image = upload_image("videos/" + str(project_name) + "/assets/frames/1_selected/" + str(index_of_current_item) + ".png")
-                        else:
-                            source_image = timing_details[index_of_current_item]["source_image"]
-                        update_timing_values(project_name, index_of_current_item, prompt, strength, model,run_character_pipeline, negative_prompt,guidance_scale,seed,num_inference_steps, source_image)                                                    
-                        timing_details = get_timing_details(project_name)
-                        if which_stage_to_run_on == "Extracted Frames":
-                            source_image = timing_details[index_of_current_item]["source_image"]
-                            variants = timing_details[index_of_current_item]["alternative_images"]        
-                            variants = variants[1:-1]
-                            variants = ast.literal_eval(variants)    
-                            number_of_variants = len(variants)   
-                        else:
-                            variants = timing_details[index_of_current_item]["alternative_images"]        
-                            variants = variants[1:-1]
-                            variants = ast.literal_eval(variants)    
-                            number_of_variants = len(variants)                        
-                            primary_image = int(timing_details[index_of_current_item]["primary_image"])
-                            source_image = variants[primary_image]
-                            
-                        if run_character_pipeline == "Yes":                        
-                            character_pipeline(index_of_current_item, project_name, project_settings, timing_details, source_image)
-                        else:
-                            
-                            restyle_images(index_of_current_item, project_name, project_settings, timing_details, source_image)
-                        if promote_new_generation == True:
-                            promote_image_variant(index_of_current_item, project_name, number_of_variants)
-                                                
-
-                    st.experimental_rerun()
-
-            else:
+            if "strength" not in st.session_state:
                     
-                    st.sidebar.write("Select a valid range")
-    
-            reveal_or_hide_all = st.radio("Reveal or hide all details", options=["Hide All", "Reveal All"], key = "Reveal or hide all details", horizontal=True, help="We recommend that you only open one at a time in order to avoid slowing down your browser and cluttering your view!")
-            if reveal_or_hide_all == "Reveal All":
-                st.warning("It's recommended to open and work on one image at a time to avoid slowing your computer down.", icon="⚠️")
-            st.markdown("***")
-            for i in timing_details:                
-                index_of_current_item = timing_details.index(i)
-                if f'reveal_or_hide_{index_of_current_item}' not in st.session_state:
-                    st.session_state[f'reveal_or_hide_{index_of_current_item}'] = 'Hidden'
-                img_header_1, img_header_2 = st.columns([10,5])
-                with img_header_1:
-                    st.subheader(f'Image #{index_of_current_item}:') 
-                    if timing_details[index_of_current_item]["alternative_images"] != "":
-                        variants = ast.literal_eval(timing_details[index_of_current_item]["alternative_images"][1:-1])
-                        st.text(f"{len(variants)} variants available.")
-                    else:
-                        st.text("No variants available.")
-                with img_header_2:
-                    if st.session_state[f'reveal_or_hide_{index_of_current_item}'] == 'Revealed':
-                        index_for_radio_button = 1
-                    else:
-                        index_for_radio_button = 0
-                    st.session_state[f'reveal_or_hide_{index_of_current_item}'] = st.radio(f"Hide Image #{index_of_current_item}:", options=["Hidden", "Revealed"], key = f"Reveal or hide variants for {index_of_current_item}", horizontal=True, index=index_for_radio_button)
-                if st.session_state[f'reveal_or_hide_{index_of_current_item}'] == "Revealed":           
-                    if timing_details[index_of_current_item]["alternative_images"] != "":                    
-                        variants = ast.literal_eval(timing_details[index_of_current_item]["alternative_images"][1:-1])
+                    st.session_state['strength'] = project_settings["last_strength"]
+                    st.session_state['prompt'] = project_settings["last_prompt"]
+                    st.session_state['model'] = project_settings["last_model"]
+                    st.session_state['run_character_pipeline'] = project_settings["last_character_pipeline"]
+                    st.session_state['negative_prompt'] = project_settings["last_negative_prompt"]
+                    st.session_state['guidance_scale'] = project_settings["last_guidance_scale"]
+                    st.session_state['seed'] = project_settings["last_seed"]
+                    st.session_state['num_inference_steps'] = project_settings["last_num_inference_steps"]
+                    st.session_state['which_stage_to_run_on'] = project_settings["last_which_stage_to_run_on"]
+
+            if timing_details[0]["source_image"] == "":
+                st.info("You need to select and load key frames first in the Key Frame Selection section.")
+                    
+            else:
+                if "which_image" not in st.session_state:
+                    st.session_state['which_image'] = 0
+                if timing_details[0]["alternative_images"] != "":
+                    variants = ast.literal_eval(timing_details[st.session_state['which_image']]["alternative_images"][1:-1])
+                    number_of_variants = len(variants)
+                    current_variant = int(timing_details[st.session_state['which_image']]["primary_image"])
+
+                    f1, f2, f3  = st.columns([1,3,1])
+                    with f1:
+                        st.session_state['which_image'] = st.number_input('Go to Frame:', 0, len(timing_details)-1,help=f"There are {len(timing_details)} key frames in this video.")                                                        
+                        
+                        variants = ast.literal_eval(timing_details[st.session_state['which_image']]["alternative_images"][1:-1])
                         number_of_variants = len(variants)
-                        current_variant = int(timing_details[index_of_current_item]["primary_image"])
-
-                        variantcol1, variantcol2 = st.columns([3,1])
-                        with variantcol1:
-                            which_variant = st.radio(f'Main variant = {current_variant}', range(number_of_variants), index=current_variant, horizontal = True, key = f"Main variant for {index_of_current_item}")
-                        with variantcol2:
-                            if which_variant == current_variant:                                      
-                                st.success("Main variant")
-                            else:
-                                st.write("")
-                                if st.button(f"Promote Variant #{which_variant}", key=f"Promote Variant #{which_variant} for {index_of_current_item}", help="Promote this variant to the primary image"):
-                                    promote_image_variant(index_of_current_item, project_name, which_variant)
-                                    st.experimental_rerun()
-
-                        image_name = str(timing_details.index(i)) + ".png"
-                        
-                        response = r.get(variants[which_variant])
-                        image = Image.open(BytesIO(response.content))
-                    
-                    if timing_details[index_of_current_item]["alternative_images"] != "":
-                        img2=variants[which_variant]
-                    else:
-                        img2='https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'          
-                    image_comparison(starting_position=10,
-                        img1=timing_details[index_of_current_item]["source_image"],
-                        img2=img2)
-                    
-                    detail1, detail2, detail3 = st.columns([1,1,1])
-                    with detail1:
-                        st.number_input(f"How many variants?", min_value=1, max_value=6, value=1, key=f"number_of_variants_{index_of_current_item}")
-                    with detail2:
-                        st.write("")
-                        st.write("")
-                        if st.button(f"Generate Variants for {index_of_current_item}", key=f"new_variations_{index_of_current_item}",help="This will generate new variants based on the settings to the left."):
-                            st.session_state['restyle_button'] = 'yes'
-                            st.session_state['item_to_restyle'] = index_of_current_item                        
-                            st.experimental_rerun()                    
-                    with detail3:   
-                        with st.expander("Show/Hide Previous Last Prompt Details", expanded=False):
-                            st.write(f"Prompt: {i['prompt']}")
-                            st.write(f"Strength: {i['strength']}")
-                            st.write(f"Model: {i['model_id']}")
-                    for a in timing_details:
-                        index_of_checking_item = timing_details.index(a)
-                        if index_of_checking_item != index_of_current_item:
-                            if st.session_state[f'reveal_or_hide_{index_of_checking_item}'] == 'Revealed':
-                                st.session_state[f'reveal_or_hide_{index_of_checking_item}'] = 'Hidden'
+                        current_variant = int(timing_details[st.session_state['which_image']]["primary_image"])    
+                        which_variant = current_variant     
+                    with f2:
+                        which_variant = st.radio(f'Main variant = {current_variant}', range(number_of_variants), index=current_variant, horizontal = True, key = f"Main variant for {st.session_state['which_image']}")
+                    with f3:
+                        if which_variant == current_variant:   
+                            st.write("")                                   
+                            st.success("Main variant")
+                        else:
+                            st.write("")
+                            if st.button(f"Promote Variant #{which_variant}", key=f"Promote Variant #{which_variant} for {st.session_state['which_image']}", help="Promote this variant to the primary image"):
+                                promote_image_variant(st.session_state['which_image'], project_name, which_variant)
+                                time.sleep(0.5)
                                 st.experimental_rerun()
-                                # rerun
-                    
+                else:   
+                    f1, f2, f3  = st.columns([1,3,1])
+                    with f1:
+                        st.session_state['which_image'] = st.number_input('Go to Frame:', 0, len(timing_details)-1,help=f"There are {len(timing_details)} key frames in this video.")   
+
+                
+                
+            
+                if timing_details[st.session_state['which_image']]["alternative_images"] != "":
+                    img2=variants[which_variant]
                 else:
-                    if timing_details[index_of_current_item]["alternative_images"] != "":       
-                        variants = timing_details[index_of_current_item]["alternative_images"]        
-                        variants = variants[1:-1]
-                        variants = ast.literal_eval(variants)
-                        primary_image = timing_details[index_of_current_item]["primary_image"]
-                        preview_image =variants[primary_image]
-                        st.image(preview_image, width=350)
-                    else:
-                        st.warning("No variants have been generated for this image yet.", icon="⬜")
+                    img2='https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'          
+                image_comparison(starting_position=10,
+                    img1=timing_details[st.session_state['which_image']]["source_image"],
+                    img2=img2)
                 
+                detail1, detail2, detail3 = st.columns([1,1,1])
+                with detail1:
+                    st.number_input(f"How many variants?", min_value=1, max_value=6, value=1, key=f"number_of_variants_{st.session_state['which_image']}")
+                with detail2:
+                    st.write("")
+                    st.write("")
+                    if st.button(f"Generate Variants for {st.session_state['which_image']}", key=f"new_variations_{st.session_state['which_image']}",help="This will generate new variants based on the settings to the left."):
+                        st.session_state['restyle_button'] = 'yes'
+                        st.session_state['item_to_restyle'] = st.session_state['which_image']                        
+                        st.experimental_rerun()                    
+                with detail3:   
+                    with st.expander("Show/Hide Previous Last Prompt Details", expanded=False):
+                        print("a")
+                        # st.write(f"Prompt: {st.session_state['which_image']['prompt']}")
+                        # st.write(f"Strength: {st.session_state['which_image']['strength']}")
+                        # st.write(f"Model: {st.session_state['which_image']['model_id']}")
+
+                if st.button("Create gif of current main variants"):
+                    
+                    create_gif_preview(project_name, timing_details)
+                    st.image(f"videos/{project_name}/preview_gif.gif", use_column_width=True)                
+                    st.balloons()
+                    
+                    
+
+                timing_details = get_timing_details(project_name)
+                for i in timing_details:
+                    print("----------------")
+                    print(i)
+                    print("----------------")
+        
+                
+
+                if len(timing_details) == 0:
+                    st.info("You first need to select key frames at the Key Frame Selection stage.")
+
+                st.sidebar.header("Restyle Frames")
+                                
+                
+
+                models = get_models()
+
+                models.append('sd')
+                models.append('depth2img')
+                models.append('pix2pix')
+
+                # find the index of last_model in models
+
+                index_of_last_model = models.index(st.session_state['model'])
+
+                st.session_state['model'] = st.sidebar.selectbox(f"Model", models,index=index_of_last_model)
+
+                
+
+
+                st.session_state['prompt'] = st.sidebar.text_area(f"Prompt", label_visibility="visible", value=st.session_state['prompt'])
+                if st.session_state['model'] != "sd" and st.session_state['model'] != "depth2img" and st.session_state['model'] != "pix2pix":
+                    model_details = get_model_details(st.session_state['model'])
+                    st.sidebar.info(f"Must include '{model_details['keyword']}' to run this model")                                    
+                else:
+                    if st.session_state['model'] == "pix2pix":
+                        st.sidebar.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")                    
+                st.session_state['strength'] = st.sidebar.number_input(f"Batch strength", value=float(st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
+                if project_settings["last_character_pipeline"] == "No":
+                    index_of_run_character_pipeline = 1
+                else:
+                    index_of_run_character_pipeline = 0
+
+                with st.sidebar.expander("Advanced settings 😏"):
+                    st.session_state['negative_prompt'] = st.text_area(f"Negative prompt", value=st.session_state['negative_prompt'], label_visibility="visible")
+                    st.session_state['guidance_scale'] = st.number_input(f"Guidance scale", value=float(st.session_state['guidance_scale']))
+                    st.session_state['seed'] = st.number_input(f"Seed", value=int(st.session_state['seed']))
+                    st.session_state['num_inference_steps'] = st.number_input(f"Inference steps", value=int(st.session_state['num_inference_steps']))
+                    
+
+                
+                st.session_state['character_pipeline'] = st.sidebar.radio("Run character pipeline?", options=["Yes", "No"], index=index_of_run_character_pipeline, horizontal=True)
+
+                if st.session_state['character_pipeline'] == "Yes":
+                    with st.sidebar.expander("Character pipeline instructions"):
+                        st.markdown("## How to use the character pipeline")                
+                        st.markdown("1. Create a fine-tined model in the Custom Model section of the app - you'll need to use this to generat a consistent character.")
+                        st.markdown("2. It's best to include a detailed prompt. We recommend taking an input image and running it through a CLIP Interrogator")
+                        st.markdown("3. Use [expression] and [location] tags to vary the expression and location of the character dynamically if that changes throughout the clip. Varying this in the prompt will make the character look more natural.")
+                        st.markdown("4. In our experience, the best strength for coherent character transformations is 0.25.")
+                
+                            
+                range_start = st.sidebar.slider('Update From', 0, len(timing_details) -1, 0)
+
+                range_end = st.sidebar.slider('Update To', 0, len(timing_details) - 1, 1)
+
+                if project_settings["last_which_stage_to_run_on"] == "Current Main Variant":
+                    index_of_which_stage_to_run_on = 1
+                else:
+                    index_of_which_stage_to_run_on = 0
+
+                st.session_state['which_stage_to_run_on'] = st.sidebar.radio("What stage of images would you like to run this on?", options=["Extracted Frames", "Current Main Variant"], horizontal=True, index = index_of_which_stage_to_run_on, help="Extracted frames means the original frames from the video.")
+
+                promote_new_generation = st.sidebar.checkbox("Promote new generation to main variant", value=True, key="promote_new_generation_to_main_variant")
+
+                range_end = range_end + 1
+
+                project_settings = get_project_settings(project_name)
+
+                app_settings = get_app_settings()
+
+                if 'restyle_button' not in st.session_state:
+                    st.session_state['restyle_button'] = ''
+                    st.session_state['item_to_restyle'] = ''
+
+
+                if range_start <= range_end:
+
+                    if st.sidebar.button(f'Batch restyle') or st.session_state['restyle_button'] == 'yes':
+
+                        print(st.session_state['strength'])
+
+                        if st.session_state['restyle_button'] == 'yes':
+                            range_start = int(st.session_state['item_to_restyle'])
+                            range_end = range_start + 1
+                            st.session_state['restyle_button'] = ''
+                            st.session_state['item_to_restyle'] = ''
+
+                        for i in range(range_start, range_end): 
+                                                
+                            index_of_current_item = i
+                            get_model_details(st.session_state['model'])                    
+                            st.session_state['prompt'] = st.session_state['prompt'].replace(",", ".")                              
+                            st.session_state['prompt'] = st.session_state['prompt'].replace("\n", "")
+                            update_project_setting("last_prompt", st.session_state['prompt'], project_name)
+                            update_project_setting("last_strength", st.session_state['strength'],project_name)
+                            update_project_setting("last_model", st.session_state['model'], project_name)
+                            update_project_setting("last_character_pipeline", st.session_state['run_character_pipeline'], project_name)
+                            update_project_setting("last_negative_prompt", st.session_state['negative_prompt'], project_name)
+                            update_project_setting("last_guidance_scale", st.session_state['guidance_scale'], project_name)
+                            update_project_setting("last_seed", st.session_state['seed'], project_name)
+                            update_project_setting("last_num_inference_steps",  st.session_state['num_inference_steps'], project_name)   
+                            update_project_setting("last_which_stage_to_run_on", st.session_state['which_stage_to_run_on'], project_name)                       
+                            if timing_details[index_of_current_item]["source_image"] == "":
+                                source_image = upload_image("videos/" + str(project_name) + "/assets/frames/1_selected/" + str(index_of_current_item) + ".png")
+                            else:
+                                source_image = timing_details[index_of_current_item]["source_image"]
+                            update_timing_values(project_name, index_of_current_item, st.session_state['prompt'], st.session_state['strength'], st.session_state['model'],st.session_state['run_character_pipeline'], st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'], source_image)                                                    
+                            timing_details = get_timing_details(project_name)
+                            if st.session_state['which_stage_to_run_on'] == "Extracted Frames":
+                                source_image = timing_details[index_of_current_item]["source_image"]
+                            else:
+                                variants = ast.literal_eval(timing_details[index_of_current_item]["alternative_images"][1:-1])
+                                number_of_variants = len(variants)                       
+                                primary_image = int(timing_details[index_of_current_item]["primary_image"])
+                                source_image = variants[primary_image]
+                                
+                            if st.session_state['run_character_pipeline'] == "Yes":                        
+                                character_pipeline(index_of_current_item, project_name, project_settings, timing_details, source_image)
+                            else:                            
+                                restyle_images(index_of_current_item, project_name, project_settings, timing_details, source_image)
+                            if promote_new_generation == True:                              
+                                timing_details = get_timing_details(project_name)                            
+                                variants = ast.literal_eval(timing_details[index_of_current_item]["alternative_images"][1:-1])                                                                 
+                                number_of_variants = len(variants)                   
+                                if number_of_variants == 1:
+                                    print("No new generation to promote")
+                                else:                            
+                                    promote_image_variant(index_of_current_item, project_name, number_of_variants - 1)
+                                                    
+
+                        st.experimental_rerun()
+
+                else:
                         
-
-                st.markdown("***")
+                        st.sidebar.write("Select a valid range")
+                   
+                    
                 
-
-
-
 
         elif st.session_state.stage == "Frame Interpolation":
             if len(timing_details) == 0:
@@ -1702,10 +1715,14 @@ def main():
                     st.write("8.57 seconds = 8 steps")
 
                 which_video = st.select_slider("Which video to interpolate", options=["All","Single"])
+                delete_existing_videos = st.checkbox("Delete existing videos:")
 
                 if which_video == "All":
 
                     if st.button("Interpolate All Videos"):
+                        if delete_existing_videos == True:
+                            for filename in os.listdir("videos/" + str(project_name) + "/assets/videos/0_raw"):
+                                os.remove("videos/" + str(project_name) + "/assets/videos/0_raw/" + filename)
 
                         for i in range(0, total_number_of_videos):
 
@@ -1762,7 +1779,12 @@ def main():
 
             st.file_uploader("Attach music", type=["mp3"], help="Attach music to your video")
 
+            delete_existing_videos = st.checkbox("Delete all the existing timings", value=True)
+
             if st.button("Render Video"):
+                if delete_existing_videos == True:
+                    for filename in os.listdir("videos/" + str(project_name) + "/assets/videos/1_final"):
+                        os.remove("videos/" + str(project_name) + "/assets/videos/1_final/" + filename)
                 timing_details = get_timing_details(project_name)
                 total_number_of_videos = len(timing_details) - 2
                 calculate_desired_duration_of_each_clip(timing_details, project_name)
@@ -1830,13 +1852,20 @@ def main():
 
             # sort the videos reverse chronologically
 
+            video_dir = "videos/" + project_name + "/assets/videos/2_completed"
+
             video_list.sort(key=lambda f: int(re.sub('\D', '', f)))
+
+            video_list = sorted(video_list, key=lambda x: os.path.getmtime(os.path.join(video_dir, x)), reverse=True)
+
+
+            
 
             # list them on the page
 
             for video in video_list:
 
-                st.subheader(video)        
+                st.subheader(video)       
 
                 st.write(datetime.datetime.fromtimestamp(
                     os.path.getmtime("videos/" + project_name + "/assets/videos/2_completed/" + video)))
@@ -1865,19 +1894,17 @@ def main():
             st.write("Project Settings")
             
 
-        elif st.session_state.stage == "Train Model":
+        elif st.session_state.stage == "Custom Models":
             
             app_settings = get_app_settings()
 
             tab1, tab2 = st.tabs(["Train New Model", "See Existing Models"])
 
             with tab1:
-                # images_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/training_data') if f.endswith('.png')]
 
-                images_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/training_data')]
-        
+                images_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/training_data')]        
                 images_list.sort(key=lambda f: int(re.sub('\D', '', f)))
-                
+
                 files_uploaded = ''
 
                 uploaded_files = st.file_uploader("Add training images here", accept_multiple_files=True)
@@ -1891,18 +1918,15 @@ def main():
                             st.success("Saved File") 
                             # apend the image to the list
                             images_list.append(uploaded_file.name)
-                
-                                            
+                                                            
                 images_for_model = []
                                  
-
                 for image_name in images_list:
                     index_of_current_item = images_list.index(image_name)
                     st.subheader(f'{image_name}:')                        
                     image = Image.open(f'videos/{project_name}/assets/resources/training_data/{image_name}') 
                     st.image(image, width=400) 
                     yes = st.checkbox(f'Add {index_of_current_item} to model')    
-
                     if yes:
                         images_for_model.append(image_name)
                     else:
@@ -1914,210 +1938,276 @@ def main():
                 instance_prompt = st.sidebar.text_input("Trigger word:",value="", help = "This is the word that will trigger the model")
                 class_prompt = st.sidebar.text_input("Describe what your prompts depict generally:",value="", help="This will help guide the model to learn what you want it to do")
                 max_train_steps = st.sidebar.number_input("Max training steps:",value=2000, help=" The number of training steps to run. Fewer steps make it run faster but typically make it worse quality, and vice versa.")
-
-
-                st.sidebar.write(f"You've selected {len(images_for_model)} image.")
+                st.sidebar.write(f"You've selected {len(images_for_model)} images.")
                 
-
-
                 if len(images_for_model) < 5 or model_name == "" or instance_prompt == "" or class_prompt == "":
                     st.sidebar.write("Select at least 5 images and fill in all the fields to train a new model.")
                     st.sidebar.button("Train Model",disabled=True)
-
                 else:
                     if st.sidebar.button("Train Model",disabled=False):
                         model_status = train_model(app_settings,images_for_model, instance_prompt,class_prompt,max_train_steps,model_name, project_name)
                         st.sidebar.success(model_status)
             
             with tab2:
-                st.write("This is the tab 2")
+                models = get_models()           
+                header1, header2, header3, header4, header5, header6 = st.columns(6)
+                with header1:
+                    st.markdown("###### Model Name")
+                with header2:
+                    st.markdown("###### Trigger Word")
+                with header3:
+                    st.markdown("###### Model ID")
+                with header4:
+                    st.markdown("###### Example Image #1")
+                with header5:
+                    st.markdown("###### Example Image #2")
+                with header6:                
+                    st.markdown("###### Example Image #3")
+                
+                for i in models:   
+                    col1, col2, col3, col4, col5, col6 = st.columns(6)
+                    with col1:
+                        model_details = get_model_details(i)
+                        model_details["name"]
+                    with col2:
+                        model_details["keyword"]
+                    with col3:
+                        model_details["id"]
+                    with col4:
+                        st.image(ast.literal_eval(model_details["training_images"])[0])
+                    with col5:
+                        st.image(ast.literal_eval(model_details["training_images"])[1])
+                    with col6:
+                        st.image(ast.literal_eval(model_details["training_images"])[2])
+                    st.markdown("***")
+                                        
 
                   
-        elif st.session_state.stage == "Image Editing":
+        elif st.session_state.stage == "Frame Editing":
 
-            timing_details = get_timing_details(project_name)
-            project_settings = get_project_settings(project_name)
-            
-            with st.sidebar.expander("How this works", expanded=False):
-                st.write("This")
-            f1, f2 = st.columns([5,2])
-            with f1:
-                which_image = st.slider('Select image to edit', 0, len(timing_details)-1, 0)
-            with f2:
-                which_stage = st.radio('Select stage', ["Unedited Key Frame", "Styled Key Frame"], horizontal=True)
+            if timing_details[0]["source_image"] == "":
+                st.info("You need to add  key frames first in the Key Frame Selection section.")
 
-            if "edited_image" not in st.session_state:
-                st.session_state.edited_image = ""
-            
-            
+            else:
 
-            if which_stage == "Unedited Key Frame":
-                bg_image = timing_details[which_image]["source_image"]
-            elif which_stage == "Styled Key Frame":            
-                variants = ast.literal_eval(timing_details[which_image]["alternative_images"][1:-1])
-                primary_image = timing_details[which_image]["primary_image"]             
-                bg_image = variants[primary_image]
-          
-            width = int(project_settings["width"])
-            height = int(project_settings["height"])
+                timing_details = get_timing_details(project_name)
+                project_settings = get_project_settings(project_name)
 
-            ch1, ch2 = st.columns([3,1])
-
-            with ch1:                            
-                type_of_mask_selection = st.radio("Select type of edit", ["Automated Background Selection", "Manual Background Selection"], horizontal=True)
-            with ch2:
-                if which_stage == "Unedited Key Frame":            
-                    if st.button("Reset Key Frame", help="This will reset the base key frame to the original unedited version. This will not affect the video."):
-                        extract_frame(int(which_image), project_name, project_settings["input_video"], timing_details[which_image]["frame_number"],timing_details)
-                        new_source_image = upload_image(f"videos/{project_name}/assets/frames/1_selected/{which_image}.png")
-                        update_source_image(project_name, which_image, new_source_image)
-                        st.experimental_rerun()
-
-
-            if type_of_mask_selection == "Manual Background Selection":
-                canvas_image = r.get(bg_image)
-                if 'drawing_input' not in st.session_state:
-                    st.session_state['drawing_input'] = 'Magic shapes 🪄'
-                col1, col2 = st.columns([6,3])
-                                
-                with col1:
-                    st.session_state['drawing_input'] = st.radio(
-                        "Drawing tool:",
-                        ("Make shapes 🪄","Move shapes 🏋🏾‍♂️", "Draw lines ✏️"), horizontal=True,
-                    )
+                #initiative value
+                if "which_image" not in st.session_state:
+                    st.session_state['which_image'] = 0
                 
-                if st.session_state['drawing_input'] == "Move shapes 🏋🏾‍♂️":
-                    drawing_mode = "transform"
-                    st.info("To delete something, just move it outside of the image! 🥴")
-                elif st.session_state['drawing_input'] == "Make shapes 🪄":
-                    drawing_mode = "polygon"
-                    st.info("To end a shape, right click!")
-                elif st.session_state['drawing_input'] == "Draw lines ✏️":
-                    drawing_mode = "freedraw"
-                    st.info("To draw, draw! ")
-                
-                with col2:    
-                    if drawing_mode == "freedraw":           
-                        stroke_width = st.slider("Stroke width: ", 1, 25, 12)
-                    else:
-                        stroke_width = 3
-
-                realtime_update = True        
-
-                canvas_result = st_canvas(
-                    fill_color="rgba(0, 0, 0)", 
-                    stroke_width=stroke_width,
-                    stroke_color="rgba(0, 0, 0)",
-                    background_color="rgb(255, 255, 255)",
-                    background_image=Image.open(BytesIO(canvas_image.content)),
-                    update_streamlit=realtime_update,
-                    height=height,
-                    width=width,
-                    drawing_mode=drawing_mode,
-                    display_toolbar=True,
-                    key="full_app",
-                )
-
-                if 'image_created' not in st.session_state:
-                    st.session_state['image_created'] = 'no'
-
-                if canvas_result.image_data is not None:
-                    img_data = canvas_result.image_data
-                    im = Image.fromarray(img_data.astype("uint8"), mode="RGBA")
-                    im.save(f"mask.png", "PNG")
-            
-            elif type_of_mask_selection == "Automated Background Selection":
-                st.image(bg_image)
-
-            type_of_mask_replacement = st.radio("Select type of edit", ["Replace With Image", "Replace With AI"], horizontal=True)            
-
-            
-            btn1, btn2 = st.columns([1,1])
-
-            if type_of_mask_replacement == "Replace With Image":
-                background_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/backgrounds') if f.endswith('.png')]                 
-                with btn1:
-                    background_image = st.selectbox("Range background", background_list)
-                    if background_list != []:
-                        st.image(f"videos/{project_name}/assets/resources/backgrounds/{background_image}", use_column_width=True)
-                with btn2:
-                    uploaded_files = st.file_uploader("Add more background images here", accept_multiple_files=True)
-
-                    st.info(f"Please make sure files are .png format and are the same size as your project - {width} x {height} pixels in size.")
-                    if uploaded_files is not None:
-                        for uploaded_file in uploaded_files:
-                            file_details = {"FileName":uploaded_file.name,"FileType":uploaded_file.type}
-                            st.write(file_details)
-                            img = Image.open(uploaded_file)        
-                            with open(os.path.join(f"videos/{project_name}/assets/resources/backgrounds",uploaded_file.name),"wb") as f:                                 
-                                st.success("Your backgrounds are uploaded file, refresh the page to see them.")                     
-                                background_list.append(uploaded_file.name)
-            elif type_of_mask_replacement == "Replace With AI":
-                with btn1:
-                    prompt = st.text_input("Prompt:", help="Describe the whole image, but focus on the details you want changed!")
-                with btn2:
-                    negative_prompt = st.text_input("Negative Prompt:", help="Enter any things you want to make the model avoid!")
-
-
-            if st.button(f'Swap background'):
-                if type_of_mask_selection == "Automated Background Selection":  
-                    removed_background = remove_background(project_name, bg_image)
-                    response = r.get(removed_background)                                
-                    with open("masked_image.png", "wb") as f:
-                        f.write(response.content)    
-                    if type_of_mask_replacement == "Replace With Image":                                               
-                        output = replace_background(project_name, "masked_image.png", background_image) 
-                        st.session_state['edited_image'] = upload_image(f"videos/{project_name}/replaced_bg.png") 
-                    elif type_of_mask_replacement == "Replace With AI":
-                        image = Image.open("masked_image.png")
-
-                        converted_image = Image.new("RGB", image.size, (255, 255, 255))
-                        for x in range(image.width):
-                            for y in range(image.height):
-                                pixel = image.getpixel((x, y))
-                                if pixel[3] == 0:                                    
-                                    converted_image.putpixel((x, y), (0,0,0))
-                                else:                                    
-                                    converted_image.putpixel((x, y), (255, 255, 255))                                            
-                        converted_image.save("mask.png")
-                        st.session_state['edited_image'] = inpainting(project_name, bg_image, prompt, negative_prompt)                                                                                                
-                
-                elif type_of_mask_selection == "Manual Background Selection":
-
-                    if type_of_mask_replacement == "Replace With Image":    
-                        response = r.get(bg_image)
-                        bg_img = Image.open(BytesIO(response.content))                        
-                        mask_img = Image.open("mask.png")                                
-                        result_img = Image.new("RGBA", bg_img.size, (255, 255, 255, 0))                                
-                        for x in range(bg_img.size[0]):
-                            for y in range(bg_img.size[1]):                                        
-                                if mask_img.getpixel((x, y)) == (0, 0, 0, 255):                                            
-                                    result_img.putpixel((x, y), (255, 255, 255, 0))
-                                else:                                            
-                                    result_img.putpixel((x, y), bg_img.getpixel((x, y)))                                
-                        result_img.save("masked_image.png")                                                                                                                                                   
-                        output = replace_background(project_name, "masked_image.png", background_image)
-                        st.session_state['edited_image'] = upload_image(f"videos/{project_name}/replaced_bg.png")
-                    elif type_of_mask_replacement == "Replace With AI":
-                        im = Image.open("mask.png")
-                        mask = Image.new('RGB', (704, 512), color = (255, 255, 255))
-                        mask.paste(im, (0, 0), im)                                    
-                        mask.save("mask.png")
-                        st.session_state['edited_image'] = inpainting(project_name, bg_image, prompt, negative_prompt)                        
-
-
-            if st.session_state['edited_image'] != "":  
-                st.success("To promote it to the main image, click the button below! This will dissapear once you make changes but will be .")
-                st.image(st.session_state['edited_image'])                      
-                if st.button("Promote Last Image"):
-                    if which_stage == "Unedited Key Frame":                        
-                        update_source_image(project_name, which_image, st.session_state['edited_image'])
-                    elif which_stage == "Styled Key Frame":
-                        number_of_image_variants = add_image_variant(st.session_state['edited_image'], which_image, project_name, timing_details)
-                        promote_image_variant(which_image, project_name, number_of_image_variants - 1)
+                def reset_new_image():
                     st.session_state['edited_image'] = ""
+            
+                    
+                f1, f2, f3 = st.columns([1,2,1])
+                with f1:
+                    st.session_state['which_image'] = st.number_input('Go to Frame:', 0, len(timing_details)-1,help=f"There are {len(timing_details)} key frames in this video.", on_change=reset_new_image)
+                    
+                with f2:                
+                    which_stage = st.radio('Select stage:', ["Unedited Key Frame", "Styled Key Frame"], horizontal=True, on_change=reset_new_image)
+                    # st.session_state['which_image'] = st.slider('Select image to edit:', 0, len(timing_details)-1, st.session_state["which_image"])
+
+                with f3:                
+                    if which_stage == "Unedited Key Frame":     
+                        st.write("")                     
+                        if st.button("Reset Key Frame", help="This will reset the base key frame to the original unedited version. This will not affect the video."):
+                            extract_frame(int(st.session_state['which_image']), project_name, project_settings["input_video"], timing_details[st.session_state['which_image']]["frame_number"],timing_details)
+                            new_source_image = upload_image(f"videos/{project_name}/assets/frames/1_selected/{st.session_state['which_image']}.png")
+                            update_source_image(project_name, st.session_state['which_image'], new_source_image)
+                            st.experimental_rerun()
+                                    
+                if "edited_image" not in st.session_state:
+                    st.session_state.edited_image = ""                        
+
+                if which_stage == "Unedited Key Frame":
+                    bg_image = timing_details[st.session_state['which_image']]["source_image"]
+                elif which_stage == "Styled Key Frame":            
+                    variants = ast.literal_eval(timing_details[st.session_state['which_image']]["alternative_images"][1:-1])
+                    primary_image = timing_details[st.session_state['which_image']]["primary_image"]             
+                    bg_image = variants[primary_image]
+            
+                width = int(project_settings["width"])
+                height = int(project_settings["height"])
+
+                
+                st.sidebar.markdown("### Select Area To Edit:") 
+                type_of_mask_selection = st.sidebar.radio("How would you like to select what to edit?", ["Automated Background Selection", "Automated Layer Selection", "Manual Background Selection"], horizontal=True)
+            
+                if "which_layer" not in st.session_state:
+                    st.session_state['which_layer'] = "Background"
+
+                if type_of_mask_selection == "Automated Layer Selection":
+                    st.session_state['which_layer'] = st.sidebar.selectbox("Which layer would you like to replace?", ["Background", "Middleground", "Foreground"])
 
 
+                if type_of_mask_selection == "Manual Background Selection":
+                    if st.session_state['edited_image'] == "":
+                        canvas_image = r.get(bg_image)
+                        if 'drawing_input' not in st.session_state:
+                            st.session_state['drawing_input'] = 'Magic shapes 🪄'
+                        col1, col2 = st.columns([6,3])
+                                        
+                        with col1:
+                            st.session_state['drawing_input'] = st.sidebar.radio(
+                                "Drawing tool:",
+                                ("Make shapes 🪄","Move shapes 🏋🏾‍♂️", "Draw lines ✏️"), horizontal=True,
+                            )
+                        
+                        if st.session_state['drawing_input'] == "Move shapes 🏋🏾‍♂️":
+                            drawing_mode = "transform"
+                            st.sidebar.info("To delete something, just move it outside of the image! 🥴")
+                        elif st.session_state['drawing_input'] == "Make shapes 🪄":
+                            drawing_mode = "polygon"
+                            st.sidebar.info("To end a shape, right click!")
+                        elif st.session_state['drawing_input'] == "Draw lines ✏️":
+                            drawing_mode = "freedraw"
+                            st.sidebar.info("To draw, draw! ")
+                        
+                        with col2:    
+                            if drawing_mode == "freedraw":           
+                                stroke_width = st.slider("Stroke width: ", 1, 25, 12)
+                            else:
+                                stroke_width = 3
+
+                        realtime_update = True        
+
+                        canvas_result = st_canvas(
+                            fill_color="rgba(0, 0, 0)", 
+                            stroke_width=stroke_width,
+                            stroke_color="rgba(0, 0, 0)",
+                            background_color="rgb(255, 255, 255)",
+                            background_image=Image.open(BytesIO(canvas_image.content)),
+                            update_streamlit=realtime_update,
+                            height=height,
+                            width=width,
+                            drawing_mode=drawing_mode,
+                            display_toolbar=True,
+                            key="full_app",
+                        )
+
+                        if 'image_created' not in st.session_state:
+                            st.session_state['image_created'] = 'no'
+
+                        if canvas_result.image_data is not None:
+                            img_data = canvas_result.image_data
+                            im = Image.fromarray(img_data.astype("uint8"), mode="RGBA")
+                            im.save(f"mask.png", "PNG")
+                    else:
+                        image_comparison(
+                            img1=bg_image,
+                            img2=st.session_state['edited_image'], starting_position=10, label1="Original", label2="Edited")  
+                        if st.button("Reset Canvas"):
+                            st.session_state['edited_image'] = ""
+                            st.experimental_rerun()
+                
+                elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection":
+                    if st.session_state['edited_image'] == "":
+                        st.image(bg_image)
+                    else:
+                        image_comparison(
+                            img1=bg_image,
+                            img2=st.session_state['edited_image'], starting_position=10, label1="Original", label2="Edited")                    
+                        
+
+            
+
+                st.sidebar.markdown("### Edit Individual Image:") 
+                
+                type_of_mask_replacement = st.sidebar.radio("Select type of edit", ["Replace With Image", "Inpainting"], horizontal=True)            
+
+                
+                btn1, btn2 = st.sidebar.columns([1,1])
+
+                if type_of_mask_replacement == "Replace With Image":
+                    background_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/backgrounds') if f.endswith('.png')]                 
+                    with btn1:
+                        background_image = st.sidebar.selectbox("Range background", background_list)
+                        if background_list != []:
+                            st.image(f"videos/{project_name}/assets/resources/backgrounds/{background_image}", use_column_width=True)
+                    with btn2:
+                        uploaded_files = st.file_uploader("Add more background images here", accept_multiple_files=True)                    
+                        if uploaded_files is not None:
+                            for uploaded_file in uploaded_files:
+                                file_details = {"FileName":uploaded_file.name,"FileType":uploaded_file.type}
+                                st.write(file_details)
+                                img = Image.open(uploaded_file)        
+                                with open(os.path.join(f"videos/{project_name}/assets/resources/backgrounds",uploaded_file.name),"wb") as f:                                 
+                                    st.success("Your backgrounds are uploaded file, refresh the page to see them.")                     
+                                    background_list.append(uploaded_file.name)
+                elif type_of_mask_replacement == "Inpainting":
+                    with btn1:
+                        prompt = st.text_input("Prompt:", help="Describe the whole image, but focus on the details you want changed!")
+                    with btn2:
+                        negative_prompt = st.text_input("Negative Prompt:", help="Enter any things you want to make the model avoid!")
+
+                edit1, edit2 = st.sidebar.columns(2)
+
+                with edit1:
+                    if st.button(f'Run Edit On Current Image'):
+                        if type_of_mask_replacement == "Inpainting":
+                            st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, "", bg_image, prompt, negative_prompt,width, height,st.session_state['which_layer'])
+                        elif type_of_mask_replacement == "Replace With Image":
+                            st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, "", "",width, height,st.session_state['which_layer'])
+                        st.experimental_rerun()
+                with edit2:
+                    if st.session_state['edited_image'] != "":                                     
+                        if st.button("Promote Last Image", type="primary"):
+                            if which_stage == "Unedited Key Frame":                        
+                                update_source_image(project_name, st.session_state['which_image'], st.session_state['edited_image'])
+                            elif which_stage == "Styled Key Frame":
+                                number_of_image_variants = add_image_variant(st.session_state['edited_image'], st.session_state['which_image'], project_name, timing_details)
+                                promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1)
+                            st.session_state['edited_image'] = ""
+                            st.success("Image promoted!")
+                    else:
+                        if st.button("Run Edit & Promote"):
+                            if type_of_mask_replacement == "Inpainting":
+                                st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, "", bg_image, prompt, negative_prompt,width, height,st.session_state['which_layer'])
+                            elif type_of_mask_replacement == "Replace With Image":
+                                st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, "", "",width, height,st.session_state['which_layer'])
+                            if which_stage == "Unedited Key Frame":                        
+                                update_source_image(project_name, st.session_state['which_image'], st.session_state['edited_image'])
+                            elif which_stage == "Styled Key Frame":
+                                number_of_image_variants = add_image_variant(st.session_state['edited_image'], st.session_state['which_image'], project_name, timing_details)
+                                promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1)
+                            st.session_state['edited_image'] = ""
+                            st.success("Image promoted!")
+                            st.experimental_rerun()
+                            
+                            
+                            
+                        
+
+                st.sidebar.markdown("### Batch Run Edits:")   
+                st.sidebar.write("This will batch run the settings you have above on a batch of images.")     
+                batch_run_from = st.sidebar.slider("From:", 1, 0, (0, len(timing_details)-1))
+                batch_run_to = st.sidebar.slider("To:", 1, 0, (0, len(timing_details)-1))
+                if which_stage == "Unedited Key Frame":
+                    st.sidebar.warning("This will overwrite the source images in the range you select - you can always reset them if you wish.")
+                elif which_stage == "Styled Key Frame":
+                    make_primary_variant = st.sidebar.checkbox("Make primary variant", value=True, help="If you want to make the edited image the primary variant, tick this box. If you want to keep the original primary variant, untick this box.")          
+                if st.sidebar.button("Batch Run Edit"):
+                    for i in range(batch_run_from, batch_run_to):
+                        if which_stage == "Unedited Key Frame":
+                            bg_image = timing_details[i]["source_image"]
+                            edited_image = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, prompt, negative_prompt, width, height,st.session_state['which_layer'])
+                            update_source_image(project_name, st.session_state['which_image'], edited_image)
+                        elif which_stage == "Styled Key Frame":
+                            variants = ast.literal_eval(timing_details[st.session_state['which_image']]["alternative_images"][1:-1])
+                            primary_image = timing_details[st.session_state['which_image']]["primary_image"]             
+                            bg_image = variants[primary_image]   
+                            edited_image = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, prompt, negative_prompt, width, height,st.session_state['which_layer'])   
+                            number_of_image_variants = add_image_variant(edited_image, st.session_state['which_image'], project_name, timing_details)
+                            if make_primary_variant == True:
+                                promote_image_variant(i, project_name, number_of_image_variants-1)
+
+                    
+
+
+
+            
             
 if __name__ == '__main__':
     main()
