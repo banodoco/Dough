@@ -44,9 +44,11 @@ def inpainting(video_name, image_url, prompt, negative_prompt):
     mask = "mask.png"
     mask = upload_image("mask.png")
         
-    #image = upload_image(f'videos/nirvana_test/assets/frames/1_selected/1.png')
+   # if image url itsn't a url, make image_url open("{image_url}", "rb")
+    if image_url[0:4] != "http":
+        image_url = f"open({image_url}, 'rb')"
 
-    output = version.predict(mask=mask, image=image_url,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt)    
+    output = version.predict(mask=mask, image=image_url,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)    
 
     return output[0]
 
@@ -82,6 +84,18 @@ def promote_image_variant(index_of_current_item, project_name, variant_to_promot
     df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
     df.iloc[index_of_current_item, [3]] = variant_to_promote
     df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
+
+    update_specific_timing_value(project_name, index_of_current_item -1, "interpolated_video", "")
+    update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", "")
+    if index_of_current_item < len(get_timing_details(project_name)) - 1:
+        update_specific_timing_value(project_name, index_of_current_item +1, "interpolated_video", "")
+    update_specific_timing_value(project_name, index_of_current_item -1, "timing_video", "")
+    update_specific_timing_value(project_name, index_of_current_item, "timing_video", "")
+    if index_of_current_item < len(get_timing_details(project_name)) - 1:
+        update_specific_timing_value(project_name, index_of_current_item +1, "timing_video", "")
+    
+
+
         
         
                 
@@ -343,9 +357,9 @@ def create_working_assets(video_name):
 
     df.to_csv(f'videos/{video_name}/settings.csv', index=False)
 
-    df = pd.DataFrame(columns=['index_number','frame_time','frame_number','primary_image','alternative_images','character_pipeline','negative_prompt','guidance_scale','seed','num_inference_steps','model_id','strength','notes','source_image','interpolation_style','static_time', 'duration_of_clip','prompt'])
+    df = pd.DataFrame(columns=['index_number','frame_time','frame_number','primary_image','alternative_images','character_pipeline','negative_prompt','guidance_scale','seed','num_inference_steps','model_id','strength','notes','source_image','interpolation_style','static_time','duration_of_clip','interpolated_video','timing_video','prompt'])
 
-    df.loc[0] = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+    df.loc[0] = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
 
     df.to_csv(f'videos/{video_name}/timings.csv', index=False)
 
@@ -372,26 +386,42 @@ def update_project_setting(key, pair_value, project_name):
 
     df.to_csv(csv_file_path, index=False)
 
-def prompt_interpolation_model(img1, img2, video_name, video_number, interpolation_steps, replicate_api_key):
+def prompt_interpolation_model(img1, img2, project_name, video_number, interpolation_steps, replicate_api_key):
 
     os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
 
     model = replicate.models.get("google-research/frame-interpolation")
 
-    output = model.predict(frame1=img1, frame2=img2, times_to_interpolate=interpolation_steps)
+    if img1[0:4] != "http":
+        img1 = f"open('{img1}', 'rb')"
 
-    video_name = "videos/" + video_name + \
-        "/assets/videos/0_raw/" + str(video_number) + ".mp4"
+    if img2[0:4] != "http":
+        img2 = f"open('{img2}', 'rb')"
+
+
+    output = model.predict(frame1=img1, frame2=img2, times_to_interpolate=interpolation_steps)
+    
+    #generate a random 8 digit string to name the file
+    file_name = ''.join(random.choices(string.ascii_lowercase + string.digits, k = 16)) + ".mp4"
+
+    video_location = "videos/" + project_name + \
+        "/assets/videos/0_raw/" + str(file_name)
 
     try:
 
-        urllib.request.urlretrieve(output, video_name)
+        urllib.request.urlretrieve(output, video_location)
 
     except Exception as e:
 
         print(e)
 
-    clip = VideoFileClip(video_name)
+    clip = VideoFileClip(video_location)
+
+    update_specific_timing_value(project_name, video_number, "interpolated_video", video_location)
+
+    update_specific_timing_value(project_name, video_number, "timing_video", "")
+
+    
 
 def get_timing_details(video_name):
 
@@ -443,6 +473,8 @@ def calculate_frame_number_at_time(input_video, time_of_frame, project_name):
 
 def remove_background(project_name, input_image):
     app_settings = get_app_settings()
+    if image[0:4] != "http":
+        image = f"open('{image}', 'rb')"
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
     model = replicate.models.get("pollinations/modnet")
     image = input_image
@@ -515,6 +547,35 @@ def extract_frame(frame_number, video_name, input_video, extract_frame_number,ti
 
     return str(frame_number) + ".png"
 
+def prompt_clip_interrogator(input_image,which_model,best_or_fast):
+
+    if which_model == "Stable Diffusion 1.5":
+        which_model = "ViT-L-14/openai"
+    elif which_model == "Stable Diffusion 2":
+        which_model = "ViT-H-14/laion2b_s32b_b79k"
+
+
+    app_settings = get_app_settings()
+
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
+
+    model = replicate.models.get("pharmapsychotic/clip-interrogator")    
+    
+    if input_image[0:4] == "http":
+        output = model.predict(image=input_image, clip_model_name=which_model, mode=best_or_fast)
+
+    elif input_image[0:4] != "http":
+        output = model.predict(image=open(input_image, "rb"), clip_model_name=which_model, mode=best_or_fast)
+
+    print(input_image)
+        
+    
+    print(output)
+  
+    return output
+
+
+
 
 def touch_up_images(video_name, index_of_current_item, image):
 
@@ -524,6 +585,8 @@ def touch_up_images(video_name, index_of_current_item, image):
 
     model = replicate.models.get("xinntao/gfpgan")    
     input_image = image
+    if input_image[0:4] != "http":
+        input_image = f"open({input_image}, 'rb')"
     # remove first and last characters from string
     print(input_image)
     output = model.predict(img=input_image)
@@ -536,6 +599,8 @@ def resize_image(video_name, image_number, new_width,new_height, image):
     response = r.get(image)
     image = Image.open(BytesIO(response.content))
     resized_image = image.resize((new_width, new_height))
+
+    time.sleep(0.1)
 
     resized_image.save("videos/" + str(video_name) + "/temp_image.png")
 
@@ -558,6 +623,12 @@ def face_swap(video_name, index_of_current_item, source_image):
     source_face = upload_image("videos/" + str(video_name) + "/face.png")
 
     target_face = source_image
+
+    if source_face[0:4] != "http":
+        source_face = f"open({source_face}, 'rb')"
+
+    if target_face[0:4] != "http":
+        target_face = f"open({target_face}, 'rb')"
 
     output = version.predict(source_path=source_face, target_path=target_face,use_sr=0)
 
@@ -582,30 +653,39 @@ def prompt_model_stability(project_name, index_of_current_item, timing_details, 
     strength = timing_details[index_of_current_item]["strength"]
     model = replicate.models.get("cjwbw/stable-diffusion-img2img-v2.1")
     version = model.versions.get("650c347f19a96c8a0379db998c4cd092e0734534591b16a60df9942d11dec15b")
-    input_image = source_image    
+    input_image = source_image 
+    if input_image[0:4] != "http":
+        input_image = f"open({input_image}, 'rb')"   
     output = version.predict(image=input_image, prompt_strength=str(strength), prompt=prompt, negative_prompt = timing_details[index_of_current_item]["negative_prompt"], width = project_settings["width"], height = project_settings["height"], guidance_scale = float(timing_details[index_of_current_item]["guidance_scale"]), seed = int(timing_details[index_of_current_item]["seed"]), num_inference_steps = int(timing_details[index_of_current_item]["num_inference_steps"]))
     new_image = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png" 
 
     return output[0]
 
 
-def delete_frame(video_name, image_number):
+def delete_frame(project_name, index_of_current_item):
 
-    os.remove("videos/" + str(video_name) + "/assets/frames/1_selected/" + str(image_number) + ".png")
+    update_specific_timing_value(project_name, index_of_current_item -1, "interpolated_video", "")    
+    if index_of_current_item < len(get_timing_details(project_name)) - 1:
+        update_specific_timing_value(project_name, index_of_current_item +1, "interpolated_video", "")
+    update_specific_timing_value(project_name, index_of_current_item -1, "timing_video", "")    
+    if index_of_current_item < len(get_timing_details(project_name)) - 1:
+        update_specific_timing_value(project_name, index_of_current_item +1, "timing_video", "")
 
-    df = pd.read_csv("videos/" + str(video_name) + "/timings.csv")
+    os.remove("videos/" + str(project_name) + "/assets/frames/1_selected/" + str(index_of_current_item) + ".png")
+
+    df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
     
-    for i in range(int(image_number)+1, len(os.listdir("videos/" + str(video_name) + "/assets/frames/1_selected"))):
+    for i in range(int(index_of_current_item)+1, len(os.listdir("videos/" + str(project_name) + "/assets/frames/1_selected"))):
             
-        os.rename("videos/" + str(video_name) + "/assets/frames/1_selected/" + str(i) + ".png", "videos/" + str(video_name) + "/assets/frames/1_selected/" + str(i - 1) + ".png")
+        os.rename("videos/" + str(project_name) + "/assets/frames/1_selected/" + str(i) + ".png", "videos/" + str(project_name) + "/assets/frames/1_selected/" + str(i - 1) + ".png")
 
         df.iloc[i, [0]] = str(i - 1)
 
     # remove the row from the timings.csv file using pandas
 
-    df = df.drop([int(image_number)])
+    df = df.drop([int(index_of_current_item)])
 
-    df.to_csv("videos/" + str(video_name) + "/timings.csv", index=False)
+    df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
 
     
 
@@ -640,9 +720,11 @@ def prompt_model_dreambooth(project_name, image_number, model_name, app_settings
     else:
         version = model_details["version"]
 
-    version = model.versions.get(version)
+    version = model.versions.get(version)    
 
     input_image = image_url
+    if input_image[0:4] != "http":
+        input_image = f"open({input_image}, 'rb')"
     output = version.predict(image=input_image, prompt=prompt, prompt_strength=strength, height = project_settings["height"], width = project_settings["width"], disable_safety_check=True, negative_prompt = negative_prompt, guidance_scale = guidance_scale, seed = seed, num_inference_steps = num_inference_steps)
 
     new_image = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(image_number) + ".png"
@@ -695,10 +777,10 @@ def update_slice_of_video_speed(video_name, input_video, desired_speed_change):
     os.rename("videos/" + str(video_name) + "/assets/videos/0_raw/output_" + str(input_video),
               "videos/" + str(video_name) + "/assets/videos/0_raw/" + str(input_video))
 
-def slice_part_of_video(video_name, video_number, video_start_percentage, video_end_percentage, slice_name):
 
-    input_video = "videos/" + \
-        str(video_name) + "/assets/videos/0_raw/" + str(video_number) + ".mp4"
+def slice_part_of_video(project_name, index_of_current_item, video_start_percentage, video_end_percentage, slice_name,timing_details):
+
+    input_video = timing_details[int(index_of_current_item)]["interpolated_video"]
     video_capture = cv2.VideoCapture(input_video)
     frame_rate = video_capture.get(cv2.CAP_PROP_FPS)
     total_duration_of_clip = video_capture.get(cv2.CAP_PROP_FRAME_COUNT) / frame_rate
@@ -707,21 +789,17 @@ def slice_part_of_video(video_name, video_number, video_start_percentage, video_
     clip = VideoFileClip(input_video).subclip(
         t_start=start_time, t_end=end_time)
     output_video = "videos/" + \
-        str(video_name) + "/assets/videos/0_raw/" + str(slice_name) + ".mp4"
+        str(project_name) + "/assets/videos/0_raw/" + str(slice_name) + ".mp4"
     clip.write_videofile(output_video, audio=False)
 
-def update_video_speed(video_name, video_number, duration_of_static_time, total_duration_of_clip):
+def update_video_speed(project_name, index_of_current_item, duration_of_static_time, total_duration_of_clip,timing_details):
 
+    slice_part_of_video(project_name, index_of_current_item, 0, 0.00000000001, "static",timing_details)
 
-    input_video = "videos/" + \
-        str(video_name) + "/assets/videos/0_raw/" + str(video_number) + ".mp4"
-
-    slice_part_of_video(video_name, video_number, 0, 0.00000000001, "static")
-
-    slice_part_of_video(video_name, video_number, 0, 1, "moving")
+    slice_part_of_video(project_name, index_of_current_item, 0, 1, "moving",timing_details)
 
     video_capture = cv2.VideoCapture(
-        "videos/" + str(video_name) + "/assets/videos/0_raw/static.mp4")
+        "videos/" + str(project_name) + "/assets/videos/0_raw/static.mp4")
 
     frame_rate = video_capture.get(cv2.CAP_PROP_FPS)
 
@@ -732,10 +810,10 @@ def update_video_speed(video_name, video_number, duration_of_static_time, total_
         duration_of_static_time) / float(total_duration_of_static)
 
     update_slice_of_video_speed(
-        video_name, "static.mp4", desired_speed_change_of_static)
+        project_name, "static.mp4", desired_speed_change_of_static)
 
     video_capture = cv2.VideoCapture(
-        "videos/" + str(video_name) + "/assets/videos/0_raw/moving.mp4")
+        "videos/" + str(project_name) + "/assets/videos/0_raw/moving.mp4")
 
     frame_rate = video_capture.get(cv2.CAP_PROP_FPS)
 
@@ -750,24 +828,28 @@ def update_video_speed(video_name, video_number, duration_of_static_time, total_
 
     desired_speed_change_of_moving = (total_duration_of_clip - duration_of_static_time) / total_duration_of_moving
 
-    update_slice_of_video_speed(video_name, "moving.mp4", desired_speed_change_of_moving)
+    update_slice_of_video_speed(project_name, "moving.mp4", desired_speed_change_of_moving)
+
+    file_name = ''.join(random.choices(string.ascii_lowercase + string.digits, k = 16)) + ".mp4"
 
     if duration_of_static_time == 0:
         
         # shutil.move("videos/" + str(video_name) + "/assets/videos/0_raw/moving.mp4", "videos/" + str(video_name) + "/assets/videos/1_final/" + str(video_number) + ".mp4")
-        os.rename("videos/" + str(video_name) + "/assets/videos/0_raw/moving.mp4",
-                  "videos/" + str(video_name) + "/assets/videos/1_final/" + str(video_number) + ".mp4")
-        os.remove("videos/" + str(video_name) + "/assets/videos/0_raw/static.mp4")
+        os.rename("videos/" + str(project_name) + "/assets/videos/0_raw/moving.mp4",
+                  "videos/" + str(project_name) + "/assets/videos/1_final/" + str(file_name))
+        os.remove("videos/" + str(project_name) + "/assets/videos/0_raw/static.mp4")
     else:
-        final_clip = concatenate_videoclips([VideoFileClip("videos/" + str(video_name) + "/assets/videos/0_raw/static.mp4"),                                        VideoFileClip("videos/" + str(video_name) + "/assets/videos/0_raw/moving.mp4")])
+        final_clip = concatenate_videoclips([VideoFileClip("videos/" + str(project_name) + "/assets/videos/0_raw/static.mp4"),                                        VideoFileClip("videos/" + str(video_name) + "/assets/videos/0_raw/moving.mp4")])
 
         final_clip.write_videofile(
-            "videos/" + str(video_name) + "/assets/videos/0_raw/full_output.mp4", fps=30)
+            "videos/" + str(project_name) + "/assets/videos/0_raw/full_output.mp4", fps=30)
 
-        os.remove("videos/" + str(video_name) + "/assets/videos/0_raw/moving.mp4")
-        os.remove("videos/" + str(video_name) + "/assets/videos/0_raw/static.mp4")
-        os.rename("videos/" + str(video_name) + "/assets/videos/0_raw/full_output.mp4",
-                "videos/" + str(video_name) + "/assets/videos/1_final/" + str(video_number) + ".mp4")
+        os.remove("videos/" + str(project_name) + "/assets/videos/0_raw/moving.mp4")
+        os.remove("videos/" + str(project_name) + "/assets/videos/0_raw/static.mp4")
+        os.rename("videos/" + str(project_name) + "/assets/videos/0_raw/full_output.mp4",
+                "videos/" + str(file_name))
+        
+    update_specific_timing_value(project_name, index_of_current_item, "timing_video", "videos/" + str(project_name) + "/assets/videos/1_final/" + str(file_name))
 
 def calculate_desired_duration_of_each_clip(timing_details,project_name):
 
@@ -824,6 +906,12 @@ def hair_swap(replicate_api_key, video_name, index_of_current_item,stablediffusi
 
     target_hair = upload_image("videos/" + str(video_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png")
 
+    if source_hair[0:4] != "http":
+        source_hair = f"open({source_hair}, 'rb')"
+
+    if target_hair[0:4] != "http":
+        target_hair = f"open({target_hair}, 'rb')"
+
     output = version.predict(source_image=source_hair, target_image=target_hair)
 
     new_image = "videos/" + str(video_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png"
@@ -848,6 +936,9 @@ def prompt_model_depth2img(strength,video_name, image_number, replicate_api_key,
     version = model.versions.get("68f699d395bc7c17008283a7cef6d92edc832d8dc59eb41a6cafec7fc70b85bc")
     image = source_image
 
+    if image[0:4] != "http":
+        image = f"open({image}, 'rb')"
+
     output = version.predict(input_image=image, prompt_strength=str(strength), prompt=prompt, negative_prompt = negative_prompt, num_inference_steps = num_inference_steps, guidance_scale = guidance_scale)
     
     return output[0]
@@ -857,6 +948,8 @@ def prompt_model_blip2(source_image, query):
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]        
     model = replicate.models.get("salesforce/blip-2")
     version = model.versions.get("4b32258c42e9efd4288bb9910bc532a69727f9acd26aa08e175713a0a857a608")
+    if source_image[0:4] != "http":
+        source_image = f"open({source_image}, 'rb')"
     output = version.predict(image=source_image, question=query)
     print (output)
     return output
@@ -866,6 +959,8 @@ def facial_expression_recognition(source_image):
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]        
     model = replicate.models.get("phamquiluan/facial-expression-recognition")
     version = model.versions.get("b16694d5bfed43612f1bfad7015cf2b7883b732651c383fe174d4b7783775ff5")
+    if source_image[0:4] != "http":
+        source_image = f"open({source_image}, 'rb')"
     output = version.predict(input_path=source_image)
     emo_label = output[0]["emo_label"]
     if emo_label == "disgust":
@@ -889,6 +984,47 @@ def facial_expression_recognition(source_image):
         emotion = (f"neutral expression")
     return emotion
     
+def trigger_restyling_process(timing_details, project_name, index_of_current_item,model,prompt,strength,run_character_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps,which_stage_to_run_on,promote_new_generation, project_settings):
+                                                    
+    get_model_details(model)                    
+    prompt = prompt.replace(",", ".")                              
+    prompt = prompt.replace("\n", "")
+    update_project_setting("last_prompt", prompt, project_name)
+    update_project_setting("last_strength", strength,project_name)
+    update_project_setting("last_model", model, project_name)
+    update_project_setting("last_character_pipeline", run_character_pipeline, project_name)
+    update_project_setting("last_negative_prompt", negative_prompt, project_name)
+    update_project_setting("last_guidance_scale", guidance_scale, project_name)
+    update_project_setting("last_seed", seed, project_name)
+    update_project_setting("last_num_inference_steps",  num_inference_steps, project_name)   
+    update_project_setting("last_which_stage_to_run_on", which_stage_to_run_on, project_name)                       
+    if timing_details[index_of_current_item]["source_image"] == "":
+        source_image = upload_image("videos/" + str(project_name) + "/assets/frames/1_selected/" + str(index_of_current_item) + ".png")
+    else:
+        source_image = timing_details[index_of_current_item]["source_image"]
+    update_timing_values(project_name, index_of_current_item, prompt, strength, model,run_character_pipeline, negative_prompt,guidance_scale,seed,num_inference_steps, source_image)                                                    
+    timing_details = get_timing_details(project_name)
+    if which_stage_to_run_on == "Extracted Frames":
+        source_image = timing_details[index_of_current_item]["source_image"]
+    else:
+        variants = ast.literal_eval(timing_details[index_of_current_item]["alternative_images"][1:-1])
+        number_of_variants = len(variants)                       
+        primary_image = int(timing_details[index_of_current_item]["primary_image"])
+        source_image = variants[primary_image]
+        
+    if st.session_state['run_character_pipeline'] == "Yes":                        
+        character_pipeline(index_of_current_item, project_name, project_settings, timing_details, source_image)
+    else:                            
+        restyle_images(index_of_current_item, project_name, project_settings, timing_details, source_image)
+    if promote_new_generation == True:                              
+        timing_details = get_timing_details(project_name)                            
+        variants = ast.literal_eval(timing_details[index_of_current_item]["alternative_images"][1:-1])                                                                 
+        number_of_variants = len(variants)                   
+        if number_of_variants == 1:
+            print("No new generation to promote")
+        else:                            
+            promote_image_variant(index_of_current_item, project_name, number_of_variants - 1)
+
 
 def prompt_model_pix2pix(strength,video_name, image_number, timing_details, replicate_api_key, source_image):
     app_settings = get_app_settings()
@@ -900,6 +1036,8 @@ def prompt_model_pix2pix(strength,video_name, image_number, timing_details, repl
     model = replicate.models.get("arielreplicate/instruct-pix2pix")
     version = model.versions.get("10e63b0e6361eb23a0374f4d9ee145824d9d09f7a31dcd70803193ebc7121430")
     image = source_image
+    if image[0:4] != "http":
+        image = f"open({image}, 'rb')"
     output = version.predict(input_image=image, instruction_text=prompt, seed=seed, cfg_image=1.2, cfg_text = guidance_scale, resolution=704)    
 
     return output
@@ -1014,6 +1152,64 @@ def update_source_image(project_name, index_of_current_item,source_image):
 
     df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
 
+def render_video(project_name, final_video_name):
+    timing_details = get_timing_details(project_name)     
+    total_number_of_videos = len(timing_details) - 2
+    calculate_desired_duration_of_each_clip(timing_details, project_name)
+    timing_details = get_timing_details(project_name)
+
+    for i in timing_details:
+        
+        index_of_current_item = timing_details.index(i)
+
+        if index_of_current_item <= total_number_of_videos:
+
+            if timing_details[index_of_current_item]["timing_video"] == "":
+
+                total_duration_of_clip = timing_details[index_of_current_item]['duration_of_clip']
+
+                total_duration_of_clip = float(total_duration_of_clip)
+
+                if index_of_current_item == total_number_of_videos:
+
+                    total_duration_of_clip = timing_details[index_of_current_item]['duration_of_clip']
+                    duration_of_static_time = float(timing_details[index_of_current_item]['static_time'])
+                    duration_of_static_time = float(duration_of_static_time) / 2
+
+                elif index_of_current_item == 0:
+
+                    duration_of_static_time = float(timing_details[index_of_current_item]['static_time'])
+
+                else:
+
+                    duration_of_static_time = float(timing_details[index_of_current_item]['static_time'])
+
+                    
+                update_video_speed(project_name, index_of_current_item, duration_of_static_time, total_duration_of_clip,timing_details)
+
+    video_list = []
+
+    timing_details = get_timing_details(project_name)
+
+    for i in timing_details:
+
+        index_of_current_item = timing_details.index(i)
+
+        if index_of_current_item <= total_number_of_videos:
+
+            index_of_current_item = timing_details.index(i)
+
+            video_location = timing_details[index_of_current_item]["timing_video"]
+
+            video_list.append(video_location)
+
+    video_clips = [VideoFileClip(v) for v in video_list]
+
+    finalclip = concatenate_videoclips(video_clips) 
+
+    finalclip.write_videofile(f"videos/{project_name}/assets/videos/2_completed/{final_video_name}.mp4", fps=60,  audio_bitrate="1000k", bitrate="4000k", codec="libx264")
+
+    video = VideoFileClip(f"videos/{project_name}/assets/videos/2_completed/{final_video_name}.mp4")
 
 
 def update_specific_timing_value(project_name, index_of_current_item, parameter, value):
@@ -1047,7 +1243,7 @@ def update_timing_values(project_name, index_of_current_item,prompt, strength, m
     print("HERE IT IS!!!")
 
     print(prompt,strength,model,character_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps, source_image)
-    df.iloc[index_of_current_item, [17,11,10,5,6,7,8,9,13]] = [prompt,strength,model,character_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps, source_image]
+    df.iloc[index_of_current_item, [19,11,10,5,6,7,8,9,13]] = [prompt,strength,model,character_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps, source_image]
 
     # Convert the "primary_image" column to numeric
     df["primary_image"] = pd.to_numeric(df["primary_image"], downcast='integer', errors='coerce')
@@ -1098,6 +1294,8 @@ def create_depth_mask_image(image_url,layer):
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]            
     model = replicate.models.get("cjwbw/midas")
     version = model.versions.get("a6ba5798f04f80d3b314de0f0a62277f21ab3503c60c84d4817de83c5edfdae0")
+    if image_url[0:4] != "http":
+        image_url = f"open({image_url}, 'rb')"
     output = version.predict(image=image_url, model_type="dpt_beit_large_512")
     try:
         urllib.request.urlretrieve(output, "depth.png")    
@@ -1225,7 +1423,7 @@ def main():
         timing_details = get_timing_details(project_name)
         st.session_state.stage = st.sidebar.radio("Select an option",
                                     ["App Settings","New Project","Project Settings","Custom Models","Key Frame Selection",
-                                     "Frame Styling","Frame Editing","Frame Interpolation","Timing Adjustment","Video Rendering"])
+                                     "Frame Styling","Frame Editing","Frame Interpolation","Timing Adjustment","Video Rendering", "Saved Versions","Prompt Finder"])
         st.header(st.session_state.stage)   
 
      
@@ -1455,22 +1653,20 @@ def main():
                                                     
        
         elif st.session_state.stage == "Frame Styling":  
-            # if project_name/assets/frames/1_selected/0.png or project_name/assets/frames/1_selected/1.png exist, then we can proceed to the next stage 
-            
-            
-            project_settings = get_project_settings(project_name)
 
-            if "strength" not in st.session_state:
-                    
-                    st.session_state['strength'] = project_settings["last_strength"]
-                    st.session_state['prompt'] = project_settings["last_prompt"]
-                    st.session_state['model'] = project_settings["last_model"]
-                    st.session_state['run_character_pipeline'] = project_settings["last_character_pipeline"]
-                    st.session_state['negative_prompt'] = project_settings["last_negative_prompt"]
-                    st.session_state['guidance_scale'] = project_settings["last_guidance_scale"]
-                    st.session_state['seed'] = project_settings["last_seed"]
-                    st.session_state['num_inference_steps'] = project_settings["last_num_inference_steps"]
-                    st.session_state['which_stage_to_run_on'] = project_settings["last_which_stage_to_run_on"]
+            if "project_settings" not in st.session_state:
+                st.session_state['project_settings'] = get_project_settings(project_name)
+                                    
+            if "strength" not in st.session_state:                    
+                st.session_state['strength'] = st.session_state['project_settings']["last_strength"]
+                st.session_state['prompt'] = st.session_state['project_settings']["last_prompt"]
+                st.session_state['model'] = st.session_state['project_settings']["last_model"]
+                st.session_state['run_character_pipeline'] = st.session_state['project_settings']["last_character_pipeline"]
+                st.session_state['negative_prompt'] = st.session_state['project_settings']["last_negative_prompt"]
+                st.session_state['guidance_scale'] = st.session_state['project_settings']["last_guidance_scale"]
+                st.session_state['seed'] = st.session_state['project_settings']["last_seed"]
+                st.session_state['num_inference_steps'] = st.session_state['project_settings']["last_num_inference_steps"]
+                st.session_state['which_stage_to_run_on'] = st.session_state['project_settings']["last_which_stage_to_run_on"]
 
             if timing_details[0]["source_image"] == "":
                 st.info("You need to select and load key frames first in the Key Frame Selection section.")
@@ -1478,19 +1674,21 @@ def main():
             else:
                 if "which_image" not in st.session_state:
                     st.session_state['which_image'] = 0
-                if timing_details[0]["alternative_images"] != "":
+
+                f1, f2, f3  = st.columns([1,3,1])
+
+                
+                with f1:
+                    st.session_state['which_image'] = st.number_input('Go to Frame:', 0, len(timing_details)-1,help=f"There are {len(timing_details)-1} key frames in this video.")
+
+                if timing_details[st.session_state['which_image']]["alternative_images"] != "":
+                    
+
+                                                                            
                     variants = ast.literal_eval(timing_details[st.session_state['which_image']]["alternative_images"][1:-1])
                     number_of_variants = len(variants)
-                    current_variant = int(timing_details[st.session_state['which_image']]["primary_image"])
-
-                    f1, f2, f3  = st.columns([1,3,1])
-                    with f1:
-                        st.session_state['which_image'] = st.number_input('Go to Frame:', 0, len(timing_details)-1,help=f"There are {len(timing_details)} key frames in this video.")                                                        
-                        
-                        variants = ast.literal_eval(timing_details[st.session_state['which_image']]["alternative_images"][1:-1])
-                        number_of_variants = len(variants)
-                        current_variant = int(timing_details[st.session_state['which_image']]["primary_image"])    
-                        which_variant = current_variant     
+                    current_variant = int(timing_details[st.session_state['which_image']]["primary_image"])                                                                                                
+                    which_variant = current_variant     
                     with f2:
                         which_variant = st.radio(f'Main variant = {current_variant}', range(number_of_variants), index=current_variant, horizontal = True, key = f"Main variant for {st.session_state['which_image']}")
                     with f3:
@@ -1503,14 +1701,8 @@ def main():
                                 promote_image_variant(st.session_state['which_image'], project_name, which_variant)
                                 time.sleep(0.5)
                                 st.experimental_rerun()
-                else:   
-                    f1, f2, f3  = st.columns([1,3,1])
-                    with f1:
-                        st.session_state['which_image'] = st.number_input('Go to Frame:', 0, len(timing_details)-1,help=f"There are {len(timing_details)} key frames in this video.")   
-
-                
-                
-            
+                 
+                                
                 if timing_details[st.session_state['which_image']]["alternative_images"] != "":
                     img2=variants[which_variant]
                 else:
@@ -1519,36 +1711,7 @@ def main():
                     img1=timing_details[st.session_state['which_image']]["source_image"],
                     img2=img2)
                 
-                detail1, detail2, detail3 = st.columns([1,1,1])
-                with detail1:
-                    st.number_input(f"How many variants?", min_value=1, max_value=6, value=1, key=f"number_of_variants_{st.session_state['which_image']}")
-                with detail2:
-                    st.write("")
-                    st.write("")
-                    if st.button(f"Generate Variants for {st.session_state['which_image']}", key=f"new_variations_{st.session_state['which_image']}",help="This will generate new variants based on the settings to the left."):
-                        st.session_state['restyle_button'] = 'yes'
-                        st.session_state['item_to_restyle'] = st.session_state['which_image']                        
-                        st.experimental_rerun()                    
-                with detail3:   
-                    with st.expander("Show/Hide Previous Last Prompt Details", expanded=False):
-                        print("a")
-                        # st.write(f"Prompt: {st.session_state['which_image']['prompt']}")
-                        # st.write(f"Strength: {st.session_state['which_image']['strength']}")
-                        # st.write(f"Model: {st.session_state['which_image']['model_id']}")
-
-                if st.button("Create gif of current main variants"):
-                    
-                    create_gif_preview(project_name, timing_details)
-                    st.image(f"videos/{project_name}/preview_gif.gif", use_column_width=True)                
-                    st.balloons()
-                    
-                    
-
-                timing_details = get_timing_details(project_name)
-                for i in timing_details:
-                    print("----------------")
-                    print(i)
-                    print("----------------")
+                                                        
         
                 
 
@@ -1582,7 +1745,7 @@ def main():
                     if st.session_state['model'] == "pix2pix":
                         st.sidebar.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")                    
                 st.session_state['strength'] = st.sidebar.number_input(f"Batch strength", value=float(st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
-                if project_settings["last_character_pipeline"] == "No":
+                if st.session_state['project_settings']["last_character_pipeline"] == "No":
                     index_of_run_character_pipeline = 1
                 else:
                     index_of_run_character_pipeline = 0
@@ -1610,7 +1773,7 @@ def main():
 
                 range_end = st.sidebar.slider('Update To', 0, len(timing_details) - 1, 1)
 
-                if project_settings["last_which_stage_to_run_on"] == "Current Main Variant":
+                if st.session_state['project_settings']["last_which_stage_to_run_on"] == "Current Main Variant":
                     index_of_which_stage_to_run_on = 1
                 else:
                     index_of_which_stage_to_run_on = 0
@@ -1619,9 +1782,7 @@ def main():
 
                 promote_new_generation = st.sidebar.checkbox("Promote new generation to main variant", value=True, key="promote_new_generation_to_main_variant")
 
-                range_end = range_end + 1
-
-                project_settings = get_project_settings(project_name)
+                range_end = range_end + 1                
 
                 app_settings = get_app_settings()
 
@@ -1632,64 +1793,56 @@ def main():
 
                 if range_start <= range_end:
 
-                    if st.sidebar.button(f'Batch restyle') or st.session_state['restyle_button'] == 'yes':
+                    btn1, btn2 = st.sidebar.columns(2)
 
-                        print(st.session_state['strength'])
+                    with btn1:
+                        batch_number_of_variants = st.number_input("How many variants?", value=1, min_value=1, max_value=10, step=1, key="number_of_variants")
 
-                        if st.session_state['restyle_button'] == 'yes':
-                            range_start = int(st.session_state['item_to_restyle'])
-                            range_end = range_start + 1
-                            st.session_state['restyle_button'] = ''
-                            st.session_state['item_to_restyle'] = ''
+                    with btn2:
 
-                        for i in range(range_start, range_end): 
-                                                
-                            index_of_current_item = i
-                            get_model_details(st.session_state['model'])                    
-                            st.session_state['prompt'] = st.session_state['prompt'].replace(",", ".")                              
-                            st.session_state['prompt'] = st.session_state['prompt'].replace("\n", "")
-                            update_project_setting("last_prompt", st.session_state['prompt'], project_name)
-                            update_project_setting("last_strength", st.session_state['strength'],project_name)
-                            update_project_setting("last_model", st.session_state['model'], project_name)
-                            update_project_setting("last_character_pipeline", st.session_state['run_character_pipeline'], project_name)
-                            update_project_setting("last_negative_prompt", st.session_state['negative_prompt'], project_name)
-                            update_project_setting("last_guidance_scale", st.session_state['guidance_scale'], project_name)
-                            update_project_setting("last_seed", st.session_state['seed'], project_name)
-                            update_project_setting("last_num_inference_steps",  st.session_state['num_inference_steps'], project_name)   
-                            update_project_setting("last_which_stage_to_run_on", st.session_state['which_stage_to_run_on'], project_name)                       
-                            if timing_details[index_of_current_item]["source_image"] == "":
-                                source_image = upload_image("videos/" + str(project_name) + "/assets/frames/1_selected/" + str(index_of_current_item) + ".png")
-                            else:
-                                source_image = timing_details[index_of_current_item]["source_image"]
-                            update_timing_values(project_name, index_of_current_item, st.session_state['prompt'], st.session_state['strength'], st.session_state['model'],st.session_state['run_character_pipeline'], st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'], source_image)                                                    
-                            timing_details = get_timing_details(project_name)
-                            if st.session_state['which_stage_to_run_on'] == "Extracted Frames":
-                                source_image = timing_details[index_of_current_item]["source_image"]
-                            else:
-                                variants = ast.literal_eval(timing_details[index_of_current_item]["alternative_images"][1:-1])
-                                number_of_variants = len(variants)                       
-                                primary_image = int(timing_details[index_of_current_item]["primary_image"])
-                                source_image = variants[primary_image]
-                                
-                            if st.session_state['run_character_pipeline'] == "Yes":                        
-                                character_pipeline(index_of_current_item, project_name, project_settings, timing_details, source_image)
-                            else:                            
-                                restyle_images(index_of_current_item, project_name, project_settings, timing_details, source_image)
-                            if promote_new_generation == True:                              
-                                timing_details = get_timing_details(project_name)                            
-                                variants = ast.literal_eval(timing_details[index_of_current_item]["alternative_images"][1:-1])                                                                 
-                                number_of_variants = len(variants)                   
-                                if number_of_variants == 1:
-                                    print("No new generation to promote")
-                                else:                            
-                                    promote_image_variant(index_of_current_item, project_name, number_of_variants - 1)
-                                                    
+                        st.write("")
+                        st.write("")
+                        if st.button(f'Batch restyle') or st.session_state['restyle_button'] == 'yes':
+                                            
+                            if st.session_state['restyle_button'] == 'yes':
+                                range_start = int(st.session_state['item_to_restyle'])
+                                range_end = range_start + 1
+                                st.session_state['restyle_button'] = ''
+                                st.session_state['item_to_restyle'] = ''
 
-                        st.experimental_rerun()
+                            for i in range(range_start, range_end): 
+                                for number in range(0, batch_number_of_variants):
+                                    index_of_current_item = i
+                                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['run_character_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'])
+                            st.experimental_rerun()
 
                 else:
                         
                         st.sidebar.write("Select a valid range")
+                
+                detail1, detail2, detail3 = st.columns([1,1,2])
+                with detail1:
+                    individual_number_of_variants = st.number_input(f"How many variants?", min_value=1, max_value=10, value=1, key=f"number_of_variants_{st.session_state['which_image']}")
+                with detail2:
+                    st.write("")
+                    st.write("")
+                    if st.button(f"Generate Variants", key=f"new_variations_{st.session_state['which_image']}",help="This will generate new variants based on the settings to the left."):
+                        for i in range(0, individual_number_of_variants):
+                            index_of_current_item = st.session_state['which_image']
+                            trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['run_character_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'])                 
+                        st.experimental_rerun()
+                with detail3:   
+                    with st.expander("Show/Hide Previous Last Prompt Details", expanded=False):
+                        print("a")
+                        # st.write(f"Prompt: {st.session_state['which_image']['prompt']}")
+                        # st.write(f"Strength: {st.session_state['which_image']['strength']}")
+                        # st.write(f"Model: {st.session_state['which_image']['model_id']}")
+
+                if st.button("Create gif of current main variants"):
+                    
+                    create_gif_preview(project_name, timing_details)
+                    st.image(f"videos/{project_name}/preview_gif.gif", use_column_width=True)                
+                    st.balloons()
                    
                     
                 
@@ -1703,32 +1856,70 @@ def main():
                 key_settings = get_app_settings()
                 total_number_of_videos = len(timing_details) - 1
 
-                interpolation_steps = st.slider("Number of interpolation steps", min_value=1, max_value=8, value=4)
-                with st.expander("Unsure what to pick? Click to see what this means."):
-                    st.write("Interpolation steps are the number of frames to generate between each frame. We recommend varying the number of interpolation steps roughly based on how long the gap between each frame is is.")
-                    st.write("0.17 seconds = 2 steps")
-                    st.write("0.3 seconds = 3 steps")
-                    st.write("0.57 seconds = 4 steps")
-                    st.write("1.1 seconds = 5 steps")
-                    st.write("2.17 seconds = 6 steps")
-                    st.write("4.3 seconds = 7 steps")
-                    st.write("8.57 seconds = 8 steps")
+                dynamic_interolation_steps = st.radio("Interpolation step selection:", options=["Static","Dynamic"], index=0, help="If static, you will be able to select a number of interpolation steps. If dynamic, the number of interpolation steps will be calculated based on the length of the gap between each frame.", horizontal=True)
+                
+                if dynamic_interolation_steps == "Static":
+                    interpolation_steps = st.slider("Number of interpolation steps", min_value=1, max_value=8, value=4)
+                    with st.expander("Unsure what to pick? Click to see what this means."):
+                        st.write("Interpolation steps are the number of frames to generate between each frame. We recommend varying the number of interpolation steps roughly based on how long the gap between each frame is is.")
+                        st.write("0.17 seconds = 2 steps")
+                        st.write("0.3 seconds = 3 steps")
+                        st.write("0.57 seconds = 4 steps")
+                        st.write("1.1 seconds = 5 steps")
+                        st.write("2.17 seconds = 6 steps")
+                        st.write("4.3 seconds = 7 steps")
+                        st.write("8.57 seconds = 8 steps")
+                elif dynamic_interolation_steps == "Dynamic":
+                    st.info("The number of interpolation steps will be calculated based on the length of the gap between each frame.")
+                
+                
 
-                which_video = st.select_slider("Which video to interpolate", options=["All","Single"])
-                delete_existing_videos = st.checkbox("Delete existing videos:")
+                which_video = st.radio("Which video to interpolate", options=["All","Single"], horizontal=True)
+                delete_existing_videos = st.checkbox("Delete existing videos:", help="This will delete any existing interpolated videos before generating new ones. If you don't want to delete existing videos, leave this unchecked.")
+
+                def calculate_dynamic_interpolations_steps(duration_of_clip):
+
+                    if duration_of_clip < 0.17:
+                        interpolation_steps = 2
+                    elif duration_of_clip < 0.3:
+                        interpolation_steps = 3
+                    elif duration_of_clip < 0.57:
+                        interpolation_steps = 4
+                    elif duration_of_clip < 1.1:
+                        interpolation_steps = 5
+                    elif duration_of_clip < 2.17:
+                        interpolation_steps = 6
+                    elif duration_of_clip < 4.3:
+                        interpolation_steps = 7
+                    else:
+                        interpolation_steps = 8
+                    return interpolation_steps
 
                 if which_video == "All":
 
                     if st.button("Interpolate All Videos"):
-                        if delete_existing_videos == True:
-                            for filename in os.listdir("videos/" + str(project_name) + "/assets/videos/0_raw"):
-                                os.remove("videos/" + str(project_name) + "/assets/videos/0_raw/" + filename)
+
+                        
+                        if delete_existing_videos == True:                            
+                            for i in timing_details:                                
+                                if i["interpolated_video"] != "":
+                                    update_specific_timing_value(project_name, timing_details.index(i), "interpolated_video", "")
+                            time.sleep(1) 
+                                
+                          
+
+                        
 
                         for i in range(0, total_number_of_videos):
 
                             index_of_current_item = i
-                            
-                            if not os.path.exists("videos/" + str(project_name) + "/assets/videos/0_raw/" + str(index_of_current_item) + ".mp4"):
+
+                            if dynamic_interolation_steps == "Dynamic":
+                                calculate_desired_duration_of_each_clip(timing_details,project_name)
+                                timing_details = get_timing_details(project_name)
+                                interpolation_steps = calculate_dynamic_interpolations_steps(timing_details[index_of_current_item]["duration_of_clip"])
+
+                            if timing_details[index_of_current_item]["interpolated_video"] == "":                                                        
 
                                 if total_number_of_videos == index_of_current_item:
 
@@ -1753,11 +1944,17 @@ def main():
 
                                     prompt_interpolation_model(current_image_location, next_image_location, project_name, index_of_current_item,
                                                             interpolation_steps, key_settings["replicate_com_api_key"])
+                        st.success("All videos interpolated!")
 
                 else:
                     specific_video = st.number_input("Which video to interpolate", min_value=0, max_value=total_number_of_videos, value=0)
 
                     if st.button("Interpolate this video"):
+
+                        if dynamic_interolation_steps == "Dynamic":
+                            calculate_desired_duration_of_each_clip(timing_details,project_name)
+                            timing_details = get_timing_details(project_name)
+                            interpolation_steps = calculate_dynamic_interpolations_steps(timing_details[specific_video]["duration_of_clip"])                            
                         
                         current_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(specific_video) + ".png"
 
@@ -1775,74 +1972,28 @@ def main():
 
 
         elif st.session_state.stage == "Video Rendering":
-            final_video_name = st.text_input("What would you like to name this video?")
+            timing_details = get_timing_details(project_name)
+        
+            disable_rendering = False
+            for i in timing_details:
+                if i["interpolated_video"] == "" and timing_details.index(i) != len(timing_details)-1 and disable_rendering == False:                    
+                    st.error("You need to interpolate all the videos before you can render the final video. If you delete frames or change the primary image, you will need to interpolate the video again.")
+                    disable_rendering = True
+            parody_movie_names = ["The_Lord_of_the_Onion_Rings", "Jurassic_Pork", "Harry_Potter_and_the_Sorcerer_s_Kidney_Stone", "Star_Wars_The_Phantom_of_the_Oprah", "The_Silence_of_the_Yams", "The_Hunger_Pains", "Free_Willy_Wonka_and_the_Chocolate_Factory", "The_Da_Vinci_Chode", "Forrest_Dump", "The_Shawshank_Inebriation", "A_Clockwork_Orange_Juice", "The_Big_Lebowski_2_Dude_Where_s_My_Car", "The_Princess_Diaries_The_Dark_Knight_Rises", "Eternal_Sunshine_of_the_Spotless_Behind", "Rebel_Without_a_Clue", "The_Terminal_Dentist", "Dr_Strangelove_or_How_I_Learned_to_Stop_Worrying_and_Love_the_Bombastic", "The_Wolf_of_Sesame_Street", "The_Good_the_Bad_and_the_Fluffy", "The_Sound_of_Mucus", "Back_to_the_Fuchsia", "The_Curious_Case_of_Benjamin_s_Button", "The_Fellowship_of_the_Bing", "The_Texas_Chainsaw_Manicure",  "The_Iron_Manatee", "Night_of_the_Living_Bread", "Indiana_Jones_and_the_Temple_of_Groom", "Kill_Billiards", "The_Bourne_Redundancy", "The_SpongeBob_SquarePants_Movie_Sponge_Out_of_Water_and_Ideas","Planet_of_the_Snapes", "No_Country_for_Old_Yentas", "The_Expendable_Accountant", "The_Terminal_Illness", "A_Streetcar_Named_Retire", "The_Secret_Life_of_Walter_s_Mitty", "The_Hunger_Games_Catching_Foam", "The_Godfather_Part_Time_Job", "How_To_Kill_a_Mockingbird", "Star_Trek_III_The_Search_for_Spock_s_Missing_Sock", "Gone_with_the_Wind_Chimes", "Dr_No_Clue", "Ferris_Bueller_s_Day_Off_Sick", "Monty_Python_and_the_Holy_Fail", "A_Fistful_of_Quarters", "Willy_Wonka_and_the_Chocolate_Heartburn", "The_Good_the_Bad_and_the_Dandruff", "The_Princess_Bride_of_Frankenstein", "The_Wizard_of_Bras", "Pulp_Friction", "Die_Hard_with_a_Clipboard", "Indiana_Jones_and_the_Last_Audit", "Finding_Nemoy", "The_Silence_of_the_Lambs_The_Musical", "Titanic_2_The_Iceberg_Strikes_Back", "Fast_Times_at_Ridgemont_Mortuary", "The_Graduate_But_Only_Because_He_Has_an_Advanced_Degree", "Beauty_and_the_Yeast","The_Blair_Witch_Takes_Manhattan","Reservoir_Bitches","Die_Hard_with_a_Pension"]
+            
+            random_name = random.choice(parody_movie_names)
 
-            st.file_uploader("Attach music", type=["mp3"], help="Attach music to your video")
+            final_video_name = st.text_input("What would you like to name this video?",value=random_name)
+
+            # st.file_uploader("Attach music", type=["mp3"], help="Attach music to your video")
 
             delete_existing_videos = st.checkbox("Delete all the existing timings", value=True)
 
-            if st.button("Render Video"):
-                if delete_existing_videos == True:
-                    for filename in os.listdir("videos/" + str(project_name) + "/assets/videos/1_final"):
-                        os.remove("videos/" + str(project_name) + "/assets/videos/1_final/" + filename)
-                timing_details = get_timing_details(project_name)
-                total_number_of_videos = len(timing_details) - 2
-                calculate_desired_duration_of_each_clip(timing_details, project_name)
-                timing_details = get_timing_details(project_name)
-        
-                for i in timing_details:
-                    
-                    index_of_current_item = timing_details.index(i)
-
-                    if index_of_current_item <= total_number_of_videos:
-
-                        if not os.path.exists("videos/" + str(project_name) + "/assets/videos/1_final/" + str(index_of_current_item) + ".mp4"):
-
-                            total_duration_of_clip = timing_details[index_of_current_item]['duration_of_clip']
-
-                            total_duration_of_clip = float(total_duration_of_clip)
-
-                            if index_of_current_item == total_number_of_videos:
-
-                                total_duration_of_clip = timing_details[index_of_current_item]['duration_of_clip']
-                                duration_of_static_time = float(timing_details[index_of_current_item]['static_time'])
-                                duration_of_static_time = float(duration_of_static_time) / 2
-
-                            elif index_of_current_item == 0:
-
-                                duration_of_static_time = float(timing_details[index_of_current_item]['static_time'])
-
-                            else:
-
-                                duration_of_static_time = float(timing_details[index_of_current_item]['static_time'])
-
-                             
-                            update_video_speed(project_name, index_of_current_item, duration_of_static_time, total_duration_of_clip)
-
-                video_list = []
-
-                for i in timing_details:
-
-                    index_of_current_item = timing_details.index(i)
-
-                    if index_of_current_item <= total_number_of_videos:
-
-                        index_of_current_item = timing_details.index(i)
-
-                        video_list.append("videos/" + str(project_name) +
-                                        "/assets/videos/1_final/" + str(index_of_current_item) + ".mp4")
-
-                video_clips = [VideoFileClip(v) for v in video_list]
-
-                finalclip = concatenate_videoclips(video_clips)
-
-                # finalclip = finalclip.set_audio(AudioFileClip(
-                #  "videos/" + video_name + "/assets/resources/music/" + key_settings["song"]))
-
-                finalclip.write_videofile(f"videos/{project_name}/assets/videos/2_completed/{final_video_name}.mp4", fps=60,  audio_bitrate="1000k", bitrate="4000k", codec="libx264")
-
-                video = VideoFileClip(f"videos/{project_name}/assets/videos/2_completed/{final_video_name}.mp4")
-
+            if st.button("Render New Video",disabled=disable_rendering):
+                
+                render_video(project_name, final_video_name)
+                st.success("Video rendered!")
+                time.sleep(1.5)
                 st.experimental_rerun()
 
             # find all the .mp4 files in the folder
@@ -2153,7 +2304,7 @@ def main():
                         st.experimental_rerun()
                 with edit2:
                     if st.session_state['edited_image'] != "":                                     
-                        if st.button("Promote Last Image", type="primary"):
+                        if st.button("Promote Last Edit", type="primary"):
                             if which_stage == "Unedited Key Frame":                        
                                 update_source_image(project_name, st.session_state['which_image'], st.session_state['edited_image'])
                             elif which_stage == "Styled Key Frame":
@@ -2204,11 +2355,186 @@ def main():
                                 promote_image_variant(i, project_name, number_of_image_variants-1)
 
                     
-
-
-
+        elif st.session_state.stage == "Timing Adjustment":
             
+            video_list = [list_of_files for list_of_files in os.listdir(
+                "videos/" + project_name + "/assets/videos/2_completed") if list_of_files.endswith('.mp4')]
+
+            # sort the videos reverse chronologically
+
+            video_dir = "videos/" + project_name + "/assets/videos/2_completed"
+
+            video_list.sort(key=lambda f: int(re.sub('\D', '', f)))
+
+            video_list = sorted(video_list, key=lambda x: os.path.getmtime(os.path.join(video_dir, x)), reverse=True)
+
+            most_recent_video = video_list[0]
+
+            st.sidebar.markdown("### Last Video:")
+
+            st.sidebar.video("videos/" + project_name + "/assets/videos/2_completed/" + most_recent_video)
+
+            parody_movie_names = ["The_Lord_of_the_Onion_Rings", "Jurassic_Pork", "Harry_Potter_and_the_Sorcerer_s_Kidney_Stone", "Star_Wars_The_Phantom_of_the_Oprah", "The_Silence_of_the_Yams", "The_Hunger_Pains", "Honey_I_Shrunk_the_Audience", "Free_Willy_Wonka_and_the_Chocolate_Factory", "The_Da_Vinci_Chode", "Forrest_Dump", "The_Shawshank_Inebriation", "A_Clockwork_Orange_Juice", "The_Big_Lebowski_2_Dude_Where_s_My_Car", "The_Princess_Diaries_The_Dark_Knight_Rises", "Eternal_Sunshine_of_the_Spotless_Behind", "Rebel_Without_a_Clue", "The_Terminal_Dentist", "Dr_Strangelove_or_How_I_Learned_to_Stop_Worrying_and_Love_the_Bombastic", "The_Wolf_of_Sesame_Street", "The_Good_the_Bad_and_the_Fluffy", "The_Sound_of_Mucus", "Back_to_the_Fuchsia", "The_Curious_Case_of_Benjamin_s_Button", "The_Fellowship_of_the_Bing", "The_Green_Mild", "My_Big_Fat_Greek_Tragedy", "Ghostbusted", "The_Texas_Chainsaw_Manicure", "The_Fast_and_the_Furniture", "The_Dark_Knight_s_Gotta_Go_Potty", "The_Iron_Manatee", "Night_of_the_Living_Bread", "Twilight_Breaking_a_Nail", "Indiana_Jones_and_the_Temple_of_Groom", "Kill_Billiards", "The_Bourne_Redundancy", "The_SpongeBob_SquarePants_Movie_Sponge_Out_of_Water_and_Ideas", "The_Social_Nutwork", "Planet_of_the_Snapes", "No_Country_for_Old_Yentas", "The_Expendable_Accountant", "The_Terminal_Illness", "A_Streetcar_Named_Retire", "The_Secret_Life_of_Walter_s_Mitty", "The_Hunger_Games_Catching_Foam", "The_Godfather_Part_Time_Job", "To_Kill_a_Rockingbird", "Star_Trek_III_The_Search_for_Spock_s_Missing_Sock", "Gone_with_the_Wind_Chimes", "Dr_No_Clue", "Ferris_Bueller_s_Day_Off_Sick", "Monty_Python_and_the_Holy_Fail", "A_Fistful_of_Quarters", "Willy_Wonka_and_the_Chocolate_Heartburn", "The_Good_the_Bad_and_the_Dandruff", "The_Princess_Bride_of_Frankenstein", "The_Wizard_of_Bras", "Pulp_Friction", "Die_Hard_with_a_Clipboard", "Indiana_Jones_and_the_Last_Audit", "Finding_Nemoy", "The_Silence_of_the_Lambs_The_Musical", "Titanic_2_The_Iceberg_Strikes_Back", "Fast_Times_at_Ridgemont_Mortuary", "The_Graduate_But_Only_Because_He_Has_an_Advanced_Degree", "Beauty_and_the_Yeast"]
+            # choose a random name from the list
+            random_name = random.choice(parody_movie_names)
+            final_video_name = st.sidebar.text_input("What would you like to name this video?", value=random_name)
+
+            # st.file_uploader("Attach music", type=["mp3"], help="Attach music to your video")            
+
+            if st.sidebar.button("Render New Video"):
+                
+                render_video(project_name, final_video_name)
+                st.success("Video rendered! Updating above...")
+                time.sleep(1.5)
+
+                st.experimental_rerun()
             
+            timing_details = get_timing_details(project_name)
+
+            for i in timing_details:
+                    
+                    index_of_current_item = timing_details.index(i)
+
+
+
+                    # Make the subheader frame time to two decimal places
+                    
+                    
+
+                    variants = ast.literal_eval(timing_details[index_of_current_item]["alternative_images"][1:-1])                
+                    current_variant = int(timing_details[index_of_current_item]["primary_image"])                                                                                                                    
+                    image_url = variants[current_variant]    
+
+                                
+                    # disiplay time in minutes and seconds
+                    st.markdown(f"**Frame #{index_of_current_item}: {timing_details[index_of_current_item]['frame_time']:.2f} seconds**")
+                    col1,col2  = st.columns([1,1])
+                                        
+                    with col1:
+                        if timing_details[index_of_current_item]["timing_video"] != "":
+                            st.video(timing_details[index_of_current_item]["timing_video"])
+                        else:                            
+                            st.image(image_url)
+                            st.info("Re-render the video to see the new videos")
+                        
+                            
+                    with col2:
+                        if index_of_current_item == 0:                            
+                            frame_time = st.slider(f"Currently: {timing_details[index_of_current_item]['frame_time']:.2f} seconds", min_value=float(0), max_value=timing_details[index_of_current_item+1]['frame_time'], value=timing_details[index_of_current_item]['frame_time'], step=0.01, help="This is the time in seconds that the frame will be displayed for.")                                                                             
+                            
+                        elif index_of_current_item == len(timing_details)-1:
+                            frame_time = st.slider(f"Currently: {timing_details[index_of_current_item]['frame_time']:.2f} seconds", min_value=timing_details[index_of_current_item-1]['frame_time'], max_value=timing_details[index_of_current_item]['frame_time'], value=timing_details[index_of_current_item]['frame_time'], step=0.01, help="This is the time in seconds that the frame will be displayed for.")                                                 
+                            
+                        else:
+                            frame_time = st.slider(f"Currently: {timing_details[index_of_current_item]['frame_time']:.2f} seconds", min_value=timing_details[index_of_current_item-1]['frame_time'], max_value=timing_details[index_of_current_item+1]['frame_time'], value=timing_details[index_of_current_item]['frame_time'], step=0.01, help="This is the time in seconds that the frame will be displayed for.")                                                                         
+                        if st.button(f"Save new frame time", help="This will save the new frame time.", key=f"save_frame_time_{index_of_current_item}"):
+                            update_specific_timing_value(project_name, index_of_current_item, "frame_time", frame_time)
+                            update_specific_timing_value(project_name, index_of_current_item, "timing_video", "") 
+                            update_specific_timing_value(project_name, index_of_current_item-1, "timing_video", "")
+                            update_specific_timing_value(project_name, index_of_current_item+1, "timing_video", "")                                                        
+                            st.experimental_rerun()
+                        st.write("")                        
+                        confirm_deletion = st.checkbox(f"Confirm  you want to delete Frame #{index_of_current_item}", help="This will delete the key frame from your project. This will not affect the video.")
+                        if confirm_deletion == True:          
+                            if st.button(f"Delete Frame", disabled=False, help="This will delete the key frame from your project. This will not affect the video.", key=f"delete_frame_{index_of_current_item}"):
+                                delete_frame(project_name, index_of_current_item)
+                                st.experimental_rerun()
+                        else:
+                            st.button(f"Delete Frame", disabled=True, help="This will delete the key frame from your project. This will not affect the video.", key=f"delete_frame_{index_of_current_item}")   
+                    #
+                                                                            
+                                     
+
+        elif st.session_state.stage == "Saved Versions":
+
+            version_name = st.text_input("What would you liket o call this version?", key="version_name")
+
+            # remove all special characters from the version name
+
+            version_name = version_name.replace(" ", "_")
+
+
+            if st.button("Make a copy of this project", key="copy_project"):
+                # create a copy of timings.csv and save it as version_name
+                shutil.copyfile(f"videos/{project_name}/timings.csv", f"videos/{project_name}/timings_{version_name}.csv")
+                st.success("Project copied successfully!")             
+
+            # list all the .csv files in that folder starting with timings_
+
+            version_list = [list_of_files for list_of_files in os.listdir(
+                "videos/" + project_name) if list_of_files.startswith('timings_')]
+            
+            header1, header2, header3 = st.columns([1,1,1])
+
+            with header1:
+                st.markdown("### Version Name")
+            with header2:
+                st.markdown("### Created On")
+            with header3:
+                st.markdown("### Restore Version")
+
+            for i in version_list:
+                col1, col2, col3 = st.columns([1,1,1])
+
+                with col1:
+                    st.write(i)
+                with col2:
+                    st.write(f"{time.ctime(os.path.getmtime(f'videos/{project_name}/{i}'))}")
+                with col3:
+                    if st.button("Restore this version", key=f"restore_version_{i}"):
+                        # change timings.csv to last_timings.csv
+                        os.rename(f"videos/{project_name}/timings.csv", f"videos/{project_name}/timings_previous.csv")
+                        # rename i to timings.csv
+                        os.rename(f"videos/{project_name}/{i}", f"videos/{project_name}/timings.csv")
+                        st.success("Version restored successfully! Just in case, the previous version has been saved as last_timings.csv")
+                        time.sleep(2)
+                        st.experimental_rerun()
+                
+       
+
+        
+        elif st.session_state.stage == "Prompt Finder":
+            
+            st.write("This tool helps you find the prompt that would result in an image you provide. It's useful if you want to find a prompt for a specific image that you'd like to align your style with.")
+            uploaded_file = st.file_uploader("What image would you like to find the prompt for?", type=['png','jpg'], key="prompt_file")
+            which_model = st.radio("Which model would you like to get a prompt for?", ["Stable Diffusion 1.5", "Stable Diffusion 2"], key="which_model", help="This is to know which model we should optimize the prompt for. 1.5 is usually best if you're in doubt", horizontal=True)
+            best_or_fast = st.radio("Would you like to optimize for best quality or fastest speed?", ["Best", "Fast"], key="best_or_fast", help="This is to know whether we should optimize for best quality or fastest speed. Best quality is usually best if you're in doubt", horizontal=True).lower()
+            if st.button("Get prompts"):                
+                with open(f"videos/{project_name}/assets/resources/prompt_images/{uploaded_file.name}", "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                prompt = prompt_clip_interrogator(f"videos/{project_name}/assets/resources/prompt_images/{uploaded_file.name}", which_model, best_or_fast)                
+                if not os.path.exists(f"videos/{project_name}/prompts.csv"):
+                    with open(f"videos/{project_name}/prompts.csv", "w") as f:
+                        f.write("prompt,example_image,which_model\n")
+                # add the prompt to prompts.csv
+                with open(f"videos/{project_name}/prompts.csv", "a") as f:
+                    f.write(f'"{prompt}",videos/{project_name}/assets/resources/prompt_images/{uploaded_file.name},{which_model}\n')
+                st.success("Prompt added successfully!")
+                time.sleep(1)
+                st.experimental_rerun()
+            # list all the prompts in prompts.csv
+            if os.path.exists(f"videos/{project_name}/prompts.csv"):
+                
+                df = pd.read_csv(f"videos/{project_name}/prompts.csv",na_filter=False)
+                prompts = df.to_dict('records')
+                              
+                col1, col2 = st.columns([1,2])
+                with col1:
+                    st.markdown("### Prompt")
+                with col2:
+                    st.markdown("### Example Image")
+                with open(f"videos/{project_name}/prompts.csv", "r") as f:
+                    for i in prompts:
+                        index_of_current_item = prompts.index(i)                  
+                        col1, col2 = st.columns([1,2])
+                        with col1:
+                            st.write(prompts[index_of_current_item]["prompt"])                        
+                        with col2:                            
+                            st.image(prompts[index_of_current_item]["example_image"], use_column_width=True)
+                        st.markdown("***")
+            else:
+                st.info("You haven't added any prompts yet. Add an image to get started.")
+                                                        
 if __name__ == '__main__':
     main()
 
