@@ -14,6 +14,7 @@ import requests as r
 import shutil
 import ffmpeg
 import datetime
+from datetime import datetime
 import string
 import json
 import boto3
@@ -502,30 +503,10 @@ def replace_background(video_name, foreground_image, background_image):
     
 
 
-def extract_all_frames(input_video, project_name, timing_details, time_per_frame):
 
-    folder = 'videos/' + str(project_name) + '/assets/frames/1_selected'
+def extract_frame(frame_number, project_name, input_video, extract_frame_number,timing_details):
 
-    for filename in os.listdir(folder):
-        os.remove(os.path.join(folder, filename))
-
-    timing_details = get_timing_details(project_name)
-
-    for i in timing_details:
-
-        index_of_current_item = timing_details.index(i)
-    
-        time_of_frame = float(timing_details[index_of_current_item]["frame_time"])
-
-        extract_frame_number = calculate_frame_number_at_time(input_video, time_of_frame, project_name)
-
-        extract_frame(index_of_current_item, project_name, input_video, extract_frame_number,timing_details)
-
-
-
-def extract_frame(frame_number, video_name, input_video, extract_frame_number,timing_details):
-
-    input_video = "videos/" + str(video_name) + "/assets/resources/input_videos/" + str(input_video)
+    input_video = "videos/" + str(project_name) + "/assets/resources/input_videos/" + str(input_video)
 
     input_video = cv2.VideoCapture(input_video)
 
@@ -539,21 +520,24 @@ def extract_frame(frame_number, video_name, input_video, extract_frame_number,ti
 
     ret, frame = input_video.read()
 
-    df = pd.read_csv("videos/" + str(video_name) + "/timings.csv")
+    df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
 
     if timing_details[frame_number]["frame_number"] == "":
     
         df.iloc[frame_number, [2]] = [extract_frame_number]
 
-    df.to_csv("videos/" + str(video_name) + "/timings.csv", index=False)
+    df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
 
-    cv2.imwrite("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png", frame)
+    file_name = ''.join(random.choices(string.ascii_lowercase + string.digits, k = 16)) + ".png"
 
-    img = Image.open("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
+    cv2.imwrite("videos/" + project_name + "/assets/frames/1_selected/" + str(file_name), frame)
+    
+    # img = Image.open("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
 
-    img.save("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
+    # img.save("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
 
-    return str(frame_number) + ".png"
+    update_specific_timing_value(project_name, frame_number, "source_image", "videos/" + project_name + "/assets/frames/1_selected/" + str(file_name))
+        
 
 def prompt_clip_interrogator(input_image,which_model,best_or_fast):
 
@@ -1127,6 +1111,10 @@ def create_timings_row_at_frame_number(project_name, input_video, extract_frame_
 
     df.to_csv(f'videos/{project_name}/timings.csv', index=False)
 
+    created_row = get_timing_details(project_name)[last_index]["index_number"]
+
+    return created_row
+
 
 
 
@@ -1368,7 +1356,11 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     else:
         lora_model_3_model_url = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
         
-    
+    if source_image.startswith("http"):
+        source_image = source_image
+    else:
+        source_image = open(source_image, "rb")
+
     model = replicate.models.get("cloneofsimo/lora")
     version = model.versions.get("fce477182f407ffd66b94b08e761424cabd13b82b518754b83080bc75ad32466")
     inputs = {
@@ -1377,6 +1369,7 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     'width': project_settings["width"],
     'height': project_settings["height"],
     'num_outputs': 1,
+    # ifsource_image is a url     
     'image': source_image,
     'num_inference_steps': timing_details[index_of_current_item]["num_inference_steps"],
     'guidance_scale': timing_details[index_of_current_item]["guidance_scale"],
@@ -1494,7 +1487,10 @@ def main():
     else:        
         if not os.path.exists("videos/" + project_name + "/assets"):
             create_working_assets(project_name)
+        #print timestamp
+        
         timing_details = get_timing_details(project_name)
+        
         st.session_state.stage = st.sidebar.radio("Select an option",
                                     ["App Settings","New Project","Project Settings","Custom Models","Key Frame Selection",
                                      "Frame Styling","Frame Editing","Frame Interpolation","Timing Adjustment","Prompt Finder","Video Rendering"])
@@ -1505,6 +1501,8 @@ def main():
             
             timing_details = get_timing_details(project_name)                              
             project_settings = get_project_settings(project_name)
+            
+            
             images_list = [f for f in os.listdir(f'videos/{project_name}/assets/frames/0_extracted') if f.endswith('.png')]    
             images_list.sort(key=lambda f: int(re.sub('\D', '', f)))
             st.sidebar.subheader("Extract key frames from video")                
@@ -1517,8 +1515,10 @@ def main():
             else:
                 input_video = st.sidebar.selectbox("Input video:", input_video_list)
 
-            with st.sidebar.expander("Upload new video", expanded=False):
-                st.write("Upload a new video to the project")
+            with st.sidebar.expander("Upload new video", expanded=False):                
+                width = int(project_settings["width"])
+                height = int(project_settings["height"])
+                st.info("Make sure that this video is the same dimesions as your project - width: " + str(width) + "px, height: " + str(height) + "px.")
                 uploaded_file = st.file_uploader("Choose a file")
                 if st.button("Upload video"):                
                     with open(f'videos/{project_name}/assets/resources/input_videos/{uploaded_file.name}', 'wb') as f:
@@ -1560,23 +1560,9 @@ def main():
                     
 
             elif type_of_extraction == "Extract manually":
-                granularity = st.sidebar.slider("Choose frame granularity", min_value=5, max_value=50, step=5, value = 10, help=f"This will extract frames for you to manually choose from. For example, if you choose 15 it'll extract every 15th frame.")
-                if st.sidebar.checkbox("I understand that running this will remove all existing frames"):
-                    if st.sidebar.button("Update granularity"):
-                        update_project_setting("extraction_type", "Extract manually",project_name)
-                        update_project_setting("input_video", input_video,project_name)
-                        remove_existing_timing(project_name)
-                        for f in os.listdir(f'videos/{project_name}/assets/frames/0_extracted'):
-                            os.remove(f'videos/{project_name}/assets/frames/0_extracted/{f}')                        
-                        for i in range(0, int(input_video_cv2.get(cv2.CAP_PROP_FRAME_COUNT)), int(granularity)):
-                            input_video_cv2.set(cv2.CAP_PROP_POS_FRAMES, i)
-                            ret, frame = input_video_cv2.read()
-                            cv2.imwrite(f"videos/{project_name}/assets/frames/0_extracted/" + str(i) + ".png", frame)
-                            st.session_state['select_frames'] = []
-                        cv2.imwrite(f"videos/{project_name}/assets/frames/0_extracted/" + str(int(float(total_frames))) + ".png", int(float(total_frames)))
-                        st.experimental_rerun()
-                else:
-                    st.sidebar.button("Update granularity", disabled=True)
+                st.sidebar.info("On the right, you'll see a toggle to choose which frames to extract. You can also use the slider to choose the granularity of the frames you want to extract.")
+                
+                
 
 
             elif type_of_extraction == "Extract from csv":
@@ -1596,15 +1582,14 @@ def main():
                     st.sidebar.button("Re-extract frames",disabled=True)                  
                                     
             timing_details = get_timing_details(project_name)
-                    
-            if not os.path.exists(f"videos/{project_name}/assets/frames/0_extracted/0.png") and not os.path.exists(f"videos/{project_name}/assets/frames/1_selected/0.png"):                    
-                st.info("You need to add  key frames first in the Key Frame Selection section.")
-            else:         
+            show_current_key_frames = st.radio("Show currently selected key frames:", ["Yes", "No"], horizontal=True)
+            print(len(timing_details))
+            if show_current_key_frames == "Yes":       
                 for image_name in timing_details:
 
                     index_of_current_item = timing_details.index(image_name)
-                
-                    image = Image.open(f'videos/{project_name}/assets/frames/1_selected/{index_of_current_item}.png')            
+                    
+                    image = Image.open(timing_details[index_of_current_item]["source_image"])            
                     st.subheader(f'Image Name: {index_of_current_item}')                
                     st.image(image, use_column_width=True)
                     
@@ -1636,53 +1621,49 @@ def main():
                             delete_frame(project_name, index_of_current_item)
                             st.experimental_rerun()                    
 
-                if type_of_extraction == "Extract manually":
+            if type_of_extraction == "Extract manually":
+                
+                def preview_frame(project_name,video_name, frame_num):                    
+                    cap = cv2.VideoCapture(f'videos/{project_name}/assets/resources/input_videos/{video_name}')
+                    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)                                                
+                    ret, frame = cap.read()                                            
+                    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)                        
+                    cap.release()                        
+                    return frame
 
+                st.markdown("***")
+                manual1,manual2 = st.columns([3,1])
+                with manual1:
                     st.subheader('Manually add key frames to your project')
                     st.write("Select a frame from the slider below and click 'Add Frame' it to the end of your project")
-                    images = os.listdir(f"videos/{project_name}/assets/frames/0_extracted")
-                    images = [i.replace(".png", "") for i in images]
+                    # if there are >10 frames, and show_current_key_frames == "Yes", show an info 
+                    if len(timing_details) > 10 and show_current_key_frames == "Yes":
+                        st.info("To keep this running fast, you can hide the currently selected key frames by selecting 'No' in the 'Show currently selected key frames' section at the top of the page.")
+                with manual2:
+                    st.write("")
+                    granularity = st.number_input("Choose selector granularity", min_value=1, max_value=50, step=5, value = 1, help=f"This will extract frames for you to manually choose from. For example, if you choose 15 it'll extract every 15th frame.")
+                            
+                if timing_details == []:
+                    min_frames = 0
+                else:
+                    length_of_timing_details = len(timing_details) - 1
+                    min_frames= int(float(timing_details[length_of_timing_details]["frame_number"]))
 
-                    images.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
-                                
-                    if timing_details == []:
-                        min_frames = 0
-                    else:
-                        length_of_timing_details = len(timing_details) - 1
-                        min_frames= int(float(timing_details[length_of_timing_details]["frame_number"]))
+                max_frames = min_frames + 100
 
-                    max_frames = int((float(total_frames) / float(granularity))) * int(granularity)
-
-                    if max_frames > int(float(total_frames)):
-                        max_frames = int(float(total_frames))
-            
-                    slider = st.slider("Choose Frame", max_value= min_frames+ 100, min_value=min_frames,step=granularity, value = min_frames + granularity)
-
-
-
-                    st.image(f"videos/{project_name}/assets/frames/0_extracted/{slider}.png")
-
-                    if st.button(f"Add Frame {slider} to Project"):     
-                        
-                        last_index = len(timing_details)
-
-                        shutil.copy(f"videos/{project_name}/assets/frames/0_extracted/{slider}.png", f"videos/{project_name}/assets/frames/1_selected/{last_index}.png")
-
-                        create_timings_row_at_frame_number(project_name, input_video, slider,timing_details)
-                        
-                        st.experimental_rerun()
-
-                
-                st.header("Load existing selections for styling and editing:")
-                st.write("This will load up the existing selections for styling and editing. This will update the source image if there's one already available.")
-
-                if st.button("Load up existing selections"):
-                        for i in timing_details:                    
-                            index_of_current_item = timing_details.index(i)
-                            source_image = upload_image(f"videos/{project_name}/assets/frames/1_selected/{index_of_current_item}.png")                        
-                            update_source_image(project_name, index_of_current_item, source_image)
-                        st.success("Loaded up existing selections!")
+                if max_frames > int(float(total_frames)):
+                    max_frames = int(float(total_frames)) - 1
         
+                slider = st.slider("Choose Frame", max_value=max_frames, min_value=min_frames,step=1, value = min_frames + granularity)
+
+                st.image(preview_frame(project_name, input_video, slider))
+
+                if st.button(f"Add Frame {slider} to Project"):  
+                    created_row = create_timings_row_at_frame_number(project_name, input_video, slider, timing_details)                       
+                    timing_details = get_timing_details(project_name)
+                    extract_frame(created_row, project_name, input_video, slider,timing_details)                                                                                                
+                    st.experimental_rerun()   
+                            
 
         elif st.session_state.stage == "App Settings":
 
@@ -1712,9 +1693,15 @@ def main():
 
         elif st.session_state.stage == "New Project":
             new_project_name = st.text_input("Project Name", value="")
-            width = st.selectbox("Select video width", options=["512","704","1024"], key="video_width")
-            height = st.selectbox("Select video height", options=["512","704","1024"], key="video_height")
-            input_type = st.radio("Select input type", options=["Video","Image"], key="input_type", help="This will determine whether you guide the AI with a video or a series of images. You can always change this later.")
+            col1, col2 = st.columns(2)
+            with col1:
+                width = st.selectbox("Select video width", options=["512","704","1024"], key="video_width")
+                height = st.selectbox("Select video height", options=["512","704","1024"], key="video_height")
+            with col2:
+                st.write("")
+                st.write("")
+                st.info("We recommend choosing a reasonably small size and then scaling up the video resolution afterwards")
+            input_type = st.radio("Select input type", options=["Video","Image"], key="input_type", disabled=True,help="Only video is available at the moment, let me know if you need image support - it should be pretty easy.")
 
             if st.button("Create New Project"):                
                 new_project_name = new_project_name.replace(" ", "_")                      
@@ -1745,25 +1732,30 @@ def main():
                 st.session_state['seed'] = st.session_state['project_settings']["last_seed"]
                 st.session_state['num_inference_steps'] = st.session_state['project_settings']["last_num_inference_steps"]
                 st.session_state['which_stage_to_run_on'] = st.session_state['project_settings']["last_which_stage_to_run_on"]
+                st.session_state['show_comparison'] = "Don't show"
+
+            if "which_image" not in st.session_state:
+                st.session_state['which_image'] = 0
 
             if timing_details[0]["source_image"] == "":
-                st.info("You need to select and load key frames first in the Key Frame Selection section.")
-                    
+                st.info("You need to select and load key frames first in the Key Frame Selection section.")                            
             else:
-                view_type = st.radio("View type:", ("Single Frame", "List View"), key="view_type", horizontal=True)
+                top1, top2, top3 = st.columns([3,1,2])
+                with top1:
+                    view_type = st.radio("View type:", ("Single Frame", "List View"), key="view_type", horizontal=True)
+                with top2:
+                    st.write("")
+
 
                 if view_type == "Single Frame":
-                    if "which_image" not in st.session_state:
-                        st.session_state['which_image'] = 0
-
-                    f1, f2, f3  = st.columns([1,3,1])
-
+                    with top3:
+                        st.session_state['show_comparison'] = st.radio("Show comparison to original", options=["Don't show", "Show"], index=0, key=f"show_comparison_{st.session_state['which_image']}", horizontal=True)
                     
+                    f1, f2, f3  = st.columns([1,3,1])
+                    print("Current Timestamp:", datetime.now())    
                     with f1:
                         st.session_state['which_image'] = st.number_input('Go to Frame:', 0, len(timing_details)-1,help=f"There are {len(timing_details)-1} key frames in this video.")
-
-                    if timing_details[st.session_state['which_image']]["alternative_images"] != "":
-                                                                                                    
+                    if timing_details[st.session_state['which_image']]["alternative_images"] != "":                                                                                       
                         variants = ast.literal_eval(timing_details[st.session_state['which_image']]["alternative_images"][1:-1])
                         number_of_variants = len(variants)
                         current_variant = int(timing_details[st.session_state['which_image']]["primary_image"])                                                                                                
@@ -1781,23 +1773,39 @@ def main():
                                     time.sleep(0.5)
                                     st.experimental_rerun()
                     
-                                    
-                    if timing_details[st.session_state['which_image']]["alternative_images"] != "":
-                        img2=variants[which_variant]
+                    print("Current Timestamp:", datetime.now())
+                    if st.session_state['show_comparison'] == "Don't show":
+                        if timing_details[st.session_state['which_image']]["alternative_images"] != "":
+                            st.image(variants[which_variant], use_column_width=True)   
+                        else:
+                            st.image('https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png', use_column_width=True)   
                     else:
-                        img2='https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'          
-                    image_comparison(starting_position=5,
-                        img1=timing_details[st.session_state['which_image']]["source_image"],
-                        img2=img2)
+                        if timing_details[st.session_state['which_image']]["alternative_images"] != "":
+                            img2=variants[which_variant]
+                        else:
+                            img2='https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'          
+                        image_comparison(starting_position=50,
+                            img1=timing_details[st.session_state['which_image']]["source_image"],
+                            img2=img2)
+                        print("Current Timestamp:", datetime.now())    
                     
-                                                                                
+
+                elif view_type == "List View":
+                    for i in range(0, len(timing_details)):
+                        st.subheader(f"Frame {i}")                
+                                              
+                        if timing_details[i]["alternative_images"] != "":
+                            variants = ast.literal_eval(timing_details[i]["alternative_images"][1:-1])                        
+                            current_variant = int(timing_details[i]["primary_image"])    
+                            st.image(variants[current_variant])
+                        else:
+                            st.image('https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png', use_column_width=True) 
+                                                                     
                 if len(timing_details) == 0:
                     st.info("You first need to select key frames at the Key Frame Selection stage.")
 
                 st.sidebar.header("Restyle Frames")
-                                
-                
-
+                                                
                 models = get_models()
 
                 models.append('sd')
@@ -1821,7 +1829,7 @@ def main():
                     lora_model_3 = st.sidebar.selectbox(f"LoRA Model 3", lora_model_list)
                     lora_models = [lora_model_1, lora_model_2, lora_model_3]
                     print(lora_models)
-                    st.sidebar.info("You can reference each model in your prompt using the following keywords: [1], [2], [3] - for example '[1] in the style of [2]")
+                    st.sidebar.info("You can reference each model in your prompt using the following keywords: <1>, <2>, <3> - for example '<1> in the style of <2>")
                     adapter_type = st.sidebar.selectbox(f"Adapter Type", ["sketch", "seg", "keypose", "depth"], help="This is the method through the model will infer the shape of the object. ")
                 else:
                     lora_models = []
@@ -1910,7 +1918,8 @@ def main():
                         
                         st.sidebar.write("Select a valid range")
                 
-                detail1, detail2, detail3 = st.columns([1,1,2])
+                detail1, detail2, detail3, detail4 = st.columns([1,1,1,1])
+
                 with detail1:
                     individual_number_of_variants = st.number_input(f"How many variants?", min_value=1, max_value=10, value=1, key=f"number_of_variants_{st.session_state['which_image']}")
                 with detail2:
@@ -1921,12 +1930,13 @@ def main():
                             index_of_current_item = st.session_state['which_image']
                             trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['run_character_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'],lora_models,adapter_type) 
                         st.experimental_rerun()
-                with detail3:   
-                    with st.expander("Show/Hide Previous Last Prompt Details", expanded=False):
-                        print("a")
-                        # st.write(f"Prompt: {st.session_state['which_image']['prompt']}")
-                        # st.write(f"Strength: {st.session_state['which_image']['strength']}")
-                        # st.write(f"Model: {st.session_state['which_image']['model_id']}")
+                with detail3:
+                    st.write("")
+                with detail4:   
+                    st.write("")
+                    if st.button("Preview video"):
+                        st.write("")
+                        
                 st.subheader("Preview video")
                 st.write("You can get a gif of the video by clicking the button below.")
                 if st.button("Create gif of current main variants"):
@@ -1934,7 +1944,7 @@ def main():
                     create_gif_preview(project_name, timing_details)
                     st.image(f"videos/{project_name}/preview_gif.gif", use_column_width=True)                
                     st.balloons()
-                                                       
+                                                    
 
         elif st.session_state.stage == "Frame Interpolation":
             if len(timing_details) == 0:
@@ -2241,7 +2251,7 @@ def main():
     
             st.subheader("Train a new model:")
             
-            type_of_model = st.selectbox("Type of model:",["Dreambooth","LoRA"],help="If you'd like to use other methods for model training, let us know - or implement it yourself :)")
+            type_of_model = st.selectbox("Type of model:",["LoRA","Dreambooth"],help="If you'd like to use other methods for model training, let us know - or implement it yourself :)")
             model_name = st.text_input("Model name:",value="", help="No spaces or special characters please")
             if type_of_model == "Dreambooth":
                 instance_prompt = st.text_input("Trigger word:",value="", help = "This is the word that will trigger the model")        
@@ -2518,14 +2528,14 @@ def main():
 
                 st.sidebar.markdown("### Batch Run Edits:")   
                 st.sidebar.write("This will batch run the settings you have above on a batch of images.")     
-                batch_run_from = st.sidebar.slider("From:", 1, 0, (0, len(timing_details)-1))
-                batch_run_to = st.sidebar.slider("To:", 1, 0, (0, len(timing_details)-1))
+                batch_run_range = st.sidebar.slider("Select range:", 1, 0, (0, len(timing_details)-1))
+    
                 if which_stage == "Unedited Key Frame":
                     st.sidebar.warning("This will overwrite the source images in the range you select - you can always reset them if you wish.")
                 elif which_stage == "Styled Key Frame":
                     make_primary_variant = st.sidebar.checkbox("Make primary variant", value=True, help="If you want to make the edited image the primary variant, tick this box. If you want to keep the original primary variant, untick this box.")          
                 if st.sidebar.button("Batch Run Edit"):
-                    for i in range(batch_run_from, batch_run_to):
+                    for i in range(batch_run_range):
                         if which_stage == "Unedited Key Frame":
                             bg_image = timing_details[i]["source_image"]
                             edited_image = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, prompt, negative_prompt, width, height,st.session_state['which_layer'])
