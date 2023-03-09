@@ -14,7 +14,6 @@ import requests as r
 import shutil
 import ffmpeg
 import datetime
-from datetime import datetime
 import string
 import json
 import boto3
@@ -31,7 +30,7 @@ import numpy as np
 st.set_page_config(page_title="Banodoco")
 
 
-def inpainting(video_name, image_url, prompt, negative_prompt):
+def inpainting(video_name, input_image, prompt, negative_prompt):
 
     app_settings = get_app_settings()
     timing_details = get_timing_details(video_name)
@@ -44,10 +43,10 @@ def inpainting(video_name, image_url, prompt, negative_prompt):
     mask = "mask.png"
     mask = upload_image("mask.png")
         
-    if image_url[0:4] != "http":
-        image_url = f"open({image_url}, 'rb')"
+    if not input_image.startswith("http"):        
+        input_image = open(input_image, "rb")
 
-    output = version.predict(mask=mask, image=image_url,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)    
+    output = version.predict(mask=mask, image=input_image,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)    
 
     return output[0]
 
@@ -401,11 +400,13 @@ def prompt_interpolation_model(img1, img2, project_name, video_number, interpola
 
     model = replicate.models.get("google-research/frame-interpolation")
 
-    if img1[0:4] != "http":
-        img1 = f"open('{img1}', 'rb')"
 
-    if img2[0:4] != "http":
-        img2 = f"open('{img2}', 'rb')"
+
+    if not img1.startswith("http"):
+        img1 = open(img1, "rb")
+
+    if not img2.startswith("http"):
+        img2 = open(img2, "rb")
 
 
     output = model.predict(frame1=img1, frame2=img2, times_to_interpolate=interpolation_steps)
@@ -482,12 +483,14 @@ def calculate_frame_number_at_time(input_video, time_of_frame, project_name):
 
 def remove_background(project_name, input_image):
     app_settings = get_app_settings()
-    if input_image[0:4] != "http":
-        image = f"open('{image}', 'rb')"
+
+    if not input_image.startswith("http"):        
+        input_image = open(input_image, "rb")
+
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
     model = replicate.models.get("pollinations/modnet")
     image = input_image
-    output = model.predict(image=image)
+    output = model.predict(image=input_image)
     return output
 
 
@@ -552,33 +555,32 @@ def prompt_clip_interrogator(input_image,which_model,best_or_fast):
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
 
     model = replicate.models.get("pharmapsychotic/clip-interrogator")    
+
+    if not input_image.startswith("http"):        
+        input_image = open(input_image, "rb")
+        
+    output = model.predict(image=input_image, clip_model_name=which_model, mode=best_or_fast)
     
-    if input_image[0:4] == "http":
-        output = model.predict(image=input_image, clip_model_name=which_model, mode=best_or_fast)
 
-    elif input_image[0:4] != "http":
-        output = model.predict(image=open(input_image, "rb"), clip_model_name=which_model, mode=best_or_fast)
 
-    print(input_image)
         
     
-    print(output)
+
   
     return output
 
 
 
 
-def touch_up_images(video_name, index_of_current_item, image):
+def touch_up_images(video_name, index_of_current_item, input_image):
 
     app_settings = get_app_settings()
 
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
 
     model = replicate.models.get("xinntao/gfpgan")    
-    input_image = image
-    if input_image[0:4] != "http":
-        input_image = f"open({input_image}, 'rb')"
+    if not input_image.startswith("http"):        
+        input_image = open(input_image, "rb")
     # remove first and last characters from string
     print(input_image)
     output = model.predict(img=input_image)
@@ -616,11 +618,11 @@ def face_swap(video_name, index_of_current_item, source_image):
 
     target_face = source_image
 
-    if source_face[0:4] != "http":
-        source_face = f"open({source_face}, 'rb')"
+    if not source_face.startswith("http"):        
+        source_face = open(source_face, "rb")
 
-    if target_face[0:4] != "http":
-        target_face = f"open({target_face}, 'rb')"
+    if not target_face.startswith("http"):        
+        target_face = open(target_face, "rb")
 
     output = version.predict(source_path=source_face, target_path=target_face,use_sr=0)
 
@@ -635,7 +637,7 @@ def face_swap(video_name, index_of_current_item, source_image):
         print(e)
     return output
 
-def prompt_model_stability(project_name, index_of_current_item, timing_details, source_image):
+def prompt_model_stability(project_name, index_of_current_item, timing_details, input_image):
 
     app_settings = get_app_settings()
     project_settings = get_project_settings(project_name)
@@ -644,10 +646,9 @@ def prompt_model_stability(project_name, index_of_current_item, timing_details, 
     prompt = timing_details[index_of_current_item]["prompt"]
     strength = timing_details[index_of_current_item]["strength"]
     model = replicate.models.get("cjwbw/stable-diffusion-img2img-v2.1")
-    version = model.versions.get("650c347f19a96c8a0379db998c4cd092e0734534591b16a60df9942d11dec15b")
-    input_image = source_image 
-    if input_image[0:4] != "http":
-        input_image = f"open({input_image}, 'rb')"   
+    version = model.versions.get("650c347f19a96c8a0379db998c4cd092e0734534591b16a60df9942d11dec15b")    
+    if not input_image.startswith("http"):        
+        input_image = open(input_image, "rb") 
     output = version.predict(image=input_image, prompt_strength=str(strength), prompt=prompt, negative_prompt = timing_details[index_of_current_item]["negative_prompt"], width = project_settings["width"], height = project_settings["height"], guidance_scale = float(timing_details[index_of_current_item]["guidance_scale"]), seed = int(timing_details[index_of_current_item]["seed"]), num_inference_steps = int(timing_details[index_of_current_item]["num_inference_steps"]))
     new_image = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png" 
 
@@ -715,8 +716,8 @@ def prompt_model_dreambooth(project_name, image_number, model_name, app_settings
     version = model.versions.get(version)    
 
     input_image = image_url
-    if input_image[0:4] != "http":
-        input_image = f"open({input_image}, 'rb')"
+    if not input_image.startswith("http"):        
+        input_image = open(input_image, "rb")
     output = version.predict(image=input_image, prompt=prompt, prompt_strength=strength, height = project_settings["height"], width = project_settings["width"], disable_safety_check=True, negative_prompt = negative_prompt, guidance_scale = guidance_scale, seed = seed, num_inference_steps = num_inference_steps)
 
     new_image = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(image_number) + ".png"
@@ -898,11 +899,11 @@ def hair_swap(replicate_api_key, video_name, index_of_current_item,stablediffusi
 
     target_hair = upload_image("videos/" + str(video_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png")
 
-    if source_hair[0:4] != "http":
-        source_hair = f"open({source_hair}, 'rb')"
+    if not source_hair.startswith("http"):        
+        source_hair = open(source_hair, "rb")
 
-    if target_hair[0:4] != "http":
-        target_hair = f"open({target_hair}, 'rb')"
+    if not target_hair.startswith("http"):        
+        target_hair = open(target_hair, "rb")
 
     output = version.predict(source_image=source_hair, target_image=target_hair)
 
@@ -928,32 +929,32 @@ def prompt_model_depth2img(strength,video_name, image_number, replicate_api_key,
     version = model.versions.get("68f699d395bc7c17008283a7cef6d92edc832d8dc59eb41a6cafec7fc70b85bc")
     image = source_image
 
-    if image[0:4] != "http":
-        image = f"open({image}, 'rb')"
+    if not input_image.startswith("http"):        
+        input_image = open(input_image, "rb")
 
     output = version.predict(input_image=image, prompt_strength=str(strength), prompt=prompt, negative_prompt = negative_prompt, num_inference_steps = num_inference_steps, guidance_scale = guidance_scale)
     
     return output[0]
 
-def prompt_model_blip2(source_image, query):
+def prompt_model_blip2(input_image, query):
     app_settings = get_app_settings()
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]        
     model = replicate.models.get("salesforce/blip-2")
     version = model.versions.get("4b32258c42e9efd4288bb9910bc532a69727f9acd26aa08e175713a0a857a608")
-    if source_image[0:4] != "http":
-        source_image = f"open({source_image}, 'rb')"
-    output = version.predict(image=source_image, question=query)
+    if not input_image.startswith("http"):        
+        input_image = open(input_image, "rb")
+    output = version.predict(image=input_image, question=query)
     print (output)
     return output
 
-def facial_expression_recognition(source_image):
+def facial_expression_recognition(input_image):
     app_settings = get_app_settings()
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]        
     model = replicate.models.get("phamquiluan/facial-expression-recognition")
     version = model.versions.get("b16694d5bfed43612f1bfad7015cf2b7883b732651c383fe174d4b7783775ff5")
-    if source_image[0:4] != "http":
-        source_image = f"open({source_image}, 'rb')"
-    output = version.predict(input_path=source_image)
+    if not input_image.startswith("http"):        
+        input_image = open(input_image, "rb")
+    output = version.predict(input_path=input_image)
     emo_label = output[0]["emo_label"]
     if emo_label == "disgust":
         emo_label = "disgusted"
@@ -1018,7 +1019,7 @@ def trigger_restyling_process(timing_details, project_name, index_of_current_ite
             promote_image_variant(index_of_current_item, project_name, number_of_variants - 1)
 
 
-def prompt_model_pix2pix(strength,video_name, image_number, timing_details, replicate_api_key, source_image):
+def prompt_model_pix2pix(strength,video_name, image_number, timing_details, replicate_api_key, input_image):
     app_settings = get_app_settings()
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
     image_number = int(image_number)
@@ -1026,11 +1027,10 @@ def prompt_model_pix2pix(strength,video_name, image_number, timing_details, repl
     guidance_scale = float(timing_details[image_number]["guidance_scale"])
     seed = int(timing_details[image_number]["seed"])
     model = replicate.models.get("arielreplicate/instruct-pix2pix")
-    version = model.versions.get("10e63b0e6361eb23a0374f4d9ee145824d9d09f7a31dcd70803193ebc7121430")
-    image = source_image
-    if image[0:4] != "http":
-        image = f"open({image}, 'rb')"
-    output = version.predict(input_image=image, instruction_text=prompt, seed=seed, cfg_image=1.2, cfg_text = guidance_scale, resolution=704)    
+    version = model.versions.get("10e63b0e6361eb23a0374f4d9ee145824d9d09f7a31dcd70803193ebc7121430") 
+    if not input_image.startswith("http"):        
+        input_image = open(input_image, "rb")
+    output = version.predict(input_image=input_image, instruction_text=prompt, seed=seed, cfg_image=1.2, cfg_text = guidance_scale, resolution=704)    
 
     return output
 
@@ -1055,6 +1055,8 @@ def restyle_images(index_of_current_item,project_name, project_settings, timing_
         output_url = prompt_model_pix2pix(strength,project_name, index_of_current_item, timing_details, app_settings, source_image)
     elif model_name == "LoRA":
         output_url = prompt_model_lora(project_name, index_of_current_item, timing_details, source_image)
+    elif model_name == "controlnet":
+        output_url = prompt_model_controlnet(timing_details, index_of_current_item, source_image)
     else:
         output_url = prompt_model_dreambooth(project_name, index_of_current_item, model_name, app_settings,timing_details, project_settings,source_image)
 
@@ -1285,15 +1287,15 @@ def create_gif_preview(project_name, timing_details):
     imageio.mimsave(f'videos/{project_name}/preview_gif.gif', frames, fps=0.5)
 
 
-def create_depth_mask_image(image_url,layer):
+def create_depth_mask_image(input_image,layer):
     
     app_settings = get_app_settings()
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]            
     model = replicate.models.get("cjwbw/midas")
     version = model.versions.get("a6ba5798f04f80d3b314de0f0a62277f21ab3503c60c84d4817de83c5edfdae0")
-    if image_url[0:4] != "http":
-        image_url = f"open({image_url}, 'rb')"
-    output = version.predict(image=image_url, model_type="dpt_beit_large_512")
+    if not input_image.startswith("http"):        
+        input_image = open(input_image, "rb")
+    output = version.predict(image=input_image, model_type="dpt_beit_large_512")
     try:
         urllib.request.urlretrieve(output, "depth.png")    
     except Exception as e:
@@ -1316,6 +1318,53 @@ def create_depth_mask_image(image_url,layer):
                 mask_pixels[i, j] = 0 if depth_value <= 50 else 255  # Set background pixels to black
 
     mask.save("mask.png") 
+
+def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
+    
+    app_settings = get_app_settings()
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
+
+    if timing_details[index_of_current_item]["adapter_type"] == "normal":
+        model = replicate.models.get("jagilley/controlnet-normal")
+    elif timing_details[index_of_current_item]["adapter_type"] == "canny":
+        model = replicate.models.get("jagilley/controlnet-canny")
+    elif timing_details[index_of_current_item]["adapter_type"] == "hed":
+        model = replicate.models.get("jagilley/controlnet-hed")
+    elif timing_details[index_of_current_item]["adapter_type"] == "scribble":
+        model = replicate.models.get("jagilley/controlnet-scribble")
+    elif timing_details[index_of_current_item]["adapter_type"] == "seg":
+        model = replicate.models.get("jagilley/controlnet-seg")
+    elif timing_details[index_of_current_item]["adapter_type"] == "hough":
+        model = replicate.models.get("jagilley/controlnet-hough")
+    elif timing_details[index_of_current_item]["adapter_type"] == "depth2img":
+        model = replicate.models.get("jagilley/controlnet-depth2img")
+    elif timing_details[index_of_current_item]["adapter_type"] == "pose":
+        model = replicate.models.get("jagilley/controlnet-pose")
+
+    if not input_image.startswith("http"):        
+        input_image = open(input_image, "rb")
+
+    inputs = {
+    'image': input_image,
+    'prompt': timing_details[index_of_current_item]["prompt"],
+    'num_samples': "1",
+    'image_resolution': "512",    
+    'ddim_steps': timing_details[index_of_current_item]["num_inference_steps"],
+    'scale': timing_details[index_of_current_item]["guidance_scale"],
+    'eta': 0, 
+    'seed': timing_details[index_of_current_item]["seed"],   
+    'a_prompt': "best quality, extremely detailed",    
+    'n_prompt': timing_details[index_of_current_item]["negative_prompt"] + ", longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",        
+    'detect_resolution': 512,    
+    'bg_threshold': 0,
+    }
+
+    output = model.predict(**inputs)
+
+    return output[1]
+
+
+
 
 def prompt_model_lora(project_name, index_of_current_item, timing_details, source_image):
 
@@ -1360,7 +1409,7 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
         source_image = source_image
     else:
         source_image = open(source_image, "rb")
-
+    
     model = replicate.models.get("cloneofsimo/lora")
     version = model.versions.get("fce477182f407ffd66b94b08e761424cabd13b82b518754b83080bc75ad32466")
     inputs = {
@@ -1493,7 +1542,7 @@ def main():
         
         st.session_state.stage = st.sidebar.radio("Select an option",
                                     ["App Settings","New Project","Project Settings","Custom Models","Key Frame Selection",
-                                     "Frame Styling","Frame Editing","Frame Interpolation","Timing Adjustment","Prompt Finder","Video Rendering"])
+                                     "Frame Styling","Frame Editing","Frame Interpolation","Timing Adjustment","Prompt Finder","Video Rendering","Batch Actions"])
         st.header(st.session_state.stage)   
 
      
@@ -1752,7 +1801,7 @@ def main():
                         st.session_state['show_comparison'] = st.radio("Show comparison to original", options=["Don't show", "Show"], index=0, key=f"show_comparison_{st.session_state['which_image']}", horizontal=True)
                     
                     f1, f2, f3  = st.columns([1,3,1])
-                    print("Current Timestamp:", datetime.now())    
+                    
                     with f1:
                         st.session_state['which_image'] = st.number_input('Go to Frame:', 0, len(timing_details)-1,help=f"There are {len(timing_details)-1} key frames in this video.")
                     if timing_details[st.session_state['which_image']]["alternative_images"] != "":                                                                                       
@@ -1773,7 +1822,7 @@ def main():
                                     time.sleep(0.5)
                                     st.experimental_rerun()
                     
-                    print("Current Timestamp:", datetime.now())
+                    
                     if st.session_state['show_comparison'] == "Don't show":
                         if timing_details[st.session_state['which_image']]["alternative_images"] != "":
                             st.image(variants[which_variant], use_column_width=True)   
@@ -1812,6 +1861,7 @@ def main():
                 models.append('depth2img')
                 models.append('pix2pix')
                 models.append('LoRA')
+                models.append('controlnet_normal')
 
                 # find the index of last_model in models
 
@@ -1833,10 +1883,10 @@ def main():
                     adapter_type = st.sidebar.selectbox(f"Adapter Type", ["sketch", "seg", "keypose", "depth"], help="This is the method through the model will infer the shape of the object. ")
                 else:
                     lora_models = []
-                    adapter_type
+                    adapter_type = ""
                 
                 st.session_state['prompt'] = st.sidebar.text_area(f"Prompt", label_visibility="visible", value=st.session_state['prompt'])
-                if st.session_state['model'] != "sd" and st.session_state['model'] != "depth2img" and st.session_state['model'] != "pix2pix" and st.session_state['model'] != "LoRA":
+                if st.session_state['model'] != "sd" and st.session_state['model'] != "depth2img" and st.session_state['model'] != "pix2pix" and st.session_state['model'] != "LoRA" and st.session_state['model'] != "controlnet_normal":
                     model_details = get_model_details(st.session_state['model'])
                     st.sidebar.info(f"Must include '{model_details['keyword']}' to run this model")                                    
                 else:
@@ -2105,7 +2155,7 @@ def main():
             video_list.sort(key=lambda f: int(re.sub('\D', '', f)))
 
             video_list = sorted(video_list, key=lambda x: os.path.getmtime(os.path.join(video_dir, x)), reverse=True)                        
-
+            import datetime
             for video in video_list:
 
                 st.subheader(video)       
@@ -2129,6 +2179,20 @@ def main():
                         st.button(f"Delete {video}",disabled=True)
 
                         
+        elif st.session_state.stage == "Batch Actions":
+            timing_details = get_timing_details(project_name)
+            if st.button("Move initial key frames to completed key froms"):
+                for i in timing_details:
+                    index_of_current_item = timing_details.index(i)
+                    add_image_variant(timing_details[index_of_current_item]["source_image"], index_of_current_item, project_name, timing_details)
+                    promote_image_variant(index_of_current_item, project_name, 0)
+                st.success("All initial key frames moved to completed key frames")
+            
+            if st.button("Remove Existing Timings"):
+                remove_existing_timing(project_name)
+
+    
+                
 
         elif st.session_state.stage == "Project Settings":
 
