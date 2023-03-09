@@ -482,11 +482,9 @@ def touch_up_images(video_name, index_of_current_item, input_image):
     model = replicate.models.get("xinntao/gfpgan")    
     if not input_image.startswith("http"):        
         input_image = open(input_image, "rb")
-    # remove first and last characters from string
-    print(input_image)
+    
     output = model.predict(img=input_image)
-    print(output)
-  
+    
     return output
 
 def resize_image(video_name, image_number, new_width,new_height, image):
@@ -788,7 +786,7 @@ def calculate_desired_duration_of_each_clip(timing_details,project_name):
         df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
 
 
-def hair_swap(replicate_api_key, video_name, index_of_current_item,stablediffusionapi_com_api_key):
+def hair_swap(source_image, video_name, index_of_current_item):
 
     os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
 
@@ -979,7 +977,7 @@ def custom_pipeline_mystique(index_of_current_item, project_name, project_settin
         timing_details = get_timing_details(project_name)
         
     output_url = face_swap(project_name, index_of_current_item, source_image)
-    # output_url = hair_swap(key_settings["replicate_com_api_key"],video_name,index_of_current_item,key_settings["stablediffusionapi_com_api_key"])
+    # output_url = hair_swap(source_image, project_name, index_of_current_item)
     output_url = touch_up_images(project_name, index_of_current_item, output_url)
     output_url = resize_image(project_name, index_of_current_item, int(project_settings["width"]),int(project_settings["height"]), output_url)
     if timing_details[index_of_current_item]["model_id"] == "Dreambooth":
@@ -1409,14 +1407,11 @@ def main():
         if st.session_state.stage == "Key Frame Selection":
             
             timing_details = get_timing_details(project_name)                              
-            project_settings = get_project_settings(project_name)
-            
-            
+            project_settings = get_project_settings(project_name)                        
             images_list = [f for f in os.listdir(f'videos/{project_name}/assets/frames/0_extracted') if f.endswith('.png')]    
             images_list.sort(key=lambda f: int(re.sub('\D', '', f)))
             st.sidebar.subheader("Extract key frames from video")                
-            input_video_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/input_videos') if f.endswith('.mp4')]
-            
+            input_video_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/input_videos') if f.endswith('.mp4')]            
             if project_settings["input_video"] != "": 
                 input_video_index = input_video_list.index(project_settings["input_video"])                
                 input_video = st.sidebar.selectbox("Input video:", input_video_list, index = input_video_index)
@@ -1491,8 +1486,7 @@ def main():
                     st.sidebar.button("Re-extract frames",disabled=True)                  
                                     
             timing_details = get_timing_details(project_name)
-            show_current_key_frames = st.radio("Show currently selected key frames:", ["Yes", "No"], horizontal=True)
-            print(len(timing_details))
+            show_current_key_frames = st.radio("Show currently selected key frames:", ["Yes", "No"], horizontal=True)            
             if show_current_key_frames == "Yes":       
                 for image_name in timing_details:
 
@@ -1503,9 +1497,6 @@ def main():
                     st.image(image, use_column_width=True)
                     
                     col1, col2,col3, col4 = st.columns([1,1,1,1])
-
-                    current_item =  str(index_of_current_item) + "_lad"
-
                     
                     with col1:
                         frame_time = round(float(timing_details[index_of_current_item]['frame_time']),2)                                    
@@ -1515,9 +1506,7 @@ def main():
                         # return frame number to 2 decimal places
                         frame_number = round(float(timing_details[index_of_current_item]['frame_number']),2)                                    
                         st.markdown(f"Frame Number: {frame_number}")
-
-                
-
+            
                     with col3:
                         if st.button(f"Reset Key Frame #{index_of_current_item}", help="This will reset the base key frame to the original unedited version. This will not affect the video."):
                             extract_frame(int(index_of_current_item), project_name, project_settings["input_video"], timing_details[index_of_current_item]["frame_number"],timing_details)
@@ -1547,7 +1536,7 @@ def main():
                     st.write("Select a frame from the slider below and click 'Add Frame' it to the end of your project")
                     # if there are >10 frames, and show_current_key_frames == "Yes", show an info 
                     if len(timing_details) > 10 and show_current_key_frames == "Yes":
-                        st.info("To keep this running fast, you can hide the currently selected key frames by selecting 'No' in the 'Show currently selected key frames' section at the top of the page.")
+                        st.info("You have over 10 frames visible. To keep this running fast, you can hide the currently selected key frames by selecting 'No' in the 'Show currently selected key frames' section at the top of the page.")
                 with manual2:
                     st.write("")
                     granularity = st.number_input("Choose selector granularity", min_value=1, max_value=50, step=5, value = 1, help=f"This will extract frames for you to manually choose from. For example, if you choose 15 it'll extract every 15th frame.")
@@ -1714,11 +1703,9 @@ def main():
                 if len(timing_details) == 0:
                     st.info("You first need to select key frames at the Key Frame Selection stage.")
 
-                st.sidebar.header("Restyle Frames")
-                                                                                
-                #index_of_last_model = models.index(st.session_state['model'])
+                st.sidebar.header("Restyle Frames")                                                                                        
 
-                st.session_state['custom_pipeline'] = st.sidebar.selectbox(f"Custom Pipeline", ["","Mystique"], help="Leave blank to use none")
+                st.session_state['custom_pipeline'] = st.sidebar.selectbox(f"Custom Pipeline", ["None","Mystique"])
                 
                 if st.session_state['custom_pipeline'] == "Mystique":
                     st.sidebar.info("Mystique is a custom pipeline that uses a multiple models to generate a consistent character and style transformation.")
@@ -1766,18 +1753,12 @@ def main():
                         st.sidebar.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")                    
                 st.session_state['strength'] = st.sidebar.number_input(f"Batch strength", value=float(st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
                 
-
                 with st.sidebar.expander("Advanced settings 😏"):
                     st.session_state['negative_prompt'] = st.text_area(f"Negative prompt", value=st.session_state['negative_prompt'], label_visibility="visible")
                     st.session_state['guidance_scale'] = st.number_input(f"Guidance scale", value=float(st.session_state['guidance_scale']))
                     st.session_state['seed'] = st.number_input(f"Seed", value=int(st.session_state['seed']))
                     st.session_state['num_inference_steps'] = st.number_input(f"Inference steps", value=int(st.session_state['num_inference_steps']))
-                    
-
-                
-                # st.session_state['character_pipeline'] = st.sidebar.radio("Run character pipeline?", options=["Yes", "No"], index=index_of_run_character_pipeline, horizontal=True)
-
-                
+                                
                             
                 range_start = st.sidebar.slider('Update From', 0, len(timing_details) -1, 0)
 
@@ -2071,13 +2052,9 @@ def main():
             
             project_settings = get_project_settings(project_name)
             # make a list of all the files in videos/{project_name}/assets/resources/music
-
             
             with st.expander("Audio"):
-            
-                
-
-
+                        
                 uploaded_file = st.file_uploader("Attach audio", type=["mp3"], help="This will attach this audio when you render a video")
                 if st.button("Upload and attach new audio"):                               
                     with open(os.path.join(f"videos/{project_name}/assets/resources/audio",uploaded_file.name),"wb") as f: 
@@ -2092,11 +2069,9 @@ def main():
                 
 
                 version_name = st.text_input("What would you liket to call this version?", key="version_name")
-
                 version_name = version_name.replace(" ", "_")
 
-                if st.button("Make a copy of this project", key="copy_project"):
-                    # create a copy of timings.csv and save it as version_name
+                if st.button("Make a copy of this project", key="copy_project"):                    
                     shutil.copyfile(f"videos/{project_name}/timings.csv", f"videos/{project_name}/timings_{version_name}.csv")
                     st.success("Project copied successfully!")             
 
