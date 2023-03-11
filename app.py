@@ -1451,7 +1451,7 @@ def main():
     
     if "online" not in st.session_state:
         current_url = st_javascript("await fetch('').then(r => window.parent.location.href)")
-        time.sleep(0.5)
+        time.sleep(0.75)
         if "localhost" not in current_url:
             st.session_state["online"] = True
         else:
