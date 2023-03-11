@@ -2,7 +2,7 @@ streamlit
 Pillow
 streamlit_image_comparison
 moviepy
-opencv-python
+opencv-python-headless==4.5.3.56
 pandas
 replicate
 requests
