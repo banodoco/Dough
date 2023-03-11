@@ -96,7 +96,7 @@ def promote_image_variant(index_of_current_item, project_name, variant_to_promot
 def train_model(app_settings, images_list, instance_prompt,class_prompt, max_train_steps, model_name,project_name, type_of_model, type_of_task, resolution):
     
     for i in range(len(images_list)):
-        images_list[i] = 'videos/' + project_name + '/assets/resources/training_data/' + images_list[i]
+        images_list[i] = 'training_data/' + images_list[i]
 
     with zipfile.ZipFile('images.zip', 'w') as zip:
         for image in images_list:
@@ -200,7 +200,7 @@ def move_frame(project_name, index_of_current_item, distance_to_move, timing_det
         extract_frame(index_of_current_item, project_name, input_video, new_frame_number,timing_details)
 
 
-            
+
     elif distance_to_move < 0:
 
         last_frame_number = int(calculate_frame_number_at_time(input_video, timing_details[index_of_current_item - 1]["frame_time"],project_name))
@@ -297,8 +297,8 @@ def create_working_assets(video_name):
     os.mkdir("videos/" + video_name + "/assets/resources/backgrounds")
     os.mkdir("videos/" + video_name + "/assets/resources/masks")
     os.mkdir("videos/" + video_name + "/assets/resources/audio")
-    os.mkdir("videos/" + video_name + "/assets/resources/training_data")
     os.mkdir("videos/" + video_name + "/assets/resources/input_videos")
+    os.mkdir("videos/" + video_name + "/assets/resources/prompt_images")
 
     os.mkdir("videos/" + video_name + "/assets/videos")
 
@@ -1436,13 +1436,21 @@ def main():
         
         timing_details = get_timing_details(project_name)
 
-        sections = st.sidebar.radio("Select an option", ["Main Process","Additional Tools","Settings","Custom Models","Key Frame Selection"], horizontal=True)
+        sections = st.sidebar.radio("Select section:", ["Main Process","Tools","Settings","New Project"], horizontal=True)
         
-        st.session_state.stage = st.sidebar.radio("Select an option",
-                                    ["App Settings","New Project","Project Settings","Custom Models","Key Frame Selection",
-                                     "Frame Styling","Frame Editing","Frame Interpolation","Timing Adjustment","Prompt Finder","Video Rendering","Batch Actions"])
-        
-        
+        if sections == "Main Process":
+            st.session_state.stage = st.sidebar.radio("Select page:",
+                                    ["Key Frame Selection",
+                                     "Frame Styling","Frame Interpolation","Video Rendering"])
+        elif sections == "Tools":
+            st.session_state.stage = st.sidebar.radio("Select page:",
+                                    ["Custom Models","Frame Editing","Prompt Finder","Batch Actions","Timing Adjustment"])
+        elif sections == "Settings":
+            st.session_state.stage = st.sidebar.radio("Select page:",
+                                    ["App Settings","Project Settings"])
+        elif sections == "New Project":
+            st.session_state.stage = "New Project"
+
         
         st.header(st.session_state.stage)   
 
@@ -1487,7 +1495,7 @@ def main():
 
             if type_of_extraction == "Regular intervals":
                 frequency_of_extraction = st.sidebar.slider("How frequently would you like to extract frames?", min_value=1, max_value=100, step=1, value = 10, help=f"This will extract frames at regular intervals. For example, if you choose 15 it'll extract every 15th frame.")
-                if st.sidebar.checkbox("I understand that running this will remove all existing frames"):                    
+                if st.sidebar.checkbox("I understand that running this will remove all existing frames and styling."):                    
                     if st.sidebar.button("Extract frames"):
                         update_project_setting("extraction_type", "Regular intervals",project_name)
                         update_project_setting("input_video", input_video,project_name)
@@ -1552,9 +1560,7 @@ def main():
             
                     with col3:
                         if st.button(f"Reset Key Frame #{index_of_current_item}", help="This will reset the base key frame to the original unedited version. This will not affect the video."):
-                            extract_frame(int(index_of_current_item), project_name, project_settings["input_video"], timing_details[index_of_current_item]["frame_number"],timing_details)
-                            new_source_image = upload_image(f"videos/{project_name}/assets/frames/1_selected/{index_of_current_item}.png")
-                            update_source_image(project_name, index_of_current_item, new_source_image)
+                            extract_frame(int(index_of_current_item), project_name, project_settings["input_video"], timing_details[index_of_current_item]["frame_number"],timing_details)                            
                             st.experimental_rerun()
                             
                     with col4:                    
@@ -1576,10 +1582,10 @@ def main():
                 manual1,manual2 = st.columns([3,1])
                 with manual1:
                     st.subheader('Manually add key frames to your project')
-                    st.write("Select a frame from the slider below and click 'Add Frame' it to the end of your project")
+                    st.write("Select a frame from the slider below and click 'Add Frame' it to the end of your project.")
                     # if there are >10 frames, and show_current_key_frames == "Yes", show an info 
                     if len(timing_details) > 10 and show_current_key_frames == "Yes":
-                        st.info("You have over 10 frames visible. To keep this running fast, you can hide the currently selected key frames by selecting 'No' in the 'Show currently selected key frames' section at the top of the page.")
+                        st.info("You have over 10 frames visible. To keep the frame selector running fast, we recommend hiding the currently selected key frames by selecting 'No' in the 'Show currently selected key frames' section at the top of the page.")
                 with manual2:
                     st.write("")
                     granularity = st.number_input("Choose selector granularity", min_value=1, max_value=50, step=5, value = 1, help=f"This will extract frames for you to manually choose from. For example, if you choose 15 it'll extract every 15th frame.")
@@ -1676,6 +1682,7 @@ def main():
                 st.session_state['which_stage_to_run_on'] = st.session_state['project_settings']["last_which_stage_to_run_on"]
                 st.session_state['show_comparison'] = "Don't show"
                 st.session_state['custom_pipeline'] = st.session_state['project_settings']["last_custom_pipeline"]
+                st.session_state['view_type'] = "Single Frame"
 
             if "which_image" not in st.session_state:
                 st.session_state['which_image'] = 0
@@ -1685,12 +1692,12 @@ def main():
             else:
                 top1, top2, top3 = st.columns([3,1,2])
                 with top1:
-                    view_type = st.radio("View type:", ("Single Frame", "List View"), key="view_type", horizontal=True)
+                    st.session_state['view_type'] = st.radio("View type:", ("Single Frame", "List View"), key="which_view_type", horizontal=True)
                 with top2:
                     st.write("")
 
 
-                if view_type == "Single Frame":
+                if st.session_state['view_type'] == "Single Frame":
                     with top3:
                         st.session_state['show_comparison'] = st.radio("Show comparison to original", options=["Don't show", "Show"], index=0, key=f"show_comparison_{st.session_state['which_image']}", horizontal=True)
                     
@@ -1733,16 +1740,19 @@ def main():
                           
                     
 
-                elif view_type == "List View":
+                elif st.session_state['view_type'] == "List View":
                     for i in range(0, len(timing_details)):
                         st.subheader(f"Frame {i}")                
                                               
                         if timing_details[i]["alternative_images"] != "":
                             variants = ast.literal_eval(timing_details[i]["alternative_images"][1:-1])                        
                             current_variant = int(timing_details[i]["primary_image"])    
-                            st.image(variants[current_variant])
+                            st.image(variants[current_variant])                            
                         else:
                             st.image('https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png', use_column_width=True) 
+                            if st.button(f"Style Frame #{i}", key=f"View single frame styling for {i}", help="This will run the styling process on this frame."):
+                                index_of_current_item = i
+                                trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'],custom_models,adapter_type) 
                                                                      
                 if len(timing_details) == 0:
                     st.info("You first need to select key frames at the Key Frame Selection stage.")
@@ -2176,96 +2186,129 @@ def main():
             
             app_settings = get_app_settings()
 
-            st.subheader("Existing Models:")
-
-            models = get_models() 
-            if models == []:
-                st.info("You don't have any models yet. Train a new model below.")
-            else:
-                header1, header2, header3, header4, header5, header6 = st.columns(6)
-                with header1:
-                    st.markdown("###### Model Name")
-                with header2:
-                    st.markdown("###### Trigger Word")
-                with header3:
-                    st.markdown("###### Model ID")
-                with header4:
-                    st.markdown("###### Example Image #1")
-                with header5:
-                    st.markdown("###### Example Image #2")
-                with header6:                
-                    st.markdown("###### Example Image #3")
-                
-                for i in models:   
-                    col1, col2, col3, col4, col5, col6 = st.columns(6)
-                    with col1:
-                        model_details = get_model_details(i)
-                        model_details["name"]
-                    with col2:
-                        if model_details["keyword"] != "":
-                            model_details["keyword"]
-                    with col3:
-                        if model_details["keyword"] != "":
-                            model_details["id"]
-                    with col4:
-                        st.image(ast.literal_eval(model_details["training_images"])[0])
-                    with col5:
-                        st.image(ast.literal_eval(model_details["training_images"])[1])
-                    with col6:
-                        st.image(ast.literal_eval(model_details["training_images"])[2])
-                    st.markdown("***")            
-
-    
-            st.subheader("Train a new model:")
             
-            type_of_model = st.selectbox("Type of model:",["LoRA","Dreambooth"],help="If you'd like to use other methods for model training, let us know - or implement it yourself :)")
-            model_name = st.text_input("Model name:",value="", help="No spaces or special characters please")
-            if type_of_model == "Dreambooth":
-                instance_prompt = st.text_input("Trigger word:",value="", help = "This is the word that will trigger the model")        
-                class_prompt = st.text_input("Describe what your prompts depict generally:",value="", help="This will help guide the model to learn what you want it to do")
-                max_train_steps = st.number_input("Max training steps:",value=2000, help=" The number of training steps to run. Fewer steps make it run faster but typically make it worse quality, and vice versa.")
-                type_of_task = ""
-                resolution = ""
-                
-            elif type_of_model == "LoRA":
-                type_of_task = st.selectbox("Type of task:",["Face","Object","Style"]).lower()
-                resolution = st.selectbox("Resolution:",["512","768","1024"],help="The resolution for input images. All the images in the train/validation dataset will be resized to this resolution.")
-                instance_prompt = ""
-                class_prompt = ""
-                max_train_steps = ""
-            uploaded_files = st.file_uploader("Images you'd like to train the model based on:", type=['png','jpg','jpeg'], key="prompt_file",accept_multiple_files=True)
-            if uploaded_files is not None:   
-                column = 0                             
-                for image in uploaded_files:
-                    # if it's an even number 
-                    if uploaded_files.index(image) % 2 == 0:
-                        column = column + 1                                   
-                        row_1_key = str(column) + 'a'
-                        row_2_key = str(column) + 'b'                        
-                        row_1_key, row_2_key = st.columns([1,1])
-                        with row_1_key:
-                            st.image(uploaded_files[uploaded_files.index(image)], width=300)
-                    else:
-                        with row_2_key:
-                            st.image(uploaded_files[uploaded_files.index(image)], width=300)
-                                                                                      
-                st.write(f"You've selected {len(uploaded_files)} images.")
-                
-            if len(uploaded_files) <= 5 and model_name == "":
-                st.write("Select at least 5 images and fill in all the fields to train a new model.")
-                st.button("Train Model",disabled=True)
-            else:
-                if st.button("Train Model",disabled=False):
-                    st.info("Loading...")
-                    images_for_model = []
-                    for image in uploaded_files:
-                        with open(os.path.join(f"videos/{project_name}/assets/resources/training_data",image.name),"wb") as f: 
-                            f.write(image.getbuffer())                                                        
-                            images_for_model.append(image.name)                                                    
-                    model_status = train_model(app_settings,images_for_model, instance_prompt,class_prompt,max_train_steps,model_name, project_name, type_of_model, type_of_task, resolution)
-                    st.success(model_status)
 
-                                                    
+            with st.expander("Existing models"):
+                
+                st.subheader("Existing Models:")
+
+                models = get_models() 
+                if models == []:
+                    st.info("You don't have any models yet. Train a new model below.")
+                else:
+                    header1, header2, header3, header4, header5, header6 = st.columns(6)
+                    with header1:
+                        st.markdown("###### Model Name")
+                    with header2:
+                        st.markdown("###### Trigger Word")
+                    with header3:
+                        st.markdown("###### Model ID")
+                    with header4:
+                        st.markdown("###### Example Image #1")
+                    with header5:
+                        st.markdown("###### Example Image #2")
+                    with header6:                
+                        st.markdown("###### Example Image #3")
+                    
+                    for i in models:   
+                        col1, col2, col3, col4, col5, col6 = st.columns(6)
+                        with col1:
+                            model_details = get_model_details(i)
+                            model_details["name"]
+                        with col2:
+                            if model_details["keyword"] != "":
+                                model_details["keyword"]
+                        with col3:
+                            if model_details["keyword"] != "":
+                                model_details["id"]
+                        with col4:
+                            st.image(ast.literal_eval(model_details["training_images"])[0])
+                        with col5:
+                            st.image(ast.literal_eval(model_details["training_images"])[1])
+                        with col6:
+                            st.image(ast.literal_eval(model_details["training_images"])[2])
+                        st.markdown("***")            
+
+            with st.expander("Train a new model"):
+                st.subheader("Train a new model:")
+                
+                type_of_model = st.selectbox("Type of model:",["LoRA","Dreambooth"],help="If you'd like to use other methods for model training, let us know - or implement it yourself :)")
+                model_name = st.text_input("Model name:",value="", help="No spaces or special characters please")
+                if type_of_model == "Dreambooth":
+                    instance_prompt = st.text_input("Trigger word:",value="", help = "This is the word that will trigger the model")        
+                    class_prompt = st.text_input("Describe what your prompts depict generally:",value="", help="This will help guide the model to learn what you want it to do")
+                    max_train_steps = st.number_input("Max training steps:",value=2000, help=" The number of training steps to run. Fewer steps make it run faster but typically make it worse quality, and vice versa.")
+                    type_of_task = ""
+                    resolution = ""
+                    
+                elif type_of_model == "LoRA":
+                    type_of_task = st.selectbox("Type of task:",["Face","Object","Style"]).lower()
+                    resolution = st.selectbox("Resolution:",["512","768","1024"],help="The resolution for input images. All the images in the train/validation dataset will be resized to this resolution.")
+                    instance_prompt = ""
+                    class_prompt = ""
+                    max_train_steps = ""
+                uploaded_files = st.file_uploader("Images you'd like to train the model based on:", type=['png','jpg','jpeg'], key="prompt_file",accept_multiple_files=True)
+                if uploaded_files is not None:   
+                    column = 0                             
+                    for image in uploaded_files:
+                        # if it's an even number 
+                        if uploaded_files.index(image) % 2 == 0:
+                            column = column + 1                                   
+                            row_1_key = str(column) + 'a'
+                            row_2_key = str(column) + 'b'                        
+                            row_1_key, row_2_key = st.columns([1,1])
+                            with row_1_key:
+                                st.image(uploaded_files[uploaded_files.index(image)], width=300)
+                        else:
+                            with row_2_key:
+                                st.image(uploaded_files[uploaded_files.index(image)], width=300)
+                                                                                        
+                    st.write(f"You've selected {len(uploaded_files)} images.")
+                    
+                if len(uploaded_files) <= 5 and model_name == "":
+                    st.write("Select at least 5 images and fill in all the fields to train a new model.")
+                    st.button("Train Model",disabled=True)
+                else:
+                    if st.button("Train Model",disabled=False):
+                        st.info("Loading...")
+                        images_for_model = []
+                        for image in uploaded_files:
+                            with open(os.path.join(f"training_data",image.name),"wb") as f: 
+                                f.write(image.getbuffer())                                                        
+                                images_for_model.append(image.name)                                                  
+                        model_status = train_model(app_settings,images_for_model, instance_prompt,class_prompt,max_train_steps,model_name, project_name, type_of_model, type_of_task, resolution)
+                        st.success(model_status)
+
+            with st.expander("Add model from internet"):
+                st.subheader("Add a model the internet:")    
+                uploaded_type_of_model = st.selectbox("Type of model:",["LoRA","Dreambooth"], key="uploaded_type_of_model", disabled=True, help="You can currently only upload LoRA models - this will change soon.")
+                uploaded_model_name = st.text_input("Model name:",value="", help="No spaces or special characters please", key="uploaded_model_name")                                   
+                uploaded_model_images = st.file_uploader("Please add at least 2 sample images from this model:", type=['png','jpg','jpeg'], key="uploaded_prompt_file",accept_multiple_files=True)
+                uploaded_link_to_model = st.text_input("Link to model:",value="", key="uploaded_link_to_model")
+                st.info("The model should be a direct link to a .safetensors files. You can find models on websites like: https://civitai.com/" )
+                if uploaded_model_name == "" or uploaded_link_to_model == "" or uploaded_model_images is None:
+                    st.write("Fill in all the fields to add a model from the internet.")
+                    st.button("Upload Model",disabled=True)
+                else:
+                    if st.button("Upload Model",disabled=False):                    
+                        images_for_model = []
+                        for image in uploaded_model_images:
+                            with open(os.path.join(f"training_data",image.name),"wb") as f: 
+                                f.write(image.getbuffer())                                                        
+                                images_for_model.append(image.name)
+                        for i in range(len(images_for_model)):
+                            images_for_model[i] = 'training_data/' + images_for_model[i]
+                        df = pd.read_csv("models.csv")
+                        df = df.append({}, ignore_index=True)
+                        new_row_index = df.index[-1]
+                        df.iloc[new_row_index, 0] = uploaded_model_name
+                        df.iloc[new_row_index, 4] = str(images_for_model)
+                        df.iloc[new_row_index, 5] = uploaded_type_of_model
+                        df.iloc[new_row_index, 6] = uploaded_link_to_model
+                        df.to_csv("models.csv", index=False)
+                        st.success(f"Successfully uploaded - the model '{model_name}' is now available for use!")
+                        time.sleep(1.5)
+                        st.experimental_rerun()
 
                   
         elif st.session_state.stage == "Frame Editing":
@@ -2300,9 +2343,7 @@ def main():
                     if which_stage == "Unedited Key Frame":     
                         st.write("")                     
                         if st.button("Reset Key Frame", help="This will reset the base key frame to the original unedited version. This will not affect the video."):
-                            extract_frame(int(st.session_state['which_image']), project_name, project_settings["input_video"], timing_details[st.session_state['which_image']]["frame_number"],timing_details)
-                            new_source_image = upload_image(f"videos/{project_name}/assets/frames/1_selected/{st.session_state['which_image']}.png")
-                            update_source_image(project_name, st.session_state['which_image'], new_source_image)
+                            extract_frame(int(st.session_state['which_image']), project_name, project_settings["input_video"], timing_details[st.session_state['which_image']]["frame_number"],timing_details)                            
                             st.experimental_rerun()
                                     
                 if "edited_image" not in st.session_state:
@@ -2416,14 +2457,15 @@ def main():
                             st.image(f"videos/{project_name}/assets/resources/backgrounds/{background_image}", use_column_width=True)
                     with btn2:
                         uploaded_files = st.file_uploader("Add more background images here", accept_multiple_files=True)                    
-                        if uploaded_files is not None:
+                        if st.button("Upload Backgrounds"):                            
                             for uploaded_file in uploaded_files:
-                                file_details = {"FileName":uploaded_file.name,"FileType":uploaded_file.type}
-                                st.write(file_details)
-                                img = Image.open(uploaded_file)        
-                                with open(os.path.join(f"videos/{project_name}/assets/resources/backgrounds",uploaded_file.name),"wb") as f:                                 
-                                    st.success("Your backgrounds are uploaded file, refresh the page to see them.")                     
+                                with open(os.path.join(f"videos/{project_name}/assets/resources/backgrounds",uploaded_file.name),"wb") as f: 
+                                    f.write(uploaded_file.getbuffer())                                                                                                                                                      
+                                    st.success("Your backgrounds are uploaded file - they should appear in the dropdown.")                     
                                     background_list.append(uploaded_file.name)
+                                    time.sleep(1.5)
+                                    st.experimental_rerun()
+
                 elif type_of_mask_replacement == "Inpainting":
                     with btn1:
                         prompt = st.text_input("Prompt:", help="Describe the whole image, but focus on the details you want changed!")
@@ -2523,9 +2565,9 @@ def main():
 
             col1,col2 = st.columns(2)
             with col1:
-                how_to_adjust_timing = st.radio("How would you like to adjust the timing?",["Change The Time", "Change The Duration"])
+                automatically_rerender_clips = st.radio("Automatically rerender clips when timing changes", ["Yes","No"], help="If you want to automatically rerender clips when you change the timing, tick this box. If you want to rerender clips manually, untick this box.", index=1, horizontal=True)
             with col2:
-                automatically_rerender_clips = st.radio("Automatically rerender clips when timing changes", ["Yes","No"], help="If you want to automatically rerender clips when you change the timing, tick this box. If you want to rerender clips manually, untick this box.", index=1)
+                st.write("")
                 
             
             video_list = [list_of_files for list_of_files in os.listdir(
@@ -2621,6 +2663,7 @@ def main():
                     f.write(f'"{prompt}",videos/{project_name}/assets/resources/prompt_images/{uploaded_file.name},{which_model}\n')
                 st.success("Prompt added successfully!")
                 time.sleep(1)
+                uploaded_file = ""
                 st.experimental_rerun()
             # list all the prompts in prompts.csv
             if os.path.exists(f"videos/{project_name}/prompts.csv"):
