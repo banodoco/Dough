@@ -1448,11 +1448,11 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
 
 
 def main():
-
+    
     if "online" not in st.session_state:
         current_url = st_javascript("await fetch('').then(r => window.parent.location.href)")
-        time.sleep(0.2)
-        if "localhost" in current_url:
+        time.sleep(0.4)
+        if "localhost" not in current_url:
             st.session_state["online"] = True
         else:
             st.session_state["online"] = False
