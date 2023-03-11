@@ -5,6 +5,7 @@ from streamlit_image_comparison import image_comparison
 from moviepy.editor import *
 import cv2
 import re
+from streamlit_javascript import st_javascript
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import csv
 import pandas as pd
@@ -1447,6 +1448,12 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
 
 
 def main():
+
+    current_url = st_javascript("await fetch('').then(r => window.parent.location.href)")
+    # if current url contains localhost
+    if "localhost" not in current_url:
+        st.warning("This app is meant to be run locally - this just a demo app for people to test out. As such, the buttons, and functions aren't working. To use the app properly, you can follow the instructions here to run it locally: https://github.com/peter942/banodoco")
+
     
     def project_changed():
         st.session_state["project_changed"] = True
