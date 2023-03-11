@@ -1449,10 +1449,16 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
 
 def main():
 
-    current_url = st_javascript("await fetch('').then(r => window.parent.location.href)")
-    # if current url contains localhost
-    if "localhost" not in current_url:
-        st.warning("This app is meant to be run locally - this just a demo app for people to test out. As such, the buttons, and functions aren't working. To use the app properly, you can follow the instructions here to run it locally: https://github.com/peter942/banodoco")
+    if "online" not in st.session_state:
+        current_url = st_javascript("await fetch('').then(r => window.parent.location.href)")
+        time.sleep(0.2)
+        if "localhost" in current_url:
+            st.session_state["online"] = True
+        else:
+            st.session_state["online"] = False
+
+    if st.session_state["online"] == True:
+        st.warning("This is just a demo app for people to test out - to use it properly, you need to run it locally. For the demo version, you can click around but the buttons and functions aren't working. To use the app properly, you can follow the instructions here to run it locally: https://github.com/peter942/banodoco")
 
     
     def project_changed():
