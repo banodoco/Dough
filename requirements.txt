@@ -11,3 +11,4 @@ ffmpeg-python
 streamlit_drawable_canvas
 numpy
 mesa
+mesa-utils
