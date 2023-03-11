@@ -307,7 +307,7 @@ def create_working_assets(video_name):
     os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
 
     data = {'key': ['last_prompt', 'last_model','last_strength','last_custom_pipeline','audio', 'input_type', 'input_video','extraction_type','width','height','last_negative_prompt','last_guidance_scale','last_seed','last_num_inference_steps','last_which_stage_to_run_on','last_custom_models','last_adapter_type'],
-        'value': ['prompt', 'sd', '0.5','no','', 'video', '','Regular intervals','','','',7.5,0,50,'Extracted Frames',"None",""]}
+        'value': ['prompt', 'stable-diffusion-img2img-v2.1', '0.5','no','', 'video', '','Regular intervals','','','',7.5,0,50,'Extracted Frames',"None",""]}
 
     df = pd.DataFrame(data)
 
@@ -790,9 +790,10 @@ def calculate_desired_duration_of_each_clip(timing_details,project_name):
         df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
 
 
-def hair_swap(source_image, video_name, index_of_current_item):
+def hair_swap(source_image, project_name, index_of_current_item):
 
-    os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
+    app_settings = get_app_settings()
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]   
 
     model = replicate.models.get("cjwbw/style-your-hair")
 
@@ -812,22 +813,22 @@ def hair_swap(source_image, video_name, index_of_current_item):
 
     return output
 
-def prompt_model_depth2img(strength,video_name, image_number, replicate_api_key, timing_details, source_image):
+def prompt_model_depth2img(strength, image_number, timing_details, source_image):
 
-    os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
+    app_settings = get_app_settings()
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]   
 
     prompt = timing_details[image_number]["prompt"]
     num_inference_steps = timing_details[image_number]["num_inference_steps"]
     guidance_scale = timing_details[image_number]["guidance_scale"]
     negative_prompt = timing_details[image_number]["negative_prompt"]
     model = replicate.models.get("jagilley/stable-diffusion-depth2img")
-    version = model.versions.get("68f699d395bc7c17008283a7cef6d92edc832d8dc59eb41a6cafec7fc70b85bc")
-    image = source_image
+    version = model.versions.get("68f699d395bc7c17008283a7cef6d92edc832d8dc59eb41a6cafec7fc70b85bc")    
 
-    if not input_image.startswith("http"):        
-        input_image = open(input_image, "rb")
+    if not source_image.startswith("http"):        
+        source_image = open(source_image, "rb")
 
-    output = version.predict(input_image=image, prompt_strength=str(strength), prompt=prompt, negative_prompt = negative_prompt, num_inference_steps = num_inference_steps, guidance_scale = guidance_scale)
+    output = version.predict(input_image=source_image, prompt_strength=str(strength), prompt=prompt, negative_prompt = negative_prompt, num_inference_steps = num_inference_steps, guidance_scale = guidance_scale)
     
     return output[0]
 
@@ -895,7 +896,7 @@ def trigger_restyling_process(timing_details, project_name, index_of_current_ite
         source_image = timing_details[index_of_current_item]["source_image"]
     batch_update_timing_values(project_name, index_of_current_item, prompt, strength, model,custom_pipeline, negative_prompt,guidance_scale,seed,num_inference_steps, source_image,custom_models, adapter_type)   
     timing_details = get_timing_details(project_name)
-    if which_stage_to_run_on == "Extracted Frames":
+    if which_stage_to_run_on == "Extracted Key Frames":
         source_image = timing_details[index_of_current_item]["source_image"]
     else:
         variants = ast.literal_eval(timing_details[index_of_current_item]["alternative_images"][1:-1])
@@ -943,10 +944,10 @@ def restyle_images(index_of_current_item,project_name, project_settings, timing_
     app_settings = get_app_settings()
     project_settings = get_project_settings(project_name)
 
-    if model_name == "sd":
+    if model_name == "stable-diffusion-img2img-v2.1":
         output_url = prompt_model_stability(project_name, index_of_current_item,timing_details, source_image)
     elif model_name == "depth2img":    
-        output_url = prompt_model_depth2img(strength,project_name, index_of_current_item,app_settings, timing_details, source_image)
+        output_url = prompt_model_depth2img(strength, index_of_current_item, timing_details, source_image)
     elif model_name == "pix2pix":
         output_url = prompt_model_pix2pix(strength,project_name, index_of_current_item, timing_details, app_settings, source_image)
     elif model_name == "LoRA":
@@ -1220,6 +1221,34 @@ def create_depth_mask_image(input_image,layer):
                 mask_pixels[i, j] = 0 if depth_value <= 50 else 255  # Set background pixels to black
 
     mask.save("mask.png") 
+
+
+
+def create_video_without_interpolation(timing_details, output_file):
+    # Create a list of ffmpeg inputs, each input being a frame with its duration
+    inputs = []
+    for i in range(len(timing_details)):
+        # Get the current frame details
+        frame = timing_details[i]
+        frame_time = frame['frame_time']
+        source_image = frame['source_image']
+
+        # Get the duration of this frame
+        if i == len(timing_details) - 1:
+            # This is the last frame, just make its duration the same as the previous
+            duration = frame_time - timing_details[i-1]['frame_time']
+        else:
+            # This is not the last frame, get the duration until the next frame
+            duration = timing_details[i+1]['frame_time'] - frame_time
+
+        # Create an ffmpeg input for this frame
+        inputs.append(
+            ffmpeg.input(source_image, t=str(duration), ss=str(frame_time))
+        )
+
+    # Concatenate the inputs and export the video
+    ffmpeg.concat(*inputs).output(output_file).run()
+
 
 def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
 
@@ -1543,7 +1572,11 @@ def main():
 
                     index_of_current_item = timing_details.index(image_name)
                     
-                    image = Image.open(timing_details[index_of_current_item]["source_image"])            
+                    # if image starts with http
+                    if image_name["source_image"].startswith("http"):
+                        image = timing_details[index_of_current_item]["source_image"]
+                    else:
+                        image = Image.open(timing_details[index_of_current_item]["source_image"])            
                     st.subheader(f'Image Name: {index_of_current_item}')                
                     st.image(image, use_column_width=True)
                     
@@ -1610,6 +1643,11 @@ def main():
                     timing_details = get_timing_details(project_name)
                     extract_frame(created_row, project_name, input_video, slider,timing_details)                                                                                                
                     st.experimental_rerun()   
+
+            st.subheader("Make preview video at current timings")
+            if st.button("Make Preview Video"):
+                create_video_without_interpolation(timing_details, "preview")
+                st.video(f'videos/{project_name}/preview.mp4')
                             
 
         elif st.session_state.stage == "App Settings":
@@ -1757,7 +1795,12 @@ def main():
                 if len(timing_details) == 0:
                     st.info("You first need to select key frames at the Key Frame Selection stage.")
 
-                st.sidebar.header("Restyle Frames")                                                                                        
+                st.sidebar.header("Restyle Frames")   
+                if st.session_state['project_settings']["last_which_stage_to_run_on"] == "Current Main Variant":
+                    index_of_which_stage_to_run_on = 1
+                else:
+                    index_of_which_stage_to_run_on = 0
+                st.session_state['which_stage_to_run_on'] = st.sidebar.radio("What stage of images would you like to run styling on?", options=["Extracted Key Frames", "Current Main Variants"], horizontal=True, index = index_of_which_stage_to_run_on, help="Extracted frames means the original frames from the video.")                                                                                     
                 custom_pipelines = ["None","Mystique"]
                 # find index of st.session_state['custom_pipeline'] in custom_pipelines
                 index_of_last_custom_pipeline = custom_pipelines.index(st.session_state['custom_pipeline'])
@@ -1775,12 +1818,13 @@ def main():
                     
                     st.session_state['model'] = st.sidebar.selectbox(f"Which type of model is trained on your character?", ["LoRA","Dreambooth"])                    
                 else:
-                    models = ['sd', 'depth2img', 'pix2pix', 'controlnet', 'Dreambooth', 'LoRA','StyleGAN-NADA']
+                    models = ['stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'controlnet', 'Dreambooth', 'LoRA','StyleGAN-NADA']
                     st.session_state['model'] = st.sidebar.selectbox(f"Model", models)
                 
                 if st.session_state['model'] == "controlnet":   
-                    adapter_type = st.sidebar.selectbox(f"Adapter Type",["normal", "canny", "hed", "scribble", "seg", "hough", "depth2img", "pose"])               
-                if st.session_state['model'] == "LoRA": 
+                    adapter_type = st.sidebar.selectbox(f"Adapter Type",["normal", "canny", "hed", "scribble", "seg", "hough", "depth2img", "pose"])   
+                    custom_models = []           
+                elif st.session_state['model'] == "LoRA": 
                     df = pd.read_csv('models.csv')
                     filtered_df = df[df.iloc[:, 5] == 'LoRA']
                     lora_model_list = filtered_df.iloc[:, 0].tolist()
@@ -1825,57 +1869,40 @@ def main():
                         st.session_state['seed'] = st.number_input(f"Seed", value=int(st.session_state['seed']))
                         st.session_state['num_inference_steps'] = st.number_input(f"Inference steps", value=int(st.session_state['num_inference_steps']))
                                     
-                            
-                range_start = st.sidebar.slider('Update From', 0, len(timing_details) -1, 0)
-
-                range_end = st.sidebar.slider('Update To', 0, len(timing_details) - 1, 1)
-
-                if st.session_state['project_settings']["last_which_stage_to_run_on"] == "Current Main Variant":
-                    index_of_which_stage_to_run_on = 1
-                else:
-                    index_of_which_stage_to_run_on = 0
-
-                st.session_state['which_stage_to_run_on'] = st.sidebar.radio("What stage of images would you like to run this on?", options=["Extracted Frames", "Current Main Variant"], horizontal=True, index = index_of_which_stage_to_run_on, help="Extracted frames means the original frames from the video.")
-
+                batch_run_range = st.sidebar.slider("Select range:", 1, 0, (0, len(timing_details)-1))  
+            
                 promote_new_generation = st.sidebar.checkbox("Promote new generation to main variant", value=True, key="promote_new_generation_to_main_variant")
-
-                range_end = range_end + 1                
 
                 app_settings = get_app_settings()
 
                 if 'restyle_button' not in st.session_state:
                     st.session_state['restyle_button'] = ''
-                    st.session_state['item_to_restyle'] = ''
+                    st.session_state['item_to_restyle'] = ''                
 
+                btn1, btn2 = st.sidebar.columns(2)
 
-                if range_start <= range_end:
+                with btn1:
+                    batch_number_of_variants = st.number_input("How many variants?", value=1, min_value=1, max_value=10, step=1, key="number_of_variants")
 
-                    btn1, btn2 = st.sidebar.columns(2)
+                with btn2:
 
-                    with btn1:
-                        batch_number_of_variants = st.number_input("How many variants?", value=1, min_value=1, max_value=10, step=1, key="number_of_variants")
+                    st.write("")
+                    st.write("")
+                    if st.button(f'Batch restyle') or st.session_state['restyle_button'] == 'yes':
+                                        
+                        if st.session_state['restyle_button'] == 'yes':
+                            range_start = int(st.session_state['item_to_restyle'])
+                            range_end = range_start + 1
+                            st.session_state['restyle_button'] = ''
+                            st.session_state['item_to_restyle'] = ''
 
-                    with btn2:
+                        for i in range(batch_run_range[1]+1):
+                            for number in range(0, batch_number_of_variants):
+                                index_of_current_item = i
+                                trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'],custom_models,adapter_type)
+                        st.experimental_rerun()
 
-                        st.write("")
-                        st.write("")
-                        if st.button(f'Batch restyle') or st.session_state['restyle_button'] == 'yes':
-                                            
-                            if st.session_state['restyle_button'] == 'yes':
-                                range_start = int(st.session_state['item_to_restyle'])
-                                range_end = range_start + 1
-                                st.session_state['restyle_button'] = ''
-                                st.session_state['item_to_restyle'] = ''
-
-                            for i in range(range_start, range_end): 
-                                for number in range(0, batch_number_of_variants):
-                                    index_of_current_item = i
-                                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'],custom_models,adapter_type)
-                            st.experimental_rerun()
-
-                else:
-                        
-                        st.sidebar.write("Select a valid range")
+               
                 
                 detail1, detail2, detail3, detail4 = st.columns([1,1,1,1])
 
@@ -2539,17 +2566,17 @@ def main():
 
                 st.sidebar.markdown("### Batch Run Edits:")   
                 st.sidebar.write("This will batch run the settings you have above on a batch of images.")     
-                batch_run_range = st.sidebar.slider("Select range:", 1, 0, (0, len(timing_details)-1))
-                print("BATCH RUN RANGE")
-                print(batch_run_range)
+                batch_run_range = st.sidebar.slider("Select range:", 1, 0, (0, len(timing_details)-1))                                
                 if which_stage == "Unedited Key Frame":
                     st.sidebar.warning("This will overwrite the source images in the range you select - you can always reset them if you wish.")
                 elif which_stage == "Styled Key Frame":
                     make_primary_variant = st.sidebar.checkbox("Make primary variant", value=True, help="If you want to make the edited image the primary variant, tick this box. If you want to keep the original primary variant, untick this box.")          
                 if st.sidebar.button("Batch Run Edit"):
                     for i in range(batch_run_range[1]+1):
+                        if type_of_mask_replacement == "Inpainting":
+                                background_image = ""
                         if which_stage == "Unedited Key Frame":
-                            bg_image = timing_details[i]["source_image"]
+                            bg_image = timing_details[i]["source_image"]                            
                             edited_image = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, prompt, negative_prompt, width, height,st.session_state['which_layer'])
                             update_source_image(project_name, st.session_state['which_image'], edited_image)
                         elif which_stage == "Styled Key Frame":
