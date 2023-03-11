@@ -6,7 +6,7 @@ last_custom_pipeline,None
 audio,
 input_type,Video
 input_video,recorded_heman.mp4
-extraction_type,Regular intervals
+extraction_type,Extract manually
 width,704
 height,512
 last_negative_prompt,"nudity, boobs, breasts, naked, nsfw"
