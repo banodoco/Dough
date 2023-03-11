@@ -1,5 +1,6 @@
 streamlit==1.19.0
 opencv-python-headless
+sahi
 Pillow==9.4.0
 streamlit-image-comparison==0.0.3
 moviepy==1.0.3
