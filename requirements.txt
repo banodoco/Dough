@@ -11,3 +11,4 @@ boto3==1.26.54
 ffmpeg-python==0.2.0
 streamlit-drawable-canvas==0.9.2
 numpy==1.24.1
+mesa-utils==8.4.0
