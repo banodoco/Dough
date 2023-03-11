@@ -1,0 +1,16 @@
+key,value
+last_prompt,a close up of HE MAN  with a shirt on. yellow background. digital art. inspired by Earl Norem. shock art. pink golden hour. he is screaming. render to resolute perfection. he - man!!!!!. marvelous designer 3d rendered. neon colored suit. war cry. sonic power. idol. absolute chad. 8k archival print. nightcore
+last_model,controlnet_normal
+last_strength,0.3
+last_character_pipeline,no
+audio,
+input_type,Video
+input_video,recorded_heman.mp4
+extraction_type,Regular intervals
+width,704
+height,512
+last_negative_prompt,"nudity, boobs, breasts, naked, nsfw"
+last_guidance_scale,5.039999999999999
+last_seed,0
+last_num_inference_steps,50
+last_which_stage_to_run_on,Extracted Frames
