@@ -1483,14 +1483,14 @@ def main():
         sections = st.sidebar.radio("Select section:", ["Main Process","Tools","Settings","New Project"], horizontal=True)
         
         if sections == "Main Process":
-            st.session_state.stage = st.sidebar.radio("Select page:",
+            st.session_state.stage = st.sidebar.radio("Select stage:",
                                     ["Key Frame Selection",
                                      "Frame Styling","Frame Interpolation","Video Rendering"])
         elif sections == "Tools":
-            st.session_state.stage = st.sidebar.radio("Select page:",
+            st.session_state.stage = st.sidebar.radio("Select tool:",
                                     ["Custom Models","Frame Editing","Prompt Finder","Batch Actions","Timing Adjustment"])
         elif sections == "Settings":
-            st.session_state.stage = st.sidebar.radio("Select page:",
+            st.session_state.stage = st.sidebar.radio("Select type of settings:",
                                     ["Project Settings","App Settings"])
         elif sections == "New Project":
             st.session_state.stage = "New Project"
@@ -1503,8 +1503,8 @@ def main():
             
             timing_details = get_timing_details(project_name)                              
             project_settings = get_project_settings(project_name)                        
-            images_list = [f for f in os.listdir(f'videos/{project_name}/assets/frames/0_extracted') if f.endswith('.png')]    
-            images_list.sort(key=lambda f: int(re.sub('\D', '', f)))
+              
+
             st.sidebar.subheader("Extract key frames from video")                
             input_video_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/input_videos') if f.endswith('.mp4')]            
             if project_settings["input_video"] != "": 
@@ -1722,10 +1722,12 @@ def main():
                 st.write("")
                 audio_options = ["No audio","Attach new audio"]
                 if uploaded_video is not None:
-                    audio_options.append("Keep audio from original video")
+                    audio_options.append("Keep audio from original video")               
+                    
                 st.info("Make sure that this video is the same size as you've specified above.")
             audio = st.radio("Audio:", audio_options, key="audio",horizontal=True)
-
+            if uploaded_video is None:
+                st.info("You can also keep the audio from your original video - just upload the video above and the option will appear.")
             if audio == "Attach new audio":
                 d1, d2 = st.columns([4,5])
                 with d1:                
@@ -2434,8 +2436,7 @@ def main():
                 if "edited_image" not in st.session_state:
                     st.session_state.edited_image = ""                        
                 
-                if which_stage == "Styled Key Frame":
-                    if timing_details[st.session_state['which_image']]["alternative_images"] == "":
+                if which_stage == "Styled Key Frame" and timing_details[st.session_state['which_image']]["alternative_images"] == "":
                         st.info("You need to add a style first in the Style Selection section.")
                 else:
 
