@@ -1,0 +1,12 @@
+streamlit
+Pillow
+streamlit_image_comparison
+moviepy
+opencv-python
+pandas
+replicate
+requests
+boto3
+ffmpeg-python
+streamlit_drawable_canvas
+numpy
