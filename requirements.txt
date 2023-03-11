@@ -1,4 +1,5 @@
 streamlit==1.19.0
+opencv-python==4.7.0.68
 Pillow==9.4.0
 streamlit-image-comparison==0.0.3
 moviepy==1.0.3
