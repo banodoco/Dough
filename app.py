@@ -306,8 +306,8 @@ def create_working_assets(video_name):
     os.mkdir("videos/" + video_name + "/assets/videos/1_final")
     os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
 
-    data = {'key': ['last_prompt', 'last_model','last_strength','last_custom_pipeline','audio', 'input_type', 'input_video','extraction_type','width','height','last_negative_prompt','last_guidance_scale','last_seed','last_num_inference_steps','last_which_stage_to_run_on'],
-        'value': ['prompt', 'sd', '0.5','no','', 'video', '','Regular intervals','','','',7.5,0,50,'Extracted Frames']}
+    data = {'key': ['last_prompt', 'last_model','last_strength','last_custom_pipeline','audio', 'input_type', 'input_video','extraction_type','width','height','last_negative_prompt','last_guidance_scale','last_seed','last_num_inference_steps','last_which_stage_to_run_on','last_custom_models','last_adapter_type'],
+        'value': ['prompt', 'sd', '0.5','no','', 'video', '','Regular intervals','','','',7.5,0,50,'Extracted Frames',"None",""]}
 
     df = pd.DataFrame(data)
 
@@ -487,7 +487,7 @@ def touch_up_images(video_name, index_of_current_item, input_image):
     
     return output
 
-def resize_image(video_name, image_number, new_width,new_height, image):
+def resize_image(video_name, new_width,new_height, image):
 
     response = r.get(image)
     image = Image.open(BytesIO(response.content))
@@ -503,7 +503,7 @@ def resize_image(video_name, image_number, new_width,new_height, image):
 
     return resized_image
 
-def face_swap(video_name, index_of_current_item, source_image):
+def face_swap(video_name, index_of_current_item, source_image, timing_details):
 
     app_settings = get_app_settings()
     
@@ -511,9 +511,11 @@ def face_swap(video_name, index_of_current_item, source_image):
 
     model = replicate.models.get("arielreplicate/ghost_face_swap")
 
-    version = model.versions.get("106df0aaf9690354379d8cd291ad337f6b3ea02fe07d90feb1dafd64820066fa")
+    model_id = timing_details[index_of_current_item]["custom_models"]
+   
+    source_face = ast.literal_eval(get_model_details(model_id)["training_images"][1:-1])[0]
 
-    source_face = upload_image("videos/" + str(video_name) + "/face.png")
+    version = model.versions.get("106df0aaf9690354379d8cd291ad337f6b3ea02fe07d90feb1dafd64820066fa")
 
     target_face = source_image
 
@@ -524,17 +526,19 @@ def face_swap(video_name, index_of_current_item, source_image):
         target_face = open(target_face, "rb")
 
     output = version.predict(source_path=source_face, target_path=target_face,use_sr=0)
-
-    new_image = "videos/" + str(video_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png"
-    
-    try:
-
-        urllib.request.urlretrieve(output, new_image)
-
-    except Exception as e:
-
-        print(e)
     return output
+
+def prompt_model_stylegan_nada(index_of_current_item, timing_details, input_image, project_name):
+    
+        app_settings = get_app_settings()
+        os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
+        model = replicate.models.get("rinongal/stylegan-nada")
+        if not input_image.startswith("http"):        
+            input_image = open(input_image, "rb")        
+        output = model.predict(input=input_image,output_style = timing_details[index_of_current_item]["prompt"])        
+        output = resize_image(project_name, 512, 512, output)
+        
+        return output
 
 def prompt_model_stability(project_name, index_of_current_item, timing_details, input_image):
 
@@ -881,7 +885,10 @@ def trigger_restyling_process(timing_details, project_name, index_of_current_ite
     update_project_setting("last_guidance_scale", guidance_scale, project_name)
     update_project_setting("last_seed", seed, project_name)
     update_project_setting("last_num_inference_steps",  num_inference_steps, project_name)   
-    update_project_setting("last_which_stage_to_run_on", which_stage_to_run_on, project_name)                       
+    update_project_setting("last_which_stage_to_run_on", which_stage_to_run_on, project_name)
+    update_project_setting("last_custom_models", custom_models, project_name)
+    update_project_setting("last_adapter_type", adapter_type, project_name)
+                     
     if timing_details[index_of_current_item]["source_image"] == "":
         source_image = upload_image("videos/" + str(project_name) + "/assets/frames/1_selected/" + str(index_of_current_item) + ".png")
     else:
@@ -946,8 +953,10 @@ def restyle_images(index_of_current_item,project_name, project_settings, timing_
         output_url = prompt_model_lora(project_name, index_of_current_item, timing_details, source_image)
     elif model_name == "controlnet":
         output_url = prompt_model_controlnet(timing_details, index_of_current_item, source_image)
-    elif model_name == "dreambooth":
-        output_url = prompt_model_dreambooth(project_name, index_of_current_item, model_name, app_settings,timing_details, project_settings,source_image)
+    elif model_name == "Dreambooth":
+        output_url = prompt_model_dreambooth(project_name, index_of_current_item, timing_details[index_of_current_item]["custom_models"], app_settings,timing_details, project_settings,source_image)
+    elif model_name =='StyleGAN-NADA':
+        output_url = prompt_model_stylegan_nada(index_of_current_item ,timing_details,source_image,project_name)
     
     return output_url
 
@@ -975,11 +984,23 @@ def custom_pipeline_mystique(index_of_current_item, project_name, project_settin
         prompt = prompt.replace("[location]", prompt_location)
         update_specific_timing_value(project_name, index_of_current_item, "prompt", prompt)
         timing_details = get_timing_details(project_name)
+
+    if "[mouth]" in prompt:
+        prompt_mouth = prompt_model_blip2(source_image, "is their mouth open or closed?")
+        prompt = prompt.replace("[mouth]", "mouth is " + str(prompt_mouth))
+        update_specific_timing_value(project_name, index_of_current_item, "prompt", prompt)
+        timing_details = get_timing_details(project_name)
         
-    output_url = face_swap(project_name, index_of_current_item, source_image)
+    if "[looking]" in prompt:
+        prompt_looking = prompt_model_blip2(source_image, "the person is looking")
+        prompt = prompt.replace("[looking]", "looking " + str(prompt_looking))
+        update_specific_timing_value(project_name, index_of_current_item, "prompt", prompt)
+        timing_details = get_timing_details(project_name)
+
+    output_url = face_swap(project_name, index_of_current_item, source_image, timing_details)
     # output_url = hair_swap(source_image, project_name, index_of_current_item)
     output_url = touch_up_images(project_name, index_of_current_item, output_url)
-    output_url = resize_image(project_name, index_of_current_item, int(project_settings["width"]),int(project_settings["height"]), output_url)
+    output_url = resize_image(project_name, int(project_settings["width"]),int(project_settings["height"]), output_url)
     if timing_details[index_of_current_item]["model_id"] == "Dreambooth":
         model = timing_details[index_of_current_item]["custom_models"]
         output_url = prompt_model_dreambooth(project_name, index_of_current_item, model, app_settings,timing_details, project_settings,output_url)
@@ -1105,9 +1126,26 @@ def update_specific_timing_value(project_name, index_of_current_item, parameter,
 def batch_update_timing_values(project_name, index_of_current_item,prompt, strength, model, custom_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps, source_image, custom_models,adapter_type):
 
     df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")    
-    if model == "LoRA":
+    if model != "Dreambooth":
         custom_models = f'"{custom_models}"'
-    df.iloc[index_of_current_item, [19,11,10,5,6,7,8,9,13,14,15]] = [prompt,strength,model,custom_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps, source_image,custom_models,adapter_type]
+    print("ARRAY")
+    print(f"Prompt {prompt}")
+    print(f"Strength {strength}")
+    print(f"Model {model}")
+    print(f"Custom Pipeline {custom_pipeline}")
+    print(f"Negative Prompt {negative_prompt}")
+    print(f"Guidance Scale {guidance_scale}")
+    print(f"Seed {seed}")
+    print(f"Num Inference Steps {num_inference_steps}")
+    print(f"Source Image {source_image}")
+    print(f"Custom Models {custom_models}")
+    print(f"Adapter Type {adapter_type}")
+    print(f"Shape of value list: {len([prompt,strength,model,custom_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps, source_image,custom_models,adapter_type])}")
+    print(f"Shape of DataFrame slice: {df.iloc[index_of_current_item, [19,11,10,5,6,7,8,9,13,14,15]].shape}")
+    print(f"Data types in value list: {[type(x) for x in [prompt,strength,model,custom_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps, source_image,custom_models,adapter_type]]}")
+    print(f"Data types in DataFrame slice: {[type(x) for x in df.iloc[index_of_current_item, [19,11,10,5,6,7,8,9,13,14,15]].values]}")
+    df.iloc[index_of_current_item, [19,11,10,5,6,7,8,9,13,14,15]] = [prompt, float(strength), model, custom_pipeline, negative_prompt, float(guidance_scale), int(seed), int(num_inference_steps), source_image, custom_models, adapter_type]
+
 
     df["primary_image"] = pd.to_numeric(df["primary_image"], downcast='integer', errors='coerce')
     df["seed"] = pd.to_numeric(df["seed"], downcast='integer', errors='coerce')
@@ -1397,10 +1435,15 @@ def main():
         #print timestamp
         
         timing_details = get_timing_details(project_name)
+
+        sections = st.sidebar.radio("Select an option", ["Main Process","Additional Tools","Settings","Custom Models","Key Frame Selection"], horizontal=True)
         
         st.session_state.stage = st.sidebar.radio("Select an option",
                                     ["App Settings","New Project","Project Settings","Custom Models","Key Frame Selection",
                                      "Frame Styling","Frame Editing","Frame Interpolation","Timing Adjustment","Prompt Finder","Video Rendering","Batch Actions"])
+        
+        
+        
         st.header(st.session_state.stage)   
 
      
@@ -1443,7 +1486,7 @@ def main():
             st.sidebar.caption(f"This video is {total_frames} frames long and has a framerate of {fps} fps.")
 
             if type_of_extraction == "Regular intervals":
-                frequency_of_extraction = st.sidebar.slider("How frequently would you like to extract frames?", min_value=5, max_value=100, step=5, value = 10, help=f"This will extract frames at regular intervals. For example, if you choose 15 it'll extract every 15th frame.")
+                frequency_of_extraction = st.sidebar.slider("How frequently would you like to extract frames?", min_value=1, max_value=100, step=1, value = 10, help=f"This will extract frames at regular intervals. For example, if you choose 15 it'll extract every 15th frame.")
                 if st.sidebar.checkbox("I understand that running this will remove all existing frames"):                    
                     if st.sidebar.button("Extract frames"):
                         update_project_setting("extraction_type", "Regular intervals",project_name)
@@ -1452,7 +1495,7 @@ def main():
                         remove_existing_timing(project_name)
 
                         for i in range (0, number_of_extractions):
-                            
+                            timing_details = get_timing_details(project_name)
                             extract_frame_number = i * frequency_of_extraction
                             create_timings_row_at_frame_number(project_name, input_video, extract_frame_number, timing_details)
                             timing_details = get_timing_details(project_name)
@@ -1569,7 +1612,7 @@ def main():
             
 
             with st.expander("Replicate API Keys:"):
-                replicate_user_name = st.text_input("replicate_user_name")
+                replicate_user_name = st.text_input("replicate_user_name", value = app_settings["replicate_user_name"])
                 replicate_com_api_key = st.text_input("replicate_com_api_key", value = app_settings["replicate_com_api_key"])
 
             locally_or_hosted = st.radio("Do you want to store your files locally or on AWS?", ("Locally", "AWS"),disabled=True, help="Only local storage is available at the moment, let me know if you need AWS storage - it should be pretty easy.")
@@ -1583,6 +1626,7 @@ def main():
                
 
             if st.button("Save Settings"):
+                update_app_setting("replicate_user_name", replicate_user_name)
                 update_app_setting("replicate_com_api_key", replicate_com_api_key)
                 update_app_setting("aws_access_key_id", aws_access_key_id)
                 update_app_setting("aws_secret_access_key", aws_secret_access_key)
@@ -1610,7 +1654,7 @@ def main():
                 update_project_setting("input_type", input_type, project_name)
                 st.session_state["project_name"] = project_name
                 st.session_state["project_set"] = "Yes"            
-                st.success("Project created - you can select it on the left.")
+                st.success("Project created! It should be open now. Click into 'Key Frame Selection' to get started")
                 time.sleep(1)
                 st.experimental_rerun()
                                                                     
@@ -1631,7 +1675,7 @@ def main():
                 st.session_state['num_inference_steps'] = st.session_state['project_settings']["last_num_inference_steps"]
                 st.session_state['which_stage_to_run_on'] = st.session_state['project_settings']["last_which_stage_to_run_on"]
                 st.session_state['show_comparison'] = "Don't show"
-                st.session_state['custom_pipeline'] = ""
+                st.session_state['custom_pipeline'] = st.session_state['project_settings']["last_custom_pipeline"]
 
             if "which_image" not in st.session_state:
                 st.session_state['which_image'] = 0
@@ -1704,8 +1748,11 @@ def main():
                     st.info("You first need to select key frames at the Key Frame Selection stage.")
 
                 st.sidebar.header("Restyle Frames")                                                                                        
+                custom_pipelines = ["None","Mystique"]
+                # find index of st.session_state['custom_pipeline'] in custom_pipelines
+                index_of_last_custom_pipeline = custom_pipelines.index(st.session_state['custom_pipeline'])
 
-                st.session_state['custom_pipeline'] = st.sidebar.selectbox(f"Custom Pipeline", ["None","Mystique"])
+                st.session_state['custom_pipeline'] = st.sidebar.selectbox(f"Custom Pipeline", custom_pipelines, index=index_of_last_custom_pipeline)
                 
                 if st.session_state['custom_pipeline'] == "Mystique":
                     st.sidebar.info("Mystique is a custom pipeline that uses a multiple models to generate a consistent character and style transformation.")
@@ -1713,14 +1760,14 @@ def main():
                         st.markdown("## How to use the Mystique pipeline")                
                         st.markdown("1. Create a fine-tined model in the Custom Model section of the app - we recommend Dreambooth for character transformations.")
                         st.markdown("2. It's best to include a detailed prompt. We recommend taking an example input image and running it through the Prompt Finder")
-                        st.markdown("3. Use [expression] and [location] tags to vary the expression and location of the character dynamically if that changes throughout the clip. Varying this in the prompt will make the character look more natural.")
-                        st.markdown("4. In our experience, the best strength for coherent character transformations is 0.25-0.3 - any more than this and details like eye position change.")
-                if st.session_state['custom_pipeline'] == "Mystique":
+                        st.markdown("3. Use [expression], [location], [mouth], and [looking] tags to vary the expression and location of the character dynamically if that changes throughout the clip. Varying this in the prompt will make the character look more natural - especially useful if the character is speaking.")
+                        st.markdown("4. In our experience, the best strength for coherent character transformations is 0.25-0.3 - any more than this and details like eye position change.")                
+                    
                     st.session_state['model'] = st.sidebar.selectbox(f"Which type of model is trained on your character?", ["LoRA","Dreambooth"])                    
                 else:
-                    models = ['sd', 'depth2img', 'pix2pix', 'controlnet', 'Dreambooth', 'LoRA']
+                    models = ['sd', 'depth2img', 'pix2pix', 'controlnet', 'Dreambooth', 'LoRA','StyleGAN-NADA']
                     st.session_state['model'] = st.sidebar.selectbox(f"Model", models)
-                # st.session_state['model'] = st.sidebar.selectbox(f"Model", models,index=index_of_last_model)
+                
                 if st.session_state['model'] == "controlnet":   
                     adapter_type = st.sidebar.selectbox(f"Adapter Type",["normal", "canny", "hed", "scribble", "seg", "hough", "depth2img", "pose"])               
                 if st.session_state['model'] == "LoRA": 
@@ -1742,23 +1789,32 @@ def main():
                     adapter_type = ""
                 else:
                     custom_models = []
-                    adapter_type = ""
+                    adapter_type = "N"
                 
-                st.session_state['prompt'] = st.sidebar.text_area(f"Prompt", label_visibility="visible", value=st.session_state['prompt'])
-                if st.session_state['model'] == "Dreambooth":
-                    model_details = get_model_details(custom_models)
-                    st.sidebar.info(f"Must include '{model_details['keyword']}' to run this model")                                    
+                if st.session_state['model'] == "StyleGAN-NADA":
+                    st.sidebar.info("StyleGAN-NADA is a custom model that uses StyleGAN to generate a consistent character and style transformation.")
+                    st.session_state['prompt'] = st.sidebar.selectbox("What style would you like to apply to the character?", ['base', 'mona_lisa', 'modigliani', 'cubism', 'elf', 'sketch_hq', 'thomas', 'thanos', 'simpson', 'witcher', 'edvard_munch', 'ukiyoe', 'botero', 'shrek', 'joker', 'pixar', 'zombie', 'werewolf', 'groot', 'ssj', 'rick_morty_cartoon', 'anime', 'white_walker', 'zuckerberg', 'disney_princess', 'all', 'list'])
+                    st.session_state['strength'] = 0.5
+                    st.session_state['guidance_scale'] = 7.5
+                    st.session_state['seed'] = int(0)
+                    st.session_state['num_inference_steps'] = int(50)
+                                  
                 else:
-                    if st.session_state['model'] == "pix2pix":
-                        st.sidebar.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")                    
-                st.session_state['strength'] = st.sidebar.number_input(f"Batch strength", value=float(st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
-                
-                with st.sidebar.expander("Advanced settings 😏"):
-                    st.session_state['negative_prompt'] = st.text_area(f"Negative prompt", value=st.session_state['negative_prompt'], label_visibility="visible")
-                    st.session_state['guidance_scale'] = st.number_input(f"Guidance scale", value=float(st.session_state['guidance_scale']))
-                    st.session_state['seed'] = st.number_input(f"Seed", value=int(st.session_state['seed']))
-                    st.session_state['num_inference_steps'] = st.number_input(f"Inference steps", value=int(st.session_state['num_inference_steps']))
-                                
+                    st.session_state['prompt'] = st.sidebar.text_area(f"Prompt", label_visibility="visible", value=st.session_state['prompt'])
+                    if st.session_state['model'] == "Dreambooth":
+                        model_details = get_model_details(custom_models)
+                        st.sidebar.info(f"Must include '{model_details['keyword']}' to run this model")                                    
+                    else:
+                        if st.session_state['model'] == "pix2pix":
+                            st.sidebar.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")                    
+                    st.session_state['strength'] = st.sidebar.number_input(f"Batch strength", value=float(st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
+                    
+                    with st.sidebar.expander("Advanced settings 😏"):
+                        st.session_state['negative_prompt'] = st.text_area(f"Negative prompt", value=st.session_state['negative_prompt'], label_visibility="visible")
+                        st.session_state['guidance_scale'] = st.number_input(f"Guidance scale", value=float(st.session_state['guidance_scale']))
+                        st.session_state['seed'] = st.number_input(f"Seed", value=int(st.session_state['seed']))
+                        st.session_state['num_inference_steps'] = st.number_input(f"Inference steps", value=int(st.session_state['num_inference_steps']))
+                                    
                             
                 range_start = st.sidebar.slider('Update From', 0, len(timing_details) -1, 0)
 
@@ -2351,6 +2407,8 @@ def main():
                 btn1, btn2 = st.sidebar.columns([1,1])
 
                 if type_of_mask_replacement == "Replace With Image":
+                    prompt = ""
+                    negative_prompt = ""
                     background_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/backgrounds') if f.endswith('.png')]                 
                     with btn1:
                         background_image = st.sidebar.selectbox("Range background", background_list)
@@ -2440,25 +2498,25 @@ def main():
                 st.sidebar.markdown("### Batch Run Edits:")   
                 st.sidebar.write("This will batch run the settings you have above on a batch of images.")     
                 batch_run_range = st.sidebar.slider("Select range:", 1, 0, (0, len(timing_details)-1))
-    
+                print("BATCH RUN RANGE")
+                print(batch_run_range)
                 if which_stage == "Unedited Key Frame":
                     st.sidebar.warning("This will overwrite the source images in the range you select - you can always reset them if you wish.")
                 elif which_stage == "Styled Key Frame":
                     make_primary_variant = st.sidebar.checkbox("Make primary variant", value=True, help="If you want to make the edited image the primary variant, tick this box. If you want to keep the original primary variant, untick this box.")          
                 if st.sidebar.button("Batch Run Edit"):
-                    for i in range(batch_run_range):
+                    for i in range(batch_run_range[1]+1):
                         if which_stage == "Unedited Key Frame":
                             bg_image = timing_details[i]["source_image"]
                             edited_image = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, prompt, negative_prompt, width, height,st.session_state['which_layer'])
                             update_source_image(project_name, st.session_state['which_image'], edited_image)
                         elif which_stage == "Styled Key Frame":
-                            variants = ast.literal_eval(timing_details[st.session_state['which_image']]["alternative_images"][1:-1])
-                            primary_image = timing_details[st.session_state['which_image']]["primary_image"]             
+                            variants = ast.literal_eval(timing_details[i]["alternative_images"][1:-1])
+                            primary_image = timing_details[i]["primary_image"]             
                             bg_image = variants[primary_image]   
                             edited_image = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, prompt, negative_prompt, width, height,st.session_state['which_layer'])   
-                            number_of_image_variants = add_image_variant(edited_image, st.session_state['which_image'], project_name, timing_details)
-                            if make_primary_variant == True:
-                                promote_image_variant(i, project_name, number_of_image_variants-1)
+                            number_of_image_variants = add_image_variant(edited_image, i, project_name, timing_details)                        
+                            promote_image_variant(i, project_name, number_of_image_variants-1)
 
                     
         elif st.session_state.stage == "Timing Adjustment":
