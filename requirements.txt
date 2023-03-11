@@ -1,8 +1,9 @@
 streamlit==1.19.0
+streamlit-image-comparison==0.0.3
 opencv-python-headless
 sahi
+libgl1-mesa-glx
 Pillow==9.4.0
-streamlit-image-comparison==0.0.3
 moviepy==1.0.3
 pandas==1.5.3
 replicate==0.4.0
