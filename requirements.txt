@@ -2,7 +2,7 @@ streamlit
 Pillow
 streamlit_image_comparison
 moviepy
-opencv-python-headless==4.5.3.56
+opencv-python
 pandas
 replicate
 requests
@@ -10,3 +10,4 @@ boto3
 ffmpeg-python
 streamlit_drawable_canvas
 numpy
+opengl
