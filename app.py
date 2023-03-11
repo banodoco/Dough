@@ -1399,6 +1399,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
     elif type_of_mask_selection == "Manual Background Selection":
         if type_of_mask_replacement == "Replace With Image":    
             response = r.get(bg_image)
+            # if the image is
             bg_img = Image.open(BytesIO(response.content))                        
             mask_img = Image.open("mask.png")    
             # check if the mask image has a transparent background
@@ -2461,7 +2462,12 @@ def main():
 
                     if type_of_mask_selection == "Manual Background Selection":
                         if st.session_state['edited_image'] == "":
-                            canvas_image = r.get(bg_image)
+                            # if image starts with http
+                            if bg_image.startswith("http"):
+                                canvas_image = r.get(bg_image)
+                                canvas_image = Image.open(BytesIO(canvas_image.content))
+                            else:
+                                canvas_image = Image.open(bg_image)
                             if 'drawing_input' not in st.session_state:
                                 st.session_state['drawing_input'] = 'Magic shapes 🪄'
                             col1, col2 = st.columns([6,3])
@@ -2495,7 +2501,7 @@ def main():
                                 stroke_width=stroke_width,
                                 stroke_color="rgba(0, 0, 0)",
                                 background_color="rgb(255, 255, 255)",
-                                background_image=Image.open(BytesIO(canvas_image.content)),
+                                background_image=canvas_image,
                                 update_streamlit=realtime_update,
                                 height=height,
                                 width=width,
@@ -2541,10 +2547,6 @@ def main():
                         negative_prompt = ""
                         background_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/backgrounds') if f.endswith('.png')]                 
                         with btn1:
-                            background_image = st.sidebar.selectbox("Range background", background_list)
-                            if background_list != []:
-                                st.image(f"videos/{project_name}/assets/resources/backgrounds/{background_image}", use_column_width=True)
-                        with btn2:
                             uploaded_files = st.file_uploader("Add more background images here", accept_multiple_files=True)                    
                             if st.button("Upload Backgrounds"):                            
                                 for uploaded_file in uploaded_files:
@@ -2554,6 +2556,12 @@ def main():
                                         background_list.append(uploaded_file.name)
                                         time.sleep(1.5)
                                         st.experimental_rerun()
+                            
+                        with btn2:
+                            background_image = st.sidebar.selectbox("Range background", background_list)
+                            if background_list != []:
+                                st.image(f"videos/{project_name}/assets/resources/backgrounds/{background_image}", use_column_width=True)
+                            
 
                     elif type_of_mask_replacement == "Inpainting":
                         with btn1:
