@@ -12,3 +12,4 @@ ffmpeg-python==0.2.0
 streamlit-drawable-canvas==0.9.2
 numpy==1.24.1
 mesa
+streamlit-js-eval==0.1.5
