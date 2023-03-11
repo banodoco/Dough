@@ -1360,7 +1360,18 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     print(output)
     return output[0]
 
-
+def attach_audio_element(project_name, project_settings,expanded):
+    with st.expander("Audio"):                        
+        uploaded_file = st.file_uploader("Attach audio", type=["mp3"], help="This will attach this audio when you render a video")
+        if st.button("Upload and attach new audio"):                               
+            with open(os.path.join(f"videos/{project_name}/assets/resources/audio",uploaded_file.name),"wb") as f: 
+                f.write(uploaded_file.getbuffer())
+                update_project_setting("audio", uploaded_file.name, project_name)
+                st.experimental_rerun()
+        if project_settings["audio"] == "extracted_audio.mp3":
+            st.info("You have attached the audio from the video you uploaded.")
+        if project_settings["audio"] != "":
+            st.audio(f"videos/{project_name}/assets/resources/audio/{project_settings['audio']}")
     
 def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, prompt, negative_prompt, width, height, layer):
 
@@ -1428,7 +1439,10 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
 
     return edited_image
 
-
+            
+       
+        
+        
 
 
 def main():
@@ -1502,14 +1516,19 @@ def main():
             with st.sidebar.expander("Upload new video", expanded=False):                
                 width = int(project_settings["width"])
                 height = int(project_settings["height"])
-                st.info("Make sure that this video is the same dimesions as your project - width: " + str(width) + "px, height: " + str(height) + "px.")
+                st.info("Make sure that this video is the same dimensions as your project - width: " + str(width) + "px, height: " + str(height) + "px.")
                 uploaded_file = st.file_uploader("Choose a file")
+                keep_audio = st.checkbox("Keep audio from original video.")
                 if st.button("Upload video"):                
                     with open(f'videos/{project_name}/assets/resources/input_videos/{uploaded_file.name}', 'wb') as f:
                         f.write(uploaded_file.getbuffer())
                     width = int(project_settings["width"])
                     height = int(project_settings["height"])                    
                     st.success("Video uploaded successfully")
+                    if keep_audio == True:
+                        clip = VideoFileClip(f'videos/{project_name}/assets/resources/input_videos/{uploaded_file.name}')                    
+                        clip.audio.write_audiofile(f'videos/{project_name}/assets/resources/audio/extracted_audio.mp3')
+                        update_project_setting("audio", "extracted_audio.mp3", project_name)
                     time.sleep(1.5)
                     st.experimental_rerun()
                     
@@ -1678,17 +1697,44 @@ def main():
                                        
 
         elif st.session_state.stage == "New Project":
-            new_project_name = st.text_input("Project Name", value="")
-            col1, col2 = st.columns(2)
-            with col1:
-                width = st.selectbox("Select video width", options=["512","704","1024"], key="video_width")
-                height = st.selectbox("Select video height", options=["512","704","1024"], key="video_height")
-            with col2:
+            a1, a2 = st.columns(2)
+            with a1:
+                new_project_name = st.text_input("Project name:", value="")
+            with a2:
+                st.write("")            
+            b1, b2, b3 = st.columns(3)
+            with b1:
+                width = st.selectbox("Select video width:", options=["512","704","1024"], key="video_width")
+                
+            with b2:
+                height = st.selectbox("Select video height:", options=["512","704","1024"], key="video_height")
+            with b3:
+                st.info("We recommend a small size + then scaling up afterwards.")
+            
+            input_type = st.radio("Select input type:", options=["Video","Image"], key="input_type", disabled=True,help="Only video is available at the moment, let me know if you need image support - it should be pretty easy.", horizontal=True)
+            
+            c1, c2 = st.columns(2)
+            with c1:               
+                uploaded_video = st.file_uploader("Choose a video file:")
+            with c2:
                 st.write("")
                 st.write("")
-                st.info("We recommend choosing a reasonably small size and then scaling up the video resolution afterwards.")
-            input_type = st.radio("Select input type", options=["Video","Image"], key="input_type", disabled=True,help="Only video is available at the moment, let me know if you need image support - it should be pretty easy.")
+                audio_options = ["No audio","Attach new audio"]
+                if uploaded_video is not None:
+                    audio_options.append("Keep audio from original video")
+                st.info("Make sure that this video is the same size as you've specified above.")
+            audio = st.radio("Audio:", audio_options, key="audio",horizontal=True)
 
+            if audio == "Attach new audio":
+                d1, d2 = st.columns([4,5])
+                with d1:                
+                    uploaded_audio = st.file_uploader("Choose a audio file:")
+                with d2:
+                    st.write("")
+                    st.write("")
+                    st.info("Make sure that this audio is around the same length as your video.")
+
+            st.write("")
             if st.button("Create New Project"):                
                 new_project_name = new_project_name.replace(" ", "_")                      
                 create_working_assets(new_project_name)
@@ -1696,9 +1742,23 @@ def main():
                 update_project_setting("width", width, project_name)
                 update_project_setting("height", height, project_name)  
                 update_project_setting("input_type", input_type, project_name)
+                if uploaded_video is not None:
+                    with open(f'videos/{project_name}/assets/resources/input_videos/{uploaded_video.name}', 'wb') as f:
+                        f.write(uploaded_video.getbuffer())
+                    update_project_setting("input_video", uploaded_video.name, project_name)
+                if audio == "Attach new audio":
+                    if uploaded_audio is not None:
+                        with open(os.path.join(f"videos/{project_name}/assets/resources/audio",uploaded_audio.name),"wb") as f: 
+                            f.write(uploaded_audio.getbuffer())
+                        update_project_setting("audio", uploaded_audio.name, project_name)                
+                if audio == "Keep audio from original video":
+                    clip = VideoFileClip(f'videos/{project_name}/assets/resources/input_videos/{uploaded_video.name}')                    
+                    clip.audio.write_audiofile(f'videos/{project_name}/assets/resources/audio/extracted_audio.mp3')
+                    update_project_setting("audio", "extracted_audio.mp3", project_name)
+                                        
                 st.session_state["project_name"] = project_name
                 st.session_state["project_set"] = "Yes"            
-                st.success("Project created! It should be open now. Click into 'Key Frame Selection' to get started")
+                st.success("Project created! It should be open now. Click into 'Main Process' to get started")
                 time.sleep(1)
                 st.experimental_rerun()
                                                                     
@@ -1737,7 +1797,7 @@ def main():
 
                 if st.session_state['view_type'] == "Single Frame":
                     with top3:
-                        st.session_state['show_comparison'] = st.radio("Show comparison to original", options=["Don't show", "Show"], index=0, key=f"show_comparison_{st.session_state['which_image']}", horizontal=True)
+                        st.session_state['show_comparison'] = st.radio("Show comparison to original", options=["Don't show", "Show"], horizontal=True)
                     
                     f1, f2, f3  = st.columns([1,3,1])
                     
@@ -2070,7 +2130,7 @@ def main():
 
             final_video_name = st.text_input("What would you like to name this video?",value=random_name)
 
-            
+            attach_audio_element(project_name, project_settings,False)
 
             delete_existing_videos = st.checkbox("Delete all the existing timings", value=False)
 
@@ -2080,8 +2140,7 @@ def main():
                 st.success("Video rendered!")
                 time.sleep(1.5)
                 st.experimental_rerun()            
-            if project_settings["audio"] == "":
-                st.info("You can attach audio in Project Settings")
+            
 
             video_list = [list_of_files for list_of_files in os.listdir(
                 "videos/" + project_name + "/assets/videos/2_completed") if list_of_files.endswith('.mp4')]            
@@ -2146,17 +2205,7 @@ def main():
             project_settings = get_project_settings(project_name)
             # make a list of all the files in videos/{project_name}/assets/resources/music
             
-            with st.expander("Audio"):
-                        
-                uploaded_file = st.file_uploader("Attach audio", type=["mp3"], help="This will attach this audio when you render a video")
-                if st.button("Upload and attach new audio"):                               
-                    with open(os.path.join(f"videos/{project_name}/assets/resources/audio",uploaded_file.name),"wb") as f: 
-                        f.write(uploaded_file.getbuffer())
-                        update_project_setting("audio", uploaded_file.name, project_name)
-                        st.experimental_rerun()
-                
-                if project_settings["audio"] != "":
-                    st.audio(f"videos/{project_name}/assets/resources/audio/{project_settings['audio']}")
+            attach_audio_element(project_name, project_settings,False)
                
             with st.expander("Version History"):
                 
