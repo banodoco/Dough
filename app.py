@@ -1448,16 +1448,24 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
 
 
 def main():
+
+    app_settings = get_app_settings()
     
     if "online" not in st.session_state:
         current_url = st_javascript("await fetch('').then(r => window.parent.location.href)")
         time.sleep(0.75)
         if "localhost" not in current_url:
             st.session_state["online"] = True
+            st.session_state["show_welcome_state"] = False
         else:
             st.session_state["online"] = False
+            if app_settings["welcomed"] == "no":
+                st.session_state["show_welcome_state"] = True
+            else:
+                st.session_state["show_welcome_state"] = False
+            
 
-    if st.session_state["online"] != True:
+    if st.session_state["online"] == True:
         st.error("**PLEASE READ:** This is just a demo app for testing out so *buttons & functions won't work* - to run it properly, follow the instructions [here](https://github.com/peter942/banodoco) to run it locally.")
 
     
@@ -1471,11 +1479,11 @@ def main():
         update_app_setting("previous_project", st.session_state["project_name"])
         st.session_state["project_changed"] = False
 
-    app_settings = get_app_settings()
+    
 
     st.sidebar.title("Banodoco")
 
-    if app_settings["welcomed"] == "no":
+    if st.session_state["show_welcome_state"] == True:
 
         st.header("Welcome to Banodoco!")
         st.success("Banodoco is a tool that allows you to easily replace the background of your images and videos. It's built on top of the amazing [Hugging Face](https://huggingface.co/)")
