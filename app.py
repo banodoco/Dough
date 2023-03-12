@@ -875,7 +875,8 @@ def facial_expression_recognition(input_image):
     return emotion
     
 def trigger_restyling_process(timing_details, project_name, index_of_current_item,model,prompt,strength,custom_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps,which_stage_to_run_on,promote_new_generation, project_settings, custom_models,adapter_type):
-                                                    
+    
+                                     
     get_model_details(model)                    
     prompt = prompt.replace(",", ".")                              
     prompt = prompt.replace("\n", "")
@@ -904,7 +905,10 @@ def trigger_restyling_process(timing_details, project_name, index_of_current_ite
         number_of_variants = len(variants)                       
         primary_image = int(timing_details[index_of_current_item]["primary_image"])
         source_image = variants[primary_image]
-        
+    
+    prompt_enhance(prompt, source_image, project_name, index_of_current_item)
+    timing_details = get_timing_details(project_name)        
+    
     if st.session_state['custom_pipeline'] == "Mystique":                        
         output_url = custom_pipeline_mystique(index_of_current_item, project_name, project_settings, timing_details, source_image)
     else:                            
@@ -963,8 +967,25 @@ def restyle_images(index_of_current_item,project_name, project_settings, timing_
     return output_url
 
     
+def prompt_enhance(prompt, source_image, project_name, index_of_current_item):
+     
+    if "[expression]" in prompt:
+        prompt_expression = facial_expression_recognition(source_image)
+        prompt = prompt.replace("[expression]", prompt_expression)                
 
+    if "[location]" in prompt:
+        prompt_location = prompt_model_blip2(source_image, "What's surrounding the character?")
+        prompt = prompt.replace("[location]", prompt_location)        
 
+    if "[mouth]" in prompt:
+        prompt_mouth = prompt_model_blip2(source_image, "is their mouth open or closed?")
+        prompt = prompt.replace("[mouth]", "mouth is " + str(prompt_mouth))
+                
+    if "[looking]" in prompt:
+        prompt_looking = prompt_model_blip2(source_image, "the person is looking")
+        prompt = prompt.replace("[looking]", "looking " + str(prompt_looking))        
+
+    update_specific_timing_value(project_name, index_of_current_item, "prompt", prompt)
 
 
 def custom_pipeline_mystique(index_of_current_item, project_name, project_settings, timing_details, source_image):
@@ -974,30 +995,7 @@ def custom_pipeline_mystique(index_of_current_item, project_name, project_settin
 
     app_settings = get_app_settings()
     project_settings = get_project_settings(project_name)
-    
-    if "[expression]" in prompt:
-        prompt_expression = facial_expression_recognition(source_image)
-        prompt = prompt.replace("[expression]", prompt_expression)
-        update_specific_timing_value(project_name, index_of_current_item, "prompt", prompt)
-        timing_details = get_timing_details(project_name)
-
-    if "[location]" in prompt:
-        prompt_location = prompt_model_blip2(source_image, "What's surrounding the character?")
-        prompt = prompt.replace("[location]", prompt_location)
-        update_specific_timing_value(project_name, index_of_current_item, "prompt", prompt)
-        timing_details = get_timing_details(project_name)
-
-    if "[mouth]" in prompt:
-        prompt_mouth = prompt_model_blip2(source_image, "is their mouth open or closed?")
-        prompt = prompt.replace("[mouth]", "mouth is " + str(prompt_mouth))
-        update_specific_timing_value(project_name, index_of_current_item, "prompt", prompt)
-        timing_details = get_timing_details(project_name)
         
-    if "[looking]" in prompt:
-        prompt_looking = prompt_model_blip2(source_image, "the person is looking")
-        prompt = prompt.replace("[looking]", "looking " + str(prompt_looking))
-        update_specific_timing_value(project_name, index_of_current_item, "prompt", prompt)
-        timing_details = get_timing_details(project_name)
 
     output_url = face_swap(project_name, index_of_current_item, source_image, timing_details)
     # output_url = hair_swap(source_image, project_name, index_of_current_item)
@@ -1295,6 +1293,13 @@ def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
 
     return output[1]
 
+def preview_frame(project_name,video_name, frame_num):                    
+    cap = cv2.VideoCapture(f'videos/{project_name}/assets/resources/input_videos/{video_name}')
+    cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)                                                
+    ret, frame = cap.read()                                            
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)                        
+    cap.release()                        
+    return frame
 
 def prompt_model_lora(project_name, index_of_current_item, timing_details, source_image):
 
@@ -1466,7 +1471,7 @@ def main():
             
 
     if st.session_state["online"] == True:
-        st.error("**PLEASE READ:** This is just a demo app for testing so *buttons & queries won't work*. To run it properly, follow the instructions [here](https://github.com/peter942/banodoco) to run it locally.")
+        st.error("**PLEASE READ:** This is a demo app for testing so *buttons & queries won't work*. To use it properly, follow the instructions [here](https://github.com/peter942/banodoco) to run it locally.")
 
     
     def project_changed():
@@ -1502,9 +1507,19 @@ def main():
         st.subheader("And here's me ranting about a bunch more ideas of what's possible")
         st.write("I've put together a quick video to show you how to use the app. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
         st.video("https://www.youtube.com/watch?v=ZZ5LpwO-An4")
+
         st.subheader("That's it! Just click below when you feel sufficiently welcomed, and you'll be taken to the app!")
+
+        st.subheader("Add your Replicate credentials")
+        st.write("To use the app, you'll need to add your Replicate credentials. You can get them [here](https://replicate.com/).")
+        replicate_user_name = st.text_input("replicate_user_name", value = app_settings["replicate_user_name"])
+        replicate_com_api_key = st.text_input("replicate_com_api_key", value = app_settings["replicate_com_api_key"])
+
+        
         st.write("I'm delighted to have you here!")
         if st.button("I feel welcomed!", type="primary"):
+            update_app_setting("replicate_user_name", replicate_user_name)
+            update_app_setting("replicate_com_api_key", replicate_com_api_key)
             update_app_setting("welcomed", "yes")
             st.experimental_rerun()
 
@@ -1584,10 +1599,10 @@ def main():
                         time.sleep(1.5)
                         st.experimental_rerun()
                         
-                type_of_extraction = project_settings["extraction_type"]
+                
                 types_of_extraction = ["Extract manually", "Regular intervals", "Extract from csv"]            
-                type_of_extraction_index = types_of_extraction.index(type_of_extraction)            
-                type_of_extraction = st.sidebar.radio("Choose type of key frame extraction", types_of_extraction, index = type_of_extraction_index)
+                     
+                type_of_extraction = st.sidebar.radio("Choose type of key frame extraction", types_of_extraction)
                 input_video_cv2 = cv2.VideoCapture(f'videos/{project_name}/assets/resources/input_videos/{input_video}')
                 total_frames = input_video_cv2.get(cv2.CAP_PROP_FRAME_COUNT)
                 fps = input_video_cv2.get(cv2.CAP_PROP_FPS)
@@ -1634,11 +1649,99 @@ def main():
                                 index_of_current_item = timing_details.index(i)                                                
                                 extract_frame(index_of_current_item, project_name, input_video, int(float(timing_details[index_of_current_item]['frame_number'])),timing_details)                                        
                     else:
-                        st.sidebar.button("Re-extract frames",disabled=True)                  
+                        st.sidebar.button("Re-extract frames",disabled=True)    
+                    
+                    
+                
+
                                         
                 timing_details = get_timing_details(project_name)
-                show_current_key_frames = st.radio("Show currently selected key frames:", ["Yes", "No"], horizontal=True)            
-                if show_current_key_frames == "Yes":       
+                view_type = st.radio("Show currently selected key frames:", ["Single Frame", "List View"], horizontal=True)            
+                if view_type == "Single Frame":
+                    header1,header2,header3 = st.columns([1,1,1])
+                    with header1:
+                        st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", min_value=0, max_value=len(timing_details)-1, step=1, value = 0)
+                        index_of_current_item = st.session_state['which_image']
+                                                                        
+                                            
+                                                     
+                    slider1, slider2 = st.columns([6,12]) 
+                    # make a slider for choosing the frame to extract, starting from the previous frame number, and ending at the next frame number       
+                    if index_of_current_item == 0:
+                        min_frames = 0
+                    else:
+                        min_frames = int(float(timing_details[index_of_current_item-1]['frame_number'])) + 1
+                    if index_of_current_item == len(timing_details)-1:
+                        max_frames = int(total_frames) - 2
+                    else:
+                        max_frames = int(float(timing_details[index_of_current_item+1]['frame_number'])) - 1
+                    with slider1:
+                        
+                        st.markdown(f"Frame #: {timing_details[index_of_current_item]['frame_number']}")                    
+                        # show frame time to the nearest 2 decimal places
+                        st.markdown(f"Frame time: {round(float(timing_details[index_of_current_item]['frame_time']),2)}")
+                        
+                        
+                        if st.button("Delete current frame"):
+                            delete_frame(project_name, index_of_current_item)
+                            timing_details = get_timing_details(project_name)
+                            st.experimental_rerun()  
+                    with slider2:
+                        st.write("")
+                        new_frame_number = st.slider("Choose which frame to preview:", min_value=min_frames, max_value=max_frames, step=1, value = int(float(timing_details[index_of_current_item]['frame_number'])))
+                                                
+                            
+                    preview1,preview2 = st.columns([1,2])
+                    with preview1:
+                        
+                        if index_of_current_item == 0:
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                        else:
+                            st.write("Previous frame:")
+                            st.image(timing_details[index_of_current_item-1]["source_image"], use_column_width=True)
+                        
+                        if index_of_current_item == len(timing_details)-1: 
+                            st.write("")
+                        else:
+                            st.write("Next frame:")
+                            st.image(timing_details[index_of_current_item+1]["source_image"], use_column_width=True)
+                    with preview2:
+                        flag1,flag2 = st.columns([1,1])
+                        with flag1:
+                            st.write("Preview frame:")
+                            st.write("")
+                        with flag2:
+                            if new_frame_number == int(float(timing_details[index_of_current_item]['frame_number'])):                            
+                                st.info("This is the current frame")
+                        
+                        st.image(preview_frame(project_name, input_video, new_frame_number))
+
+                        if new_frame_number != int(float(timing_details[index_of_current_item]['frame_number'])): 
+                            bottom1, bottom2 = st.columns([1,1])
+                            with bottom1:                            
+                                    if st.button("Update this frame to here"):
+                                        st.write("Updating frame...")
+                            with bottom2:
+                                if st.button("Add new frame at this time"):
+                                    st.write("Adding frame after...")
+                        
+                    
+                    
+                        
+                    
+                elif view_type == "List View":     
                     for image_name in timing_details:
 
                         index_of_current_item = timing_details.index(image_name)
@@ -1674,13 +1777,7 @@ def main():
 
                 if type_of_extraction == "Extract manually":
                     
-                    def preview_frame(project_name,video_name, frame_num):                    
-                        cap = cv2.VideoCapture(f'videos/{project_name}/assets/resources/input_videos/{video_name}')
-                        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)                                                
-                        ret, frame = cap.read()                                            
-                        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)                        
-                        cap.release()                        
-                        return frame
+                    
 
                     st.markdown("***")
                     manual1,manual2 = st.columns([3,1])
@@ -1688,7 +1785,7 @@ def main():
                         st.subheader('Manually add key frames to your project')
                         st.write("Select a frame from the slider below and click 'Add Frame' it to the end of your project.")
                         # if there are >10 frames, and show_current_key_frames == "Yes", show an info 
-                        if len(timing_details) > 10 and show_current_key_frames == "Yes":
+                        if len(timing_details) > 10 and view_type == "List View":
                             st.info("You have over 10 frames visible. To keep the frame selector running fast, we recommend hiding the currently selected key frames by selecting 'No' in the 'Show currently selected key frames' section at the top of the page.")
                     with manual2:
                         st.write("")
@@ -1703,7 +1800,7 @@ def main():
                     max_frames = min_frames + 100
 
                     if max_frames > int(float(total_frames)):
-                        max_frames = int(float(total_frames)) - 1
+                        max_frames = int(float(total_frames)) -2
             
                     slider = st.slider("Choose Frame", max_value=max_frames, min_value=min_frames,step=1, value = min_frames + granularity)
 
@@ -1859,10 +1956,10 @@ def main():
                         with top3:
                             st.session_state['show_comparison'] = st.radio("Show comparison to original", options=["Don't show", "Show"], horizontal=True)
                         
-                        f1, f2, f3  = st.columns([1,3,1])
+                        f1, f2, f3  = st.columns([1,1,1])
                         
                         with f1:
-                            st.session_state['which_image'] = st.number_input('Go to Frame:', 0, len(timing_details)-1,help=f"There are {len(timing_details)-1} key frames in this video.")
+                            st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(timing_details)-1)
                         if timing_details[st.session_state['which_image']]["alternative_images"] != "":                                                                                       
                             variants = ast.literal_eval(timing_details[st.session_state['which_image']]["alternative_images"][1:-1])
                             number_of_variants = len(variants)
@@ -2477,7 +2574,7 @@ def main():
                         
                     f1, f2, f3 = st.columns([1,2,1])
                     with f1:
-                        st.session_state['which_image'] = st.number_input('Go to Frame:', 0, len(timing_details)-1,help=f"There are {len(timing_details)} key frames in this video.", on_change=reset_new_image)
+                        st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(timing_details)-1, on_change=reset_new_image)
                         
                     with f2:                
                         which_stage = st.radio('Select stage:', ["Unedited Key Frame", "Styled Key Frame"], horizontal=True, on_change=reset_new_image)
