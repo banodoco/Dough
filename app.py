@@ -1453,7 +1453,7 @@ def main():
     
     if "online" not in st.session_state:
         current_url = st_javascript("await fetch('').then(r => window.parent.location.href)")
-        time.sleep(0.75)
+        time.sleep(1)
         if "localhost" not in current_url:
             st.session_state["online"] = True
             st.session_state["show_welcome_state"] = False
@@ -1466,7 +1466,7 @@ def main():
             
 
     if st.session_state["online"] == True:
-        st.error("**PLEASE READ:** This is just a demo app for testing out so *buttons & functions won't work* - to run it properly, follow the instructions [here](https://github.com/peter942/banodoco) to run it locally.")
+        st.error("**PLEASE READ:** This is just a demo app for testing so *buttons & queries won't work*. To run it properly, follow the instructions [here](https://github.com/peter942/banodoco) to run it locally.")
 
     
     def project_changed():
