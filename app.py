@@ -908,7 +908,7 @@ def trigger_restyling_process(timing_details, project_name, index_of_current_ite
     
     prompt_enhance(prompt, source_image, project_name, index_of_current_item)
     timing_details = get_timing_details(project_name)        
-    
+
     if st.session_state['custom_pipeline'] == "Mystique":                        
         output_url = custom_pipeline_mystique(index_of_current_item, project_name, project_settings, timing_details, source_image)
     else:                            
@@ -1471,7 +1471,7 @@ def main():
             
 
     if st.session_state["online"] == True:
-        st.error("**PLEASE READ:** This is a demo app for testing so *buttons & queries won't work*. To use it properly, follow the instructions [here](https://github.com/peter942/banodoco) to run it locally.")
+        st.error("**PLEASE READ:** This is a demo app for testing so *buttons & queries won't work*. To use the proper version, follow the instructions [here](https://github.com/peter942/banodoco) to run it locally.")
 
     
     def project_changed():
@@ -1956,7 +1956,7 @@ def main():
                         with top3:
                             st.session_state['show_comparison'] = st.radio("Show comparison to original", options=["Don't show", "Show"], horizontal=True)
                         
-                        f1, f2, f3  = st.columns([1,1,1])
+                        f1, f2, f3  = st.columns([1,4,1])
                         
                         with f1:
                             st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(timing_details)-1)
