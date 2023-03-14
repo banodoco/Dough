@@ -1301,37 +1301,25 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     
     lora_models = ast.literal_eval(timing_details[index_of_current_item]["custom_models"][1:-1])
     project_settings = get_project_settings(project_name)
-    
-    if lora_models[0] != "":
-        lora_model_1 = lora_models[0]
-        lora_model_1_model_details = get_model_details(lora_model_1)
-        if lora_model_1_model_details['model_url'] != "":
-            lora_model_1_model_url = lora_model_1_model_details['model_url']
-        else:
-            lora_model_1_model_url = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
-    else:
-        lora_model_1_model_url = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
+    default_model_url = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
 
-    if lora_models[1] != "":
-        lora_model_2 = lora_models[1]
-        lora_model_2_model_details = get_model_details(lora_model_2)
-        if lora_model_2_model_details['model_url'] != "":
-            lora_model_2_model_url = lora_model_2_model_details['model_url']
-        else:
-            lora_model_2_model_url = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
-    else:
-        lora_model_2_model_url = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
+    lora_model_urls = []
 
-    if lora_models[2] != "":
-        lora_model_3 = lora_models[2]
-        lora_model_3_model_details = get_model_details(lora_model_3)
-        if lora_model_3_model_details['model_url'] != "":
-            lora_model_3_model_url = lora_model_3_model_details['model_url']
-        else:
-            lora_model_3_model_url = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
-    else:
-        lora_model_3_model_url = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
-        
+    for lora_model in lora_models:
+        if lora_model != "":
+            lora_model_details = get_model_details(lora_model)
+            if lora_model_details['model_url'] != "":            
+                lora_model_url = lora_model_details['model_url']
+            else:                
+                lora_model_url = default_model_url
+        else:        
+            lora_model_url = default_model_url                
+        lora_model_urls.append(lora_model_url)
+
+    lora_model_1_model_url = lora_model_urls[0]
+    lora_model_2_model_url = lora_model_urls[1]
+    lora_model_3_model_url = lora_model_urls[2]
+
     if source_image.startswith("http"):
         source_image = source_image
     else:
@@ -1527,6 +1515,8 @@ def main():
         
         if "project_set" not in st.session_state:
             st.session_state["project_set"] = "No"
+
+        
         
         if st.session_state["project_set"] == "Yes":
             st.session_state["index_of_project_name"] = os.listdir("videos").index(st.session_state["project_name"])
@@ -1583,7 +1573,7 @@ def main():
             
             st.session_state["page"] = st.sidebar.radio("Select a stage", [page for page in pages if page["section_name"] == st.session_state["section"]][0]["pages"],horizontal=False, index=st.session_state["index_of_page"])
             
-            
+           
                  
             
             st.header(st.session_state["page"])   
@@ -1684,14 +1674,16 @@ def main():
 
                     if "which_image_value" not in st.session_state:
                         st.session_state['which_image_value'] = 0
-                                            
+
+                    
                     timing_details = get_timing_details(project_name)
                     view_type = st.radio("What view would you like?", ["Single Frame", "List View"], horizontal=True)            
                     if view_type == "Single Frame":
                         header1,header2,header3 = st.columns([1,1,1])
-                        with header1:
+                        with header1:                            
                             st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", min_value=0, max_value=len(timing_details)-1, step=1, value=st.session_state['which_image_value'], key="which_image_checker")
                             index_of_current_item = st.session_state['which_image']
+                            st.session_state['which_image_value'] = st.session_state['which_image']
                         with header3:
                             with st.expander("Edit key frames"):
                                 st.write("You can edit the key frames in Tools > Frame Editing - you can click the edit button below to jump there.")
@@ -2028,7 +2020,8 @@ def main():
                         f1, f2, f3  = st.columns([1,4,1])
                         
                         with f1:
-                            st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(timing_details)-1)
+                            st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(timing_details)-1, value=st.session_state['which_image_value'], step=1, key="which_image_selector")
+                            st.session_state['which_image_value'] = st.session_state['which_image']
                         if timing_details[st.session_state['which_image']]["alternative_images"] != "":                                                                                       
                             variants = ast.literal_eval(timing_details[st.session_state['which_image']]["alternative_images"][1:-1])
                             number_of_variants = len(variants)
@@ -2658,8 +2651,8 @@ def main():
                         
                     f1, f2, f3 = st.columns([1,2,1])
                     with f1:
-                        st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(timing_details)-1, on_change=reset_new_image)
-                        
+                        st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(timing_details)-1, on_change=reset_new_image, value=st.session_state['which_image_value'])
+                        st.session_state['which_image_value'] = st.session_state['which_image']
                     with f2:                
                         which_stage = st.radio('Select stage:', ["Unedited Key Frame", "Styled Key Frame"], horizontal=True, on_change=reset_new_image)
                         # st.session_state['which_image'] = st.slider('Select image to edit:', 0, len(timing_details)-1, st.session_state["which_image"])
