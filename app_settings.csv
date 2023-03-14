@@ -4,4 +4,4 @@ aws_access_key_id,
 aws_secret_access_key,
 previous_project,controlnet_test
 replicate_user_name,
-welcomed,no
+welcome_state,0
