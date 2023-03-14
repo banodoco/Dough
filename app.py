@@ -1454,7 +1454,7 @@ def main():
              st.session_state["online"] = False                               
         st.session_state["welcome_state"] = app_settings["welcome_state"]                       
     if st.session_state["online"] == True:
-        st.error("**PLEASE READ:** This is a demo app. While you can click around, *buttons & queries won't work* and some things won't display properly. To use the proper version, follow the instructions [here](https://github.com/peter942/banodoco) to run it locally.")
+        st.error("**PLEASE READ:** This is a demo app. While you can click around, *buttons & queries won't work* and some things won't display properly. To use the proper version, follow the instructions [here](https://github.com/peter942/banodoco-2) to run it locally.")
     
     def project_changed():
         st.session_state["project_changed"] = True
