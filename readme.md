@@ -4,7 +4,7 @@ Banodoco is a simple but powerful open source animation tool build on top of Sta
 
 ## Test It Out
 
-You can test out a preview version of Banodoco [here](https://peter942-banodoco-2-app-le21w4.streamlit.app/). 
+You can test out a preview version of Banodoco <a href="https://peter942-banodoco-2-app-le21w4.streamlit.app/" target="_blank">here</a>.
 
 While the buttons and queries won't work and some things won't display properly, it should give you a good idea of what to expect. 
 
