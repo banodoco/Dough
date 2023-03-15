@@ -1474,7 +1474,7 @@ def main():
     st.sidebar.title("Banodoco")    
 
     def buttons(step):
-        button1, button2, button3, button4 = st.columns([1,1,1,2])
+        button1, button2, button3 = st.columns([2,6,2])
         with button1:
             if step == 0:
                 if st.button("Previous Step", disabled=True):
@@ -1486,7 +1486,7 @@ def main():
                     st.experimental_rerun()
             
             if st.button("Skip Intro"):
-                st.session_state["welcome_state"] = 6
+                st.session_state["welcome_state"] = 7
         with button2:
             st.write("")
             
@@ -1499,67 +1499,60 @@ def main():
 
                         
     if int(st.session_state["welcome_state"]) == 0 and st.session_state["online"] == False:
-        intro1,intro2 = st.columns([3,2])
-        with intro1:
-            st.header("Welcome to Banodoco!")                
-            st.subheader("First, a quick demo!")            
-            st.write("I've put together a quick demo video to show you how to use the app. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
-            st.video("https://www.youtube.com/watch?v=ZZ5LpwO-An4")
+        
+        st.header("Welcome to Banodoco!")                
+        st.subheader("First, a quick demo!")            
+        st.write("I've put together a quick demo video to show you how to use the app. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
+        st.video("https://youtu.be/YQkwcsPGLnA")
         buttons(int(st.session_state["welcome_state"]))
         
     elif int(st.session_state["welcome_state"]) == 1 and st.session_state["online"] == False:    
-        intro1,intro2 = st.columns([3,2])
-        with intro1:                    
-            st.subheader("Next,a quick intro to our philosophy")
-            st.write("I'm a big fan of the philosophy of the Stoics. I've put together a quick video to introduce you to the philosophy of the Stoics. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
-            st.video("https://www.youtube.com/watch?v=ZZ5LpwO-An4")
+                          
+        st.subheader("Next,a quick intro to our philosophy")
+        st.write("I'm a big fan of the philosophy of the Stoics. I've put together a quick video to introduce you to the philosophy of the Stoics. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
+        st.video("https://www.youtube.com/watch?v=ZZ5LpwO-An4")
             
         buttons(int(st.session_state["welcome_state"]))
         
 
     elif int(st.session_state["welcome_state"]) == 2 and st.session_state["online"] == False:
-        intro1,intro2 = st.columns([3,2])
-        with intro1:
-            st.subheader("Next, a example of a video made with it!")
-            st.write("I've put together a quick video to show you how to use the app. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
-            st.video("https://www.youtube.com/watch?v=ZZ5LpwO-An4")
-            
+       
+        st.subheader("Next, a example of a video made with it!")
+        st.write("I've put together a quick video to show you how to use the app. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
+        st.video("https://www.youtube.com/watch?v=vWWBiDjwKkg&t")
+        
         buttons(int(st.session_state["welcome_state"]))
 
     elif int(st.session_state["welcome_state"]) == 3 and st.session_state["online"] == False:
-        intro1,intro2 = st.columns([3,2])
-        with intro1:
-            st.subheader("And here's a more abstract video made with it...")
-            st.write("I've put together a quick video to show you how to use the app. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
-            st.video("https://www.youtube.com/watch?v=ZZ5LpwO-An4")
+        
+        st.subheader("And here's a more abstract video made with it...")
+        st.write("I've put together a quick video to show you how to use the app. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
+        st.video("https://youtu.be/ynJyxnEzepM")
             
         buttons(int(st.session_state["welcome_state"]))
 
     elif st.session_state["welcome_state"] == 4 and st.session_state["online"] == False:
-        intro1,intro2 = st.columns([3,2])
-        with intro1:
-            st.subheader("And here's me ranting about a bunch more ideas of what's possible")
-            st.write("I've put together a quick video to show you how to use the app. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
-            st.video("https://www.youtube.com/watch?v=ZZ5LpwO-An4")
+        
+        st.subheader("And here's me ranting about a bunch more ideas of what's possible")
+        st.write("I've put together a quick video to show you how to use the app. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
+        st.video("https://www.youtube.com/watch?v=ZZ5LpwO-An4")
             
         buttons(int(st.session_state["welcome_state"]))
 
     elif int(st.session_state["welcome_state"]) == 5 and st.session_state["online"] == False:
-        intro1,intro2 = st.columns([3,2])
-        with intro1:
-            st.subheader("Add your Replicate credentials")
-            st.write("Currently, we use Replicate.com for our model hosting. If you don't have an account, you can sign up for free [here](https://replicate.com/signin) and grab your API key [here](https://replicate.com/account) - this data is stored locally on your computer.")
-            with st.expander("Why Replicate.com? Can I run the models locally?"):
-                st.info("Replicate.com allows us to rapidly implement a wide array of models that work on any computer. Currently, these are delivered via API, which means that you pay for GPU time - but it tends to be very cheap. Getting it locally [via COG](https://github.com/replicate/cog/blob/main/docs/wsl2/wsl2.md) shouldn't be too difficult but I don't have the hardware to do that")
-            st.session_state["replicate_user_name"] = st.text_input("replicate_user_name", value = app_settings["replicate_user_name"])
-            st.session_state["replicate_com_api_key"]  = st.text_input("replicate_com_api_key", value = app_settings["replicate_com_api_key"])
-            st.warning("You can add this in App Settings later if you wish.")
+      
+        st.subheader("Add your Replicate credentials")
+        st.write("Currently, we use Replicate.com for our model hosting. If you don't have an account, you can sign up for free [here](https://replicate.com/signin) and grab your API key [here](https://replicate.com/account) - this data is stored locally on your computer.")
+        with st.expander("Why Replicate.com? Can I run the models locally?"):
+            st.info("Replicate.com allows us to rapidly implement a wide array of models that work on any computer. Currently, these are delivered via API, which means that you pay for GPU time - but it tends to be very cheap. Getting it locally [via COG](https://github.com/replicate/cog/blob/main/docs/wsl2/wsl2.md) shouldn't be too difficult but I don't have the hardware to do that")
+        st.session_state["replicate_user_name"] = st.text_input("replicate_user_name", value = app_settings["replicate_user_name"])
+        st.session_state["replicate_com_api_key"]  = st.text_input("replicate_com_api_key", value = app_settings["replicate_com_api_key"])
+        st.warning("You can add this in App Settings later if you wish.")
         buttons(int(st.session_state["welcome_state"]))
 
     elif int(st.session_state["welcome_state"]) == 6 and st.session_state["online"] == False:
-        intro1,intro2 = st.columns([3,2])
-        with intro1:  
-            st.subheader("That's it! Just click below when you feel sufficiently welcomed, and you'll be taken to the app!")                        
+        
+        st.subheader("That's it! Just click below when you feel sufficiently welcomed, and you'll be taken to the app!")                        
         if st.button("I feel welcomed!", type="primary"):
             if st.session_state["replicate_com_api_key"] != "":
                 update_app_setting("replicate_user_name", st.session_state["replicate_user_name"])
@@ -1630,10 +1623,9 @@ def main():
             
 
             st.session_state["section"] = st.sidebar.radio("Select a section:", [page["section_name"] for page in pages],horizontal=True)
-
-            
-            
+                                                                      
             st.session_state["page"] = st.sidebar.radio("Select a page:", [page for page in pages if page["section_name"] == st.session_state["section"]][0]["pages"],horizontal=False)
+            
             
             
             
@@ -1650,7 +1642,7 @@ def main():
         
             if st.session_state["page"] == "Key Frame Selection":                
                 with mainheader2:
-                    with st.expander("How Key Frame Selection Works:"):
+                    with st.expander("💡 How key frame selection works"):
                         st.info("Key Frame Selection is a process that allows you to select the frames that you want to style. These Key Frames act as the anchor points for your animations. On the left, you can bulk select these, while on the right, you can refine your choices, or manually select them.")
                 timing_details = get_timing_details(project_name)                              
                 project_settings = get_project_settings(project_name)                        
@@ -1898,7 +1890,7 @@ def main():
                                 st.markdown(f"Frame Number: {frame_number}")
                     
                             with col4:                                                      
-                                if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will reset the base key frame to the original unedited version. This will not affect the video."):
+                                if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will switch to a Single Frame view type and open this individual image."):
                                     st.session_state['which_image_value'] = index_of_current_item
                                     st.session_state['view_type'] = "Single View"
                                     st.session_state['view_type_index'] = 1
@@ -1970,6 +1962,7 @@ def main():
                 with st.expander("Reset Welcome Sequence"):
                     st.write("This will reset the welcome sequence so you can see it again.")
                     if st.button("Reset Welcome Sequence"):
+                        st.session_state["welcome_state"] = 0
                         update_app_setting("welcome_state", 0)
                         st.experimental_rerun()
 
@@ -2059,7 +2052,7 @@ def main():
         
             elif st.session_state["page"] == "Frame Styling":  
                 with mainheader2:
-                    with st.expander("How Frame Styling Works:"):
+                    with st.expander("💡 How frame styling works"):
                         st.info("On the left, there are a bunch of differnet models and processes you can use to style frames. You can even use combinatinos of models through custom pipelines or by running them one after another. We recommend experimenting on 1-2 frames before doing bulk runs for the sake of efficiency.")
 
                 if "project_settings" not in st.session_state:
@@ -2183,11 +2176,10 @@ def main():
                             with detail3:
                                 st.write("")
                             with detail4:
-                                if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will reset the base key frame to the original unedited version. This will not affect the video."):
+                                if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will switch to a Single Frame view type and open this individual image."):
                                     st.session_state['which_image_value'] = index_of_current_item
                                     st.session_state['view_type'] = "Single View"
-                                    st.session_state['view_type_index'] = 1
-                                    st.session_state['open_manual_extractor'] = False
+                                    st.session_state['view_type_index'] = 1                                    
                                     st.experimental_rerun()         
 
 
@@ -2311,15 +2303,12 @@ def main():
 
                     if st.session_state["view_type"] == "Single Frame":
                     
-                        detail1, detail2, detail3, detail4 = st.columns([1,1,1,1])
+                        detail1, detail2, detail3, detail4 = st.columns([2,2,1,2])
 
                         with detail1:
                             individual_number_of_variants = st.number_input(f"How many variants?", min_value=1, max_value=10, value=1, key=f"number_of_variants_{st.session_state['which_image']}")
-                            with st.expander("Edit key frames"):
-                                st.write("You can edit the key frames in Tools > Frame Editing - you can click the edit button below to jump there.")
-                                if st.button("Edit this key frame"):
-                                    st.session_state["index_of_page"], st.session_state["index_of_section"] = page_switcher(pages, "Frame Editing")
-                                    st.experimental_rerun()   
+                            
+                            
                         with detail2:
                             st.write("")
                             st.write("")
@@ -2328,6 +2317,12 @@ def main():
                                     index_of_current_item = st.session_state['which_image']
                                     trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'],custom_models,adapter_type) 
                                 st.experimental_rerun()
+                                
+                        with detail4:
+                            st.write("")
+                            with st.expander("💡 Editing key frames"):
+                                st.info("You can edit the key frames in Tools > Frame Editing.")
+                        
                         
                             
                             
@@ -2342,7 +2337,7 @@ def main():
 
             elif st.session_state["page"] == "Frame Interpolation":
                 with mainheader2:
-                    with st.expander("How Frame Interpolation Works:"):
+                    with st.expander("💡 How frame interpolation works"):
                         st.info("Frame Interpolation fills the gap between 2 different frames - if the distance between the images is far, this will be a vivid switch. If it's close, for example, an eye-blinking, it can look subtle and natural.")
 
                 timing_details = get_timing_details(project_name)
@@ -2476,7 +2471,7 @@ def main():
 
             elif st.session_state["page"] == "Video Rendering":
                 with mainheader2:
-                    with st.expander("How Video Rendering Works:"):
+                    with st.expander("💡 How video rendering works"):
                         st.info("This is simply pulling together the interpolated frames to deliver the final video. You can edit the timing if need be in in Tools > Timing Adjustment")
 
                 timing_details = get_timing_details(project_name)
