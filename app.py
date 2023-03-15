@@ -1441,7 +1441,9 @@ def page_switcher(pages, page):
 
 def main():
 
-    
+    if "view_type" not in st.session_state:
+            st.session_state['view_type'] = "List View"
+            st.session_state['view_type_index']=  0
 
     app_settings = get_app_settings()
     
@@ -1633,10 +1635,10 @@ def main():
             
             
             
-            if st.session_state["page_updated"] == "Yes":                
-                st.session_state["index_of_section"] = 0            
-                st.session_state["index_of_page"] = 0
-                st.session_state["page_updated"] = "No"
+            #if st.session_state[""] == "Yes":                
+             #   st.session_state["index_of_section"] = 0            
+              #  st.session_state["index_of_page"] = 0
+            #    st.session_state["page_updated"] = "No"
             
             
             mainheader1, mainheader2 = st.columns([3,2])
@@ -1747,23 +1749,28 @@ def main():
 
                     
                     timing_details = get_timing_details(project_name)
-                    view_type = st.radio("What view would you like?", ["List View", "Single Frame"], horizontal=True)            
-                    if view_type == "Single Frame":
+                                        
+                    
+                    if st.session_state['view_type'] == "Single Frame":
+                        index_of_view_type = 1
+                    else:
+                        index_of_view_type = 0
+
+                    view_types = ["List View","Single Frame"]
+                    st.session_state['view_type'] = st.radio("View type:", view_types, key="which_view_type", horizontal=True, index=st.session_state['view_type_index'])                        
+                    if view_types.index(st.session_state['view_type']) != st.session_state['view_type_index']:
+                        st.session_state['view_type_index'] = view_types.index(st.session_state['view_type'])
+                        st.experimental_rerun()     
+
+                    if st.session_state['view_type'] == "Single Frame":
                         header1,header2,header3 = st.columns([1,1,1])
                         with header1:                            
                             st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", min_value=0, max_value=len(timing_details)-1, step=1, value=st.session_state['which_image_value'], key="which_image_checker")
                             index_of_current_item = st.session_state['which_image']
                             st.session_state['which_image_value'] = st.session_state['which_image']
                         with header3:
-                            with st.expander("Edit key frames"):
-                                st.write("You can edit the key frames in Tools > Frame Editing - you can click the edit button below to jump there.")
-                                if st.button("Edit this key frame"):
-                                    st.session_state["index_of_page"], st.session_state["index_of_section"] = page_switcher(pages, "Frame Editing")
-                                    st.session_state["page_updated"] = "Yes"
-                                    st.experimental_rerun()
-
-                                                                            
-                                                
+                            st.write("")
+                                                                                                                            
                                                         
                         slider1, slider2 = st.columns([6,12]) 
                         # make a slider for choosing the frame to extract, starting from the previous frame number, and ending at the next frame number       
@@ -1867,7 +1874,7 @@ def main():
                                     st.button("Add new frame at this time", disabled=True, help="This is the current frame.")
                                                                                                                                 
                         
-                    elif view_type == "List View":     
+                    elif st.session_state['view_type'] == "List View":     
                         for image_name in timing_details:
 
                             index_of_current_item = timing_details.index(image_name)
@@ -1918,7 +1925,7 @@ def main():
                             st.subheader('Add key frames to the end of your video:')
                             st.write("Select a frame from the slider below and click 'Add Frame' it to the end of your project.")
                             # if there are >10 frames, and show_current_key_frames == "Yes", show an info 
-                            if len(timing_details) > 10 and view_type == "List View":
+                            if len(timing_details) > 10 and st.session_state['view_type'] == "List View":
                                 st.info("You have over 10 frames visible. To keep the frame selector running fast, we recommend hiding the currently selected key frames by selecting 'No' in the 'Show currently selected key frames' section at the top of the page.")
                         with manual2:
                             st.write("")
@@ -2077,13 +2084,21 @@ def main():
 
                 if "which_image" not in st.session_state:
                     st.session_state['which_image'] = 0
+                                              
+                
+                                                        
                 
                 if timing_details == []:
                     st.info("You need to select and load key frames first in the Key Frame Selection section.")                            
                 else:
                     top1, top2, top3 = st.columns([3,1,2])
                     with top1:
-                        st.session_state['view_type'] = st.radio("View type:", ("List View","Single Frame"), key="which_view_type", horizontal=True)
+                        view_types = ["List View","Single Frame"]
+                        st.session_state['view_type'] = st.radio("View type:", view_types, key="which_view_type", horizontal=True, index=st.session_state['view_type_index'])                        
+                        if view_types.index(st.session_state['view_type']) != st.session_state['view_type_index']:
+                            st.session_state['view_type_index'] = view_types.index(st.session_state['view_type'])
+                            st.experimental_rerun()
+                                                                        
                     with top2:
                         st.write("")
 
