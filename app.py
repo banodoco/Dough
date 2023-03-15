@@ -28,7 +28,7 @@ import ast
 from streamlit_drawable_canvas import st_canvas
 import numpy as np
 
-st.set_page_config(page_title="Banodoco", layout="wide")
+st.set_page_config(page_title="Banodoco")
 
 def inpainting(video_name, input_image, prompt, negative_prompt):
 
@@ -1592,6 +1592,7 @@ def main():
         if project_name == "":
             st.info("No projects found - create one in the 'New Project' section")
         else:  
+
             if not os.path.exists("videos/" + project_name + "/assets"):
                 create_working_assets(project_name)
             
@@ -1600,8 +1601,9 @@ def main():
                 st.session_state["index_of_page"] = 0
             
             pages = [
-            {"section_name": "Main Process",        
-            "pages": ["Key Frame Selection","Frame Styling", "Frame Interpolation","Video Rendering"]
+            {
+                "section_name": "Main Process",        
+                "pages": ["Key Frame Selection","Frame Styling", "Frame Interpolation","Video Rendering"]
             },
             {
                 "section_name": "Tools",
@@ -1623,11 +1625,11 @@ def main():
             
             
 
-            st.session_state["section"] = st.sidebar.radio("Select a section", [page["section_name"] for page in pages],horizontal=True)
+            st.session_state["section"] = st.sidebar.radio("Select a section:", [page["section_name"] for page in pages],horizontal=True)
 
             
             
-            st.session_state["page"] = st.sidebar.radio("Select a stage", [page for page in pages if page["section_name"] == st.session_state["section"]][0]["pages"],horizontal=False)
+            st.session_state["page"] = st.sidebar.radio("Select a page:", [page for page in pages if page["section_name"] == st.session_state["section"]][0]["pages"],horizontal=False)
             
             
             
@@ -1637,11 +1639,15 @@ def main():
                 st.session_state["page_updated"] = "No"
             
             
-            st.header(st.session_state["page"])   
+            mainheader1, mainheader2 = st.columns([3,2])
+            with mainheader1:
+                st.header(st.session_state["page"])   
 
         
-            if st.session_state["page"] == "Key Frame Selection":
-                
+            if st.session_state["page"] == "Key Frame Selection":                
+                with mainheader2:
+                    with st.expander("How Key Frame Selection Works:"):
+                        st.info("Key Frame Selection is a process that allows you to select the frames that you want to style. These Key Frames act as the anchor points for your animations. On the left, you can bulk select these, while on the right, you can refine your choices, or manually select them.")
                 timing_details = get_timing_details(project_name)                              
                 project_settings = get_project_settings(project_name)                        
                 
@@ -1741,7 +1747,7 @@ def main():
 
                     
                     timing_details = get_timing_details(project_name)
-                    view_type = st.radio("What view would you like?", ["Single Frame", "List View"], horizontal=True)            
+                    view_type = st.radio("What view would you like?", ["List View", "Single Frame"], horizontal=True)            
                     if view_type == "Single Frame":
                         header1,header2,header3 = st.columns([1,1,1])
                         with header1:                            
@@ -2046,6 +2052,9 @@ def main():
                                                                         
         
             elif st.session_state["page"] == "Frame Styling":  
+                with mainheader2:
+                    with st.expander("How Frame Styling Works:"):
+                        st.info("On the left, there are a bunch of differnet models and processes you can use to style frames. You can even use combinatinos of models through custom pipelines or by running them one after another. We recommend experimenting on 1-2 frames before doing bulk runs for the sake of efficiency.")
 
                 if "project_settings" not in st.session_state:
                     st.session_state['project_settings'] = get_project_settings(project_name)
@@ -2074,7 +2083,7 @@ def main():
                 else:
                     top1, top2, top3 = st.columns([3,1,2])
                     with top1:
-                        st.session_state['view_type'] = st.radio("View type:", ("Single Frame", "List View"), key="which_view_type", horizontal=True)
+                        st.session_state['view_type'] = st.radio("View type:", ("List View","Single Frame"), key="which_view_type", horizontal=True)
                     with top2:
                         st.write("")
 
@@ -2293,6 +2302,10 @@ def main():
                                                         
 
             elif st.session_state["page"] == "Frame Interpolation":
+                with mainheader2:
+                    with st.expander("How Frame Interpolation Works:"):
+                        st.info("Frame Interpolation fills the gap between 2 different frames - if the distance between the images is far, this will be a vivid switch. If it's close, for example, an eye-blinking, it can look subtle and natural.")
+
                 timing_details = get_timing_details(project_name)
 
                 if len(timing_details) == 0:
@@ -2423,6 +2436,10 @@ def main():
 
 
             elif st.session_state["page"] == "Video Rendering":
+                with mainheader2:
+                    with st.expander("How Video Rendering Works:"):
+                        st.info("This is simply pulling together the interpolated frames to deliver the final video. You can edit the timing if need be in in Tools > Timing Adjustment")
+
                 timing_details = get_timing_details(project_name)
                 project_settings = get_project_settings(project_name)
             
