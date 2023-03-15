@@ -1611,7 +1611,7 @@ def main():
                 },
                 {
                     "section_name": "Tools",
-                    "pages": ["Custom Models", "Frame Editing","Prompt Finder", "Batch Actions","Timing Adjustment"]
+                    "pages": ["Frame Editing","Custom Models","Prompt Finder", "Batch Actions","Timing Adjustment"]
                 },
                 {
                     "section_name": "Settings",
@@ -1753,10 +1753,7 @@ def main():
                         timing_details = get_timing_details(project_name)
                                             
                         
-                        if st.session_state['view_type'] == "Single Frame":
-                            index_of_view_type = 1
-                        else:
-                            index_of_view_type = 0
+                        
 
                         view_types = ["List View","Single Frame"]
                         st.session_state['view_type'] = st.radio("View type:", view_types, key="which_view_type", horizontal=True, index=st.session_state['view_type_index'])                        
@@ -1889,7 +1886,7 @@ def main():
                                 st.subheader(f'Image Name: {index_of_current_item}')                
                                 st.image(image, use_column_width=True)
                                 
-                                col1, col2,col3, col4 = st.columns([1,1,1,1])
+                                col1, col2,col3,col4 = st.columns([1,1,1,2])
                                 
                                 with col1:
                                     frame_time = round(float(timing_details[index_of_current_item]['frame_time']),2)                                    
@@ -1900,21 +1897,21 @@ def main():
                                     frame_number = round(float(timing_details[index_of_current_item]['frame_number']),2)                                    
                                     st.markdown(f"Frame Number: {frame_number}")
                         
-                                with col3:
-                                    if st.button(f"Reset Key Frame #{index_of_current_item}", help="This will reset the base key frame to the original unedited version. This will not affect the video."):
-                                        extract_frame(int(index_of_current_item), project_name, project_settings["input_video"], timing_details[index_of_current_item]["frame_number"],timing_details)                            
-                                        st.experimental_rerun()
-                                        
-                                with col4:                    
-                                    if st.button(f"Delete {index_of_current_item} Frame", disabled=False, help="This will delete the key frame from your project. This will not affect the video."):
-                                        delete_frame(project_name, index_of_current_item)
-                                        st.experimental_rerun()                    
+                                with col4:                                                      
+                                    if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will reset the base key frame to the original unedited version. This will not affect the video."):
+                                        st.session_state['which_image_value'] = index_of_current_item
+                                        st.session_state['view_type'] = "Single View"
+                                        st.session_state['view_type_index'] = 1
+                                        st.session_state['open_manual_extractor'] = False
+                                        st.experimental_rerun()                   
 
                         
                         st.markdown("***")
                     
-                        
-                    open_manual_extractor = st.checkbox("Open manual Key Frame extractor", value=True)
+                    if 'open_manual_extractor' not in st.session_state:
+                        st.session_state['open_manual_extractor'] = True
+                    
+                    open_manual_extractor = st.checkbox("Open manual Key Frame extractor", value=st.session_state['open_manual_extractor'])
                                                             
 
                         
@@ -2154,6 +2151,8 @@ def main():
 
                         elif st.session_state['view_type'] == "List View":
                             for i in range(0, len(timing_details)):
+                                index_of_current_item = i
+                            
                                 st.subheader(f"Frame {i}")                
                                                     
                                 if timing_details[i]["alternative_images"] != "":
@@ -2162,10 +2161,37 @@ def main():
                                     st.image(variants[current_variant])                            
                                 else:
                                     st.image('https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png', use_column_width=True) 
-                                    if st.button(f"Style Frame #{i}", key=f"View single frame styling for {i}", help="This will run the styling process on this frame."):
-                                        index_of_current_item = i
-                                        trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'],custom_models,adapter_type) 
-                                                                            
+                                
+
+                                detail1, detail2, detail3, detail4 = st.columns([2,2,1,3])
+
+                                with detail1:
+                                    individual_number_of_variants = st.number_input(f"How many variants?", min_value=1, max_value=10, value=1, key=f"number_of_variants_{index_of_current_item}")
+                                    
+
+                                    
+                                with detail2:
+                                    st.write("")
+                                    st.write("")
+                                    if st.button(f"Generate Variants", key=f"new_variations_{index_of_current_item}",help="This will generate new variants based on the settings to the left."):
+                                        for i in range(0, individual_number_of_variants):
+                                            index_of_current_item = st.session_state['which_image']
+                                            trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'],custom_models,adapter_type) 
+                                        st.experimental_rerun()
+                                    
+                                    
+                                with detail3:
+                                    st.write("")
+                                with detail4:
+                                    if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will reset the base key frame to the original unedited version. This will not affect the video."):
+                                        st.session_state['which_image_value'] = index_of_current_item
+                                        st.session_state['view_type'] = "Single View"
+                                        st.session_state['view_type_index'] = 1
+                                        st.session_state['open_manual_extractor'] = False
+                                        st.experimental_rerun()         
+
+
+
                         if len(timing_details) == 0:
                             st.info("You first need to select key frames at the Key Frame Selection stage.")
 
@@ -2283,31 +2309,27 @@ def main():
                                         trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'],custom_models,adapter_type)
                                 st.experimental_rerun()
 
-                    
+                        if st.session_state["view_type"] == "Single Frame":
                         
-                        detail1, detail2, detail3, detail4 = st.columns([1,1,1,1])
+                            detail1, detail2, detail3, detail4 = st.columns([1,1,1,1])
 
-                        with detail1:
-                            individual_number_of_variants = st.number_input(f"How many variants?", min_value=1, max_value=10, value=1, key=f"number_of_variants_{st.session_state['which_image']}")
-                            with st.expander("Edit key frames"):
-                                st.write("You can edit the key frames in Tools > Frame Editing - you can click the edit button below to jump there.")
-                                if st.button("Edit this key frame"):
-                                    st.session_state["index_of_page"], st.session_state["index_of_section"] = page_switcher(pages, "Frame Editing")
-                                    st.experimental_rerun()   
-                        with detail2:
-                            st.write("")
-                            st.write("")
-                            if st.button(f"Generate Variants", key=f"new_variations_{st.session_state['which_image']}",help="This will generate new variants based on the settings to the left."):
-                                for i in range(0, individual_number_of_variants):
-                                    index_of_current_item = st.session_state['which_image']
-                                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'],custom_models,adapter_type) 
-                                st.experimental_rerun()
-                        with detail3:
-                            st.write("")
-                        with detail4:   
-                            st.write("")
-                            if st.button("Preview video"):
+                            with detail1:
+                                individual_number_of_variants = st.number_input(f"How many variants?", min_value=1, max_value=10, value=1, key=f"number_of_variants_{st.session_state['which_image']}")
+                                with st.expander("Edit key frames"):
+                                    st.write("You can edit the key frames in Tools > Frame Editing - you can click the edit button below to jump there.")
+                                    if st.button("Edit this key frame"):
+                                        st.session_state["index_of_page"], st.session_state["index_of_section"] = page_switcher(pages, "Frame Editing")
+                                        st.experimental_rerun()   
+                            with detail2:
                                 st.write("")
+                                st.write("")
+                                if st.button(f"Generate Variants", key=f"new_variations_{st.session_state['which_image']}",help="This will generate new variants based on the settings to the left."):
+                                    for i in range(0, individual_number_of_variants):
+                                        index_of_current_item = st.session_state['which_image']
+                                        trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'],custom_models,adapter_type) 
+                                    st.experimental_rerun()
+                            
+                                
                                 
                         st.subheader("Preview video")
                         st.write("You can get a gif of the video by clicking the button below.")
