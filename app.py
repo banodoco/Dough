@@ -1441,9 +1441,7 @@ def page_switcher(pages, page):
 
 def main():
 
-    if "view_type" not in st.session_state:
-            st.session_state['view_type'] = "List View"
-            st.session_state['view_type_index']=  0
+    
 
     app_settings = get_app_settings()
     
@@ -1505,17 +1503,10 @@ def main():
         st.write("I've put together a quick demo video to show you how to use the app. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
         st.video("https://youtu.be/YQkwcsPGLnA")
         buttons(int(st.session_state["welcome_state"]))
-        
-    elif int(st.session_state["welcome_state"]) == 1 and st.session_state["online"] == False:    
-                          
-        st.subheader("Next,a quick intro to our philosophy")
-        st.write("I'm a big fan of the philosophy of the Stoics. I've put together a quick video to introduce you to the philosophy of the Stoics. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
-        st.video("https://www.youtube.com/watch?v=ZZ5LpwO-An4")
             
-        buttons(int(st.session_state["welcome_state"]))
         
 
-    elif int(st.session_state["welcome_state"]) == 2 and st.session_state["online"] == False:
+    elif int(st.session_state["welcome_state"]) == 1 and st.session_state["online"] == False:
        
         st.subheader("Next, a example of a video made with it!")
         st.write("I've put together a quick video to show you how to use the app. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
@@ -1523,7 +1514,7 @@ def main():
         
         buttons(int(st.session_state["welcome_state"]))
 
-    elif int(st.session_state["welcome_state"]) == 3 and st.session_state["online"] == False:
+    elif int(st.session_state["welcome_state"]) == 2 and st.session_state["online"] == False:
         
         st.subheader("And here's a more abstract video made with it...")
         st.write("I've put together a quick video to show you how to use the app. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
@@ -1531,15 +1522,8 @@ def main():
             
         buttons(int(st.session_state["welcome_state"]))
 
-    elif st.session_state["welcome_state"] == 4 and st.session_state["online"] == False:
-        
-        st.subheader("And here's me ranting about a bunch more ideas of what's possible")
-        st.write("I've put together a quick video to show you how to use the app. While I recommend you watch it, you can also click the button to skip it and go straight to the app.")
-        st.video("https://www.youtube.com/watch?v=ZZ5LpwO-An4")
-            
-        buttons(int(st.session_state["welcome_state"]))
 
-    elif int(st.session_state["welcome_state"]) == 5 and st.session_state["online"] == False:
+    elif int(st.session_state["welcome_state"]) == 3 and st.session_state["online"] == False:
       
         st.subheader("Add your Replicate credentials")
         st.write("Currently, we use Replicate.com for our model hosting. If you don't have an account, you can sign up for free [here](https://replicate.com/signin) and grab your API key [here](https://replicate.com/account) - this data is stored locally on your computer.")
@@ -1550,10 +1534,11 @@ def main():
         st.warning("You can add this in App Settings later if you wish.")
         buttons(int(st.session_state["welcome_state"]))
 
-    elif int(st.session_state["welcome_state"]) == 6 and st.session_state["online"] == False:
+    elif int(st.session_state["welcome_state"]) == 4 and st.session_state["online"] == False:
         
         st.subheader("That's it! Just click below when you feel sufficiently welcomed, and you'll be taken to the app!")                        
         if st.button("I feel welcomed!", type="primary"):
+            st.balloons()
             if st.session_state["replicate_com_api_key"] != "":
                 update_app_setting("replicate_user_name", st.session_state["replicate_user_name"])
             if st.session_state["replicate_com_api_key"] != "":
@@ -1744,16 +1729,19 @@ def main():
                     
                     timing_details = get_timing_details(project_name)
                                         
-                    
+                    if 'key_frame_view_type_index' not in st.session_state:
+                        st.session_state['key_frame_view_type_index'] = 0
                     
 
                     view_types = ["List View","Single Frame"]
-                    st.session_state['view_type'] = st.radio("View type:", view_types, key="which_view_type", horizontal=True, index=st.session_state['view_type_index'])                        
-                    if view_types.index(st.session_state['view_type']) != st.session_state['view_type_index']:
-                        st.session_state['view_type_index'] = view_types.index(st.session_state['view_type'])
+
+                    st.session_state['key_frame_view_type'] = st.radio("View type:", view_types, key="which_view_type", horizontal=True, index=st.session_state['key_frame_view_type_index'])                        
+                    
+                    if view_types.index(st.session_state['key_frame_view_type']) != st.session_state['key_frame_view_type_index']:
+                        st.session_state['key_frame_view_type_index'] = view_types.index(st.session_state['key_frame_view_type'])
                         st.experimental_rerun()     
 
-                    if st.session_state['view_type'] == "Single Frame":
+                    if st.session_state['key_frame_view_type'] == "Single Frame":
                         header1,header2,header3 = st.columns([1,1,1])
                         with header1:                            
                             st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", min_value=0, max_value=len(timing_details)-1, step=1, value=st.session_state['which_image_value'], key="which_image_checker")
@@ -1865,7 +1853,7 @@ def main():
                                     st.button("Add new frame at this time", disabled=True, help="This is the current frame.")
                                                                                                                                 
                         
-                    elif st.session_state['view_type'] == "List View":     
+                    elif st.session_state['key_frame_view_type'] == "List View":     
                         for image_name in timing_details:
 
                             index_of_current_item = timing_details.index(image_name)
@@ -1892,8 +1880,8 @@ def main():
                             with col4:                                                      
                                 if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will switch to a Single Frame view type and open this individual image."):
                                     st.session_state['which_image_value'] = index_of_current_item
-                                    st.session_state['view_type'] = "Single View"
-                                    st.session_state['view_type_index'] = 1
+                                    st.session_state['key_frame_view_type'] = "Single View"
+                                    st.session_state['key_frame_view_type_index'] = 1
                                     st.session_state['open_manual_extractor'] = False
                                     st.experimental_rerun()                   
 
@@ -1916,7 +1904,7 @@ def main():
                             st.subheader('Add key frames to the end of your video:')
                             st.write("Select a frame from the slider below and click 'Add Frame' it to the end of your project.")
                             # if there are >10 frames, and show_current_key_frames == "Yes", show an info 
-                            if len(timing_details) > 10 and st.session_state['view_type'] == "List View":
+                            if len(timing_details) > 10 and st.session_state['key_frame_view_type'] == "List View":
                                 st.info("You have over 10 frames visible. To keep the frame selector running fast, we recommend hiding the currently selected key frames by selecting 'No' in the 'Show currently selected key frames' section at the top of the page.")
                         with manual2:
                             st.write("")
@@ -2071,14 +2059,16 @@ def main():
                     st.session_state['num_inference_steps'] = st.session_state['project_settings']["last_num_inference_steps"]
                     st.session_state['which_stage_to_run_on'] = st.session_state['project_settings']["last_which_stage_to_run_on"]
                     st.session_state['show_comparison'] = "Don't show"
-                    
-                    st.session_state['view_type'] = "Single Frame"
+                                        
 
                 if "which_image" not in st.session_state:
                     st.session_state['which_image'] = 0
                                             
                 
-                                                        
+                if 'frame_styling_view_type' not in st.session_state:
+                    st.session_state['frame_styling_view_type'] = "List View"
+                    st.session_state['frame_styling_view_type_index'] = 0
+
                 
                 if timing_details == []:
                     st.info("You need to select and load key frames first in the Key Frame Selection section.")                            
@@ -2086,16 +2076,16 @@ def main():
                     top1, top2, top3 = st.columns([3,1,2])
                     with top1:
                         view_types = ["List View","Single Frame"]
-                        st.session_state['view_type'] = st.radio("View type:", view_types, key="which_view_type", horizontal=True, index=st.session_state['view_type_index'])                        
-                        if view_types.index(st.session_state['view_type']) != st.session_state['view_type_index']:
-                            st.session_state['view_type_index'] = view_types.index(st.session_state['view_type'])
+                        st.session_state['frame_styling_view_type'] = st.radio("View type:", view_types, key="which_view_type", horizontal=True, index=st.session_state['frame_styling_view_type_index'])                        
+                        if view_types.index(st.session_state['frame_styling_view_type']) != st.session_state['frame_styling_view_type_index']:
+                            st.session_state['frame_styling_view_type_index'] = view_types.index(st.session_state['frame_styling_view_type'])
                             st.experimental_rerun()
                                                                         
                     with top2:
                         st.write("")
 
 
-                    if st.session_state['view_type'] == "Single Frame":
+                    if st.session_state['frame_styling_view_type'] == "Single Frame":
                         with top3:
                             st.session_state['show_comparison'] = st.radio("Show comparison to original", options=["Don't show", "Show"], horizontal=True)
                             
@@ -2142,7 +2132,7 @@ def main():
                             
                         
 
-                    elif st.session_state['view_type'] == "List View":
+                    elif st.session_state['frame_styling_view_type'] == "List View":
                         for i in range(0, len(timing_details)):
                             index_of_current_item = i
                         
@@ -2178,8 +2168,8 @@ def main():
                             with detail4:
                                 if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will switch to a Single Frame view type and open this individual image."):
                                     st.session_state['which_image_value'] = index_of_current_item
-                                    st.session_state['view_type'] = "Single View"
-                                    st.session_state['view_type_index'] = 1                                    
+                                    st.session_state['frame_styling_view_type'] = "Single View"
+                                    st.session_state['frame_styling_view_type_index'] = 1                                    
                                     st.experimental_rerun()         
 
 
