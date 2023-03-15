@@ -2291,7 +2291,7 @@ def main():
                                     trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'],custom_models,adapter_type)
                             st.experimental_rerun()
 
-                    if st.session_state["view_type"] == "Single Frame":
+                    if st.session_state['frame_styling_view_type'] == "Single Frame":
                     
                         detail1, detail2, detail3, detail4 = st.columns([2,2,1,2])
 
