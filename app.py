@@ -1756,7 +1756,7 @@ def main():
                 st.sidebar.caption(f"This video is {total_frames} frames long and has a framerate of {fps} fps.")
 
                 if type_of_extraction == "Regular intervals":
-                    frequency_of_extraction = st.sidebar.slider("How frequently would you like to extract frames?", min_value=1, max_value=100, step=1, value = 10, help=f"This will extract frames at regular intervals. For example, if you choose 15 it'll extract every 15th frame.")
+                    frequency_of_extraction = st.sidebar.slider("How frequently would you like to extract frames?", min_value=1, max_value=120, step=1, value = 10, help=f"This will extract frames at regular intervals. For example, if you choose 15 it'll extract every 15th frame.")
                     if st.sidebar.checkbox("I understand that running this will remove all existing frames and styling."):                    
                         if st.sidebar.button("Extract frames"):
                             update_project_setting("extraction_type", "Regular intervals",project_name)
@@ -1826,8 +1826,11 @@ def main():
                         header1,header2,header3 = st.columns([1,1,1])
                         with header1:                            
                             st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", min_value=0, max_value=len(timing_details)-1, step=1, value=st.session_state['which_image_value'], key="which_image_checker")
+                            if st.session_state['which_image_value'] != st.session_state['which_image']:
+                                st.session_state['which_image_value'] = st.session_state['which_image']
+                                st.experimental_rerun()
                             index_of_current_item = st.session_state['which_image']
-                            st.session_state['which_image_value'] = st.session_state['which_image']
+                            
                         with header3:
                             st.write("")
                                                                                                                             
