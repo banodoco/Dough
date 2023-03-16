@@ -1741,7 +1741,7 @@ def main():
                     
                     uploaded_file = st.file_uploader("Choose a file")
                     keep_audio = st.checkbox("Keep audio from original video.")
-                    resize_video = st.checkbox("Resize video to match project settings: " + str(width) + "px x " + str(height)+ "px", value=True)
+                    resize_this_video = st.checkbox("Resize video to match project settings: " + str(width) + "px x " + str(height)+ "px", value=True)
                     
                     if st.button("Upload new video"):   
                         video_path = f'videos/{project_name}/assets/resources/input_videos/{uploaded_file.name}'                
@@ -1750,7 +1750,7 @@ def main():
                          
                         width = int(project_settings["width"])
                         height = int(project_settings["height"])
-                        if resize_video == True:
+                        if resize_this_video == True:
                             resize_video(input_path=video_path,output_path=video_path,width=width,height=height)                    
                         st.success("Video uploaded successfully")
                         if keep_audio == True:
@@ -2081,10 +2081,10 @@ def main():
                     st.write("")            
                 b1, b2, b3 = st.columns(3)
                 with b1:
-                    width = st.selectbox("Select video width:", options=["512","704","1024"], key="video_width")
+                    width = int(st.selectbox("Select video width:", options=["512","704","1024"], key="video_width"))
                     
                 with b2:
-                    height = st.selectbox("Select video height:", options=["512","704","1024"], key="video_height")
+                    height = int(st.selectbox("Select video height:", options=["512","704","1024"], key="video_height"))
                 with b3:
                     st.info("We recommend a small size + then scaling up afterwards.")
                 
@@ -2102,7 +2102,7 @@ def main():
                         
                     st.info("Make sure that this video is the same size as you've specified above.")
                 if uploaded_video is not None:
-                    resize_video = st.checkbox("Resize video to match video dimensions above", value=True)
+                    resize_this_video = st.checkbox("Resize video to match video dimensions above", value=True)
                 
                 audio = st.radio("Audio:", audio_options, key="audio",horizontal=True)
                 if uploaded_video is None:
@@ -2129,7 +2129,7 @@ def main():
                         with open(video_path, 'wb') as f:
                             f.write(uploaded_video.getbuffer())
                         update_project_setting("input_video", uploaded_video.name, new_project_name)
-                        if resize_video == True:
+                        if resize_this_video == True:
                             resize_video(input_path=video_path,output_path=video_path,width=width,height=height)   
                     if audio == "Attach new audio":
                         if uploaded_audio is not None:
