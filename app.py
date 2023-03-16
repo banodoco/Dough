@@ -1702,7 +1702,7 @@ def main():
                 timing_details = get_timing_details(project_name)                              
                 project_settings = get_project_settings(project_name)                        
                 
-
+                
                 st.sidebar.subheader("Upload new videos")
                 st.sidebar.write("Open the toggle below to upload and select new inputs video to use for this project.")
                           
@@ -1719,6 +1719,7 @@ def main():
                     if st.button("Update Video"):
                         update_project_setting("input_video", input_video, project_name)                   
                         st.experimental_rerun()
+                    st.markdown("***")
                     st.subheader("Upload new video")
                     width = int(project_settings["width"])
                     height = int(project_settings["height"])
@@ -2015,7 +2016,7 @@ def main():
                             timing_details = get_timing_details(project_name)
                             extract_frame(created_row, project_name, input_video, slider,timing_details)                                                                                                
                             st.experimental_rerun()   
-
+                    st.markdown("***")
                     st.subheader("Make preview video at current timings")
                     if st.button("Make Preview Video"):
                         create_video_without_interpolation(timing_details, "preview")
@@ -2323,7 +2324,7 @@ def main():
                                     
                     else:
                         st.session_state['prompt'] = st.sidebar.text_area(f"Prompt", label_visibility="visible", value=st.session_state['prompt'])
-                        with st.sidebar.expander("Learn about dynamic prompting"):
+                        with st.sidebar.expander("💡 Learn about dynamic prompting"):
                             st.markdown("## Why and how to use dynamic prompting")
                             st.markdown("Why:")
                             st.markdown("Dynamic prompting allows you to automatically vary the prompt throughout the clip based on changing features in the source image. This makes the output match the input more closely and makes character transformations look more natural.")
@@ -2401,7 +2402,7 @@ def main():
                         
                         
                             
-                            
+                    st.markdown("***")        
                     st.subheader("Preview video")
                     st.write("You can get a gif of the video by clicking the button below.")
                     if st.button("Create gif of current main variants"):
