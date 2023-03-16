@@ -1706,13 +1706,28 @@ def main():
                 st.sidebar.subheader("Upload new videos")
                 st.sidebar.write("Open the toggle below to upload and select new inputs video to use for this project.")
                           
-
+                if project_settings["input_video"] == "":
+                    st.warning("No input video selected - please select one below.")
                 with st.sidebar.expander("Select input video", expanded=False):   
                     input_video_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/input_videos') if f.endswith(('.mp4', '.mov','.MOV', '.avi'))]       
                     if project_settings["input_video"] != "": 
                         input_video_index = input_video_list.index(project_settings["input_video"])                
                         input_video = st.selectbox("Input video:", input_video_list, index = input_video_index)
-                        st.video(f'videos/{project_name}/assets/resources/input_videos/{input_video}')
+                        input_video_cv2 = cv2.VideoCapture(f'videos/{project_name}/assets/resources/input_videos/{input_video}')
+                        total_frames = input_video_cv2.get(cv2.CAP_PROP_FRAME_COUNT)
+                        fps = input_video_cv2.get(cv2.CAP_PROP_FPS)
+                        # duration to 2 decimal places
+                        duration = round(total_frames / fps, 2)
+                        
+                        preview1, preview2, preview3 = st.columns([1,1,1])
+                        with preview1:                        
+                            st.image(preview_frame(project_name, input_video, total_frames * 0.25))
+                        with preview2:
+                            st.image(preview_frame(project_name, input_video, total_frames * 0.5))
+                        with preview3:
+                            st.image(preview_frame(project_name, input_video, total_frames * 0.75))
+                        st.caption(f"This video is {duration} seconds long, and has {total_frames} frames.")
+                        # st.video(f'videos/{project_name}/assets/resources/input_videos/{input_video}')
                     else:
                         input_video = st.selectbox("Input video:", input_video_list)
 
@@ -1726,7 +1741,7 @@ def main():
                     
                     uploaded_file = st.file_uploader("Choose a file")
                     keep_audio = st.checkbox("Keep audio from original video.")
-                    resize_video = st.checkbox("Resize video to match project settings:" + str(width) + "px x " + str(height)+ "px", value=True)
+                    resize_video = st.checkbox("Resize video to match project settings: " + str(width) + "px x " + str(height)+ "px", value=True)
                     
                     if st.button("Upload new video"):   
                         video_path = f'videos/{project_name}/assets/resources/input_videos/{uploaded_file.name}'                
@@ -1735,7 +1750,8 @@ def main():
                          
                         width = int(project_settings["width"])
                         height = int(project_settings["height"])
-                        resize_video(input_path=video_path,output_path=video_path,width=width,height=height)                    
+                        if resize_video == True:
+                            resize_video(input_path=video_path,output_path=video_path,width=width,height=height)                    
                         st.success("Video uploaded successfully")
                         if keep_audio == True:
                             clip = VideoFileClip(f'videos/{project_name}/assets/resources/input_videos/{uploaded_file.name}')                    
@@ -2006,9 +2022,9 @@ def main():
                         if max_frames > int(float(total_frames)):
                             max_frames = int(float(total_frames)) -2
                 
-                        slider = st.slider("Choose Frame", max_value=max_frames, min_value=min_frames,step=granularity, value = min_frames)
+                        slider = st.slider("Choose frame:", max_value=max_frames, min_value=min_frames,step=granularity, value = min_frames)
 
-                        st.image(preview_frame(project_name, input_video, slider))
+                        st.image(preview_frame(project_name, input_video, slider), use_column_width=True)
 
                         if st.button(f"Add Frame {slider} to Project"):  
                             last_index = len(timing_details)
@@ -2085,9 +2101,13 @@ def main():
                         audio_options.append("Keep audio from original video")               
                         
                     st.info("Make sure that this video is the same size as you've specified above.")
+                if uploaded_video is not None:
+                    resize_video = st.checkbox("Resize video to match video dimensions above", value=True)
+                
                 audio = st.radio("Audio:", audio_options, key="audio",horizontal=True)
                 if uploaded_video is None:
-                    st.info("You can also keep the audio from your original video - just upload the video above and the option will appear.")
+                    st.info("You can also keep the audio from your original video - just upload the video above and the option will appear.")                
+                    
                 if audio == "Attach new audio":
                     d1, d2 = st.columns([4,5])
                     with d1:                
@@ -2096,6 +2116,7 @@ def main():
                         st.write("")
                         st.write("")
                         st.info("Make sure that this audio is around the same length as your video.")
+                
                 st.write("")
                 if st.button("Create New Project"):                
                     new_project_name = new_project_name.replace(" ", "_")                      
@@ -2108,7 +2129,8 @@ def main():
                         with open(video_path, 'wb') as f:
                             f.write(uploaded_video.getbuffer())
                         update_project_setting("input_video", uploaded_video.name, new_project_name)
-                    resize_video(input_path=video_path,output_path=video_path,width=width,height=height)   
+                        if resize_video == True:
+                            resize_video(input_path=video_path,output_path=video_path,width=width,height=height)   
                     if audio == "Attach new audio":
                         if uploaded_audio is not None:
                             with open(os.path.join(f"videos/{new_project_name}/assets/resources/audio",uploaded_audio.name),"wb") as f: 
@@ -2886,8 +2908,7 @@ def main():
 
 
                         if type_of_mask_selection == "Manual Background Selection":
-                            if st.session_state['edited_image'] == "":
-                                # if image starts with http
+                            if st.session_state['edited_image'] == "":                                
                                 if bg_image.startswith("http"):
                                     canvas_image = r.get(bg_image)
                                     canvas_image = Image.open(BytesIO(canvas_image.content))
@@ -2952,7 +2973,7 @@ def main():
                         
                         elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection":
                             if st.session_state['edited_image'] == "":
-                                st.image(bg_image)
+                                st.image(bg_image, use_column_width=True)
                             else:
                                 image_comparison(
                                     img1=bg_image,
