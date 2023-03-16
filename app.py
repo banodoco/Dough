@@ -1707,7 +1707,9 @@ def main():
                 st.sidebar.write("Open the toggle below to upload and select new inputs video to use for this project.")
                           
                 if project_settings["input_video"] == "":
-                    st.warning("No input video selected - please select one below.")
+                    st.sidebar.warning("No input video selected - please select one below.")
+                if project_settings["input_video"] != "":
+                    st.sidebar.success("Input video selected - you can change this below.")
                 with st.sidebar.expander("Select input video", expanded=False):   
                     input_video_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/input_videos') if f.endswith(('.mp4', '.mov','.MOV', '.avi'))]       
                     if project_settings["input_video"] != "": 
@@ -1757,7 +1759,8 @@ def main():
                             clip = VideoFileClip(f'videos/{project_name}/assets/resources/input_videos/{uploaded_file.name}')                    
                             clip.audio.write_audiofile(f'videos/{project_name}/assets/resources/audio/extracted_audio.mp3')
                             update_project_setting("audio", "extracted_audio.mp3", project_name)
-                        update_project_setting("input_video", input_video, project_name)                
+                        update_project_setting("input_video", input_video, project_name)
+                        project_settings = get_project_settings(project_name)                
                         time.sleep(1)
                         st.experimental_rerun()
                         
@@ -2047,6 +2050,12 @@ def main():
                 with st.expander("Replicate API Keys:"):
                     replicate_user_name = st.text_input("replicate_user_name", value = app_settings["replicate_user_name"])
                     replicate_com_api_key = st.text_input("replicate_com_api_key", value = app_settings["replicate_com_api_key"])
+                    if st.button("Save Settings"):
+                        update_app_setting("replicate_user_name", replicate_user_name)
+                        update_app_setting("replicate_com_api_key", replicate_com_api_key)
+                        update_app_setting("aws_access_key_id", aws_access_key_id)
+                        update_app_setting("aws_secret_access_key", aws_secret_access_key)
+                        st.experimental_rerun()
 
                 with st.expander("Reset Welcome Sequence"):
                     st.write("This will reset the welcome sequence so you can see it again.")
@@ -2065,12 +2074,7 @@ def main():
                 
                 
 
-                if st.button("Save Settings"):
-                    update_app_setting("replicate_user_name", replicate_user_name)
-                    update_app_setting("replicate_com_api_key", replicate_com_api_key)
-                    update_app_setting("aws_access_key_id", aws_access_key_id)
-                    update_app_setting("aws_secret_access_key", aws_secret_access_key)
-                    st.experimental_rerun()
+                
                                         
 
             elif st.session_state["page"] == "New Project":
