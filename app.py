@@ -929,7 +929,7 @@ def prompt_model_pix2pix(strength,video_name, image_number, timing_details, repl
     version = model.versions.get("10e63b0e6361eb23a0374f4d9ee145824d9d09f7a31dcd70803193ebc7121430") 
     if not input_image.startswith("http"):        
         input_image = open(input_image, "rb")
-    output = version.predict(input_image=input_image, instruction_text=prompt, seed=seed, cfg_image=1.2, cfg_text = guidance_scale, resolution=704)    
+    output = version.predict(input_image=input_image, instruction_text=prompt, seed=seed, cfg_image=1.5, cfg_text = guidance_scale, resolution=704)    
 
     return output
 
@@ -2128,22 +2128,25 @@ def main():
                     update_project_setting("width", width, new_project_name)
                     update_project_setting("height", height, new_project_name)  
                     update_project_setting("input_type", input_type, new_project_name)
-                    video_path = f'videos/{new_project_name}/assets/resources/input_videos/{uploaded_video.name}'
+                    
+                    
                     if uploaded_video is not None:
+                        video_path = f'videos/{new_project_name}/assets/resources/input_videos/{uploaded_video.name}'
                         with open(video_path, 'wb') as f:
                             f.write(uploaded_video.getbuffer())
                         update_project_setting("input_video", uploaded_video.name, new_project_name)
                         if resize_this_video == True:
-                            resize_video(input_path=video_path,output_path=video_path,width=width,height=height)   
+                            resize_video(input_path=video_path,output_path=video_path,width=width,height=height) 
+                        if audio == "Keep audio from original video":
+                            clip = VideoFileClip(video_path)                    
+                            clip.audio.write_audiofile(f'videos/{new_project_name}/assets/resources/audio/extracted_audio.mp3')
+                            update_project_setting("audio", "extracted_audio.mp3", new_project_name) 
                     if audio == "Attach new audio":
                         if uploaded_audio is not None:
                             with open(os.path.join(f"videos/{new_project_name}/assets/resources/audio",uploaded_audio.name),"wb") as f: 
                                 f.write(uploaded_audio.getbuffer())
                             update_project_setting("audio", uploaded_audio.name, new_project_name)                
-                    if audio == "Keep audio from original video":
-                        clip = VideoFileClip(video_path)                    
-                        clip.audio.write_audiofile(f'videos/{new_project_name}/assets/resources/audio/extracted_audio.mp3')
-                        update_project_setting("audio", "extracted_audio.mp3", new_project_name)                                            
+                                                                
                     st.session_state["project_name"] = new_project_name
                     st.session_state["project_set"] = "Yes"            
                     st.success("Project created! It should be open now. Click into 'Main Process' to get started")
@@ -2245,45 +2248,7 @@ def main():
                             
                         
 
-                    elif st.session_state['frame_styling_view_type'] == "List View":
-                        for i in range(0, len(timing_details)):
-                            index_of_current_item = i
-                        
-                            st.subheader(f"Frame {i}")                
-                                                
-                            if timing_details[i]["alternative_images"] != "":
-                                variants = timing_details[i]["alternative_images"]
-                                current_variant = int(timing_details[i]["primary_image"])    
-                                st.image(variants[current_variant])                            
-                            else:
-                                st.image('https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png', use_column_width=True) 
-                            
-
-                            detail1, detail2, detail3, detail4 = st.columns([2,2,1,3])
-
-                            with detail1:
-                                individual_number_of_variants = st.number_input(f"How many variants?", min_value=1, max_value=10, value=1, key=f"number_of_variants_{index_of_current_item}")
-                                
-
-                                
-                            with detail2:
-                                st.write("")
-                                st.write("")
-                                if st.button(f"Generate Variants", key=f"new_variations_{index_of_current_item}",help="This will generate new variants based on the settings to the left."):
-                                    for i in range(0, individual_number_of_variants):
-                                        index_of_current_item = st.session_state['which_image']
-                                        trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'],custom_models,adapter_type) 
-                                    st.experimental_rerun()
-                                
-                                
-                            with detail3:
-                                st.write("")
-                            with detail4:
-                                if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will switch to a Single Frame view type and open this individual image."):
-                                    st.session_state['which_image_value'] = index_of_current_item
-                                    st.session_state['frame_styling_view_type'] = "Single View"
-                                    st.session_state['frame_styling_view_type_index'] = 1                                    
-                                    st.experimental_rerun()         
+                       
 
 
 
@@ -2371,8 +2336,9 @@ def main():
                             st.session_state['num_inference_steps'] = st.number_input(f"Inference steps", value=int(st.session_state['num_inference_steps']))
                                         
                     batch_run_range = st.sidebar.slider("Select range:", 1, 0, (0, len(timing_details)-1))  
-                
-                    promote_new_generation = st.sidebar.checkbox("Promote new generation to main variant", value=True, key="promote_new_generation_to_main_variant")
+                    
+                    st.session_state["promote_new_generation"] = True                    
+                    st.session_state["promote_new_generation"] = st.sidebar.checkbox("Promote new generation to main variant", value=True, key="promote_new_generation_to_main_variant")
 
                     app_settings = get_app_settings()
 
@@ -2401,7 +2367,7 @@ def main():
                             for i in range(batch_run_range[1]+1):
                                 for number in range(0, batch_number_of_variants):
                                     index_of_current_item = i
-                                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'],custom_models,adapter_type)
+                                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,adapter_type)
                             st.experimental_rerun()
 
                     if st.session_state['frame_styling_view_type'] == "Single Frame":
@@ -2418,13 +2384,54 @@ def main():
                             if st.button(f"Generate Variants", key=f"new_variations_{st.session_state['which_image']}",help="This will generate new variants based on the settings to the left."):
                                 for i in range(0, individual_number_of_variants):
                                     index_of_current_item = st.session_state['which_image']
-                                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],promote_new_generation, st.session_state['project_settings'],custom_models,adapter_type) 
+                                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,adapter_type) 
                                 st.experimental_rerun()
                                 
                         with detail4:
                             st.write("")
                             with st.expander("💡 Editing key frames"):
                                 st.info("You can edit the key frames in Tools > Frame Editing.")
+
+                    
+                    elif st.session_state['frame_styling_view_type'] == "List View":
+                        for i in range(0, len(timing_details)):
+                            index_of_current_item = i
+                        
+                            st.subheader(f"Frame {i}")                
+                                                
+                            if timing_details[i]["alternative_images"] != "":
+                                variants = timing_details[i]["alternative_images"]
+                                current_variant = int(timing_details[i]["primary_image"])    
+                                st.image(variants[current_variant])                            
+                            else:
+                                st.image('https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png', use_column_width=True) 
+                            
+
+                            detail1, detail2, detail3, detail4 = st.columns([2,2,1,3])
+
+                            with detail1:
+                                individual_number_of_variants = st.number_input(f"How many variants?", min_value=1, max_value=10, value=1, key=f"number_of_variants_{index_of_current_item}")
+                                
+
+                                
+                            with detail2:
+                                st.write("")
+                                st.write("")
+                                if st.button(f"Generate Variants", key=f"new_variations_{index_of_current_item}",help="This will generate new variants based on the settings to the left."):
+                                    for i in range(0, individual_number_of_variants):
+                                        index_of_current_item = st.session_state['which_image']
+                                        trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,adapter_type) 
+                                    st.experimental_rerun()
+                                
+                                
+                            with detail3:
+                                st.write("")
+                            with detail4:
+                                if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will switch to a Single Frame view type and open this individual image."):
+                                    st.session_state['which_image_value'] = index_of_current_item
+                                    st.session_state['frame_styling_view_type'] = "Single View"
+                                    st.session_state['frame_styling_view_type_index'] = 1                                    
+                                    st.experimental_rerun() 
                         
                         
                             
@@ -2659,6 +2666,18 @@ def main():
 
                 st.markdown("***")
                 
+                st.markdown("#### Bulk adjust the timings")
+                st.write("This will adjust the timings of all the key frames by the number of seconds you enter below")
+                bulk_adjustment = st.number_input("What multiple would you like to adjust the timings by?", value=1.0)
+                if st.button("Adjust Timings"):
+                    for i in timing_details:
+                        index_of_current_item = timing_details.index(i)
+                        new_frame_time = float(timing_details[index_of_current_item]["frame_time"]) * bulk_adjustment
+                        update_specific_timing_value(project_name, index_of_current_item, "frame_time", new_frame_time)
+                        
+                    st.success("Timings adjusted successfully!")
+                    time.sleep(1)
+                    st.experimental_rerun()
 
             elif st.session_state["page"] == "Project Settings":
 
@@ -3122,10 +3141,11 @@ def main():
                 video_dir = "videos/" + project_name + "/assets/videos/2_completed"
                 video_list.sort(key=lambda f: int(re.sub('\D', '', f)))
                 video_list = sorted(video_list, key=lambda x: os.path.getmtime(os.path.join(video_dir, x)), reverse=True)
-                most_recent_video = video_list[0]
-
-                st.sidebar.markdown("### Last Video:")
-                st.sidebar.video("videos/" + project_name + "/assets/videos/2_completed/" + most_recent_video)
+                
+                if len(video_list) > 0:
+                    most_recent_video = video_list[0]
+                    st.sidebar.markdown("### Last Video:")
+                    st.sidebar.video("videos/" + project_name + "/assets/videos/2_completed/" + most_recent_video)
                 parody_movie_names = ["The_Lord_of_the_Onion_Rings", "Jurassic_Pork", "Harry_Potter_and_the_Sorcerer_s_Kidney_Stone", "Star_Wars_The_Phantom_of_the_Oprah", "The_Silence_of_the_Yams", "The_Hunger_Pains", "Honey_I_Shrunk_the_Audience", "Free_Willy_Wonka_and_the_Chocolate_Factory", "The_Da_Vinci_Chode", "Forrest_Dump", "The_Shawshank_Inebriation", "A_Clockwork_Orange_Juice", "The_Big_Lebowski_2_Dude_Where_s_My_Car", "The_Princess_Diaries_The_Dark_Knight_Rises", "Eternal_Sunshine_of_the_Spotless_Behind", "Rebel_Without_a_Clue", "The_Terminal_Dentist", "Dr_Strangelove_or_How_I_Learned_to_Stop_Worrying_and_Love_the_Bombastic", "The_Wolf_of_Sesame_Street", "The_Good_the_Bad_and_the_Fluffy", "The_Sound_of_Mucus", "Back_to_the_Fuchsia", "The_Curious_Case_of_Benjamin_s_Button", "The_Fellowship_of_the_Bing", "The_Green_Mild", "My_Big_Fat_Greek_Tragedy", "Ghostbusted", "The_Texas_Chainsaw_Manicure", "The_Fast_and_the_Furniture", "The_Dark_Knight_s_Gotta_Go_Potty", "The_Iron_Manatee", "Night_of_the_Living_Bread", "Twilight_Breaking_a_Nail", "Indiana_Jones_and_the_Temple_of_Groom", "Kill_Billiards", "The_Bourne_Redundancy", "The_SpongeBob_SquarePants_Movie_Sponge_Out_of_Water_and_Ideas", "The_Social_Nutwork", "Planet_of_the_Snapes", "No_Country_for_Old_Yentas", "The_Expendable_Accountant", "The_Terminal_Illness", "A_Streetcar_Named_Retire", "The_Secret_Life_of_Walter_s_Mitty", "The_Hunger_Games_Catching_Foam", "The_Godfather_Part_Time_Job", "To_Kill_a_Rockingbird", "Star_Trek_III_The_Search_for_Spock_s_Missing_Sock", "Gone_with_the_Wind_Chimes", "Dr_No_Clue", "Ferris_Bueller_s_Day_Off_Sick", "Monty_Python_and_the_Holy_Fail", "A_Fistful_of_Quarters", "Willy_Wonka_and_the_Chocolate_Heartburn", "The_Good_the_Bad_and_the_Dandruff", "The_Princess_Bride_of_Frankenstein", "The_Wizard_of_Bras", "Pulp_Friction", "Die_Hard_with_a_Clipboard", "Indiana_Jones_and_the_Last_Audit", "Finding_Nemoy", "The_Silence_of_the_Lambs_The_Musical", "Titanic_2_The_Iceberg_Strikes_Back", "Fast_Times_at_Ridgemont_Mortuary", "The_Graduate_But_Only_Because_He_Has_an_Advanced_Degree", "Beauty_and_the_Yeast"]            
                 random_name = random.choice(parody_movie_names)
                 final_video_name = st.sidebar.text_input("What would you like to name this video?", value=random_name)
