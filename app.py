@@ -955,6 +955,8 @@ def restyle_images(index_of_current_item,project_name, project_settings, timing_
         output_url = prompt_model_dreambooth(project_name, index_of_current_item, timing_details[index_of_current_item]["custom_models"], app_settings,timing_details, project_settings,source_image)
     elif model_name =='StyleGAN-NADA':
         output_url = prompt_model_stylegan_nada(index_of_current_item ,timing_details,source_image,project_name)
+    elif model_name == "dreambooth_controlnet":
+        output_url = prompt_model_dreambooth_controlnet(source_image, timing_details, project_name, index_of_current_item)
     
     return output_url
 
@@ -1229,6 +1231,68 @@ def create_video_without_interpolation(timing_details, output_file):
 
     # Concatenate the inputs and export the video
     ffmpeg.concat(*inputs).output(output_file).run()
+
+
+
+def prompt_model_dreambooth_controlnet(input_image, timing_details, project_name, index_of_current_item):
+
+    app_settings = get_app_settings()
+    project_settings = get_project_settings(project_name)
+    sd_api_key = app_settings['sd_api_key']
+    sd_url = "https://stablediffusionapi.com/api/v5/controlnet"
+    input_image = upload_image(input_image)
+
+    payload = {
+        "key": sd_api_key,
+        "prompt": timing_details[index_of_current_item]["prompt"],
+        "width": project_settings["width"],
+        "height": project_settings["height"],
+        "samples": "1",
+        "num_inference_steps": timing_details[index_of_current_item]["num_inference_steps"],
+        "seed": timing_details[index_of_current_item]["seed"],
+        "guidance_scale": timing_details[index_of_current_item]["guidance_scale"],
+        "webhook": "0",
+        "track_id": "null",
+        "init_image": input_image,
+        "controlnet_model": timing_details[index_of_current_item]["adapter_type"],
+        "model_id": "CfYgXuhAeyaqQTFDdnIUG6BjH",
+        "auto_hint": "yes",
+        "negative_prompt": None,
+        "scheduler": "UniPCMultistepScheduler",
+        "safety_checker": "no",
+        "enhance_prompt": "yes",
+        "strength": timing_details[index_of_current_item]["strength"],
+    }
+    print("CUNT")
+    print(payload)
+    
+    completed = "false"
+
+    while completed == "false":
+        response = r.post(sd_url, json=payload)
+
+        if response.json()["status"] == "processing":
+            wait = int(response.json()["eta"])
+            print("Processing, ETA: " + str(wait) + " seconds")
+            time.sleep(wait)
+            response = "https://stablediffusionapi.com/api/v3/dreambooth/fetch/" + str(response.json()["id"])
+        
+        elif response.json()["status"] == "success":        
+            output_url = response.json()["output"][0]        
+            image = r.get(output_url)            
+            unique_file_name = str(uuid.uuid4()) + ".png"    
+            with open(unique_file_name, "wb") as f:
+                f.write(image.content)    
+            url = upload_image(unique_file_name)
+            os.remove(unique_file_name)
+            completed = "true"
+
+        else:
+            print(response)
+            return "failed"
+
+    return url
+
 
 
 def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
@@ -2155,6 +2219,7 @@ def main():
                                                                         
         
             elif st.session_state["page"] == "Frame Styling":  
+                timing_details = get_timing_details(project_name)
                 with mainheader2:
                     with st.expander("💡 How frame styling works"):
                         st.info("On the left, there are a bunch of differnet models and processes you can use to style frames. You can even use combinatinos of models through custom pipelines or by running them one after another. We recommend experimenting on 1-2 frames before doing bulk runs for the sake of efficiency.")
@@ -2278,10 +2343,10 @@ def main():
                         
                         st.session_state['model'] = st.sidebar.selectbox(f"Which type of model is trained on your character?", ["LoRA","Dreambooth"])                    
                     else:
-                        models = ['stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'controlnet', 'Dreambooth', 'LoRA','StyleGAN-NADA']
+                        models = ['stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'controlnet', 'Dreambooth', 'LoRA','StyleGAN-NADA','dreambooth_controlnet']
                         st.session_state['model'] = st.sidebar.selectbox(f"Model", models)
                     
-                    if st.session_state['model'] == "controlnet":   
+                    if st.session_state['model'] == "controlnet" or st.session_state['model'] == 'dreambooth_controlnet':   
                         adapter_type = st.sidebar.selectbox(f"Adapter Type",["normal", "canny", "hed", "scribble", "seg", "hough", "depth2img", "pose"])   
                         custom_models = []           
                     elif st.session_state['model'] == "LoRA": 
@@ -2603,6 +2668,11 @@ def main():
                 delete_existing_videos = st.checkbox("Delete all the existing timings", value=False)
 
                 if st.button("Render New Video",disabled=disable_rendering):
+                    if delete_existing_videos == True:
+                        for i in timing_details:   
+                            index_of_current_item = timing_details.index(i)                                                             
+                            update_specific_timing_value(project_name, timing_details.index(i), "interpolated_video", "")
+                        timing_details = get_timing_details(project_name)
                     
                     render_video(project_name, final_video_name)
                     st.success("Video rendered!")
