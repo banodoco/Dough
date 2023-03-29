@@ -929,7 +929,7 @@ def prompt_model_pix2pix(strength,video_name, image_number, timing_details, repl
     version = model.versions.get("10e63b0e6361eb23a0374f4d9ee145824d9d09f7a31dcd70803193ebc7121430") 
     if not input_image.startswith("http"):        
         input_image = open(input_image, "rb")
-    output = version.predict(input_image=input_image, instruction_text=prompt, seed=seed, cfg_image=1.5, cfg_text = guidance_scale, resolution=704)    
+    output = version.predict(input_image=input_image, instruction_text=prompt, seed=seed, cfg_image=1.2, cfg_text = guidance_scale, resolution=704)    
 
     return output
 
@@ -1263,8 +1263,7 @@ def prompt_model_dreambooth_controlnet(input_image, timing_details, project_name
         "enhance_prompt": "yes",
         "strength": timing_details[index_of_current_item]["strength"],
     }
-    print("CUNT")
-    print(payload)
+    
     
     completed = "false"
 
@@ -1380,15 +1379,6 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
         source_image = open(source_image, "rb")
     
 
-    # if timing_details[index_of_current_item]["adapter_type"] == "None":
-    adapter_type = "sketch"
-    adapter_condition_image = None
-    # else:
-      #  adapter_type = timing_details[index_of_current_item]["adapter_type"]
-      #  adapter_condition_image = None
-        
-
-
 
     model = replicate.models.get("cloneofsimo/lora")
     version = model.versions.get("fce477182f407ffd66b94b08e761424cabd13b82b518754b83080bc75ad32466")
@@ -1405,12 +1395,25 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     'scheduler': "DPMSolverMultistep",
     'lora_urls': lora_model_1_model_url + "|" + lora_model_2_model_url + "|" + lora_model_3_model_url,
     'lora_scales': "0.5 | 0.5 | 0.5",
-    'adapter_type': adapter_type,
+    'adapter_type': timing_details[index_of_current_item]["adapter_type"],
     'adapter_condition_image': adapter_condition_image,
      }
-    output = version.predict(**inputs)
     
-    return output[0]
+    max_attempts = 3
+    attempts = 0
+    while attempts < max_attempts:
+        try:
+            output = version.predict(**inputs)
+            print(output)
+            return output[0]
+        except replicate.exceptions.ModelError as e:
+            if "NSFW content detected" in str(e):
+                print("NSFW content detected. Attempting to rerun code...")
+                attempts += 1
+                continue
+            else:
+                raise e
+    return "https://i.ibb.co/ZG0hxzj/Failed-3x-In-A-Row.png"
 
 def attach_audio_element(project_name, project_settings,expanded):
     with st.expander("Audio"):                        
@@ -1874,12 +1877,12 @@ def main():
                         if st.sidebar.button("Re-extract frames"):
                             update_project_setting("extraction_type", "Extract from csv",project_name)
                             update_project_setting("input_video", input_video,project_name)
-                            get_timing_details(project_name)                                            
-                            for f in os.listdir(f'videos/{project_name}/assets/frames/0_extracted'):
-                                os.remove(f'videos/{project_name}/assets/frames/0_extracted/{f}')
+                            get_timing_details(project_name)                                                                        
                             for i in timing_details:
-                                index_of_current_item = timing_details.index(i)                                                
-                                extract_frame(index_of_current_item, project_name, input_video, int(float(timing_details[index_of_current_item]['frame_number'])),timing_details)                                        
+                                index_of_current_item = timing_details.index(i)   
+                                extract_frame_number = calculate_frame_number_at_time(input_video, timing_details[index_of_current_item]["frame_time"], project_name)
+                                extract_frame(index_of_current_item, project_name, input_video, extract_frame_number,timing_details)
+                                
                     else:
                         st.sidebar.button("Re-extract frames",disabled=True)    
                 
@@ -2149,10 +2152,10 @@ def main():
                     st.write("")            
                 b1, b2, b3 = st.columns(3)
                 with b1:
-                    width = int(st.selectbox("Select video width:", options=["512","704","1024"], key="video_width"))
+                    width = int(st.selectbox("Select video width:", options=["512","704","768","1024"], key="video_width"))
                     
                 with b2:
-                    height = int(st.selectbox("Select video height:", options=["512","704","1024"], key="video_height"))
+                    height = int(st.selectbox("Select video height:", options=["512","704","768","1024"], key="video_height"))
                 with b3:
                     st.info("We recommend a small size + then scaling up afterwards.")
                 
@@ -2347,28 +2350,29 @@ def main():
                         st.session_state['model'] = st.sidebar.selectbox(f"Model", models)
                     
                     if st.session_state['model'] == "controlnet" or st.session_state['model'] == 'dreambooth_controlnet':   
-                        adapter_type = st.sidebar.selectbox(f"Adapter Type",["normal", "canny", "hed", "scribble", "seg", "hough", "depth2img", "pose"])   
+                        st.session_state['adapter_type'] = st.sidebar.selectbox(f"Adapter Type",["normal", "canny", "hed", "scribble", "seg", "hough", "depth2img", "pose"])   
                         custom_models = []           
                     elif st.session_state['model'] == "LoRA": 
                         df = pd.read_csv('models.csv')
                         filtered_df = df[df.iloc[:, 5] == 'LoRA']
                         lora_model_list = filtered_df.iloc[:, 0].tolist()
                         lora_model_list.insert(0, '')
-                        lora_model_1 = st.sidebar.selectbox(f"LoRA Model 1", lora_model_list)
-                        lora_model_2 = st.sidebar.selectbox(f"LoRA Model 2", lora_model_list)
-                        lora_model_3 = st.sidebar.selectbox(f"LoRA Model 3", lora_model_list)
-                        custom_models = [lora_model_1, lora_model_2, lora_model_3]                    
+                        st.session_state['lora_model_1'] = st.sidebar.selectbox(f"LoRA Model 1", lora_model_list)
+                        st.session_state['lora_model_2'] = st.sidebar.selectbox(f"LoRA Model 2", lora_model_list)
+                        st.session_state['lora_model_3'] = st.sidebar.selectbox(f"LoRA Model 3", lora_model_list)
+                        
+                        custom_models = [st.session_state['lora_model_1'], st.session_state['lora_model_2'], st.session_state['lora_model_3']]                    
                         st.sidebar.info("You can reference each model in your prompt using the following keywords: <1>, <2>, <3> - for example '<1> in the style of <2>.")
-                        adapter_type = st.sidebar.selectbox(f"Adapter Type", ["sketch", "seg", "keypose", "depth",None], help="This is the method through the model will infer the shape of the object. ")
+                        st.session_state['adapter_type'] = st.sidebar.selectbox(f"Adapter Type", ["sketch", "seg", "keypose", "depth",None], help="This is the method through the model will infer the shape of the object. ")
                     elif st.session_state['model'] == "Dreambooth":
                         df = pd.read_csv('models.csv')
                         filtered_df = df[df.iloc[:, 5] == 'Dreambooth']
                         dreambooth_model_list = filtered_df.iloc[:, 0].tolist()
                         custom_models = st.sidebar.selectbox(f"Dreambooth Model", dreambooth_model_list)                    
-                        adapter_type = ""
+                        st.session_state['adapter_type'] = ""
                     else:
                         custom_models = []
-                        adapter_type = "N"
+                        st.session_state['adapter_type'] = "N"
                     
                     if st.session_state['model'] == "StyleGAN-NADA":
                         st.sidebar.info("StyleGAN-NADA is a custom model that uses StyleGAN to generate a consistent character and style transformation.")
@@ -2432,7 +2436,7 @@ def main():
                             for i in range(batch_run_range[1]+1):
                                 for number in range(0, batch_number_of_variants):
                                     index_of_current_item = i
-                                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,adapter_type)
+                                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,st.session_state['adapter_type'])
                             st.experimental_rerun()
 
                     if st.session_state['frame_styling_view_type'] == "Single Frame":
@@ -2449,7 +2453,7 @@ def main():
                             if st.button(f"Generate Variants", key=f"new_variations_{st.session_state['which_image']}",help="This will generate new variants based on the settings to the left."):
                                 for i in range(0, individual_number_of_variants):
                                     index_of_current_item = st.session_state['which_image']
-                                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,adapter_type) 
+                                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,st.session_state['adapter_type']) 
                                 st.experimental_rerun()
                                 
                         with detail4:
@@ -2485,7 +2489,7 @@ def main():
                                 if st.button(f"Generate Variants", key=f"new_variations_{index_of_current_item}",help="This will generate new variants based on the settings to the left."):
                                     for i in range(0, individual_number_of_variants):
                                         index_of_current_item = st.session_state['which_image']
-                                        trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,adapter_type) 
+                                        trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,st.session_state['adapter_type']) 
                                     st.experimental_rerun()
                                 
                                 
@@ -2955,18 +2959,26 @@ def main():
                     
                     def reset_new_image():
                         st.session_state['edited_image'] = ""
+
+                    if "which_stage" not in st.session_state:
+                        st.session_state['which_stage'] = "Unedited Key Frame"
+                        st.session_state['which_stage_index'] = 0
                 
                         
                     f1, f2, f3 = st.columns([1,2,1])
                     with f1:
                         st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(timing_details)-1, on_change=reset_new_image, value=st.session_state['which_image_value'])
-                        st.session_state['which_image_value'] = st.session_state['which_image']
+                        if st.session_state['which_image_value'] != st.session_state['which_image']:
+                            st.session_state['which_image_value'] = st.session_state['which_image']
+                            st.experimental_rerun()
                     with f2:                
-                        which_stage = st.radio('Select stage:', ["Unedited Key Frame", "Styled Key Frame"], horizontal=True, on_change=reset_new_image)
+                        st.session_state['which_stage'] = st.radio('Select stage:', ["Unedited Key Frame", "Styled Key Frame"], horizontal=True, on_change=reset_new_image, index=st.session_state['which_stage_index'])
+                        if st.session_state['which_stage'] == "Styled Key Frame":
+                            st.session_state['which_stage_index'] = 1
                         # st.session_state['which_image'] = st.slider('Select image to edit:', 0, len(timing_details)-1, st.session_state["which_image"])
 
                     with f3:                
-                        if which_stage == "Unedited Key Frame":     
+                        if st.session_state['which_stage'] == "Unedited Key Frame":     
                             st.write("")                     
                             if st.button("Reset Key Frame", help="This will reset the base key frame to the original unedited version. This will not affect the video."):
                                 extract_frame(int(st.session_state['which_image']), project_name, project_settings["input_video"], timing_details[st.session_state['which_image']]["frame_number"],timing_details)                            
@@ -2975,17 +2987,17 @@ def main():
                     if "edited_image" not in st.session_state:
                         st.session_state.edited_image = ""                        
                     
-                    if which_stage == "Styled Key Frame" and timing_details[st.session_state['which_image']]["alternative_images"] == "":
-                            st.info("You need to add a style first in the Style Selection section.")
+                    if st.session_state['which_stage'] == "Styled Key Frame" and timing_details[st.session_state['which_image']]["alternative_images"] == "":
+                        st.info("You need to add a style first in the Style Selection section.")
                     else:
 
-                        if which_stage == "Unedited Key Frame":
+                        if st.session_state['which_stage'] == "Unedited Key Frame":
                             bg_image = timing_details[st.session_state['which_image']]["source_image"]
-                        elif which_stage == "Styled Key Frame":                                             
-                                variants = timing_details[st.session_state['which_image']]["alternative_images"]
-                                primary_image = timing_details[st.session_state['which_image']]["primary_image"]             
-                                bg_image = variants[primary_image]
-                    
+                        elif st.session_state['which_stage'] == "Styled Key Frame":                                             
+                            variants = timing_details[st.session_state['which_image']]["alternative_images"]
+                            primary_image = timing_details[st.session_state['which_image']]["primary_image"]             
+                            bg_image = variants[primary_image]
+                
                         width = int(project_settings["width"])
                         height = int(project_settings["height"])
 
@@ -3075,13 +3087,20 @@ def main():
                                                     
 
                         st.sidebar.markdown("### Edit Individual Image:") 
+
+                        if "type_of_mask_replacement" not in st.session_state:
+                            st.session_state["type_of_mask_replacement"] = "Replace With Image"
+                            st.session_state["index_of_type_of_mask_replacement"] = 0
                         
-                        type_of_mask_replacement = st.sidebar.radio("Select type of edit", ["Replace With Image", "Inpainting"], horizontal=True)            
+                        st.session_state["type_of_mask_replacement"] = st.sidebar.radio("Select type of edit", ["Replace With Image", "Inpainting"], horizontal=True, index=st.session_state["index_of_type_of_mask_replacement"])    
+
+                        if st.session_state["type_of_mask_replacement"] == "Inpainting":           
+                            st.session_state["index_of_type_of_mask_replacement"] = 1
 
                         
                         btn1, btn2 = st.sidebar.columns([1,1])
 
-                        if type_of_mask_replacement == "Replace With Image":
+                        if st.session_state["type_of_mask_replacement"] == "Replace With Image":
                             prompt = ""
                             negative_prompt = ""
                             background_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/backgrounds') if f.endswith('.png')]                 
@@ -3102,7 +3121,7 @@ def main():
                                     st.image(f"videos/{project_name}/assets/resources/backgrounds/{background_image}", use_column_width=True)
                                 
 
-                        elif type_of_mask_replacement == "Inpainting":
+                        elif st.session_state["type_of_mask_replacement"] == "Inpainting":
                             with btn1:
                                 prompt = st.text_input("Prompt:", help="Describe the whole image, but focus on the details you want changed!")
                             with btn2:
@@ -3112,30 +3131,30 @@ def main():
 
                         with edit1:
                             if st.button(f'Run Edit On Current Image'):
-                                if type_of_mask_replacement == "Inpainting":
-                                    st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, "", bg_image, prompt, negative_prompt,width, height,st.session_state['which_layer'])
-                                elif type_of_mask_replacement == "Replace With Image":
-                                    st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, "", "",width, height,st.session_state['which_layer'])
+                                if st.session_state["type_of_mask_replacement"] == "Inpainting":
+                                    st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, "", bg_image, prompt, negative_prompt,width, height,st.session_state['which_layer'])
+                                elif st.session_state["type_of_mask_replacement"] == "Replace With Image":
+                                    st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, bg_image, "", "",width, height,st.session_state['which_layer'])
                                 st.experimental_rerun()
                         with edit2:
                             if st.session_state['edited_image'] != "":                                     
                                 if st.button("Promote Last Edit", type="primary"):
-                                    if which_stage == "Unedited Key Frame":                        
+                                    if st.session_state['which_stage'] == "Unedited Key Frame":                        
                                         update_source_image(project_name, st.session_state['which_image'], st.session_state['edited_image'])
-                                    elif which_stage == "Styled Key Frame":
+                                    elif st.session_state['which_stage'] == "Styled Key Frame":
                                         number_of_image_variants = add_image_variant(st.session_state['edited_image'], st.session_state['which_image'], project_name, timing_details)
                                         promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1)
                                     st.session_state['edited_image'] = ""
                                     st.success("Image promoted!")
                             else:
                                 if st.button("Run Edit & Promote"):
-                                    if type_of_mask_replacement == "Inpainting":
-                                        st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, "", bg_image, prompt, negative_prompt,width, height,st.session_state['which_layer'])
-                                    elif type_of_mask_replacement == "Replace With Image":
-                                        st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, "", "",width, height,st.session_state['which_layer'])
-                                    if which_stage == "Unedited Key Frame":                        
+                                    if st.session_state["type_of_mask_replacement"] == "Inpainting":
+                                        st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, "", bg_image, prompt, negative_prompt,width, height,st.session_state['which_layer'])
+                                    elif st.session_state["type_of_mask_replacement"] == "Replace With Image":
+                                        st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, bg_image, "", "",width, height,st.session_state['which_layer'])
+                                    if st.session_state['which_stage'] == "Unedited Key Frame":                        
                                         update_source_image(project_name, st.session_state['which_image'], st.session_state['edited_image'])
-                                    elif which_stage == "Styled Key Frame":
+                                    elif st.session_state['which_stage'] == "Styled Key Frame":
                                         number_of_image_variants = add_image_variant(st.session_state['edited_image'], st.session_state['which_image'], project_name, timing_details)
                                         promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1)
                                     st.session_state['edited_image'] = ""
@@ -3148,7 +3167,7 @@ def main():
                                 replacement_frame = st.file_uploader("Upload a replacement frame here", type="png", accept_multiple_files=False, key="replacement_frame")
                             with replace2:
                                 st.write("")
-                                confirm_replace = st.checkbox(f"I confirm I want to replace {which_stage} {st.session_state['which_image']} with this frame", key="confirm_replace}")
+                                confirm_replace = st.checkbox(f"I confirm I want to replace {st.session_state['which_stage']} {st.session_state['which_image']} with this frame", key="confirm_replace}")
                             with replace3:
                                 st.write("")
                                 if confirm_replace == True and replacement_frame is not None:
@@ -3157,9 +3176,9 @@ def main():
                                         with open(os.path.join(f"videos/{project_name}/",replacement_frame.name),"wb") as f: 
                                             f.write(replacement_frame.getbuffer())     
                                         uploaded_image = upload_image(f"videos/{project_name}/{replacement_frame.name}")
-                                        if which_stage == "Unedited Key Frame":
+                                        if st.session_state['which_stage'] == "Unedited Key Frame":
                                             update_source_image(project_name, st.session_state['which_image'], uploaded_image)
-                                        elif which_stage == "Styled Key Frame":
+                                        elif st.session_state['which_stage'] == "Styled Key Frame":
                                             number_of_image_variants = add_image_variant(uploaded_image, st.session_state['which_image'], project_name, timing_details)
                                             promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1) 
                                         # delete the uploaded file
@@ -3176,23 +3195,23 @@ def main():
                     st.sidebar.markdown("### Batch Run Edits:")   
                     st.sidebar.write("This will batch run the settings you have above on a batch of images.")     
                     batch_run_range = st.sidebar.slider("Select range:", 1, 0, (0, len(timing_details)-1))                                
-                    if which_stage == "Unedited Key Frame":
+                    if st.session_state['which_stage'] == "Unedited Key Frame":
                         st.sidebar.warning("This will overwrite the source images in the range you select - you can always reset them if you wish.")
-                    elif which_stage == "Styled Key Frame":
+                    elif st.session_state['which_stage'] == "Styled Key Frame":
                         make_primary_variant = st.sidebar.checkbox("Make primary variant", value=True, help="If you want to make the edited image the primary variant, tick this box. If you want to keep the original primary variant, untick this box.")          
                     if st.sidebar.button("Batch Run Edit"):
                         for i in range(batch_run_range[1]+1):
-                            if type_of_mask_replacement == "Inpainting":
+                            if st.session_state["type_of_mask_replacement"] == "Inpainting":
                                     background_image = ""
-                            if which_stage == "Unedited Key Frame":
+                            if st.session_state['which_stage'] == "Unedited Key Frame":
                                 bg_image = timing_details[i]["source_image"]                            
-                                edited_image = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, prompt, negative_prompt, width, height,st.session_state['which_layer'])
+                                edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, bg_image, prompt, negative_prompt, width, height,st.session_state['which_layer'])
                                 update_source_image(project_name, st.session_state['which_image'], edited_image)
-                            elif which_stage == "Styled Key Frame":
+                            elif st.session_state['which_stage'] == "Styled Key Frame":
                                 variants = timing_details[i]["alternative_images"]
                                 primary_image = timing_details[i]["primary_image"]             
                                 bg_image = variants[primary_image]   
-                                edited_image = execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, prompt, negative_prompt, width, height,st.session_state['which_layer'])   
+                                edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, bg_image, prompt, negative_prompt, width, height,st.session_state['which_layer'])   
                                 number_of_image_variants = add_image_variant(edited_image, i, project_name, timing_details)                        
                                 promote_image_variant(i, project_name, number_of_image_variants-1)
 
