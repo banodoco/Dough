@@ -1582,7 +1582,13 @@ def main():
     app_settings = get_app_settings()
     
     if "online" not in st.session_state:
-        st.session_state["online"] = False
+        current_url = st_javascript("await fetch('').then(r => window.parent.location.href)")
+        time.sleep(1.5)
+        # if current_url contains streamlit.app
+        if "streamlit.app" in current_url:
+            st.session_state["online"] = True    
+        else:
+            st.session_state["online"] = False
                            
         st.session_state["welcome_state"] = app_settings["welcome_state"]                       
     if st.session_state["online"] == True:
@@ -2051,15 +2057,6 @@ def main():
 
                     
                     st.markdown("***")
-
-                    if 'online_set' not in st.session_state:
-                        st.session_state['online_set'] = True
-                        current_url = st_javascript("await fetch('').then(r => window.parent.location.href)")                        
-                        # if current_url contains streamlit.app
-                        if "streamlit.app" in current_url:
-                            st.session_state["online"] = True    
-                        else:
-                            st.session_state["online"] = False
                 
                 if 'open_manual_extractor' not in st.session_state:
                     st.session_state['open_manual_extractor'] = True
