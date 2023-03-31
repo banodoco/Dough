@@ -221,7 +221,8 @@ def get_app_settings():
 
     csv_file_path = "app_settings.csv"
     
-    df = pd.read_csv(csv_file_path, header=None)
+    df = pd.read_csv(csv_file_path, header=None,na_filter=False)
+    
     
     app_settings = {row[0]: row[1] for _, row in df.iterrows()}
     
@@ -260,7 +261,8 @@ def update_app_setting(key, pair_value):
     
     csv_file_path = 'app_settings.csv'
     
-    df = pd.read_csv(csv_file_path)
+    df = pd.read_csv(csv_file_path,na_filter=False)
+    
     
     row_number = df[df.iloc[:, 0] == key].index[0]
     df.at[row_number, df.columns[1]] = pair_value
@@ -1585,6 +1587,9 @@ def main():
         st.session_state["welcome_state"] = app_settings["welcome_state"]                       
     if st.session_state["online"] == True:
         st.error("**PLEASE READ:** This is a demo app. While you can click around, *buttons & queries won't work* and some things won't display properly. To use the proper version, follow the instructions [here](https://github.com/peter942/banodoco) to run it locally.")
+    else:
+        if app_settings["replicate_com_api_key"] == "":
+            st.error("**To run restyling and other functions, you need to set your Replicate.com API key by going to Settings -> App Settings.**")
     
     def project_changed():
         st.session_state["project_changed"] = True
@@ -1608,7 +1613,7 @@ def main():
             else:
                 if st.button("Previous Step"):
                     st.session_state["welcome_state"] = str(int(step) - 1)
-                    update_app_setting("welcome_state", st.session_state["welcome_state"])                
+                    update_app_setting("welcome_state", st.session_state["welcome_state"])                                    
                     st.experimental_rerun()
             
             if st.button("Skip Intro"):
