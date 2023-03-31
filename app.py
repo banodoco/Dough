@@ -1613,6 +1613,8 @@ def main():
             
             if st.button("Skip Intro"):
                 st.session_state["welcome_state"] = 7
+                update_app_setting("welcome_state", st.session_state["welcome_state"]) 
+                st.experimental_rerun()
         with button2:
             st.write("")
             
