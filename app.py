@@ -2315,7 +2315,8 @@ def main():
                             
                         
 
-                       
+                    if 'index_of_last_model' not in st.session_state:
+                        st.session_state['index_of_last_model'] = 0
 
 
 
@@ -2323,51 +2324,87 @@ def main():
                         st.info("You first need to select key frames at the Key Frame Selection stage.")
 
                     st.sidebar.header("Restyle Frames")   
-                    if st.session_state['project_settings']["last_which_stage_to_run_on"] == "Current Main Variant":
-                        index_of_which_stage_to_run_on = 1
-                    else:
-                        index_of_which_stage_to_run_on = 0
-                    st.session_state['which_stage_to_run_on'] = st.sidebar.radio("What stage of images would you like to run styling on?", options=["Extracted Key Frames", "Current Main Variants"], horizontal=True, index = index_of_which_stage_to_run_on, help="Extracted frames means the original frames from the video.")                                                                                     
-                    custom_pipelines = ["None","Mystique"]
-                    # find index of st.session_state['custom_pipeline'] in custom_pipelines
-                    index_of_last_custom_pipeline = custom_pipelines.index(st.session_state['custom_pipeline'])
+                    if 'index_of_which_stage_to_run_on' not in st.session_state:                        
+                        st.session_state['index_of_which_stage_to_run_on'] = 0
+                    stages = ["Extracted Key Frames", "Current Main Variants"]
+                    st.session_state['which_stage_to_run_on'] = st.sidebar.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True, index =st.session_state['index_of_which_stage_to_run_on'] , help="Extracted frames means the original frames from the video.")                                                                                     
+                    if stages.index(st.session_state['which_stage_to_run_on']) != st.session_state['index_of_which_stage_to_run_on']:
+                        st.session_state['index_of_which_stage_to_run_on'] = stages.index(st.session_state['which_stage_to_run_on'])
+                        st.experimental_rerun()
 
-                    st.session_state['custom_pipeline'] = st.sidebar.selectbox(f"Custom Pipeline", custom_pipelines, index=index_of_last_custom_pipeline)
-                    
+                    custom_pipelines = ["None","Mystique"]                    
+                    index_of_last_custom_pipeline = custom_pipelines.index(st.session_state['custom_pipeline'])
+                    st.session_state['custom_pipeline'] = st.sidebar.selectbox(f"Custom Pipeline:", custom_pipelines, index=index_of_last_custom_pipeline)                    
                     if st.session_state['custom_pipeline'] == "Mystique":
+                        if st.session_state['index_of_last_model'] != 0 or st.session_state['index_of_last_model'] != 1:
+                            st.session_state['index_of_last_model'] = 0
+                            st.experimental_rerun()
                         st.sidebar.info("Mystique is a custom pipeline that uses a multiple models to generate a consistent character and style transformation.")
                         with st.sidebar.expander("Mystique pipeline instructions"):
                             st.markdown("## How to use the Mystique pipeline")                
                             st.markdown("1. Create a fine-tined model in the Custom Model section of the app - we recommend Dreambooth for character transformations.")
                             st.markdown("2. It's best to include a detailed prompt. We recommend taking an example input image and running it through the Prompt Finder")
                             st.markdown("3. Use [expression], [location], [mouth], and [looking] tags to vary the expression and location of the character dynamically if that changes throughout the clip. Varying this in the prompt will make the character look more natural - especially useful if the character is speaking.")
-                            st.markdown("4. In our experience, the best strength for coherent character transformations is 0.25-0.3 - any more than this and details like eye position change.")                
-                        
-                        st.session_state['model'] = st.sidebar.selectbox(f"Which type of model is trained on your character?", ["LoRA","Dreambooth"])                    
+                            st.markdown("4. In our experience, the best strength for coherent character transformations is 0.25-0.3 - any more than this and details like eye position change.")                                        
+                        st.session_state['model'] = st.sidebar.selectbox(f"Which type of model is trained on your character?", ["LoRA","Dreambooth"], index=st.session_state['index_of_last_model'])                    
+                        if st.session_state['index_of_last_model'] == 1 and st.session_state['model'] == "LoRA":
+                            st.session_state['index_of_last_model'] = 0  
+                            st.experimental_rerun()                          
                     else:
                         models = ['stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'controlnet', 'Dreambooth', 'LoRA','StyleGAN-NADA','dreambooth_controlnet']
-                        st.session_state['model'] = st.sidebar.selectbox(f"Model", models)
+                        st.session_state['model'] = st.sidebar.selectbox(f"Model", models, index=st.session_state['index_of_last_model'])
+                        if st.session_state['index_of_last_model'] != models.index(st.session_state['model']):
+                            st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
+                            st.experimental_rerun()
+                            
                     
                     if st.session_state['model'] == "controlnet" or st.session_state['model'] == 'dreambooth_controlnet':   
-                        st.session_state['adapter_type'] = st.sidebar.selectbox(f"Adapter Type",["normal", "canny", "hed", "scribble", "seg", "hough", "depth2img", "pose"])   
+                        controlnet_adapter_types = ["normal", "canny", "hed", "scribble", "seg", "hough", "depth2img", "pose"]
+                        if 'index_of_controlnet_adapter_type' not in st.session_state:
+                            st.session_state['index_of_controlnet_adapter_type'] = 0
+                        st.session_state['adapter_type'] = st.sidebar.selectbox(f"Adapter Type",controlnet_adapter_types, index=st.session_state['index_of_controlnet_adapter_type'])
+                        if st.session_state['index_of_controlnet_adapter_type'] != controlnet_adapter_types.index(st.session_state['adapter_type']):
+                            st.session_state['index_of_controlnet_adapter_type'] = controlnet_adapter_types.index(st.session_state['adapter_type'])
+                            st.experimental_rerun()
                         custom_models = []           
                     elif st.session_state['model'] == "LoRA": 
+                        if 'index_of_lora_model_1' not in st.session_state:
+                            st.session_state['index_of_lora_model_1'] = 0
+                            st.session_state['index_of_lora_model_2'] = 0
+                            st.session_state['index_of_lora_model_3'] = 0
                         df = pd.read_csv('models.csv')
                         filtered_df = df[df.iloc[:, 5] == 'LoRA']
                         lora_model_list = filtered_df.iloc[:, 0].tolist()
                         lora_model_list.insert(0, '')
-                        st.session_state['lora_model_1'] = st.sidebar.selectbox(f"LoRA Model 1", lora_model_list)
-                        st.session_state['lora_model_2'] = st.sidebar.selectbox(f"LoRA Model 2", lora_model_list)
-                        st.session_state['lora_model_3'] = st.sidebar.selectbox(f"LoRA Model 3", lora_model_list)
-                        
+                        st.session_state['lora_model_1'] = st.sidebar.selectbox(f"LoRA Model 1", lora_model_list, index=st.session_state['index_of_lora_model_1'])
+                        if st.session_state['index_of_lora_model_1'] != lora_model_list.index(st.session_state['lora_model_1']):
+                            st.session_state['index_of_lora_model_1'] = lora_model_list.index(st.session_state['lora_model_1'])
+                            st.experimental_rerun()
+                        st.session_state['lora_model_2'] = st.sidebar.selectbox(f"LoRA Model 2", lora_model_list, index=st.session_state['index_of_lora_model_2'])
+                        if st.session_state['index_of_lora_model_2'] != lora_model_list.index(st.session_state['lora_model_2']):
+                            st.session_state['index_of_lora_model_2'] = lora_model_list.index(st.session_state['lora_model_2'])
+                            st.experimental_rerun()
+                        st.session_state['lora_model_3'] = st.sidebar.selectbox(f"LoRA Model 3", lora_model_list, index=st.session_state['index_of_lora_model_3'])
+                        if st.session_state['index_of_lora_model_3'] != lora_model_list.index(st.session_state['lora_model_3']):
+                            st.session_state['index_of_lora_model_3'] = lora_model_list.index(st.session_state['lora_model_3'])                     
+                            st.experimental_rerun()
                         custom_models = [st.session_state['lora_model_1'], st.session_state['lora_model_2'], st.session_state['lora_model_3']]                    
                         st.sidebar.info("You can reference each model in your prompt using the following keywords: <1>, <2>, <3> - for example '<1> in the style of <2>.")
-                        st.session_state['adapter_type'] = st.sidebar.selectbox(f"Adapter Type", ["sketch", "seg", "keypose", "depth",None], help="This is the method through the model will infer the shape of the object. ")
+                        lora_adapter_types = ['sketch', 'seg', 'keypose', 'depth', None]
+                        if "index_of_lora_adapter_type" not in st.session_state:
+                            st.session_state['index_of_lora_adapter_type'] = 0
+                        st.session_state['adapter_type'] = st.sidebar.selectbox(f"Adapter Type:", lora_adapter_types, help="This is the method through the model will infer the shape of the object. ", index=st.session_state['index_of_lora_adapter_type'])
+                        if st.session_state['index_of_lora_adapter_type'] != lora_adapter_types.index(st.session_state['adapter_type']):
+                            st.session_state['index_of_lora_adapter_type'] = lora_adapter_types.index(st.session_state['adapter_type'])
                     elif st.session_state['model'] == "Dreambooth":
                         df = pd.read_csv('models.csv')
                         filtered_df = df[df.iloc[:, 5] == 'Dreambooth']
                         dreambooth_model_list = filtered_df.iloc[:, 0].tolist()
-                        custom_models = st.sidebar.selectbox(f"Dreambooth Model", dreambooth_model_list)                    
+                        if 'index_of_dreambooth_model' not in st.session_state:
+                            st.session_state['index_of_dreambooth_model'] = 0
+                        custom_models = st.sidebar.selectbox(f"Dreambooth Model", dreambooth_model_list, index=st.session_state['index_of_dreambooth_model'])
+                        if st.session_state['index_of_dreambooth_model'] != dreambooth_model_list.index(custom_models):
+                            st.session_state['index_of_dreambooth_model'] = dreambooth_model_list.index(custom_models)            
                         st.session_state['adapter_type'] = ""
                     else:
                         custom_models = []
@@ -2674,7 +2711,7 @@ def main():
                     if delete_existing_videos == True:
                         for i in timing_details:   
                             index_of_current_item = timing_details.index(i)                                                             
-                            update_specific_timing_value(project_name, timing_details.index(i), "interpolated_video", "")
+                            update_specific_timing_value(project_name, timing_details.index(i), "timing_video", "")
                         timing_details = get_timing_details(project_name)
                     
                     render_video(project_name, final_video_name)
