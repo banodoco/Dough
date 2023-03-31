@@ -366,6 +366,7 @@ def get_timing_details(video_name):
 
     # Evaluate the alternative_images column and replace it with the evaluated list
     df['alternative_images'] = df['alternative_images'].fillna('').apply(lambda x: ast.literal_eval(x[1:-1]) if x != '' else '')
+    
 
 
     return df.to_dict('records')
@@ -1345,16 +1346,22 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     app_settings = get_app_settings()
     
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-    
+
+    # read as list and remove first and last characters
     lora_models = ast.literal_eval(timing_details[index_of_current_item]["custom_models"][1:-1])
     project_settings = get_project_settings(project_name)
     default_model_url = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
 
     lora_model_urls = []
 
+
+    print(lora_models)
+
     for lora_model in lora_models:
         if lora_model != "":
             lora_model_details = get_model_details(lora_model)
+            print("FUCK IT")
+            print(lora_model_details)
             if lora_model_details['model_url'] != "":            
                 lora_model_url = lora_model_details['model_url']
             else:                
@@ -1379,18 +1386,17 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     inputs = {
     'prompt': timing_details[index_of_current_item]["prompt"],
     'negative_prompt': timing_details[index_of_current_item]["negative_prompt"],
-    'width': project_settings["width"],
-    'height': project_settings["height"],
+    'width': int(project_settings["width"]),
+    'height': int(project_settings["height"]),
     'num_outputs': 1,
     'image': source_image,
-    'num_inference_steps': timing_details[index_of_current_item]["num_inference_steps"],
-    'guidance_scale': timing_details[index_of_current_item]["guidance_scale"],
-    'prompt_strength': timing_details[index_of_current_item]["strength"],
+    'num_inference_steps': int(timing_details[index_of_current_item]["num_inference_steps"]),
+    'guidance_scale': float(timing_details[index_of_current_item]["guidance_scale"]),
+    'prompt_strength': float(timing_details[index_of_current_item]["strength"]),
     'scheduler': "DPMSolverMultistep",
     'lora_urls': lora_model_1_model_url + "|" + lora_model_2_model_url + "|" + lora_model_3_model_url,
     'lora_scales': "0.5 | 0.5 | 0.5",
     'adapter_type': timing_details[index_of_current_item]["adapter_type"],
-    'adapter_condition_image': adapter_condition_image,
      }
     
     max_attempts = 3
