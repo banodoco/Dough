@@ -219,12 +219,13 @@ def move_frame(project_name, index_of_current_item, distance_to_move, timing_det
         
 def get_app_settings():
 
-    app_settings = {}
-    with open("app_settings.csv") as f:
-        lines = [line.split(',') for line in f.read().splitlines()]
-    number_of_rows = len(lines)
-    for i in range(1, number_of_rows):
-        app_settings[lines[i][0]] = lines[i][1]
+    csv_file_path = "app_settings.csv"
+    
+    df = pd.read_csv(csv_file_path, header=None,na_filter=False)
+    
+    
+    app_settings = {row[0]: row[1] for _, row in df.iterrows()}
+    
     return app_settings
 
 
@@ -258,21 +259,14 @@ def get_model_details(model_name):
 
 def update_app_setting(key, pair_value):
     
-    csv_file_path = f'app_settings.csv'
+    csv_file_path = 'app_settings.csv'
     
-    with open(csv_file_path, 'r') as csv_file:
-
-        csv_reader = csv.reader(csv_file)
-
-        for row in csv_reader:
-            if row[0] == key:            
-                row_number = csv_reader.line_num - 2            
-                new_value = pair_value        
+    df = pd.read_csv(csv_file_path,na_filter=False)
     
-    df = pd.read_csv(csv_file_path)
-
-    df.iat[row_number, 1] = new_value
-
+    
+    row_number = df[df.iloc[:, 0] == key].index[0]
+    df.at[row_number, df.columns[1]] = pair_value
+    
     df.to_csv(csv_file_path, index=False)
 
 def create_working_assets(video_name):
@@ -372,6 +366,7 @@ def get_timing_details(video_name):
 
     # Evaluate the alternative_images column and replace it with the evaluated list
     df['alternative_images'] = df['alternative_images'].fillna('').apply(lambda x: ast.literal_eval(x[1:-1]) if x != '' else '')
+    
 
 
     return df.to_dict('records')
@@ -544,12 +539,12 @@ def prompt_model_stability(project_name, index_of_current_item, timing_details, 
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
     index_of_current_item = int(index_of_current_item)
     prompt = timing_details[index_of_current_item]["prompt"]
-    strength = timing_details[index_of_current_item]["strength"]
+    strength = float(timing_details[index_of_current_item]["strength"])
     model = replicate.models.get("cjwbw/stable-diffusion-img2img-v2.1")
     version = model.versions.get("650c347f19a96c8a0379db998c4cd092e0734534591b16a60df9942d11dec15b")    
     if not input_image.startswith("http"):        
         input_image = open(input_image, "rb") 
-    output = version.predict(image=input_image, prompt_strength=str(strength), prompt=prompt, negative_prompt = timing_details[index_of_current_item]["negative_prompt"], width = project_settings["width"], height = project_settings["height"], guidance_scale = float(timing_details[index_of_current_item]["guidance_scale"]), seed = int(timing_details[index_of_current_item]["seed"]), num_inference_steps = int(timing_details[index_of_current_item]["num_inference_steps"]))
+    output = version.predict(image=input_image, prompt_strength=float(strength), prompt=prompt, negative_prompt = timing_details[index_of_current_item]["negative_prompt"], width = int(project_settings["width"]), height = int(project_settings["height"]), guidance_scale = float(timing_details[index_of_current_item]["guidance_scale"]), seed = int(timing_details[index_of_current_item]["seed"]), num_inference_steps = int(timing_details[index_of_current_item]["num_inference_steps"]))
     new_image = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png" 
 
     return output[0]
@@ -813,7 +808,7 @@ def prompt_model_depth2img(strength, image_number, timing_details, source_image)
 
     prompt = timing_details[image_number]["prompt"]
     num_inference_steps = timing_details[image_number]["num_inference_steps"]
-    guidance_scale = timing_details[image_number]["guidance_scale"]
+    guidance_scale = float(timing_details[image_number]["guidance_scale"])
     negative_prompt = timing_details[image_number]["negative_prompt"]
     model = replicate.models.get("jagilley/stable-diffusion-depth2img")
     version = model.versions.get("68f699d395bc7c17008283a7cef6d92edc832d8dc59eb41a6cafec7fc70b85bc")    
@@ -821,7 +816,7 @@ def prompt_model_depth2img(strength, image_number, timing_details, source_image)
     if not source_image.startswith("http"):        
         source_image = open(source_image, "rb")
 
-    output = version.predict(input_image=source_image, prompt_strength=str(strength), prompt=prompt, negative_prompt = negative_prompt, num_inference_steps = num_inference_steps, guidance_scale = guidance_scale)
+    output = version.predict(input_image=source_image, prompt_strength=float(strength), prompt=prompt, negative_prompt = negative_prompt, num_inference_steps = num_inference_steps, guidance_scale = guidance_scale)
     
     return output[0]
 
@@ -1351,16 +1346,22 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     app_settings = get_app_settings()
     
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-    
+
+    # read as list and remove first and last characters
     lora_models = ast.literal_eval(timing_details[index_of_current_item]["custom_models"][1:-1])
     project_settings = get_project_settings(project_name)
     default_model_url = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
 
     lora_model_urls = []
 
+
+    print(lora_models)
+
     for lora_model in lora_models:
         if lora_model != "":
             lora_model_details = get_model_details(lora_model)
+            print("FUCK IT")
+            print(lora_model_details)
             if lora_model_details['model_url'] != "":            
                 lora_model_url = lora_model_details['model_url']
             else:                
@@ -1385,18 +1386,17 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     inputs = {
     'prompt': timing_details[index_of_current_item]["prompt"],
     'negative_prompt': timing_details[index_of_current_item]["negative_prompt"],
-    'width': project_settings["width"],
-    'height': project_settings["height"],
+    'width': int(project_settings["width"]),
+    'height': int(project_settings["height"]),
     'num_outputs': 1,
     'image': source_image,
-    'num_inference_steps': timing_details[index_of_current_item]["num_inference_steps"],
-    'guidance_scale': timing_details[index_of_current_item]["guidance_scale"],
-    'prompt_strength': timing_details[index_of_current_item]["strength"],
+    'num_inference_steps': int(timing_details[index_of_current_item]["num_inference_steps"]),
+    'guidance_scale': float(timing_details[index_of_current_item]["guidance_scale"]),
+    'prompt_strength': float(timing_details[index_of_current_item]["strength"]),
     'scheduler': "DPMSolverMultistep",
     'lora_urls': lora_model_1_model_url + "|" + lora_model_2_model_url + "|" + lora_model_3_model_url,
     'lora_scales': "0.5 | 0.5 | 0.5",
     'adapter_type': timing_details[index_of_current_item]["adapter_type"],
-    'adapter_condition_image': adapter_condition_image,
      }
     
     max_attempts = 3
@@ -1593,6 +1593,9 @@ def main():
         st.session_state["welcome_state"] = app_settings["welcome_state"]                       
     if st.session_state["online"] == True:
         st.error("**PLEASE READ:** This is a demo app. While you can click around, *buttons & queries won't work* and some things won't display properly. To use the proper version, follow the instructions [here](https://github.com/peter942/banodoco) to run it locally.")
+    else:
+        if app_settings["replicate_com_api_key"] == "":
+            st.error("**To run restyling and other functions, you need to set your Replicate.com API key by going to Settings -> App Settings.**")
     
     def project_changed():
         st.session_state["project_changed"] = True
@@ -1616,11 +1619,13 @@ def main():
             else:
                 if st.button("Previous Step"):
                     st.session_state["welcome_state"] = str(int(step) - 1)
-                    update_app_setting("welcome_state", st.session_state["welcome_state"])                
+                    update_app_setting("welcome_state", st.session_state["welcome_state"])                                    
                     st.experimental_rerun()
             
             if st.button("Skip Intro"):
                 st.session_state["welcome_state"] = 7
+                update_app_setting("welcome_state", st.session_state["welcome_state"]) 
+                st.experimental_rerun()
         with button2:
             st.write("")
             
@@ -2119,8 +2124,8 @@ def main():
                     if st.button("Save Settings"):
                         update_app_setting("replicate_user_name", replicate_user_name)
                         update_app_setting("replicate_com_api_key", replicate_com_api_key)
-                        update_app_setting("aws_access_key_id", aws_access_key_id)
-                        update_app_setting("aws_secret_access_key", aws_secret_access_key)
+                        # update_app_setting("aws_access_key_id", aws_access_key_id)
+                        # update_app_setting("aws_secret_access_key", aws_secret_access_key)
                         st.experimental_rerun()
 
                 with st.expander("Reset Welcome Sequence"):
