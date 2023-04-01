@@ -629,7 +629,7 @@ def prompt_model_dreambooth(project_name, image_number, model_name, app_settings
     input_image = image_url
     if not input_image.startswith("http"):        
         input_image = open(input_image, "rb")
-    output = version.predict(image=input_image, prompt=prompt, prompt_strength=strength, height = project_settings["height"], width = project_settings["width"], disable_safety_check=True, negative_prompt = negative_prompt, guidance_scale = guidance_scale, seed = seed, num_inference_steps = num_inference_steps)
+    output = version.predict(image=input_image, prompt=prompt, prompt_strength=float(strength), height = int(project_settings["height"]), width = int(project_settings["width"]), disable_safety_check=True, negative_prompt = negative_prompt, guidance_scale = float(guidance_scale), seed = int(seed), num_inference_steps = int(num_inference_steps))
 
     new_image = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(image_number) + ".png"
     
@@ -1339,10 +1339,10 @@ def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
     'prompt': timing_details[index_of_current_item]["prompt"],
     'num_samples': "1",
     'image_resolution': "512",    
-    'ddim_steps': timing_details[index_of_current_item]["num_inference_steps"],
-    'scale': timing_details[index_of_current_item]["guidance_scale"],
+    'ddim_steps': int(timing_details[index_of_current_item]["num_inference_steps"]),
+    'scale': float(timing_details[index_of_current_item]["guidance_scale"]),
     'eta': 0, 
-    'seed': timing_details[index_of_current_item]["seed"],   
+    'seed': int(timing_details[index_of_current_item]["seed"]),   
     'a_prompt': "best quality, extremely detailed",    
     'n_prompt': timing_details[index_of_current_item]["negative_prompt"] + ", longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",        
     'detect_resolution': 512,    
@@ -1374,13 +1374,9 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
 
     lora_model_urls = []
 
-
-    print(lora_models)
-
     for lora_model in lora_models:
         if lora_model != "":
-            lora_model_details = get_model_details(lora_model)
-            print("FUCK IT")
+            lora_model_details = get_model_details(lora_model)            
             print(lora_model_details)
             if lora_model_details['model_url'] != "":            
                 lora_model_url = lora_model_details['model_url']
@@ -2393,13 +2389,17 @@ def main():
                         st.session_state['index_of_which_stage_to_run_on'] = stages.index(st.session_state['which_stage_to_run_on'])
                         st.experimental_rerun()
 
-                    custom_pipelines = ["None","Mystique"]                    
-                    index_of_last_custom_pipeline = custom_pipelines.index(st.session_state['custom_pipeline'])
-                    st.session_state['custom_pipeline'] = st.sidebar.selectbox(f"Custom Pipeline:", custom_pipelines, index=index_of_last_custom_pipeline)                    
+                    custom_pipelines = ["None","Mystique"]                   
+                    if 'index_of_last_custom_pipeline' not in st.session_state:
+                        st.session_state['index_of_last_custom_pipeline'] = 0
+                    
+                    st.session_state['custom_pipeline'] = st.sidebar.selectbox(f"Custom Pipeline:", custom_pipelines, index=st.session_state['index_of_last_custom_pipeline'])
+                    if st.session_state['custom_pipeline'] == "Mystique" and st.session_state['index_of_last_custom_pipeline'] == 0:
+                        st.session_state['index_of_last_custom_pipeline'] = 1
+                        st.experimental_rerun()
                     if st.session_state['custom_pipeline'] == "Mystique":
-                        if st.session_state['index_of_last_model'] != 0 or st.session_state['index_of_last_model'] != 1:
-                            st.session_state['index_of_last_model'] = 0
-                            st.experimental_rerun()
+                        if st.session_state['index_of_last_custom_pipeline'] > 1:
+                            st.session_state['index_of_last_custom_pipeline'] = 0                            
                         st.sidebar.info("Mystique is a custom pipeline that uses a multiple models to generate a consistent character and style transformation.")
                         with st.sidebar.expander("Mystique pipeline instructions"):
                             st.markdown("## How to use the Mystique pipeline")                
@@ -2407,10 +2407,11 @@ def main():
                             st.markdown("2. It's best to include a detailed prompt. We recommend taking an example input image and running it through the Prompt Finder")
                             st.markdown("3. Use [expression], [location], [mouth], and [looking] tags to vary the expression and location of the character dynamically if that changes throughout the clip. Varying this in the prompt will make the character look more natural - especially useful if the character is speaking.")
                             st.markdown("4. In our experience, the best strength for coherent character transformations is 0.25-0.3 - any more than this and details like eye position change.")                                        
-                        st.session_state['model'] = st.sidebar.selectbox(f"Which type of model is trained on your character?", ["LoRA","Dreambooth"], index=st.session_state['index_of_last_model'])                    
-                        if st.session_state['index_of_last_model'] == 1 and st.session_state['model'] == "LoRA":
-                            st.session_state['index_of_last_model'] = 0  
-                            st.experimental_rerun()                          
+                        models = ['LoRA','Dreambooth']
+                        st.session_state['model'] = st.sidebar.selectbox(f"Which type of model is trained on your character?", models, index=st.session_state['index_of_last_model'])                    
+                        if st.session_state['index_of_last_model'] != models.index(st.session_state['model']):
+                            st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
+                            st.experimental_rerun()                      
                     else:
                         models = ['stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'controlnet', 'Dreambooth', 'LoRA','StyleGAN-NADA','dreambooth_controlnet']
                         st.session_state['model'] = st.sidebar.selectbox(f"Model", models, index=st.session_state['index_of_last_model'])
@@ -2472,7 +2473,7 @@ def main():
                         st.session_state['adapter_type'] = "N"
                     
                     if st.session_state['model'] == "StyleGAN-NADA":
-                        st.sidebar.info("StyleGAN-NADA is a custom model that uses StyleGAN to generate a consistent character and style transformation.")
+                        st.sidebar.warning("StyleGAN-NADA is a custom model that uses StyleGAN to generate a consistent character and style transformation. It only works for square images.")
                         st.session_state['prompt'] = st.sidebar.selectbox("What style would you like to apply to the character?", ['base', 'mona_lisa', 'modigliani', 'cubism', 'elf', 'sketch_hq', 'thomas', 'thanos', 'simpson', 'witcher', 'edvard_munch', 'ukiyoe', 'botero', 'shrek', 'joker', 'pixar', 'zombie', 'werewolf', 'groot', 'ssj', 'rick_morty_cartoon', 'anime', 'white_walker', 'zuckerberg', 'disney_princess', 'all', 'list'])
                         st.session_state['strength'] = 0.5
                         st.session_state['guidance_scale'] = 7.5
@@ -3458,4 +3459,3 @@ def main():
                                                 
 if __name__ == '__main__':
     main()
-
