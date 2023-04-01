@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 venv
 .env
 videos
@@ -6,3 +7,12 @@ videos
 __pycache__/
 *.py[cod]
 *$py.class
+=======
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+venv
+.vscode
+>>>>>>> dc53c940e80d6f3b3d99fb2b2fbc89256a9af0f3

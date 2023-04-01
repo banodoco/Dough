@@ -1,4 +1,4 @@
-# Welcome to Banodoco!
+# Welcome to Banodoco - V.0.2 Alpha Version!
 
 Banodoco is a simple but powerful open source animation tool build on top of Stable Diffusion, Google FILM, and various other online machine models.
 
