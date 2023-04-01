@@ -7,4 +7,4 @@ venv
 .vscode
 
 # user files
-./app_settings.csv
+app_settings.csv
