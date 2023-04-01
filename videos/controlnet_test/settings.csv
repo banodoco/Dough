@@ -1,18 +1,18 @@
 key,value
-last_prompt,a close up of HE MAN  with a shirt on. yellow background. digital art. inspired by Earl Norem. shock art. pink golden hour. he is screaming. render to resolute perfection. he - man!!!!!. marvelous designer 3d rendered. neon colored suit. war cry. sonic power. idol. absolute chad. 8k archival print. nightcore
-last_model,LoRA
-last_strength,0.3
+last_prompt,a stylish girl wearing stylish streetwear in a convenience store. Oil painting. by Ilya Kuvshinov. Greg Rutkowski and Makoto Shinkai.
+last_model,depth2img
+last_strength,0.7
 last_custom_pipeline,None
 audio,
 input_type,Video
-input_video,recorded_heman.mp4
-extraction_type,Extract manually
+input_video,pexels-mikhail-nilov-6706912.mp4
+extraction_type,Regular intervals
 width,704
 height,512
 last_negative_prompt,"nudity, boobs, breasts, naked, nsfw"
-last_guidance_scale,5.039999999999999
+last_guidance_scale,7.5
 last_seed,0
-last_num_inference_steps,50
+last_num_inference_steps,100
 last_which_stage_to_run_on,Extracted Key Frames
-last_custom_models,"['He Man', 'Goaty McDudeFace', '']"
-last_adapter_type,sketch
+last_custom_models,[]
+last_adapter_type,N

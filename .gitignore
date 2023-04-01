@@ -5,3 +5,6 @@ __pycache__/
 
 venv
 .vscode
+
+# user files
+./app_settings.csv
