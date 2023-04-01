@@ -30,7 +30,21 @@ import numpy as np
 
 st.set_page_config(page_title="Banodoco")
 
-def inpainting(video_name, input_image, prompt, negative_prompt):
+def create_or_update_mask(project_name, index_of_current_number, image):
+    timing_details = get_timing_details(project_name)
+    if timing_details[index_of_current_number]["mask"] == "":
+        unique_file_name = str(uuid.uuid4()) + ".png"
+        update_specific_timing_value(project_name, index_of_current_number, "mask", f"videos/{project_name}/assets/resources/masks/{unique_file_name}")
+        timing_details = get_timing_details(project_name)
+    else:                                        
+        unique_file_name = timing_details[st.session_state['which_image']]["mask"].split("/")[-1]                                                                                                                                                                                     
+    file_location = f"videos/{project_name}/assets/resources/masks/{unique_file_name}"
+    image.save(file_location, "PNG")
+    return file_location
+
+
+
+def inpainting(video_name, input_image, prompt, negative_prompt,index_of_current_item):
 
     app_settings = get_app_settings()
     timing_details = get_timing_details(video_name)
@@ -40,8 +54,11 @@ def inpainting(video_name, input_image, prompt, negative_prompt):
     model = replicate.models.get("andreasjansson/stable-diffusion-inpainting")
 
     version = model.versions.get("e490d072a34a94a11e9711ed5a6ba621c3fab884eda1665d9d3a282d65a21180")
-    mask = "mask.png"
-    mask = upload_image("mask.png")
+    
+    mask = timing_details[index_of_current_item]["mask"]
+
+    if not mask.startswith("http"):
+        mask = open(mask, "rb")
         
     if not input_image.startswith("http"):        
         input_image = open(input_image, "rb")
@@ -302,7 +319,7 @@ def create_working_assets(video_name):
 
     df.to_csv(f'videos/{video_name}/settings.csv', index=False)
 
-    df = pd.DataFrame(columns=['frame_time','frame_number','primary_image','alternative_images','custom_pipeline','negative_prompt','guidance_scale','seed','num_inference_steps','model_id','strength','notes','source_image','custom_models','adapter_type','duration_of_clip','interpolated_video','timing_video','prompt'])
+    df = pd.DataFrame(columns=['frame_time','frame_number','primary_image','alternative_images','custom_pipeline','negative_prompt','guidance_scale','seed','num_inference_steps','model_id','strength','notes','source_image','custom_models','adapter_type','duration_of_clip','interpolated_video','timing_video','prompt','mask'])
 
     # df.loc[0] = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
 
@@ -1168,7 +1185,7 @@ def create_gif_preview(project_name, timing_details):
     imageio.mimsave(f'videos/{project_name}/preview_gif.gif', frames, fps=0.5)
 
 
-def create_depth_mask_image(input_image,layer):
+def create_depth_mask_image(input_image,layer,project_name, index_of_current_item):
     
     app_settings = get_app_settings()
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]            
@@ -1198,7 +1215,10 @@ def create_depth_mask_image(input_image,layer):
             elif layer == "Background":
                 mask_pixels[i, j] = 0 if depth_value <= 50 else 255  # Set background pixels to black
 
-    mask.save("mask.png") 
+    return create_or_update_mask(project_name, index_of_current_item, mask)
+
+    
+
 
 
 
@@ -1428,17 +1448,17 @@ def attach_audio_element(project_name, project_settings,expanded):
         if project_settings["audio"] != "":
             st.audio(f"videos/{project_name}/assets/resources/audio/{project_settings['audio']}")
     
-def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, prompt, negative_prompt, width, height, layer):
+def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, editing_image, prompt, negative_prompt, width, height, layer, index_of_current_item):
 
     if type_of_mask_selection == "Automated Background Selection":  
-        removed_background = remove_background(project_name, bg_image)
+        removed_background = remove_background(project_name, editing_image)
         response = r.get(removed_background)                                
         with open("masked_image.png", "wb") as f:
             f.write(response.content)    
         if type_of_mask_replacement == "Replace With Image":                                               
             replace_background(project_name, "masked_image.png", background_image) 
             edited_image = upload_image(f"videos/{project_name}/replaced_bg.png") 
-        elif type_of_mask_replacement == "Inpainting":
+        elif type_of_mask_replacement == "Inpainting":            
             image = Image.open("masked_image.png")
             converted_image = Image.new("RGB", image.size, (255, 255, 255))
             for x in range(image.width):
@@ -1447,18 +1467,24 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
                     if pixel[3] == 0:                                    
                         converted_image.putpixel((x, y), (0,0,0))
                     else:                                    
-                        converted_image.putpixel((x, y), (255, 255, 255))                                            
-            converted_image.save("mask.png")
-            edited_image = inpainting(project_name, bg_image, prompt, negative_prompt)                                                                                                
+                        converted_image.putpixel((x, y), (255, 255, 255))    
+            create_or_update_mask(project_name, index_of_current_item, converted_image)            
+            edited_image = inpainting(project_name, editing_image, prompt, negative_prompt,index_of_current_item)                                                                                                
                 
     elif type_of_mask_selection == "Manual Background Selection":
         if type_of_mask_replacement == "Replace With Image":    
-            response = r.get(bg_image)
-            # if the image is
-            bg_img = Image.open(BytesIO(response.content))                        
-            mask_img = Image.open("mask.png")    
-            # check if the mask image has a transparent background
-                                       
+            if editing_image.startswith("http"):
+                response = r.get(editing_image)
+                bg_img = Image.open(BytesIO(response.content))
+            else:
+                bg_img = Image.open(editing_image)
+            timing_detials = get_timing_details(project_name)
+            mask_location = timing_detials[index_of_current_item]["mask"]
+            if mask_location.startswith("http"):
+                response = r.get(mask_location)
+                mask_img = Image.open(BytesIO(response.content))
+            else:
+                mask_img = Image.open(mask_location)                                                       
             result_img = Image.new("RGBA", bg_img.size, (255, 255, 255, 0))                                
             for x in range(bg_img.size[0]):
                 for y in range(bg_img.size[1]):                                        
@@ -1470,28 +1496,58 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
             replace_background(project_name, "masked_image.png", background_image)
             edited_image = upload_image(f"videos/{project_name}/replaced_bg.png")
         elif type_of_mask_replacement == "Inpainting":
-            im = Image.open("mask.png")
+            timing_detials = get_timing_details(project_name)
+            mask_location = timing_detials[index_of_current_item]["mask"]
+            if mask_location.startswith("http"):
+                response = r.get(mask_location)
+                im = Image.open(BytesIO(response.content))
+            else:
+                im = Image.open(mask_location)
             if "A" in im.getbands():
                 mask = Image.new('RGB', (width, height), color = (255, 255, 255))
                 mask.paste(im, (0, 0), im)                                    
-                mask.save("mask.png")
-            edited_image = inpainting(project_name, bg_image, prompt, negative_prompt)
+                create_or_update_mask(project_name, index_of_current_item, mask)
+            edited_image = inpainting(project_name, editing_image, prompt, negative_prompt,index_of_current_item)
+    
     elif type_of_mask_selection == "Automated Layer Selection":
-        create_depth_mask_image(bg_image,layer)
+        mask_location = create_depth_mask_image(editing_image,layer, project_name, index_of_current_item)
         if type_of_mask_replacement == "Replace With Image":
-            mask = Image.open("mask.png").convert('1')
-
-            response = r.get(bg_image)
-            bg_img = Image.open(BytesIO(response.content)).convert('RGBA')                            
+            if mask_location.startswith("http"):
+                mask = Image.open(BytesIO(r.get(mask_location).content)).convert('1')
+            else:
+                mask = Image.open(mask_location).convert('1')
+            if editing_image.startswith("http"):
+                response = r.get(editing_image)
+                bg_img = Image.open(BytesIO(response.content)).convert('RGBA')                            
+            else:
+                bg_img = Image.open(editing_image).convert('RGBA')
             masked_img = Image.composite(bg_img, Image.new('RGBA', bg_img.size, (0,0,0,0)), mask)            
+            masked_img.save("masked_image.png")                                                                                                                  
+            replace_background(project_name, "masked_image.png", background_image)
+            edited_image = upload_image(f"videos/{project_name}/replaced_bg.png")            
+        elif type_of_mask_replacement == "Inpainting":
+            edited_image = inpainting(project_name, editing_image, prompt, negative_prompt,index_of_current_item)
+                        
+    elif type_of_mask_selection == "Re-Use Previous Mask":
+        timing_detials = get_timing_details(project_name)
+        mask_location = timing_detials[index_of_current_item]["mask"]
+        if type_of_mask_replacement == "Replace With Image":
+            if mask_location.startswith("http"):
+                response = r.get(mask_location)
+                mask = Image.open(BytesIO(response.content)).convert('1')
+            else:
+                mask = Image.open(mask_location).convert('1')
+            if editing_image.startswith("http"):
+                response = r.get(editing_image)
+                bg_img = Image.open(BytesIO(response.content)).convert('RGBA')
+            else:
+                bg_img = Image.open(editing_image).convert('RGBA')            
+            masked_img = Image.composite(bg_img, Image.new('RGBA', bg_img.size, (0,0,0,0)), mask)
             masked_img.save("masked_image.png")
-                                                                                                                  
             replace_background(project_name, "masked_image.png", background_image)
             edited_image = upload_image(f"videos/{project_name}/replaced_bg.png")
-            
         elif type_of_mask_replacement == "Inpainting":
-            edited_image = inpainting(project_name, bg_image, prompt, negative_prompt)
-                        
+            edited_image = inpainting(project_name, editing_image, prompt, negative_prompt,index_of_current_item)
 
     return edited_image
 
@@ -3014,8 +3070,9 @@ def main():
                             st.experimental_rerun()
                     with f2:                
                         st.session_state['which_stage'] = st.radio('Select stage:', ["Unedited Key Frame", "Styled Key Frame"], horizontal=True, on_change=reset_new_image, index=st.session_state['which_stage_index'])
-                        if st.session_state['which_stage'] == "Styled Key Frame":
+                        if st.session_state['which_stage'] == "Styled Key Frame" and st.session_state['which_stage_index'] == 0:
                             st.session_state['which_stage_index'] = 1
+                            st.experimental_rerun()
                         # st.session_state['which_image'] = st.slider('Select image to edit:', 0, len(timing_details)-1, st.session_state["which_image"])
 
                     with f3:                
@@ -3033,19 +3090,21 @@ def main():
                     else:
 
                         if st.session_state['which_stage'] == "Unedited Key Frame":
-                            bg_image = timing_details[st.session_state['which_image']]["source_image"]
+                            editing_image = timing_details[st.session_state['which_image']]["source_image"]
                         elif st.session_state['which_stage'] == "Styled Key Frame":                                             
                             variants = timing_details[st.session_state['which_image']]["alternative_images"]
                             primary_image = timing_details[st.session_state['which_image']]["primary_image"]             
-                            bg_image = variants[primary_image]
+                            editing_image = variants[primary_image]
                 
                         width = int(project_settings["width"])
                         height = int(project_settings["height"])
 
                         
                         st.sidebar.markdown("### Select Area To Edit:") 
-                        type_of_mask_selection = st.sidebar.radio("How would you like to select what to edit?", ["Automated Background Selection", "Automated Layer Selection", "Manual Background Selection"], horizontal=True)
-                    
+                        type_of_mask_selection = st.sidebar.radio("How would you like to select what to edit?", ["Automated Background Selection", "Automated Layer Selection", "Manual Background Selection","Re-Use Previous Mask"], horizontal=True)
+                        
+                        
+
                         if "which_layer" not in st.session_state:
                             st.session_state['which_layer'] = "Background"
 
@@ -3055,11 +3114,11 @@ def main():
 
                         if type_of_mask_selection == "Manual Background Selection":
                             if st.session_state['edited_image'] == "":                                
-                                if bg_image.startswith("http"):
-                                    canvas_image = r.get(bg_image)
+                                if editing_image.startswith("http"):
+                                    canvas_image = r.get(editing_image)
                                     canvas_image = Image.open(BytesIO(canvas_image.content))
                                 else:
-                                    canvas_image = Image.open(bg_image)
+                                    canvas_image = Image.open(editing_image)
                                 if 'drawing_input' not in st.session_state:
                                     st.session_state['drawing_input'] = 'Magic shapes 🪄'
                                 col1, col2 = st.columns([6,3])
@@ -3105,27 +3164,39 @@ def main():
                                 if 'image_created' not in st.session_state:
                                     st.session_state['image_created'] = 'no'
 
+                            
+
+
                                 if canvas_result.image_data is not None:
                                     img_data = canvas_result.image_data
                                     im = Image.fromarray(img_data.astype("uint8"), mode="RGBA")
-                                    im.save(f"mask.png", "PNG")
+                                    # save the image with a random filename
+                                    create_or_update_mask(project_name, st.session_state['which_image'], im)
+                                    
                             else:
                                 image_comparison(
-                                    img1=bg_image,
+                                    img1=editing_image,
                                     img2=st.session_state['edited_image'], starting_position=5, label1="Original", label2="Edited")  
                                 if st.button("Reset Canvas"):
                                     st.session_state['edited_image'] = ""
                                     st.experimental_rerun()
                         
-                        elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection":
+                        elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection" or type_of_mask_selection == "Re-Use Previous Mask":
+                            if type_of_mask_selection == "Re-Use Previous Mask" and timing_details[st.session_state['which_image']]["mask"] == "":
+                                st.sidebar.info("You don't have a previous mask to re-use.")
                             if st.session_state['edited_image'] == "":
-                                st.image(bg_image, use_column_width=True)
+                                st.image(editing_image, use_column_width=True)
                             else:
                                 image_comparison(
-                                    img1=bg_image,
-                                    img2=st.session_state['edited_image'], starting_position=5, label1="Original", label2="Edited")                    
+                                    img1=editing_image,
+                                    img2=st.session_state['edited_image'], starting_position=5, label1="Original", label2="Edited") 
+                                if st.button("Reset Canvas"):
+                                    st.session_state['edited_image'] = ""
+                                    st.experimental_rerun()
+
+
                                 
-                                                    
+                                                
 
                         st.sidebar.markdown("### Edit Individual Image:") 
 
@@ -3173,9 +3244,9 @@ def main():
                         with edit1:
                             if st.button(f'Run Edit On Current Image'):
                                 if st.session_state["type_of_mask_replacement"] == "Inpainting":
-                                    st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, "", bg_image, prompt, negative_prompt,width, height,st.session_state['which_layer'])
+                                    st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, "", editing_image, prompt, negative_prompt,width, height,st.session_state['which_layer'], st.session_state['which_image'])
                                 elif st.session_state["type_of_mask_replacement"] == "Replace With Image":
-                                    st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, bg_image, "", "",width, height,st.session_state['which_layer'])
+                                    st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, editing_image, "", "",width, height,st.session_state['which_layer'], st.session_state['which_image'])
                                 st.experimental_rerun()
                         with edit2:
                             if st.session_state['edited_image'] != "":                                     
@@ -3190,9 +3261,9 @@ def main():
                             else:
                                 if st.button("Run Edit & Promote"):
                                     if st.session_state["type_of_mask_replacement"] == "Inpainting":
-                                        st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, "", bg_image, prompt, negative_prompt,width, height,st.session_state['which_layer'])
+                                        st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, "", editing_image, prompt, negative_prompt,width, height,st.session_state['which_layer'], st.session_state['which_image'])
                                     elif st.session_state["type_of_mask_replacement"] == "Replace With Image":
-                                        st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, bg_image, "", "",width, height,st.session_state['which_layer'])
+                                        st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, editing_image, "", "",width, height,st.session_state['which_layer'], st.session_state['which_image'])
                                     if st.session_state['which_stage'] == "Unedited Key Frame":                        
                                         update_source_image(project_name, st.session_state['which_image'], st.session_state['edited_image'])
                                     elif st.session_state['which_stage'] == "Styled Key Frame":
@@ -3245,14 +3316,14 @@ def main():
                             if st.session_state["type_of_mask_replacement"] == "Inpainting":
                                     background_image = ""
                             if st.session_state['which_stage'] == "Unedited Key Frame":
-                                bg_image = timing_details[i]["source_image"]                            
-                                edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, bg_image, prompt, negative_prompt, width, height,st.session_state['which_layer'])
+                                editing_image = timing_details[i]["source_image"]                            
+                                edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, editing_image, prompt, negative_prompt, width, height,st.session_state['which_layer'], st.session_state['which_image'])
                                 update_source_image(project_name, st.session_state['which_image'], edited_image)
                             elif st.session_state['which_stage'] == "Styled Key Frame":
                                 variants = timing_details[i]["alternative_images"]
                                 primary_image = timing_details[i]["primary_image"]             
-                                bg_image = variants[primary_image]   
-                                edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, bg_image, prompt, negative_prompt, width, height,st.session_state['which_layer'])   
+                                editing_image = variants[primary_image]   
+                                edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, editing_image, prompt, negative_prompt, width, height,st.session_state['which_layer'], st.session_state['which_image'])
                                 number_of_image_variants = add_image_variant(edited_image, i, project_name, timing_details)                        
                                 promote_image_variant(i, project_name, number_of_image_variants-1)
 
