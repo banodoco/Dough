@@ -467,7 +467,7 @@ def replace_background(video_name, foreground_image, background_image):
         response = r.get(background_image)
         background_image = Image.open(BytesIO(response.content))
     else:
-        background_image = Image.open(f"videos/{video_name}/assets/resources/backgrounds/{background_image}")
+        background_image = Image.open(f"{background_image}")
     foreground_image = Image.open(f"masked_image.png")
     background_image.paste(foreground_image, (0, 0), foreground_image)
     background_image.save(f"videos/{video_name}/replaced_bg.png")

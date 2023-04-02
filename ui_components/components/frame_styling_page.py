@@ -119,11 +119,10 @@ def frame_styling_page(mainheader2, project_name):
 
         custom_pipelines = ["None","Mystique"]                   
         if 'index_of_last_custom_pipeline' not in st.session_state:
-            st.session_state['index_of_last_custom_pipeline'] = 0
-
+            st.session_state['index_of_last_custom_pipeline'] = 0        
         st.session_state['custom_pipeline'] = st.sidebar.selectbox(f"Custom Pipeline:", custom_pipelines, index=st.session_state['index_of_last_custom_pipeline'])
-        if st.session_state['custom_pipeline'] == "Mystique" and st.session_state['index_of_last_custom_pipeline'] == 0:
-            st.session_state['index_of_last_custom_pipeline'] = 1
+        if custom_pipelines.index(st.session_state['custom_pipeline']) != st.session_state['index_of_last_custom_pipeline']:
+            st.session_state['index_of_last_custom_pipeline'] = custom_pipelines.index(st.session_state['custom_pipeline'])
             st.experimental_rerun()
 
         if st.session_state['custom_pipeline'] == "Mystique":
@@ -135,15 +134,15 @@ def frame_styling_page(mainheader2, project_name):
                 st.markdown("1. Create a fine-tined model in the Custom Model section of the app - we recommend Dreambooth for character transformations.")
                 st.markdown("2. It's best to include a detailed prompt. We recommend taking an example input image and running it through the Prompt Finder")
                 st.markdown("3. Use [expression], [location], [mouth], and [looking] tags to vary the expression and location of the character dynamically if that changes throughout the clip. Varying this in the prompt will make the character look more natural - especially useful if the character is speaking.")
-                st.markdown("4. In our experience, the best strength for coherent character transformations is 0.25-0.3 - any more than this and details like eye position change.")                                        
-            st.session_state['model'] = st.sidebar.selectbox(f"Which type of model is trained on your character?", ["LoRA","Dreambooth"], index=st.session_state['index_of_last_model'])                    
-            if st.session_state['index_of_last_model'] == 1 and st.session_state['model'] == "LoRA":
-                st.session_state['index_of_last_model'] = 0  
+                st.markdown("4. In our experience, the best strength for coherent character transformations is 0.25-0.3 - any more than this and details like eye position change.")  
+            models = ["LoRA","Dreambooth"]                                     
+            st.session_state['model'] = st.sidebar.selectbox(f"Which type of model is trained on your character?", models, index=st.session_state['index_of_last_model'])                    
+            if st.session_state['index_of_last_model'] != models.index(st.session_state['model']):
+                st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
                 st.experimental_rerun()                          
         else:
-            models = ['stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'controlnet', 'Dreambooth', 'LoRA','StyleGAN-NADA','dreambooth_controlnet']
-            models = ['LoRA','Dreambooth']
-            st.session_state['model'] = st.sidebar.selectbox(f"Which type of model is trained on your character?", models, index=st.session_state['index_of_last_model'])                    
+            models = ['stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'controlnet', 'Dreambooth', 'LoRA','StyleGAN-NADA','dreambooth_controlnet']            
+            st.session_state['model'] = st.sidebar.selectbox(f"Which model would you like to use?", models, index=st.session_state['index_of_last_model'])                    
             if st.session_state['index_of_last_model'] != models.index(st.session_state['model']):
                 st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
                 st.experimental_rerun() 

@@ -13,6 +13,8 @@ from utils.file_upload.s3 import upload_image
 
 def frame_editing_page(project_name):
     # if 0_extract folder is empty, show error
+    
+    timing_details = get_timing_details(project_name)
 
     if len(timing_details) == 0:
         st.info("You need to add  key frames first in the Key Frame Selection section.")
@@ -207,9 +209,11 @@ def frame_editing_page(project_name):
                                     time.sleep(1.5)
                                     st.experimental_rerun()                                
                     with btn2:
-                        background_image = st.sidebar.selectbox("Range background", background_list)
+                        background_selection = st.sidebar.selectbox("Range background", background_list)                        
+                        background_image = f'videos/{project_name}/assets/resources/backgrounds/{background_selection}'
+                        st.write(f"Background image: {background_image}")
                         if background_list != []:
-                            st.image(f"videos/{project_name}/assets/resources/backgrounds/{background_image}", use_column_width=True)
+                            st.image(f"{background_image}", use_column_width=True)
                 elif source_of_image == "From Other Frame":
                     btn1, btn2 = st.sidebar.columns([1,1])
                     with btn1:
@@ -217,6 +221,7 @@ def frame_editing_page(project_name):
                         which_image_to_use = st.number_input("Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0)
                         if which_stage_to_use == "Unedited Key Frame":                                    
                             background_image = timing_details[which_image_to_use]["source_image"]
+                            
                         elif which_stage_to_use == "Styled Key Frame":
                             variants = timing_details[which_image_to_use]["alternative_images"]
                             primary_image = timing_details[which_image_to_use]["primary_image"]             

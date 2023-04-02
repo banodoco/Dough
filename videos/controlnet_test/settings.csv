@@ -1,7 +1,7 @@
 key,value
-last_prompt,a stylish girl wearing stylish streetwear in a convenience store. Oil painting. by Ilya Kuvshinov. Greg Rutkowski and Makoto Shinkai.
-last_model,depth2img
-last_strength,0.7
+last_prompt,<1> looking crazy
+last_model,controlnet
+last_strength,0.5
 last_custom_pipeline,None
 audio,
 input_type,Video
@@ -13,6 +13,6 @@ last_negative_prompt,"nudity, boobs, breasts, naked, nsfw"
 last_guidance_scale,7.5
 last_seed,0
 last_num_inference_steps,100
-last_which_stage_to_run_on,Extracted Key Frames
+last_which_stage_to_run_on,Current Main Variants
 last_custom_models,[]
-last_adapter_type,N
+last_adapter_type,normal
