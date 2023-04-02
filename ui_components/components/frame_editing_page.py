@@ -7,7 +7,7 @@ import requests as r
 from streamlit_drawable_canvas import st_canvas
 from streamlit_image_comparison import image_comparison
 
-from repository.local_repo.csv_data import get_project_settings
+from repository.local_repo.csv_repo import get_project_settings
 from ui_components.common_methods import add_image_variant, create_or_update_mask, execute_image_edit, extract_frame, get_timing_details, promote_image_variant, update_source_image
 from utils.file_upload.s3 import upload_image
 

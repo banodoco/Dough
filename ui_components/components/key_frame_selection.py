@@ -3,9 +3,9 @@ import cv2, os
 import time
 from PIL import Image
 from moviepy.video.io.VideoFileClip import VideoFileClip
-from repository.local_repo.csv_data import get_project_settings, remove_existing_timing, update_project_setting
+from repository.local_repo.csv_repo import get_project_settings, remove_existing_timing, update_project_setting, update_specific_timing_value
 
-from ui_components.common_methods import calculate_frame_number_at_time, create_timings_row_at_frame_number, create_video_without_interpolation, delete_frame, extract_frame, get_timing_details, preview_frame, update_specific_timing_value
+from ui_components.common_methods import calculate_frame_number_at_time, create_timings_row_at_frame_number, create_video_without_interpolation, delete_frame, extract_frame, get_timing_details, preview_frame
 from utils.media_processor.video import resize_video
 
 def key_frame_selection_page(mainheader2, project_name):             
@@ -23,6 +23,7 @@ def key_frame_selection_page(mainheader2, project_name):
         st.sidebar.warning("No input video selected - please select one below.")
     if project_settings["input_video"] != "":
         st.sidebar.success("Input video selected - you can change this below.")
+
     with st.sidebar.expander("Select input video", expanded=False):   
         input_video_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/input_videos') if f.endswith(('.mp4', '.mov','.MOV', '.avi'))]       
         if project_settings["input_video"] != "": 
@@ -107,15 +108,8 @@ def key_frame_selection_page(mainheader2, project_name):
                 st.experimental_rerun()
         else:                    
             st.sidebar.button("Extract frames", disabled=True)
-
-            
-
     elif type_of_extraction == "Extract manually":
         st.sidebar.info("On the right, you'll see a toggle to choose which frames to extract. You can also use the slider to choose the granularity of the frames you want to extract.")
-        
-        
-
-
     elif type_of_extraction == "Extract from csv":
         st.sidebar.subheader("Re-extract key frames using existing timings file")
         st.sidebar.write("This will re-extract all frames based on the timings file. This is useful if you've changed the granularity of your key frames manually.")
@@ -136,13 +130,14 @@ def key_frame_selection_page(mainheader2, project_name):
     if len(timing_details) == 0:
         st.info("Once you've added key frames, they'll appear here.")                
     else:
-
+        # which_image_value is the current keyframe number
         if "which_image_value" not in st.session_state:
             st.session_state['which_image_value'] = 0
 
         
         timing_details = get_timing_details(project_name)
-                            
+        
+        # 0 -> list view, 1 -> single view
         if 'key_frame_view_type_index' not in st.session_state:
             st.session_state['key_frame_view_type_index'] = 0
         
@@ -151,12 +146,14 @@ def key_frame_selection_page(mainheader2, project_name):
 
         st.session_state['key_frame_view_type'] = st.radio("View type:", view_types, key="which_view_type", horizontal=True, index=st.session_state['key_frame_view_type_index'])                        
         
+        # if displayed_view != selected_view then rerun()
         if view_types.index(st.session_state['key_frame_view_type']) != st.session_state['key_frame_view_type_index']:
             st.session_state['key_frame_view_type_index'] = view_types.index(st.session_state['key_frame_view_type'])
             st.experimental_rerun()     
 
+
         if st.session_state['key_frame_view_type'] == "Single Frame":
-            header1,header2,header3 = st.columns([1,1,1])
+            header1, header2, header3 = st.columns([1,1,1])
             with header1:                            
                 st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", min_value=0, max_value=len(timing_details)-1, step=1, value=st.session_state['which_image_value'], key="which_image_checker")
                 if st.session_state['which_image_value'] != st.session_state['which_image']:
@@ -174,23 +171,25 @@ def key_frame_selection_page(mainheader2, project_name):
                 min_frames = 0
             else:
                 min_frames = int(float(timing_details[index_of_current_item-1]['frame_number'])) + 1
+
             if index_of_current_item == len(timing_details)-1:
                 max_frames = int(total_frames) - 2
             else:
                 max_frames = int(float(timing_details[index_of_current_item+1]['frame_number'])) - 1
+            
             with slider1:
-                
                 st.markdown(f"Frame # for Key Frame {index_of_current_item}: {timing_details[index_of_current_item]['frame_number']}")                    
                 # show frame time to the nearest 2 decimal places
                 st.markdown(f"Frame time: {round(float(timing_details[index_of_current_item]['frame_time']),2)}")
                 
-                
                 if st.button("Delete current key frame"):
                     delete_frame(project_name, index_of_current_item)                            
                     timing_details = get_timing_details(project_name)
-                    st.experimental_rerun()  
+                    st.experimental_rerun()
+
             with slider2:
-                if timing_details[index_of_current_item]["frame_number"]-1 ==  timing_details[index_of_current_item-1]["frame_number"] and timing_details[index_of_current_item]["frame_number"] + 1 == timing_details[index_of_current_item+1]["frame_number"]:
+                if timing_details[index_of_current_item]["frame_number"] - 1 == timing_details[index_of_current_item-1]["frame_number"]\
+                      and timing_details[index_of_current_item]["frame_number"] + 1 == timing_details[index_of_current_item+1]["frame_number"]:
                     st.warning("There's nowhere to move this frame due to it being 1 frame away from both the next and previous frame.")
                     new_frame_number = int(float(timing_details[index_of_current_item]['frame_number']))
                 else:
@@ -198,8 +197,8 @@ def key_frame_selection_page(mainheader2, project_name):
                                         
                     
             preview1,preview2 = st.columns([1,2])
+
             with preview1:
-                
                 if index_of_current_item == 0:
                     st.write("")
                     st.write("")

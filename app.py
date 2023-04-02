@@ -2,7 +2,7 @@ import streamlit as st
 from moviepy.editor import *
 from streamlit_javascript import st_javascript
 import time
-from repository.local_repo.csv_data import get_app_settings
+from repository.local_repo.csv_repo import get_app_settings
 
 from settings import project_init
 

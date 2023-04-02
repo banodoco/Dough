@@ -1,6 +1,6 @@
 import streamlit as st
 
-from repository.local_repo.csv_data import get_app_settings, update_app_settings
+from repository.local_repo.csv_repo import get_app_settings, update_app_settings
 
 def app_settings_page():
     app_settings = get_app_settings()

@@ -1,7 +1,7 @@
 import streamlit as st
 import time
-from repository.local_repo.csv_data import remove_existing_timing
-from ui_components.common_methods import add_image_variant, get_timing_details, promote_image_variant, update_specific_timing_value
+from repository.local_repo.csv_repo import remove_existing_timing, update_specific_timing_value
+from ui_components.common_methods import add_image_variant, get_timing_details, promote_image_variant
 
 def batch_action_page(project_name):
     timing_details = get_timing_details(project_name)

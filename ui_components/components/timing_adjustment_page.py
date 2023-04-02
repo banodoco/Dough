@@ -3,8 +3,9 @@ import re
 import streamlit as st
 import random
 import time
+from repository.local_repo.csv_repo import update_specific_timing_value
 
-from ui_components.common_methods import delete_frame, find_duration_of_clip, get_timing_details, render_video, update_specific_timing_value, update_video_speed
+from ui_components.common_methods import delete_frame, find_duration_of_clip, get_timing_details, render_video, update_video_speed
 
 def timing_adjustment_page(project_name):
     timing_details = get_timing_details(project_name)

@@ -5,7 +5,7 @@ import streamlit as st
 import os
 from moviepy.editor import *
 
-from repository.local_repo.csv_data import get_app_settings, update_app_settings
+from repository.local_repo.csv_repo import get_app_settings, update_app_settings
 from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.batch_action_page import batch_action_page
 from ui_components.components.custom_models_page import custom_models_page

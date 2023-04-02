@@ -3,7 +3,7 @@ import streamlit as st
 import os
 import time
 
-from repository.local_repo.csv_data import get_project_settings, update_project_setting
+from repository.local_repo.csv_repo import get_project_settings, update_project_setting
 from ui_components.common_methods import attach_audio_element
 
 

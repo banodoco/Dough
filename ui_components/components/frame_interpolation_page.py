@@ -1,7 +1,7 @@
 import streamlit as st
 import time
-from repository.local_repo.csv_data import get_app_settings
-from ui_components.common_methods import calculate_desired_duration_of_each_clip, get_timing_details, prompt_interpolation_model, update_specific_timing_value
+from repository.local_repo.csv_repo import get_app_settings, update_specific_timing_value
+from ui_components.common_methods import calculate_desired_duration_of_each_clip, get_timing_details, prompt_interpolation_model
 
 def frame_interpolation_page(mainheader2, project_name):
     with mainheader2:

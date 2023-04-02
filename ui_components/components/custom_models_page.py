@@ -5,7 +5,7 @@ import pandas as pd
 import streamlit as st
 
 from ui_components.common_methods import get_model_details, get_models, train_model
-from repository.local_repo.csv_data import get_app_settings
+from repository.local_repo.csv_repo import get_app_settings
 
 
 def custom_models_page(project_name):

@@ -1,4 +1,4 @@
-from repository.local_repo.csv_data import get_app_settings
+from repository.local_repo.csv_repo import get_app_settings
 
 
 REPLICATE_API_TOKEN = None

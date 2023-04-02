@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_image_comparison import image_comparison
 import time
 import pandas as pd
-from repository.local_repo.csv_data import get_app_settings, get_project_settings
+from repository.local_repo.csv_repo import get_app_settings, get_project_settings
 from ui_components.common_methods import create_gif_preview, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process
 
 def frame_styling_page(mainheader2, project_name):

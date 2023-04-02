@@ -20,25 +20,8 @@ import uuid
 from io import BytesIO
 import ast
 import numpy as np
-from repository.local_repo.csv_data import get_app_settings, get_project_settings, update_project_setting
+from repository.local_repo.csv_repo import get_app_settings, get_project_settings, update_project_setting, update_specific_timing_value
 
-def update_specific_timing_value(project_name, index_of_current_item, parameter, value):
-    df = pd.read_csv(f"videos/{project_name}/timings.csv")
-    
-    try:
-        col_index = df.columns.get_loc(parameter)
-    except KeyError:
-        raise ValueError(f"Invalid parameter: {parameter}")
-    
-    df.iloc[index_of_current_item, col_index] = value
-    numeric_cols = ["primary_image", "seed", "num_inference_steps"]
-
-    for col in numeric_cols:
-        df[col] = pd.to_numeric(df[col], downcast="integer", errors="coerce")
-        df[col].fillna(0, inplace=True)
-        df[col] = df[col].astype(int)
-    
-    df.to_csv(f"videos/{project_name}/timings.csv", index=False)
 
 def calculate_time_at_frame_number(input_video, frame_number, project_name):
     input_video = "videos/" + str(project_name) + "/assets/resources/input_videos/" + str(input_video)
@@ -122,12 +105,13 @@ def get_timing_details(video_name):
     df['alternative_images'] = df['alternative_images'].fillna('').apply(lambda x: ast.literal_eval(x[1:-1]) if x != '' else '')
     return df.to_dict('records')
 
-# 
+# delete keyframe at a particular index from timings.csv
 def delete_frame(project_name, index_of_current_item):
-    update_specific_timing_value(project_name, index_of_current_item -1, "interpolated_video", "")    
+    update_specific_timing_value(project_name, index_of_current_item -1, "interpolated_video", "")
     if index_of_current_item < len(get_timing_details(project_name)) - 1:
         update_specific_timing_value(project_name, index_of_current_item +1, "interpolated_video", "")
-    update_specific_timing_value(project_name, index_of_current_item -1, "timing_video", "")    
+        
+    update_specific_timing_value(project_name, index_of_current_item -1, "timing_video", "")
     if index_of_current_item < len(get_timing_details(project_name)) - 1:
         update_specific_timing_value(project_name, index_of_current_item +1, "timing_video", "")
 
@@ -137,7 +121,7 @@ def delete_frame(project_name, index_of_current_item):
 
 def batch_update_timing_values(project_name, index_of_current_item,prompt, strength, model, custom_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps, source_image, custom_models,adapter_type):
 
-    df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")    
+    df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
     if model != "Dreambooth":
         custom_models = f'"{custom_models}"' 
     df.iloc[index_of_current_item, [18, 10, 9, 4, 5, 6, 7, 8, 12, 13, 14]] = [prompt, float(strength), model, custom_pipeline, negative_prompt, float(guidance_scale), int(seed), int(num_inference_steps), source_image, custom_models, adapter_type]

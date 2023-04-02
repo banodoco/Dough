@@ -51,15 +51,25 @@ def remove_existing_timing(project_name):
 def get_app_settings():
     csv_client = CSVProcessor("app_settings.csv")
     return csv_client.get_all_json_data()
-    
-    # app_settings = {}
-    # with open("app_settings.csv") as f:
-    #     lines = [line.split(',') for line in f.read().splitlines()]
-    # number_of_rows = len(lines)
-    # for i in range(1, number_of_rows):
-    #     app_settings[lines[i][0]] = lines[i][1]
-    # return app_settings
 
 def update_app_settings(key, value):
     csv_client = CSVProcessor("app_settings.csv")
     csv_client.update_csv_data(key, value)
+
+def update_specific_timing_value(project_name, index_of_current_item, parameter, value):
+    df = pd.read_csv(f"videos/{project_name}/timings.csv")
+    
+    try:
+        col_index = df.columns.get_loc(parameter)
+    except KeyError:
+        raise ValueError(f"Invalid parameter: {parameter}")
+    
+    df.iloc[index_of_current_item, col_index] = value
+    numeric_cols = ["primary_image", "seed", "num_inference_steps"]
+
+    for col in numeric_cols:
+        df[col] = pd.to_numeric(df[col], downcast="integer", errors="coerce")
+        df[col].fillna(0, inplace=True)
+        df[col] = df[col].astype(int)
+    
+    df.to_csv(f"videos/{project_name}/timings.csv", index=False)

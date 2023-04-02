@@ -1,6 +1,6 @@
 import streamlit as st
-from ui_components.common_methods import attach_audio_element, get_timing_details, render_video, update_specific_timing_value
-from repository.local_repo.csv_data import get_project_settings
+from ui_components.common_methods import attach_audio_element, get_timing_details, render_video
+from repository.local_repo.csv_repo import get_project_settings, update_specific_timing_value
 import random
 import time
 import os
