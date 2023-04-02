@@ -1496,7 +1496,13 @@ def main():
 
         st.session_state["project_changed"] = False        
 
-    st.sidebar.title("Banodoco")    
+    title1, title2 = st.sidebar.columns([3,2])
+    with title1:
+        st.title("Banodoco")    
+    with title2:
+        
+        st.write("")
+        st.caption("Experiencing issues or have feedback? Please [let me know](mailto:peter@omalley.io)!")
 
     hide_img = '''
     <style>
