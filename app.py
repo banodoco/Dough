@@ -47,19 +47,14 @@ def create_or_update_mask(project_name, index_of_current_number, image):
 def inpainting(video_name, input_image, prompt, negative_prompt,index_of_current_item):
 
     app_settings = get_app_settings()
-    timing_details = get_timing_details(video_name)
-        
+    timing_details = get_timing_details(video_name)        
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-
     model = replicate.models.get("andreasjansson/stable-diffusion-inpainting")
-
-    version = model.versions.get("e490d072a34a94a11e9711ed5a6ba621c3fab884eda1665d9d3a282d65a21180")
-    
+    version = model.versions.get("e490d072a34a94a11e9711ed5a6ba621c3fab884eda1665d9d3a282d65a21180")    
     mask = timing_details[index_of_current_item]["mask"]
 
     if not mask.startswith("http"):
-        mask = open(mask, "rb")
-        
+        mask = open(mask, "rb")        
     if not input_image.startswith("http"):        
         input_image = open(input_image, "rb")
 
@@ -74,14 +69,12 @@ def add_image_variant(image_url, index_of_current_item, project_name, timing_det
         additions = []
     else:
         alternative_images = []
-
         additions = timing_details[index_of_current_item]["alternative_images"]                     
         for addition in additions:                
             alternative_images.append(addition)
         alternative_images.append(image_url)
+
     update_specific_timing_value(project_name, index_of_current_item, "alternative_images", '"' + str(alternative_images) + '"')
-
-
 
     if str(timing_details[index_of_current_item]["primary_image"]) == "":
         timing_details[index_of_current_item]["primary_image"] = 0
@@ -91,9 +84,7 @@ def add_image_variant(image_url, index_of_current_item, project_name, timing_det
     
 def promote_image_variant(index_of_current_item, project_name, variant_to_promote):
     
-
-    update_specific_timing_value(project_name, index_of_current_item, "primary_image", variant_to_promote)
-    
+    update_specific_timing_value(project_name, index_of_current_item, "primary_image", variant_to_promote)    
     update_specific_timing_value(project_name, index_of_current_item -1, "interpolated_video", "")
     update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", "")
     if index_of_current_item < len(get_timing_details(project_name)) - 1:
@@ -103,8 +94,6 @@ def promote_image_variant(index_of_current_item, project_name, variant_to_promot
     if index_of_current_item < len(get_timing_details(project_name)) - 1:
         update_specific_timing_value(project_name, index_of_current_item +1, "timing_video", "")
     
-
-
 
 def train_model(app_settings, images_list, instance_prompt,class_prompt, max_train_steps, model_name,project_name, type_of_model, type_of_task, resolution):
     
@@ -191,58 +180,35 @@ def move_frame(project_name, index_of_current_item, distance_to_move, timing_det
     
     current_frame_number = int(calculate_frame_number_at_time(input_video, timing_details[index_of_current_item]["frame_time"], project_name))
 
-    if distance_to_move == 0:
-                        
+    if distance_to_move == 0:                        
         extract_frame(index_of_current_item, project_name, input_video, current_frame_number,timing_details)
-
         new_frame_number = current_frame_number
-
         
-    
     elif distance_to_move > 0:    
-
         next_frame_number = int(calculate_frame_number_at_time(input_video, timing_details[index_of_current_item + 1]["frame_time"],project_name))
-
         abs_distance_to_move = abs(distance_to_move) / 100
-
         difference_between_frames = abs(next_frame_number - current_frame_number)
-
         new_frame_number = current_frame_number + (difference_between_frames * abs_distance_to_move)
-
         extract_frame(index_of_current_item, project_name, input_video, new_frame_number,timing_details)
 
-
-
     elif distance_to_move < 0:
-
         last_frame_number = int(calculate_frame_number_at_time(input_video, timing_details[index_of_current_item - 1]["frame_time"],project_name))
-
         abs_distance_to_move = abs(distance_to_move) / 100
-
         difference_between_frames = abs(current_frame_number - last_frame_number)
-
         new_frame_number = current_frame_number - (difference_between_frames * abs_distance_to_move)
-
         extract_frame(index_of_current_item, project_name, input_video, new_frame_number,timing_details)
 
     df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
-
     new_time = calculate_time_at_frame_number(input_video, new_frame_number, project_name)
-
     df.iloc[index_of_current_item, [16,1]] = [int(distance_to_move),new_time]
-    
     df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
-
-        
+      
 def get_app_settings():
 
-    csv_file_path = "app_settings.csv"
-    
+    csv_file_path = "app_settings.csv"    
     df = pd.read_csv(csv_file_path, header=None,na_filter=False)
-    
-    
     app_settings = {row[0]: row[1] for _, row in df.iterrows()}
-    
+
     return app_settings
 
 
@@ -276,11 +242,8 @@ def get_model_details(model_name):
 
 def update_app_setting(key, pair_value):
     
-    csv_file_path = 'app_settings.csv'
-    
-    df = pd.read_csv(csv_file_path,na_filter=False)
-    
-    
+    csv_file_path = 'app_settings.csv'    
+    df = pd.read_csv(csv_file_path,na_filter=False)        
     row_number = df[df.iloc[:, 0] == key].index[0]
     df.at[row_number, df.columns[1]] = pair_value
     
@@ -320,11 +283,8 @@ def create_working_assets(video_name):
     df.to_csv(f'videos/{video_name}/settings.csv', index=False)
 
     df = pd.DataFrame(columns=['frame_time','frame_number','primary_image','alternative_images','custom_pipeline','negative_prompt','guidance_scale','seed','num_inference_steps','model_id','strength','notes','source_image','custom_models','adapter_type','duration_of_clip','interpolated_video','timing_video','prompt','mask'])
-
-    # df.loc[0] = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
-
+    
     df.to_csv(f'videos/{video_name}/timings.csv', index=False)
-
 
 
 def update_project_setting(key, pair_value, project_name):
@@ -332,11 +292,8 @@ def update_project_setting(key, pair_value, project_name):
     csv_file_path = f'videos/{project_name}/settings.csv'
     
     with open(csv_file_path, 'r') as csv_file:
-
         csv_reader = csv.reader(csv_file)
-
         rows = []
-
         for row in csv_reader:
             if row[0] == key:            
                 row_number = csv_reader.line_num - 2            
@@ -424,8 +381,6 @@ def remove_background(project_name, input_image):
     output = model.predict(image=input_image)
     return output
 
-
-
 def replace_background(video_name, foreground_image, background_image):
     
     if background_image.startswith("http"):
@@ -440,7 +395,6 @@ def replace_background(video_name, foreground_image, background_image):
 
     return (f"videos/{video_name}/replaced_bg.png")
     
-
 def extract_frame(frame_number, project_name, input_video, extract_frame_number,timing_details):
 
     input_video = "videos/" + str(project_name) + "/assets/resources/input_videos/" + str(input_video)
@@ -457,10 +411,6 @@ def extract_frame(frame_number, project_name, input_video, extract_frame_number,
     file_name = ''.join(random.choices(string.ascii_lowercase + string.digits, k = 16)) + ".png"
 
     cv2.imwrite("videos/" + project_name + "/assets/frames/1_selected/" + str(file_name), frame)
-    
-    # img = Image.open("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
-
-    # img.save("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
 
     update_specific_timing_value(project_name, frame_number, "source_image", "videos/" + project_name + "/assets/frames/1_selected/" + str(file_name))
         
@@ -471,7 +421,6 @@ def prompt_clip_interrogator(input_image,which_model,best_or_fast):
         which_model = "ViT-L-14/openai"
     elif which_model == "Stable Diffusion 2":
         which_model = "ViT-H-14/laion2b_s32b_b79k"
-
 
     app_settings = get_app_settings()
 
@@ -579,28 +528,13 @@ def delete_frame(project_name, index_of_current_item):
         update_specific_timing_value(project_name, index_of_current_item +1, "interpolated_video", "")
     update_specific_timing_value(project_name, index_of_current_item -1, "timing_video", "")    
     if index_of_current_item < len(get_timing_details(project_name)) - 1:
-        update_specific_timing_value(project_name, index_of_current_item +1, "timing_video", "")
-
-    # os.remove("videos/" + str(project_name) + "/assets/frames/1_selected/" + str(index_of_current_item) + ".png")
+        update_specific_timing_value(project_name, index_of_current_item +1, "timing_video", "")    
 
     df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
     
-    # for i in range(int(index_of_current_item)+1, len(os.listdir("videos/" + str(project_name) + "/assets/frames/1_selected"))):
-            
-        # os.rename("videos/" + str(project_name) + "/assets/frames/1_selected/" + str(i) + ".png", "videos/" + str(project_name) + "/assets/frames/1_selected/" + str(i - 1) + ".png")
-
-        # df.iloc[i, [0]] = str(i - 1)
-
-    
-
     df = df.drop([int(index_of_current_item)])
 
     df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
-
-    
-
-
-
 
 def prompt_model_dreambooth(project_name, image_number, model_name, app_settings,timing_details, project_settings, image_url):
 
