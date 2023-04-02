@@ -1498,6 +1498,14 @@ def main():
 
     st.sidebar.title("Banodoco")    
 
+    hide_img = '''
+    <style>
+    button[title="View fullscreen"]{
+        display: none;}
+    </style>
+    '''
+    st.markdown(hide_img, unsafe_allow_html=True)
+
     def buttons(step):
         button1, button2, button3 = st.columns([2,6,2])
         with button1:
@@ -3273,3 +3281,4 @@ def main():
                                                 
 if __name__ == '__main__':
     main()
+
