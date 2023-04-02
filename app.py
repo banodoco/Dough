@@ -42,8 +42,6 @@ def create_or_update_mask(project_name, index_of_current_number, image):
     image.save(file_location, "PNG")
     return file_location
 
-
-
 def inpainting(video_name, input_image, prompt, negative_prompt,index_of_current_item):
 
     app_settings = get_app_settings()
@@ -80,8 +78,7 @@ def add_image_variant(image_url, index_of_current_item, project_name, timing_det
         timing_details[index_of_current_item]["primary_image"] = 0
         update_specific_timing_value(project_name, index_of_current_item, "primary_image", timing_details[index_of_current_item]["primary_image"])        
     return len(additions) + 1
-                
-    
+                    
 def promote_image_variant(index_of_current_item, project_name, variant_to_promote):
     
     update_specific_timing_value(project_name, index_of_current_item, "primary_image", variant_to_promote)    
@@ -168,8 +165,6 @@ def train_model(app_settings, images_list, instance_prompt,class_prompt, max_tra
         df.to_csv("models.csv", index=False)
         return f"Successfully trained - the model '{model_name}' is now available for use!"       
 
-
-
 def remove_existing_timing(project_name):
 
     df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
@@ -218,7 +213,6 @@ def get_project_settings(project_name):
     for i, row in data.iterrows():
         project_settings[row['key']] = row['value']
     return project_settings
-
 
 def get_model_details(model_name):
 
@@ -277,13 +271,9 @@ def create_working_assets(video_name):
         'value': ['prompt', 'controlnet', '0.5','None','', 'video', '','Extract manually','','','',7.5,0,50,'Extracted Frames',"None",""]}
 
     df = pd.DataFrame(data)
-
     df.to_csv(f'videos/{video_name}/settings.csv', index=False)
-
     df = pd.DataFrame(columns=['frame_time','frame_number','primary_image','alternative_images','custom_pipeline','negative_prompt','guidance_scale','seed','num_inference_steps','model_id','strength','notes','source_image','custom_models','adapter_type','duration_of_clip','interpolated_video','timing_video','prompt','mask'])
-    
     df.to_csv(f'videos/{video_name}/timings.csv', index=False)
-
 
 def update_project_setting(key, pair_value, project_name):
     
@@ -381,8 +371,7 @@ def replace_background(video_name, foreground_image, background_image):
         response = r.get(background_image)
         background_image = Image.open(BytesIO(response.content))
     else:
-        background_image = Image.open(f"videos/{video_name}/assets/resources/backgrounds/{background_image}")
-        
+        background_image = Image.open(f"videos/{video_name}/assets/resources/backgrounds/{background_image}")        
     foreground_image = Image.open(f"masked_image.png")
     background_image.paste(foreground_image, (0, 0), foreground_image)
     background_image.save(f"videos/{video_name}/replaced_bg.png")
@@ -403,9 +392,7 @@ def extract_frame(frame_number, project_name, input_video, extract_frame_number,
         update_specific_timing_value(project_name, frame_number, "frame_number", extract_frame_number)
     
     file_name = ''.join(random.choices(string.ascii_lowercase + string.digits, k = 16)) + ".png"
-
     cv2.imwrite("videos/" + project_name + "/assets/frames/1_selected/" + str(file_name), frame)
-
     update_specific_timing_value(project_name, frame_number, "source_image", "videos/" + project_name + "/assets/frames/1_selected/" + str(file_name))
         
 
@@ -429,10 +416,9 @@ def prompt_clip_interrogator(input_image,which_model,best_or_fast):
 def touch_up_images(video_name, index_of_current_item, input_image):
 
     app_settings = get_app_settings()
-
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-
     model = replicate.models.get("xinntao/gfpgan")    
+
     if not input_image.startswith("http"):        
         input_image = open(input_image, "rb")
     
@@ -445,13 +431,9 @@ def resize_image(video_name, new_width,new_height, image):
     response = r.get(image)
     image = Image.open(BytesIO(response.content))
     resized_image = image.resize((new_width, new_height))
-
     time.sleep(0.1)
-
     resized_image.save("videos/" + str(video_name) + "/temp_image.png")
-
     resized_image = upload_image("videos/" + str(video_name) + "/temp_image.png")
-
     os.remove("videos/" + str(video_name) + "/temp_image.png")
 
     return resized_image
@@ -520,10 +502,8 @@ def delete_frame(project_name, index_of_current_item):
     if index_of_current_item < len(get_timing_details(project_name)) - 1:
         update_specific_timing_value(project_name, index_of_current_item +1, "timing_video", "")    
 
-    df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
-    
+    df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")    
     df = df.drop([int(index_of_current_item)])
-
     df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
 
 def prompt_model_dreambooth(project_name, image_number, model_name, app_settings,timing_details, project_settings, image_url):
@@ -558,18 +538,14 @@ def prompt_model_dreambooth(project_name, image_number, model_name, app_settings
     input_image = image_url
     if not input_image.startswith("http"):        
         input_image = open(input_image, "rb")
+    
     output = version.predict(image=input_image, prompt=prompt, prompt_strength=float(strength), height = int(project_settings["height"]), width = int(project_settings["width"]), disable_safety_check=True, negative_prompt = negative_prompt, guidance_scale = float(guidance_scale), seed = int(seed), num_inference_steps = int(num_inference_steps))
-
     new_image = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(image_number) + ".png"
     
     try:
-
         urllib.request.urlretrieve(output[0], new_image)
-
     except Exception as e:
-
         print(e)
-    
     return output[0]
 
 
@@ -842,7 +818,6 @@ def trigger_restyling_process(timing_details, project_name, index_of_current_ite
         else:                            
             promote_image_variant(index_of_current_item, project_name, number_of_variants - 1)
 
-
 def prompt_model_pix2pix(strength,video_name, image_number, timing_details, replicate_api_key, input_image):
     app_settings = get_app_settings()
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
@@ -884,7 +859,6 @@ def restyle_images(index_of_current_item,project_name, project_settings, timing_
         output_url = prompt_model_dreambooth_controlnet(source_image, timing_details, project_name, index_of_current_item)
     
     return output_url
-
     
 def dynamic_prompting(prompt, source_image, project_name, index_of_current_item):
      
@@ -906,7 +880,6 @@ def dynamic_prompting(prompt, source_image, project_name, index_of_current_item)
 
     update_specific_timing_value(project_name, index_of_current_item, "prompt", prompt)
 
-
 def custom_pipeline_mystique(index_of_current_item, project_name, project_settings, timing_details, source_image):
     
     app_settings = get_app_settings()
@@ -924,7 +897,6 @@ def custom_pipeline_mystique(index_of_current_item, project_name, project_settin
     
     return output_url
 
-
 def create_timings_row_at_frame_number(project_name, input_video, extract_frame_number, timing_details, index_of_new_item):
     
     df = pd.read_csv(f'videos/{project_name}/timings.csv')
@@ -939,10 +911,6 @@ def create_timings_row_at_frame_number(project_name, input_video, extract_frame_
    
     return index_of_new_item
         
-
-    
-    
-
 def get_models():
     df = pd.read_csv('models.csv')
     models = df[df.columns[0]].tolist()
@@ -1022,7 +990,6 @@ def render_video(project_name, final_video_name):
         finalclip = finalclip.set_audio(audio_clip)
     finalclip.write_videofile(output_video_file, fps=60, audio_bitrate="1000k", bitrate="4000k", codec="libx264")
 
-
 def update_specific_timing_value(project_name, index_of_current_item, parameter, value):
     
     df = pd.read_csv(f"videos/{project_name}/timings.csv")
@@ -1033,9 +1000,7 @@ def update_specific_timing_value(project_name, index_of_current_item, parameter,
         raise ValueError(f"Invalid parameter: {parameter}")
     
     df.iloc[index_of_current_item, col_index] = value
-    
     numeric_cols = ["primary_image", "seed", "num_inference_steps"]
-
     for col in numeric_cols:
         df[col] = pd.to_numeric(df[col], downcast="integer", errors="coerce")
         df[col].fillna(0, inplace=True)
@@ -1122,38 +1087,6 @@ def create_depth_mask_image(input_image,layer,project_name, index_of_current_ite
                 mask_pixels[i, j] = 0 if depth_value <= 50 else 255  # Set background pixels to black
 
     return create_or_update_mask(project_name, index_of_current_item, mask)
-
-    
-
-
-
-
-def create_video_without_interpolation(timing_details, output_file):
-    # Create a list of ffmpeg inputs, each input being a frame with its duration
-    inputs = []
-    for i in range(len(timing_details)):
-        # Get the current frame details
-        frame = timing_details[i]
-        frame_time = frame['frame_time']
-        source_image = frame['source_image']
-
-        # Get the duration of this frame
-        if i == len(timing_details) - 1:
-            # This is the last frame, just make its duration the same as the previous
-            duration = frame_time - timing_details[i-1]['frame_time']
-        else:
-            # This is not the last frame, get the duration until the next frame
-            duration = timing_details[i+1]['frame_time'] - frame_time
-
-        # Create an ffmpeg input for this frame
-        inputs.append(
-            ffmpeg.input(source_image, t=str(duration), ss=str(frame_time))
-        )
-
-    # Concatenate the inputs and export the video
-    ffmpeg.concat(*inputs).output(output_file).run()
-
-
 
 def prompt_model_dreambooth_controlnet(input_image, timing_details, project_name, index_of_current_item):
 
@@ -1301,8 +1234,6 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     else:
         source_image = open(source_image, "rb")
     
-
-
     model = replicate.models.get("cloneofsimo/lora")
     version = model.versions.get("fce477182f407ffd66b94b08e761424cabd13b82b518754b83080bc75ad32466")
     inputs = {
@@ -1535,7 +1466,6 @@ def resize_video(input_path, output_path, width, height, crop_type=None, output_
     cv2.destroyAllWindows()
 
 def main():
-
     
     app_settings = get_app_settings()
     
@@ -2168,10 +2098,10 @@ def main():
                                         
                 if "strength" not in st.session_state:                    
                     st.session_state['strength'] = st.session_state['project_settings']["last_strength"]
-                    st.session_state['prompt'] = st.session_state['project_settings']["last_prompt"]
+                    st.session_state['prompt_value'] = st.session_state['project_settings']["last_prompt"]
                     st.session_state['model'] = st.session_state['project_settings']["last_model"]
                     st.session_state['custom_pipeline'] = st.session_state['project_settings']["last_custom_pipeline"]
-                    st.session_state['negative_prompt'] = st.session_state['project_settings']["last_negative_prompt"]
+                    st.session_state['negative_prompt_value'] = st.session_state['project_settings']["last_negative_prompt"]
                     st.session_state['guidance_scale'] = st.session_state['project_settings']["last_guidance_scale"]
                     st.session_state['seed'] = st.session_state['project_settings']["last_seed"]
                     st.session_state['num_inference_steps'] = st.session_state['project_settings']["last_num_inference_steps"]
@@ -2353,7 +2283,10 @@ def main():
                         st.session_state['num_inference_steps'] = int(50)
                                     
                     else:
-                        st.session_state['prompt'] = st.sidebar.text_area(f"Prompt", label_visibility="visible", value=st.session_state['prompt'])
+                        st.session_state['prompt'] = st.sidebar.text_area(f"Prompt", label_visibility="visible", value=st.session_state['prompt_value'],height=150)
+                        if st.session_state['prompt'] != st.session_state['prompt_value']:
+                            st.session_state['prompt_value'] = st.session_state['prompt']
+                            st.experimental_rerun()
                         with st.sidebar.expander("💡 Learn about dynamic prompting"):
                             st.markdown("## Why and how to use dynamic prompting")
                             st.markdown("Why:")
@@ -2369,7 +2302,10 @@ def main():
                         st.session_state['strength'] = st.sidebar.number_input(f"Strength", value=float(st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
                         
                         with st.sidebar.expander("Advanced settings 😏"):
-                            st.session_state['negative_prompt'] = st.text_area(f"Negative prompt", value=st.session_state['negative_prompt'], label_visibility="visible")
+                            st.session_state['negative_prompt'] = st.text_area(f"Negative prompt", value=st.session_state['negative_prompt_value'], label_visibility="visible")
+                            if st.session_state['negative_prompt'] != st.session_state['negative_prompt_value']:
+                                st.session_state['negative_prompt_value'] = st.session_state['negative_prompt']
+                                st.experimental_rerun()
                             st.session_state['guidance_scale'] = st.number_input(f"Guidance scale", value=float(st.session_state['guidance_scale']))
                             st.session_state['seed'] = st.number_input(f"Seed", value=int(st.session_state['seed']))
                             st.session_state['num_inference_steps'] = st.number_input(f"Inference steps", value=int(st.session_state['num_inference_steps']))
@@ -3337,4 +3273,3 @@ def main():
                                                 
 if __name__ == '__main__':
     main()
-
