@@ -208,9 +208,7 @@ def get_app_settings():
     csv_file_path = "app_settings.csv"    
     df = pd.read_csv(csv_file_path, header=None,na_filter=False)
     app_settings = {row[0]: row[1] for _, row in df.iterrows()}
-
     return app_settings
-
 
 
 def get_project_settings(project_name):
@@ -300,9 +298,7 @@ def update_project_setting(key, pair_value, project_name):
                 new_value = pair_value        
     
     df = pd.read_csv(csv_file_path)
-
     df.iat[row_number, 1] = new_value
-
     df.to_csv(csv_file_path, index=False)
 
 def prompt_interpolation_model(img1, img2, project_name, video_number, interpolation_steps, replicate_api_key):
@@ -341,8 +337,6 @@ def get_timing_details(video_name):
     # Evaluate the alternative_images column and replace it with the evaluated list
     df['alternative_images'] = df['alternative_images'].fillna('').apply(lambda x: ast.literal_eval(x[1:-1]) if x != '' else '')
     
-
-
     return df.to_dict('records')
 
 def calculate_time_at_frame_number(input_video, frame_number, project_name):
@@ -423,14 +417,10 @@ def prompt_clip_interrogator(input_image,which_model,best_or_fast):
         which_model = "ViT-H-14/laion2b_s32b_b79k"
 
     app_settings = get_app_settings()
-
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-
     model = replicate.models.get("pharmapsychotic/clip-interrogator")    
-
     if not input_image.startswith("http"):        
-        input_image = open(input_image, "rb")
-        
+        input_image = open(input_image, "rb")        
     output = model.predict(image=input_image, clip_model_name=which_model, mode=best_or_fast)
     
     return output
@@ -493,15 +483,15 @@ def face_swap(video_name, index_of_current_item, source_image, timing_details):
 
 def prompt_model_stylegan_nada(index_of_current_item, timing_details, input_image, project_name):
     
-        app_settings = get_app_settings()
-        os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-        model = replicate.models.get("rinongal/stylegan-nada")
-        if not input_image.startswith("http"):        
-            input_image = open(input_image, "rb")        
-        output = model.predict(input=input_image,output_style = timing_details[index_of_current_item]["prompt"])        
-        output = resize_image(project_name, 512, 512, output)
-        
-        return output
+    app_settings = get_app_settings()
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
+    model = replicate.models.get("rinongal/stylegan-nada")
+    if not input_image.startswith("http"):        
+        input_image = open(input_image, "rb")        
+    output = model.predict(input=input_image,output_style = timing_details[index_of_current_item]["prompt"])        
+    output = resize_image(project_name, 512, 512, output)
+    
+    return output
 
 def prompt_model_stability(project_name, index_of_current_item, timing_details, input_image):
 
@@ -620,7 +610,6 @@ def update_slice_of_video_speed(video_name, input_video, desired_speed_change):
     os.rename("videos/" + str(video_name) + "/assets/videos/0_raw/output_" + str(input_video),
               "videos/" + str(video_name) + "/assets/videos/0_raw/" + str(input_video))
 
-
 def slice_part_of_video(project_name, index_of_current_item, video_start_percentage, video_end_percentage, slice_name,timing_details):
 
     input_video = timing_details[int(index_of_current_item)]["interpolated_video"]
@@ -704,24 +693,16 @@ def calculate_desired_duration_of_each_clip(timing_details,project_name):
         length_of_list = len(timing_details)
 
         if index_of_current_item == (length_of_list - 1):
-
             time_of_frame = timing_details[index_of_current_item]["frame_time"]
-
             duration_of_static_time = 0.0
-
             end_duration_of_frame = float(
                 time_of_frame) + float(duration_of_static_time)
-
             total_duration_of_frame = float(
                 end_duration_of_frame) - float(time_of_frame)
-
         else:
-
             time_of_frame = timing_details[index_of_current_item]["frame_time"]
-
             time_of_next_frame = timing_details[index_of_current_item +
                                                 1]["frame_time"]
-
             total_duration_of_frame = float(
                 time_of_next_frame) - float(time_of_frame)
 
@@ -733,23 +714,17 @@ def calculate_desired_duration_of_each_clip(timing_details,project_name):
         update_specific_timing_value(project_name, index_of_current_item, "duration_of_clip", total_duration_of_frame)
         
 
-
 def hair_swap(source_image, project_name, index_of_current_item):
 
     app_settings = get_app_settings()
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]   
-
     model = replicate.models.get("cjwbw/style-your-hair")
-
     version = model.versions.get("c4c7e5a657e2e1abccd57625093522a9928edeccee77e3f55d57c664bcd96fa2")
-
-    source_hair = upload_image("videos/" + str(video_name) + "/face.png")
-
-    target_hair = upload_image("videos/" + str(video_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png")
+    source_hair = upload_image("videos/" + str(project_name) + "/face.png")
+    target_hair = upload_image("videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png")
 
     if not source_hair.startswith("http"):        
         source_hair = open(source_hair, "rb")
-
     if not target_hair.startswith("http"):        
         target_hair = open(target_hair, "rb")
 
@@ -761,7 +736,6 @@ def prompt_model_depth2img(strength, image_number, timing_details, source_image)
 
     app_settings = get_app_settings()
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]   
-
     prompt = timing_details[image_number]["prompt"]
     num_inference_steps = timing_details[image_number]["num_inference_steps"]
     guidance_scale = float(timing_details[image_number]["guidance_scale"])
@@ -934,15 +908,10 @@ def dynamic_prompting(prompt, source_image, project_name, index_of_current_item)
 
 
 def custom_pipeline_mystique(index_of_current_item, project_name, project_settings, timing_details, source_image):
-
-    prompt = timing_details[index_of_current_item]["prompt"]
-
-    model_name = timing_details[index_of_current_item]["model_id"]
-
+    
     app_settings = get_app_settings()
     project_settings = get_project_settings(project_name)
         
-
     output_url = face_swap(project_name, index_of_current_item, source_image, timing_details)
     # output_url = hair_swap(source_image, project_name, index_of_current_item)
     output_url = touch_up_images(project_name, index_of_current_item, output_url)
@@ -957,16 +926,14 @@ def custom_pipeline_mystique(index_of_current_item, project_name, project_settin
 
 
 def create_timings_row_at_frame_number(project_name, input_video, extract_frame_number, timing_details, index_of_new_item):
+    
     df = pd.read_csv(f'videos/{project_name}/timings.csv')
     length_of_df = len(df)
     frame_time = calculate_time_at_frame_number(input_video, float(extract_frame_number),project_name)
     new_row = {'frame_time': frame_time, 'frame_number': extract_frame_number}
-    
-    
-    # ADD IT TO THE END OF THE DATAFRAM 
+            
     df.loc[len(df)] = new_row
     df = df.sort_values(by=['frame_number'])
-
     
     df.to_csv(f'videos/{project_name}/timings.csv', index=False)
    
@@ -1682,9 +1649,7 @@ def main():
         if "project_set" not in st.session_state:
             st.session_state["project_set"] = "No"
             st.session_state["page_updated"] = "Yes"
-
-        
-        
+                
         if st.session_state["project_set"] == "Yes":
             st.session_state["index_of_project_name"] = os.listdir("videos").index(st.session_state["project_name"])
             st.session_state["project_set"] = "No"
@@ -1717,11 +1682,11 @@ def main():
             pages = [
             {
                 "section_name": "Main Process",        
-                "pages": ["Key Frame Selection","Frame Styling", "Frame Interpolation","Video Rendering"]
+                "pages": ["Key Frame Selection","Frame Styling", "Frame Editing","Frame Interpolation","Video Rendering"]
             },
             {
                 "section_name": "Tools",
-                "pages": ["Frame Editing","Custom Models","Prompt Finder", "Batch Actions","Timing Adjustment"]
+                "pages": ["Custom Models","Prompt Finder", "Batch Actions","Timing Adjustment"]
             },
             {
                 "section_name": "Settings",
@@ -1734,24 +1699,12 @@ def main():
             ]
 
             
-
-            timing_details = get_timing_details(project_name)
-            
-            
+            timing_details = get_timing_details(project_name)                        
 
             st.session_state["section"] = st.sidebar.radio("Select a section:", [page["section_name"] for page in pages],horizontal=True)
                                                                       
             st.session_state["page"] = st.sidebar.radio("Select a page:", [page for page in pages if page["section_name"] == st.session_state["section"]][0]["pages"],horizontal=False)
-            
-            
-            
-            
-            #if st.session_state[""] == "Yes":                
-            #   st.session_state["index_of_section"] = 0            
-            #  st.session_state["index_of_page"] = 0
-            #    st.session_state["page_updated"] = "No"
-            
-            
+
             mainheader1, mainheader2 = st.columns([3,2])
             with mainheader1:
                 st.header(st.session_state["page"])   
@@ -1856,15 +1809,10 @@ def main():
                             st.experimental_rerun()
                     else:                    
                         st.sidebar.button("Extract frames", disabled=True)
-
                         
-
                 elif type_of_extraction == "Extract manually":
                     st.sidebar.info("On the right, you'll see a toggle to choose which frames to extract. You can also use the slider to choose the granularity of the frames you want to extract.")
-                    
-                    
-
-
+                           
                 elif type_of_extraction == "Extract from csv":
                     st.sidebar.subheader("Re-extract key frames using existing timings file")
                     st.sidebar.write("This will re-extract all frames based on the timings file. This is useful if you've changed the granularity of your key frames manually.")
@@ -2050,7 +1998,6 @@ def main():
                                     st.session_state['key_frame_view_type_index'] = 1
                                     st.session_state['open_manual_extractor'] = False
                                     st.experimental_rerun()                   
-
                     
                     st.markdown("***")
                 
@@ -2058,9 +2005,7 @@ def main():
                     st.session_state['open_manual_extractor'] = True
                 
                 open_manual_extractor = st.checkbox("Open manual Key Frame extractor", value=st.session_state['open_manual_extractor'])
-                                                        
-
-                    
+                                                                            
                 if open_manual_extractor is True:
                     if project_settings["input_video"] == "":
                         st.info("You need to add an input video on the left before you can add key frames.")
@@ -2108,7 +2053,6 @@ def main():
 
                 app_settings = get_app_settings()
                         
-
                 with st.expander("Replicate API Keys:"):
                     replicate_user_name = st.text_input("replicate_user_name", value = app_settings["replicate_user_name"])
                     replicate_com_api_key = st.text_input("replicate_com_api_key", value = app_settings["replicate_com_api_key"])
@@ -2132,12 +2076,7 @@ def main():
                     with st.expander("AWS API Keys:"):
                         aws_access_key_id = st.text_input("aws_access_key_id", value = app_settings["aws_access_key_id"])
                         aws_secret_access_key = st.text_input("aws_secret_access_key", value = app_settings["aws_secret_access_key"])
-                                
-                
-                
-
-                
-                                        
+                                                                                                      
 
             elif st.session_state["page"] == "New Project":
                 a1, a2 = st.columns(2)
@@ -2239,15 +2178,12 @@ def main():
                     st.session_state['which_stage_to_run_on'] = st.session_state['project_settings']["last_which_stage_to_run_on"]
                     st.session_state['show_comparison'] = "Don't show"
                                         
-
                 if "which_image" not in st.session_state:
                     st.session_state['which_image'] = 0
-                                            
-                
+                                                          
                 if 'frame_styling_view_type' not in st.session_state:
                     st.session_state['frame_styling_view_type'] = "List View"
                     st.session_state['frame_styling_view_type_index'] = 0
-
                 
                 if timing_details == []:
                     st.info("You need to select and load key frames first in the Key Frame Selection section.")                            
@@ -2266,8 +2202,7 @@ def main():
 
                     if st.session_state['frame_styling_view_type'] == "Single Frame":
                         with top3:
-                            st.session_state['show_comparison'] = st.radio("Show comparison to original", options=["Don't show", "Show"], horizontal=True)
-                            
+                            st.session_state['show_comparison'] = st.radio("Show comparison to original", options=["Don't show", "Show"], horizontal=True)                            
                                                 
                         f1, f2, f3  = st.columns([1,4,1])
                         
@@ -2292,8 +2227,7 @@ def main():
                                     if st.button(f"Promote Variant #{which_variant}", key=f"Promote Variant #{which_variant} for {st.session_state['which_image']}", help="Promote this variant to the primary image"):
                                         promote_image_variant(st.session_state['which_image'], project_name, which_variant)
                                         time.sleep(0.5)
-                                        st.experimental_rerun()
-                        
+                                        st.experimental_rerun()                        
                         
                         if st.session_state['show_comparison'] == "Don't show":
                             if timing_details[st.session_state['which_image']]["alternative_images"] != "":
@@ -2313,8 +2247,6 @@ def main():
 
                     if 'index_of_last_model' not in st.session_state:
                         st.session_state['index_of_last_model'] = 0
-
-
 
                     if len(timing_details) == 0:
                         st.info("You first need to select key frames at the Key Frame Selection stage.")
@@ -2458,7 +2390,6 @@ def main():
                     with btn1:
                         batch_number_of_variants = st.number_input("How many variants?", value=1, min_value=1, max_value=10, step=1, key="number_of_variants")
                     
-
                     with btn2:
 
                         st.write("")
@@ -2483,8 +2414,7 @@ def main():
 
                         with detail1:
                             individual_number_of_variants = st.number_input(f"How many variants?", min_value=1, max_value=10, value=1, key=f"number_of_variants_{st.session_state['which_image']}")
-                            
-                            
+                                                        
                         with detail2:
                             st.write("")
                             st.write("")
@@ -2518,9 +2448,7 @@ def main():
 
                             with detail1:
                                 individual_number_of_variants = st.number_input(f"How many variants?", min_value=1, max_value=10, value=1, key=f"number_of_variants_{index_of_current_item}")
-                                
-
-                                
+                                                                
                             with detail2:
                                 st.write("")
                                 st.write("")
@@ -2539,9 +2467,7 @@ def main():
                                     st.session_state['frame_styling_view_type'] = "Single View"
                                     st.session_state['frame_styling_view_type_index'] = 1                                    
                                     st.experimental_rerun() 
-                        
-                        
-                            
+                                                                            
                     st.markdown("***")        
                     st.subheader("Preview video")
                     st.write("You can get a gif of the video by clicking the button below.")
@@ -2626,10 +2552,6 @@ def main():
                                     update_specific_timing_value(project_name, timing_details.index(i), "interpolated_video", "")
                                 timing_details = get_timing_details(project_name)
                                 time.sleep(1) 
-                                    
-                            
-
-                            
 
                             for i in range(0, total_number_of_videos):
 
@@ -2678,13 +2600,7 @@ def main():
                             next_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(specific_video+1) + ".png"
 
                             prompt_interpolation_model(current_image_location, next_image_location, project_name, specific_video,
-                                                                interpolation_steps, key_settings["replicate_com_api_key"])
-
-
-                
-            
-                
-
+                                                                interpolation_steps, key_settings["replicate_com_api_key"])                                            
 
             elif st.session_state["page"] == "Video Rendering":
                 with mainheader2:
@@ -2808,9 +2724,7 @@ def main():
                     if st.button("Make a copy of this project", key="copy_project"):                    
                         shutil.copyfile(f"videos/{project_name}/timings.csv", f"videos/{project_name}/timings_{version_name}.csv")
                         st.success("Project copied successfully!")             
-
-                    # list all the .csv files in that folder starting with timings_
-
+                
                     version_list = [list_of_files for list_of_files in os.listdir(
                         "videos/" + project_name) if list_of_files.startswith('timings_')]
                     
@@ -3157,9 +3071,7 @@ def main():
                         if st.session_state["index_of_type_of_mask_replacement"] != types_of_mask_replacement.index(st.session_state["type_of_mask_replacement"]):
                             st.session_state["index_of_type_of_mask_replacement"] = types_of_mask_replacement.index(st.session_state["type_of_mask_replacement"])
                             st.experimental_rerun()
-                        
-                        
-
+                                                
                         if st.session_state["type_of_mask_replacement"] == "Replace With Image":
                             prompt = ""
                             negative_prompt = ""
@@ -3378,12 +3290,7 @@ def main():
                                 delete_frame(project_name, index_of_current_item)
                                 st.experimental_rerun()
                         else:
-                            st.button(f"Delete Frame", disabled=True, help="This will delete the key frame from your project. This will not affect the video.", key=f"delete_frame_{index_of_current_item}")                   
-                                                                                
-                                        
-            
-                
-                        
+                            st.button(f"Delete Frame", disabled=True, help="This will delete the key frame from your project. This will not affect the video.", key=f"delete_frame_{index_of_current_item}")                                                                                                                                                                                               
             
             elif st.session_state["page"] == "Prompt Finder":
                 
