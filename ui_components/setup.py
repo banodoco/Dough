@@ -33,8 +33,12 @@ def setup_app_ui():
         st.session_state["project_changed"] = False        
 
     app_settings = get_app_settings()
-    st.sidebar.title("Banodoco")    
-
+    title1, title2 = st.sidebar.columns([3,2])
+    with title1:
+        st.title("Banodoco")    
+    with title2:        
+        st.write("")
+        st.caption("Experiencing issues or have feedback? Please [let me know](mailto:peter@omalley.io)!")
            
     if int(st.session_state["welcome_state"]) in [0,1,2,3,4] and st.session_state["online"] == False:
         welcome_page()
