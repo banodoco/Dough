@@ -514,27 +514,27 @@ def resize_image(video_name, new_width,new_height, image):
 
 def face_swap(video_name, index_of_current_item, source_image, timing_details):
 
-    app_settings = get_app_settings()
-    
+    app_settings = get_app_settings()    
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
+    model = replicate.models.get("arielreplicate/ghost_face_swap")    
+    model_id = timing_details[index_of_current_item]["model_id"]
 
-    model = replicate.models.get("arielreplicate/ghost_face_swap")
-
-    model_id = timing_details[index_of_current_item]["custom_models"]
-   
-    source_face = ast.literal_eval(get_model_details(model_id)["training_images"][1:-1])[0]
-
+    if model_id == "Dreambooth":
+        custom_model = timing_details[index_of_current_item]["custom_models"]
+    if model_id == "LoRA":        
+        custom_model = ast.literal_eval(timing_details[index_of_current_item]["custom_models"][1:-1])[0]
+                    
+    source_face = ast.literal_eval(get_model_details(custom_model)["training_images"][1:-1])[0]
     version = model.versions.get("106df0aaf9690354379d8cd291ad337f6b3ea02fe07d90feb1dafd64820066fa")
-
     target_face = source_image
 
     if not source_face.startswith("http"):        
         source_face = open(source_face, "rb")
-
     if not target_face.startswith("http"):        
         target_face = open(target_face, "rb")
 
-    output = version.predict(source_path=source_face, target_path=target_face,use_sr=0)
+    output = version.predict(source_path=source_face, target_path=target_face)
+
     return output
 
 def prompt_model_stylegan_nada(index_of_current_item, timing_details, input_image, project_name):
@@ -2398,10 +2398,11 @@ def main():
                         st.session_state['index_of_last_custom_pipeline'] = 1
                         st.experimental_rerun()
                     if st.session_state['custom_pipeline'] == "Mystique":
-                        if st.session_state['index_of_last_custom_pipeline'] > 1:
-                            st.session_state['index_of_last_custom_pipeline'] = 0                            
-                        st.sidebar.info("Mystique is a custom pipeline that uses a multiple models to generate a consistent character and style transformation.")
-                        with st.sidebar.expander("Mystique pipeline instructions"):
+                        if st.session_state['index_of_last_model'] > 1:
+                            st.session_state['index_of_last_model'] = 0       
+                            st.experimental_rerun()           
+                                                          
+                        with st.sidebar.expander("Mystique is a custom pipeline that uses a multiple models to generate a consistent character and style transformation."):
                             st.markdown("## How to use the Mystique pipeline")                
                             st.markdown("1. Create a fine-tined model in the Custom Model section of the app - we recommend Dreambooth for character transformations.")
                             st.markdown("2. It's best to include a detailed prompt. We recommend taking an example input image and running it through the Prompt Finder")
