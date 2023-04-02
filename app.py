@@ -427,8 +427,13 @@ def remove_background(project_name, input_image):
 
 
 def replace_background(video_name, foreground_image, background_image):
-
-    background_image = Image.open(f"videos/{video_name}/assets/resources/backgrounds/{background_image}")
+    
+    if background_image.startswith("http"):
+        response = r.get(background_image)
+        background_image = Image.open(BytesIO(response.content))
+    else:
+        background_image = Image.open(f"videos/{video_name}/assets/resources/backgrounds/{background_image}")
+        
     foreground_image = Image.open(f"masked_image.png")
     background_image.paste(foreground_image, (0, 0), foreground_image)
     background_image.save(f"videos/{video_name}/replaced_bg.png")
@@ -3103,9 +3108,14 @@ def main():
 
                         
                         st.sidebar.markdown("### Select Area To Edit:") 
-                        type_of_mask_selection = st.sidebar.radio("How would you like to select what to edit?", ["Automated Background Selection", "Automated Layer Selection", "Manual Background Selection","Re-Use Previous Mask"], horizontal=True)
-                        
-                        
+
+                        if 'index_of_type_of_mask_selection' not in st.session_state:
+                            st.session_state['index_of_type_of_mask_selection'] = 0
+                        mask_selection_options = ["Automated Background Selection", "Automated Layer Selection", "Manual Background Selection","Re-Use Previous Mask"]
+                        type_of_mask_selection = st.sidebar.radio("How would you like to select what to edit?", mask_selection_options, horizontal=True, index=st.session_state['index_of_type_of_mask_selection'])                                                                      
+                        if st.session_state['index_of_type_of_mask_selection'] != mask_selection_options.index(type_of_mask_selection):
+                            st.session_state['index_of_type_of_mask_selection'] = mask_selection_options.index(type_of_mask_selection)
+                            st.experimental_rerun()
 
                         if "which_layer" not in st.session_state:
                             st.session_state['which_layer'] = "Background"
@@ -3206,36 +3216,62 @@ def main():
                             st.session_state["type_of_mask_replacement"] = "Replace With Image"
                             st.session_state["index_of_type_of_mask_replacement"] = 0
                         
-                        st.session_state["type_of_mask_replacement"] = st.sidebar.radio("Select type of edit", ["Replace With Image", "Inpainting"], horizontal=True, index=st.session_state["index_of_type_of_mask_replacement"])    
+                        types_of_mask_replacement = ["Replace With Image", "Inpainting"]
+                        st.session_state["type_of_mask_replacement"] = st.sidebar.radio("Select type of edit", types_of_mask_replacement, horizontal=True, index=st.session_state["index_of_type_of_mask_replacement"])    
 
-                        if st.session_state["type_of_mask_replacement"] == "Inpainting":           
-                            st.session_state["index_of_type_of_mask_replacement"] = 1
-
+                      
+                        if st.session_state["index_of_type_of_mask_replacement"] != types_of_mask_replacement.index(st.session_state["type_of_mask_replacement"]):
+                            st.session_state["index_of_type_of_mask_replacement"] = types_of_mask_replacement.index(st.session_state["type_of_mask_replacement"])
+                            st.experimental_rerun()
                         
-                        btn1, btn2 = st.sidebar.columns([1,1])
+                        
 
                         if st.session_state["type_of_mask_replacement"] == "Replace With Image":
                             prompt = ""
                             negative_prompt = ""
-                            background_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/backgrounds') if f.endswith('.png')]                 
-                            with btn1:
-                                uploaded_files = st.file_uploader("Add more background images here", accept_multiple_files=True)                    
-                                if st.button("Upload Backgrounds"):                            
-                                    for uploaded_file in uploaded_files:
-                                        with open(os.path.join(f"videos/{project_name}/assets/resources/backgrounds",uploaded_file.name),"wb") as f: 
-                                            f.write(uploaded_file.getbuffer())                                                                                                                                                      
-                                            st.success("Your backgrounds are uploaded file - they should appear in the dropdown.")                     
-                                            background_list.append(uploaded_file.name)
-                                            time.sleep(1.5)
-                                            st.experimental_rerun()
-                                
-                            with btn2:
-                                background_image = st.sidebar.selectbox("Range background", background_list)
-                                if background_list != []:
-                                    st.image(f"videos/{project_name}/assets/resources/backgrounds/{background_image}", use_column_width=True)
-                                
 
+                            background_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/backgrounds') if f.endswith('.png')]                 
+                            sources_of_images = ["Uploaded", "From Other Frame"]
+                            if 'index_of_source_of_image' not in st.session_state:
+                                st.session_state['index_of_source_of_image'] = 0
+                            source_of_image = st.sidebar.radio("Select type of image", sources_of_images,horizontal=True, index=st.session_state['index_of_source_of_image'])
+                            
+                            if st.session_state['index_of_source_of_image'] != sources_of_images.index(source_of_image):
+                                st.session_state['index_of_source_of_image'] = sources_of_images.index(source_of_image)
+                                st.experimental_rerun()
+                            
+                            if source_of_image == "Uploaded":                                
+                                btn1, btn2 = st.sidebar.columns([1,1])
+                                with btn1:
+                                    uploaded_files = st.file_uploader("Add more background images here", accept_multiple_files=True)                    
+                                    if st.button("Upload Backgrounds"):                            
+                                        for uploaded_file in uploaded_files:
+                                            with open(os.path.join(f"videos/{project_name}/assets/resources/backgrounds",uploaded_file.name),"wb") as f: 
+                                                f.write(uploaded_file.getbuffer())                                                                                                                                                      
+                                                st.success("Your backgrounds are uploaded file - they should appear in the dropdown.")                     
+                                                background_list.append(uploaded_file.name)
+                                                time.sleep(1.5)
+                                                st.experimental_rerun()                                
+                                with btn2:
+                                    background_image = st.sidebar.selectbox("Range background", background_list)
+                                    if background_list != []:
+                                        st.image(f"videos/{project_name}/assets/resources/backgrounds/{background_image}", use_column_width=True)
+                            elif source_of_image == "From Other Frame":
+                                btn1, btn2 = st.sidebar.columns([1,1])
+                                with btn1:
+                                    which_stage_to_use = st.radio("Select stage to use:", ["Unedited Key Frame", "Styled Key Frame"])
+                                    which_image_to_use = st.number_input("Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0)
+                                    if which_stage_to_use == "Unedited Key Frame":                                    
+                                        background_image = timing_details[which_image_to_use]["source_image"]
+                                    elif which_stage_to_use == "Styled Key Frame":
+                                        variants = timing_details[which_image_to_use]["alternative_images"]
+                                        primary_image = timing_details[which_image_to_use]["primary_image"]             
+                                        background_image = variants[primary_image]
+                                with btn2:
+                                    st.image(background_image, use_column_width=True)
+                                                                                                                                                                   
                         elif st.session_state["type_of_mask_replacement"] == "Inpainting":
+                            btn1, btn2 = st.sidebar.columns([1,1])
                             with btn1:
                                 prompt = st.text_input("Prompt:", help="Describe the whole image, but focus on the details you want changed!")
                             with btn2:
