@@ -18,10 +18,10 @@ def frame_styling_page(mainheader2, project_name):
                             
     if "strength" not in st.session_state:                    
         st.session_state['strength'] = st.session_state['project_settings']["last_strength"]
-        st.session_state['prompt'] = st.session_state['project_settings']["last_prompt"]
+        st.session_state['prompt_value'] = st.session_state['project_settings']["last_prompt"]
         st.session_state['model'] = st.session_state['project_settings']["last_model"]
         st.session_state['custom_pipeline'] = st.session_state['project_settings']["last_custom_pipeline"]
-        st.session_state['negative_prompt'] = st.session_state['project_settings']["last_negative_prompt"]
+        st.session_state['negative_prompt_value'] = st.session_state['project_settings']["last_negative_prompt"]
         st.session_state['guidance_scale'] = st.session_state['project_settings']["last_guidance_scale"]
         st.session_state['seed'] = st.session_state['project_settings']["last_seed"]
         st.session_state['num_inference_steps'] = st.session_state['project_settings']["last_num_inference_steps"]
@@ -117,15 +117,20 @@ def frame_styling_page(mainheader2, project_name):
             st.session_state['index_of_which_stage_to_run_on'] = stages.index(st.session_state['which_stage_to_run_on'])
             st.experimental_rerun()
 
-        custom_pipelines = ["None","Mystique"]                    
-        index_of_last_custom_pipeline = custom_pipelines.index(st.session_state['custom_pipeline'])
-        st.session_state['custom_pipeline'] = st.sidebar.selectbox(f"Custom Pipeline:", custom_pipelines, index=index_of_last_custom_pipeline)                    
+        custom_pipelines = ["None","Mystique"]                   
+        if 'index_of_last_custom_pipeline' not in st.session_state:
+            st.session_state['index_of_last_custom_pipeline'] = 0
+
+        st.session_state['custom_pipeline'] = st.sidebar.selectbox(f"Custom Pipeline:", custom_pipelines, index=st.session_state['index_of_last_custom_pipeline'])
+        if st.session_state['custom_pipeline'] == "Mystique" and st.session_state['index_of_last_custom_pipeline'] == 0:
+            st.session_state['index_of_last_custom_pipeline'] = 1
+            st.experimental_rerun()
+
         if st.session_state['custom_pipeline'] == "Mystique":
-            if st.session_state['index_of_last_model'] != 0 or st.session_state['index_of_last_model'] != 1:
-                st.session_state['index_of_last_model'] = 0
-                st.experimental_rerun()
-            st.sidebar.info("Mystique is a custom pipeline that uses a multiple models to generate a consistent character and style transformation.")
-            with st.sidebar.expander("Mystique pipeline instructions"):
+            if st.session_state['index_of_last_model'] > 1:
+                st.session_state['index_of_last_model'] = 0       
+                st.experimental_rerun()           
+            with st.sidebar.expander("Mystique is a custom pipeline that uses a multiple models to generate a consistent character and style transformation."):
                 st.markdown("## How to use the Mystique pipeline")                
                 st.markdown("1. Create a fine-tined model in the Custom Model section of the app - we recommend Dreambooth for character transformations.")
                 st.markdown("2. It's best to include a detailed prompt. We recommend taking an example input image and running it through the Prompt Finder")
@@ -137,10 +142,11 @@ def frame_styling_page(mainheader2, project_name):
                 st.experimental_rerun()                          
         else:
             models = ['stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'controlnet', 'Dreambooth', 'LoRA','StyleGAN-NADA','dreambooth_controlnet']
-            st.session_state['model'] = st.sidebar.selectbox(f"Model", models, index=st.session_state['index_of_last_model'])
+            models = ['LoRA','Dreambooth']
+            st.session_state['model'] = st.sidebar.selectbox(f"Which type of model is trained on your character?", models, index=st.session_state['index_of_last_model'])                    
             if st.session_state['index_of_last_model'] != models.index(st.session_state['model']):
                 st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
-                st.experimental_rerun()
+                st.experimental_rerun() 
                 
         
         if st.session_state['model'] == "controlnet" or st.session_state['model'] == 'dreambooth_controlnet':   
@@ -196,7 +202,7 @@ def frame_styling_page(mainheader2, project_name):
             st.session_state['adapter_type'] = "N"
         
         if st.session_state['model'] == "StyleGAN-NADA":
-            st.sidebar.info("StyleGAN-NADA is a custom model that uses StyleGAN to generate a consistent character and style transformation.")
+            st.sidebar.warning("StyleGAN-NADA is a custom model that uses StyleGAN to generate a consistent character and style transformation. It only works for square images.")
             st.session_state['prompt'] = st.sidebar.selectbox("What style would you like to apply to the character?", ['base', 'mona_lisa', 'modigliani', 'cubism', 'elf', 'sketch_hq', 'thomas', 'thanos', 'simpson', 'witcher', 'edvard_munch', 'ukiyoe', 'botero', 'shrek', 'joker', 'pixar', 'zombie', 'werewolf', 'groot', 'ssj', 'rick_morty_cartoon', 'anime', 'white_walker', 'zuckerberg', 'disney_princess', 'all', 'list'])
             st.session_state['strength'] = 0.5
             st.session_state['guidance_scale'] = 7.5
@@ -204,7 +210,10 @@ def frame_styling_page(mainheader2, project_name):
             st.session_state['num_inference_steps'] = int(50)
                         
         else:
-            st.session_state['prompt'] = st.sidebar.text_area(f"Prompt", label_visibility="visible", value=st.session_state['prompt'])
+            st.session_state['prompt'] = st.sidebar.text_area(f"Prompt", label_visibility="visible", value=st.session_state['prompt_value'],height=150)
+            if st.session_state['prompt'] != st.session_state['prompt_value']:
+                st.session_state['prompt_value'] = st.session_state['prompt']
+                st.experimental_rerun()
             with st.sidebar.expander("💡 Learn about dynamic prompting"):
                 st.markdown("## Why and how to use dynamic prompting")
                 st.markdown("Why:")
@@ -220,7 +229,10 @@ def frame_styling_page(mainheader2, project_name):
             st.session_state['strength'] = st.sidebar.number_input(f"Strength", value=float(st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
             
             with st.sidebar.expander("Advanced settings 😏"):
-                st.session_state['negative_prompt'] = st.text_area(f"Negative prompt", value=st.session_state['negative_prompt'], label_visibility="visible")
+                st.session_state['negative_prompt'] = st.text_area(f"Negative prompt", value=st.session_state['negative_prompt_value'], label_visibility="visible")
+                if st.session_state['negative_prompt'] != st.session_state['negative_prompt_value']:
+                    st.session_state['negative_prompt_value'] = st.session_state['negative_prompt']
+                    st.experimental_rerun()
                 st.session_state['guidance_scale'] = st.number_input(f"Guidance scale", value=float(st.session_state['guidance_scale']))
                 st.session_state['seed'] = st.number_input(f"Seed", value=int(st.session_state['seed']))
                 st.session_state['num_inference_steps'] = st.number_input(f"Inference steps", value=int(st.session_state['num_inference_steps']))

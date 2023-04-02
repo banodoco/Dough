@@ -14,6 +14,14 @@ def main():
     project_init()
     
     app_settings = get_app_settings()
+
+    hide_img = '''
+    <style>
+    button[title="View fullscreen"]{
+        display: none;}
+    </style>
+    '''
+    st.markdown(hide_img, unsafe_allow_html=True)
     
     # set online status of user
     if "online" not in st.session_state:

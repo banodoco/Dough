@@ -237,6 +237,18 @@ def promote_image_variant(index_of_current_item, project_name, variant_to_promot
     if index_of_current_item < len(get_timing_details(project_name)) - 1:
         update_specific_timing_value(project_name, index_of_current_item +1, "timing_video", "")
 
+def create_or_update_mask(project_name, index_of_current_number, image):
+    timing_details = get_timing_details(project_name)
+    if timing_details[index_of_current_number]["mask"] == "":
+        unique_file_name = str(uuid.uuid4()) + ".png"
+        update_specific_timing_value(project_name, index_of_current_number, "mask", f"videos/{project_name}/assets/resources/masks/{unique_file_name}")
+        timing_details = get_timing_details(project_name)
+    else:                                        
+        unique_file_name = timing_details[st.session_state['which_image']]["mask"].split("/")[-1]                                                                                                                                                                                     
+    file_location = f"videos/{project_name}/assets/resources/masks/{unique_file_name}"
+    image.save(file_location, "PNG")
+    return file_location
+
 def create_video_without_interpolation(timing_details, output_file):
     # Create a list of ffmpeg inputs, each input being a frame with its duration
     inputs = []
@@ -295,13 +307,13 @@ def create_working_assets(video_name):
 
     df.to_csv(f'videos/{video_name}/settings.csv', index=False)
 
-    df = pd.DataFrame(columns=['frame_time','frame_number','primary_image','alternative_images','custom_pipeline','negative_prompt','guidance_scale','seed','num_inference_steps','model_id','strength','notes','source_image','custom_models','adapter_type','duration_of_clip','interpolated_video','timing_video','prompt'])
+    df = pd.DataFrame(columns=['frame_time','frame_number','primary_image','alternative_images','custom_pipeline','negative_prompt','guidance_scale','seed','num_inference_steps','model_id','strength','notes','source_image','custom_models','adapter_type','duration_of_clip','interpolated_video','timing_video','prompt', 'mask'])
 
     # df.loc[0] = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
 
     df.to_csv(f'videos/{video_name}/timings.csv', index=False)
 
-def inpainting(video_name, input_image, prompt, negative_prompt):
+def inpainting(video_name, input_image, prompt, negative_prompt, index_of_current_item):
 
     app_settings = get_app_settings()
     timing_details = get_timing_details(video_name)
@@ -311,8 +323,10 @@ def inpainting(video_name, input_image, prompt, negative_prompt):
     model = replicate.models.get("andreasjansson/stable-diffusion-inpainting")
 
     version = model.versions.get("e490d072a34a94a11e9711ed5a6ba621c3fab884eda1665d9d3a282d65a21180")
-    mask = "mask.png"
-    mask = upload_image("mask.png")
+    mask = timing_details[index_of_current_item]["mask"]
+
+    if not mask.startswith("http"):
+        mask = open(mask, "rb")
         
     if not input_image.startswith("http"):        
         input_image = open(input_image, "rb")
@@ -465,7 +479,11 @@ def remove_background(project_name, input_image):
     return output
 
 def replace_background(video_name, foreground_image, background_image):
-    background_image = Image.open(f"videos/{video_name}/assets/resources/backgrounds/{background_image}")
+    if background_image.startswith("http"):
+        response = r.get(background_image)
+        background_image = Image.open(BytesIO(response.content))
+    else:
+        background_image = Image.open(f"videos/{video_name}/assets/resources/backgrounds/{background_image}")
     foreground_image = Image.open(f"masked_image.png")
     background_image.paste(foreground_image, (0, 0), foreground_image)
     background_image.save(f"videos/{video_name}/replaced_bg.png")
@@ -526,19 +544,19 @@ def resize_image(video_name, new_width,new_height, image):
     return resized_image
 
 def face_swap(video_name, index_of_current_item, source_image, timing_details):
-
     app_settings = get_app_settings()
     
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
+    model = replicate.models.get("arielreplicate/ghost_face_swap")    
+    model_id = timing_details[index_of_current_item]["model_id"]
 
-    model = replicate.models.get("arielreplicate/ghost_face_swap")
-
-    model_id = timing_details[index_of_current_item]["custom_models"]
-   
-    source_face = ast.literal_eval(get_model_details(model_id)["training_images"][1:-1])[0]
-
+    if model_id == "Dreambooth":
+        custom_model = timing_details[index_of_current_item]["custom_models"]
+    if model_id == "LoRA":        
+        custom_model = ast.literal_eval(timing_details[index_of_current_item]["custom_models"][1:-1])[0]
+                    
+    source_face = ast.literal_eval(get_model_details(custom_model)["training_images"][1:-1])[0]
     version = model.versions.get("106df0aaf9690354379d8cd291ad337f6b3ea02fe07d90feb1dafd64820066fa")
-
     target_face = source_image
 
     if not source_face.startswith("http"):        
@@ -547,20 +565,19 @@ def face_swap(video_name, index_of_current_item, source_image, timing_details):
     if not target_face.startswith("http"):        
         target_face = open(target_face, "rb")
 
-    output = version.predict(source_path=source_face, target_path=target_face,use_sr=0)
+    output = version.predict(source_path=source_face, target_path=target_face)
     return output
 
 def prompt_model_stylegan_nada(index_of_current_item, timing_details, input_image, project_name):
+    app_settings = get_app_settings()
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
+    model = replicate.models.get("rinongal/stylegan-nada")
+    if not input_image.startswith("http"):        
+        input_image = open(input_image, "rb")        
+    output = model.predict(input=input_image,output_style = timing_details[index_of_current_item]["prompt"])        
+    output = resize_image(project_name, 512, 512, output)
     
-        app_settings = get_app_settings()
-        os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-        model = replicate.models.get("rinongal/stylegan-nada")
-        if not input_image.startswith("http"):        
-            input_image = open(input_image, "rb")        
-        output = model.predict(input=input_image,output_style = timing_details[index_of_current_item]["prompt"])        
-        output = resize_image(project_name, 512, 512, output)
-        
-        return output
+    return output
 
 def prompt_model_stability(project_name, index_of_current_item, timing_details, input_image):
 
@@ -612,7 +629,7 @@ def prompt_model_dreambooth(project_name, image_number, model_name, app_settings
     input_image = image_url
     if not input_image.startswith("http"):        
         input_image = open(input_image, "rb")
-    output = version.predict(image=input_image, prompt=prompt, prompt_strength=strength, height = project_settings["height"], width = project_settings["width"], disable_safety_check=True, negative_prompt = negative_prompt, guidance_scale = guidance_scale, seed = seed, num_inference_steps = num_inference_steps)
+    output = version.predict(image=input_image, prompt=prompt, prompt_strength=float(strength), height = int(project_settings["height"]), width = int(project_settings["width"]), disable_safety_check=True, negative_prompt = negative_prompt, guidance_scale = float(guidance_scale), seed = int(seed), num_inference_steps = int(num_inference_steps))
 
     new_image = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(image_number) + ".png"
     
@@ -1053,7 +1070,7 @@ def create_gif_preview(project_name, timing_details):
     imageio.mimsave(f'videos/{project_name}/preview_gif.gif', frames, fps=0.5)
 
 
-def create_depth_mask_image(input_image,layer):
+def create_depth_mask_image(input_image,layer,project_name, index_of_current_item):
     
     app_settings = get_app_settings()
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]            
@@ -1083,7 +1100,7 @@ def create_depth_mask_image(input_image,layer):
             elif layer == "Background":
                 mask_pixels[i, j] = 0 if depth_value <= 50 else 255  # Set background pixels to black
 
-    mask.save("mask.png")
+    return create_or_update_mask(project_name, index_of_current_item, mask)
 
 
 def prompt_model_dreambooth_controlnet(input_image, timing_details, project_name, index_of_current_item):
@@ -1176,10 +1193,10 @@ def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
     'prompt': timing_details[index_of_current_item]["prompt"],
     'num_samples': "1",
     'image_resolution': "512",    
-    'ddim_steps': timing_details[index_of_current_item]["num_inference_steps"],
-    'scale': timing_details[index_of_current_item]["guidance_scale"],
+    'ddim_steps': int(timing_details[index_of_current_item]["num_inference_steps"]),
+    'scale': float(timing_details[index_of_current_item]["guidance_scale"]),
     'eta': 0, 
-    'seed': timing_details[index_of_current_item]["seed"],   
+    'seed': int(timing_details[index_of_current_item]["seed"]),   
     'a_prompt': "best quality, extremely detailed",    
     'n_prompt': timing_details[index_of_current_item]["negative_prompt"] + ", longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",        
     'detect_resolution': 512,    
@@ -1209,7 +1226,6 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     for lora_model in lora_models:
         if lora_model != "":
             lora_model_details = get_model_details(lora_model)
-            print("FUCK IT")
             print(lora_model_details)
             if lora_model_details['model_url'] != "":            
                 lora_model_url = lora_model_details['model_url']
@@ -1277,10 +1293,10 @@ def attach_audio_element(project_name, project_settings,expanded):
         if project_settings["audio"] != "":
             st.audio(f"videos/{project_name}/assets/resources/audio/{project_settings['audio']}")
     
-def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, bg_image, prompt, negative_prompt, width, height, layer):
+def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project_name, background_image, editing_image, prompt, negative_prompt, width, height, layer, index_of_current_item):
 
     if type_of_mask_selection == "Automated Background Selection":  
-        removed_background = remove_background(project_name, bg_image)
+        removed_background = remove_background(project_name, editing_image)
         response = r.get(removed_background)                                
         with open("masked_image.png", "wb") as f:
             f.write(response.content)    
@@ -1296,17 +1312,24 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
                     if pixel[3] == 0:                                    
                         converted_image.putpixel((x, y), (0,0,0))
                     else:                                    
-                        converted_image.putpixel((x, y), (255, 255, 255))                                            
-            converted_image.save("mask.png")
-            edited_image = inpainting(project_name, bg_image, prompt, negative_prompt)                                                                                                
+                        converted_image.putpixel((x, y), (255, 255, 255))    
+            create_or_update_mask(project_name, index_of_current_item, converted_image)            
+            edited_image = inpainting(project_name, editing_image, prompt, negative_prompt,index_of_current_item)                                                                                                
                 
     elif type_of_mask_selection == "Manual Background Selection":
         if type_of_mask_replacement == "Replace With Image":    
-            response = r.get(bg_image)
-            # if the image is
-            bg_img = Image.open(BytesIO(response.content))                        
-            mask_img = Image.open("mask.png")    
-            # check if the mask image has a transparent background
+            if editing_image.startswith("http"):
+                response = r.get(editing_image)
+                bg_img = Image.open(BytesIO(response.content))
+            else:
+                bg_img = Image.open(editing_image)
+            timing_detials = get_timing_details(project_name)
+            mask_location = timing_detials[index_of_current_item]["mask"]
+            if mask_location.startswith("http"):
+                response = r.get(mask_location)
+                mask_img = Image.open(BytesIO(response.content))
+            else:
+                mask_img = Image.open(mask_location)   
                                        
             result_img = Image.new("RGBA", bg_img.size, (255, 255, 255, 0))                                
             for x in range(bg_img.size[0]):
@@ -1319,27 +1342,57 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
             replace_background(project_name, "masked_image.png", background_image)
             edited_image = upload_image(f"videos/{project_name}/replaced_bg.png")
         elif type_of_mask_replacement == "Inpainting":
-            im = Image.open("mask.png")
+            timing_detials = get_timing_details(project_name)
+            mask_location = timing_detials[index_of_current_item]["mask"]
+            if mask_location.startswith("http"):
+                response = r.get(mask_location)
+                im = Image.open(BytesIO(response.content))
+            else:
+                im = Image.open(mask_location)
             if "A" in im.getbands():
                 mask = Image.new('RGB', (width, height), color = (255, 255, 255))
                 mask.paste(im, (0, 0), im)                                    
-                mask.save("mask.png")
-            edited_image = inpainting(project_name, bg_image, prompt, negative_prompt)
+                create_or_update_mask(project_name, index_of_current_item, mask)
+            edited_image = inpainting(project_name, editing_image, prompt, negative_prompt,index_of_current_item)
     elif type_of_mask_selection == "Automated Layer Selection":
-        create_depth_mask_image(bg_image,layer)
+        mask_location = create_depth_mask_image(editing_image,layer, project_name, index_of_current_item)
         if type_of_mask_replacement == "Replace With Image":
-            mask = Image.open("mask.png").convert('1')
+            if mask_location.startswith("http"):
+                mask = Image.open(BytesIO(r.get(mask_location).content)).convert('1')
+            else:
+                mask = Image.open(mask_location).convert('1')
+            if editing_image.startswith("http"):
+                response = r.get(editing_image)
+                bg_img = Image.open(BytesIO(response.content)).convert('RGBA')                            
+            else:
+                bg_img = Image.open(editing_image).convert('RGBA')                        
+            masked_img = Image.composite(bg_img, Image.new('RGBA', bg_img.size, (0,0,0,0)), mask)   
+            masked_img.save("masked_image.png")                                                                                                                  
+            replace_background(project_name, "masked_image.png", background_image)
+            edited_image = upload_image(f"videos/{project_name}/replaced_bg.png")            
+        elif type_of_mask_replacement == "Inpainting":
+            edited_image = inpainting(project_name, editing_image, prompt, negative_prompt,index_of_current_item)
 
-            response = r.get(bg_image)
-            bg_img = Image.open(BytesIO(response.content)).convert('RGBA')                            
-            masked_img = Image.composite(bg_img, Image.new('RGBA', bg_img.size, (0,0,0,0)), mask)            
-            masked_img.save("masked_image.png")
-                                                                                                                  
+    elif type_of_mask_selection == "Re-Use Previous Mask":
+        timing_detials = get_timing_details(project_name)
+        mask_location = timing_detials[index_of_current_item]["mask"]
+        if type_of_mask_replacement == "Replace With Image":
+            if mask_location.startswith("http"):
+                response = r.get(mask_location)
+                mask = Image.open(BytesIO(response.content)).convert('1')
+            else:
+                mask = Image.open(mask_location).convert('1')
+            if editing_image.startswith("http"):
+                response = r.get(editing_image)
+                bg_img = Image.open(BytesIO(response.content)).convert('RGBA')
+            else:
+                bg_img = Image.open(editing_image).convert('RGBA')            
+            masked_img = Image.composite(bg_img, Image.new('RGBA', bg_img.size, (0,0,0,0)), mask)         
+            masked_img.save("masked_image.png")                                                                     
             replace_background(project_name, "masked_image.png", background_image)
             edited_image = upload_image(f"videos/{project_name}/replaced_bg.png")
-            
         elif type_of_mask_replacement == "Inpainting":
-            edited_image = inpainting(project_name, bg_image, prompt, negative_prompt)
+            edited_image = inpainting(project_name, editing_image, prompt, negative_prompt,index_of_current_item)
                         
 
     return edited_image

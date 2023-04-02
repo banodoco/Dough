@@ -74,11 +74,11 @@ def setup_app_ui():
             pages = [
             {
                 "section_name": "Main Process",        
-                "pages": ["Key Frame Selection","Frame Styling", "Frame Interpolation","Video Rendering"]
+                "pages": ["Key Frame Selection","Frame Styling", "Frame Editing", "Frame Interpolation","Video Rendering"]
             },
             {
                 "section_name": "Tools",
-                "pages": ["Frame Editing","Custom Models","Prompt Finder", "Batch Actions","Timing Adjustment"]
+                "pages": ["Custom Models", "Prompt Finder", "Batch Actions","Timing Adjustment"]
             },
             {
                 "section_name": "Settings",
