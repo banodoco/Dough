@@ -20,7 +20,7 @@ import uuid
 from io import BytesIO
 import ast
 import numpy as np
-from repository.local_repo.csv_repo import get_app_settings, get_project_settings, update_project_setting, update_specific_timing_value
+from repository.local_repo.csv_repo import CSVProcessor, get_app_settings, get_project_settings, update_project_setting, update_specific_timing_value
 
 
 def calculate_time_at_frame_number(input_video, frame_number, project_name):
@@ -99,7 +99,8 @@ def move_frame(project_name, index_of_current_item, distance_to_move, timing_det
 # timing_details stores frame_number and frame_time map along with other meta details 
 def get_timing_details(video_name):
     file_path = "videos/" + str(video_name) + "/timings.csv"
-    df = pd.read_csv(file_path, na_filter=False)
+    csv_processor = CSVProcessor(file_path)
+    df = csv_processor.get_df_data()
 
     # Evaluate the alternative_images column and replace it with the evaluated list
     df['alternative_images'] = df['alternative_images'].fillna('').apply(lambda x: ast.literal_eval(x[1:-1]) if x != '' else '')
@@ -115,13 +116,13 @@ def delete_frame(project_name, index_of_current_item):
     if index_of_current_item < len(get_timing_details(project_name)) - 1:
         update_specific_timing_value(project_name, index_of_current_item +1, "timing_video", "")
 
-    df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
-    df = df.drop([int(index_of_current_item)])
-    df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
+    csv_processor = CSVProcessor("videos/" + str(project_name) + "/timings.csv")
+    csv_processor.delete_row(index_of_current_item)
 
 def batch_update_timing_values(project_name, index_of_current_item,prompt, strength, model, custom_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps, source_image, custom_models,adapter_type):
+    csv_processor = CSVProcessor("videos/" + str(project_name) + "/timings.csv")
+    df = csv_processor.get_df_data()
 
-    df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
     if model != "Dreambooth":
         custom_models = f'"{custom_models}"' 
     df.iloc[index_of_current_item, [18, 10, 9, 4, 5, 6, 7, 8, 12, 13, 14]] = [prompt, float(strength), model, custom_pipeline, negative_prompt, float(guidance_scale), int(seed), int(num_inference_steps), source_image, custom_models, adapter_type]
@@ -930,7 +931,8 @@ def custom_pipeline_mystique(index_of_current_item, project_name, project_settin
 
 
 def create_timings_row_at_frame_number(project_name, input_video, extract_frame_number, timing_details, index_of_new_item):
-    df = pd.read_csv(f'videos/{project_name}/timings.csv')
+    csv_processor = CSVProcessor(f'videos/{project_name}/timings.csv')
+    df = csv_processor.get_df_data()
     length_of_df = len(df)
     frame_time = calculate_time_at_frame_number(input_video, float(extract_frame_number),project_name)
     new_row = {'frame_time': frame_time, 'frame_number': extract_frame_number}

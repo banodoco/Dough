@@ -17,6 +17,10 @@ class CSVProcessor:
             res[row['key']] = row['value']
         return res
     
+    def get_df_data(self):
+        df = pd.read_csv(self.file_path, na_filter=False)
+        return df
+    
     # updates a single key value pair
     def update_csv_data(self, key, value):
         with open(self.file_path, 'r') as csv_file:
@@ -36,6 +40,11 @@ class CSVProcessor:
     def clear_all_data(self):
         df = pd.read_csv(self.file_path)
         df = df.drop(df.index[0:])
+        df.to_csv(self.file_path, index=False)
+
+    def delete_row(self, idx):
+        df = pd.read_csv(self.file_path)
+        df = df.drop([int(idx)])
         df.to_csv(self.file_path, index=False)
     
     # TODO: create a separate interface for this later

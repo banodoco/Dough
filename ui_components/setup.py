@@ -29,7 +29,6 @@ def setup_app_ui():
 
     if st.session_state["project_changed"] == True:
         update_app_settings("previous_project", st.session_state["project_name"])
-
         st.session_state["project_changed"] = False        
 
     app_settings = get_app_settings()
@@ -42,7 +41,7 @@ def setup_app_ui():
            
     if int(st.session_state["welcome_state"]) in [0,1,2,3,4] and st.session_state["online"] == False:
         welcome_page()
-    else:            
+    else:
         if "project_set" not in st.session_state:
             st.session_state["project_set"] = "No"
             st.session_state["page_updated"] = "Yes"
@@ -58,9 +57,9 @@ def setup_app_ui():
             st.session_state["index_of_project_name"] = video_list.index(st.session_state["project_name"])
             st.session_state['project_set'] = 'No'
         else:
-            st.session_state["project_name"] = project_name
-            st.session_state["index_of_project_name"] = ""
-            
+            # st.session_state["project_name"] = project_name
+            st.session_state["index_of_project_name"] = 0
+        
         st.session_state["project_name"] = st.sidebar.selectbox("Select which project you'd like to work on:", os.listdir("videos"),index=st.session_state["index_of_project_name"], on_change=project_changed())    
         project_name = st.session_state["project_name"]
         
