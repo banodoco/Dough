@@ -440,7 +440,7 @@ def train_model(app_settings, images_list, instance_prompt, class_prompt, max_tr
     training_file_url = serving_url
     url = "https://dreambooth-api-experimental.replicate.com/v1/trainings"
     os.remove('images.zip')
-
+    model_name = model_name.replace(" ", "-").lower()
     if type_of_model == "Dreambooth":
         headers = {
             "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),
@@ -455,10 +455,10 @@ def train_model(app_settings, images_list, instance_prompt, class_prompt, max_tr
             },
             "model": "peter942/" + str(model_name),
             "trainer_version": "cd3f925f7ab21afaef7d45224790eedbb837eeac40d22e8fefe015489ab644aa",
+            "template_version": "b65d36e378a01ef81d81ba49be7deb127e9bb8b74a28af3aa0eaca16b9bcd0eb",
             "webhook_completed": "https://example.com/dreambooth-webhook"
-        }
-
-        response = r.post(url, headers=headers, data=json.dumps(payload))
+        }    
+        response = r.post(url, headers=headers, data=json.dumps(payload))    
         response = (response.json())
         training_status = response["status"]
         model_id = response["id"]
