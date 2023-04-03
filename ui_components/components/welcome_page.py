@@ -18,7 +18,7 @@ def welcome_page():
                     st.experimental_rerun()
             
             if st.button("Skip Intro"):
-                st.session_state["welcome_state"] = 7
+                st.session_state["welcome_state"] = '7'
                 update_app_settings("welcome_state", st.session_state["welcome_state"]) 
                 st.experimental_rerun()
         with button2:
