@@ -76,7 +76,7 @@ def frame_editing_page(project_name):
             st.sidebar.markdown("### Select Area To Edit:") 
             if 'index_of_type_of_mask_selection' not in st.session_state:
                 st.session_state['index_of_type_of_mask_selection'] = 0
-            mask_selection_options = ["Automated Background Selection", "Automated Layer Selection", "Manual Background Selection","Re-Use Previous Mask"]
+            mask_selection_options = ["Automated Background Selection", "Automated Layer Selection", "Manual Background Selection","Re-Use Previous Mask", "Invert Previous Mask"]
             type_of_mask_selection = st.sidebar.radio("How would you like to select what to edit?", mask_selection_options, horizontal=True, index=st.session_state['index_of_type_of_mask_selection'])                                                                      
             if st.session_state['index_of_type_of_mask_selection'] != mask_selection_options.index(type_of_mask_selection):
                 st.session_state['index_of_type_of_mask_selection'] = mask_selection_options.index(type_of_mask_selection)
@@ -154,9 +154,17 @@ def frame_editing_page(project_name):
                         st.session_state['edited_image'] = ""
                         st.experimental_rerun()
             
-            elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection" or type_of_mask_selection == "Re-Use Previous Mask":
-                if type_of_mask_selection == "Re-Use Previous Mask" and timing_details[st.session_state['which_image']]["mask"] == "":
+            elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection" or type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
+                if (type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask") and timing_details[st.session_state['which_image']]["mask"] == "":
                     st.sidebar.info("You don't have a previous mask to re-use.")
+                else:
+                    mask1,mask2 = st.sidebar.columns([2,1])
+                    with mask1:
+                        if type_of_mask_selection == "Re-Use Previous Mask":
+                            st.info("This will update the **black pixels** in the mask with the pixels from the image you are editing.")
+                        elif type_of_mask_selection == "Invert Previous Mask":
+                            st.info("This will update the **white pixels** in the mask with the pixels from the image you are editing.")                
+                        st.image(timing_details[st.session_state['which_image']]["mask"], use_column_width=True)
                 if st.session_state['edited_image'] == "":
                     st.image(editing_image, use_column_width=True)
                 else:
@@ -302,7 +310,7 @@ def frame_editing_page(project_name):
                     else:
                         st.button("Replace frame",disabled=True, help="You need to confirm you want to replace the frame and upload a replacement frame first.")
                     
-
+        st.sidebar.markdown("***")
         st.sidebar.markdown("### Batch Run Edits:")   
         st.sidebar.write("This will batch run the settings you have above on a batch of images.")     
         batch_run_range = st.sidebar.slider("Select range:", 1, 0, (0, len(timing_details)-1))                                

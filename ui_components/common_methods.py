@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from moviepy.editor import *
 import cv2
 from moviepy.video.io.VideoFileClip import VideoFileClip
@@ -1551,6 +1551,35 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
         elif type_of_mask_replacement == "Inpainting":
             edited_image = inpainting(
                 project_name, editing_image, prompt, negative_prompt, index_of_current_item)
+    
+    elif type_of_mask_selection == "Invert Previous Mask":
+        timing_detials = get_timing_details(project_name)
+        mask_location = timing_detials[index_of_current_item]["mask"]
+        if type_of_mask_replacement == "Replace With Image":
+            if mask_location.startswith("http"):
+                response = r.get(mask_location)
+                mask = Image.open(BytesIO(response.content)).convert('1')
+            else:
+                mask = Image.open(mask_location).convert('1')
+            inverted_mask = ImageOps.invert(mask)
+            if editing_image.startswith("http"):
+                response = r.get(editing_image)
+                bg_img = Image.open(BytesIO(response.content)).convert('RGBA')
+            else:
+                bg_img = Image.open(editing_image).convert('RGBA')
+            masked_img = Image.composite(bg_img, Image.new(
+                'RGBA', bg_img.size, (0, 0, 0, 0)), inverted_mask)
+            masked_img.save("masked_image.png")
+            replace_background(
+                project_name, "masked_image.png", background_image)
+            edited_image = upload_image(
+                f"videos/{project_name}/replaced_bg.png")
+        elif type_of_mask_replacement == "Inpainting":
+            edited_image = inpainting(
+                project_name, editing_image, prompt, negative_prompt, index_of_current_item)
+
+
+
 
     return edited_image
 
