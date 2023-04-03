@@ -1,9 +1,12 @@
 import pandas as pd
 import csv
 
+from utils.common_methods import create_file_path
+
 class CSVProcessor:
     def __init__(self, file_path):
         self.file_path = file_path
+        create_file_path(self.file_path)
     
     # returns the entire csv file data in json format
     def get_all_json_data(self, na_filter=False):
@@ -34,6 +37,25 @@ class CSVProcessor:
         df = pd.read_csv(self.file_path)
         df = df.drop(df.index[0:])
         df.to_csv(self.file_path, index=False)
+    
+    # TODO: create a separate interface for this later
+    def update_specific_timing_value(self, index_of_current_item, parameter, value):
+        df = pd.read_csv(self.file_path)
+        
+        try:
+            col_index = df.columns.get_loc(parameter)
+        except KeyError:
+            raise ValueError(f"Invalid parameter: {parameter}")
+        
+        df.iloc[index_of_current_item, col_index] = value
+        numeric_cols = ["primary_image", "seed", "num_inference_steps"]
+
+        for col in numeric_cols:
+            df[col] = pd.to_numeric(df[col], downcast="integer", errors="coerce")
+            df[col].fillna(0, inplace=True)
+            df[col] = df[col].astype(int)
+        
+        df.to_csv(self.file_path, index=False)
 
 
 def get_project_settings(project_name):
@@ -57,19 +79,5 @@ def update_app_settings(key, value):
     csv_client.update_csv_data(key, value)
 
 def update_specific_timing_value(project_name, index_of_current_item, parameter, value):
-    df = pd.read_csv(f"videos/{project_name}/timings.csv")
-    
-    try:
-        col_index = df.columns.get_loc(parameter)
-    except KeyError:
-        raise ValueError(f"Invalid parameter: {parameter}")
-    
-    df.iloc[index_of_current_item, col_index] = value
-    numeric_cols = ["primary_image", "seed", "num_inference_steps"]
-
-    for col in numeric_cols:
-        df[col] = pd.to_numeric(df[col], downcast="integer", errors="coerce")
-        df[col].fillna(0, inplace=True)
-        df[col] = df[col].astype(int)
-    
-    df.to_csv(f"videos/{project_name}/timings.csv", index=False)
+    csv_client = CSVProcessor(f"videos/{project_name}/timings.csv")
+    csv_client.update_specific_timing_value(index_of_current_item, parameter, value)
