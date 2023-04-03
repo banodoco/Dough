@@ -533,6 +533,7 @@ def get_model_details(model_name):
 def prompt_interpolation_model(img1, img2, project_name, video_number, interpolation_steps, replicate_api_key):
     os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
     model = replicate.models.get("google-research/frame-interpolation")
+    version = model.versions.get("4f88a16a13673a8b589c18866e540556170a5bcb2ccdc12de556e800e9456d3d")
 
     if not img1.startswith("http"):
         img1 = open(img1, "rb")
@@ -540,7 +541,7 @@ def prompt_interpolation_model(img1, img2, project_name, video_number, interpola
     if not img2.startswith("http"):
         img2 = open(img2, "rb")
 
-    output = model.predict(frame1=img1, frame2=img2,
+    output = version.predict(frame1=img1, frame2=img2,
                            times_to_interpolate=interpolation_steps)
     file_name = ''.join(random.choices(
         string.ascii_lowercase + string.digits, k=16)) + ".mp4"
@@ -568,7 +569,9 @@ def remove_background(project_name, input_image):
 
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
     model = replicate.models.get("pollinations/modnet")
-    output = model.predict(image=input_image)
+    version = model.versions.get("da7d45f3b836795f945f221fc0b01a6d3ab7f5e163f13208948ad436001e2255")
+
+    output = version.predict(image=input_image)
     return output
 
 
@@ -601,7 +604,9 @@ def prompt_clip_interrogator(input_image, which_model, best_or_fast):
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
 
-    output = model.predict(
+    version = model.versions.get("a4a8bafd6089e1716b06057c42b19378250d008b80fe87caa5cd36d40c1eda90")
+
+    output = version.predict(
         image=input_image, clip_model_name=which_model, mode=best_or_fast)
 
     return output
@@ -617,7 +622,9 @@ def touch_up_images(video_name, index_of_current_item, input_image):
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
 
-    output = model.predict(img=input_image)
+    version = model.versions.get("6129309904ce4debfde78de5c209bce0022af40e197e132f08be8ccce3050393")
+
+    output = version.predict(img=input_image)
 
     return output
 
@@ -675,7 +682,9 @@ def prompt_model_stylegan_nada(index_of_current_item, timing_details, input_imag
     model = replicate.models.get("rinongal/stylegan-nada")
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
-    output = model.predict(
+    version = model.versions.get(
+        "6b2af4ac56fa2384f8f86fc7620943d5fc7689dcbb6183733743a215296d0e30")
+    output = version.predict(
         input=input_image, output_style=timing_details[index_of_current_item]["prompt"])
     output = resize_image(project_name, 512, 512, output)
 
@@ -1244,18 +1253,33 @@ def create_depth_mask_image(input_image, layer, project_name, index_of_current_i
     mask = Image.new("L", depth_map.size)
     mask_pixels = mask.load()
 
+    fg_mask = Image.new("L", depth_map.size) if "Foreground" in layer else None
+    mg_mask = Image.new("L", depth_map.size) if "Middleground" in layer else None
+    bg_mask = Image.new("L", depth_map.size) if "Background" in layer else None
+
+    fg_pixels = fg_mask.load() if fg_mask else None
+    mg_pixels = mg_mask.load() if mg_mask else None
+    bg_pixels = bg_mask.load() if bg_mask else None
+
     for i in range(depth_map.size[0]):
         for j in range(depth_map.size[1]):
             depth_value = pixels[i, j]
-            if layer == "Foreground":
-                # Set foreground pixels to black
-                mask_pixels[i, j] = 0 if depth_value > 200 else 255
-            elif layer == "Middleground":
-                # Set middleground pixels to black
-                mask_pixels[i, j] = 0 if depth_value <= 200 and depth_value > 50 else 255
-            elif layer == "Background":
-                # Set background pixels to black
-                mask_pixels[i, j] = 0 if depth_value <= 50 else 255
+
+            if fg_pixels:
+                fg_pixels[i, j] = 0 if depth_value > 200 else 255
+            if mg_pixels:
+                mg_pixels[i, j] = 0 if depth_value <= 200 and depth_value > 50 else 255
+            if bg_pixels:
+                bg_pixels[i, j] = 0 if depth_value <= 50 else 255
+
+            mask_pixels[i, j] = 255
+            if fg_pixels:
+                mask_pixels[i, j] &= fg_pixels[i, j]
+            if mg_pixels:
+                mask_pixels[i, j] &= mg_pixels[i, j]
+            if bg_pixels:
+                mask_pixels[i, j] &= bg_pixels[i, j]
+
 
     return create_or_update_mask(project_name, index_of_current_item, mask)
 
@@ -1267,20 +1291,28 @@ def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
 
     if timing_details[index_of_current_item]["adapter_type"] == "normal":
         model = replicate.models.get("jagilley/controlnet-normal")
+        version = model.versions.get("cc8066f617b6c99fdb134bc1195c5291cf2610875da4985a39de50ee1f46d81c")
     elif timing_details[index_of_current_item]["adapter_type"] == "canny":
         model = replicate.models.get("jagilley/controlnet-canny")
+        version = model.versions.get("aff48af9c68d162388d230a2ab003f68d2638d88307bdaf1c2f1ac95079c9613")
     elif timing_details[index_of_current_item]["adapter_type"] == "hed":
         model = replicate.models.get("jagilley/controlnet-hed")
+        version = model.versions.get("cde353130c86f37d0af4060cd757ab3009cac68eb58df216768f907f0d0a0653")
     elif timing_details[index_of_current_item]["adapter_type"] == "scribble":
         model = replicate.models.get("jagilley/controlnet-scribble")
+        version = model.versions.get("435061a1b5a4c1e26740464bf786efdfa9cb3a3ac488595a2de23e143fdb0117")
     elif timing_details[index_of_current_item]["adapter_type"] == "seg":
         model = replicate.models.get("jagilley/controlnet-seg")
+        version = model.versions.get("f967b165f4cd2e151d11e7450a8214e5d22ad2007f042f2f891ca3981dbfba0d")
     elif timing_details[index_of_current_item]["adapter_type"] == "hough":
         model = replicate.models.get("jagilley/controlnet-hough")
+        version = model.versions.get("854e8727697a057c525cdb45ab037f64ecca770a1769cc52287c2e56472a247b")
     elif timing_details[index_of_current_item]["adapter_type"] == "depth2img":
         model = replicate.models.get("jagilley/controlnet-depth2img")
+        version = model.versions.get("922c7bb67b87ec32cbc2fd11b1d5f94f0ba4f5519c4dbd02856376444127cc60")
     elif timing_details[index_of_current_item]["adapter_type"] == "pose":
         model = replicate.models.get("jagilley/controlnet-pose")
+        version = model.versions.get("0304f7f774ba7341ef754231f794b1ba3d129e3c46af3022241325ae0c50fb99")
 
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
@@ -1299,8 +1331,8 @@ def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
         'detect_resolution': 512,
         'bg_threshold': 0,
     }
-
-    output = model.predict(**inputs)
+    
+    output = version.predict(**inputs)
 
     return output[1]
 

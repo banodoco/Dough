@@ -86,7 +86,8 @@ def frame_editing_page(project_name):
                 st.session_state['which_layer'] = "Background"
 
             if type_of_mask_selection == "Automated Layer Selection":
-                st.session_state['which_layer'] = st.sidebar.selectbox("Which layer would you like to replace?", ["Background", "Middleground", "Foreground"])
+                st.session_state['which_layer'] = st.sidebar.multiselect("Which layers would you like to replace?", ["Background", "Middleground", "Foreground"])
+                
 
 
             if type_of_mask_selection == "Manual Background Selection":
@@ -323,3 +324,4 @@ def frame_editing_page(project_name):
                     edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, editing_image, prompt, negative_prompt, width, height,st.session_state['which_layer'], st.session_state['which_image'])
                     number_of_image_variants = add_image_variant(edited_image, i, project_name, timing_details)                        
                     promote_image_variant(i, project_name, number_of_image_variants-1)
+            st.experimental_rerun()
