@@ -6,7 +6,11 @@ __pycache__/
 venv
 .vscode
 
+# system
+.DS_Store
+
 # user files
 app_settings.csv
 videos
 videos/*
+training_data
