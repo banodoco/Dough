@@ -430,6 +430,9 @@ def train_model(app_settings, images_list, instance_prompt, class_prompt, max_tr
         "Content-Type": "application/zip"
     }
     response = r.post(url, headers=headers)
+    if response.status_code != 200:
+        st.error(response.content)
+        return
     upload_url = response.json()["upload_url"]
     serving_url = response.json()["serving_url"]
     with open('images.zip', 'rb') as f:

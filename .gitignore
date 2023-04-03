@@ -10,3 +10,4 @@ venv
 app_settings.csv
 videos
 videos/*
+training_data

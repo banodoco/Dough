@@ -109,6 +109,11 @@ def custom_models_page(project_name):
             if st.button("Train Model", disabled=False):
                 st.info("Loading...")
                 images_for_model = []
+
+                directory = "training_data"
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+
                 for image in uploaded_files:
                     with open(os.path.join(f"training_data", image.name), "wb") as f:
                         f.write(image.getbuffer())
@@ -134,6 +139,10 @@ def custom_models_page(project_name):
         else:
             if st.button("Upload Model", disabled=False):
                 images_for_model = []
+                directory = "training_data"
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+                    
                 for image in uploaded_model_images:
                     with open(os.path.join(f"training_data", image.name), "wb") as f:
                         f.write(image.getbuffer())
