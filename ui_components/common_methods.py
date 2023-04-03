@@ -338,7 +338,7 @@ def add_image_variant(image_url, index_of_current_item, project_name, timing_det
         update_specific_timing_value(project_name, index_of_current_item, "primary_image", timing_details[index_of_current_item]["primary_image"])        
     return len(additions) + 1
     
-def train_model(app_settings, images_list, instance_prompt,class_prompt, max_train_steps, model_name,project_name, type_of_model, type_of_task, resolution):
+def train_model(app_settings, images_list, instance_prompt,class_prompt, max_train_steps, model_name,project_name, type_of_model, type_of_task, resolution, controller_type):
     
     for i in range(len(images_list)):
         images_list[i] = 'training_data/' + images_list[i]
@@ -362,7 +362,26 @@ def train_model(app_settings, images_list, instance_prompt,class_prompt, max_tra
     url = "https://dreambooth-api-experimental.replicate.com/v1/trainings"
     os.remove('images.zip')
     model_name = model_name.replace(" ", "-").lower()
+    
     if type_of_model == "Dreambooth":
+        # ["normal", "canny", "hed", "scribble", "seg", "openpose", "depth","mlsd"]
+        if controller_type == "normal":
+            template_version = "b65d36e378a01ef81d81ba49be7deb127e9bb8b74a28af3aa0eaca16b9bcd0eb"
+        elif controller_type == "canny":
+            template_version = "3c60cbfce253b1d82fea02c7692d13c1e96b36a22da784470fcbedc603a1ed4b"
+        elif controller_type == "hed":
+            template_version = "bef0803be223ecb38361097771dbea7cd166514996494123db27907da53d75cd"
+        elif controller_type == "scribble":
+            template_version = "346b487d77a0bdd150c4bbb8f162f7cd4a4491bca5f309105e078556d0789f11"
+        elif controller_type == "seg":
+            template_version = "a0266713f8c30b35a3f4fc8212fc9450cecea61e4181af63cfb54e5a152ecb24"
+        elif controller_type == "openpose":
+            template_version = "141b8753e2973933441880e325fd21404923d0877014c9f8903add05ff530e52"
+        elif controller_type == "depth":
+            template_version = "6cf8fc430894121f2f91867978780011e6859b6956b499b43273afc25ed21121"
+        elif controller_type == "mlsd":
+            template_version == "04982e9aa6d3998c2a2490f92e7ccfab2dbd93f5be9423cdf0405c7b86339022"        
+
         headers = {
             "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),
             "Content-Type": "application/json"
@@ -376,7 +395,7 @@ def train_model(app_settings, images_list, instance_prompt,class_prompt, max_tra
             },
             "model": "peter942/" + str(model_name),
             "trainer_version": "cd3f925f7ab21afaef7d45224790eedbb837eeac40d22e8fefe015489ab644aa",
-            "template_version": "b65d36e378a01ef81d81ba49be7deb127e9bb8b74a28af3aa0eaca16b9bcd0eb",
+            "template_version": template_version,
             "webhook_completed": "https://example.com/dreambooth-webhook"
         }    
         response = r.post(url, headers=headers, data=json.dumps(payload))    
@@ -423,7 +442,8 @@ def get_model_details(model_name):
                     'version': row[3],
                     'training_images': row[4],
                     'model_type': row[5],
-                    'model_url': row[6]
+                    'model_url': row[6],
+                    'controller_type': row[7]
                 }
                 return model_details
 
@@ -578,12 +598,11 @@ def prompt_model_stability(project_name, index_of_current_item, timing_details, 
     if not input_image.startswith("http"):        
         input_image = open(input_image, "rb") 
     output = version.predict(image=input_image, prompt_strength=float(strength), prompt=prompt, negative_prompt = timing_details[index_of_current_item]["negative_prompt"], width = int(project_settings["width"]), height = int(project_settings["height"]), guidance_scale = float(timing_details[index_of_current_item]["guidance_scale"]), seed = int(timing_details[index_of_current_item]["seed"]), num_inference_steps = int(timing_details[index_of_current_item]["num_inference_steps"]))
-    new_image = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png" 
-
+    
     return output[0]
 
 
-def prompt_model_dreambooth(project_name, image_number, model_name, app_settings,timing_details, project_settings, image_url):
+def prompt_model_dreambooth(project_name, image_number, model_name, app_settings,timing_details, project_settings, source_image):
 
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
     replicate_api_key = app_settings["replicate_com_api_key"]
@@ -598,6 +617,14 @@ def prompt_model_dreambooth(project_name, image_number, model_name, app_settings
     model_details = get_model_details(model_name)    
     model_id = model_details["id"]
 
+    if timing_details[image_number]["adapter_type"] == "Yes":
+        if source_image.startswith("http"):        
+            control_image = source_image
+        else:
+            control_image = open(source_image, "rb")
+    else:
+        control_image = None
+    
     if model_details["version"] == "":
         headers = {"Authorization": f"Token {replicate_api_key}"}
         url = f"https://dreambooth-api-experimental.replicate.com/v1/trainings/{model_id}"
@@ -612,22 +639,18 @@ def prompt_model_dreambooth(project_name, image_number, model_name, app_settings
 
     version = model.versions.get(version)    
 
-    input_image = image_url
-    if not input_image.startswith("http"):        
-        input_image = open(input_image, "rb")
-    output = version.predict(image=input_image, prompt=prompt, prompt_strength=float(strength), height = int(project_settings["height"]), width = int(project_settings["width"]), disable_safety_check=True, negative_prompt = negative_prompt, guidance_scale = float(guidance_scale), seed = int(seed), num_inference_steps = int(num_inference_steps))
+    if source_image.startswith("http"):        
+        input_image = source_image        
+    else:
+        input_image = open(source_image, "rb")
 
-    new_image = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(image_number) + ".png"
+    if control_image != None:
+        output = version.predict(image=input_image, control_image = control_image, prompt=prompt, prompt_strength=float(strength), height = int(project_settings["height"]), width = int(project_settings["width"]), disable_safety_check=True, negative_prompt = negative_prompt, guidance_scale = float(guidance_scale), seed = int(seed), num_inference_steps = int(num_inference_steps))
+    else:
+        output = version.predict(image=input_image, prompt=prompt, prompt_strength=float(strength), height = int(project_settings["height"]), width = int(project_settings["width"]), disable_safety_check=True, negative_prompt = negative_prompt, guidance_scale = float(guidance_scale), seed = int(seed), num_inference_steps = int(num_inference_steps))
     
-    try:
-
-        urllib.request.urlretrieve(output[0], new_image)
-
-    except Exception as e:
-
-        print(e)
-    
-    return output[0]
+    for i in output:
+        return i
 
 
 def upload_image(image_location):
@@ -902,8 +925,7 @@ def restyle_images(index_of_current_item,project_name, project_settings, timing_
         output_url = prompt_model_dreambooth(project_name, index_of_current_item, timing_details[index_of_current_item]["custom_models"], app_settings,timing_details, project_settings,source_image)
     elif model_name =='StyleGAN-NADA':
         output_url = prompt_model_stylegan_nada(index_of_current_item ,timing_details,source_image,project_name)
-    elif model_name == "dreambooth_controlnet":
-        output_url = prompt_model_dreambooth_controlnet(source_image, timing_details, project_name, index_of_current_item)
+
     
     return output_url
 
@@ -1090,66 +1112,6 @@ def create_depth_mask_image(input_image,layer,project_name, index_of_current_ite
     return create_or_update_mask(project_name, index_of_current_item, mask)
 
 
-def prompt_model_dreambooth_controlnet(input_image, timing_details, project_name, index_of_current_item):
-
-    app_settings = get_app_settings()
-    project_settings = get_project_settings(project_name)
-    sd_api_key = app_settings['sd_api_key']
-    sd_url = "https://stablediffusionapi.com/api/v5/controlnet"
-    input_image = upload_image(input_image)
-
-    payload = {
-        "key": sd_api_key,
-        "prompt": timing_details[index_of_current_item]["prompt"],
-        "width": project_settings["width"],
-        "height": project_settings["height"],
-        "samples": "1",
-        "num_inference_steps": timing_details[index_of_current_item]["num_inference_steps"],
-        "seed": timing_details[index_of_current_item]["seed"],
-        "guidance_scale": timing_details[index_of_current_item]["guidance_scale"],
-        "webhook": "0",
-        "track_id": "null",
-        "init_image": input_image,
-        "controlnet_model": timing_details[index_of_current_item]["adapter_type"],
-        "model_id": "CfYgXuhAeyaqQTFDdnIUG6BjH",
-        "auto_hint": "yes",
-        "negative_prompt": None,
-        "scheduler": "UniPCMultistepScheduler",
-        "safety_checker": "no",
-        "enhance_prompt": "yes",
-        "strength": timing_details[index_of_current_item]["strength"],
-    }
-    
-    
-    completed = "false"
-
-    while completed == "false":
-        response = r.post(sd_url, json=payload)
-
-        if response.json()["status"] == "processing":
-            wait = int(response.json()["eta"])
-            print("Processing, ETA: " + str(wait) + " seconds")
-            time.sleep(wait)
-            response = "https://stablediffusionapi.com/api/v3/dreambooth/fetch/" + str(response.json()["id"])
-        
-        elif response.json()["status"] == "success":        
-            output_url = response.json()["output"][0]        
-            image = r.get(output_url)            
-            unique_file_name = str(uuid.uuid4()) + ".png"    
-            with open(unique_file_name, "wb") as f:
-                f.write(image.content)    
-            url = upload_image(unique_file_name)
-            os.remove(unique_file_name)
-            completed = "true"
-
-        else:
-            print(response)
-            return "failed"
-
-    return url
-
-
-
 def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
 
     app_settings = get_app_settings()
@@ -1200,16 +1162,13 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
 
-    # read as list and remove first and last characters
+    timing_details = get_timing_details(project_name)
     lora_models = ast.literal_eval(timing_details[index_of_current_item]["custom_models"][1:-1])
     project_settings = get_project_settings(project_name)
     default_model_url = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
 
     lora_model_urls = []
-
-
-    print(lora_models)
-
+    
     for lora_model in lora_models:
         if lora_model != "":
             lora_model_details = get_model_details(lora_model)
@@ -1224,14 +1183,20 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
 
     lora_model_1_model_url = lora_model_urls[0]
     lora_model_2_model_url = lora_model_urls[1]
-    lora_model_3_model_url = lora_model_urls[2]
+    lora_model_3_model_url = lora_model_urls[2]    
 
-    if source_image.startswith("http"):
-        source_image = source_image
+    if source_image[:4] == "http":
+        input_image = source_image
     else:
-        source_image = open(source_image, "rb")
+        input_image = open(source_image, "rb")
     
-
+    if timing_details[index_of_current_item]["adapter_type"] != "None":
+        if source_image[:4] == "http":
+            adapter_condition_image = source_image
+        else:
+            adapter_condition_image = open(source_image, "rb")
+    else:
+        adapter_condition_image = ""
 
     model = replicate.models.get("cloneofsimo/lora")
     version = model.versions.get("fce477182f407ffd66b94b08e761424cabd13b82b518754b83080bc75ad32466")
@@ -1241,7 +1206,7 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     'width': int(project_settings["width"]),
     'height': int(project_settings["height"]),
     'num_outputs': 1,
-    'image': source_image,
+    'image': input_image,
     'num_inference_steps': int(timing_details[index_of_current_item]["num_inference_steps"]),
     'guidance_scale': float(timing_details[index_of_current_item]["guidance_scale"]),
     'prompt_strength': float(timing_details[index_of_current_item]["strength"]),
@@ -1249,6 +1214,7 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     'lora_urls': lora_model_1_model_url + "|" + lora_model_2_model_url + "|" + lora_model_3_model_url,
     'lora_scales': "0.5 | 0.5 | 0.5",
     'adapter_type': timing_details[index_of_current_item]["adapter_type"],
+    'adapter_condition_image': adapter_condition_image,
      }
     
     max_attempts = 3

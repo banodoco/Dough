@@ -61,7 +61,8 @@ def custom_models_page(project_name):
             class_prompt = st.text_input("Describe what your prompts depict generally:",value="", help="This will help guide the model to learn what you want it to do")
             max_train_steps = st.number_input("Max training steps:",value=2000, help=" The number of training steps to run. Fewer steps make it run faster but typically make it worse quality, and vice versa.")
             type_of_task = ""
-            resolution = ""
+            resolution = ""            
+            controller_type = st.selectbox("What ControlNet controller would you like to use?",["normal", "canny", "hed", "scribble", "seg", "openpose", "depth","mlsd"])
             
         elif type_of_model == "LoRA":
             type_of_task = st.selectbox("Type of task:",["Face","Object","Style"]).lower()
@@ -69,6 +70,7 @@ def custom_models_page(project_name):
             instance_prompt = ""
             class_prompt = ""
             max_train_steps = ""
+            controller_type = ""
         uploaded_files = st.file_uploader("Images you'd like to train the model based on:", type=['png','jpg','jpeg'], key="prompt_file",accept_multiple_files=True)
         if uploaded_files is not None:   
             column = 0                             
@@ -98,7 +100,7 @@ def custom_models_page(project_name):
                     with open(os.path.join(f"training_data",image.name),"wb") as f: 
                         f.write(image.getbuffer())                                                        
                         images_for_model.append(image.name)                                                  
-                model_status = train_model(app_settings,images_for_model, instance_prompt,class_prompt,max_train_steps,model_name, project_name, type_of_model, type_of_task, resolution)
+                model_status = train_model(app_settings,images_for_model, instance_prompt,class_prompt,max_train_steps,model_name, project_name, type_of_model, type_of_task, resolution,controller_type)
                 st.success(model_status)
 
     with st.expander("Add model from internet"):

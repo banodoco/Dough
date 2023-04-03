@@ -141,14 +141,14 @@ def frame_styling_page(mainheader2, project_name):
                 st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
                 st.experimental_rerun()                          
         else:
-            models = ['stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'controlnet', 'Dreambooth', 'LoRA','StyleGAN-NADA','dreambooth_controlnet']            
+            models = ['stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'controlnet', 'Dreambooth', 'LoRA','StyleGAN-NADA']            
             st.session_state['model'] = st.sidebar.selectbox(f"Which model would you like to use?", models, index=st.session_state['index_of_last_model'])                    
             if st.session_state['index_of_last_model'] != models.index(st.session_state['model']):
                 st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
                 st.experimental_rerun() 
                 
         
-        if st.session_state['model'] == "controlnet" or st.session_state['model'] == 'dreambooth_controlnet':   
+        if st.session_state['model'] == "controlnet":   
             controlnet_adapter_types = ["normal", "canny", "hed", "scribble", "seg", "hough", "depth2img", "pose"]
             if 'index_of_controlnet_adapter_type' not in st.session_state:
                 st.session_state['index_of_controlnet_adapter_type'] = 0
@@ -194,8 +194,7 @@ def frame_styling_page(mainheader2, project_name):
                 st.session_state['index_of_dreambooth_model'] = 0
             custom_models = st.sidebar.selectbox(f"Dreambooth Model", dreambooth_model_list, index=st.session_state['index_of_dreambooth_model'])
             if st.session_state['index_of_dreambooth_model'] != dreambooth_model_list.index(custom_models):
-                st.session_state['index_of_dreambooth_model'] = dreambooth_model_list.index(custom_models)            
-            st.session_state['adapter_type'] = ""
+                st.session_state['index_of_dreambooth_model'] = dreambooth_model_list.index(custom_models)                                    
         else:
             custom_models = []
             st.session_state['adapter_type'] = "N"
@@ -221,7 +220,12 @@ def frame_styling_page(mainheader2, project_name):
                 st.markdown("You can include the following tags in the prompt to vary the prompt dynamically: [expression], [location], [mouth], and [looking]")
             if st.session_state['model'] == "Dreambooth":
                 model_details = get_model_details(custom_models)
-                st.sidebar.info(f"Must include '{model_details['keyword']}' to run this model")                                    
+                st.sidebar.info(f"Must include '{model_details['keyword']}' to run this model")   
+                if model_details['controller_type'] != "":                    
+                    st.session_state['adapter_type']  = st.sidebar.selectbox(f"Would you like to use the {model_details['controller_type']} controller?", ['Yes', 'No'])
+                else:
+                    st.session_state['adapter_type']  = "No"
+
             else:
                 if st.session_state['model'] == "pix2pix":
                     st.sidebar.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")                    
@@ -319,9 +323,9 @@ def frame_styling_page(mainheader2, project_name):
                     st.write("")
                     st.write("")
                     if st.button(f"Generate Variants", key=f"new_variations_{index_of_current_item}",help="This will generate new variants based on the settings to the left."):
-                        for i in range(0, individual_number_of_variants):
-                            index_of_current_item = st.session_state['which_image']
-                            trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,st.session_state['adapter_type']) 
+                        for a in range(0, individual_number_of_variants):
+                            index_of_current_item = i
+                            trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,st.session_state['adapter_type'])                             
                         st.experimental_rerun()
                     
                     
