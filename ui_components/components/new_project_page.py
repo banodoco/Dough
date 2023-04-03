@@ -75,8 +75,7 @@ def new_project_page():
                     f.write(uploaded_audio.getbuffer())
                 update_project_setting("audio", uploaded_audio.name, new_project_name)                
                                                     
-        st.session_state["project_name"] = new_project_name
-        st.session_state["project_set"] = "Yes"            
+        st.session_state["project_name"] = new_project_name            
         st.success("Project created! It should be open now. Click into 'Main Process' to get started")
         time.sleep(1)
         st.experimental_rerun()
