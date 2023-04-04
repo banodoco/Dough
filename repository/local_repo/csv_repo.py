@@ -72,6 +72,11 @@ def get_project_settings(project_name):
     return csv_client.get_all_json_data()
 
 def update_project_setting(key, value, project_name):
+    if isinstance(value, str):
+        value = value.strip()
+        print("striped newline: ", value)
+    
+    print("setting ", key, " value to: ", value)
     csv_client = CSVProcessor(f'videos/{project_name}/settings.csv')
     csv_client.update_csv_data(key, value)
 
