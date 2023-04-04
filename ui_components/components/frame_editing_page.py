@@ -289,8 +289,29 @@ def frame_editing_page(project_name):
                 replace_with = st.radio("Replace with:", ["Previous Frame", "Uploaded Frame"], horizontal=True)
                 replace1, replace2, replace3 = st.columns([2,1,1])                    
 
-                if replace_with == "Previous Frame":         
-                    
+                if replace_with == "Previous Frame":  
+                    with replace1:
+                        which_stage_to_use_for_replacement = st.radio("Select stage to use:", ["Unedited Key Frame", "Styled Key Frame"],key="which_stage_to_use_for_replacement", horizontal=True)
+                        which_image_to_use_for_replacement = st.number_input("Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0, key="which_image_to_use_for_replacement")
+                        if which_stage_to_use_for_replacement == "Unedited Key Frame":                                    
+                            background_image = timing_details[which_image_to_use_for_replacement]["source_image"]                            
+                        elif which_stage_to_use_for_replacement == "Styled Key Frame":
+                            variants = timing_details[which_image_to_use_for_replacement]["alternative_images"]
+                            primary_image = timing_details[which_image_to_use_for_replacement]["primary_image"]             
+                            background_image = variants[primary_image]
+                        if st.button("Replace with selected frame",disabled=False):
+                            if st.session_state['which_stage'] == "Unedited Key Frame":
+                                update_specific_timing_value(project_name, st.session_state['which_image'], "source_image",background_image)                                                                                   
+                            elif st.session_state['which_stage'] == "Styled Key Frame":
+                                number_of_image_variants = add_image_variant(background_image, st.session_state['which_image'], project_name, timing_details)
+                                promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1) 
+                            st.success("Replaced")
+                            time.sleep(1)     
+                            st.experimental_rerun()
+                    with replace2:
+                        st.image(background_image, width=300)       
+                                                                                                                                                              
+                elif replace_with == "Uploaded Frame":
                     with replace1:
                         replacement_frame = st.file_uploader("Upload a replacement frame here", type="png", accept_multiple_files=False, key="replacement_frame")                                                
                     with replace2:                                                        
@@ -315,28 +336,9 @@ def frame_editing_page(project_name):
                             os.remove(f"videos/{project_name}/{replacement_frame.name}")
                             st.success("Replaced")
                             time.sleep(1)     
-                            st.experimental_rerun()                                                                                                                        
-                elif replace_with == "Uploaded Frame":
-                    with replace1:
-                        which_stage_to_use_for_replacement = st.radio("Select stage to use:", ["Unedited Key Frame", "Styled Key Frame"],key="which_stage_to_use_for_replacement", horizontal=True)
-                        which_image_to_use_for_replacement = st.number_input("Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0, key="which_image_to_use_for_replacement")
-                        if which_stage_to_use_for_replacement == "Unedited Key Frame":                                    
-                            background_image = timing_details[which_image_to_use_for_replacement]["source_image"]                            
-                        elif which_stage_to_use_for_replacement == "Styled Key Frame":
-                            variants = timing_details[which_image_to_use_for_replacement]["alternative_images"]
-                            primary_image = timing_details[which_image_to_use_for_replacement]["primary_image"]             
-                            background_image = variants[primary_image]
-                        if st.button("Replace with selected frame",disabled=False):
-                            if st.session_state['which_stage'] == "Unedited Key Frame":
-                                update_specific_timing_value(project_name, st.session_state['which_image'], "source_image",background_image)                                                                                   
-                            elif st.session_state['which_stage'] == "Styled Key Frame":
-                                number_of_image_variants = add_image_variant(background_image, st.session_state['which_image'], project_name, timing_details)
-                                promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1) 
-                            st.success("Replaced")
-                            time.sleep(1)     
-                            st.experimental_rerun()
-                    with replace2:
-                        st.image(background_image, width=300)
+                            st.experimental_rerun()  
+        
+                   
                         
                     
         st.sidebar.markdown("***")
