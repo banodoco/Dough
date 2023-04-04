@@ -212,10 +212,8 @@ def trigger_restyling_process(timing_details, project_name, index_of_current_ite
     update_project_setting("last_prompt", prompt, project_name)
     update_project_setting("last_strength", strength, project_name)
     update_project_setting("last_model", model, project_name)
-    update_project_setting("last_custom_pipeline",
-                           custom_pipeline, project_name)
-    update_project_setting("last_negative_prompt",
-                           negative_prompt, project_name)
+    update_project_setting("last_custom_pipeline", custom_pipeline, project_name)
+    update_project_setting("last_negative_prompt", negative_prompt, project_name)
     update_project_setting("last_guidance_scale", guidance_scale, project_name)
     update_project_setting("last_seed", seed, project_name)
     update_project_setting("last_num_inference_steps",

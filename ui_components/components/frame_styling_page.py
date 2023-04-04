@@ -232,7 +232,8 @@ def frame_styling_page(mainheader2, project_name):
             st.session_state['strength'] = st.sidebar.number_input(f"Strength", value=float(st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
             
             with st.sidebar.expander("Advanced settings 😏"):
-                st.session_state['negative_prompt'] = st.text_area(f"Negative prompt", value=st.session_state['negative_prompt_value'], label_visibility="visible")
+                negative_prompt = st.text_area(f"Negative prompt", value=st.session_state['negative_prompt_value'], label_visibility="visible")
+                st.session_state['negative_prompt'] = negative_prompt.strip()
                 if st.session_state['negative_prompt'] != st.session_state['negative_prompt_value']:
                     st.session_state['negative_prompt_value'] = st.session_state['negative_prompt']
                     st.experimental_rerun()
