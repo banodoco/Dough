@@ -51,9 +51,10 @@ def video_rendering_page(mainheader2, project_name):
 
     video_list = sorted(video_list, key=lambda x: os.path.getmtime(os.path.join(video_dir, x)), reverse=True)                        
     import datetime
-    for video in video_list:
+    st.subheader("Rendered Video List")
+    for idx, video in enumerate(video_list):
 
-        st.subheader(video)       
+        st.subheader(f"{idx+1}. {video}")       
 
         st.write(datetime.datetime.fromtimestamp(
             os.path.getmtime("videos/" + project_name + "/assets/videos/2_completed/" + video)))
