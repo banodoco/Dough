@@ -3,7 +3,7 @@ from streamlit_image_comparison import image_comparison
 import time
 import pandas as pd
 from repository.local_repo.csv_repo import get_app_settings, get_project_settings
-from ui_components.common_methods import create_gif_preview, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process
+from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process
 
 def frame_styling_page(mainheader2, project_name):
     timing_details = get_timing_details(project_name)
@@ -302,8 +302,16 @@ def frame_styling_page(mainheader2, project_name):
         elif st.session_state['frame_styling_view_type'] == "List View":
             for i in range(0, len(timing_details)):
                 index_of_current_item = i
-            
-                st.subheader(f"Frame {i}")                
+                
+                col1, col2, col3 = st.columns([1, 1, 1])
+                with col1:
+                    st.subheader(f"Frame {i}")
+                col2.empty()
+                with col3:
+                    if st.button("Delete this keyframe", key=f'{index_of_current_item}'):
+                        delete_frame(project_name, index_of_current_item)
+                        timing_details = get_timing_details(project_name)
+                        st.experimental_rerun()           
                                     
                 if timing_details[i]["alternative_images"] != "":
                     variants = timing_details[i]["alternative_images"]

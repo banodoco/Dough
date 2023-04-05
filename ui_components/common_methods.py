@@ -133,8 +133,6 @@ def get_timing_details(video_name):
     return df.to_dict('records')
 
 # delete keyframe at a particular index from timings.csv
-
-
 def delete_frame(project_name, index_of_current_item):
     update_specific_timing_value(
         project_name, index_of_current_item - 1, "interpolated_video", "")

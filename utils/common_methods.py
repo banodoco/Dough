@@ -31,7 +31,7 @@ def create_file_path(path):
             data = [
                 ['frame_time','frame_number','primary_image','alternative_images','character_pipeline','negative_prompt','guidance_scale',\
                     'seed','num_inference_steps','model_id','strength','notes','source_image','lora_models','adapter_type','duration_of_clip',\
-                    'interpolated_video','timing_video','prompt'],
+                    'interpolated_video','timing_video','prompt', 'mask'],
             ]
         elif file_name == 'settings.csv':
             data = [
