@@ -263,7 +263,7 @@ def frame_editing_page(project_name):
                 if st.session_state['edited_image'] != "":                                     
                     if st.button("Promote Last Edit", type="primary"):
                         if st.session_state['which_stage'] == "Unedited Key Frame":                                                    
-                            update_specific_timing_value(project_name, st.session_state['which_image'], st.session_state['edited_image'])                               
+                            update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", st.session_state['edited_image'])                               
                         elif st.session_state['which_stage'] == "Styled Key Frame":
                             number_of_image_variants = add_image_variant(st.session_state['edited_image'], st.session_state['which_image'], project_name, timing_details)
                             promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1)
@@ -276,7 +276,7 @@ def frame_editing_page(project_name):
                         elif st.session_state["type_of_mask_replacement"] == "Replace With Image":
                             st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, editing_image, "", "",width, height,st.session_state['which_layer'], st.session_state['which_image'])
                         if st.session_state['which_stage'] == "Unedited Key Frame": 
-                            update_specific_timing_value(project_name, st.session_state['which_image'], st.session_state['edited_image'])                                                   
+                            update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", st.session_state['edited_image'])                                                   
                         elif st.session_state['which_stage'] == "Styled Key Frame":
                             number_of_image_variants = add_image_variant(st.session_state['edited_image'], st.session_state['which_image'], project_name, timing_details)
                             promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1)
