@@ -23,7 +23,7 @@ class CSVProcessor:
     
     # updates a single key value pair
     def update_csv_data(self, key, value):
-        with open(self.file_path, 'r', newline='') as csv_file:
+        with open(self.file_path, 'r') as csv_file:
             csv_reader = csv.reader(csv_file)
 
             rows = []

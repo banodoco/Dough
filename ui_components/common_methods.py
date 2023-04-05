@@ -210,8 +210,10 @@ def trigger_restyling_process(timing_details, project_name, index_of_current_ite
     update_project_setting("last_prompt", prompt, project_name)
     update_project_setting("last_strength", strength, project_name)
     update_project_setting("last_model", model, project_name)
-    update_project_setting("last_custom_pipeline", custom_pipeline, project_name)
-    update_project_setting("last_negative_prompt", negative_prompt, project_name)
+    update_project_setting("last_custom_pipeline",
+                           custom_pipeline, project_name)
+    update_project_setting("last_negative_prompt",
+                           negative_prompt, project_name)
     update_project_setting("last_guidance_scale", guidance_scale, project_name)
     update_project_setting("last_seed", seed, project_name)
     update_project_setting("last_num_inference_steps",
@@ -365,7 +367,7 @@ def create_working_assets(video_name):
     df.to_csv(f'videos/{video_name}/timings.csv', index=False)
 
 
-def inpainting(video_name, input_image, prompt, negative_prompt, index_of_current_item):
+def inpainting(video_name, input_image, prompt, negative_prompt, index_of_current_item, invert_mask):
 
     app_settings = get_app_settings()
     timing_details = get_timing_details(video_name)
@@ -385,7 +387,7 @@ def inpainting(video_name, input_image, prompt, negative_prompt, index_of_curren
         input_image = open(input_image, "rb")
 
     output = version.predict(mask=mask, image=input_image, prompt=prompt,
-                             invert_mask=True, negative_prompt=negative_prompt, num_inference_steps=25)
+                             invert_mask=invert_mask, negative_prompt=negative_prompt, num_inference_steps=25)
 
     return output[0]
 
@@ -1116,28 +1118,6 @@ def get_models():
     return models
 
 
-def update_source_image(project_name, index_of_current_item, new_image):
-
-    update_specific_timing_value(
-        project_name, index_of_current_item, "source_image", new_image)
-
-    df["primary_image"] = pd.to_numeric(
-        df["primary_image"], downcast='integer', errors='coerce')
-    df["seed"] = pd.to_numeric(df["seed"], downcast='integer', errors='coerce')
-    df["num_inference_steps"] = pd.to_numeric(
-        df["num_inference_steps"], downcast='integer', errors='coerce')
-
-    df["primary_image"].fillna(0, inplace=True)
-    df["seed"].fillna(0, inplace=True)
-    df["num_inference_steps"].fillna(0, inplace=True)
-
-    df["primary_image"] = df["primary_image"].astype(int)
-    df["seed"] = df["seed"].astype(int)
-    df["num_inference_steps"] = df["num_inference_steps"].astype(int)
-
-    df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
-
-
 def find_duration_of_clip(index_of_current_item, timing_details, total_number_of_videos):
 
     total_duration_of_clip = timing_details[index_of_current_item]['duration_of_clip']
@@ -1454,7 +1434,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
             create_or_update_mask(
                 project_name, index_of_current_item, converted_image)
             edited_image = inpainting(
-                project_name, editing_image, prompt, negative_prompt, index_of_current_item)
+                project_name, editing_image, prompt, negative_prompt, index_of_current_item, True)
 
     elif type_of_mask_selection == "Manual Background Selection":
         if type_of_mask_replacement == "Replace With Image":
@@ -1497,7 +1477,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
                 create_or_update_mask(
                     project_name, index_of_current_item, mask)
             edited_image = inpainting(
-                project_name, editing_image, prompt, negative_prompt, index_of_current_item)
+                project_name, editing_image, prompt, negative_prompt, index_of_current_item,True)
     elif type_of_mask_selection == "Automated Layer Selection":
         mask_location = create_depth_mask_image(
             editing_image, layer, project_name, index_of_current_item)
@@ -1521,7 +1501,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
                 f"videos/{project_name}/replaced_bg.png")
         elif type_of_mask_replacement == "Inpainting":
             edited_image = inpainting(
-                project_name, editing_image, prompt, negative_prompt, index_of_current_item)
+                project_name, editing_image, prompt, negative_prompt, index_of_current_item, True)
 
     elif type_of_mask_selection == "Re-Use Previous Mask":
         timing_detials = get_timing_details(project_name)
@@ -1546,7 +1526,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
                 f"videos/{project_name}/replaced_bg.png")
         elif type_of_mask_replacement == "Inpainting":
             edited_image = inpainting(
-                project_name, editing_image, prompt, negative_prompt, index_of_current_item)
+                project_name, editing_image, prompt, negative_prompt, index_of_current_item, True)
     
     elif type_of_mask_selection == "Invert Previous Mask":
         timing_detials = get_timing_details(project_name)
@@ -1570,9 +1550,9 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, project
                 project_name, "masked_image.png", background_image)
             edited_image = upload_image(
                 f"videos/{project_name}/replaced_bg.png")
-        elif type_of_mask_replacement == "Inpainting":
+        elif type_of_mask_replacement == "Inpainting":            
             edited_image = inpainting(
-                project_name, editing_image, prompt, negative_prompt, index_of_current_item)
+                project_name, editing_image, prompt, negative_prompt, index_of_current_item, False)
 
 
 

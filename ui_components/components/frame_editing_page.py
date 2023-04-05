@@ -7,8 +7,8 @@ import requests as r
 from streamlit_drawable_canvas import st_canvas
 from streamlit_image_comparison import image_comparison
 
-from repository.local_repo.csv_repo import get_project_settings
-from ui_components.common_methods import add_image_variant, create_or_update_mask, execute_image_edit, extract_frame, get_timing_details, promote_image_variant, update_source_image
+from repository.local_repo.csv_repo import get_project_settings, update_specific_timing_value
+from ui_components.common_methods import add_image_variant, create_or_update_mask, execute_image_edit, extract_frame, get_timing_details, promote_image_variant
 from utils.file_upload.s3 import upload_image
 
 def frame_editing_page(project_name):
@@ -49,11 +49,15 @@ def frame_editing_page(project_name):
                 st.experimental_rerun()
 
         with f3:                
-            if st.session_state['which_stage'] == "Unedited Key Frame":     
-                st.write("")                     
+            st.write("")   
+            if st.session_state['which_stage'] == "Unedited Key Frame":                                       
                 if st.button("Reset Key Frame", help="This will reset the base key frame to the original unedited version. This will not affect the video."):
                     extract_frame(int(st.session_state['which_image']), project_name, project_settings["input_video"], timing_details[st.session_state['which_image']]["frame_number"],timing_details)                            
                     st.experimental_rerun()
+            elif st.session_state['which_stage'] == "Styled Key Frame":                
+                if st.button("Reset Style", help="This will reset the style of the key frame to the original one."):
+                    update_specific_timing_value(project_name, st.session_state['which_image'], "primary_image", 0)
+                    st.experimental_rerun()                
                             
         if "edited_image" not in st.session_state:
             st.session_state.edited_image = ""                        
@@ -84,12 +88,13 @@ def frame_editing_page(project_name):
         
             if "which_layer" not in st.session_state:
                 st.session_state['which_layer'] = "Background"
+                st.session_state['which_layer_index'] = 0
 
             if type_of_mask_selection == "Automated Layer Selection":
-                st.session_state['which_layer'] = st.sidebar.multiselect("Which layers would you like to replace?", ["Background", "Middleground", "Foreground"])
+                layers = ["Background", "Middleground", "Foreground"]
+                st.session_state['which_layer'] = st.sidebar.multiselect("Which layers would you like to replace?", layers)
                 
-
-
+                
             if type_of_mask_selection == "Manual Background Selection":
                 if st.session_state['edited_image'] == "":                                
                     if editing_image.startswith("http"):
@@ -155,16 +160,17 @@ def frame_editing_page(project_name):
                         st.experimental_rerun()
             
             elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection" or type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
-                if (type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask") and timing_details[st.session_state['which_image']]["mask"] == "":
-                    st.sidebar.info("You don't have a previous mask to re-use.")
-                else:
-                    mask1,mask2 = st.sidebar.columns([2,1])
-                    with mask1:
-                        if type_of_mask_selection == "Re-Use Previous Mask":
-                            st.info("This will update the **black pixels** in the mask with the pixels from the image you are editing.")
-                        elif type_of_mask_selection == "Invert Previous Mask":
-                            st.info("This will update the **white pixels** in the mask with the pixels from the image you are editing.")                
-                        st.image(timing_details[st.session_state['which_image']]["mask"], use_column_width=True)
+                if type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
+                    if timing_details[st.session_state['which_image']]["mask"] == "":
+                        st.sidebar.info("You don't have a previous mask to re-use.")                
+                    else:
+                        mask1,mask2 = st.sidebar.columns([2,1])
+                        with mask1:
+                            if type_of_mask_selection == "Re-Use Previous Mask":
+                                st.info("This will update the **black pixels** in the mask with the pixels from the image you are editing.")
+                            elif type_of_mask_selection == "Invert Previous Mask":
+                                st.info("This will update the **white pixels** in the mask with the pixels from the image you are editing.")                
+                            st.image(timing_details[st.session_state['which_image']]["mask"], use_column_width=True)
                 if st.session_state['edited_image'] == "":
                     st.image(editing_image, use_column_width=True)
                 else:
@@ -185,7 +191,6 @@ def frame_editing_page(project_name):
             
             types_of_mask_replacement = ["Replace With Image", "Inpainting"]
             st.session_state["type_of_mask_replacement"] = st.sidebar.radio("Select type of edit", types_of_mask_replacement, horizontal=True, index=st.session_state["index_of_type_of_mask_replacement"])    
-
 
             if st.session_state["index_of_type_of_mask_replacement"] != types_of_mask_replacement.index(st.session_state["type_of_mask_replacement"]):
                 st.session_state["index_of_type_of_mask_replacement"] = types_of_mask_replacement.index(st.session_state["type_of_mask_replacement"])
@@ -219,8 +224,7 @@ def frame_editing_page(project_name):
                                     st.experimental_rerun()                                
                     with btn2:
                         background_selection = st.sidebar.selectbox("Range background", background_list)                        
-                        background_image = f'videos/{project_name}/assets/resources/backgrounds/{background_selection}'
-                        st.write(f"Background image: {background_image}")
+                        background_image = f'videos/{project_name}/assets/resources/backgrounds/{background_selection}'                        
                         if background_list != []:
                             st.image(f"{background_image}", use_column_width=True)
                 elif source_of_image == "From Other Frame":
@@ -258,21 +262,21 @@ def frame_editing_page(project_name):
             with edit2:
                 if st.session_state['edited_image'] != "":                                     
                     if st.button("Promote Last Edit", type="primary"):
-                        if st.session_state['which_stage'] == "Unedited Key Frame":                        
-                            update_source_image(project_name, st.session_state['which_image'], st.session_state['edited_image'])
+                        if st.session_state['which_stage'] == "Unedited Key Frame":                                                    
+                            update_specific_timing_value(project_name, st.session_state['which_image'], st.session_state['edited_image'])                               
                         elif st.session_state['which_stage'] == "Styled Key Frame":
                             number_of_image_variants = add_image_variant(st.session_state['edited_image'], st.session_state['which_image'], project_name, timing_details)
                             promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1)
                         st.session_state['edited_image'] = ""
-                        st.success("Image promoted!")
+                        st.experimental_rerun()
                 else:
                     if st.button("Run Edit & Promote"):
                         if st.session_state["type_of_mask_replacement"] == "Inpainting":
                             st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, "", editing_image, prompt, negative_prompt,width, height,st.session_state['which_layer'], st.session_state['which_image'])
                         elif st.session_state["type_of_mask_replacement"] == "Replace With Image":
                             st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, editing_image, "", "",width, height,st.session_state['which_layer'], st.session_state['which_image'])
-                        if st.session_state['which_stage'] == "Unedited Key Frame":                        
-                            update_source_image(project_name, st.session_state['which_image'], st.session_state['edited_image'])
+                        if st.session_state['which_stage'] == "Unedited Key Frame": 
+                            update_specific_timing_value(project_name, st.session_state['which_image'], st.session_state['edited_image'])                                                   
                         elif st.session_state['which_stage'] == "Styled Key Frame":
                             number_of_image_variants = add_image_variant(st.session_state['edited_image'], st.session_state['which_image'], project_name, timing_details)
                             promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1)
@@ -281,22 +285,50 @@ def frame_editing_page(project_name):
                         st.experimental_rerun()
                         
             with st.expander("Replace Frame"):
-                replace1, replace2, replace3 = st.columns([2,1,1])
-                with replace1:            
-                    replacement_frame = st.file_uploader("Upload a replacement frame here", type="png", accept_multiple_files=False, key="replacement_frame")
-                with replace2:
-                    st.write("")
-                    confirm_replace = st.checkbox(f"I confirm I want to replace {st.session_state['which_stage']} {st.session_state['which_image']} with this frame", key="confirm_replace}")
-                with replace3:
-                    st.write("")
-                    if confirm_replace == True and replacement_frame is not None:
+                
+                replace_with = st.radio("Replace with:", ["Previous Frame", "Uploaded Frame"], horizontal=True)
+                replace1, replace2, replace3 = st.columns([2,1,1])                    
+
+                if replace_with == "Previous Frame":  
+                    with replace1:
+                        which_stage_to_use_for_replacement = st.radio("Select stage to use:", ["Unedited Key Frame", "Styled Key Frame"],key="which_stage_to_use_for_replacement", horizontal=True)
+                        which_image_to_use_for_replacement = st.number_input("Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0, key="which_image_to_use_for_replacement")
+                        if which_stage_to_use_for_replacement == "Unedited Key Frame":                                    
+                            background_image = timing_details[which_image_to_use_for_replacement]["source_image"]                            
+                        elif which_stage_to_use_for_replacement == "Styled Key Frame":
+                            variants = timing_details[which_image_to_use_for_replacement]["alternative_images"]
+                            primary_image = timing_details[which_image_to_use_for_replacement]["primary_image"]             
+                            background_image = variants[primary_image]
+                        if st.button("Replace with selected frame",disabled=False):
+                            if st.session_state['which_stage'] == "Unedited Key Frame":
+                                update_specific_timing_value(project_name, st.session_state['which_image'], "source_image",background_image)                                                                                   
+                            elif st.session_state['which_stage'] == "Styled Key Frame":
+                                number_of_image_variants = add_image_variant(background_image, st.session_state['which_image'], project_name, timing_details)
+                                promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1) 
+                            st.success("Replaced")
+                            time.sleep(1)     
+                            st.experimental_rerun()
+                    with replace2:
+                        st.image(background_image, width=300)       
+                                                                                                                                                              
+                elif replace_with == "Uploaded Frame":
+                    with replace1:
+                        replacement_frame = st.file_uploader("Upload a replacement frame here", type="png", accept_multiple_files=False, key="replacement_frame")                                                
+                    with replace2:                                                        
+                        st.write("")
+                        st.write("")
+                        st.write("")
+                        st.write("")
+                        st.write("")
+                        st.write("")
+                        st.write("")
                         if st.button("Replace frame",disabled=False):
                             images_for_model = []                    
                             with open(os.path.join(f"videos/{project_name}/",replacement_frame.name),"wb") as f: 
                                 f.write(replacement_frame.getbuffer())     
                             uploaded_image = upload_image(f"videos/{project_name}/{replacement_frame.name}")
                             if st.session_state['which_stage'] == "Unedited Key Frame":
-                                update_source_image(project_name, st.session_state['which_image'], uploaded_image)
+                                update_specific_timing_value(project_name, st.session_state['which_image'],"source_image", uploaded_image)                                                                                   
                             elif st.session_state['which_stage'] == "Styled Key Frame":
                                 number_of_image_variants = add_image_variant(uploaded_image, st.session_state['which_image'], project_name, timing_details)
                                 promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1) 
@@ -304,11 +336,10 @@ def frame_editing_page(project_name):
                             os.remove(f"videos/{project_name}/{replacement_frame.name}")
                             st.success("Replaced")
                             time.sleep(1)     
-                            st.experimental_rerun()
-                                                            
-                            
-                    else:
-                        st.button("Replace frame",disabled=True, help="You need to confirm you want to replace the frame and upload a replacement frame first.")
+                            st.experimental_rerun()  
+        
+                   
+                        
                     
         st.sidebar.markdown("***")
         st.sidebar.markdown("### Batch Run Edits:")   
