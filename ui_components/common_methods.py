@@ -324,49 +324,6 @@ def create_video_without_interpolation(timing_details, output_file):
     # Concatenate the inputs and export the video
     ffmpeg.concat(*inputs).output(output_file).run()
 
-
-def create_working_assets(video_name):
-    os.mkdir("videos/" + video_name)
-    os.mkdir("videos/" + video_name + "/assets")
-
-    os.mkdir("videos/" + video_name + "/assets/frames")
-
-    os.mkdir("videos/" + video_name + "/assets/frames/0_extracted")
-    os.mkdir("videos/" + video_name + "/assets/frames/1_selected")
-    os.mkdir("videos/" + video_name +
-             "/assets/frames/2_character_pipeline_completed")
-    os.mkdir("videos/" + video_name +
-             "/assets/frames/3_backdrop_pipeline_completed")
-
-    os.mkdir("videos/" + video_name + "/assets/resources")
-
-    os.mkdir("videos/" + video_name + "/assets/resources/backgrounds")
-    os.mkdir("videos/" + video_name + "/assets/resources/masks")
-    os.mkdir("videos/" + video_name + "/assets/resources/audio")
-    os.mkdir("videos/" + video_name + "/assets/resources/input_videos")
-    os.mkdir("videos/" + video_name + "/assets/resources/prompt_images")
-
-    os.mkdir("videos/" + video_name + "/assets/videos")
-
-    os.mkdir("videos/" + video_name + "/assets/videos/0_raw")
-    os.mkdir("videos/" + video_name + "/assets/videos/1_final")
-    os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
-
-    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type'],
-            'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Extracted Frames', "None", ""]}
-
-    df = pd.DataFrame(data)
-
-    df.to_csv(f'videos/{video_name}/settings.csv', index=False)
-
-    df = pd.DataFrame(columns=['frame_time', 'frame_number', 'primary_image', 'alternative_images', 'custom_pipeline', 'negative_prompt', 'guidance_scale', 'seed', 'num_inference_steps',
-                      'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'duration_of_clip', 'interpolated_video', 'timing_video', 'prompt', 'mask'])
-
-    # df.loc[0] = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
-
-    df.to_csv(f'videos/{video_name}/timings.csv', index=False)
-
-
 def inpainting(video_name, input_image, prompt, negative_prompt, index_of_current_item, invert_mask):
 
     app_settings = get_app_settings()
