@@ -67,6 +67,6 @@ def welcome_page():
                 update_app_settings("replicate_user_name", st.session_state["replicate_user_name"])
             if st.session_state["replicate_com_api_key"] != "":
                 update_app_settings("replicate_com_api_key", st.session_state["replicate_com_api_key"])
-            update_app_settings("welcome_state", 7)
-            st.session_state["welcome_state"] = 7
+            update_app_settings("welcome_state", "7")
+            st.session_state["welcome_state"] = "7"
             st.experimental_rerun()

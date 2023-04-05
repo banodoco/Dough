@@ -29,9 +29,8 @@ def create_file_path(path):
         # adding columns/rows in the file
         if file_name == 'timings.csv':
             data = [
-                ['frame_time','frame_number','primary_image','alternative_images','character_pipeline','negative_prompt','guidance_scale',\
-                    'seed','num_inference_steps','model_id','strength','notes','source_image','lora_models','adapter_type','duration_of_clip',\
-                    'interpolated_video','timing_video','prompt', 'mask'],
+                ['frame_time', 'frame_number', 'primary_image', 'alternative_images', 'custom_pipeline', 'negative_prompt', 'guidance_scale', 'seed', 'num_inference_steps',
+                      'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'duration_of_clip', 'interpolated_video', 'timing_video', 'prompt', 'mask'],
             ]
         elif file_name == 'settings.csv':
             data = [
@@ -70,4 +69,38 @@ def create_file_path(path):
             with open(file_path, 'w', newline='') as csv_file:
                 writer = csv.writer(csv_file)
                 writer.writerows(data)
+
+
+def create_working_assets(video_name):
+    directory_list = [
+        "videos/" + video_name,
+        "videos/" + video_name + "/assets",
+        "videos/" + video_name + "/assets/frames",
+        "videos/" + video_name + "/assets/frames/0_extracted",
+        "videos/" + video_name + "/assets/frames/1_selected",
+        "videos/" + video_name + "/assets/frames/2_character_pipeline_completed",
+        "videos/" + video_name + "/assets/frames/3_backdrop_pipeline_completed",
+        "videos/" + video_name + "/assets/resources",
+        "videos/" + video_name + "/assets/resources/backgrounds",
+        "videos/" + video_name + "/assets/resources/masks",
+        "videos/" + video_name + "/assets/resources/audio",
+        "videos/" + video_name + "/assets/resources/input_videos",
+        "videos/" + video_name + "/assets/resources/prompt_images",
+        "videos/" + video_name + "/assets/videos",
+        "videos/" + video_name + "/assets/videos/0_raw",
+        "videos/" + video_name + "/assets/videos/1_final",
+        "videos/" + video_name + "/assets/videos/2_completed"
+    ]
+    
+    for directory in directory_list:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+    csv_file_list = [
+        f'videos/{video_name}/settings.csv',
+        f'videos/{video_name}/timings.csv'
+    ]
+
+    for csv_file in csv_file_list:
+        create_file_path(csv_file)
 

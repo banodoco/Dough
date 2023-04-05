@@ -28,8 +28,11 @@ def key_frame_selection_page(mainheader2, project_name):
         st.sidebar.success("Input video selected - you can change this below.")
 
     with st.sidebar.expander("Select input video", expanded=False):
-        input_video_list = [f for f in os.listdir(
-            f'videos/{project_name}/assets/resources/input_videos') if f.endswith(('.mp4', '.mov', '.MOV', '.avi'))]
+        directory_path = f'videos/{project_name}/assets/resources/input_videos'
+        if not os.path.exists(directory_path):
+            os.makedirs(directory_path)
+        
+        input_video_list = [f for f in os.listdir(directory_path) if f.endswith(('.mp4', '.mov', '.MOV', '.avi'))]
         if project_settings["input_video"] != "":
             input_video_index = input_video_list.index(
                 project_settings["input_video"])
