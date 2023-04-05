@@ -1,13 +1,3 @@
-<<<<<<< HEAD
-venv
-.env
-videos
-.vscode
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-=======
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -15,4 +5,12 @@ __pycache__/
 
 venv
 .vscode
->>>>>>> dc53c940e80d6f3b3d99fb2b2fbc89256a9af0f3
+
+# system
+.DS_Store
+
+# user files
+app_settings.csv
+videos
+videos/*
+training_data
