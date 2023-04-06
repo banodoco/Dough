@@ -70,35 +70,69 @@ def create_file_path(path):
                 writer = csv.writer(csv_file)
                 writer.writerows(data)
 
+def copy_sample_assets(project_name):
+    import shutil
 
-def create_working_assets(video_name):
+    # copy sample video
+    source = "sample_assets/input_videos/sample.mp4"
+    dest = "videos/" + project_name + "/assets/resources/input_videos/sample.mp4"
+    shutil.copyfile(source, dest)
+
+    # copy selected frames
+    select_samples_path = 'sample_assets/frames/selected_sample'
+    file_list = os.listdir(select_samples_path)
+    file_paths = []
+    for item in file_list:
+        item_path = os.path.join(select_samples_path, item)
+        if os.path.isfile(item_path):
+            file_paths.append(item_path)
+    
+    for idx in range(len(file_list)):
+        source = file_paths[idx]
+        dest = f"videos/{project_name}/assets/frames/1_selected/{file_list[idx]}"
+        shutil.copyfile(source, dest)
+    
+    # copy timings file
+    source = "sample_assets/frames/meta_data/timings.csv"
+    dest = f"videos/{project_name}/timings.csv"
+    shutil.copyfile(source, dest)
+
+def create_working_assets(project_name):
+    new_project = True
+    if os.path.exists("videos/"+project_name):
+        new_project = False
+
     directory_list = [
-        "videos/" + video_name,
-        "videos/" + video_name + "/assets",
-        "videos/" + video_name + "/assets/frames",
-        "videos/" + video_name + "/assets/frames/0_extracted",
-        "videos/" + video_name + "/assets/frames/1_selected",
-        "videos/" + video_name + "/assets/frames/2_character_pipeline_completed",
-        "videos/" + video_name + "/assets/frames/3_backdrop_pipeline_completed",
-        "videos/" + video_name + "/assets/resources",
-        "videos/" + video_name + "/assets/resources/backgrounds",
-        "videos/" + video_name + "/assets/resources/masks",
-        "videos/" + video_name + "/assets/resources/audio",
-        "videos/" + video_name + "/assets/resources/input_videos",
-        "videos/" + video_name + "/assets/resources/prompt_images",
-        "videos/" + video_name + "/assets/videos",
-        "videos/" + video_name + "/assets/videos/0_raw",
-        "videos/" + video_name + "/assets/videos/1_final",
-        "videos/" + video_name + "/assets/videos/2_completed"
+        "videos/" + project_name,
+        "videos/" + project_name + "/assets",
+        "videos/" + project_name + "/assets/frames",
+        "videos/" + project_name + "/assets/frames/0_extracted",
+        "videos/" + project_name + "/assets/frames/1_selected",
+        "videos/" + project_name + "/assets/frames/2_character_pipeline_completed",
+        "videos/" + project_name + "/assets/frames/3_backdrop_pipeline_completed",
+        "videos/" + project_name + "/assets/resources",
+        "videos/" + project_name + "/assets/resources/backgrounds",
+        "videos/" + project_name + "/assets/resources/masks",
+        "videos/" + project_name + "/assets/resources/audio",
+        "videos/" + project_name + "/assets/resources/input_videos",
+        "videos/" + project_name + "/assets/resources/prompt_images",
+        "videos/" + project_name + "/assets/videos",
+        "videos/" + project_name + "/assets/videos/0_raw",
+        "videos/" + project_name + "/assets/videos/1_final",
+        "videos/" + project_name + "/assets/videos/2_completed"
     ]
     
     for directory in directory_list:
         if not os.path.exists(directory):
             os.makedirs(directory)
 
+    # copying sample assets for new project
+    if new_project:
+        copy_sample_assets(project_name)
+
     csv_file_list = [
-        f'videos/{video_name}/settings.csv',
-        f'videos/{video_name}/timings.csv'
+        f'videos/{project_name}/settings.csv',
+        f'videos/{project_name}/timings.csv'
     ]
 
     for csv_file in csv_file_list:
