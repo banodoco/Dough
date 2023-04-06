@@ -3,7 +3,7 @@ from streamlit_image_comparison import image_comparison
 import time
 import pandas as pd
 from repository.local_repo.csv_repo import get_app_settings, get_project_settings
-from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process
+from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details_from_csv, get_timing_details, promote_image_variant, trigger_restyling_process
 
 def frame_styling_page(mainheader2, project_name):
     timing_details = get_timing_details(project_name)
@@ -219,7 +219,7 @@ def frame_styling_page(mainheader2, project_name):
                 st.markdown("How:")
                 st.markdown("You can include the following tags in the prompt to vary the prompt dynamically: [expression], [location], [mouth], and [looking]")
             if st.session_state['model'] == "Dreambooth":
-                model_details = get_model_details(custom_models)
+                model_details = get_model_details_from_csv(custom_models)
                 st.sidebar.info(f"Must include '{model_details['keyword']}' to run this model")   
                 if model_details['controller_type'] != "":                    
                     st.session_state['adapter_type']  = st.sidebar.selectbox(f"Would you like to use the {model_details['controller_type']} controller?", ['Yes', 'No'])

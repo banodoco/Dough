@@ -4,7 +4,7 @@ import time
 import pandas as pd
 import streamlit as st
 
-from ui_components.common_methods import get_model_details, get_models, train_model
+from ui_components.common_methods import get_model_details_from_csv, get_models, train_model
 from repository.local_repo.csv_repo import get_app_settings
 
 
@@ -36,7 +36,7 @@ def custom_models_page(project_name):
             for i in models:
                 col1, col2, col3, col4, col5, col6 = st.columns(6)
                 with col1:
-                    model_details = get_model_details(i)
+                    model_details = get_model_details_from_csv(i)
                     st.text(model_details["name"])
                 with col2:
                     if model_details["keyword"] != "":

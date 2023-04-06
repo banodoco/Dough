@@ -1,17 +1,19 @@
-from settings import REPLICATE_API_TOKEN
+from repository.local_repo.csv_repo import get_app_settings
 from utils.file_upload.s3 import upload_image
 from utils.ml_processor.ml_interface import MachineLearningProcessor
 import replicate
 import os
 import requests as r
 import json
+import zipfile
 
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
 
 
 class ReplicateProcessor(MachineLearningProcessor):
     def __init__(self):
-        os.environ["REPLICATE_API_TOKEN"] = REPLICATE_API_TOKEN
+        app_settings = get_app_settings()
+        os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
         self._set_urls()
 
     def _set_urls(self):
@@ -46,18 +48,30 @@ class ReplicateProcessor(MachineLearningProcessor):
 
         return output[0]
     
-    def upload_training_data(self, file_path):
+    # TODO: separate image compression from this function
+    def upload_training_data(self, images_list):
+        # compressing images in zip file
+        for i in range(len(images_list)):
+            images_list[i] = 'training_data/' + images_list[i]
+
+        with zipfile.ZipFile('images.zip', 'w') as zip:
+            for image in images_list:
+                zip.write(image, arcname=os.path.basename(image))
+
         headers = {
             "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),
             "Content-Type": "application/zip"
         }
         response = r.post(self.training_data_upload_url, headers=headers)
-        data = response.json()
-
-        with open(file_path, 'rb') as f:
-            r.put(data['upload_url'], data=f, headers=headers)
+        if response.status_code != 200:
+            raise Exception(str(response.content))
+        upload_url = response.json()["upload_url"]  # this is where data will be uploaded
+        serving_url = response.json()["serving_url"]    # this is where the data will be available
+        with open("images.zip", 'rb') as f:
+            r.put(upload_url, data=f, headers=headers)
         
-        return data['upload_url'], data['serving_url']
+        os.remove('images.zip')
+        return serving_url
     
     def dreambooth_training(self, training_file_url, instance_prompt, class_prompt, max_train_steps, model_name):
         headers = {
@@ -87,3 +101,12 @@ class ReplicateProcessor(MachineLearningProcessor):
         model = self.get_model(REPLICATE_MODEL.pollination_modnet)
         output = model.predict(image=input_image)
         return output
+    
+    def get_model_version_from_id(self, model_id):
+        api_key = os.environ.get("REPLICATE_API_TOKEN")
+        headers = {"Authorization": f"Token {api_key}"}
+        url = f"{self.dreambooth_training_url}/{model_id}"
+        response = r.get(url, headers=headers)
+        version = (response.json()["version"])
+
+        return version

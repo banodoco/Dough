@@ -14,13 +14,16 @@ import string
 import json
 import boto3
 import time
-import zipfile
 import random
 import uuid
 from io import BytesIO
 import ast
 import numpy as np
 from repository.local_repo.csv_repo import CSVProcessor, get_app_settings, get_project_settings, update_project_setting, update_specific_timing_value
+from utils.file_upload.s3 import upload_image
+from utils.ml_processor.ml_interface import get_ml_client
+from utils.ml_processor.replicate.constants import DEFAULT_LORA_MODEL_URL, REPLICATE_MODEL
+from utils.ml_processor.replicate.replicate import ReplicateProcessor
 
 
 def calculate_time_at_frame_number(input_video, frame_number, project_name):
@@ -204,7 +207,7 @@ def dynamic_prompting(prompt, source_image, project_name, index_of_current_item)
 
 
 def trigger_restyling_process(timing_details, project_name, index_of_current_item, model, prompt, strength, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, which_stage_to_run_on, promote_new_generation, project_settings, custom_models, adapter_type):
-    get_model_details(model)
+    get_model_details_from_csv(model)
     prompt = prompt.replace(",", ".")
     prompt = prompt.replace("\n", "")
     update_project_setting("last_prompt", prompt, project_name)
@@ -329,12 +332,6 @@ def inpainting(video_name, input_image, prompt, negative_prompt, index_of_curren
     app_settings = get_app_settings()
     timing_details = get_timing_details(video_name)
 
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-
-    model = replicate.models.get("andreasjansson/stable-diffusion-inpainting")
-
-    version = model.versions.get(
-        "e490d072a34a94a11e9711ed5a6ba621c3fab884eda1665d9d3a282d65a21180")
     mask = timing_details[index_of_current_item]["mask"]
 
     if not mask.startswith("http"):
@@ -343,7 +340,8 @@ def inpainting(video_name, input_image, prompt, negative_prompt, index_of_curren
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
 
-    output = version.predict(mask=mask, image=input_image, prompt=prompt,
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.andreas_sd_inpainting,mask=mask, image=input_image, prompt=prompt,
                              invert_mask=invert_mask, negative_prompt=negative_prompt, num_inference_steps=25)
 
     return output[0]
@@ -368,106 +366,77 @@ def add_image_variant(image_url, index_of_current_item, project_name, timing_det
         update_specific_timing_value(project_name, index_of_current_item,
                                      "primary_image", timing_details[index_of_current_item]["primary_image"])
     return len(additions) + 1
-    
-def train_model(app_settings, images_list, instance_prompt,class_prompt, max_train_steps, model_name,project_name, type_of_model, type_of_task, resolution, controller_type):
-    
-    for i in range(len(images_list)):
-        images_list[i] = 'training_data/' + images_list[i]
 
-    with zipfile.ZipFile('images.zip', 'w') as zip:
-        for image in images_list:
-            zip.write(image, arcname=os.path.basename(image))
+def train_dreambooth_model(controller_type, instance_prompt, class_prompt, training_file_url, max_train_steps, model_name, images_list):
+    if controller_type == "normal":
+        template_version = "b65d36e378a01ef81d81ba49be7deb127e9bb8b74a28af3aa0eaca16b9bcd0eb"
+    elif controller_type == "canny":
+        template_version = "3c60cbfce253b1d82fea02c7692d13c1e96b36a22da784470fcbedc603a1ed4b"
+    elif controller_type == "hed":
+        template_version = "bef0803be223ecb38361097771dbea7cd166514996494123db27907da53d75cd"
+    elif controller_type == "scribble":
+        template_version = "346b487d77a0bdd150c4bbb8f162f7cd4a4491bca5f309105e078556d0789f11"
+    elif controller_type == "seg":
+        template_version = "a0266713f8c30b35a3f4fc8212fc9450cecea61e4181af63cfb54e5a152ecb24"
+    elif controller_type == "openpose":
+        template_version = "141b8753e2973933441880e325fd21404923d0877014c9f8903add05ff530e52"
+    elif controller_type == "depth":
+        template_version = "6cf8fc430894121f2f91867978780011e6859b6956b499b43273afc25ed21121"
+    elif controller_type == "mlsd":
+        template_version == "04982e9aa6d3998c2a2490f92e7ccfab2dbd93f5be9423cdf0405c7b86339022"        
 
-    os.environ["REPLICATE_API_TOKEN"] = app_settings['replicate_com_api_key']
-    url = "https://dreambooth-api-experimental.replicate.com/v1/upload/data.zip"
-    headers = {
-        "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),
-        "Content-Type": "application/zip"
-    }
-    response = r.post(url, headers=headers)
-    if response.status_code != 200:
-        st.error(response.content)
-        return
-    upload_url = response.json()["upload_url"]
-    serving_url = response.json()["serving_url"]
-    with open('images.zip', 'rb') as f:
-        r.put(upload_url, data=f, headers=headers)
-    training_file_url = serving_url
-    url = "https://dreambooth-api-experimental.replicate.com/v1/trainings"
-    os.remove('images.zip')
-    model_name = model_name.replace(" ", "-").lower()
-    
-    if type_of_model == "Dreambooth":
-        # ["normal", "canny", "hed", "scribble", "seg", "openpose", "depth","mlsd"]
-        if controller_type == "normal":
-            template_version = "b65d36e378a01ef81d81ba49be7deb127e9bb8b74a28af3aa0eaca16b9bcd0eb"
-        elif controller_type == "canny":
-            template_version = "3c60cbfce253b1d82fea02c7692d13c1e96b36a22da784470fcbedc603a1ed4b"
-        elif controller_type == "hed":
-            template_version = "bef0803be223ecb38361097771dbea7cd166514996494123db27907da53d75cd"
-        elif controller_type == "scribble":
-            template_version = "346b487d77a0bdd150c4bbb8f162f7cd4a4491bca5f309105e078556d0789f11"
-        elif controller_type == "seg":
-            template_version = "a0266713f8c30b35a3f4fc8212fc9450cecea61e4181af63cfb54e5a152ecb24"
-        elif controller_type == "openpose":
-            template_version = "141b8753e2973933441880e325fd21404923d0877014c9f8903add05ff530e52"
-        elif controller_type == "depth":
-            template_version = "6cf8fc430894121f2f91867978780011e6859b6956b499b43273afc25ed21121"
-        elif controller_type == "mlsd":
-            template_version == "04982e9aa6d3998c2a2490f92e7ccfab2dbd93f5be9423cdf0405c7b86339022"        
-
-        headers = {
-            "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),
-            "Content-Type": "application/json"
-        }
-        payload = {
-            "input": {
-                "instance_prompt": instance_prompt,
-                "class_prompt": class_prompt,
-                "instance_data": training_file_url,
-                "max_train_steps": max_train_steps
-            },
-            "model": "peter942/" + str(model_name),
-            "trainer_version": "cd3f925f7ab21afaef7d45224790eedbb837eeac40d22e8fefe015489ab644aa",
-            "template_version": template_version,
-            "webhook_completed": "https://example.com/dreambooth-webhook"
-        }    
-        response = r.post(url, headers=headers, data=json.dumps(payload))    
-        response = (response.json())
-        training_status = response["status"]
-        model_id = response["id"]
-        if training_status == "queued":
-            df = pd.read_csv("models.csv")
-            df = df.append({}, ignore_index=True)
-            new_row_index = df.index[-1]
-            df.iloc[new_row_index, 0] = model_name
-            df.iloc[new_row_index, 1] = model_id
-            df.iloc[new_row_index, 2] = instance_prompt
-            df.iloc[new_row_index, 4] = str(images_list)
-            df.iloc[new_row_index, 5] = "Dreambooth"
-            df.to_csv("models.csv", index=False)
-            return "Success - Training Started. Please wait 10-15 minutes for the model to be trained."
-        else:
-            return "Failed"
-
-    elif type_of_model == "LoRA":
-        model = replicate.models.get("cloneofsimo/lora-training")
-        version = model.versions.get(
-            "b2a308762e36ac48d16bfadc03a65493fe6e799f429f7941639a6acec5b276cc")
-        output = version.predict(
-            instance_data=training_file_url, task=type_of_task, resolution=int(resolution))
+    ml_client = get_ml_client()
+    response = ml_client.dreambooth_training(training_file_url, instance_prompt, class_prompt, max_train_steps, model_name)
+    training_status = response["status"]
+    model_id = response["id"]
+    if training_status == "queued":
         df = pd.read_csv("models.csv")
         df = df.append({}, ignore_index=True)
         new_row_index = df.index[-1]
         df.iloc[new_row_index, 0] = model_name
+        df.iloc[new_row_index, 1] = model_id
+        df.iloc[new_row_index, 2] = instance_prompt
         df.iloc[new_row_index, 4] = str(images_list)
-        df.iloc[new_row_index, 5] = "LoRA"
-        df.iloc[new_row_index, 6] = output
+        df.iloc[new_row_index, 5] = "Dreambooth"
         df.to_csv("models.csv", index=False)
-        return f"Successfully trained - the model '{model_name}' is now available for use!"
+        return "Success - Training Started. Please wait 10-15 minutes for the model to be trained."
+    else:
+        return "Failed"
+    
+def train_lora_model(training_file_url, type_of_task, resolution, model_name, images_list):
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.clones_lora_training,instance_data=training_file_url, \
+                                            task=type_of_task, resolution=int(resolution))
+    
+    df = pd.read_csv("models.csv")
+    df = df.append({}, ignore_index=True)
+    new_row_index = df.index[-1]
+    df.iloc[new_row_index, 0] = model_name
+    df.iloc[new_row_index, 4] = str(images_list)
+    df.iloc[new_row_index, 5] = "LoRA"
+    df.iloc[new_row_index, 6] = output
+    df.to_csv("models.csv", index=False)
+    return f"Successfully trained - the model '{model_name}' is now available for use!"
+
+def train_model(app_settings, images_list, instance_prompt,class_prompt, max_train_steps, \
+                model_name,project_name, type_of_model, type_of_task, resolution, controller_type):
+    # prepare and upload the training data (images.zip)
+    ml_client = get_ml_client()
+    try:
+        training_file_url = ml_client.upload_training_data(images_list)
+    except Exception as e:
+        raise e
+
+    # training the model
+    model_name = model_name.replace(" ", "-").lower()
+    if type_of_model == "Dreambooth":
+        return train_dreambooth_model(controller_type, instance_prompt, class_prompt, training_file_url, \
+                                      max_train_steps, model_name, images_list)
+    elif type_of_model == "LoRA":
+        return train_lora_model(training_file_url, type_of_task, resolution, model_name, images_list)
 
 
-def get_model_details(model_name):
+def get_model_details_from_csv(model_name):
     with open('models.csv', 'r') as f:
         reader = csv.reader(f)
         for row in reader:
@@ -486,17 +455,14 @@ def get_model_details(model_name):
 
 
 def prompt_interpolation_model(img1, img2, project_name, video_number, interpolation_steps, replicate_api_key):
-    os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
-    model = replicate.models.get("google-research/frame-interpolation")
-    version = model.versions.get("4f88a16a13673a8b589c18866e540556170a5bcb2ccdc12de556e800e9456d3d")
-
     if not img1.startswith("http"):
         img1 = open(img1, "rb")
 
     if not img2.startswith("http"):
         img2 = open(img2, "rb")
 
-    output = version.predict(frame1=img1, frame2=img2,
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.google_frame_interpolation,frame1=img1, frame2=img2,
                            times_to_interpolate=interpolation_steps)
     file_name = ''.join(random.choices(
         string.ascii_lowercase + string.digits, k=16)) + ".mp4"
@@ -522,11 +488,8 @@ def remove_background(project_name, input_image):
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
 
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-    model = replicate.models.get("pollinations/modnet")
-    version = model.versions.get("da7d45f3b836795f945f221fc0b01a6d3ab7f5e163f13208948ad436001e2255")
-
-    output = version.predict(image=input_image)
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.pollination_modnet, image=input_image)
     return output
 
 
@@ -544,42 +507,26 @@ def replace_background(video_name, foreground_image, background_image):
 
 
 def prompt_clip_interrogator(input_image, which_model, best_or_fast):
-
     if which_model == "Stable Diffusion 1.5":
         which_model = "ViT-L-14/openai"
     elif which_model == "Stable Diffusion 2":
         which_model = "ViT-H-14/laion2b_s32b_b79k"
 
-    app_settings = get_app_settings()
-
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-
-    model = replicate.models.get("pharmapsychotic/clip-interrogator")
-
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
 
-    version = model.versions.get("a4a8bafd6089e1716b06057c42b19378250d008b80fe87caa5cd36d40c1eda90")
-
-    output = version.predict(
-        image=input_image, clip_model_name=which_model, mode=best_or_fast)
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.clip_interrogator, image=input_image, clip_model_name=which_model, mode=best_or_fast)
 
     return output
 
 
 def touch_up_images(video_name, index_of_current_item, input_image):
-
-    app_settings = get_app_settings()
-
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-
-    model = replicate.models.get("xinntao/gfpgan")
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
 
-    version = model.versions.get("6129309904ce4debfde78de5c209bce0022af40e197e132f08be8ccce3050393")
-
-    output = version.predict(img=input_image)
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.gfp_gan, img=input_image)
 
     return output
 
@@ -603,10 +550,6 @@ def resize_image(video_name, new_width, new_height, image):
 
 
 def face_swap(video_name, index_of_current_item, source_image, timing_details):
-    app_settings = get_app_settings()
-
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-    model = replicate.models.get("arielreplicate/ghost_face_swap")
     model_id = timing_details[index_of_current_item]["model_id"]
 
     if model_id == "Dreambooth":
@@ -615,10 +558,9 @@ def face_swap(video_name, index_of_current_item, source_image, timing_details):
         custom_model = ast.literal_eval(
             timing_details[index_of_current_item]["custom_models"][1:-1])[0]
 
-    source_face = ast.literal_eval(get_model_details(
+    source_face = ast.literal_eval(get_model_details_from_csv(
         custom_model)["training_images"][1:-1])[0]
-    version = model.versions.get(
-        "106df0aaf9690354379d8cd291ad337f6b3ea02fe07d90feb1dafd64820066fa")
+    
     target_face = source_image
 
     if not source_face.startswith("http"):
@@ -627,46 +569,44 @@ def face_swap(video_name, index_of_current_item, source_image, timing_details):
     if not target_face.startswith("http"):
         target_face = open(target_face, "rb")
 
-    output = version.predict(source_path=source_face, target_path=target_face)
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.arielreplicate,source_path=source_face, target_path=target_face)
     return output
 
 
 def prompt_model_stylegan_nada(index_of_current_item, timing_details, input_image, project_name):
-    app_settings = get_app_settings()
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-    model = replicate.models.get("rinongal/stylegan-nada")
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
-    version = model.versions.get(
-        "6b2af4ac56fa2384f8f86fc7620943d5fc7689dcbb6183733743a215296d0e30")
-    output = version.predict(
-        input=input_image, output_style=timing_details[index_of_current_item]["prompt"])
+
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.stylegan_nada, input=input_image, \
+                                            output_style=timing_details[index_of_current_item]["prompt"])
     output = resize_image(project_name, 512, 512, output)
 
     return output
 
 
 def prompt_model_stability(project_name, index_of_current_item, timing_details, input_image):
-
-    app_settings = get_app_settings()
     project_settings = get_project_settings(project_name)
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
     index_of_current_item = int(index_of_current_item)
     prompt = timing_details[index_of_current_item]["prompt"]
-    strength = float(timing_details[index_of_current_item]["strength"])
-    model = replicate.models.get("cjwbw/stable-diffusion-img2img-v2.1")
-    version = model.versions.get("650c347f19a96c8a0379db998c4cd092e0734534591b16a60df9942d11dec15b")    
+    strength = float(timing_details[index_of_current_item]["strength"])  
     if not input_image.startswith("http"):        
         input_image = open(input_image, "rb") 
-    output = version.predict(image=input_image, prompt_strength=float(strength), prompt=prompt, negative_prompt = timing_details[index_of_current_item]["negative_prompt"], width = int(project_settings["width"]), height = int(project_settings["height"]), guidance_scale = float(timing_details[index_of_current_item]["guidance_scale"]), seed = int(timing_details[index_of_current_item]["seed"]), num_inference_steps = int(timing_details[index_of_current_item]["num_inference_steps"]))
+    
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.img2img_sd_2_1,image=input_image, \
+                                            prompt_strength=float(strength), prompt=prompt, \
+                                                negative_prompt = timing_details[index_of_current_item]["negative_prompt"], \
+                                                    width = int(project_settings["width"]), height = int(project_settings["height"]),\
+                                                          guidance_scale = float(timing_details[index_of_current_item]["guidance_scale"]),\
+                                                              seed = int(timing_details[index_of_current_item]["seed"]), \
+                                                                num_inference_steps = int(timing_details[index_of_current_item]["num_inference_steps"]))
     
     return output[0]
 
 
 def prompt_model_dreambooth(project_name, image_number, model_name, app_settings,timing_details, project_settings, source_image):
-
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-    replicate_api_key = app_settings["replicate_com_api_key"]
     image_number = int(image_number)
     prompt = timing_details[image_number]["prompt"]
     strength = float(timing_details[image_number]["strength"])
@@ -675,9 +615,11 @@ def prompt_model_dreambooth(project_name, image_number, model_name, app_settings
     seed = int(timing_details[image_number]["seed"])
     num_inference_steps = int(
         timing_details[image_number]["num_inference_steps"])
-    model = replicate.models.get(f"peter942/{model_name}")
-    model_details = get_model_details(model_name)
+    
+    model_details = get_model_details_from_csv(model_name)
     model_id = model_details["id"]
+
+    ml_client = get_ml_client()
 
     if timing_details[image_number]["adapter_type"] == "Yes":
         if source_image.startswith("http"):        
@@ -687,11 +629,9 @@ def prompt_model_dreambooth(project_name, image_number, model_name, app_settings
     else:
         control_image = None
     
+    # version of models that were custom created has to be fetched
     if model_details["version"] == "":
-        headers = {"Authorization": f"Token {replicate_api_key}"}
-        url = f"https://dreambooth-api-experimental.replicate.com/v1/trainings/{model_id}"
-        response = r.get(url, headers=headers)
-        version = (response.json()["version"])
+        version = ml_client.get_model_version_from_id(model_id)
         models_df = pd.read_csv("models.csv")
         row_number = models_df[models_df["id"] == model_id].index[0]
         models_df.iloc[row_number, [3]] = version
@@ -699,34 +639,33 @@ def prompt_model_dreambooth(project_name, image_number, model_name, app_settings
     else:
         version = model_details["version"]
 
-    version = model.versions.get(version)
+    model_version = ml_client.get_model_by_name(f"peter942/{model_name}", version)
 
     if source_image.startswith("http"):        
         input_image = source_image        
     else:
         input_image = open(source_image, "rb")
 
+    input_data = {
+        "image" :input_image,
+        "prompt" :prompt,
+        "prompt_strength" :float(strength),
+        "height" : int(project_settings["height"]),
+        "width" : int(project_settings["width"]),
+        "disable_safety_check" :True,
+        "negative_prompt" : negative_prompt,
+        "guidance_scale" : float(guidance_scale),
+        "seed" : int(seed),
+        "num_inference_steps" : int(num_inference_steps)
+    }
+
     if control_image != None:
-        output = version.predict(image=input_image, control_image = control_image, prompt=prompt, prompt_strength=float(strength), height = int(project_settings["height"]), width = int(project_settings["width"]), disable_safety_check=True, negative_prompt = negative_prompt, guidance_scale = float(guidance_scale), seed = int(seed), num_inference_steps = int(num_inference_steps))
-    else:
-        output = version.predict(image=input_image, prompt=prompt, prompt_strength=float(strength), height = int(project_settings["height"]), width = int(project_settings["width"]), disable_safety_check=True, negative_prompt = negative_prompt, guidance_scale = float(guidance_scale), seed = int(seed), num_inference_steps = int(num_inference_steps))
+        input_data['control_image'] = control_image
+        
+    output = model_version.predict(**input_data)
     
     for i in output:
         return i
-
-
-def upload_image(image_location):
-
-    app_settings = get_app_settings()
-
-    unique_file_name = str(uuid.uuid4()) + ".png"
-    s3_file = f"input_images/{unique_file_name}"
-    s3 = boto3.client('s3', aws_access_key_id=app_settings['aws_access_key_id'],
-                      aws_secret_access_key=app_settings['aws_secret_access_key'])
-    s3.upload_file(image_location, "banodoco", s3_file)
-    s3.put_object_acl(ACL='public-read', Bucket='banodoco', Key=s3_file)
-    return f"https://s3.amazonaws.com/banodoco/{s3_file}"
-
 
 def update_slice_of_video_speed(video_name, input_video, desired_speed_change):
 
@@ -825,7 +764,7 @@ def update_video_speed(project_name, index_of_current_item, duration_of_static_t
                   "/assets/videos/0_raw/static.mp4")
     else:
         final_clip = concatenate_videoclips([VideoFileClip("videos/" + str(project_name) + "/assets/videos/0_raw/static.mp4"),
-                                            VideoFileClip("videos/" + str(video_name) + "/assets/videos/0_raw/moving.mp4")])
+                                            VideoFileClip("videos/" + str(project_name) + "/assets/videos/0_raw/moving.mp4")])
 
         final_clip.write_videofile(
             "videos/" + str(project_name) + "/assets/videos/0_raw/full_output.mp4", fps=30)
@@ -882,19 +821,8 @@ def calculate_desired_duration_of_each_clip(timing_details, project_name):
 
 
 def hair_swap(source_image, project_name, index_of_current_item):
-
-    app_settings = get_app_settings()
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-
-    model = replicate.models.get("cjwbw/style-your-hair")
-
-    version = model.versions.get(
-        "c4c7e5a657e2e1abccd57625093522a9928edeccee77e3f55d57c664bcd96fa2")
-
-    source_hair = upload_image("videos/" + str(video_name) + "/face.png")
-
-    target_hair = upload_image("videos/" + str(video_name) +
-                               "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png")
+    source_hair = upload_image("videos/" + str(project_name) + "/face.png")
+    target_hair = upload_image("videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png")
 
     if not source_hair.startswith("http"):
         source_hair = open(source_hair, "rb")
@@ -902,56 +830,45 @@ def hair_swap(source_image, project_name, index_of_current_item):
     if not target_hair.startswith("http"):
         target_hair = open(target_hair, "rb")
 
-    output = version.predict(source_image=source_hair,
-                             target_image=target_hair)
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.cjwbw_style_hair, source_image=source_hair, target_image=target_hair)
 
     return output
 
 
 def prompt_model_depth2img(strength, image_number, timing_details, source_image):
-
-    app_settings = get_app_settings()
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-
     prompt = timing_details[image_number]["prompt"]
     num_inference_steps = timing_details[image_number]["num_inference_steps"]
     guidance_scale = float(timing_details[image_number]["guidance_scale"])
     negative_prompt = timing_details[image_number]["negative_prompt"]
-    model = replicate.models.get("jagilley/stable-diffusion-depth2img")
-    version = model.versions.get(
-        "68f699d395bc7c17008283a7cef6d92edc832d8dc59eb41a6cafec7fc70b85bc")
-
     if not source_image.startswith("http"):
         source_image = open(source_image, "rb")
 
-    output = version.predict(input_image=source_image, prompt_strength=float(strength), prompt=prompt,
-                             negative_prompt=negative_prompt, num_inference_steps=num_inference_steps, guidance_scale=guidance_scale)
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.jagilley_controlnet_depth2img, input_image=source_image,\
+                                            prompt_strength=float(strength), prompt=prompt, negative_prompt=negative_prompt, \
+                                                num_inference_steps=num_inference_steps, guidance_scale=guidance_scale)
 
     return output[0]
 
 
 def prompt_model_blip2(input_image, query):
-    app_settings = get_app_settings()
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-    model = replicate.models.get("salesforce/blip-2")
-    version = model.versions.get(
-        "4b32258c42e9efd4288bb9910bc532a69727f9acd26aa08e175713a0a857a608")
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
-    output = version.predict(image=input_image, question=query)
-    print(output)
+    
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.salesforce_blip_2, image=input_image, question=query)
+
     return output
 
 
 def facial_expression_recognition(input_image):
-    app_settings = get_app_settings()
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-    model = replicate.models.get("phamquiluan/facial-expression-recognition")
-    version = model.versions.get(
-        "b16694d5bfed43612f1bfad7015cf2b7883b732651c383fe174d4b7783775ff5")
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
-    output = version.predict(input_path=input_image)
+    
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.phamquiluan_face_recognition, input_path=input_image)
+
     emo_label = output[0]["emo_label"]
     if emo_label == "disgust":
         emo_label = "disgusted"
@@ -976,18 +893,15 @@ def facial_expression_recognition(input_image):
 
 
 def prompt_model_pix2pix(strength, video_name, image_number, timing_details, replicate_api_key, input_image):
-    app_settings = get_app_settings()
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
     image_number = int(image_number)
     prompt = timing_details[image_number]["prompt"]
     guidance_scale = float(timing_details[image_number]["guidance_scale"])
     seed = int(timing_details[image_number]["seed"])
-    model = replicate.models.get("arielreplicate/instruct-pix2pix")
-    version = model.versions.get(
-        "10e63b0e6361eb23a0374f4d9ee145824d9d09f7a31dcd70803193ebc7121430")
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
-    output = version.predict(input_image=input_image, instruction_text=prompt,
+
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.arielreplicate, input_image=input_image, instruction_text=prompt,
                              seed=seed, cfg_image=1.2, cfg_text=guidance_scale, resolution=704)
 
     return output
@@ -1165,16 +1079,11 @@ def create_gif_preview(project_name, timing_details):
 
 
 def create_depth_mask_image(input_image, layer, project_name, index_of_current_item):
-
-    app_settings = get_app_settings()
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-    model = replicate.models.get("cjwbw/midas")
-    version = model.versions.get(
-        "a6ba5798f04f80d3b314de0f0a62277f21ab3503c60c84d4817de83c5edfdae0")
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
-    output = version.predict(
-        image=input_image, model_type="dpt_beit_large_512")
+    
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.cjwbw_midas, image=input_image, model_type="dpt_beit_large_512")
     try:
         urllib.request.urlretrieve(output, "depth.png")
     except Exception as e:
@@ -1218,34 +1127,22 @@ def create_depth_mask_image(input_image, layer, project_name, index_of_current_i
 
 
 def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
-
-    app_settings = get_app_settings()
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-
     if timing_details[index_of_current_item]["adapter_type"] == "normal":
-        model = replicate.models.get("jagilley/controlnet-normal")
-        version = model.versions.get("cc8066f617b6c99fdb134bc1195c5291cf2610875da4985a39de50ee1f46d81c")
+        model = REPLICATE_MODEL.jagilley_controlnet_normal
     elif timing_details[index_of_current_item]["adapter_type"] == "canny":
-        model = replicate.models.get("jagilley/controlnet-canny")
-        version = model.versions.get("aff48af9c68d162388d230a2ab003f68d2638d88307bdaf1c2f1ac95079c9613")
+        model = REPLICATE_MODEL.jagilley_controlnet_canny
     elif timing_details[index_of_current_item]["adapter_type"] == "hed":
-        model = replicate.models.get("jagilley/controlnet-hed")
-        version = model.versions.get("cde353130c86f37d0af4060cd757ab3009cac68eb58df216768f907f0d0a0653")
+        model = REPLICATE_MODEL.jagilley_controlnet_hed
     elif timing_details[index_of_current_item]["adapter_type"] == "scribble":
-        model = replicate.models.get("jagilley/controlnet-scribble")
-        version = model.versions.get("435061a1b5a4c1e26740464bf786efdfa9cb3a3ac488595a2de23e143fdb0117")
+        model = REPLICATE_MODEL.jagilley_controlnet_scribble
     elif timing_details[index_of_current_item]["adapter_type"] == "seg":
-        model = replicate.models.get("jagilley/controlnet-seg")
-        version = model.versions.get("f967b165f4cd2e151d11e7450a8214e5d22ad2007f042f2f891ca3981dbfba0d")
+        model = REPLICATE_MODEL.jagilley_controlnet_seg
     elif timing_details[index_of_current_item]["adapter_type"] == "hough":
-        model = replicate.models.get("jagilley/controlnet-hough")
-        version = model.versions.get("854e8727697a057c525cdb45ab037f64ecca770a1769cc52287c2e56472a247b")
+        model = REPLICATE_MODEL.jagilley_controlnet_hough
     elif timing_details[index_of_current_item]["adapter_type"] == "depth2img":
-        model = replicate.models.get("jagilley/controlnet-depth2img")
-        version = model.versions.get("922c7bb67b87ec32cbc2fd11b1d5f94f0ba4f5519c4dbd02856376444127cc60")
+        model = REPLICATE_MODEL.jagilley_controlnet_depth2img
     elif timing_details[index_of_current_item]["adapter_type"] == "pose":
-        model = replicate.models.get("jagilley/controlnet-pose")
-        version = model.versions.get("0304f7f774ba7341ef754231f794b1ba3d129e3c46af3022241325ae0c50fb99")
+        model = REPLICATE_MODEL.jagilley_controlnet_pose
 
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
@@ -1265,27 +1162,23 @@ def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
         'bg_threshold': 0,
     }
     
-    output = version.predict(**inputs)
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(model, **inputs)
 
     return output[1]
 
 
 def prompt_model_lora(project_name, index_of_current_item, timing_details, source_image):
-
-    app_settings = get_app_settings()
-
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-
     timing_details = get_timing_details(project_name)
     lora_models = ast.literal_eval(timing_details[index_of_current_item]["custom_models"][1:-1])
     project_settings = get_project_settings(project_name)
-    default_model_url = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
+    default_model_url = DEFAULT_LORA_MODEL_URL
 
     lora_model_urls = []
     
     for lora_model in lora_models:
         if lora_model != "":
-            lora_model_details = get_model_details(lora_model)
+            lora_model_details = get_model_details_from_csv(lora_model)
             print(lora_model_details)
             if lora_model_details['model_url'] != "":
                 lora_model_url = lora_model_details['model_url']
@@ -1312,31 +1205,29 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
     else:
         adapter_condition_image = ""
 
-    model = replicate.models.get("cloneofsimo/lora")
-    version = model.versions.get(
-        "fce477182f407ffd66b94b08e761424cabd13b82b518754b83080bc75ad32466")
     inputs = {
-    'prompt': timing_details[index_of_current_item]["prompt"],
-    'negative_prompt': timing_details[index_of_current_item]["negative_prompt"],
-    'width': int(project_settings["width"]),
-    'height': int(project_settings["height"]),
-    'num_outputs': 1,
-    'image': input_image,
-    'num_inference_steps': int(timing_details[index_of_current_item]["num_inference_steps"]),
-    'guidance_scale': float(timing_details[index_of_current_item]["guidance_scale"]),
-    'prompt_strength': float(timing_details[index_of_current_item]["strength"]),
-    'scheduler': "DPMSolverMultistep",
-    'lora_urls': lora_model_1_model_url + "|" + lora_model_2_model_url + "|" + lora_model_3_model_url,
-    'lora_scales': "0.5 | 0.5 | 0.5",
-    'adapter_type': timing_details[index_of_current_item]["adapter_type"],
-    'adapter_condition_image': adapter_condition_image,
+        'prompt': timing_details[index_of_current_item]["prompt"],
+        'negative_prompt': timing_details[index_of_current_item]["negative_prompt"],
+        'width': int(project_settings["width"]),
+        'height': int(project_settings["height"]),
+        'num_outputs': 1,
+        'image': input_image,
+        'num_inference_steps': int(timing_details[index_of_current_item]["num_inference_steps"]),
+        'guidance_scale': float(timing_details[index_of_current_item]["guidance_scale"]),
+        'prompt_strength': float(timing_details[index_of_current_item]["strength"]),
+        'scheduler': "DPMSolverMultistep",
+        'lora_urls': lora_model_1_model_url + "|" + lora_model_2_model_url + "|" + lora_model_3_model_url,
+        'lora_scales': "0.5 | 0.5 | 0.5",
+        'adapter_type': timing_details[index_of_current_item]["adapter_type"],
+        'adapter_condition_image': adapter_condition_image,
      }
     
+    ml_client = get_ml_client()
     max_attempts = 3
     attempts = 0
     while attempts < max_attempts:
         try:
-            output = version.predict(**inputs)
+            output = ml_client.predict_model_output(REPLICATE_MODEL.clones_lora_training_2, **inputs)
             print(output)
             return output[0]
         except replicate.exceptions.ModelError as e:
@@ -1346,6 +1237,9 @@ def prompt_model_lora(project_name, index_of_current_item, timing_details, sourc
                 continue
             else:
                 raise e
+        except Exception as e:
+            raise e
+        
     return "https://i.ibb.co/ZG0hxzj/Failed-3x-In-A-Row.png"
 
 
