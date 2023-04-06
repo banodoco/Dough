@@ -15,6 +15,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         app_settings = get_app_settings()
         os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
         self._set_urls()
+        super().__init__()
 
     def _set_urls(self):
         self.dreambooth_training_url = "https://dreambooth-api-experimental.replicate.com/v1/trainings"
