@@ -8,7 +8,7 @@ from streamlit_drawable_canvas import st_canvas
 from streamlit_image_comparison import image_comparison
 
 from repository.local_repo.csv_repo import get_project_settings, update_specific_timing_value
-from ui_components.common_methods import add_image_variant, create_or_update_mask, execute_image_edit, extract_frame, get_timing_details, promote_image_variant
+from ui_components.common_methods import add_image_variant, create_or_update_mask, execute_image_edit, extract_frame, get_timing_details, promote_image_variant,prompt_model_controlnet
 from utils.file_upload.s3 import upload_image
 
 def frame_editing_page(project_name):
@@ -80,7 +80,7 @@ def frame_editing_page(project_name):
             st.sidebar.markdown("### Select Area To Edit:") 
             if 'index_of_type_of_mask_selection' not in st.session_state:
                 st.session_state['index_of_type_of_mask_selection'] = 0
-            mask_selection_options = ["Automated Background Selection", "Automated Layer Selection", "Manual Background Selection","Re-Use Previous Mask", "Invert Previous Mask"]
+            mask_selection_options = ["Automated Background Selection", "Automated Layer Selection", "Manual Background Selection","Re-Use Previous Mask", "Invert Previous Mask","Edit Canny Image"]
             type_of_mask_selection = st.sidebar.radio("How would you like to select what to edit?", mask_selection_options, horizontal=True, index=st.session_state['index_of_type_of_mask_selection'])                                                                      
             if st.session_state['index_of_type_of_mask_selection'] != mask_selection_options.index(type_of_mask_selection):
                 st.session_state['index_of_type_of_mask_selection'] = mask_selection_options.index(type_of_mask_selection)
@@ -159,6 +159,115 @@ def frame_editing_page(project_name):
                         st.session_state['edited_image'] = ""
                         st.experimental_rerun()
             
+            elif type_of_mask_selection == "Edit Canny Image":
+                if timing_details[st.session_state['which_image']]["canny_image"] == "":
+                    st.error("No Canny Image Found From Key Frame")
+                                                                                                    
+                else:
+                    if timing_details[st.session_state['which_image']]["canny_image"] .startswith("http"):
+                        canvas_image = r.get(timing_details[st.session_state['which_image']]["canny_image"] )
+                        canvas_image = Image.open(BytesIO(canvas_image.content))
+                    else:
+                        canvas_image = Image.open(timing_details[st.session_state['which_image']]["canny_image"] )
+                    if 'drawing_input' not in st.session_state:
+                        st.session_state['drawing_input'] = 'Magic shapes 🪄'
+                    col1, col2 = st.columns([6,3])
+                                    
+                    with col1:
+                        st.session_state['drawing_input'] = st.sidebar.radio(
+                            "Drawing tool:",
+                            ("Make shapes 🪄","Move shapes 🏋🏾‍♂️", "Draw lines ✏️","Erase Lines ❌"), horizontal=True,
+                        )
+                    
+                    if st.session_state['drawing_input'] == "Move shapes 🏋🏾‍♂️":
+                        drawing_mode = "transform"                        
+                        st.sidebar.info("To delete something, just move it outside of the image! 🥴")
+                        stroke_colour = "rgba(0, 0, 0)"
+                    elif st.session_state['drawing_input'] == "Make shapes 🪄":
+                        drawing_mode = "polygon"
+                        stroke_colour = "rgba(0, 0, 0)"
+                        st.sidebar.info("To end a shape, right click!")
+                    elif st.session_state['drawing_input'] == "Draw lines ✏️":
+                        drawing_mode = "freedraw"
+                        stroke_colour = "rgba(0, 0, 0)"
+                        st.sidebar.info("To draw, draw! ")
+                    elif st.session_state['drawing_input'] == "Erase Lines ❌":
+                        drawing_mode = "freedraw"
+                        stroke_colour = "rgba(255, 255, 255)"
+                        st.sidebar.info("To erase, draw! ")
+                    
+                    with col2:    
+                        if drawing_mode == "freedraw":           
+                            stroke_width = st.sidebar.slider("Stroke width: ", 1, 25, 2)
+                        else:
+                            stroke_width = 3
+
+                    realtime_update = True        
+
+                    canvas_result = st_canvas(
+                        fill_color="rgba(0, 0, 0)", 
+                        stroke_width=stroke_width,
+                        stroke_color=stroke_colour,
+                        background_color="rgb(255, 255, 255)",
+                        background_image=canvas_image,
+                        update_streamlit=realtime_update,
+                        height=height,
+                        width=width,
+                        drawing_mode=drawing_mode,
+                        display_toolbar=True,
+                        key="full_app",
+                    )
+
+                    if 'image_created' not in st.session_state:
+                        st.session_state['image_created'] = 'no'
+
+                    if canvas_result.image_data is not None:
+                        img_data = canvas_result.image_data
+                        im = Image.fromarray(img_data.astype("uint8"), mode="RGBA")
+
+                    if st.button("Save New Canny Image"):
+                        if canvas_result.image_data is not None:
+                            # overlay the canvas image on top of the canny image and save the result
+                            # if canny image is from a url, then we need to download it first
+                            if timing_details[st.session_state['which_image']]["canny_image"].startswith("http"):
+                                canny_image = r.get(timing_details[st.session_state['which_image']]["canny_image"])
+                                canny_image = Image.open(BytesIO(canny_image.content))
+                            else:
+                                canny_image = Image.open(timing_details[st.session_state['which_image']]["canny_image"])
+                            canny_image = canny_image.convert("RGBA")
+                            canvas_image = im
+                            canvas_image = canvas_image.convert("RGBA")
+                            new_canny_image = Image.alpha_composite(canny_image, canvas_image)
+                            new_canny_image = new_canny_image.convert("RGB")
+                            new_canny_image.save(f"videos/{project_name}/assets/resources/masks/{st.session_state['which_image']}.png")
+                            update_specific_timing_value(project_name, st.session_state['which_image'], "canny_image", f"videos/{project_name}/assets/resources/masks/{st.session_state['which_image']}.png")
+                            st.experimental_rerun()
+
+                        else:
+                            st.error("No Image Found")
+
+                canny1, canny2 = st.columns([1,1])
+                with canny1:
+                    st.markdown("#### Use Canny Image From Other Frame")
+                    st.markdown("This will use a canny image from another frame. This will take a few seconds.")                    
+                    which_number_image_for_canny = st.number_input("Which frame would you like to use?", min_value=0, max_value=len(timing_details)-1, value=0, step=1)
+                    if st.button("Use Canny Image From Other Frame"):
+                        if timing_details[which_number_image_for_canny]["canny_image"] != "":                             
+                            update_specific_timing_value(project_name, st.session_state['which_image'], "canny_image", timing_details[which_number_image_for_canny]["canny_image"])                                                
+                    if timing_details[which_number_image_for_canny]["canny_image"] == "":
+                        st.error("No Canny Image Found From Key Frame")                    
+                with canny2:                                                            
+                    st.markdown("#### Upload Canny Image")
+                    st.markdown("This will upload a canny image from your computer. This will take a few seconds.")
+                    uploaded_file = st.file_uploader("Choose a file")
+                    if st.button("Upload Canny Image"):                                
+                        with open(os.path.join(f"videos/{project_name}/assets/resources/masks",uploaded_file.name),"wb") as f:
+                            f.write(uploaded_file.getbuffer())                                                                                                                                                      
+                            st.success("Your backgrounds are uploaded file - they should appear in the dropdown.")                     
+                            update_specific_timing_value(project_name, st.session_state['which_image'], "canny_image", f"videos/{project_name}/assets/resources/masks/{uploaded_file.name}")                               
+                            time.sleep(1.5)
+                            st.experimental_rerun()  
+
             elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection" or type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
                 if type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
                     if timing_details[st.session_state['which_image']]["mask"] == "":
@@ -246,9 +355,9 @@ def frame_editing_page(project_name):
             elif st.session_state["type_of_mask_replacement"] == "Inpainting":
                 btn1, btn2 = st.sidebar.columns([1,1])
                 with btn1:
-                    prompt = st.text_input("Prompt:", help="Describe the whole image, but focus on the details you want changed!")
+                    prompt = st.text_area("Prompt:", help="Describe the whole image, but focus on the details you want changed!")
                 with btn2:
-                    negative_prompt = st.text_input("Negative Prompt:", help="Enter any things you want to make the model avoid!")
+                    negative_prompt = st.text_area("Negative Prompt:", help="Enter any things you want to make the model avoid!")
 
             edit1, edit2 = st.sidebar.columns(2)
 

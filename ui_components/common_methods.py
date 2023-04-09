@@ -1306,6 +1306,8 @@ def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
         'n_prompt': timing_details[index_of_current_item]["negative_prompt"] + ", longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
         'detect_resolution': 512,
         'bg_threshold': 0,
+        'low_threshold': 250,
+        'high_threshold': 255,
     }
     
     output = version.predict(**inputs)

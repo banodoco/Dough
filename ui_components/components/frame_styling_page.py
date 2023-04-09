@@ -156,7 +156,8 @@ def frame_styling_page(mainheader2, project_name):
             if st.session_state['index_of_controlnet_adapter_type'] != controlnet_adapter_types.index(st.session_state['adapter_type']):
                 st.session_state['index_of_controlnet_adapter_type'] = controlnet_adapter_types.index(st.session_state['adapter_type'])
                 st.experimental_rerun()
-            custom_models = []           
+            custom_models = []    
+            
         elif st.session_state['model'] == "LoRA": 
             if 'index_of_lora_model_1' not in st.session_state:
                 st.session_state['index_of_lora_model_1'] = 0
