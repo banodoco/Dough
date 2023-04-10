@@ -63,6 +63,10 @@ def create_file_path(path):
                 ['replicate_user_name', ''],
                 ['welcome_state', '0']
             ]
+        elif file_name == 'log.csv':
+            data = [
+                ['model_name', 'model_version', 'total_inference_time', 'input_params', 'created_on'],
+            ]
 
         
         if len(data):
@@ -103,6 +107,7 @@ def create_working_assets(project_name):
         new_project = False
 
     directory_list = [
+        # project specific files
         "videos/" + project_name,
         "videos/" + project_name + "/assets",
         "videos/" + project_name + "/assets/frames",
@@ -119,7 +124,9 @@ def create_working_assets(project_name):
         "videos/" + project_name + "/assets/videos",
         "videos/" + project_name + "/assets/videos/0_raw",
         "videos/" + project_name + "/assets/videos/1_final",
-        "videos/" + project_name + "/assets/videos/2_completed"
+        "videos/" + project_name + "/assets/videos/2_completed",
+        # app data
+        "inference_log"
     ]
     
     for directory in directory_list:
@@ -132,7 +139,8 @@ def create_working_assets(project_name):
 
     csv_file_list = [
         f'videos/{project_name}/settings.csv',
-        f'videos/{project_name}/timings.csv'
+        f'videos/{project_name}/timings.csv',
+        'inference_log/log.csv'
     ]
 
     for csv_file in csv_file_list:

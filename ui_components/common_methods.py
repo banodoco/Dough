@@ -21,9 +21,10 @@ import ast
 import numpy as np
 from repository.local_repo.csv_repo import CSVProcessor, get_app_settings, get_project_settings, update_project_setting, update_specific_timing_value
 from utils.file_upload.s3 import upload_image
+from utils.logging.constants import LoggingPayload, LoggingType
+from utils.logging.logging import AppLogger
 from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.replicate.constants import DEFAULT_LORA_MODEL_URL, REPLICATE_MODEL
-from utils.ml_processor.replicate.replicate import ReplicateProcessor
 
 
 def calculate_time_at_frame_number(input_video, frame_number, project_name):

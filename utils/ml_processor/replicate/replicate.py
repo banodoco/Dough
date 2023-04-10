@@ -1,5 +1,7 @@
+import time
 from repository.local_repo.csv_repo import get_app_settings
 from utils.file_upload.s3 import upload_image
+from utils.logging.logging import AppLogger
 from utils.ml_processor.ml_interface import MachineLearningProcessor
 import replicate
 import os
@@ -13,6 +15,7 @@ from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateMod
 class ReplicateProcessor(MachineLearningProcessor):
     def __init__(self):
         app_settings = get_app_settings()
+        self.logger = AppLogger()
         os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
         self._set_urls()
         super().__init__()
@@ -33,7 +36,10 @@ class ReplicateProcessor(MachineLearningProcessor):
     
     def predict_model_output(self, model: ReplicateModel, **kwargs):
         model_version = self.get_model(model)
+        start_time = time.time()
         output = model_version.predict(**kwargs)
+        end_time = time.time()
+        self.logger.log_model_inference(model, end_time - start_time, **kwargs)
         return output
 
     def inpainting(self, video_name, input_image, prompt, negative_prompt):
@@ -45,7 +51,10 @@ class ReplicateProcessor(MachineLearningProcessor):
         if not input_image.startswith("http"):        
             input_image = open(input_image, "rb")
 
+        start_time = time.time()
         output = model.predict(mask=mask, image=input_image,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)    
+        end_time = time.time()
+        self.logger.log_model_inference(model, end_time - start_time, prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)
 
         return output[0]
     
@@ -100,7 +109,11 @@ class ReplicateProcessor(MachineLearningProcessor):
             input_image = open(input_image, "rb")
 
         model = self.get_model(REPLICATE_MODEL.pollination_modnet)
+        start_time = time.time()
         output = model.predict(image=input_image)
+        end_time = time.time()
+        self.logger.log_model_inference(model, end_time - start_time, image=input_image)
+
         return output
     
     def get_model_version_from_id(self, model_id):

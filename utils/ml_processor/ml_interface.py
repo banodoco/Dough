@@ -1,6 +1,4 @@
-
-
-from utils.logging.logging import AppLogger
+from abc import ABC
 
 
 def get_ml_client():
@@ -8,6 +6,6 @@ def get_ml_client():
     
     return ReplicateProcessor()
 
-class MachineLearningProcessor:
+class MachineLearningProcessor(ABC):
     def __init__(self):
-        self.logger = AppLogger()
+        pass
