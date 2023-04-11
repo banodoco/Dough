@@ -1,4 +1,5 @@
 from repository.local_repo.csv_repo import get_app_settings
+from repository.local_repo.db_repo import DBRepo, setup_database
 from utils.common_methods import create_working_assets
 
 
@@ -24,3 +25,8 @@ def project_init():
 
     # create asset directories
     create_working_assets('controlnet_test')
+
+    # setup database
+    setup_database()
+
+

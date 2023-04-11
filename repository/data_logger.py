@@ -31,4 +31,5 @@ def log_model_inference(model: ReplicateModel, time_taken, **kwargs):
     system_logger.log(LoggingType.INFERENCE_CALL, logging_payload)
 
     # logging data
-    log_inference_data_in_csv(logging_payload.data)
+    # log_inference_data_in_csv(logging_payload.data)
+    # log_inference_data_in_local_db(logging_payload.data)
