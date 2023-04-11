@@ -10,6 +10,7 @@ import json
 import zipfile
 
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
+from repository.data_logger import log_model_inference
 
 
 class ReplicateProcessor(MachineLearningProcessor):
@@ -39,7 +40,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         start_time = time.time()
         output = model_version.predict(**kwargs)
         end_time = time.time()
-        self.logger.log_model_inference(model, end_time - start_time, **kwargs)
+        log_model_inference(model, end_time - start_time, **kwargs)
         return output
 
     def inpainting(self, video_name, input_image, prompt, negative_prompt):
@@ -54,7 +55,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         start_time = time.time()
         output = model.predict(mask=mask, image=input_image,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)    
         end_time = time.time()
-        self.logger.log_model_inference(model, end_time - start_time, prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)
+        log_model_inference(model, end_time - start_time, prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)
 
         return output[0]
     
@@ -112,7 +113,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         start_time = time.time()
         output = model.predict(image=input_image)
         end_time = time.time()
-        self.logger.log_model_inference(model, end_time - start_time, image=input_image)
+        log_model_inference(model, end_time - start_time, image=input_image)
 
         return output
     
