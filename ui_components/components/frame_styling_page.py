@@ -2,20 +2,36 @@ import streamlit as st
 from streamlit_image_comparison import image_comparison
 import time
 import pandas as pd
-from repository.local_repo.csv_repo import get_app_settings, get_project_settings
-from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process
+import os
+from PIL import Image
+import requests as r
+from streamlit_drawable_canvas import st_canvas
+from repository.local_repo.csv_repo import get_app_settings, get_project_settings,update_specific_timing_value
+from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process,add_image_variant,prompt_interpolation_model,update_speed_of_video_clip,create_timings_row_at_frame_number,extract_canny_lines,get_duration_from_video,get_audio_bytes_for_slice,add_audio_to_video_slice,convert_to_minutes_and_seconds,styling_sidebar,get_primary_variant_location,create_preview_video
+from utils.file_upload.s3 import upload_image
+import uuid
+import datetime
+from pydub import AudioSegment
+from io import BytesIO
+import shutil
+from streamlit_option_menu import option_menu
+from moviepy.editor import concatenate_videoclips
+import moviepy.editor
+
+
+
 
 def frame_styling_page(mainheader2, project_name):
-    timing_details = get_timing_details(project_name)
-    with mainheader2:
-        with st.expander("💡 How frame styling works"):
-            st.info("On the left, there are a bunch of differnet models and processes you can use to style frames. You can even use combinatinos of models through custom pipelines or by running them one after another. We recommend experimenting on 1-2 frames before doing bulk runs for the sake of efficiency.")
 
+    timing_details = get_timing_details(project_name)
+    
+   
     if "project_settings" not in st.session_state:
         st.session_state['project_settings'] = get_project_settings(project_name)
-        print("HERE LAD")
-    print(st.session_state['project_settings'])
-                            
+
+    if 'index_of_last_model' not in st.session_state:
+        st.session_state['index_of_last_model'] = 0
+                                                
     if "strength" not in st.session_state:                    
         st.session_state['strength'] = st.session_state['project_settings']["last_strength"]
         st.session_state['prompt_value'] = st.session_state['project_settings']["last_prompt"]
@@ -28,22 +44,40 @@ def frame_styling_page(mainheader2, project_name):
         st.session_state['which_stage_to_run_on'] = st.session_state['project_settings']["last_which_stage_to_run_on"]
         st.session_state['show_comparison'] = "Don't show"
                             
-
     if "which_image" not in st.session_state:
         st.session_state['which_image'] = 0
                                 
-
     if 'frame_styling_view_type' not in st.session_state:
         st.session_state['frame_styling_view_type'] = "List View"
         st.session_state['frame_styling_view_type_index'] = 0
 
 
+    with st.sidebar:
+
+        st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(timing_details)-1, value=st.session_state['which_image_value'], step=1, key="which_image_selector")
+        if st.session_state['which_image_value'] != st.session_state['which_image']:
+            st.session_state['which_image_value'] = st.session_state['which_image']
+            st.session_state['reset_canvas'] = True
+            st.experimental_rerun()            
+                
+        notes = st.text_area("Frame Notes:", value=timing_details[st.session_state['which_image']]["notes"], height=100, key="notes")
+
+        if notes != timing_details[st.session_state['which_image']]["notes"]:
+            timing_details[st.session_state['which_image']]["notes"] = notes
+            update_specific_timing_value(project_name, st.session_state['which_image'], "notes", notes)
+            st.experimental_rerun()
+        st.markdown("***")
+        styling_sidebar(project_name, timing_details)
+
     if timing_details == []:
+
         st.info("You need to select and load key frames first in the Key Frame Selection section.")                            
+    
     else:
-        top1, top2, top3 = st.columns([3,1,2])
+
+        top1, top2, top3 = st.columns([4,1,2])
         with top1:
-            view_types = ["List View","Single Frame"]
+            view_types = ["List View","ControlNet"]
             st.session_state['frame_styling_view_type'] = st.radio("View type:", view_types, key="which_view_type", horizontal=True, index=st.session_state['frame_styling_view_type_index'])                        
             if view_types.index(st.session_state['frame_styling_view_type']) != st.session_state['frame_styling_view_type_index']:
                 st.session_state['frame_styling_view_type_index'] = view_types.index(st.session_state['frame_styling_view_type'])
@@ -52,65 +86,612 @@ def frame_styling_page(mainheader2, project_name):
         with top2:
             st.write("")
 
+        project_settings = get_project_settings(project_name)
 
-        if st.session_state['frame_styling_view_type'] == "Single Frame":
-            with top3:
-                st.session_state['show_comparison'] = st.radio("Show comparison to original", options=["Don't show", "Show"], horizontal=True)
-                
-                                    
-            f1, f2, f3  = st.columns([1,4,1])
+        if st.session_state['frame_styling_view_type'] == "ControlNet":
+
+            if "section_index" not in st.session_state:
+                st.session_state['section_index'] = 0
+
+            sections = ["Drawing", "Styling", "Timing", 'Speed']
             
-            with f1:
-                st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(timing_details)-1, value=st.session_state['which_image_value'], step=1, key="which_image_selector")
-                if st.session_state['which_image_value'] != st.session_state['which_image']:
-                    st.session_state['which_image_value'] = st.session_state['which_image']
-                    st.experimental_rerun()
-            if timing_details[st.session_state['which_image']]["alternative_images"] != "":                                                                                       
-                variants = timing_details[st.session_state['which_image']]["alternative_images"]
-                number_of_variants = len(variants)
-                current_variant = int(timing_details[st.session_state['which_image']]["primary_image"])                                                                                                
-                which_variant = current_variant     
-                with f2:
-                    which_variant = st.radio(f'Main variant = {current_variant}', range(number_of_variants), index=current_variant, horizontal = True, key = f"Main variant for {st.session_state['which_image']}")
-                with f3:
-                    if which_variant == current_variant:   
-                        st.write("")                                   
-                        st.success("Main variant")
+            st.session_state['section'] = option_menu(None, sections, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", default_index=st.session_state['section_index'], orientation="horizontal")
+
+            if st.session_state['section_index'] != sections.index(st.session_state['section']):
+                st.session_state['section_index'] = sections.index(st.session_state['section'])
+                st.experimental_rerun()
+            section = st.session_state['section']
+
+            st.subheader(section)
+
+                                                
+                                           
+            
+            if section == "Drawing":        
+
+                canvas1, canvas2 = st.columns([1.25,3])
+
+                with canvas1:
+                                                                                                
+            
+                    width = int(project_settings["width"])
+                    height = int(project_settings["height"])
+                    if timing_details[st.session_state['which_image']]["canny_image"] != "":
+                        if timing_details[st.session_state['which_image']]["canny_image"] .startswith("http"):
+                            canvas_image = r.get(timing_details[st.session_state['which_image']]["canny_image"] )
+                            canvas_image = Image.open(BytesIO(canvas_image.content))
+                        else:
+                            canvas_image = Image.open(timing_details[st.session_state['which_image']]["canny_image"] )             
                     else:
-                        st.write("")
-                        if st.button(f"Promote Variant #{which_variant}", key=f"Promote Variant #{which_variant} for {st.session_state['which_image']}", help="Promote this variant to the primary image"):
-                            promote_image_variant(st.session_state['which_image'], project_name, which_variant)
-                            time.sleep(0.5)
+                        canvas_image = Image.new("RGB", (width, height), "white")
+                    if 'drawing_input' not in st.session_state:
+                            st.session_state['drawing_input'] = 'Magic shapes 🪄'
+                    col1, col2 = st.columns([6,3])
+                                    
+                    with col1:
+                        st.session_state['drawing_input'] = st.radio(
+                            "Drawing tool:",
+                            ("Draw lines ✏️","Erase Lines ❌","Make shapes 🪄","Move shapes 🏋🏾‍♂️","Make Lines ║"), horizontal=True,
+                        )
+                    
+                        if st.session_state['drawing_input'] == "Move shapes 🏋🏾‍♂️":
+                            drawing_mode = "transform"                                        
+                            stroke_colour = "rgba(0, 0, 0)"
+                        elif st.session_state['drawing_input'] == "Make shapes 🪄":
+                            drawing_mode = "polygon"
+                            stroke_colour = "rgba(0, 0, 0)"                
+                        elif st.session_state['drawing_input'] == "Draw lines ✏️":
+                            drawing_mode = "freedraw"
+                            stroke_colour = "rgba(0, 0, 0)"                
+                        elif st.session_state['drawing_input'] == "Erase Lines ❌":
+                            drawing_mode = "freedraw"
+                            stroke_colour = "rgba(255, 255, 255)"                
+                        elif st.session_state['drawing_input'] == "Make Lines ║":
+                            drawing_mode = "line"
+                            stroke_colour = "rgba(0, 0, 0)"
+                        
+                    
+                    with col2:    
+                        if st.session_state['drawing_input']  == "Draw lines ✏️" or st.session_state['drawing_input']  == "Make Lines ║":         
+                            stroke_width = st.slider("Stroke width: ", 1, 50, 2)
+                        elif st.session_state['drawing_input']  == "Erase Lines ❌":
+                            stroke_width = st.slider("Stroke width: ", 1, 100, 25)
+                        else:
+                            stroke_width = 3
+
+                    st.markdown("***")
+
+                    if st.button("Save New Canny Image"):
+                        if canvas_result.image_data is not None:
+                            # overlay the canvas image on top of the canny image and save the result
+                            # if canny image is from a url, then we need to download it first
+                            if timing_details[st.session_state['which_image']]["canny_image"] != "":
+                                if timing_details[st.session_state['which_image']]["canny_image"].startswith("http"):
+                                    canny_image = r.get(timing_details[st.session_state['which_image']]["canny_image"])
+                                    canny_image = Image.open(BytesIO(canny_image.content))
+                                else:
+                                    canny_image = Image.open(timing_details[st.session_state['which_image']]["canny_image"])
+                            else:
+                                canny_image = Image.new("RGB", (width, height), "white")
+                            canny_image = canny_image.convert("RGBA")
+                            # canvas_image = canvas_image.convert("RGBA")                                            
+                            canvas_image = im
+                            canvas_image = canvas_image.convert("RGBA")
+                            new_canny_image = Image.alpha_composite(canny_image, canvas_image)
+                            new_canny_image = new_canny_image.convert("RGB")
+                            unique_file_name = str(uuid.uuid4()) + ".png"
+                            file_location = f"videos/{project_name}/assets/resources/masks/{unique_file_name}"
+                            new_canny_image.save(file_location)
+                            update_specific_timing_value(project_name, st.session_state['which_image'], "canny_image", file_location)
+                            st.success("New Canny Image Saved")
+                            st.session_state['reset_canvas'] = True
+                            time.sleep(1)
                             st.experimental_rerun()
-            
-            
-            if st.session_state['show_comparison'] == "Don't show":
-                if timing_details[st.session_state['which_image']]["alternative_images"] != "":
-                    st.image(variants[which_variant], use_column_width=True)   
-                else:
-                    st.image('https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png', use_column_width=True)   
-            else:
-                if timing_details[st.session_state['which_image']]["alternative_images"] != "":
-                    img2=variants[which_variant]
-                else:
-                    img2='https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'          
-                image_comparison(starting_position=50,
-                    img1=timing_details[st.session_state['which_image']]["source_image"],
-                    img2=img2,make_responsive=False)
+                    
+
+                    if st.button("Clear Canny Image"):
+                        update_specific_timing_value(project_name, st.session_state['which_image'], "canny_image", "")                    
+                        st.session_state['reset_canvas'] = True                    
+                        st.experimental_rerun()
                 
+                with canvas2:
+
+                    realtime_update = True        
+
+                    if "reset_canvas" not in st.session_state:
+                        st.session_state['reset_canvas'] = False
+
+                    if st.session_state['reset_canvas'] != True:
+                                            
+                        canvas_result = st_canvas(
+                            fill_color="rgba(0, 0, 0)", 
+                            stroke_width=stroke_width,
+                            stroke_color=stroke_colour,
+                            background_color="rgb(255, 255, 255)",
+                            background_image=canvas_image,
+                            update_streamlit=realtime_update,
+                            height=height,
+                            width=width,
+                            drawing_mode=drawing_mode,
+                            display_toolbar=True,
+                            key="full_app",
+                        )
+
+                        
+
+                        if 'image_created' not in st.session_state:
+                            st.session_state['image_created'] = 'no'
+
+                        if canvas_result.image_data is not None:
+                            img_data = canvas_result.image_data
+                            im = Image.fromarray(img_data.astype("uint8"), mode="RGBA")
+                    else:
+                        st.session_state['reset_canvas'] = False
+                        canvas_result = st_canvas()       
+                        time.sleep(0.1)         
+                        st.experimental_rerun()
+
+                    
+                
+                canvasbutton1, canvasbutton2, canvasbutton3 = st.columns([1.3,2,1])
+                with canvasbutton1:
+                    st.write("")
+                        
+                                         
+                with canvasbutton3:
+                    st.write("")
+                st.markdown("***")
+                
+                canny1, canny2, canny3 = st.columns([1,1,1.1])
+                with canny1:
+                    st.markdown("#### Use Canny Image From Other Frame")
+                    st.markdown("This will use a canny image from another frame. This will take a few seconds.") 
+                    
+                    if st.session_state['which_image'] == 0:
+                        value = 0
+                    else:
+                        value = st.session_state['which_image'] - 1
+                    which_number_image_for_canny = st.number_input("Which frame would you like to use?", min_value=0, max_value=len(timing_details)-1, value=value, step=1,key="which_number_image_for_canny")
+                    if st.button("Use Canny Image From Other Frame"):
+                        if timing_details[which_number_image_for_canny]["canny_image"] != "":                             
+                            update_specific_timing_value(project_name, st.session_state['which_image'], "canny_image", timing_details[which_number_image_for_canny]["canny_image"])                                                
+                            st.experimental_rerun()
+                    if timing_details[which_number_image_for_canny]["canny_image"] != "":
+                        st.image(timing_details[which_number_image_for_canny]["canny_image"]) 
+                    else:
+                        st.error("No Canny Image Found")                 
+                with canny2:                                                            
+                    st.markdown("#### Upload Canny Image")
+                    st.markdown("This will upload a canny image from your computer. This will take a few seconds.")
+                    uploaded_file = st.file_uploader("Choose a file")
+                    if st.button("Upload Canny Image"):                                
+                        with open(os.path.join(f"videos/{project_name}/assets/resources/masks",uploaded_file.name),"wb") as f:
+                            f.write(uploaded_file.getbuffer())                                                                                                                                                      
+                            st.success("Your backgrounds are uploaded file - they should appear in the dropdown.")                     
+                            update_specific_timing_value(project_name, st.session_state['which_image'], "canny_image", f"videos/{project_name}/assets/resources/masks/{uploaded_file.name}")                               
+                            time.sleep(1.5)
+                            st.experimental_rerun()  
+                with canny3:
+                    st.markdown("#### Extract Canny From image")
+                    st.markdown("This will extract a canny image from the current image. This will take a few seconds.")
+                    source_of_image = st.radio("Which image would you like to use?", ["Existing Frame", "Uploaded Image"])
+                    if source_of_image == "Existing Frame":
+                        which_frame = st.number_input("Which frame would you like to use?", min_value=0, max_value=len(timing_details)-1, value=st.session_state['which_image'], step=1)
+                        if timing_details[which_frame]["alternative_images"] != "":
+                            variants = timing_details[which_frame]["alternative_images"]                        
+                            current_variant = int(timing_details[which_frame]["primary_image"])     
+                            image_path = variants[current_variant]
+                            st.image(image_path)
+                        else:
+                            st.error("No Image Found")
+
+                    elif source_of_image == "Uploaded Image":
+                        uploaded_image = st.file_uploader("Choose a file", key="uploaded_image")      
+
+                    threshold1, threshold2 = st.columns([1,1])
+                    with threshold1:
+                        low_threshold = st.number_input("Low Threshold", min_value=0, max_value=255, value=100, step=1)
+                    with threshold2:                    
+                        high_threshold = st.number_input("High Threshold", min_value=0, max_value=255, value=200, step=1)
+                                                                                                                                                
+                    if st.button("Extract Canny From image"):
+                        if source_of_image == "Existing Frame":
+                            canny_image = extract_canny_lines(image_path, project_name,low_threshold, high_threshold)
+                        elif source_of_image == "Uploaded Image":
+                            canny_image = extract_canny_lines(uploaded_image, project_name,low_threshold, high_threshold)
+                        update_specific_timing_value(project_name, int(st.session_state['which_image']), "canny_image", canny_image)
+                        st.session_state['reset_canvas'] = True                        
+                        st.experimental_rerun()
+            # if current item is 0 
+
+            elif section == "Speed":
+                        
+                
+
+                clip_data = []
+                start_pct = 0.0
+                total_duration = 0.0
+
+                while start_pct < 1.0:
+                    st.header(f"Section {len(clip_data) + 1}")
+                    end_pct = st.slider(f"What percentage of the original clip should section {len(clip_data) + 1} go until?", min_value=start_pct, max_value=1.0, value=1.0, step=0.01)
+
+                    if end_pct == 1.0:
+                        remaining_duration = 1.0 - total_duration
+                        remaining_pct = 1.0 - start_pct
+                        speed_change = remaining_pct / remaining_duration
+                        st.write(f"Speed change for the last section will be set to **{speed_change:.2f}x** to maintain the original video length.")
+                    else:
+                        speed_change = st.slider(f"What speed change should be applied to section {len(clip_data) + 1}?", min_value=0.1, max_value=10.0, value=1.0, step=0.1)
+
+                    clip_data.append({
+                        "start_pct": start_pct,
+                        "end_pct": end_pct,
+                        "speed_change": speed_change
+                    })
+
+                    original_duration = end_pct - start_pct
+                    final_duration = original_duration / (speed_change + 1e-6)
+                    total_duration += final_duration
+
+                    if speed_change > 1:
+                        st.info(f"This will make the section from **{start_pct * 100:.0f}% to {end_pct * 100:.0f}%** of the video "
+                                f"**{speed_change:.2f}x** faster, so it lasts **{convert_to_minutes_and_seconds(final_duration)}**.")
+                    else:
+                        st.info(f"This will make the section from **{start_pct * 100:.0f}% to {end_pct * 100:.0f}%** of the video "
+                                f"**{1 / speed_change:.2f}x** slower, so it lasts **{convert_to_minutes_and_seconds(final_duration)}**.")
+
+                    # Update the start_pct for the next section
+                    start_pct = float(end_pct)
+
+                    st.markdown("***")
+                st.write(clip_data)
+                                    
+                
+
+            elif section == "Timing":  
+
+                timing1, timing2 = st.columns([1,1])
+
+                with timing1:
+
+                    # slider for previous frame time with value os the previous frame, and min_value frame_time from 2 frames before, and max value of the current frame
+
+                    previous_frame_time = st.slider(f"Previous Frame Time = {timing_details[st.session_state['which_image']-1]['frame_time']}", min_value=timing_details[st.session_state['which_image']-2]['frame_time'], max_value=timing_details[st.session_state['which_image']]['frame_time'], value=timing_details[st.session_state['which_image']-1]['frame_time'], step=0.01)
+                    current_frame_time = st.slider(f"Current Frame Time = {timing_details[st.session_state['which_image']]['frame_time']}", min_value=timing_details[st.session_state['which_image']-1]['frame_time'], max_value=timing_details[st.session_state['which_image']+1]['frame_time'], value=timing_details[st.session_state['which_image']]['frame_time'], step=0.01)
+                    next_frame_time = st.slider(f"Next Frame Time = {timing_details[st.session_state['which_image']+1]['frame_time']}", min_value=timing_details[st.session_state['which_image']]['frame_time'], max_value=timing_details[st.session_state['which_image']+2]['frame_time'], value=timing_details[st.session_state['which_image']+1]['frame_time'], step=0.01)
+                    
+                    
+
+                    if previous_frame_time >= current_frame_time or current_frame_time >= next_frame_time:
+                        st.error("Error: Slider values overlap. Please adjust the sliders so that Previous Frame Time < Current Frame Time < Next Frame Time.")
+                    
+                    # if there are any differences between the saved times then show a warning
+                    if previous_frame_time != timing_details[st.session_state['which_image']-1]['frame_time'] or current_frame_time != timing_details[st.session_state['which_image']]['frame_time'] or next_frame_time != timing_details[st.session_state['which_image']+1]['frame_time']:
+                        st.warning("Warning: Slider values are different from the saved values. Click the button to update the saved values.")
+                    if st.button("Update Frame Time"):
+                        update_specific_timing_value(project_name, st.session_state['which_image'], "frame_time", current_frame_time)
+                        update_specific_timing_value(project_name, st.session_state['which_image']-1, "frame_time", previous_frame_time)
+                        update_specific_timing_value(project_name, st.session_state['which_image']+1, "frame_time", next_frame_time)
+                        st.success("Frame time updated")
+                        time.sleep(0.3)
+                        st.experimental_rerun()
+
+                with timing2:
+                    
+
+        
+
+                    # if st.button("Preview audio at this time"):
+                    #  audio_bytes = get_audio_bytes_for_slice(project_name, st.session_state['which_image'])
+                    # st.audio(audio_bytes, format='audio/wav')
+
+                    
+                                
+                    if st.session_state['which_image'] != 0:
+                        if timing_details[st.session_state['which_image']]["preview_video"] != "":
+                            st.video(timing_details[st.session_state['which_image']]['preview_video'])
+                        
+                        variants = timing_details[st.session_state['which_image']]["alternative_images"]
+                        if variants != [] and variants != None and variants != "":
+                            
+                            if st.button("New Preview Video"):
+                            
+                                preview_video = create_preview_video(timing_details, project_name, st.session_state['which_image'])
+                                
+                                update_specific_timing_value(project_name, st.session_state['which_image'], "preview_video", preview_video)
+                                
+                                st.experimental_rerun()                                                                        
+                                                            
             
+            elif section == "Styling":
 
-        if 'index_of_last_model' not in st.session_state:
-            st.session_state['index_of_last_model'] = 0
+                with top3:
+                    st.session_state['show_comparison'] = st.radio("Show comparison to original", options=["Don't show", "Show"], horizontal=True)
+                                
+
+                                      
+                                                    
+                mainimages1, mainimages2 = st.columns([1.5,1])
+
+                
+                variants = timing_details[st.session_state['which_image']]["alternative_images"]
+
+                if variants != [] and variants != None and variants != "":
+                                
+                    primary_variant_location = get_primary_variant_location(timing_details, st.session_state['which_image'])
+                
+
+                with mainimages1:
+                
+                    if st.session_state['show_comparison'] == "Don't show":
+                        project_settings = get_project_settings(project_name)
+                        if timing_details[st.session_state['which_image']]["alternative_images"] != "":
+                            st.image(primary_variant_location, use_column_width=True)   
+                        else:
+                            st.image('https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png', use_column_width=True)   
+                    else:
+                        if timing_details[st.session_state['which_image']]["alternative_images"] != "":
+                            img2=primary_variant_location
+                        else:
+                            img2='https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'          
+                        image_comparison(starting_position=50,
+                            img1=timing_details[st.session_state['which_image']]["source_image"],
+                            img2=img2,make_responsive=False)
+                        
+                    detail1, detail2, detail3, detail4 = st.columns([2.5,2.5,3.5,2])
+
+                    with detail1:
+                        individual_number_of_variants = st.number_input(f"How many variants?", min_value=1, max_value=10, value=1, key=f"number_of_variants_{st.session_state['which_image']}")
+                        
+                        
+                    with detail2:
+                        st.write("")
+                        st.write("")
+                        
+                        if st.button(f"Generate variants", key=f"new_variations_{st.session_state['which_image']}",help="This will generate new variants based on the settings to the left."):
+                            for i in range(0, individual_number_of_variants):
+                                index_of_current_item = st.session_state['which_image']
+                                trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,st.session_state['adapter_type'], True) 
+                            st.experimental_rerun()
+                    with detail3:
+                        st.write("")
+                        st.write("")                    
+                        if st.button(f"Re-run w/ saved settings", key=f"re_run_on_this_frame_{st.session_state['which_image']}",help="This will re-run the restyling process on this frame."):
+                            index_of_current_item = st.session_state['which_image']
+                            trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,st.session_state['adapter_type'],False)
+                            st.experimental_rerun()
+                    with detail4:
+                        st.write("")
+                        
+                        st.write("")
+                        
+                with mainimages2:
+
+                    if timing_details[st.session_state['which_image']]["alternative_images"] != "":            
+
+                        number_of_variants = len(variants)                                                                           
+
+
+                        current_variant = int(timing_details[st.session_state['which_image']]["primary_image"])             
+                        which_variant = st.radio(f'Main variant = {current_variant}', range(number_of_variants), index=current_variant, horizontal = True, key = f"Main variant for {st.session_state['which_image']}")                        
+                        st.image(variants[which_variant], use_column_width=True)
+
+                        if which_variant == current_variant:   
+                            st.write("")                                   
+                            st.success("Main variant")
+                            st.write("")                                                                                                        
+                        else:
+                            st.write("")
+                            if st.button(f"Promote Variant #{which_variant}", key=f"Promote Variant #{which_variant} for {st.session_state['which_image']}", help="Promote this variant to the primary image"):
+                                promote_image_variant(st.session_state['which_image'], project_name, which_variant)
+                                time.sleep(0.5)
+                                st.experimental_rerun()  
+                                                    
+                with st.expander("Compare to previous and next images", expanded=True):                 
+                    
+                    img1, img2 = st.columns(2)
+                    with img1:
+                        variants = timing_details[st.session_state['which_image']]["alternative_images"]
+                        if variants != [] and variants != None and variants != "":
+
+                            previous_image = get_primary_variant_location(timing_details, st.session_state['which_image']-1)                        
+                            st.image(previous_image, use_column_width=True, caption=f"Previous image")                        
+                    with img2:
+                        if variants != [] and variants != None and variants != "":
+                            variants = timing_details[st.session_state['which_image']]["alternative_images"]
+                            next_image = get_primary_variant_location(timing_details, st.session_state['which_image']+1)                    
+                            st.image(next_image, use_column_width=True, caption=f"Next image")
 
 
 
-        if len(timing_details) == 0:
-            st.info("You first need to select key frames at the Key Frame Selection stage.")
 
+                with st.expander("🛠️ Saved Settings"):
+                    st.info("These are the settings that will be used when you click 'Re-run w/ saved settings'.")
+                    updated_prompt = st.text_area("Prompt:", value = timing_details[st.session_state['which_image']]["prompt"], height=100)
+                    if st.button("Save prompt"):
+                        timing_details[st.session_state['which_image']]["prompt"] = updated_prompt
+                        update_specific_timing_value(project_name, st.session_state['which_image'], "prompt", updated_prompt)
+                        st.experimental_rerun()
+                    
+                
+
+                    
+
+                
+
+                with st.expander("Replace Frame"):
+                
+                    replace_with = st.radio("Replace with:", ["Uploaded Frame","Previous Frame"], horizontal=True)
+                    replace1, replace2, replace3 = st.columns([2,1,1])                    
+
+                    if replace_with == "Previous Frame":  
+                        with replace1:
+                            which_stage_to_use_for_replacement = st.radio("Select stage to use:", ["Styled Key Frame","Unedited Key Frame"],key="which_stage_to_use_for_replacement", horizontal=True)
+                            which_image_to_use_for_replacement = st.number_input("Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0, key="which_image_to_use_for_replacement")
+                            if which_stage_to_use_for_replacement == "Unedited Key Frame":                                    
+                                background_image = timing_details[which_image_to_use_for_replacement]["source_image"]                            
+                            elif which_stage_to_use_for_replacement == "Styled Key Frame":
+                                variants = timing_details[which_image_to_use_for_replacement]["alternative_images"]
+                                primary_image = timing_details[which_image_to_use_for_replacement]["primary_image"]             
+                                background_image = variants[primary_image]
+                            if st.button("Replace with selected frame",disabled=False):
+                                if st.session_state['which_stage'] == "Unedited Key Frame":
+                                    update_specific_timing_value(project_name, st.session_state['which_image'], "source_image",background_image)                                                                                   
+                                elif st.session_state['which_stage'] == "Styled Key Frame":
+                                    number_of_image_variants = add_image_variant(background_image, st.session_state['which_image'], project_name, timing_details)
+                                    promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1) 
+                                st.success("Replaced")
+                                time.sleep(1)     
+                                st.experimental_rerun()
+                        with replace2:
+                            st.image(background_image, width=300)       
+                                                                                                                                                                
+                    elif replace_with == "Uploaded Frame":
+                        with replace1:
+                            replacement_frame = st.file_uploader("Upload a replacement frame here", type="png", accept_multiple_files=False, key="replacement_frame")                                                
+                        with replace2:                                                        
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            st.write("")
+                            if st.button("Replace frame",disabled=False):
+                                images_for_model = []                    
+                                with open(os.path.join(f"videos/{project_name}/",replacement_frame.name),"wb") as f: 
+                                    f.write(replacement_frame.getbuffer())     
+                                uploaded_image = upload_image(f"videos/{project_name}/{replacement_frame.name}")
+                                
+                                number_of_image_variants = add_image_variant(uploaded_image, st.session_state['which_image'], project_name, timing_details)
+                                promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1) 
+                                # delete the uploaded file
+                                os.remove(f"videos/{project_name}/{replacement_frame.name}")
+                                st.success("Replaced")
+                                time.sleep(1)     
+                                st.experimental_rerun()  
+
+
+            st.markdown("***")
+            extra_settings_1, extra_settings_2, extra_settings_3, extra_settings_4 = st.columns([4,2.5,3.5,3])
+
+            with extra_settings_1:
+                
+
+                if st.button(f"Add key frame after #{st.session_state['which_image']}"):
+                    index_of_current_item = st.session_state['which_image']
+                    
+                    timing_details = get_timing_details(project_name)
+                    # if it's the last frame, then add a second to the frame time. If not, then add half the time between the current frame and the next frame.
+                    if index_of_current_item == len(timing_details) - 1:
+                        key_frame_time = float(timing_details[index_of_current_item]["frame_time"]) + 1.0
+                    else:
+                        st.write(timing_details[index_of_current_item]["frame_time"])
+                        st.write(index_of_current_item)
+                        st.write(timing_details[index_of_current_item + 1]["frame_time"])
+                        st.write(index_of_current_item + 1)
+                        key_frame_time = (float(timing_details[index_of_current_item]["frame_time"]) + float(timing_details[index_of_current_item + 1]["frame_time"])) / 2.0
+                    create_timings_row_at_frame_number(project_name, index_of_current_item +1)
+                    update_specific_timing_value(project_name, st.session_state['which_image'] + 1, "frame_time", key_frame_time)
+                    timing_details = get_timing_details(project_name)                    
+                    st.session_state['which_image_value'] = st.session_state['which_image_value'] + 1                
+                    st.experimental_rerun()
+                with extra_settings_4:
+                    if st.button("Delete key frame"):
+                        index_of_current_item = st.session_state['which_image']
+                        delete_frame(project_name, index_of_current_item)                
+                        timing_details = get_timing_details(project_name)
+                        st.experimental_rerun()
+
+
+        elif st.session_state['frame_styling_view_type'] == "List View":
+            for i in range(0, len(timing_details)):
+                index_of_current_item = i
+                
+                col1, col2, col3 = st.columns([1, 1, 1])
+                with col1:
+                    st.subheader(f"Frame {i}")
+                col2.empty()
+                with col3:
+                    if st.button("Delete this keyframe", key=f'{index_of_current_item}'):
+                        delete_frame(project_name, index_of_current_item)
+                        timing_details = get_timing_details(project_name)
+                        st.experimental_rerun()           
+                                    
+                if timing_details[i]["alternative_images"] != "":
+                    variants = timing_details[i]["alternative_images"]
+                    current_variant = int(timing_details[i]["primary_image"])    
+                    st.image(variants[current_variant])                            
+                else:
+                    st.image('https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png', use_column_width=True) 
+                
+
+                detail1, detail2, detail3, detail4 = st.columns([2,2,1,3])
+
+                with detail1:
+                    individual_number_of_variants = st.number_input(f"How many variants?", min_value=1, max_value=10, value=1, key=f"number_of_variants_{index_of_current_item}")
+                    
+
+                    
+                with detail2:
+                    st.write("")
+                    st.write("")
+                    if st.button(f"Generate variants", key=f"new_variations_{index_of_current_item}",help="This will generate new variants based on the settings to the left."):
+                        for a in range(0, individual_number_of_variants):
+                            index_of_current_item = i
+                            trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,st.session_state['adapter_type'], True)                             
+                        st.experimental_rerun()
+                    
+                    
+                with detail3:
+                    st.write("")
+                with detail4:
+                    if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will switch to a Single Frame view type and open this individual image."):
+                        st.session_state['which_image_value'] = index_of_current_item
+                        st.session_state['frame_styling_view_type'] = "ControlNet"
+                        st.session_state['frame_styling_view_type_index'] = 1                                    
+                        st.experimental_rerun() 
+            
+        
+     
+                                            
+
+                                            
+                
+
+        
+
+
+
+        
+      
+
+        '''
         st.sidebar.header("Restyle Frames")   
+
+        
         if 'index_of_which_stage_to_run_on' not in st.session_state:                        
             st.session_state['index_of_which_stage_to_run_on'] = 0
+        st.write(f"Current frame: {st.session_state['which_image']}")
+        smallbutton1, smallbutton2,smallbutton3, smallbutton4 = st.sidebar.columns([1,1,1,4])
+        with smallbutton1:
+            # if it's not the first image
+            if st.session_state['which_image'] != 0:
+                if st.button(f"{st.session_state['which_image']-1} ⏪", key=f"Previous Image for {st.session_state['which_image']}"):
+                    st.session_state['which_image_value'] = st.session_state['which_image_value'] - 1
+                    st.experimental_rerun()
+            # number of frame
+            
+        with smallbutton2:
+            st.button(f"{st.session_state['which_image']} 📍",disabled=True)
+        with smallbutton3:
+            # if it's not the last image
+            if st.session_state['which_image'] != len(timing_details)-1:
+                if st.button(f"{st.session_state['which_image']+1} ⏩", key=f"Next Image for {st.session_state['which_image']}"):
+                    st.session_state['which_image_value'] = st.session_state['which_image_value'] + 1
+                    st.experimental_rerun()
+            
         stages = ["Extracted Key Frames", "Current Main Variants"]
         st.session_state['which_stage_to_run_on'] = st.sidebar.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True, index =st.session_state['index_of_which_stage_to_run_on'] , help="Extracted frames means the original frames from the video.")                                                                                     
         if stages.index(st.session_state['which_stage_to_run_on']) != st.session_state['index_of_which_stage_to_run_on']:
@@ -141,7 +722,7 @@ def frame_styling_page(mainheader2, project_name):
                 st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
                 st.experimental_rerun()                          
         else:
-            models = ['stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'controlnet', 'Dreambooth', 'LoRA','StyleGAN-NADA']            
+            models = ['controlnet','stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'Dreambooth', 'LoRA','StyleGAN-NADA']            
             st.session_state['model'] = st.sidebar.selectbox(f"Which model would you like to use?", models, index=st.session_state['index_of_last_model'])                    
             if st.session_state['index_of_last_model'] != models.index(st.session_state['model']):
                 st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
@@ -149,7 +730,7 @@ def frame_styling_page(mainheader2, project_name):
                 
         
         if st.session_state['model'] == "controlnet":   
-            controlnet_adapter_types = ["normal", "canny", "hed", "scribble", "seg", "hough", "depth2img", "pose"]
+            controlnet_adapter_types = ["scribble","normal", "canny", "hed", "seg", "hough", "depth2img", "pose"]
             if 'index_of_controlnet_adapter_type' not in st.session_state:
                 st.session_state['index_of_controlnet_adapter_type'] = 0
             st.session_state['adapter_type'] = st.sidebar.selectbox(f"Adapter Type",controlnet_adapter_types, index=st.session_state['index_of_controlnet_adapter_type'])
@@ -245,6 +826,7 @@ def frame_styling_page(mainheader2, project_name):
         
         st.session_state["promote_new_generation"] = True                    
         st.session_state["promote_new_generation"] = st.sidebar.checkbox("Promote new generation to main variant", value=True, key="promote_new_generation_to_main_variant")
+        st.session_state["use_new_settings"] = st.sidebar.checkbox("Use new settings for batch query", value=True, key="keep_existing_settings", help="If unchecked, the new settings will be applied to the existing variants.")
 
         app_settings = get_app_settings()
 
@@ -273,88 +855,19 @@ def frame_styling_page(mainheader2, project_name):
                 for i in range(batch_run_range[1]+1):
                     for number in range(0, batch_number_of_variants):
                         index_of_current_item = i
-                        trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,st.session_state['adapter_type'])
+                        trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,st.session_state['adapter_type'],st.session_state["use_new_settings"])
                 st.experimental_rerun()
 
-        if st.session_state['frame_styling_view_type'] == "Single Frame":
-        
-            detail1, detail2, detail3, detail4 = st.columns([2,2,1,2])
-
-            with detail1:
-                individual_number_of_variants = st.number_input(f"How many variants?", min_value=1, max_value=10, value=1, key=f"number_of_variants_{st.session_state['which_image']}")
-                
-                
-            with detail2:
-                st.write("")
-                st.write("")
-                if st.button(f"Generate Variants", key=f"new_variations_{st.session_state['which_image']}",help="This will generate new variants based on the settings to the left."):
-                    for i in range(0, individual_number_of_variants):
-                        index_of_current_item = st.session_state['which_image']
-                        trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,st.session_state['adapter_type']) 
-                    st.experimental_rerun()
-                    
-            with detail4:
-                st.write("")
-                with st.expander("💡 Editing key frames"):
-                    st.info("You can edit the key frames in Tools > Frame Editing.")
+        '''
 
         
-        elif st.session_state['frame_styling_view_type'] == "List View":
-            for i in range(0, len(timing_details)):
-                index_of_current_item = i
+        
                 
-                col1, col2, col3 = st.columns([1, 1, 1])
-                with col1:
-                    st.subheader(f"Frame {i}")
-                col2.empty()
-                with col3:
-                    if st.button("Delete this keyframe", key=f'{index_of_current_item}'):
-                        delete_frame(project_name, index_of_current_item)
-                        timing_details = get_timing_details(project_name)
-                        st.experimental_rerun()           
-                                    
-                if timing_details[i]["alternative_images"] != "":
-                    variants = timing_details[i]["alternative_images"]
-                    current_variant = int(timing_details[i]["primary_image"])    
-                    st.image(variants[current_variant])                            
-                else:
-                    st.image('https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png', use_column_width=True) 
                 
+                                
 
-                detail1, detail2, detail3, detail4 = st.columns([2,2,1,3])
-
-                with detail1:
-                    individual_number_of_variants = st.number_input(f"How many variants?", min_value=1, max_value=10, value=1, key=f"number_of_variants_{index_of_current_item}")
+           
                     
 
-                    
-                with detail2:
-                    st.write("")
-                    st.write("")
-                    if st.button(f"Generate Variants", key=f"new_variations_{index_of_current_item}",help="This will generate new variants based on the settings to the left."):
-                        for a in range(0, individual_number_of_variants):
-                            index_of_current_item = i
-                            trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,st.session_state['adapter_type'])                             
-                        st.experimental_rerun()
-                    
-                    
-                with detail3:
-                    st.write("")
-                with detail4:
-                    if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will switch to a Single Frame view type and open this individual image."):
-                        st.session_state['which_image_value'] = index_of_current_item
-                        st.session_state['frame_styling_view_type'] = "Single View"
-                        st.session_state['frame_styling_view_type_index'] = 1                                    
-                        st.experimental_rerun() 
-            
-            
-                
-        st.markdown("***")        
-        st.subheader("Preview video")
-        st.write("You can get a gif of the video by clicking the button below.")
-        if st.button("Create gif of current main variants"):
-            
-            create_gif_preview(project_name, timing_details)
-            st.image(f"videos/{project_name}/preview_gif.gif", use_column_width=True)                
-            st.balloons()
-                                            
+        
+  

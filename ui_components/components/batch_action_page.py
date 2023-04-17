@@ -38,3 +38,20 @@ def batch_action_page(project_name):
         st.success("Timings adjusted successfully!")
         time.sleep(1)
         st.experimental_rerun()
+
+    st.markdown("***")
+    st.markdown("#### Remove all variants other than main")
+    st.write("This will remove all the variants of the key frames except the main one")
+    if st.button("Remove all variants"):
+        for i in timing_details:            
+            index_of_current_item = timing_details.index(i)                            
+            variants = timing_details[index_of_current_item]["alternative_images"]
+            primary_image = timing_details[index_of_current_item]["primary_image"]
+            current_primary_image = variants[primary_image]            
+            update_specific_timing_value(project_name, index_of_current_item, "alternative_images", '"' + f"['{current_primary_image}']" + '"')
+            update_specific_timing_value(project_name, index_of_current_item, "primary_image", 0)
+            
+                        
+        st.success("All variants removed successfully!")
+        time.sleep(1)
+        st.experimental_rerun()

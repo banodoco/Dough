@@ -6,7 +6,7 @@ from PIL import Image
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from repository.local_repo.csv_repo import get_project_settings, remove_existing_timing, update_project_setting, update_specific_timing_value
 
-from ui_components.common_methods import calculate_frame_number_at_time, create_timings_row_at_frame_number, create_video_without_interpolation, delete_frame, extract_frame, get_timing_details, preview_frame
+from ui_components.common_methods import calculate_frame_number_at_time, create_timings_row_at_frame_number, create_video_without_interpolation, delete_frame, extract_frame, get_timing_details, preview_frame,calculate_time_at_frame_number
 from utils.media_processor.video import resize_video
 
 
@@ -323,13 +323,6 @@ def key_frame_selection_page(mainheader2, project_name):
 
                 index_of_current_item = timing_details.index(image_name)
 
-                # if image starts with http
-                if image_name["source_image"].startswith("http"):
-                    image = timing_details[index_of_current_item]["source_image"]
-                else:
-                    image = Image.open(
-                        timing_details[index_of_current_item]["source_image"])
-
                 col1, col2, col3 = st.columns([1, 1, 1])
                 with col1:
                     st.subheader(f'Image Name: {index_of_current_item}')
@@ -340,28 +333,41 @@ def key_frame_selection_page(mainheader2, project_name):
                         timing_details = get_timing_details(project_name)
                         st.experimental_rerun()
 
-                st.image(image, use_column_width=True)
+                
 
-                col1, col2, col3, col4 = st.columns([1, 1, 1, 2])
+                
+                # if image is empty, skip it
+                if image_name["source_image"] == "":
+                    st.error("This is an empty key frame")
+                else:                                
+                    if image_name["source_image"].startswith("http"):
+                        image = timing_details[index_of_current_item]["source_image"]
+                    else:
+                        image = Image.open(
+                            timing_details[index_of_current_item]["source_image"])
 
-                with col1:
-                    frame_time = round(
-                        float(timing_details[index_of_current_item]['frame_time']), 2)
-                    st.markdown(f"Frame Time: {frame_time}")
+                    st.image(image, use_column_width=True)
 
-                with col2:
-                    # return frame number to 2 decimal places
-                    frame_number = round(
-                        float(timing_details[index_of_current_item]['frame_number']), 2)
-                    st.markdown(f"Frame Number: {frame_number}")
+                    col1, col2, col3, col4 = st.columns([1, 1, 1, 2])
 
-                with col4:
-                    if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will switch to a Single Frame view type and open this individual image."):
-                        st.session_state['which_image_value'] = index_of_current_item
-                        st.session_state['key_frame_view_type'] = "Single View"
-                        st.session_state['key_frame_view_type_index'] = 1
-                        st.session_state['open_manual_extractor'] = False
-                        st.experimental_rerun()
+                    with col1:
+                        frame_time = round(
+                            float(timing_details[index_of_current_item]['frame_time']), 2)
+                        st.markdown(f"Frame Time: {frame_time}")
+
+                    with col2:
+                        # return frame number to 2 decimal places
+                        frame_number = round(
+                            float(timing_details[index_of_current_item]['frame_number']), 2)
+                        st.markdown(f"Frame Number: {frame_number}")
+
+                    with col4:
+                        if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will switch to a Single Frame view type and open this individual image."):
+                            st.session_state['which_image_value'] = index_of_current_item
+                            st.session_state['key_frame_view_type'] = "Single View"
+                            st.session_state['key_frame_view_type_index'] = 1
+                            st.session_state['open_manual_extractor'] = False
+                            st.experimental_rerun()
 
         st.markdown("***")
 
@@ -394,7 +400,7 @@ def key_frame_selection_page(mainheader2, project_name):
             else:
                 length_of_timing_details = len(timing_details) - 1
                 min_frames = int(
-                    float(timing_details[length_of_timing_details]["frame_number"]))
+                    float(timing_details[length_of_timing_details]["frame_number"]+1))
 
             max_frames = min_frames + 100
 
@@ -409,11 +415,13 @@ def key_frame_selection_page(mainheader2, project_name):
 
             if st.button(f"Add Frame {slider} to Project"):
                 last_index = len(timing_details)
-                created_row = create_timings_row_at_frame_number(
-                    project_name, input_video, slider, timing_details, last_index)
+                created_row = create_timings_row_at_frame_number(project_name, last_index)                
                 timing_details = get_timing_details(project_name)
-                extract_frame(created_row, project_name,
-                              input_video, slider, timing_details)
+                update_specific_timing_value(project_name, created_row, "frame_number", slider)
+                frame_time = calculate_time_at_frame_number(input_video, slider, project_name)                
+                update_specific_timing_value(project_name, created_row, "frame_time", frame_time)
+                timing_details = get_timing_details(project_name)
+                extract_frame(created_row, project_name,input_video, slider, timing_details)
                 st.experimental_rerun()
         st.markdown("***")
         st.subheader("Make preview video at current timings")

@@ -99,8 +99,9 @@ def frame_interpolation_page(mainheader2, project_name):
 
                             final_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(key_settings["ending_image"])
 
-                            prompt_interpolation_model(current_image_location, final_image_location, project_name, index_of_current_item,
-                                                    interpolation_steps, key_settings["replicate_com_api_key"])
+                            video_location =  prompt_interpolation_model(current_image_location, next_image_location, project_name,interpolation_steps)
+                
+                            update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", video_location)
 
                         else:
                             current_image_variants = timing_details[index_of_current_item]["alternative_images"]                
@@ -110,8 +111,11 @@ def frame_interpolation_page(mainheader2, project_name):
                             next_image_number = timing_details[index_of_current_item+1]["primary_image"]
                             next_image_location = next_image_variants[next_image_number]
 
-                            prompt_interpolation_model(current_image_location, next_image_location, project_name, index_of_current_item,
-                                                    interpolation_steps, key_settings["replicate_com_api_key"])
+                            video_location =  prompt_interpolation_model(current_image_location, next_image_location, project_name,interpolation_steps)
+                
+                            update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", video_location)
+                            
+                            
                 st.success("All videos interpolated!")
 
         else:
@@ -128,6 +132,9 @@ def frame_interpolation_page(mainheader2, project_name):
 
                 next_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(specific_video+1) + ".png"
 
-                prompt_interpolation_model(current_image_location, next_image_location, project_name, specific_video,
-                                                    interpolation_steps, key_settings["replicate_com_api_key"])
+                video_location =  prompt_interpolation_model(current_image_location, next_image_location, project_name,interpolation_steps)
+                
+                update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", video_location)
+    
+
 

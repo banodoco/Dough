@@ -21,7 +21,271 @@ from io import BytesIO
 import ast
 import numpy as np
 from repository.local_repo.csv_repo import CSVProcessor, get_app_settings, get_project_settings, update_project_setting, update_specific_timing_value
+from pydub import AudioSegment
+import shutil
+from moviepy.editor import concatenate_videoclips,TextClip
+import moviepy.editor
 
+def create_preview_video(timing_details, project_name, index_of_item):
+
+    def create_slice_of_preview(timing_details, index_of_item):
+
+        if timing_details[index_of_item]["interpolated_video"] == "":
+            previous_image_location = get_primary_variant_location(timing_details, index_of_item)
+            current_image_location = get_primary_variant_location(timing_details, index_of_item +1)
+            interpolated_video =  prompt_interpolation_model(previous_image_location, current_image_location, project_name,3)
+            update_specific_timing_value(project_name, index_of_item, "interpolated_video", interpolated_video)
+        else:
+            interpolated_video = timing_details[index_of_item]["interpolated_video"]                                
+        new_file_name = str(uuid.uuid4()) + ".mp4"
+        video_location =  f"videos/{project_name}/assets/videos/1_final/{new_file_name}"
+        shutil.copyfile(interpolated_video, video_location)
+        duration_of_video = get_duration_from_video(video_location)                                                                
+        desired_duration = float(timing_details[index_of_item+1]["frame_time"]) - float(timing_details[index_of_item]["frame_time"])
+        speed_change_required = float(desired_duration / duration_of_video)                                
+        update_speed_of_video_clip(video_location, speed_change_required)
+        audio_bytes = get_audio_bytes_for_slice(project_name, index_of_item)
+        add_audio_to_video_slice(video_location, audio_bytes)
+
+        return video_location
+    
+    last_preview_video = create_slice_of_preview(timing_details, index_of_item-1)
+    current_preview_video = create_slice_of_preview(timing_details, index_of_item)
+
+    last_clip = moviepy.editor.VideoFileClip(last_preview_video)
+    current_clip = moviepy.editor.VideoFileClip(current_preview_video)
+
+    text1 = TextClip("1", fontsize=50, color='white', bg_color='black', size=(last_clip.w, 50)).set_duration(last_clip.duration)
+    text2 = TextClip("2", fontsize=50, color='white', bg_color='black', size=(current_clip.w, 50)).set_duration(current_clip.duration)
+
+    # Overlay the text on the video clips
+    last_clip_with_text = moviepy.editor.CompositeVideoClip([last_clip, text1.set_position(('center', 'top'))])
+    current_clip_with_text = moviepy.editor.CompositeVideoClip([current_clip, text2.set_position(('center', 'top'))])
+
+
+    combined_clip = concatenate_videoclips([last_clip_with_text, current_clip_with_text])
+
+    output_filename = str(uuid.uuid4()) + ".mp4"
+    video_location =  f"videos/{project_name}/assets/videos/1_final/{output_filename}"
+    combined_clip.write_videofile(video_location)
+
+    # Close video files to release resources
+    last_clip.close()
+    current_clip.close()
+
+    
+    return video_location
+    
+
+
+
+
+def back_and_forward_buttons():
+    smallbutton1, smallbutton2,smallbutton3, smallbutton4 = st.columns([1,1,1,4])
+    with smallbutton1:
+        # if it's not the first image
+        if st.session_state['which_image'] != 0:
+            if st.button(f"{st.session_state['which_image']-1} ⏪", key=f"Previous Image for {st.session_state['which_image']}"):
+                st.session_state['which_image_value'] = st.session_state['which_image_value'] - 1
+                st.experimental_rerun()
+        # number of frame
+        
+    with smallbutton2:
+        st.button(f"{st.session_state['which_image']} 📍",disabled=True)
+    with smallbutton3:
+        # if it's not the last image
+        if st.session_state['which_image'] != len(timing_details)-1:
+            if st.button(f"{st.session_state['which_image']+1} ⏩", key=f"Next Image for {st.session_state['which_image']}"):
+                st.session_state['which_image_value'] = st.session_state['which_image_value'] + 1
+                st.experimental_rerun()
+
+def styling_sidebar(project_name,timing_details):
+    
+    timing_details = get_timing_details(project_name)
+        
+    if 'index_of_which_stage_to_run_on' not in st.session_state:                        
+        st.session_state['index_of_which_stage_to_run_on'] = 0    
+        
+    stages = ["Extracted Key Frames", "Current Main Variants"]
+    st.session_state['which_stage_to_run_on'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True, index =st.session_state['index_of_which_stage_to_run_on'] , help="Extracted frames means the original frames from the video.")                                                                                     
+    if stages.index(st.session_state['which_stage_to_run_on']) != st.session_state['index_of_which_stage_to_run_on']:
+        st.session_state['index_of_which_stage_to_run_on'] = stages.index(st.session_state['which_stage_to_run_on'])
+        st.experimental_rerun()
+
+    custom_pipelines = ["None","Mystique"]                   
+    if 'index_of_last_custom_pipeline' not in st.session_state:
+        st.session_state['index_of_last_custom_pipeline'] = 0        
+    st.session_state['custom_pipeline'] = st.selectbox(f"Custom Pipeline:", custom_pipelines, index=st.session_state['index_of_last_custom_pipeline'])
+    if custom_pipelines.index(st.session_state['custom_pipeline']) != st.session_state['index_of_last_custom_pipeline']:
+        st.session_state['index_of_last_custom_pipeline'] = custom_pipelines.index(st.session_state['custom_pipeline'])
+        st.experimental_rerun()
+
+    if st.session_state['custom_pipeline'] == "Mystique":
+        if st.session_state['index_of_last_model'] > 1:
+            st.session_state['index_of_last_model'] = 0       
+            st.experimental_rerun()           
+        with st.expander("Mystique is a custom pipeline that uses a multiple models to generate a consistent character and style transformation."):
+            st.markdown("## How to use the Mystique pipeline")                
+            st.markdown("1. Create a fine-tined model in the Custom Model section of the app - we recommend Dreambooth for character transformations.")
+            st.markdown("2. It's best to include a detailed prompt. We recommend taking an example input image and running it through the Prompt Finder")
+            st.markdown("3. Use [expression], [location], [mouth], and [looking] tags to vary the expression and location of the character dynamically if that changes throughout the clip. Varying this in the prompt will make the character look more natural - especially useful if the character is speaking.")
+            st.markdown("4. In our experience, the best strength for coherent character transformations is 0.25-0.3 - any more than this and details like eye position change.")  
+        models = ["LoRA","Dreambooth"]                                     
+        st.session_state['model'] = st.selectbox(f"Which type of model is trained on your character?", models, index=st.session_state['index_of_last_model'])                    
+        if st.session_state['index_of_last_model'] != models.index(st.session_state['model']):
+            st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
+            st.experimental_rerun()                          
+    else:
+        models = ['controlnet','stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'Dreambooth', 'LoRA','StyleGAN-NADA']            
+        st.session_state['model'] = st.selectbox(f"Which model would you like to use?", models, index=st.session_state['index_of_last_model'])                    
+        if st.session_state['index_of_last_model'] != models.index(st.session_state['model']):
+            st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
+            st.experimental_rerun() 
+            
+    
+    if st.session_state['model'] == "controlnet":   
+        controlnet_adapter_types = ["scribble","normal", "canny", "hed", "seg", "hough", "depth2img", "pose"]
+        if 'index_of_controlnet_adapter_type' not in st.session_state:
+            st.session_state['index_of_controlnet_adapter_type'] = 0
+        st.session_state['adapter_type'] = st.selectbox(f"Adapter Type",controlnet_adapter_types, index=st.session_state['index_of_controlnet_adapter_type'])
+        if st.session_state['index_of_controlnet_adapter_type'] != controlnet_adapter_types.index(st.session_state['adapter_type']):
+            st.session_state['index_of_controlnet_adapter_type'] = controlnet_adapter_types.index(st.session_state['adapter_type'])
+            st.experimental_rerun()
+        custom_models = []    
+        
+    elif st.session_state['model'] == "LoRA": 
+        if 'index_of_lora_model_1' not in st.session_state:
+            st.session_state['index_of_lora_model_1'] = 0
+            st.session_state['index_of_lora_model_2'] = 0
+            st.session_state['index_of_lora_model_3'] = 0
+        df = pd.read_csv('models.csv')
+        filtered_df = df[df.iloc[:, 5] == 'LoRA']
+        lora_model_list = filtered_df.iloc[:, 0].tolist()
+        lora_model_list.insert(0, '')
+        st.session_state['lora_model_1'] = st.selectbox(f"LoRA Model 1", lora_model_list, index=st.session_state['index_of_lora_model_1'])
+        if st.session_state['index_of_lora_model_1'] != lora_model_list.index(st.session_state['lora_model_1']):
+            st.session_state['index_of_lora_model_1'] = lora_model_list.index(st.session_state['lora_model_1'])
+            st.experimental_rerun()
+        st.session_state['lora_model_2'] = st.selectbox(f"LoRA Model 2", lora_model_list, index=st.session_state['index_of_lora_model_2'])
+        if st.session_state['index_of_lora_model_2'] != lora_model_list.index(st.session_state['lora_model_2']):
+            st.session_state['index_of_lora_model_2'] = lora_model_list.index(st.session_state['lora_model_2'])
+            st.experimental_rerun()
+        st.session_state['lora_model_3'] = st.selectbox(f"LoRA Model 3", lora_model_list, index=st.session_state['index_of_lora_model_3'])
+        if st.session_state['index_of_lora_model_3'] != lora_model_list.index(st.session_state['lora_model_3']):
+            st.session_state['index_of_lora_model_3'] = lora_model_list.index(st.session_state['lora_model_3'])                     
+            st.experimental_rerun()
+        custom_models = [st.session_state['lora_model_1'], st.session_state['lora_model_2'], st.session_state['lora_model_3']]                    
+        st.info("You can reference each model in your prompt using the following keywords: <1>, <2>, <3> - for example '<1> in the style of <2>.")
+        lora_adapter_types = ['sketch', 'seg', 'keypose', 'depth', None]
+        if "index_of_lora_adapter_type" not in st.session_state:
+            st.session_state['index_of_lora_adapter_type'] = 0
+        st.session_state['adapter_type'] = st.selectbox(f"Adapter Type:", lora_adapter_types, help="This is the method through the model will infer the shape of the object. ", index=st.session_state['index_of_lora_adapter_type'])
+        if st.session_state['index_of_lora_adapter_type'] != lora_adapter_types.index(st.session_state['adapter_type']):
+            st.session_state['index_of_lora_adapter_type'] = lora_adapter_types.index(st.session_state['adapter_type'])
+    elif st.session_state['model'] == "Dreambooth":
+        df = pd.read_csv('models.csv')
+        filtered_df = df[df.iloc[:, 5] == 'Dreambooth']
+        dreambooth_model_list = filtered_df.iloc[:, 0].tolist()
+        if 'index_of_dreambooth_model' not in st.session_state:
+            st.session_state['index_of_dreambooth_model'] = 0
+        custom_models = st.selectbox(f"Dreambooth Model", dreambooth_model_list, index=st.session_state['index_of_dreambooth_model'])
+        if st.session_state['index_of_dreambooth_model'] != dreambooth_model_list.index(custom_models):
+            st.session_state['index_of_dreambooth_model'] = dreambooth_model_list.index(custom_models)                                    
+    else:
+        custom_models = []
+        st.session_state['adapter_type'] = "N"
+    
+    if st.session_state['model'] == "StyleGAN-NADA":
+        st.warning("StyleGAN-NADA is a custom model that uses StyleGAN to generate a consistent character and style transformation. It only works for square images.")
+        st.session_state['prompt'] = st.selectbox("What style would you like to apply to the character?", ['base', 'mona_lisa', 'modigliani', 'cubism', 'elf', 'sketch_hq', 'thomas', 'thanos', 'simpson', 'witcher', 'edvard_munch', 'ukiyoe', 'botero', 'shrek', 'joker', 'pixar', 'zombie', 'werewolf', 'groot', 'ssj', 'rick_morty_cartoon', 'anime', 'white_walker', 'zuckerberg', 'disney_princess', 'all', 'list'])
+        st.session_state['strength'] = 0.5
+        st.session_state['guidance_scale'] = 7.5
+        st.session_state['seed'] = int(0)
+        st.session_state['num_inference_steps'] = int(50)
+                    
+    else:
+        st.session_state['prompt'] = st.text_area(f"Prompt", label_visibility="visible", value=st.session_state['prompt_value'],height=150)
+        if st.session_state['prompt'] != st.session_state['prompt_value']:
+            st.session_state['prompt_value'] = st.session_state['prompt']
+            st.experimental_rerun()
+        with st.expander("💡 Learn about dynamic prompting"):
+            st.markdown("## Why and how to use dynamic prompting")
+            st.markdown("Why:")
+            st.markdown("Dynamic prompting allows you to automatically vary the prompt throughout the clip based on changing features in the source image. This makes the output match the input more closely and makes character transformations look more natural.")
+            st.markdown("How:")
+            st.markdown("You can include the following tags in the prompt to vary the prompt dynamically: [expression], [location], [mouth], and [looking]")
+        if st.session_state['model'] == "Dreambooth":
+            model_details = get_model_details(custom_models)
+            st.info(f"Must include '{model_details['keyword']}' to run this model")   
+            if model_details['controller_type'] != "":                    
+                st.session_state['adapter_type']  = st.selectbox(f"Would you like to use the {model_details['controller_type']} controller?", ['Yes', 'No'])
+            else:
+                st.session_state['adapter_type']  = "No"
+
+        else:
+            if st.session_state['model'] == "pix2pix":
+                st.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")                    
+        st.session_state['strength'] = st.number_input(f"Strength", value=float(st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
+        
+        with st.expander("Advanced settings 😏"):
+            st.session_state['negative_prompt'] = st.text_area(f"Negative prompt", value=st.session_state['negative_prompt_value'], label_visibility="visible")
+            if st.session_state['negative_prompt'] != st.session_state['negative_prompt_value']:
+                st.session_state['negative_prompt_value'] = st.session_state['negative_prompt']
+                st.experimental_rerun()
+            st.session_state['guidance_scale'] = st.number_input(f"Guidance scale", value=float(st.session_state['guidance_scale']))
+            st.session_state['seed'] = st.number_input(f"Seed", value=int(st.session_state['seed']))
+            st.session_state['num_inference_steps'] = st.number_input(f"Inference steps", value=int(st.session_state['num_inference_steps']))
+                        
+    batch_run_range = st.slider("Select range:", 1, 0, (0, len(timing_details)-1))  
+    
+    st.session_state["promote_new_generation"] = True                    
+    st.session_state["promote_new_generation"] = st.checkbox("Promote new generation to main variant", value=True, key="promote_new_generation_to_main_variant")
+    st.session_state["use_new_settings"] = st.checkbox("Use new settings for batch query", value=True, key="keep_existing_settings", help="If unchecked, the new settings will be applied to the existing variants.")
+
+    if 'restyle_button' not in st.session_state:
+        st.session_state['restyle_button'] = ''
+        st.session_state['item_to_restyle'] = ''                
+
+    btn1, btn2 = st.columns(2)
+
+    with btn1:
+        batch_number_of_variants = st.number_input("How many variants?", value=1, min_value=1, max_value=10, step=1, key="number_of_variants")
+    
+
+    with btn2:
+
+        st.write("")
+        st.write("")
+        if st.button(f'Batch restyle') or st.session_state['restyle_button'] == 'yes':
+                            
+            if st.session_state['restyle_button'] == 'yes':
+                range_start = int(st.session_state['item_to_restyle'])
+                range_end = range_start + 1
+                st.session_state['restyle_button'] = ''
+                st.session_state['item_to_restyle'] = ''
+
+            for i in range(batch_run_range[1]+1):
+                for number in range(0, batch_number_of_variants):
+                    index_of_current_item = i
+                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,st.session_state['adapter_type'],st.session_state["use_new_settings"])
+            st.experimental_rerun()
+    
+    
+
+def get_primary_variant_location(timing_details, which_image):
+                                                    
+    variants = timing_details[which_image]["alternative_images"]                
+    current_variant = int(timing_details[which_image]["primary_image"])       
+    primary_variant_location = variants[current_variant]
+    return primary_variant_location
+
+
+
+def convert_to_minutes_and_seconds(frame_time):
+    minutes = int(frame_time/60)
+    seconds = frame_time - (minutes*60)
+    seconds = round(seconds, 2)
+    return f"{minutes} min, {seconds} secs"
 
 def calculate_time_at_frame_number(input_video, frame_number, project_name):
     input_video = "videos/" + \
@@ -125,7 +389,26 @@ def move_frame(project_name, index_of_current_item, distance_to_move, timing_det
 def get_timing_details(video_name):
     file_path = "videos/" + str(video_name) + "/timings.csv"
     csv_processor = CSVProcessor(file_path)
-    df = csv_processor.get_df_data()
+    column_types = {
+        'frame_time': float,
+        'frame_number': int,
+        'primary_image': int,
+        'guidance_scale': float,
+        'seed': int,
+        'num_inference_steps': int,
+        'strength': float
+    }
+    df = csv_processor.get_df_data().astype(column_types, errors='ignore')
+    
+    df['primary_image'] = pd.to_numeric(df['primary_image'], errors='coerce').round().astype(pd.Int64Dtype(), errors='ignore')
+    df['seed'] = pd.to_numeric(df['seed'], errors='coerce').round().astype(pd.Int64Dtype(), errors='ignore')
+    df['num_inference_steps'] = pd.to_numeric(df['num_inference_steps'], errors='coerce').round().astype(pd.Int64Dtype(), errors='ignore')
+    # if source_image if empty, set to https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png
+    
+    
+    
+    
+
 
     # Evaluate the alternative_images column and replace it with the evaluated list
     df['alternative_images'] = df['alternative_images'].fillna(
@@ -152,6 +435,7 @@ def delete_frame(project_name, index_of_current_item):
 
 
 def batch_update_timing_values(project_name, index_of_current_item, prompt, strength, model, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, source_image, custom_models, adapter_type):
+    print("FUCKITY FUCK")
     csv_processor = CSVProcessor(
         "videos/" + str(project_name) + "/timings.csv")
     df = csv_processor.get_df_data()
@@ -203,33 +487,37 @@ def dynamic_prompting(prompt, source_image, project_name, index_of_current_item)
         project_name, index_of_current_item, "prompt", prompt)
 
 
-def trigger_restyling_process(timing_details, project_name, index_of_current_item, model, prompt, strength, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, which_stage_to_run_on, promote_new_generation, project_settings, custom_models, adapter_type):
-    get_model_details(model)
-    prompt = prompt.replace(",", ".")
-    prompt = prompt.replace("\n", "")
-    update_project_setting("last_prompt", prompt, project_name)
-    update_project_setting("last_strength", strength, project_name)
-    update_project_setting("last_model", model, project_name)
-    update_project_setting("last_custom_pipeline",
-                           custom_pipeline, project_name)
-    update_project_setting("last_negative_prompt",
-                           negative_prompt, project_name)
-    update_project_setting("last_guidance_scale", guidance_scale, project_name)
-    update_project_setting("last_seed", seed, project_name)
-    update_project_setting("last_num_inference_steps",
-                           num_inference_steps, project_name)
-    update_project_setting("last_which_stage_to_run_on",
-                           which_stage_to_run_on, project_name)
-    update_project_setting("last_custom_models", custom_models, project_name)
-    update_project_setting("last_adapter_type", adapter_type, project_name)
+def trigger_restyling_process(timing_details, project_name, index_of_current_item, model, prompt, strength, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, which_stage_to_run_on, promote_new_generation, project_settings, custom_models, adapter_type, update_inference_settings):
+    print(update_inference_settings)
+    timing_details = get_timing_details(project_name)
+    if update_inference_settings is True:        
+        get_model_details(model)
+        prompt = prompt.replace(",", ".")
+        prompt = prompt.replace("\n", "")
+        update_project_setting("last_prompt", prompt, project_name)
+        update_project_setting("last_strength", strength, project_name)
+        update_project_setting("last_model", model, project_name)
+        update_project_setting("last_custom_pipeline",
+                            custom_pipeline, project_name)
+        update_project_setting("last_negative_prompt",
+                            negative_prompt, project_name)
+        update_project_setting("last_guidance_scale", guidance_scale, project_name)
+        update_project_setting("last_seed", seed, project_name)
+        update_project_setting("last_num_inference_steps",
+                            num_inference_steps, project_name)
+        update_project_setting("last_which_stage_to_run_on",
+                            which_stage_to_run_on, project_name)
+        update_project_setting("last_custom_models", custom_models, project_name)
+        update_project_setting("last_adapter_type", adapter_type, project_name)
 
-    if timing_details[index_of_current_item]["source_image"] == "":
-        source_image = upload_image("videos/" + str(project_name) +
-                                    "/assets/frames/1_selected/" + str(index_of_current_item) + ".png")
-    else:
-        source_image = timing_details[index_of_current_item]["source_image"]
-    batch_update_timing_values(project_name, index_of_current_item, '"'+prompt+'"', strength, model, custom_pipeline,
-                               negative_prompt, guidance_scale, seed, num_inference_steps, source_image, custom_models, adapter_type)
+        if timing_details[index_of_current_item]["source_image"] == "":
+            source_image = ""
+        else:
+            source_image = timing_details[index_of_current_item]["source_image"]
+        batch_update_timing_values(project_name, index_of_current_item, '"'+prompt+'"', strength, model, custom_pipeline,
+                                negative_prompt, guidance_scale, seed, num_inference_steps, source_image, custom_models, adapter_type)
+        dynamic_prompting(prompt, source_image, project_name,
+                      index_of_current_item)
     timing_details = get_timing_details(project_name)
     if which_stage_to_run_on == "Extracted Key Frames":
         source_image = timing_details[index_of_current_item]["source_image"]
@@ -240,8 +528,7 @@ def trigger_restyling_process(timing_details, project_name, index_of_current_ite
             timing_details[index_of_current_item]["primary_image"])
         source_image = variants[primary_image]
 
-    dynamic_prompting(prompt, source_image, project_name,
-                      index_of_current_item)
+    
     timing_details = get_timing_details(project_name)
 
     if st.session_state['custom_pipeline'] == "Mystique":
@@ -282,6 +569,37 @@ def promote_image_variant(index_of_current_item, project_name, variant_to_promot
     if index_of_current_item < len(get_timing_details(project_name)) - 1:
         update_specific_timing_value(
             project_name, index_of_current_item + 1, "timing_video", "")
+
+
+def extract_canny_lines(image_path_or_url, project_name, low_threshold=50, high_threshold=150):
+    # Check if the input is a URL
+    if image_path_or_url.startswith("http"):
+        response = r.get(image_path_or_url)
+        image_data = np.frombuffer(response.content, dtype=np.uint8)
+        image = cv2.imdecode(image_data, cv2.IMREAD_GRAYSCALE)
+    else:
+        # Read the image from a local file
+        image = cv2.imread(image_path_or_url, cv2.IMREAD_GRAYSCALE)
+
+    # Apply Gaussian blur to the image
+    blurred_image = cv2.GaussianBlur(image, (5, 5), 0)
+
+    # Apply the Canny edge detection
+    canny_edges = cv2.Canny(blurred_image, low_threshold, high_threshold)
+
+    # Reverse the colors (invert the image)
+    inverted_canny_edges = 255 - canny_edges
+
+    # Convert the inverted Canny edge result to a PIL Image
+    new_canny_image = Image.fromarray(inverted_canny_edges)
+
+    # Save the new image
+    unique_file_name = str(uuid.uuid4()) + ".png"
+    file_location = f"videos/{project_name}/assets/resources/masks/{unique_file_name}"
+    os.makedirs(os.path.dirname(file_location), exist_ok=True)
+    new_canny_image.save(file_location)
+
+    return file_location
 
 
 def create_or_update_mask(project_name, index_of_current_number, image):
@@ -528,7 +846,9 @@ def get_model_details(model_name):
                 return model_details
 
 
-def prompt_interpolation_model(img1, img2, project_name, video_number, interpolation_steps, replicate_api_key):
+def prompt_interpolation_model(img1, img2, project_name, interpolation_steps):
+    app_settings = get_app_settings()
+    replicate_api_key = app_settings["replicate_com_api_key"]
     os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
     model = replicate.models.get("google-research/frame-interpolation")
     version = model.versions.get("4f88a16a13673a8b589c18866e540556170a5bcb2ccdc12de556e800e9456d3d")
@@ -553,11 +873,9 @@ def prompt_interpolation_model(img1, img2, project_name, video_number, interpola
         print(e)
 
     clip = VideoFileClip(video_location)
-    update_specific_timing_value(
-        project_name, video_number, "interpolated_video", video_location)
-    update_specific_timing_value(
-        project_name, video_number, "timing_video", "")
 
+    return video_location
+    
 
 def remove_background(project_name, input_image):
     app_settings = get_app_settings()
@@ -797,21 +1115,52 @@ def update_slice_of_video_speed(video_name, input_video, desired_speed_change):
               "videos/" + str(video_name) + "/assets/videos/0_raw/" + str(input_video))
 
 
-def slice_part_of_video(project_name, index_of_current_item, video_start_percentage, video_end_percentage, slice_name, timing_details):
-
-    input_video = timing_details[int(
-        index_of_current_item)]["interpolated_video"]
+def get_duration_from_video(input_video):
     video_capture = cv2.VideoCapture(input_video)
     frame_rate = video_capture.get(cv2.CAP_PROP_FPS)
-    total_duration_of_clip = video_capture.get(
-        cv2.CAP_PROP_FRAME_COUNT) / frame_rate
+    total_duration = video_capture.get(cv2.CAP_PROP_FRAME_COUNT) / frame_rate
+    video_capture.release()
+    return total_duration
+
+
+def get_audio_bytes_for_slice(project_name, index_of_current_item):
+    project_settings = get_project_settings(project_name)
+    timing_details = get_timing_details(project_name)
+    audio = f"videos/{project_name}/assets/resources/audio/{project_settings['audio']}"                    
+    audio = AudioSegment.from_file(audio)    
+    audio = audio[timing_details[index_of_current_item]['frame_time']*1000:timing_details[index_of_current_item+1]['frame_time']*1000]
+    audio_bytes = BytesIO()
+    audio.export(audio_bytes, format='wav')
+    audio_bytes.seek(0)
+    return audio_bytes
+
+def slice_part_of_video(project_name, index_of_current_item, video_start_percentage, video_end_percentage, slice_name, timing_details):
+    input_video = timing_details[int(index_of_current_item)]["interpolated_video"]
+    total_duration_of_clip = get_duration_from_video(input_video)
     start_time = float(video_start_percentage) * float(total_duration_of_clip)
     end_time = float(video_end_percentage) * float(total_duration_of_clip)
-    clip = VideoFileClip(input_video).subclip(
-        t_start=start_time, t_end=end_time)
-    output_video = "videos/" + \
-        str(project_name) + "/assets/videos/0_raw/" + str(slice_name) + ".mp4"
+    clip = VideoFileClip(input_video).subclip(t_start=start_time, t_end=end_time)
+    output_video = "videos/" + str(project_name) + "/assets/videos/0_raw/" + str(slice_name) + ".mp4"
     clip.write_videofile(output_video, audio=False)
+    clip.close()
+
+def update_speed_of_video_clip(location_of_video, desired_speed_change):
+    
+    
+    clip = VideoFileClip(location_of_video)
+    clip_location = location_of_video
+
+    # Use the desired speed change directly
+    desired_speed_change_text = str(desired_speed_change) + "*PTS"
+
+    video_stream = ffmpeg.input(str(clip_location))
+    video_stream = video_stream.filter('setpts', desired_speed_change_text)
+    ffmpeg.output(video_stream, "output.mp4").run()
+
+    os.remove(location_of_video)
+    os.rename("output.mp4", location_of_video)
+
+    
 
 
 def update_video_speed(project_name, index_of_current_item, duration_of_static_time, total_duration_of_clip, timing_details):
@@ -1095,17 +1444,24 @@ def custom_pipeline_mystique(index_of_current_item, project_name, project_settin
     return output_url
 
 
-def create_timings_row_at_frame_number(project_name, input_video, extract_frame_number, timing_details, index_of_new_item):
+def create_timings_row_at_frame_number(project_name, index_of_new_item):
+
     csv_processor = CSVProcessor(f'videos/{project_name}/timings.csv')
     df = csv_processor.get_df_data()
-    length_of_df = len(df)
-    frame_time = calculate_time_at_frame_number(
-        input_video, float(extract_frame_number), project_name)
-    new_row = {'frame_time': frame_time, 'frame_number': extract_frame_number}
+    new_row = pd.DataFrame({'frame_time': [None], 'frame_number': [None]}, index=[0])
+    df = pd.concat([df.iloc[:index_of_new_item], new_row, df.iloc[index_of_new_item:]]).reset_index(drop=True)
 
-    # ADD IT TO THE END OF THE DATAFRAM
-    df.loc[len(df)] = new_row
-    df = df.sort_values(by=['frame_number'])
+    # Set the data types for each column
+    column_types = {
+        'frame_time': float,
+        'frame_number': int,
+        'primary_image': int,
+        'guidance_scale': float,
+        'seed': int,
+        'num_inference_steps': float,
+        'strength': float
+    }
+    df = df.astype(column_types, errors='ignore')
 
     df.to_csv(f'videos/{project_name}/timings.csv', index=False)
 
@@ -1137,6 +1493,33 @@ def find_duration_of_clip(index_of_current_item, timing_details, total_number_of
         duration_of_static_time = 0
 
     return total_duration_of_clip, duration_of_static_time
+
+def add_audio_to_video_slice(video_location, audio_bytes):
+    # Save the audio bytes to a temporary file
+    audio_file = "temp_audio.wav"
+    with open(audio_file, 'wb') as f:
+        f.write(audio_bytes.getvalue())
+
+    # Create an input video stream
+    video_stream = ffmpeg.input(video_location)
+    
+    # Create an input audio stream
+    audio_stream = ffmpeg.input(audio_file)
+
+    # Add the audio stream to the video stream
+    output_stream = ffmpeg.output(video_stream, audio_stream, "output_with_audio.mp4", vcodec='copy', acodec='aac', strict='experimental')
+
+    # Run the ffmpeg command
+    output_stream.run()
+
+    # Remove the original video file and the temporary audio file
+    os.remove(video_location)
+    os.remove(audio_file)
+
+    # Rename the output file to have the same name as the original video file
+    os.rename("output_with_audio.mp4", video_location)
+
+
 
 
 def render_video(project_name, final_video_name):
@@ -1277,6 +1660,8 @@ def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
     elif timing_details[index_of_current_item]["adapter_type"] == "scribble":
         model = replicate.models.get("jagilley/controlnet-scribble")
         version = model.versions.get("435061a1b5a4c1e26740464bf786efdfa9cb3a3ac488595a2de23e143fdb0117")
+        if timing_details[index_of_current_item]["canny_image"] != "":
+            input_image = timing_details[index_of_current_item]["canny_image"]
     elif timing_details[index_of_current_item]["adapter_type"] == "seg":
         model = replicate.models.get("jagilley/controlnet-seg")
         version = model.versions.get("f967b165f4cd2e151d11e7450a8214e5d22ad2007f042f2f891ca3981dbfba0d")

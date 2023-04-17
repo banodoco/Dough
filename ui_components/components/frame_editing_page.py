@@ -198,7 +198,7 @@ def frame_editing_page(project_name):
                     
                     with col2:    
                         if drawing_mode == "freedraw":           
-                            stroke_width = st.sidebar.slider("Stroke width: ", 1, 25, 2)
+                            stroke_width = st.sidebar.slider("Stroke width: ", 1, 25, 1)
                         else:
                             stroke_width = 3
 
@@ -254,6 +254,7 @@ def frame_editing_page(project_name):
                     if st.button("Use Canny Image From Other Frame"):
                         if timing_details[which_number_image_for_canny]["canny_image"] != "":                             
                             update_specific_timing_value(project_name, st.session_state['which_image'], "canny_image", timing_details[which_number_image_for_canny]["canny_image"])                                                
+                            st.experimental_rerun()
                     if timing_details[which_number_image_for_canny]["canny_image"] == "":
                         st.error("No Canny Image Found From Key Frame")                    
                 with canny2:                                                            
@@ -395,12 +396,12 @@ def frame_editing_page(project_name):
                         
             with st.expander("Replace Frame"):
                 
-                replace_with = st.radio("Replace with:", ["Previous Frame", "Uploaded Frame"], horizontal=True)
+                replace_with = st.radio("Replace with:", ["Uploaded Frame","Previous Frame"], horizontal=True)
                 replace1, replace2, replace3 = st.columns([2,1,1])                    
 
                 if replace_with == "Previous Frame":  
                     with replace1:
-                        which_stage_to_use_for_replacement = st.radio("Select stage to use:", ["Unedited Key Frame", "Styled Key Frame"],key="which_stage_to_use_for_replacement", horizontal=True)
+                        which_stage_to_use_for_replacement = st.radio("Select stage to use:", ["Styled Key Frame","Unedited Key Frame"],key="which_stage_to_use_for_replacement", horizontal=True)
                         which_image_to_use_for_replacement = st.number_input("Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0, key="which_image_to_use_for_replacement")
                         if which_stage_to_use_for_replacement == "Unedited Key Frame":                                    
                             background_image = timing_details[which_image_to_use_for_replacement]["source_image"]                            
