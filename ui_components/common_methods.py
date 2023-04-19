@@ -26,31 +26,32 @@ import shutil
 from moviepy.editor import concatenate_videoclips,TextClip
 import moviepy.editor
 
-def create_preview_video(timing_details, project_name, index_of_item):
 
-    def create_slice_of_preview(timing_details, index_of_item):
+def create_single_preview_video(timing_details, index_of_item, project_name):
 
-        if timing_details[index_of_item]["interpolated_video"] == "":
-            previous_image_location = get_primary_variant_location(timing_details, index_of_item)
-            current_image_location = get_primary_variant_location(timing_details, index_of_item +1)
-            interpolated_video =  prompt_interpolation_model(previous_image_location, current_image_location, project_name,3)
-            update_specific_timing_value(project_name, index_of_item, "interpolated_video", interpolated_video)
-        else:
-            interpolated_video = timing_details[index_of_item]["interpolated_video"]                                
-        new_file_name = str(uuid.uuid4()) + ".mp4"
-        video_location =  f"videos/{project_name}/assets/videos/1_final/{new_file_name}"
-        shutil.copyfile(interpolated_video, video_location)
-        duration_of_video = get_duration_from_video(video_location)                                                                
-        desired_duration = float(timing_details[index_of_item+1]["frame_time"]) - float(timing_details[index_of_item]["frame_time"])
-        speed_change_required = float(desired_duration / duration_of_video)                                
-        update_speed_of_video_clip(video_location, speed_change_required)
-        audio_bytes = get_audio_bytes_for_slice(project_name, index_of_item)
-        add_audio_to_video_slice(video_location, audio_bytes)
+    if timing_details[index_of_item]["interpolated_video"] == "":
+        previous_image_location = get_primary_variant_location(timing_details, index_of_item)
+        current_image_location = get_primary_variant_location(timing_details, index_of_item +1)
+        interpolated_video =  prompt_interpolation_model(previous_image_location, current_image_location, project_name,3)
+        update_specific_timing_value(project_name, index_of_item, "interpolated_video", interpolated_video)
+    else:
+        interpolated_video = timing_details[index_of_item]["interpolated_video"]                                
+    new_file_name = str(uuid.uuid4()) + ".mp4"
+    video_location =  f"videos/{project_name}/assets/videos/1_final/{new_file_name}"
+    shutil.copyfile(interpolated_video, video_location)
+    duration_of_video = get_duration_from_video(video_location)                                                                
+    desired_duration = float(timing_details[index_of_item+1]["frame_time"]) - float(timing_details[index_of_item]["frame_time"])
+    speed_change_required = float(desired_duration / duration_of_video)                                
+    update_speed_of_video_clip(video_location, speed_change_required)
+    audio_bytes = get_audio_bytes_for_slice(project_name, index_of_item)
+    add_audio_to_video_slice(video_location, audio_bytes)
 
-        return video_location
+    return video_location
+
+def create_full_preview_video(timing_details, project_name, index_of_item):
     
-    last_preview_video = create_slice_of_preview(timing_details, index_of_item-1)
-    current_preview_video = create_slice_of_preview(timing_details, index_of_item)
+    last_preview_video = create_single_preview_video(timing_details, index_of_item-1,project_name)
+    current_preview_video = create_single_preview_video(timing_details, index_of_item,project_name)
 
     last_clip = moviepy.editor.VideoFileClip(last_preview_video)
     current_clip = moviepy.editor.VideoFileClip(current_preview_video)
@@ -80,15 +81,14 @@ def create_preview_video(timing_details, project_name, index_of_item):
 
 
 
-def back_and_forward_buttons():
-    smallbutton1, smallbutton2,smallbutton3, smallbutton4 = st.columns([1,1,1,4])
+def back_and_forward_buttons(timing_details):
+    smallbutton1, smallbutton2,smallbutton3, smallbutton4 = st.columns([2,2,2,4])
     with smallbutton1:
         # if it's not the first image
         if st.session_state['which_image'] != 0:
             if st.button(f"{st.session_state['which_image']-1} ⏪", key=f"Previous Image for {st.session_state['which_image']}"):
                 st.session_state['which_image_value'] = st.session_state['which_image_value'] - 1
-                st.experimental_rerun()
-        # number of frame
+                st.experimental_rerun()        
         
     with smallbutton2:
         st.button(f"{st.session_state['which_image']} 📍",disabled=True)
@@ -151,7 +151,7 @@ def styling_sidebar(project_name,timing_details):
         if st.session_state['index_of_controlnet_adapter_type'] != controlnet_adapter_types.index(st.session_state['adapter_type']):
             st.session_state['index_of_controlnet_adapter_type'] = controlnet_adapter_types.index(st.session_state['adapter_type'])
             st.experimental_rerun()
-        custom_models = []    
+        st.session_state['custom_models'] = []    
         
     elif st.session_state['model'] == "LoRA": 
         if 'index_of_lora_model_1' not in st.session_state:
@@ -174,7 +174,7 @@ def styling_sidebar(project_name,timing_details):
         if st.session_state['index_of_lora_model_3'] != lora_model_list.index(st.session_state['lora_model_3']):
             st.session_state['index_of_lora_model_3'] = lora_model_list.index(st.session_state['lora_model_3'])                     
             st.experimental_rerun()
-        custom_models = [st.session_state['lora_model_1'], st.session_state['lora_model_2'], st.session_state['lora_model_3']]                    
+        st.session_state['custom_models'] = [st.session_state['lora_model_1'], st.session_state['lora_model_2'], st.session_state['lora_model_3']]                    
         st.info("You can reference each model in your prompt using the following keywords: <1>, <2>, <3> - for example '<1> in the style of <2>.")
         lora_adapter_types = ['sketch', 'seg', 'keypose', 'depth', None]
         if "index_of_lora_adapter_type" not in st.session_state:
@@ -188,11 +188,11 @@ def styling_sidebar(project_name,timing_details):
         dreambooth_model_list = filtered_df.iloc[:, 0].tolist()
         if 'index_of_dreambooth_model' not in st.session_state:
             st.session_state['index_of_dreambooth_model'] = 0
-        custom_models = st.selectbox(f"Dreambooth Model", dreambooth_model_list, index=st.session_state['index_of_dreambooth_model'])
-        if st.session_state['index_of_dreambooth_model'] != dreambooth_model_list.index(custom_models):
-            st.session_state['index_of_dreambooth_model'] = dreambooth_model_list.index(custom_models)                                    
+        st.session_state['custom_models'] = st.selectbox(f"Dreambooth Model", dreambooth_model_list, index=st.session_state['index_of_dreambooth_model'])
+        if st.session_state['index_of_dreambooth_model'] != dreambooth_model_list.index(st.session_state['custom_models']):
+            st.session_state['index_of_dreambooth_model'] = dreambooth_model_list.index(st.session_state['custom_models'])                                    
     else:
-        custom_models = []
+        st.session_state['custom_models'] = []
         st.session_state['adapter_type'] = "N"
     
     if st.session_state['model'] == "StyleGAN-NADA":
@@ -215,7 +215,7 @@ def styling_sidebar(project_name,timing_details):
             st.markdown("How:")
             st.markdown("You can include the following tags in the prompt to vary the prompt dynamically: [expression], [location], [mouth], and [looking]")
         if st.session_state['model'] == "Dreambooth":
-            model_details = get_model_details(custom_models)
+            model_details = get_model_details(st.session_state['custom_models'])
             st.info(f"Must include '{model_details['keyword']}' to run this model")   
             if model_details['controller_type'] != "":                    
                 st.session_state['adapter_type']  = st.selectbox(f"Would you like to use the {model_details['controller_type']} controller?", ['Yes', 'No'])
@@ -267,8 +267,10 @@ def styling_sidebar(project_name,timing_details):
             for i in range(batch_run_range[1]+1):
                 for number in range(0, batch_number_of_variants):
                     index_of_current_item = i
-                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],custom_models,st.session_state['adapter_type'],st.session_state["use_new_settings"])
+                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],st.session_state['custom_models'],st.session_state['adapter_type'],st.session_state["use_new_settings"])
             st.experimental_rerun()
+
+    
     
     
 
@@ -488,7 +490,24 @@ def dynamic_prompting(prompt, source_image, project_name, index_of_current_item)
 
 
 def trigger_restyling_process(timing_details, project_name, index_of_current_item, model, prompt, strength, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, which_stage_to_run_on, promote_new_generation, project_settings, custom_models, adapter_type, update_inference_settings):
-    print(update_inference_settings)
+    print(f"Project Name: {project_name}")
+    print(f"Index of Current Item: {index_of_current_item}")
+    print(f"Model: {model}")
+    print(f"Prompt: {prompt}")
+    print(f"Strength: {strength}")
+    print(f"Custom Pipeline: {custom_pipeline}")
+    print(f"Negative Prompt: {negative_prompt}")
+    print(f"Guidance Scale: {guidance_scale}")
+    print(f"Seed: {seed}")
+    print(f"Num Inference Steps: {num_inference_steps}")
+    print(f"Which Stage to Run On: {which_stage_to_run_on}")
+    print(f"Promote New Generation: {promote_new_generation}")
+    print(f"Project Settings: {project_settings}")
+    print(f"Custom Models: {custom_models}")
+    print(f"Adapter Type: {adapter_type}")
+    print(f"Update Inference Settings: {update_inference_settings}")
+
+
     timing_details = get_timing_details(project_name)
     if update_inference_settings is True:        
         get_model_details(model)
@@ -1462,7 +1481,17 @@ def create_timings_row_at_frame_number(project_name, index_of_new_item):
         'strength': float
     }
     df = df.astype(column_types, errors='ignore')
+    
+    update_specific_timing_value(project_name, index_of_new_item - 1, "interpolated_video", "")
+    
+    if index_of_new_item < len(get_timing_details(project_name)) - 1:
+        update_specific_timing_value(project_name, index_of_new_item + 1, "interpolated_video", "")
 
+    update_specific_timing_value(project_name, index_of_new_item - 1, "timing_video", "")
+    
+    if index_of_new_item < len(get_timing_details(project_name)) - 1:
+        update_specific_timing_value(project_name, index_of_new_item + 1, "timing_video", "")
+    
     df.to_csv(f'videos/{project_name}/timings.csv', index=False)
 
     return index_of_new_item
