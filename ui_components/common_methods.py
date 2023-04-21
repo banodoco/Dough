@@ -1,7 +1,9 @@
 import streamlit as st
 import os
+import base64
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from moviepy.editor import *
+from requests_toolbelt.multipart.encoder import MultipartEncoder
 import cv2
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import csv
@@ -12,6 +14,7 @@ import requests as r
 import ffmpeg
 import string
 import json
+import tempfile
 import boto3
 import time
 import zipfile
@@ -27,12 +30,31 @@ from moviepy.editor import concatenate_videoclips,TextClip
 import moviepy.editor
 
 
+def create_individual_clip(timing_details, index_of_item, project_name):
+
+    if timing_details[index_of_item]["animation_style"] == "":
+        app_settings = get_app_settings()
+        animation_style = app_settings["default_animation_style"]
+    else:
+        animation_style = timing_details[index_of_item]["animation_style"]
+
+    if animation_style == "Interpolation":
+        st.write("Creating interpolated video")
+    elif animation_style == "Direct Morphing":
+        st.write("Creating style transfer video")
+
+    current_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_item) + ".png"
+
+    next_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_item+1) + ".png"
+
+        
+
 def create_single_preview_video(timing_details, index_of_item, project_name):
 
     if timing_details[index_of_item]["interpolated_video"] == "":
         previous_image_location = get_primary_variant_location(timing_details, index_of_item)
         current_image_location = get_primary_variant_location(timing_details, index_of_item +1)
-        interpolated_video =  prompt_interpolation_model(previous_image_location, current_image_location, project_name,3)
+        interpolated_video = prompt_interpolation_model(previous_image_location, current_image_location, project_name,3)
         update_specific_timing_value(project_name, index_of_item, "interpolated_video", interpolated_video)
     else:
         interpolated_video = timing_details[index_of_item]["interpolated_video"]                                
@@ -136,7 +158,7 @@ def styling_sidebar(project_name,timing_details):
             st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
             st.experimental_rerun()                          
     else:
-        models = ['controlnet','stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'Dreambooth', 'LoRA','StyleGAN-NADA']            
+        models = ['controlnet','stable_diffusion_xl','stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'Dreambooth', 'LoRA','StyleGAN-NADA']            
         st.session_state['model'] = st.selectbox(f"Which model would you like to use?", models, index=st.session_state['index_of_last_model'])                    
         if st.session_state['index_of_last_model'] != models.index(st.session_state['model']):
             st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
@@ -1026,6 +1048,78 @@ def prompt_model_stylegan_nada(index_of_current_item, timing_details, input_imag
     return output
 
 
+
+def prompt_model_stable_diffusion_xl(project_name, index_of_current_item, timing_details, source_image):
+
+    app_settings = get_app_settings()
+    engine_id = "stable-diffusion-xl-beta-v2-2-2"
+    api_host = os.getenv('API_HOST', 'https://api.stability.ai')
+    api_key = app_settings["stability_ai_api_key"]
+
+    # if the image starts with http, it's a URL, otherwise it's a file path
+    if source_image.startswith("http"):
+        response = r.get(source_image)
+        source_image = Image.open(BytesIO(response.content))    
+    else:
+        source_image = Image.open(source_image)
+
+
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    source_image.save(temp_file, "PNG")
+    temp_file.close()
+    
+    
+    source_image.seek(0)
+
+    
+
+    multipart_data = MultipartEncoder(
+        fields={
+            "text_prompts[0][text]": timing_details[index_of_current_item]["prompt"],
+            "init_image": (os.path.basename(temp_file.name), open(temp_file.name, "rb"), "image/png"),
+            "init_image_mode": "IMAGE_STRENGTH",
+            "image_strength": str(timing_details[index_of_current_item]["strength"]),
+            "cfg_scale": str(timing_details[index_of_current_item]["guidance_scale"]),
+            "clip_guidance_preset": "FAST_BLUE",                        
+            "samples": "1",
+            "steps": str(timing_details[index_of_current_item]["num_inference_steps"]),
+        }
+    )
+
+    response = r.post(
+        f"{api_host}/v1/generation/{engine_id}/image-to-image",
+        headers={
+            "Content-Type": multipart_data.content_type,
+            "Accept": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        },
+        data=multipart_data,
+    )
+    os.unlink(temp_file.name)
+
+    if response.status_code != 200:
+        st.error("An error occurred: " + str(response.text))
+        return None
+    else:
+        data = response.json()
+        generated_image = base64.b64decode(data["artifacts"][0]["base64"])
+        # generate a random file name with uuid at the location
+        file_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(uuid.uuid4()) + ".png"
+        
+        with open(file_location, "wb") as f:
+            f.write(generated_image)
+
+    return file_location
+        
+        
+   
+
+
+    
+    
+    
+
+
 def prompt_model_stability(project_name, index_of_current_item, timing_details, input_image):
 
     app_settings = get_app_settings()
@@ -1431,6 +1525,8 @@ def restyle_images(index_of_current_item, project_name, project_settings, timing
         output_url = prompt_model_dreambooth(project_name, index_of_current_item, timing_details[index_of_current_item]["custom_models"], app_settings,timing_details, project_settings,source_image)
     elif model_name =='StyleGAN-NADA':
         output_url = prompt_model_stylegan_nada(index_of_current_item ,timing_details,source_image,project_name)
+    elif model_name == "stable_diffusion_xl":
+        output_url = prompt_model_stable_diffusion_xl(project_name, index_of_current_item, timing_details, source_image)
 
     
     return output_url

@@ -39,6 +39,8 @@ def new_project_page():
     audio = st.radio("Audio:", audio_options, key="audio",horizontal=True)
     if uploaded_video is None:
         st.info("You can also keep the audio from your original video - just upload the video above and the option will appear.")                
+
+    default_animation_style = st.radio("Select default animation style:", options=["Interpolation","Direct Morphing"], help="You can always change this later.", key="default_animation_style", horizontal=True)
         
     if audio == "Attach new audio":
         d1, d2 = st.columns([4,5])
@@ -48,6 +50,8 @@ def new_project_page():
             st.write("")
             st.write("")
             st.info("Make sure that this audio is around the same length as your video.")
+
+            
     
     st.write("")
     if st.button("Create New Project"):                
@@ -56,6 +60,7 @@ def new_project_page():
         update_project_setting("width", width, new_project_name)
         update_project_setting("height", height, new_project_name)  
         update_project_setting("input_type", input_type, new_project_name)
+        update_project_setting("default_animation_style", default_animation_style, new_project_name)
         
         
         if uploaded_video is not None:

@@ -6,7 +6,7 @@ import os
 from PIL import Image
 import requests as r
 from streamlit_drawable_canvas import st_canvas
-from repository.local_repo.csv_repo import get_app_settings, get_project_settings,update_specific_timing_value
+from repository.local_repo.csv_repo import get_app_settings, get_project_settings,update_specific_timing_value,update_project_setting
 from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process,add_image_variant,prompt_interpolation_model,update_speed_of_video_clip,create_timings_row_at_frame_number,extract_canny_lines,get_duration_from_video,get_audio_bytes_for_slice,add_audio_to_video_slice,convert_to_minutes_and_seconds,styling_sidebar,get_primary_variant_location,create_full_preview_video,back_and_forward_buttons,create_single_preview_video
 from utils.file_upload.s3 import upload_image
 import uuid
@@ -17,6 +17,7 @@ import shutil
 from streamlit_option_menu import option_menu
 from moviepy.editor import concatenate_videoclips
 import moviepy.editor
+
 
 
 
@@ -79,7 +80,7 @@ def frame_styling_page(mainheader2, project_name):
 
         top1, top2, top3 = st.columns([4,1,2])
         with top1:
-            view_types = ["List View","ControlNet"]
+            view_types = ["List View","Individual View"]
             st.session_state['frame_styling_view_type'] = st.radio("View type:", view_types, key="which_view_type", horizontal=True, index=st.session_state['frame_styling_view_type_index'])                        
             if view_types.index(st.session_state['frame_styling_view_type']) != st.session_state['frame_styling_view_type_index']:
                 st.session_state['frame_styling_view_type_index'] = view_types.index(st.session_state['frame_styling_view_type'])
@@ -90,12 +91,12 @@ def frame_styling_page(mainheader2, project_name):
 
         project_settings = get_project_settings(project_name)
 
-        if st.session_state['frame_styling_view_type'] == "ControlNet":
+        if st.session_state['frame_styling_view_type'] == "Individual View":
 
             if "section_index" not in st.session_state:
                 st.session_state['section_index'] = 0
 
-            sections = ["Drawing", "Styling", "Timing", 'Speed']
+            sections = ["Guidance", "Styling", "Motion"]
             
             st.session_state['section'] = option_menu(None, sections, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", default_index=st.session_state['section_index'], orientation="horizontal")
 
@@ -109,247 +110,254 @@ def frame_styling_page(mainheader2, project_name):
                                                 
                                            
             
-            if section == "Drawing":        
-
-                canvas1, canvas2 = st.columns([1.25,3])
-
-                with canvas1:
-                                                                                                
-            
-                    width = int(project_settings["width"])
-                    height = int(project_settings["height"])
-                    if timing_details[st.session_state['which_image']]["canny_image"] != "":
-                        if timing_details[st.session_state['which_image']]["canny_image"] .startswith("http"):
-                            canvas_image = r.get(timing_details[st.session_state['which_image']]["canny_image"] )
-                            canvas_image = Image.open(BytesIO(canvas_image.content))
-                        else:
-                            canvas_image = Image.open(timing_details[st.session_state['which_image']]["canny_image"] )             
-                    else:
-                        canvas_image = Image.new("RGB", (width, height), "white")
-                    if 'drawing_input' not in st.session_state:
-                            st.session_state['drawing_input'] = 'Magic shapes 🪄'
-                    col1, col2 = st.columns([6,3])
-                                    
-                    with col1:
-                        st.session_state['drawing_input'] = st.radio(
-                            "Drawing tool:",
-                            ("Draw lines ✏️","Erase Lines ❌","Make shapes 🪄","Move shapes 🏋🏾‍♂️","Make Lines ║"), horizontal=True,
-                        )
-                    
-                        if st.session_state['drawing_input'] == "Move shapes 🏋🏾‍♂️":
-                            drawing_mode = "transform"                                        
-                            stroke_colour = "rgba(0, 0, 0)"
-                        elif st.session_state['drawing_input'] == "Make shapes 🪄":
-                            drawing_mode = "polygon"
-                            stroke_colour = "rgba(0, 0, 0)"                
-                        elif st.session_state['drawing_input'] == "Draw lines ✏️":
-                            drawing_mode = "freedraw"
-                            stroke_colour = "rgba(0, 0, 0)"                
-                        elif st.session_state['drawing_input'] == "Erase Lines ❌":
-                            drawing_mode = "freedraw"
-                            stroke_colour = "rgba(255, 255, 255)"                
-                        elif st.session_state['drawing_input'] == "Make Lines ║":
-                            drawing_mode = "line"
-                            stroke_colour = "rgba(0, 0, 0)"
-                        
-                    
-                    with col2:    
-                        if st.session_state['drawing_input']  == "Draw lines ✏️" or st.session_state['drawing_input']  == "Make Lines ║":         
-                            stroke_width = st.slider("Stroke width: ", 1, 50, 2)
-                        elif st.session_state['drawing_input']  == "Erase Lines ❌":
-                            stroke_width = st.slider("Stroke width: ", 1, 100, 25)
-                        else:
-                            stroke_width = 3
-
-                    
-                    
-
-                    if st.button("Clear Canny Image"):
-                        update_specific_timing_value(project_name, st.session_state['which_image'], "canny_image", "")                    
-                        st.session_state['reset_canvas'] = True                    
-                        st.experimental_rerun()
-                    
-                    st.markdown("***")
-                    back_and_forward_buttons(timing_details)
+            if section == "Guidance":   
                 
-                with canvas2:
-
-                    realtime_update = True        
-
-                    if "reset_canvas" not in st.session_state:
-                        st.session_state['reset_canvas'] = False
-
-                    if st.session_state['reset_canvas'] != True:
-                                            
-                        canvas_result = st_canvas(
-                            fill_color="rgba(0, 0, 0)", 
-                            stroke_width=stroke_width,
-                            stroke_color=stroke_colour,
-                            background_color="rgb(255, 255, 255)",
-                            background_image=canvas_image,
-                            update_streamlit=realtime_update,
-                            height=height,
-                            width=width,
-                            drawing_mode=drawing_mode,
-                            display_toolbar=True,
-                            key="full_app",
-                        )
-
-                        
-
-                        if 'image_created' not in st.session_state:
-                            st.session_state['image_created'] = 'no'
-
-                        if canvas_result.image_data is not None:
-                            img_data = canvas_result.image_data
-                            im = Image.fromarray(img_data.astype("uint8"), mode="RGBA")
+                guidance_types = ["Draw", "Image", "Video Frame"]
+                if 'how to guide_index' not in st.session_state:
+                    if project_settings["guidance_type"] == "":
+                        st.session_state['how_to_guide_index'] = 0
                     else:
-                        st.session_state['reset_canvas'] = False
-                        canvas_result = st_canvas()       
-                        time.sleep(0.1)         
-                        st.experimental_rerun()
+                        st.session_state['how_to_guide_index'] = guidance_types.index(project_settings["guidance_type"])
+                how_to_guide = st.radio("How to guide:", guidance_types, key="how_to_guide", horizontal=True, index=st.session_state['how_to_guide_index'])
+                if guidance_types.index(how_to_guide) != st.session_state['how_to_guide_index']:
+                    st.session_state['how_to_guide_index'] = guidance_types.index(how_to_guide)
+                    update_project_setting("guidance_type", how_to_guide,project_name)                                    
+                    st.experimental_rerun()
 
+                if how_to_guide == "Draw":
+
+                    canvas1, canvas2 = st.columns([1.25,3])
+
+                    with canvas1:
+                                                                                                    
                 
-
-                if st.button("Save New Canny Image"):
-                    if canvas_result.image_data is not None:
-                        # overlay the canvas image on top of the canny image and save the result
-                        # if canny image is from a url, then we need to download it first
-                        if timing_details[st.session_state['which_image']]["canny_image"] != "":
-                            if timing_details[st.session_state['which_image']]["canny_image"].startswith("http"):
-                                canny_image = r.get(timing_details[st.session_state['which_image']]["canny_image"])
-                                canny_image = Image.open(BytesIO(canny_image.content))
+                        width = int(project_settings["width"])
+                        height = int(project_settings["height"])
+                        if timing_details[st.session_state['which_image']]["source_image"] != "":
+                            if timing_details[st.session_state['which_image']]["source_image"] .startswith("http"):
+                                canvas_image = r.get(timing_details[st.session_state['which_image']]["source_image"] )
+                                canvas_image = Image.open(BytesIO(canvas_image.content))
                             else:
-                                canny_image = Image.open(timing_details[st.session_state['which_image']]["canny_image"])
+                                canvas_image = Image.open(timing_details[st.session_state['which_image']]["source_image"] )             
                         else:
-                            canny_image = Image.new("RGB", (width, height), "white")
-                        canny_image = canny_image.convert("RGBA")
-                        # canvas_image = canvas_image.convert("RGBA")                                            
-                        canvas_image = im
-                        canvas_image = canvas_image.convert("RGBA")
-                        new_canny_image = Image.alpha_composite(canny_image, canvas_image)
-                        new_canny_image = new_canny_image.convert("RGB")
-                        unique_file_name = str(uuid.uuid4()) + ".png"
-                        file_location = f"videos/{project_name}/assets/resources/masks/{unique_file_name}"
-                        new_canny_image.save(file_location)
-                        update_specific_timing_value(project_name, st.session_state['which_image'], "canny_image", file_location)
-                        st.success("New Canny Image Saved")
-                        st.session_state['reset_canvas'] = True
-                        time.sleep(1)
-                        st.experimental_rerun()  
+                            canvas_image = Image.new("RGB", (width, height), "white")
+                        if 'drawing_input' not in st.session_state:
+                                st.session_state['drawing_input'] = 'Magic shapes 🪄'
+                        col1, col2 = st.columns([6,3])
+                                        
+                        with col1:
+                            st.session_state['drawing_input'] = st.radio(
+                                "Drawing tool:",
+                                ("Draw lines ✏️","Erase Lines ❌","Make shapes 🪄","Move shapes 🏋🏾‍♂️","Make Lines ║"), horizontal=True,
+                            )
+                        
+                            if st.session_state['drawing_input'] == "Move shapes 🏋🏾‍♂️":
+                                drawing_mode = "transform"                                        
+                                stroke_colour = "rgba(0, 0, 0)"
+                            elif st.session_state['drawing_input'] == "Make shapes 🪄":
+                                drawing_mode = "polygon"
+                                stroke_colour = "rgba(0, 0, 0)"                
+                            elif st.session_state['drawing_input'] == "Draw lines ✏️":
+                                drawing_mode = "freedraw"
+                                stroke_colour = "rgba(0, 0, 0)"                
+                            elif st.session_state['drawing_input'] == "Erase Lines ❌":
+                                drawing_mode = "freedraw"
+                                stroke_colour = "rgba(255, 255, 255)"                
+                            elif st.session_state['drawing_input'] == "Make Lines ║":
+                                drawing_mode = "line"
+                                stroke_colour = "rgba(0, 0, 0)"
+                            
+                        
+                        with col2:    
+                            if st.session_state['drawing_input']  == "Draw lines ✏️" or st.session_state['drawing_input']  == "Make Lines ║":         
+                                stroke_width = st.slider("Stroke width: ", 1, 50, 2)
+                            elif st.session_state['drawing_input']  == "Erase Lines ❌":
+                                stroke_width = st.slider("Stroke width: ", 1, 100, 25)
+                            else:
+                                stroke_width = 3
 
-                st.markdown("***")
-                
-                
-                
-                canny1, canny2, canny3 = st.columns([1,1,1.1])
-                with canny1:
-                    st.markdown("#### Use Canny Image From Other Frame")
-                    st.markdown("This will use a canny image from another frame. This will take a few seconds.") 
-                    
-                    if st.session_state['which_image'] == 0:
-                        value = 0
-                    else:
-                        value = st.session_state['which_image'] - 1
-                    which_number_image_for_canny = st.number_input("Which frame would you like to use?", min_value=0, max_value=len(timing_details)-1, value=value, step=1,key="which_number_image_for_canny")
-                    if st.button("Use Canny Image From Other Frame"):
-                        if timing_details[which_number_image_for_canny]["canny_image"] != "":                             
-                            update_specific_timing_value(project_name, st.session_state['which_image'], "canny_image", timing_details[which_number_image_for_canny]["canny_image"])                                                
+                        
+                        
+
+                        if st.button("Clear Canny Image"):
+                            update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", "")                    
+                            st.session_state['reset_canvas'] = True                    
                             st.experimental_rerun()
-                    if timing_details[which_number_image_for_canny]["canny_image"] != "":
-                        st.image(timing_details[which_number_image_for_canny]["canny_image"]) 
-                    else:
-                        st.error("No Canny Image Found")                 
-                with canny2:                                                            
-                    st.markdown("#### Upload Canny Image")
-                    st.markdown("This will upload a canny image from your computer. This will take a few seconds.")
-                    uploaded_file = st.file_uploader("Choose a file")
-                    if st.button("Upload Canny Image"):                                
-                        with open(os.path.join(f"videos/{project_name}/assets/resources/masks",uploaded_file.name),"wb") as f:
-                            f.write(uploaded_file.getbuffer())                                                                                                                                                      
-                            st.success("Your backgrounds are uploaded file - they should appear in the dropdown.")                     
-                            update_specific_timing_value(project_name, st.session_state['which_image'], "canny_image", f"videos/{project_name}/assets/resources/masks/{uploaded_file.name}")                               
-                            time.sleep(1.5)
-                            st.experimental_rerun()  
-                with canny3:
-                    st.markdown("#### Extract Canny From image")
-                    st.markdown("This will extract a canny image from the current image. This will take a few seconds.")
-                    source_of_image = st.radio("Which image would you like to use?", ["Existing Frame", "Uploaded Image"])
-                    if source_of_image == "Existing Frame":
-                        which_frame = st.number_input("Which frame would you like to use?", min_value=0, max_value=len(timing_details)-1, value=st.session_state['which_image'], step=1)
-                        if timing_details[which_frame]["alternative_images"] != "":
-                            variants = timing_details[which_frame]["alternative_images"]                        
-                            current_variant = int(timing_details[which_frame]["primary_image"])     
-                            image_path = variants[current_variant]
-                            st.image(image_path)
+                        
+                        st.markdown("***")
+                        back_and_forward_buttons(timing_details)
+                    
+                    with canvas2:
+
+                        realtime_update = True        
+
+                        if "reset_canvas" not in st.session_state:
+                            st.session_state['reset_canvas'] = False
+
+                        if st.session_state['reset_canvas'] != True:
+                                                
+                            canvas_result = st_canvas(
+                                fill_color="rgba(0, 0, 0)", 
+                                stroke_width=stroke_width,
+                                stroke_color=stroke_colour,
+                                background_color="rgb(255, 255, 255)",
+                                background_image=canvas_image,
+                                update_streamlit=realtime_update,
+                                height=height,
+                                width=width,
+                                drawing_mode=drawing_mode,
+                                display_toolbar=True,
+                                key="full_app",
+                            )
+
+                            
+
+                            if 'image_created' not in st.session_state:
+                                st.session_state['image_created'] = 'no'
+
+                            if canvas_result.image_data is not None:
+                                img_data = canvas_result.image_data
+                                im = Image.fromarray(img_data.astype("uint8"), mode="RGBA")
                         else:
-                            st.error("No Image Found")
+                            st.session_state['reset_canvas'] = False
+                            canvas_result = st_canvas()       
+                            time.sleep(0.1)         
+                            st.experimental_rerun()
 
-                    elif source_of_image == "Uploaded Image":
-                        uploaded_image = st.file_uploader("Choose a file", key="uploaded_image")      
+                    
 
-                    threshold1, threshold2 = st.columns([1,1])
-                    with threshold1:
-                        low_threshold = st.number_input("Low Threshold", min_value=0, max_value=255, value=100, step=1)
-                    with threshold2:                    
-                        high_threshold = st.number_input("High Threshold", min_value=0, max_value=255, value=200, step=1)
-                                                                                                                                                
-                    if st.button("Extract Canny From image"):
+                    if st.button("Save New Canny Image"):
+                        if canvas_result.image_data is not None:
+                            # overlay the canvas image on top of the canny image and save the result
+                            # if canny image is from a url, then we need to download it first
+                            if timing_details[st.session_state['which_image']]["source_image"] != "":
+                                if timing_details[st.session_state['which_image']]["source_image"].startswith("http"):
+                                    canny_image = r.get(timing_details[st.session_state['which_image']]["source_image"])
+                                    canny_image = Image.open(BytesIO(canny_image.content))
+                                else:
+                                    canny_image = Image.open(timing_details[st.session_state['which_image']]["source_image"])
+                            else:
+                                canny_image = Image.new("RGB", (width, height), "white")
+                            canny_image = canny_image.convert("RGBA")
+                            # canvas_image = canvas_image.convert("RGBA")                                            
+                            canvas_image = im
+                            canvas_image = canvas_image.convert("RGBA")
+                            new_canny_image = Image.alpha_composite(canny_image, canvas_image)
+                            new_canny_image = new_canny_image.convert("RGB")
+                            unique_file_name = str(uuid.uuid4()) + ".png"
+                            file_location = f"videos/{project_name}/assets/resources/masks/{unique_file_name}"
+                            new_canny_image.save(file_location)
+                            update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", file_location)
+                            st.success("New Canny Image Saved")
+                            st.session_state['reset_canvas'] = True
+                            time.sleep(1)
+                            st.experimental_rerun()  
+
+                    st.markdown("***")
+                    
+                    
+                    
+                    canny1, canny2, canny3 = st.columns([1,1,1.1])
+                    with canny1:
+                        st.markdown("#### Use Image From Other Frame")
+                        st.markdown("This will use a canny image from another frame. This will take a few seconds.") 
+                        
+                        if st.session_state['which_image'] == 0:
+                            value = 0
+                        else:
+                            value = st.session_state['which_image'] - 1
+                        which_number_image_for_canny = st.number_input("Which frame would you like to use?", min_value=0, max_value=len(timing_details)-1, value=value, step=1,key="which_number_image_for_canny")
+                        if st.button("Use Source Image From Other Frame"):
+                            if timing_details[which_number_image_for_canny]["source_image"] != "":                             
+                                update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", timing_details[which_number_image_for_canny]["source_image"])                                                
+                                st.experimental_rerun()
+                        if timing_details[which_number_image_for_canny]["source_image"] != "":
+                            st.image(timing_details[which_number_image_for_canny]["source_image"]) 
+                        else:
+                            st.error("No Source Image Found")                 
+                    with canny2:                                                            
+                        st.markdown("#### Upload Source Image")
+                        st.markdown("This will upload a canny image from your computer. This will take a few seconds.")
+                        uploaded_file = st.file_uploader("Choose a file")
+                        if st.button("Upload Source Image"):                                
+                            with open(os.path.join(f"videos/{project_name}/assets/resources/masks",uploaded_file.name),"wb") as f:
+                                f.write(uploaded_file.getbuffer())                                                                                                                                                      
+                                st.success("Your file is uploaded")
+                                update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", f"videos/{project_name}/assets/resources/masks/{uploaded_file.name}")                               
+                                time.sleep(1.5)
+                                st.experimental_rerun()  
+                    with canny3:
+                        st.markdown("#### Extract Canny From image")
+                        st.markdown("This will extract a canny image from the current image. This will take a few seconds.")
+                        source_of_image = st.radio("Which image would you like to use?", ["Existing Frame", "Uploaded Image"])
                         if source_of_image == "Existing Frame":
-                            canny_image = extract_canny_lines(image_path, project_name,low_threshold, high_threshold)
+                            which_frame = st.number_input("Which frame would you like to use?", min_value=0, max_value=len(timing_details)-1, value=st.session_state['which_image'], step=1)
+                            if timing_details[which_frame]["alternative_images"] != "":
+                                variants = timing_details[which_frame]["alternative_images"]                        
+                                current_variant = int(timing_details[which_frame]["primary_image"])     
+                                image_path = variants[current_variant]
+                                st.image(image_path)
+                            else:
+                                st.error("No Image Found")
+
                         elif source_of_image == "Uploaded Image":
-                            canny_image = extract_canny_lines(uploaded_image, project_name,low_threshold, high_threshold)
-                        update_specific_timing_value(project_name, int(st.session_state['which_image']), "canny_image", canny_image)
-                        st.session_state['reset_canvas'] = True                        
-                        st.experimental_rerun()
+                            uploaded_image = st.file_uploader("Choose a file", key="uploaded_image")      
+
+                        threshold1, threshold2 = st.columns([1,1])
+                        with threshold1:
+                            low_threshold = st.number_input("Low Threshold", min_value=0, max_value=255, value=100, step=1)
+                        with threshold2:                    
+                            high_threshold = st.number_input("High Threshold", min_value=0, max_value=255, value=200, step=1)
+                                                                                                                                                    
+                        if st.button("Extract Canny From image"):
+                            if source_of_image == "Existing Frame":
+                                canny_image = extract_canny_lines(image_path, project_name,low_threshold, high_threshold)
+                            elif source_of_image == "Uploaded Image":
+                                canny_image = extract_canny_lines(uploaded_image, project_name,low_threshold, high_threshold)
+                            update_specific_timing_value(project_name, int(st.session_state['which_image']), "source_image", canny_image)
+                            st.session_state['reset_canvas'] = True                        
+                            st.experimental_rerun()
             # if current item is 0 
 
-            elif section == "Speed":
+                elif how_to_guide == "Image":
+                    if timing_details[st.session_state['which_image']]["source_image"] != "":
+                        st.image(timing_details[st.session_state['which_image']]["source_image"])
+                    else:
+                        st.error("No Source Image Found")
+
+
+                    canny1, canny2, canny3 = st.columns([1,1,1.1])
+                    with canny1:
+                        st.markdown("#### Use Canny Image From Other Frame")
+                        st.markdown("This will use a canny image from another frame. This will take a few seconds.") 
                         
-                
+                        if st.session_state['which_image'] == 0:
+                            value = 0
+                        else:
+                            value = st.session_state['which_image'] - 1
+                        which_number_image_for_canny = st.number_input("Which frame would you like to use?", min_value=0, max_value=len(timing_details)-1, value=value, step=1,key="which_number_image_for_canny")
+                        if st.button("Use Source Image From Other Frame"):
+                            if timing_details[which_number_image_for_canny]["source_image"] != "":                             
+                                update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", timing_details[which_number_image_for_canny]["source_image"])                                                
+                                st.experimental_rerun()
+                        if timing_details[which_number_image_for_canny]["source_image"] != "":
+                            st.image(timing_details[which_number_image_for_canny]["source_image"]) 
+                        else:
+                            st.error("No Source Image Found")                 
+                    with canny2:                                                            
+                        st.markdown("#### Upload Source Image")
+                        st.markdown("This will upload a canny image from your computer. This will take a few seconds.")
+                        uploaded_file = st.file_uploader("Choose a file")
+                        if st.button("Upload Source Image"):                                
+                            with open(os.path.join(f"videos/{project_name}/assets/resources/masks",uploaded_file.name),"wb") as f:
+                                f.write(uploaded_file.getbuffer())                                                                                                                                                      
+                                st.success("Your file is uploaded")
+                                update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", f"videos/{project_name}/assets/resources/masks/{uploaded_file.name}")                               
+                                time.sleep(1.5)
+                                st.experimental_rerun()  
 
-                clip_data = []
-                start_pct = 0.0
-                total_duration = 0.0
-
-                while start_pct < 1.0:
-                    st.header(f"Section {len(clip_data) + 1}")
-                    end_pct = st.slider(f"What percentage of the original clip should section {len(clip_data) + 1} go until?", min_value=start_pct, max_value=1.0, value=1.0, step=0.01)
-
-                    if end_pct == 1.0:
-                        remaining_duration = 1.0 - total_duration
-                        remaining_pct = 1.0 - start_pct
-                        speed_change = remaining_pct / remaining_duration
-                        st.write(f"Speed change for the last section will be set to **{speed_change:.2f}x** to maintain the original video length.")
-                    else:
-                        speed_change = st.slider(f"What speed change should be applied to section {len(clip_data) + 1}?", min_value=0.1, max_value=10.0, value=1.0, step=0.1)
-
-                    clip_data.append({
-                        "start_pct": start_pct,
-                        "end_pct": end_pct,
-                        "speed_change": speed_change
-                    })
-
-                    original_duration = end_pct - start_pct
-                    final_duration = original_duration / (speed_change + 1e-6)
-                    total_duration += final_duration
-
-                    if speed_change > 1:
-                        st.info(f"This will make the section from **{start_pct * 100:.0f}% to {end_pct * 100:.0f}%** of the video "
-                                f"**{speed_change:.2f}x** faster, so it lasts **{convert_to_minutes_and_seconds(final_duration)}**.")
-                    else:
-                        st.info(f"This will make the section from **{start_pct * 100:.0f}% to {end_pct * 100:.0f}%** of the video "
-                                f"**{1 / speed_change:.2f}x** slower, so it lasts **{convert_to_minutes_and_seconds(final_duration)}**.")
-
-                    # Update the start_pct for the next section
-                    start_pct = float(end_pct)
-
-                    st.markdown("***")
-                st.write(clip_data)
-                                    
-                
-
-            elif section == "Timing":  
+            elif section == "Motion":
+                                                                            
 
                 timing1, timing2 = st.columns([1,1])
 
@@ -383,17 +391,12 @@ def frame_styling_page(mainheader2, project_name):
                         time.sleep(0.3)
                         st.experimental_rerun()
 
-                with timing2:
-                    
-
+                with timing2:                    
         
-
                     # if st.button("Preview audio at this time"):
                     #  audio_bytes = get_audio_bytes_for_slice(project_name, st.session_state['which_image'])
                     # st.audio(audio_bytes, format='audio/wav')
-
-                    
-                                
+                                                    
                     variants = timing_details[st.session_state['which_image']]["alternative_images"]
                     if timing_details[st.session_state['which_image']]["preview_video"] != "":
                         st.video(timing_details[st.session_state['which_image']]['preview_video'])                                 
@@ -410,13 +413,102 @@ def frame_styling_page(mainheader2, project_name):
                             update_specific_timing_value(project_name, st.session_state['which_image'], "preview_video", preview_video)                                    
                             st.experimental_rerun()   
                     back_and_forward_buttons(timing_details) 
+                
+                with st.expander("Animation style"):
 
-                    
+                    animation1,animation2 = st.columns([1.5,1])
+
+                    with animation1:
+
+                        if project_settings["default_animation_style"] == "Direct Morphing":
+                            index_of_animation_style = 1
+                        else:
+                            index_of_animation_style = 0
+
+                        animation_style = st.radio("Which animation style would you like to use for this frame?", ["Interpolation", "Direct Morphing"], index=index_of_animation_style)
+
+                        animationbutton1, animationbutton2 = st.columns([1,1])
+
+                        with animationbutton1:
+
+                            if animation_style != project_settings["default_animation_style"]:
+
+                                if st.button("Update this slides animation style"):
+                                    update_specific_timing_value(project_name, st.session_state['which_image'], "animation_style", animation_style)                            
+                                    st.success("Animation style updated")                                
+                                    update_specific_timing_value(project_name, st.session_state['which_image'], "interpolated_video", "")
+                                    if project_settings["default_animation_style"] == "":
+                                        update_project_setting("default_animation_style", animation_style,project_name)
+                                    time.sleep(0.3)
+                                    st.experimental_rerun()
+                            else:
+                                st.info(f"{animation_style} is already the default animation style for this project")
                         
+                        with animationbutton2:
+                            if animation_style != project_settings["default_animation_style"]:
+                                if st.button(f"Change default animation style to {animation_style}", help="This will change the default animation style - but won't affect current frames."):
+                                    update_project_setting("default_animation_style", animation_style,project_name)    
+                                
+                    with animation2:
                         
+                        if animation_style == "Interpolation":
+                            st.info("This will fill the gaps between the current frame and the next frame with interpolated frames. This will make the animation smoother but will take longer to render.")
+                        elif animation_style == "Direct Morphing":
+                            st.info("This will morph the current frame directly into the next frame. This will make the animation less smooth but can be used to nice effect.")
+
+                        
+                                               
+                            
+                            
+
 
                 
-                                            
+                with st.expander("Clip speed adjustment"):
+                    
+                
+
+                    clip_data = []
+                    start_pct = 0.0
+                    total_duration = 0.0
+                    st.subheader("Speed Adjustment")
+
+                    while start_pct < 1.0:
+                        st.info(f"##### Section {len(clip_data) + 1}")
+                        end_pct = st.slider(f"What percentage of the original clip should section {len(clip_data) + 1} go until?", min_value=start_pct, max_value=1.0, value=1.0, step=0.01)
+
+                        if end_pct == 1.0:
+                            remaining_duration = 1.0 - total_duration
+                            remaining_pct = 1.0 - start_pct
+                            speed_change = remaining_pct / remaining_duration
+                            st.write(f"Speed change for the last section will be set to **{speed_change:.2f}x** to maintain the original video length.")
+                        else:
+                            speed_change = st.slider(f"What speed change should be applied to section {len(clip_data) + 1}?", min_value=0.1, max_value=10.0, value=1.0, step=0.1)
+
+                        clip_data.append({
+                            "start_pct": start_pct,
+                            "end_pct": end_pct,
+                            "speed_change": speed_change
+                        })
+
+                        original_duration = end_pct - start_pct
+                        final_duration = original_duration / (speed_change + 1e-6)
+                        total_duration += final_duration
+
+                        if speed_change > 1:
+                            st.info(f"This will make the section from **{start_pct * 100:.0f}% to {end_pct * 100:.0f}%** of the video "
+                                    f"**{speed_change:.2f}x** faster, so it lasts **{convert_to_minutes_and_seconds(final_duration)}**.")
+                        else:
+                            st.info(f"This will make the section from **{start_pct * 100:.0f}% to {end_pct * 100:.0f}%** of the video "
+                                    f"**{1 / speed_change:.2f}x** slower, so it lasts **{convert_to_minutes_and_seconds(final_duration)}**.")
+
+                        # Update the start_pct for the next section
+                        start_pct = float(end_pct)
+
+                        st.markdown("***")
+                    st.write(clip_data)
+
+                    
+                                                                                                            
                                  
                                                                       
                                                     
@@ -594,35 +686,43 @@ def frame_styling_page(mainheader2, project_name):
 
 
             st.markdown("***")
-            extra_settings_1, extra_settings_2, extra_settings_3, extra_settings_4 = st.columns([4,2.5,3.5,3])
+            extra_settings_1, extra_settings_2 = st.columns([1,1])
 
             with extra_settings_1:
-                
 
-                if st.button(f"Add key frame after #{st.session_state['which_image']}"):
-                    index_of_current_item = st.session_state['which_image']
-                    
-                    timing_details = get_timing_details(project_name)
-                    # if it's the last frame, then add a second to the frame time. If not, then add half the time between the current frame and the next frame.
-                    if index_of_current_item == len(timing_details) - 1:
-                        key_frame_time = float(timing_details[index_of_current_item]["frame_time"]) + 1.0
-                    else:
-                        st.write(timing_details[index_of_current_item]["frame_time"])
-                        st.write(index_of_current_item)
-                        st.write(timing_details[index_of_current_item + 1]["frame_time"])
-                        st.write(index_of_current_item + 1)
-                        key_frame_time = (float(timing_details[index_of_current_item]["frame_time"]) + float(timing_details[index_of_current_item + 1]["frame_time"])) / 2.0
-                    create_timings_row_at_frame_number(project_name, index_of_current_item +1)
-                    update_specific_timing_value(project_name, st.session_state['which_image'] + 1, "frame_time", key_frame_time)
-                    timing_details = get_timing_details(project_name)                    
-                    st.session_state['which_image_value'] = st.session_state['which_image_value'] + 1                
-                    st.experimental_rerun()
-                with extra_settings_4:
-                    if st.button("Delete key frame"):
+                with st.expander("Add Key Frame", expanded=True):
+                
+                    if st.button(f"Add key frame after #{st.session_state['which_image']}"):
                         index_of_current_item = st.session_state['which_image']
-                        delete_frame(project_name, index_of_current_item)                
+                        
                         timing_details = get_timing_details(project_name)
+                        # if it's the last frame, then add a second to the frame time. If not, then add half the time between the current frame and the next frame.
+                        if index_of_current_item == len(timing_details) - 1:
+                            key_frame_time = float(timing_details[index_of_current_item]["frame_time"]) + 1.0
+                        else:
+                            st.write(timing_details[index_of_current_item]["frame_time"])
+                            st.write(index_of_current_item)
+                            st.write(timing_details[index_of_current_item + 1]["frame_time"])
+                            st.write(index_of_current_item + 1)
+                            key_frame_time = (float(timing_details[index_of_current_item]["frame_time"]) + float(timing_details[index_of_current_item + 1]["frame_time"])) / 2.0
+                        create_timings_row_at_frame_number(project_name, index_of_current_item +1)
+                        update_specific_timing_value(project_name, st.session_state['which_image'] + 1, "frame_time", key_frame_time)
+                        timing_details = get_timing_details(project_name)                    
+                        st.session_state['which_image_value'] = st.session_state['which_image_value'] + 1                
                         st.experimental_rerun()
+            with extra_settings_2:
+                
+                with st.expander("Delete Key Frame", expanded=True):
+                    confirm_delete = st.checkbox("Confirm deletion")
+                    if confirm_delete == True:
+                        if st.button("Delete key frame"):
+                            index_of_current_item = st.session_state['which_image']
+                            delete_frame(project_name, index_of_current_item)                
+                            timing_details = get_timing_details(project_name)
+                            st.experimental_rerun()
+                    else:
+                        st.button("Delete key frame", disabled=True)
+
 
 
         elif st.session_state['frame_styling_view_type'] == "List View":
@@ -669,7 +769,7 @@ def frame_styling_page(mainheader2, project_name):
                 with detail4:
                     if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will switch to a Single Frame view type and open this individual image."):
                         st.session_state['which_image_value'] = index_of_current_item
-                        st.session_state['frame_styling_view_type'] = "ControlNet"
+                        st.session_state['frame_styling_view_type'] = "Individual View"
                         st.session_state['frame_styling_view_type_index'] = 1                                    
                         st.experimental_rerun() 
             
