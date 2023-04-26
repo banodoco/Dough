@@ -30,6 +30,58 @@ import shutil
 from moviepy.editor import concatenate_videoclips,TextClip
 import moviepy.editor
 
+def resize_and_rotate_element(stage,timing_details, project_name):
+
+    if "rotated_image" not in st.session_state:
+        st.session_state['rotated_image'] = ""
+                                
+    with st.expander("Rotate + Zoom"):
+        what_degree = st.number_input("Rotate image by: ", 0, 360, 0)
+        what_zoom = st.number_input("Zoom image by: ", 0.1, 5.0, 1.0)
+        if st.button("Rotate Image"): 
+            if stage == "Source":
+                input_image = timing_details[st.session_state['which_image']]["source_image"]                                
+            elif stage == "Styled":
+                input_image = get_primary_variant_location(timing_details, st.session_state['which_image'])
+            if what_degree != 0:                           
+                st.session_state['rotated_image'] = rotate_image(input_image,what_degree)
+                st.session_state['rotated_image'].save("temp.png")
+            else:
+                st.session_state['rotated_image'] = input_image
+                if st.session_state['rotated_image'].startswith("http"):
+                    st.session_state['rotated_image'] = r.get(st.session_state['rotated_image'])
+                    st.session_state['rotated_image'] = Image.open(BytesIO(st.session_state['rotated_image'].content))
+                else:
+                    st.session_state['rotated_image'] = Image.open(st.session_state['rotated_image'])
+                st.session_state['rotated_image'].save("temp.png")
+            if what_zoom != 1.0:
+                st.session_state['rotated_image'] = zoom_image("temp.png", what_zoom)
+        if st.session_state['rotated_image'] != "":
+            st.image(st.session_state['rotated_image'], caption="Rotated image", use_column_width=True)
+            btn1, btn2 = st.columns(2)
+            with btn1:
+                if st.button("Save image",type="primary"):
+                    file_name = str(uuid.uuid4()) + ".png"                    
+                    if stage == "Source":                        
+                        time.sleep(1)
+                        save_location = f"videos/{project_name}/assets/frames/1_selected/{file_name}"                                          
+                        st.session_state['rotated_image'].save(save_location)
+                        update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", save_location)
+                        st.session_state['rotated_image'] = ""
+                        st.experimental_rerun()
+                        
+                    elif stage == "Styled":
+                        save_location = f"videos/{project_name}/assets/frames/2_character_pipeline_completed/{file_name}"
+                        st.session_state['rotated_image'].save(save_location)
+                        number_of_image_variants = add_image_variant(save_location, st.session_state['which_image'], project_name, timing_details)
+                        promote_image_variant(st.session_state['which_image'], project_name,number_of_image_variants - 1) 
+                        st.session_state['rotated_image'] = ""
+                        st.experimental_rerun()
+            with btn2:
+                if st.button("Clear Current Image"):
+                    st.session_state['rotated_image'] = ""
+                    st.experimental_rerun()
+                            
 
 def create_individual_clip(index_of_item, project_name):
 
@@ -148,7 +200,6 @@ def zoom_image(location, zoom_factor):
     return cropped_image
 
 def rotate_image(location, degree):
-    # Check if the provided location is a URL
     if location.startswith('http') or location.startswith('https'):
         response = r.get(location)
         image = Image.open(BytesIO(response.content))
@@ -157,15 +208,15 @@ def rotate_image(location, degree):
             raise FileNotFoundError(f"File not found: {location}")
         image = Image.open(location)
 
-    # Calculate the bounding box needed to contain the rotated image
     width, height = image.size
     angle_radians = radians(abs(degree))
 
-    # Calculate the minimum scale factor to fit the original image in the new dimensions
-    scale_factor = ceil(
-        (abs(width * sin(angle_radians)) + abs(height * sin(angle_radians)))
-        / (2 * min(width, height) * cos(angle_radians))
-    )
+    diagonal = (width**2 + height**2)**0.5
+    max_scale_factor = diagonal / max(width, height)
+    min_scale_factor = 1
+
+    # Calculate the appropriate scale factor
+    scale_factor = max(min_scale_factor, max_scale_factor)
 
     # Resize the image to fill the new dimensions
     resized_image = image.resize((int(width * scale_factor), int(height * scale_factor)), Image.ANTIALIAS)
@@ -603,7 +654,7 @@ def delete_frame(project_name, index_of_current_item):
 
 
 def batch_update_timing_values(project_name, index_of_current_item, prompt, strength, model, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, source_image, custom_models, adapter_type):
-    print("FUCKITY FUCK")
+    
     csv_processor = CSVProcessor(
         "videos/" + str(project_name) + "/timings.csv")
     df = csv_processor.get_df_data()
@@ -1350,21 +1401,24 @@ def slice_part_of_video(project_name, index_of_current_item, video_start_percent
     clip.write_videofile(output_video, audio=False)
     clip.close()
 
-def update_speed_of_video_clip(project_name, location_of_video, speed_change_factor, save_to_new_location):
+def update_speed_of_video_clip(project_name, location_of_video, desired_duration, save_to_new_location):
     # Load the video clip
     clip = VideoFileClip(location_of_video)
 
-    clip = clip.set_fps(1200)
-
-    # Speed up or slow down the video clip using the speed_change_factor
-    updated_clip = clip.fx(vfx.speedx, float(1 / speed_change_factor))
+    clip = clip.set_fps(120)
     
-    updated_clip = updated_clip.set_fps(30)
+    # Calculate the number of frames to keep
+    input_duration = clip.duration
+    total_frames = len(list(clip.iter_frames()))
+    target_frames = int(total_frames * (desired_duration / input_duration))
 
-    print("Frame rate:", clip.fps)
+    # Determine which frames to keep
+    keep_every_n_frames = total_frames / target_frames
+    frames_to_keep = [int(i * keep_every_n_frames) for i in range(target_frames)]
 
-
-
+    # Create a new video clip with the selected frames
+    updated_clip = concatenate_videoclips([clip.subclip(i/clip.fps, (i+1)/clip.fps) for i in frames_to_keep])
+    
     if save_to_new_location:
         file_name = ''.join(random.choices(
             string.ascii_lowercase + string.digits, k=16)) + ".mp4"
@@ -1377,7 +1431,6 @@ def update_speed_of_video_clip(project_name, location_of_video, speed_change_fac
 
     clip.close()
     updated_clip.close()
-
 
     return location_of_video
 
@@ -1784,23 +1837,64 @@ def get_actual_clip_duration(clip_location):
     
     return rounded_duration
 
-def render_video(project_name, final_video_name):
+def calculate_dynamic_interpolations_steps(duration_of_clip):
 
-    project_settings = get_project_settings(project_name)
+    if duration_of_clip < 0.17:
+        interpolation_steps = 2
+    elif duration_of_clip < 0.3:
+        interpolation_steps = 3
+    elif duration_of_clip < 0.57:
+        interpolation_steps = 4
+    elif duration_of_clip < 1.1:
+        interpolation_steps = 5
+    elif duration_of_clip < 2.17:
+        interpolation_steps = 6
+    elif duration_of_clip < 4.3:
+        interpolation_steps = 7
+    else:
+        interpolation_steps = 8
+    return interpolation_steps
+
+def render_video(project_name, final_video_name, timing_details, quality):
 
     timing_details = get_timing_details(project_name)
-    total_number_of_videos = len(timing_details) - 2
-    # FIXXXX!!!!
-    calculate_desired_duration_of_each_clip(timing_details, project_name)
+    calculate_desired_duration_of_each_clip(timing_details,project_name)
+    total_number_of_videos = len(timing_details) - 1
+
+    for i in range(0, total_number_of_videos):
+        index_of_current_item = i
+        if quality == "High-Quality":            
+            timing_details = get_timing_details(project_name)
+            interpolation_steps = calculate_dynamic_interpolations_steps(timing_details[index_of_current_item]["duration_of_clip"])
+            if timing_details[index_of_current_item]["interpolation_steps"] == "" or timing_details[index_of_current_item]["interpolation_steps"] < interpolation_steps:
+                update_specific_timing_value(project_name, index_of_current_item, "interpolation_steps", interpolation_steps)
+                update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", "")                                
+        else:
+            if timing_details[index_of_current_item]["interpolation_steps"] == "":
+                update_specific_timing_value(project_name, index_of_current_item, "interpolation_steps", 3)
+        
+        timing_details = get_timing_details(project_name)
+
+        if timing_details[index_of_current_item]["interpolated_video"] == "":                                                        
+
+            if total_number_of_videos == index_of_current_item:                                            
+                video_location = create_individual_clip(index_of_current_item, project_name)
+                update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", video_location)
+            else:                
+                video_location =  create_individual_clip(index_of_current_item, project_name)
+                update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", video_location)
+                
+
+    project_settings = get_project_settings(project_name)
+    timing_details = get_timing_details(project_name)
+    total_number_of_videos = len(timing_details) - 2    
     timing_details = get_timing_details(project_name)
 
     for i in timing_details:
         index_of_current_item = timing_details.index(i)
         if index_of_current_item <= total_number_of_videos:
             if timing_details[index_of_current_item]["timing_video"] == "":
-
-                         
-                    
+                                                             
                 desired_duration = float(timing_details[index_of_current_item]["duration_of_clip"])
                 print(f"desired_duration: {desired_duration}")
                 location_of_input_video = timing_details[index_of_current_item]["interpolated_video"]               

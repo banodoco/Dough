@@ -7,7 +7,7 @@ from PIL import Image
 import requests as r
 from streamlit_drawable_canvas import st_canvas
 from repository.local_repo.csv_repo import get_app_settings, get_project_settings,update_specific_timing_value,update_project_setting
-from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process,add_image_variant,prompt_interpolation_model,update_speed_of_video_clip,create_timings_row_at_frame_number,extract_canny_lines,get_duration_from_video,get_audio_bytes_for_slice,add_audio_to_video_slice,convert_to_minutes_and_seconds,styling_sidebar,get_primary_variant_location,create_full_preview_video,back_and_forward_buttons,create_single_preview_video,rotate_image,zoom_image
+from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process,add_image_variant,prompt_interpolation_model,update_speed_of_video_clip,create_timings_row_at_frame_number,extract_canny_lines,get_duration_from_video,get_audio_bytes_for_slice,add_audio_to_video_slice,convert_to_minutes_and_seconds,styling_sidebar,get_primary_variant_location,create_full_preview_video,back_and_forward_buttons,create_single_preview_video,resize_and_rotate_element
 from utils.file_upload.s3 import upload_image
 import uuid
 import datetime
@@ -195,14 +195,11 @@ def frame_styling_page(mainheader2, project_name):
                             st.markdown("***")
                             back_and_forward_buttons(timing_details)
                             st.markdown("***")
-                            what_degree = st.number_input("Rotate image by: ", 0, 360, 0)
-                            what_zoom = st.number_input("Zoom image by: ", 0.1, 5.0, 1.0)
-                            if st.button("Rotate Image"):                                
-                                output_image = rotate_image(get_primary_variant_location(timing_details, st.session_state['which_image']),what_degree)
-                                output_image.save("temp.png")
-                                if what_zoom != 1.0:
-                                    output_image = zoom_image("temp.png", what_zoom)
-                                st.image(output_image, caption="Rotated image", use_column_width=True)
+
+                            
+
+                                                                                                                                                                                                            
+                            resize_and_rotate_element("Source", timing_details, project_name)
                         
                         with canvas2:
 
@@ -431,13 +428,26 @@ def frame_styling_page(mainheader2, project_name):
                         # if there are any differences between the saved times then show a warning
                         
                         if st.button("Update Frame Time"):
+
                             if previous_frame_time is not None:
-                                update_specific_timing_value(project_name, st.session_state['which_image']-1, "frame_time", previous_frame_time)                            
+                                update_specific_timing_value(project_name, st.session_state['which_image']-1, "frame_time", previous_frame_time)
+                                update_specific_timing_value(project_name, st.session_state['which_image']-1, "preview_video", "")
+                                if previous_frame_time != timing_details[st.session_state['which_image']-1]['frame_time']:
+                                    update_specific_timing_value(project_name, st.session_state['which_image']-1, "timing_video", "")
+
                             update_specific_timing_value(project_name, st.session_state['which_image'], "frame_time", current_frame_time)
+                            update_specific_timing_value(project_name, st.session_state['which_image'], "preview_video", "")
+                            if current_frame_time != timing_details[st.session_state['which_image']]['frame_time']:
+                                update_specific_timing_value(project_name, st.session_state['which_image'], "timing_video", "")
+
                             if next_frame_time is not None:
                                 update_specific_timing_value(project_name, st.session_state['which_image']+1, "frame_time", next_frame_time)
+                                update_specific_timing_value(project_name, st.session_state['which_image']+1, "preview_video", "")
+                                if next_frame_time != timing_details[st.session_state['which_image']+1]['frame_time']:
+                                    update_specific_timing_value(project_name, st.session_state['which_image']+1, "timing_video", "")
+
                             st.success("Frame time updated")
-                            time.sleep(0.3)
+                            time.sleep(0.2)
                             st.experimental_rerun()
 
                     with timing2:                    
@@ -710,7 +720,7 @@ def frame_styling_page(mainheader2, project_name):
                     
 
                         
-
+                    resize_and_rotate_element("Styled", timing_details, project_name)
                     
 
                     with st.expander("Replace Frame"):
