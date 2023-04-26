@@ -1,7 +1,7 @@
 import streamlit as st
 import time
 from repository.local_repo.csv_repo import get_app_settings, update_specific_timing_value
-from ui_components.common_methods import calculate_desired_duration_of_each_clip, get_timing_details, prompt_interpolation_model
+from ui_components.common_methods import calculate_desired_duration_of_each_clip, get_timing_details,create_individual_clip
 
 def frame_interpolation_page(mainheader2, project_name):
     with mainheader2:
@@ -42,9 +42,7 @@ def frame_interpolation_page(mainheader2, project_name):
                 st.write("8.57 seconds = 8 steps")
         elif dynamic_interolation_steps == "Dynamic":
             st.info("The number of interpolation steps will be calculated based on the length of the gap between each frame.")
-        
-        
-
+                
         which_video = st.radio("Which video to interpolate", options=["All","Single"], horizontal=True)
         delete_existing_videos = st.checkbox("Delete existing videos:", help="This will delete any existing interpolated videos before generating new ones. If you don't want to delete existing videos, leave this unchecked.")
 
@@ -77,10 +75,7 @@ def frame_interpolation_page(mainheader2, project_name):
                         update_specific_timing_value(project_name, timing_details.index(i), "interpolated_video", "")
                     timing_details = get_timing_details(project_name)
                     time.sleep(1) 
-                        
-                
-
-                
+                                                        
 
                 for i in range(0, total_number_of_videos):
 
@@ -90,28 +85,23 @@ def frame_interpolation_page(mainheader2, project_name):
                         calculate_desired_duration_of_each_clip(timing_details,project_name)
                         timing_details = get_timing_details(project_name)
                         interpolation_steps = calculate_dynamic_interpolations_steps(timing_details[index_of_current_item]["duration_of_clip"])
+                        update_specific_timing_value(project_name, index_of_current_item, "interpolation_steps", interpolation_steps)
+                        timing_details = get_timing_details(project_name)
+                    else:
+                        update_specific_timing_value(project_name, index_of_current_item, "interpolation_steps", interpolation_steps)
+                        timing_details = get_timing_details(project_name)
 
                     if timing_details[index_of_current_item]["interpolated_video"] == "":                                                        
 
                         if total_number_of_videos == index_of_current_item:
-
-                            current_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_current_item) + ".png"
-
-                            final_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(key_settings["ending_image"])
-
-                            video_location =  prompt_interpolation_model(current_image_location, next_image_location, project_name,interpolation_steps)
-                
+                                                        
+                            video_location = create_individual_clip(index_of_current_item, project_name)
                             update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", video_location)
 
                         else:
-                            current_image_variants = timing_details[index_of_current_item]["alternative_images"]                
-                            current_image_number = timing_details[index_of_current_item]["primary_image"]
-                            current_image_location = current_image_variants[current_image_number]
-                            next_image_variants = timing_details[index_of_current_item+1]["alternative_images"]                  
-                            next_image_number = timing_details[index_of_current_item+1]["primary_image"]
-                            next_image_location = next_image_variants[next_image_number]
+                            
 
-                            video_location =  prompt_interpolation_model(current_image_location, next_image_location, project_name,interpolation_steps)
+                            video_location =  create_individual_clip(index_of_current_item, project_name)
                 
                             update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", video_location)
                             
@@ -124,15 +114,12 @@ def frame_interpolation_page(mainheader2, project_name):
             if st.button("Interpolate this video"):
 
                 if dynamic_interolation_steps == "Dynamic":
-                    calculate_desired_duration_of_each_clip(timing_details,project_name)
-                    timing_details = get_timing_details(project_name)
+                    calculate_desired_duration_of_each_clip(timing_details,project_name)                    
                     interpolation_steps = calculate_dynamic_interpolations_steps(timing_details[specific_video]["duration_of_clip"])                            
-                
-                current_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(specific_video) + ".png"
+                    update_specific_timing_value(project_name, index_of_current_item, "interpolation_steps", interpolation_steps)
+                    timing_details = get_timing_details(project_name)                               
 
-                next_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(specific_video+1) + ".png"
-
-                video_location =  prompt_interpolation_model(current_image_location, next_image_location, project_name,interpolation_steps)
+                video_location = create_individual_clip(index_of_current_item, project_name)
                 
                 update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", video_location)
     

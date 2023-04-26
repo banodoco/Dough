@@ -18,6 +18,7 @@ import tempfile
 import boto3
 import time
 import zipfile
+from math import cos, sin,ceil,radians
 import random
 import uuid
 from io import BytesIO
@@ -30,31 +31,167 @@ from moviepy.editor import concatenate_videoclips,TextClip
 import moviepy.editor
 
 
-def create_individual_clip(timing_details, index_of_item, project_name):
+def create_individual_clip(index_of_item, project_name):
+
+    timing_details = get_timing_details(project_name)
 
     if timing_details[index_of_item]["animation_style"] == "":
-        app_settings = get_app_settings()
-        animation_style = app_settings["default_animation_style"]
+        project_settings = get_project_settings(project_name)
+        animation_style = project_settings["default_animation_style"]
     else:
         animation_style = timing_details[index_of_item]["animation_style"]
 
-    if animation_style == "Interpolation":
-        st.write("Creating interpolated video")
-    elif animation_style == "Direct Morphing":
-        st.write("Creating style transfer video")
+    if animation_style == "Interpolation":        
+        output_video = prompt_interpolation_model(index_of_item, project_name)
+        
+    elif animation_style == "Direct Morphing":        
+        output_video = create_video_without_interpolation(index_of_item, project_name)
 
-    current_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_item) + ".png"
-
-    next_image_location = "videos/" + str(project_name) + "/assets/frames/2_character_pipeline_completed/" + str(index_of_item+1) + ".png"
+    return output_video
 
         
+def prompt_interpolation_model(index_of_current_item, project_name):
+    timing_details = get_timing_details(project_name)
+    img1 = get_primary_variant_location(timing_details, index_of_current_item)
+    img2 = get_primary_variant_location(timing_details, index_of_current_item+1)
+    interpolation_steps = int(float(timing_details[index_of_current_item]["interpolation_steps"]))
+    app_settings = get_app_settings()
+    replicate_api_key = app_settings["replicate_com_api_key"]
+    os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
+    model = replicate.models.get("google-research/frame-interpolation")
+    version = model.versions.get("4f88a16a13673a8b589c18866e540556170a5bcb2ccdc12de556e800e9456d3d")
 
-def create_single_preview_video(timing_details, index_of_item, project_name):
+    if not img1.startswith("http"):
+        img1 = open(img1, "rb")
+
+    if not img2.startswith("http"):
+        img2 = open(img2, "rb")
+
+    output = version.predict(frame1=img1, frame2=img2,times_to_interpolate=interpolation_steps)
+    file_name = ''.join(random.choices(
+        string.ascii_lowercase + string.digits, k=16)) + ".mp4"
+
+    video_location = "videos/" + project_name + \
+        "/assets/videos/0_raw/" + str(file_name)
+    try:
+        urllib.request.urlretrieve(output, video_location)
+
+    except Exception as e:
+        print(e)
+
+    clip = VideoFileClip(video_location)
+
+    return video_location
+
+def create_video_without_interpolation(index_of_item, project_name):
+
+    timing_details = get_timing_details(project_name)
+
+    image_path_or_url = get_primary_variant_location(timing_details, index_of_item)
+
+    video_location = "videos/" + project_name + "/assets/videos/0_raw/" + \
+                     ''.join(random.choices(string.ascii_lowercase + string.digits, k=16)) + ".mp4"
+    os.makedirs(os.path.dirname(video_location), exist_ok=True)
+
+    if image_path_or_url.startswith("http://") or image_path_or_url.startswith("https://"):
+        response = r.get(image_path_or_url)
+        image = np.asarray(bytearray(response.content), dtype="uint8")
+        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+    else:
+        image = cv2.imread(image_path_or_url)
+
+    if image is None:
+        raise ValueError("Could not read the image. Please provide a valid image path or URL.")
+
+    height, width, _ = image.shape
+    fourcc = cv2.VideoWriter_fourcc(*"avc1")
+    fps = int(1 / 0.1)
+    video_writer = cv2.VideoWriter(video_location, fourcc, fps, (width, height))
+
+    for _ in range(fps):
+        video_writer.write(image)
+
+    video_writer.release()
+
+    return video_location
+
+
+def zoom_image(location, zoom_factor):
+    if zoom_factor <= 0:
+        raise ValueError("Zoom factor must be greater than 0")
+
+    # Check if the provided location is a URL
+    if location.startswith('http') or location.startswith('https'):
+        response = requests.get(location)
+        image = Image.open(BytesIO(response.content))
+    else:
+        if not os.path.exists(location):
+            raise FileNotFoundError(f"File not found: {location}")
+        image = Image.open(location)
+
+    # Calculate new dimensions based on zoom factor
+    width, height = image.size
+    new_width = int(width * zoom_factor)
+    new_height = int(height * zoom_factor)
+
+    # Resize the image
+    resized_image = image.resize((new_width, new_height), Image.ANTIALIAS)
+
+    # Crop the image to maintain the original dimensions
+    left = (resized_image.width - width) / 2
+    top = (resized_image.height - height) / 2
+    right = (resized_image.width + width) / 2
+    bottom = (resized_image.height + height) / 2
+
+    cropped_image = resized_image.crop((left, top, right, bottom))
+
+    return cropped_image
+
+def rotate_image(location, degree):
+    # Check if the provided location is a URL
+    if location.startswith('http') or location.startswith('https'):
+        response = r.get(location)
+        image = Image.open(BytesIO(response.content))
+    else:
+        if not os.path.exists(location):
+            raise FileNotFoundError(f"File not found: {location}")
+        image = Image.open(location)
+
+    # Calculate the bounding box needed to contain the rotated image
+    width, height = image.size
+    angle_radians = radians(abs(degree))
+
+    # Calculate the minimum scale factor to fit the original image in the new dimensions
+    scale_factor = ceil(
+        (abs(width * sin(angle_radians)) + abs(height * sin(angle_radians)))
+        / (2 * min(width, height) * cos(angle_radians))
+    )
+
+    # Resize the image to fill the new dimensions
+    resized_image = image.resize((int(width * scale_factor), int(height * scale_factor)), Image.ANTIALIAS)
+
+    # Create a new image with the original dimensions and paste the resized image at the center
+    expanded_image = Image.new(image.mode, (width, height), color=(255, 255, 255))
+    expanded_image.paste(
+        resized_image,
+        (int((width - resized_image.width) / 2), int((height - resized_image.height) / 2))
+    )
+
+    # Rotate the image by the specified degree
+    rotated_image = expanded_image.rotate(-degree, resample=Image.BICUBIC, expand=False)
+
+    return rotated_image
+
+
+def create_single_preview_video(index_of_item, project_name):
+    timing_details = get_timing_details(project_name)
+    project_details = get_project_settings(project_name)
 
     if timing_details[index_of_item]["interpolated_video"] == "":
+        update_specific_timing_value(project_name, index_of_item, "interpolation_steps", 3)
         previous_image_location = get_primary_variant_location(timing_details, index_of_item)
         current_image_location = get_primary_variant_location(timing_details, index_of_item +1)
-        interpolated_video = prompt_interpolation_model(previous_image_location, current_image_location, project_name,3)
+        interpolated_video = create_individual_clip(index_of_item, project_name)
         update_specific_timing_value(project_name, index_of_item, "interpolated_video", interpolated_video)
     else:
         interpolated_video = timing_details[index_of_item]["interpolated_video"]                                
@@ -64,16 +201,17 @@ def create_single_preview_video(timing_details, index_of_item, project_name):
     duration_of_video = get_duration_from_video(video_location)                                                                
     desired_duration = float(timing_details[index_of_item+1]["frame_time"]) - float(timing_details[index_of_item]["frame_time"])
     speed_change_required = float(desired_duration / duration_of_video)                                
-    update_speed_of_video_clip(video_location, speed_change_required)
-    audio_bytes = get_audio_bytes_for_slice(project_name, index_of_item)
-    add_audio_to_video_slice(video_location, audio_bytes)
+    update_speed_of_video_clip(project_name,video_location, speed_change_required, False)
+    if project_details["audio"] != "":
+        audio_bytes = get_audio_bytes_for_slice(project_name, index_of_item)
+        add_audio_to_video_slice(video_location, audio_bytes)
 
     return video_location
 
-def create_full_preview_video(timing_details, project_name, index_of_item):
+def create_full_preview_video(project_name, index_of_item):
     
-    last_preview_video = create_single_preview_video(timing_details, index_of_item-1,project_name)
-    current_preview_video = create_single_preview_video(timing_details, index_of_item,project_name)
+    last_preview_video = create_single_preview_video(index_of_item-1,project_name)
+    current_preview_video = create_single_preview_video(index_of_item,project_name)
 
     last_clip = moviepy.editor.VideoFileClip(last_preview_video)
     current_clip = moviepy.editor.VideoFileClip(current_preview_video)
@@ -170,6 +308,7 @@ def styling_sidebar(project_name,timing_details):
         if 'index_of_controlnet_adapter_type' not in st.session_state:
             st.session_state['index_of_controlnet_adapter_type'] = 0
         st.session_state['adapter_type'] = st.selectbox(f"Adapter Type",controlnet_adapter_types, index=st.session_state['index_of_controlnet_adapter_type'])
+        
         if st.session_state['index_of_controlnet_adapter_type'] != controlnet_adapter_types.index(st.session_state['adapter_type']):
             st.session_state['index_of_controlnet_adapter_type'] = controlnet_adapter_types.index(st.session_state['adapter_type'])
             st.experimental_rerun()
@@ -259,6 +398,10 @@ def styling_sidebar(project_name,timing_details):
             st.session_state['num_inference_steps'] = st.number_input(f"Inference steps", value=int(st.session_state['num_inference_steps']))
                         
     batch_run_range = st.slider("Select range:", 1, 0, (0, len(timing_details)-1))  
+    first_batch_run_value = batch_run_range[0]
+    last_batch_run_value = batch_run_range[1]
+    
+    st.write(batch_run_range)
     
     st.session_state["promote_new_generation"] = True                    
     st.session_state["promote_new_generation"] = st.checkbox("Promote new generation to main variant", value=True, key="promote_new_generation_to_main_variant")
@@ -272,6 +415,7 @@ def styling_sidebar(project_name,timing_details):
 
     with btn1:
         batch_number_of_variants = st.number_input("How many variants?", value=1, min_value=1, max_value=10, step=1, key="number_of_variants")
+        
     
 
     with btn2:
@@ -286,7 +430,7 @@ def styling_sidebar(project_name,timing_details):
                 st.session_state['restyle_button'] = ''
                 st.session_state['item_to_restyle'] = ''
 
-            for i in range(batch_run_range[1]+1):
+            for i in range(first_batch_run_value, last_batch_run_value+1):
                 for number in range(0, batch_number_of_variants):
                     index_of_current_item = i
                     trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],st.session_state['custom_models'],st.session_state['adapter_type'],st.session_state["use_new_settings"])
@@ -658,30 +802,7 @@ def create_or_update_mask(project_name, index_of_current_number, image):
     return file_location
 
 
-def create_video_without_interpolation(timing_details, output_file):
-    # Create a list of ffmpeg inputs, each input being a frame with its duration
-    inputs = []
-    for i in range(len(timing_details)):
-        # Get the current frame details
-        frame = timing_details[i]
-        frame_time = frame['frame_time']
-        source_image = frame['source_image']
 
-        # Get the duration of this frame
-        if i == len(timing_details) - 1:
-            # This is the last frame, just make its duration the same as the previous
-            duration = frame_time - timing_details[i-1]['frame_time']
-        else:
-            # This is not the last frame, get the duration until the next frame
-            duration = timing_details[i+1]['frame_time'] - frame_time
-
-        # Create an ffmpeg input for this frame
-        inputs.append(
-            ffmpeg.input(source_image, t=str(duration), ss=str(frame_time))
-        )
-
-    # Concatenate the inputs and export the video
-    ffmpeg.concat(*inputs).output(output_file).run()
 
 
 def create_working_assets(video_name):
@@ -711,15 +832,15 @@ def create_working_assets(video_name):
     os.mkdir("videos/" + video_name + "/assets/videos/1_final")
     os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
 
-    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type'],
-            'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Extracted Frames', "None", ""]}
+    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type','guidance_type','default_animation_style'],
+            'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Extracted Frames', "None", "","",""]}
 
     df = pd.DataFrame(data)
 
     df.to_csv(f'videos/{video_name}/settings.csv', index=False)
 
     df = pd.DataFrame(columns=['frame_time', 'frame_number', 'primary_image', 'alternative_images', 'custom_pipeline', 'negative_prompt', 'guidance_scale', 'seed', 'num_inference_steps',
-                      'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'duration_of_clip', 'interpolated_video', 'timing_video', 'prompt', 'mask'])
+                      'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'duration_of_clip', 'interpolated_video', 'timing_video', 'prompt', 'mask','canny_image','preview_video','animation_style','interpolation_steps'])
 
     # df.loc[0] = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
 
@@ -887,35 +1008,7 @@ def get_model_details(model_name):
                 return model_details
 
 
-def prompt_interpolation_model(img1, img2, project_name, interpolation_steps):
-    app_settings = get_app_settings()
-    replicate_api_key = app_settings["replicate_com_api_key"]
-    os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
-    model = replicate.models.get("google-research/frame-interpolation")
-    version = model.versions.get("4f88a16a13673a8b589c18866e540556170a5bcb2ccdc12de556e800e9456d3d")
 
-    if not img1.startswith("http"):
-        img1 = open(img1, "rb")
-
-    if not img2.startswith("http"):
-        img2 = open(img2, "rb")
-
-    output = version.predict(frame1=img1, frame2=img2,
-                           times_to_interpolate=interpolation_steps)
-    file_name = ''.join(random.choices(
-        string.ascii_lowercase + string.digits, k=16)) + ".mp4"
-
-    video_location = "videos/" + project_name + \
-        "/assets/videos/0_raw/" + str(file_name)
-    try:
-        urllib.request.urlretrieve(output, video_location)
-
-    except Exception as e:
-        print(e)
-
-    clip = VideoFileClip(video_location)
-
-    return video_location
     
 
 def remove_background(project_name, input_image):
@@ -1257,23 +1350,42 @@ def slice_part_of_video(project_name, index_of_current_item, video_start_percent
     clip.write_videofile(output_video, audio=False)
     clip.close()
 
-def update_speed_of_video_clip(location_of_video, desired_speed_change):
-    
-    
+def update_speed_of_video_clip(project_name, location_of_video, speed_change_factor, save_to_new_location):
+    # Load the video clip
     clip = VideoFileClip(location_of_video)
-    clip_location = location_of_video
 
-    # Use the desired speed change directly
-    desired_speed_change_text = str(desired_speed_change) + "*PTS"
+    clip = clip.set_fps(1200)
 
-    video_stream = ffmpeg.input(str(clip_location))
-    video_stream = video_stream.filter('setpts', desired_speed_change_text)
-    ffmpeg.output(video_stream, "output.mp4").run()
-
-    os.remove(location_of_video)
-    os.rename("output.mp4", location_of_video)
-
+    # Speed up or slow down the video clip using the speed_change_factor
+    updated_clip = clip.fx(vfx.speedx, float(1 / speed_change_factor))
     
+    updated_clip = updated_clip.set_fps(30)
+
+    print("Frame rate:", clip.fps)
+
+
+
+    if save_to_new_location:
+        file_name = ''.join(random.choices(
+            string.ascii_lowercase + string.digits, k=16)) + ".mp4"
+        location_of_video = "videos/" + str(project_name) + "/assets/videos/1_final/" + str(file_name)
+    else:
+        os.remove(location_of_video)
+
+    # Save the updated video clip
+    updated_clip.write_videofile(location_of_video, codec='libx265')
+
+    clip.close()
+    updated_clip.close()
+
+
+    return location_of_video
+
+
+
+
+
+'''
 
 
 def update_video_speed(project_name, index_of_current_item, duration_of_static_time, total_duration_of_clip, timing_details):
@@ -1330,7 +1442,7 @@ def update_video_speed(project_name, index_of_current_item, duration_of_static_t
                   "/assets/videos/0_raw/static.mp4")
     else:
         final_clip = concatenate_videoclips([VideoFileClip("videos/" + str(project_name) + "/assets/videos/0_raw/static.mp4"),
-                                            VideoFileClip("videos/" + str(video_name) + "/assets/videos/0_raw/moving.mp4")])
+                                            VideoFileClip("videos/" + str(project_name) + "/assets/videos/0_raw/moving.mp4")])
 
         final_clip.write_videofile(
             "videos/" + str(project_name) + "/assets/videos/0_raw/full_output.mp4", fps=30)
@@ -1345,6 +1457,7 @@ def update_video_speed(project_name, index_of_current_item, duration_of_static_t
     update_specific_timing_value(project_name, index_of_current_item, "timing_video",
                                  "videos/" + str(project_name) + "/assets/videos/1_final/" + str(file_name))
 
+'''    
 
 def calculate_desired_duration_of_each_clip(timing_details, project_name):
 
@@ -1578,17 +1691,20 @@ def create_timings_row_at_frame_number(project_name, index_of_new_item):
     }
     df = df.astype(column_types, errors='ignore')
     
-    update_specific_timing_value(project_name, index_of_new_item - 1, "interpolated_video", "")
-    
-    if index_of_new_item < len(get_timing_details(project_name)) - 1:
-        update_specific_timing_value(project_name, index_of_new_item + 1, "interpolated_video", "")
 
-    update_specific_timing_value(project_name, index_of_new_item - 1, "timing_video", "")
-    
-    if index_of_new_item < len(get_timing_details(project_name)) - 1:
-        update_specific_timing_value(project_name, index_of_new_item + 1, "timing_video", "")
-    
     df.to_csv(f'videos/{project_name}/timings.csv', index=False)
+    'remove the interpolated video from the current row and the row before and after - unless it is the first or last row'
+    update_specific_timing_value(project_name, index_of_new_item, "interpolated_video", "")
+    
+    
+
+    if index_of_new_item != 0:
+        update_specific_timing_value(project_name, index_of_new_item-1, "interpolated_video", "")
+    
+    if index_of_new_item != len(df)-1:
+        update_specific_timing_value(project_name, index_of_new_item+1, "interpolated_video", "")
+    
+    
 
     return index_of_new_item
 
@@ -1644,8 +1760,29 @@ def add_audio_to_video_slice(video_location, audio_bytes):
     # Rename the output file to have the same name as the original video file
     os.rename("output_with_audio.mp4", video_location)
 
+def calculate_desired_speed_change(input_video_location, target_duration):
+    # Load the video clip
+    input_clip = VideoFileClip(input_video_location)
+    
+    # Get the duration of the input video clip
+    input_duration = input_clip.duration
+    
+    # Calculate the desired speed change
+    desired_speed_change = target_duration / input_duration
+    
+    return desired_speed_change
 
 
+def get_actual_clip_duration(clip_location):
+    # Load the video clip
+    clip = VideoFileClip(clip_location)
+    
+    # Get the duration of the video clip
+    duration = clip.duration
+
+    rounded_duration = round(duration, 5)
+    
+    return rounded_duration
 
 def render_video(project_name, final_video_name):
 
@@ -1653,6 +1790,7 @@ def render_video(project_name, final_video_name):
 
     timing_details = get_timing_details(project_name)
     total_number_of_videos = len(timing_details) - 2
+    # FIXXXX!!!!
     calculate_desired_duration_of_each_clip(timing_details, project_name)
     timing_details = get_timing_details(project_name)
 
@@ -1660,10 +1798,39 @@ def render_video(project_name, final_video_name):
         index_of_current_item = timing_details.index(i)
         if index_of_current_item <= total_number_of_videos:
             if timing_details[index_of_current_item]["timing_video"] == "":
-                total_duration_of_clip, duration_of_static_time = find_duration_of_clip(
-                    index_of_current_item, timing_details, total_number_of_videos)
-                update_video_speed(project_name, index_of_current_item,
-                                   duration_of_static_time, total_duration_of_clip, timing_details)
+
+                         
+                    
+                desired_duration = float(timing_details[index_of_current_item]["duration_of_clip"])
+                print(f"desired_duration: {desired_duration}")
+                location_of_input_video = timing_details[index_of_current_item]["interpolated_video"]               
+                print(f"Location of input video: {location_of_input_video}")
+                duration_of_input_video = float(get_duration_from_video(location_of_input_video))                                                                
+                print(f"duration_of_input_video: {duration_of_input_video}")       
+                # how much would we need to speed up the video to get the desired duration
+                speed_change_required = float(desired_duration/duration_of_input_video)
+                update_specific_timing_value(project_name, index_of_current_item, "speed_change_factor", speed_change_required)
+                update_specific_timing_value(project_name, index_of_current_item, "input_video_time", duration_of_input_video)
+                
+                print("THISSSS!!!!")
+
+                    
+
+                    
+                print(f"Speed change required: {speed_change_required}")
+                ''' 
+                new_file_name = str(uuid.uuid4()) + ".mp4"
+                video_location =  f"videos/{project_name}/assets/videos/1_final/{new_file_name}"
+                shutil.copyfile(interpolated_video, video_location)
+                duration_of_video = get_duration_from_video(video_location)                                                                
+                desired_duration = float(timing_details[index_of_item+1]["frame_time"]) - float(timing_details[index_of_item]["frame_time"])
+                speed_change_required = float(desired_duration / duration_of_video)                                
+                update_speed_of_video_clip(project_name,video_location, speed_change_required, False)
+                '''        
+                location_of_output_video = update_speed_of_video_clip(project_name, location_of_input_video, speed_change_required, True)
+                update_specific_timing_value(project_name, index_of_current_item, "timing_video", location_of_output_video)                
+                update_specific_timing_value(project_name, index_of_current_item, "actual_duration_of_clip", get_actual_clip_duration(location_of_output_video))
+
 
     video_list = []
 
@@ -1816,8 +1983,8 @@ def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
         'n_prompt': timing_details[index_of_current_item]["negative_prompt"] + ", longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
         'detect_resolution': 512,
         'bg_threshold': 0,
-        'low_threshold': 250,
-        'high_threshold': 255,
+        'low_threshold': 13,
+        'high_threshold': 140,
     }
     
     output = version.predict(**inputs)

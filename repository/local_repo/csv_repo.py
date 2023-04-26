@@ -60,7 +60,7 @@ class CSVProcessor:
         df.iloc[index_of_current_item, col_index] = value
         
 
-        numeric_cols = ["primary_image", "seed", "num_inference_steps"]
+        numeric_cols = ["primary_image", "seed", "num_inference_steps","interpolation_steps"]
 
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], downcast="integer", errors="coerce")

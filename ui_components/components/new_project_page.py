@@ -13,34 +13,37 @@ def new_project_page():
         st.write("")            
     b1, b2, b3 = st.columns(3)
     with b1:
-        width = int(st.selectbox("Select video width:", options=["512","704","768","1024"], key="video_width"))
+        width = int(st.selectbox("Select video width:", options=["512","683","704","768","1024"], key="video_width"))
         
     with b2:
-        height = int(st.selectbox("Select video height:", options=["512","704","768","1024"], key="video_height"))
+        height = int(st.selectbox("Select video height:", options=["512","683","704","768","1024"], key="video_height"))
     with b3:
         st.info("We recommend a small size + then scaling up afterwards.")
     
-    input_type = st.radio("Select input type:", options=["Video","Image"], key="input_type", disabled=True,help="Only video is available at the moment, let me know if you need image support - it should be pretty easy.", horizontal=True)
-    
-    c1, c2 = st.columns(2)
-    with c1:               
-        uploaded_video = st.file_uploader("Choose a video file:")
-    with c2:
-        st.write("")
-        st.write("")
-        audio_options = ["No audio","Attach new audio"]
+    guidance_type = st.radio("Select guidance type:", options=["Drawing","Images","Video"], help="You can always change this later.", key="guidance_type", horizontal=True)
+    audio_options = ["No audio","Attach new audio"]
+    if guidance_type == "Video":
+        c1, c2 = st.columns(2)
+        with c1:               
+            uploaded_video = st.file_uploader("Choose a video file:")
+        with c2:
+            st.write("")
+            st.write("")        
+            if uploaded_video is not None:
+                audio_options.append("Keep audio from original video")                           
+            st.info("This video will be resized to match the dimensions above.")
         if uploaded_video is not None:
-            audio_options.append("Keep audio from original video")               
-            
-        st.info("Make sure that this video is the same size as you've specified above.")
-    if uploaded_video is not None:
-        resize_this_video = st.checkbox("Resize video to match video dimensions above", value=True)
-    
+            resize_this_video = st.checkbox("Resize video to match video dimensions above", value=True)
+    else:
+        uploaded_video = None
+        resize_this_video = False
+        
     audio = st.radio("Audio:", audio_options, key="audio",horizontal=True)
     if uploaded_video is None:
         st.info("You can also keep the audio from your original video - just upload the video above and the option will appear.")                
 
     default_animation_style = st.radio("Select default animation style:", options=["Interpolation","Direct Morphing"], help="You can always change this later.", key="default_animation_style", horizontal=True)
+
         
     if audio == "Attach new audio":
         d1, d2 = st.columns([4,5])
@@ -59,8 +62,9 @@ def new_project_page():
         create_working_assets(new_project_name)                    
         update_project_setting("width", width, new_project_name)
         update_project_setting("height", height, new_project_name)  
-        update_project_setting("input_type", input_type, new_project_name)
+        
         update_project_setting("default_animation_style", default_animation_style, new_project_name)
+        update_project_setting("guidance_type", guidance_type, new_project_name)
         
         
         if uploaded_video is not None:
