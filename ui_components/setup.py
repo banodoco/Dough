@@ -10,7 +10,6 @@ from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.batch_action_page import batch_action_page
 from ui_components.components.custom_models_page import custom_models_page
 from ui_components.components.frame_editing_page import frame_editing_page
-from ui_components.components.frame_interpolation_page import frame_interpolation_page
 from ui_components.components.frame_styling_page import frame_styling_page
 from ui_components.components.key_frame_selection import key_frame_selection_page
 from ui_components.components.new_project_page import new_project_page
@@ -63,7 +62,7 @@ def setup_app_ui():
             pages = [
             {
                 "section_name": "Main Process",        
-                "pages": ["Key Frame Selection","Frame Styling", "Frame Editing", "Frame Interpolation","Video Rendering"]
+                "pages": ["Key Frame Selection","Frame Styling", "Frame Editing","Video Rendering"]
             },
             {
                 "section_name": "Tools",
@@ -100,8 +99,6 @@ def setup_app_ui():
                 new_project_page()
             elif st.session_state["page"] == "Frame Styling":
                 frame_styling_page(mainheader2, st.session_state["project_name"])
-            elif st.session_state["page"] == "Frame Interpolation":
-                frame_interpolation_page(mainheader2, st.session_state["project_name"])
             elif st.session_state["page"] == "Video Rendering":
                 video_rendering_page(mainheader2, st.session_state["project_name"])
             elif st.session_state["page"] == "Batch Actions":
