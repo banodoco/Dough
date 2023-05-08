@@ -346,7 +346,7 @@ def key_frame_selection_page(mainheader2, project_name):
                         image = Image.open(
                             timing_details[index_of_current_item]["source_image"])
 
-                    st.image(image, use_column_width=True)
+                    st.image(image, width=300)
 
                     col1, col2, col3, col4 = st.columns([1, 1, 1, 2])
 
@@ -356,10 +356,11 @@ def key_frame_selection_page(mainheader2, project_name):
                         st.markdown(f"Frame Time: {frame_time}")
 
                     with col2:
+                        st.write("")
                         # return frame number to 2 decimal places
-                        frame_number = round(
-                            float(timing_details[index_of_current_item]['frame_number']), 2)
-                        st.markdown(f"Frame Number: {frame_number}")
+                        #frame_number = round(
+                        #    float(timing_details[index_of_current_item]['frame_number']), 2)
+                       # st.markdown(f"Frame Number: {frame_number}")
 
                     with col4:
                         if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will switch to a Single Frame view type and open this individual image."):

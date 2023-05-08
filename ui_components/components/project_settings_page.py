@@ -49,14 +49,15 @@ def project_settings_page(project_name):
                     # change timings.csv to last_timings.csv
                     os.rename(f"videos/{project_name}/timings.csv", f"videos/{project_name}/timings_previous.csv")
                     # rename i to timings.csv
-                    os.rename(f"videos/{project_name}/{i}", f"videos/{project_name}/timings.csv")
+                    # make this copy the file instead using shutil os.rename(f"videos/{project_name}/{i}", f"videos/{project_name}/timings.csv")
+                    shutil.copyfile(f"videos/{project_name}/{i}", f"videos/{project_name}/timings.csv")
                     st.success("Version restored successfully! Just in case, the previous version has been saved as last_timings.csv")
                     time.sleep(2)
                     st.experimental_rerun()
     
     with st.expander("Frame Size"):
         st.write("Current Size = ", project_settings["width"], "x", project_settings["height"])
-        width = st.selectbox("Select video width", options=["512","704","1024"], key="video_width")
+        width = st.selectbox("Select video width", options=["512","683","704","1024"], key="video_width")
         height = st.selectbox("Select video height", options=["512","704","1024"], key="video_height")
         if st.button("Save"):
             update_project_setting("width", width, project_name)

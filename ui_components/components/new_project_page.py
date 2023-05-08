@@ -4,6 +4,7 @@ from repository.local_repo.csv_repo import update_project_setting
 from utils.media_processor.video import resize_video
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import time
+import os
 
 def new_project_page():
     a1, a2 = st.columns(2)
@@ -13,7 +14,7 @@ def new_project_page():
         st.write("")            
     b1, b2, b3 = st.columns(3)
     with b1:
-        width = int(st.selectbox("Select video width:", options=["512","683","704","768","1024"], key="video_width"))
+        width = int(st.selectbox("Select video width:", options=["512","683","704","768","896","1024"], key="video_width"))
         
     with b2:
         height = int(st.selectbox("Select video height:", options=["512","683","704","768","1024"], key="video_height"))
@@ -85,6 +86,8 @@ def new_project_page():
                 update_project_setting("audio", uploaded_audio.name, new_project_name)                
                                                     
         st.session_state["project_name"] = new_project_name            
+        video_list = [f for f in os.listdir("videos") if not f.startswith('.')]
+        st.session_state["index_of_project_name"] = video_list.index(new_project_name)
         st.success("Project created! It should be open now. Click into 'Main Process' to get started")
         time.sleep(1)
         st.experimental_rerun()

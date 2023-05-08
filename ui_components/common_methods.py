@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 import base64
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageOps,ImageEnhance,ImageFilter
 from moviepy.editor import *
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 import cv2
@@ -18,7 +18,7 @@ import tempfile
 import boto3
 import time
 import zipfile
-from math import cos, sin,ceil,radians
+from math import cos, sin,ceil,radians,gcd
 import random
 import uuid
 from io import BytesIO
@@ -28,16 +28,23 @@ from repository.local_repo.csv_repo import CSVProcessor, get_app_settings, get_p
 from pydub import AudioSegment
 import shutil
 from moviepy.editor import concatenate_videoclips,TextClip
+from moviepy.video.fx.all import speedx
 import moviepy.editor
+from streamlit_cropper import st_cropper
+
 
 def resize_and_rotate_element(stage,timing_details, project_name):
 
     if "rotated_image" not in st.session_state:
         st.session_state['rotated_image'] = ""
                                 
-    with st.expander("Rotate + Zoom"):
-        what_degree = st.number_input("Rotate image by: ", 0, 360, 0)
-        what_zoom = st.number_input("Zoom image by: ", 0.1, 5.0, 1.0)
+    with st.expander("Zoom Image"):
+        select1, select2 = st.columns([2,1])
+        with select1:
+            what_degree = st.number_input("Rotate image by: ", 0.0, 360.0, 0.0)
+            what_zoom = st.number_input("Zoom image by: ", 0.1, 5.0, 1.0)
+        with select2:
+            fill_with = st.radio("Fill blank space with: ", ["Blur", None])
         if st.button("Rotate Image"): 
             if stage == "Source":
                 input_image = timing_details[st.session_state['which_image']]["source_image"]                                
@@ -55,9 +62,9 @@ def resize_and_rotate_element(stage,timing_details, project_name):
                     st.session_state['rotated_image'] = Image.open(st.session_state['rotated_image'])
                 st.session_state['rotated_image'].save("temp.png")
             if what_zoom != 1.0:
-                st.session_state['rotated_image'] = zoom_image("temp.png", what_zoom)
+                st.session_state['rotated_image'] = zoom_image("temp.png", what_zoom,fill_with)
         if st.session_state['rotated_image'] != "":
-            st.image(st.session_state['rotated_image'], caption="Rotated image", use_column_width=True)
+            st.image(st.session_state['rotated_image'], caption="Rotated image", width=300)
             btn1, btn2 = st.columns(2)
             with btn1:
                 if st.button("Save image",type="primary"):
@@ -167,8 +174,36 @@ def create_video_without_interpolation(index_of_item, project_name):
 
     return video_location
 
+def get_pillow_image(image_location):
+    if image_location.startswith("http://") or image_location.startswith("https://"):
+        response = r.get(image_location)
+        image = Image.open(BytesIO(response.content))        
+    else:
+        image = Image.open(image_location)
 
-def zoom_image(location, zoom_factor):
+    return image
+        
+
+
+
+
+            
+
+
+def create_alpha_mask(size, edge_blur_radius):
+    mask = Image.new('L', size, 0)
+    draw = ImageDraw.Draw(mask)
+
+    width, height = size
+    draw.rectangle((edge_blur_radius, edge_blur_radius, width - edge_blur_radius, height - edge_blur_radius), fill=255)
+
+    mask = mask.filter(ImageFilter.GaussianBlur(radius=edge_blur_radius))
+    return mask
+
+def zoom_image(location, zoom_factor, fill_with=None):
+    blur_radius = 5
+    edge_blur_radius = 15
+
     if zoom_factor <= 0:
         raise ValueError("Zoom factor must be greater than 0")
 
@@ -186,18 +221,150 @@ def zoom_image(location, zoom_factor):
     new_width = int(width * zoom_factor)
     new_height = int(height * zoom_factor)
 
-    # Resize the image
-    resized_image = image.resize((new_width, new_height), Image.ANTIALIAS)
+    if zoom_factor < 1:
+        # Resize the image
+        resized_image = image.resize((new_width, new_height), Image.ANTIALIAS)
 
-    # Crop the image to maintain the original dimensions
-    left = (resized_image.width - width) / 2
-    top = (resized_image.height - height) / 2
-    right = (resized_image.width + width) / 2
-    bottom = (resized_image.height + height) / 2
+        if fill_with == "Blur":
+            blurred_image = image.filter(ImageFilter.GaussianBlur(radius=blur_radius))
 
-    cropped_image = resized_image.crop((left, top, right, bottom))
+            # Resize the blurred image to match the original dimensions
+            blurred_background = blurred_image.resize((width, height), Image.ANTIALIAS)
 
-    return cropped_image
+            # Create an alpha mask for blending
+            alpha_mask = create_alpha_mask(resized_image.size, edge_blur_radius)
+
+            # Blend the resized image with the blurred background using the alpha mask
+            blended_image = Image.composite(resized_image, blurred_background.crop((0, 0, new_width, new_height)), alpha_mask)
+
+            # Calculate the position to paste the blended image at the center of the blurred background
+            paste_left = (blurred_background.width - blended_image.width) // 2
+            paste_top = (blurred_background.height - blended_image.height) // 2
+
+            # Create a new blank image with the size of the blurred background
+            final_image = Image.new('RGBA', blurred_background.size)
+
+            # Paste the blurred background onto the final image
+            final_image.paste(blurred_background, (0, 0))
+
+            # Paste the blended image onto the final image using the alpha mask
+            final_image.paste(blended_image, (paste_left, paste_top), mask=alpha_mask)
+
+            return final_image
+                        
+
+        elif fill_with == "Inpainting":
+            print("Coming soon")
+            return resized_image
+
+        elif fill_with is None:
+            # Create an empty background with the original dimensions
+            background = Image.new('RGBA', (width, height))
+
+            # Calculate the position to paste the resized image at the center of the background
+            paste_left = (background.width - resized_image.width) // 2
+            paste_top = (background.height - resized_image.height) // 2
+
+            # Paste the resized image onto the background
+            background.paste(resized_image, (paste_left, paste_top))
+
+            return background
+
+        else:
+            raise ValueError("Invalid fill_with value. Accepted values are 'Blur', 'Inpainting', and None.")
+
+    else:
+        # If zooming in, proceed as before
+        resized_image = image.resize((new_width, new_height), Image.ANTIALIAS)
+
+        left = (resized_image.width - width) / 2
+        top = (resized_image.height - height) / 2
+        right = (resized_image.width + width) / 2
+        bottom = (resized_image.height + height) / 2
+
+        cropped_image = resized_image.crop((left, top, right, bottom))
+        return cropped_image
+    
+
+
+
+
+def crop_image_element(stage,timing_details,project_name):
+
+    if timing_details[st.session_state['which_image']]["source_image"] == "":
+        st.error("Please select a source image before cropping")
+        return
+    else:
+        if stage == "Source":
+            input_image = timing_details[st.session_state['which_image']]["source_image"]                                
+        elif stage == "Styled":
+            input_image = get_primary_variant_location(timing_details, st.session_state['which_image'])
+        
+        working_image = get_pillow_image(input_image)
+        
+        options1,options2,option3, option4 = st.columns([3,1,1,1])
+        with options1:
+            degree = st.slider("Rotate Image", -180, 180, 0, 1)
+        with options2:
+            if st.button("Flip horizontally", key="cropbtn1"):
+                working_image = working_image.transpose(Image.FLIP_LEFT_RIGHT)
+            if st.button("Flip vertically", key="cropbtn2"):
+                working_image = working_image.transpose(Image.FLIP_TOP_BOTTOM)
+        
+
+        with option3:
+            brightness_factor = st.slider("Brightness", 0.0, 2.0, 1.0)
+            if brightness_factor != 1.0:
+                enhancer = ImageEnhance.Brightness(working_image)
+                working_image = enhancer.enhance(brightness_factor)
+        with option4:
+            contrast_factor = st.slider("Contrast", 0.0, 2.0, 1.0)
+            if contrast_factor != 1.0:
+                enhancer = ImageEnhance.Contrast(working_image)
+                working_image = enhancer.enhance(contrast_factor)
+        if degree != 0:
+            working_image = working_image.rotate(-degree, resample=Image.BICUBIC, expand=True)
+        
+        project_settings = get_project_settings(project_name)
+
+        width = int(project_settings["width"])
+        height = int(project_settings["height"])
+
+        gcd_value = gcd(width, height)
+        aspect_ratio_width = int(width // gcd_value)
+        aspect_ratio_height = int(height // gcd_value)
+        aspect_ratio = (aspect_ratio_width, aspect_ratio_height)
+        
+        img1, img2 = st.columns([3,1])
+
+        with img1:
+            
+            cropped_img = st_cropper(working_image, realtime_update=True, box_color="#0000FF", aspect_ratio=aspect_ratio)
+
+        with img2:
+            st.image(cropped_img, caption="Cropped Image", use_column_width=True,width=200)
+        
+            cropbtn1, cropbtn2 = st.columns(2)
+            with cropbtn1:
+                if st.button("Save Cropped Image"):
+                    if stage == "Source":
+                        # resize the image to the original width and height
+                        cropped_img = cropped_img.resize((width, height), Image.ANTIALIAS)
+                        # generate a random filename and save it to /temp               
+                        file_name = f"temp/{uuid.uuid4()}.png"
+                        cropped_img.save(file_name)            
+                        st.success("Cropped Image Saved Successfully")
+                        update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", file_name)
+                        time.sleep(1)
+                    st.experimental_rerun()
+            with cropbtn2:
+                st.warning("Warning: This will overwrite the original image")
+
+        
+
+
+
+
 
 def rotate_image(location, degree):
     if location.startswith('http') or location.startswith('https'):
@@ -208,40 +375,17 @@ def rotate_image(location, degree):
             raise FileNotFoundError(f"File not found: {location}")
         image = Image.open(location)
 
-    width, height = image.size
-    angle_radians = radians(abs(degree))
-
-    diagonal = (width**2 + height**2)**0.5
-    max_scale_factor = diagonal / max(width, height)
-    min_scale_factor = 1
-
-    # Calculate the appropriate scale factor
-    scale_factor = max(min_scale_factor, max_scale_factor)
-
-    # Resize the image to fill the new dimensions
-    resized_image = image.resize((int(width * scale_factor), int(height * scale_factor)), Image.ANTIALIAS)
-
-    # Create a new image with the original dimensions and paste the resized image at the center
-    expanded_image = Image.new(image.mode, (width, height), color=(255, 255, 255))
-    expanded_image.paste(
-        resized_image,
-        (int((width - resized_image.width) / 2), int((height - resized_image.height) / 2))
-    )
-
     # Rotate the image by the specified degree
-    rotated_image = expanded_image.rotate(-degree, resample=Image.BICUBIC, expand=False)
+    rotated_image = image.rotate(-degree, resample=Image.BICUBIC, expand=False)
 
     return rotated_image
-
 
 def create_single_preview_video(index_of_item, project_name):
     timing_details = get_timing_details(project_name)
     project_details = get_project_settings(project_name)
 
     if timing_details[index_of_item]["interpolated_video"] == "":
-        update_specific_timing_value(project_name, index_of_item, "interpolation_steps", 3)
-        previous_image_location = get_primary_variant_location(timing_details, index_of_item)
-        current_image_location = get_primary_variant_location(timing_details, index_of_item +1)
+        update_specific_timing_value(project_name, index_of_item, "interpolation_steps", 3)                        
         interpolated_video = create_individual_clip(index_of_item, project_name)
         update_specific_timing_value(project_name, index_of_item, "interpolated_video", interpolated_video)
     else:
@@ -252,30 +396,61 @@ def create_single_preview_video(index_of_item, project_name):
     duration_of_video = get_duration_from_video(video_location)                                                                
     desired_duration = float(timing_details[index_of_item+1]["frame_time"]) - float(timing_details[index_of_item]["frame_time"])
     speed_change_required = float(desired_duration / duration_of_video)                                
-    update_speed_of_video_clip(project_name,video_location, speed_change_required, False)
+    update_speed_of_video_clip(project_name,video_location, False, index_of_item)
     if project_details["audio"] != "":
         audio_bytes = get_audio_bytes_for_slice(project_name, index_of_item)
         add_audio_to_video_slice(video_location, audio_bytes)
 
     return video_location
 
-def create_full_preview_video(project_name, index_of_item):
+def create_full_preview_video(project_name, index_of_item, small_or_large):
+
+    if small_or_large == "small":
     
-    last_preview_video = create_single_preview_video(index_of_item-1,project_name)
-    current_preview_video = create_single_preview_video(index_of_item,project_name)
+        last_preview_video = create_single_preview_video(index_of_item-1,project_name)
+        current_preview_video = create_single_preview_video(index_of_item,project_name)
 
-    last_clip = moviepy.editor.VideoFileClip(last_preview_video)
-    current_clip = moviepy.editor.VideoFileClip(current_preview_video)
+        last_clip = moviepy.editor.VideoFileClip(last_preview_video)
+        current_clip = moviepy.editor.VideoFileClip(current_preview_video)
 
-    text1 = TextClip("1", fontsize=50, color='white', bg_color='black', size=(last_clip.w, 50)).set_duration(last_clip.duration)
-    text2 = TextClip("2", fontsize=50, color='white', bg_color='black', size=(current_clip.w, 50)).set_duration(current_clip.duration)
+        text1 = TextClip("1", fontsize=50, color='white', bg_color='black', size=(last_clip.w, 50)).set_duration(last_clip.duration)
+        text2 = TextClip("2", fontsize=50, color='white', bg_color='black', size=(current_clip.w, 50)).set_duration(current_clip.duration)
 
-    # Overlay the text on the video clips
-    last_clip_with_text = moviepy.editor.CompositeVideoClip([last_clip, text1.set_position(('center', 'top'))])
-    current_clip_with_text = moviepy.editor.CompositeVideoClip([current_clip, text2.set_position(('center', 'top'))])
+        # Overlay the text on the video clips
+        last_clip_with_text = moviepy.editor.CompositeVideoClip([last_clip, text1.set_position(('center', 'top'))])
+        current_clip_with_text = moviepy.editor.CompositeVideoClip([current_clip, text2.set_position(('center', 'top'))])
 
+        combined_clip = concatenate_videoclips([last_clip_with_text, current_clip_with_text])
+    
+    else:
 
-    combined_clip = concatenate_videoclips([last_clip_with_text, current_clip_with_text])
+        two_preview_videos_back = create_single_preview_video(index_of_item-2,project_name)
+        last_preview_video = create_single_preview_video(index_of_item-1,project_name)
+        current_preview_video = create_single_preview_video(index_of_item,project_name)
+        next_preview_video = create_single_preview_video(index_of_item+1,project_name)
+        two_preview_videos_forward = create_single_preview_video(index_of_item+2,project_name)
+
+        two_back_clip = moviepy.editor.VideoFileClip(two_preview_videos_back)
+        last_clip = moviepy.editor.VideoFileClip(last_preview_video)
+        current_clip = moviepy.editor.VideoFileClip(current_preview_video)
+        next_clip = moviepy.editor.VideoFileClip(next_preview_video)
+        two_forward_clip = moviepy.editor.VideoFileClip(two_preview_videos_forward)
+
+        text1 = TextClip(str(index_of_item-2), fontsize=50, color='white', bg_color='black', size=(two_back_clip.w, 50)).set_duration(two_back_clip.duration)
+        text2 = TextClip(str(index_of_item-1), fontsize=50, color='white', bg_color='black', size=(last_clip.w, 50)).set_duration(last_clip.duration)
+        text3 = TextClip(str(index_of_item), fontsize=50, color='white', bg_color='black', size=(current_clip.w, 50)).set_duration(current_clip.duration)
+        text4 = TextClip(str(index_of_item+1), fontsize=50, color='white', bg_color='black', size=(next_clip.w, 50)).set_duration(next_clip.duration)
+        text5 = TextClip(str(index_of_item+2), fontsize=50, color='white', bg_color='black', size=(two_forward_clip.w, 50)).set_duration(two_forward_clip.duration)
+
+        # Overlay the text on the video clips
+        two_back_clip_with_text = moviepy.editor.CompositeVideoClip([two_back_clip, text1.set_position(('center', 'top'))])
+        last_clip_with_text = moviepy.editor.CompositeVideoClip([last_clip, text2.set_position(('center', 'top'))])
+        current_clip_with_text = moviepy.editor.CompositeVideoClip([current_clip, text3.set_position(('center', 'top'))])
+        next_clip_with_text = moviepy.editor.CompositeVideoClip([next_clip, text4.set_position(('center', 'top'))])
+        two_forward_clip_with_text = moviepy.editor.CompositeVideoClip([two_forward_clip, text5.set_position(('center', 'top'))])
+
+        combined_clip = concatenate_videoclips([two_back_clip_with_text, last_clip_with_text, current_clip_with_text, next_clip_with_text, two_forward_clip_with_text])
+
 
     output_filename = str(uuid.uuid4()) + ".mp4"
     video_location =  f"videos/{project_name}/assets/videos/1_final/{output_filename}"
@@ -454,9 +629,9 @@ def styling_sidebar(project_name,timing_details):
     
     st.write(batch_run_range)
     
-    st.session_state["promote_new_generation"] = True                    
-    st.session_state["promote_new_generation"] = st.checkbox("Promote new generation to main variant", value=True, key="promote_new_generation_to_main_variant")
-    st.session_state["use_new_settings"] = st.checkbox("Use new settings for batch query", value=True, key="keep_existing_settings", help="If unchecked, the new settings will be applied to the existing variants.")
+                      
+    st.session_state["promote_new_generation"] = st.checkbox("Promote new generation to main variant", key="promote_new_generation_to_main_variant")
+    st.session_state["use_new_settings"] = st.checkbox("Use new settings for batch query", key="keep_existing_settings", help="If unchecked, the new settings will be applied to the existing variants.")
 
     if 'restyle_button' not in st.session_state:
         st.session_state['restyle_button'] = ''
@@ -492,11 +667,14 @@ def styling_sidebar(project_name,timing_details):
     
 
 def get_primary_variant_location(timing_details, which_image):
-                                                    
-    variants = timing_details[which_image]["alternative_images"]                
-    current_variant = int(timing_details[which_image]["primary_image"])       
-    primary_variant_location = variants[current_variant]
-    return primary_variant_location
+
+    if timing_details[which_image]["alternative_images"] == "":
+        return "https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png"
+    else:                         
+        variants = timing_details[which_image]["alternative_images"]                
+        current_variant = int(timing_details[which_image]["primary_image"])       
+        primary_variant_location = variants[current_variant]
+        return primary_variant_location
 
 
 
@@ -567,42 +745,53 @@ def calculate_frame_number_at_time(input_video, time_of_frame, project_name):
     return frame_number
 
 
-def move_frame(project_name, index_of_current_item, distance_to_move, timing_details, input_video):
-    current_frame_number = int(calculate_frame_number_at_time(
-        input_video, timing_details[index_of_current_item]["frame_time"], project_name))
+def move_frame(direction, frame_number, project_name):
 
-    if distance_to_move == 0:
-        extract_frame(index_of_current_item, project_name,
-                      input_video, current_frame_number, timing_details)
-        new_frame_number = current_frame_number
-    elif distance_to_move > 0:
-        next_frame_number = int(calculate_frame_number_at_time(
-            input_video, timing_details[index_of_current_item + 1]["frame_time"], project_name))
-        abs_distance_to_move = abs(distance_to_move) / 100
-        difference_between_frames = abs(
-            next_frame_number - current_frame_number)
-        new_frame_number = current_frame_number + \
-            (difference_between_frames * abs_distance_to_move)
-        extract_frame(index_of_current_item, project_name,
-                      input_video, new_frame_number, timing_details)
-    elif distance_to_move < 0:
-        last_frame_number = int(calculate_frame_number_at_time(
-            input_video, timing_details[index_of_current_item - 1]["frame_time"], project_name))
-        abs_distance_to_move = abs(distance_to_move) / 100
-        difference_between_frames = abs(
-            current_frame_number - last_frame_number)
-        new_frame_number = current_frame_number - \
-            (difference_between_frames * abs_distance_to_move)
-        extract_frame(index_of_current_item, project_name,
-                      input_video, new_frame_number, timing_details)
+    timing_details = get_timing_details(project_name)
 
-    df = pd.read_csv("videos/" + str(project_name) + "/timings.csv")
-    new_time = calculate_time_at_frame_number(
-        input_video, new_frame_number, project_name)
-    df.iloc[index_of_current_item, [16, 1]] = [int(distance_to_move), new_time]
-    df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
+    current_primary_image = timing_details[frame_number]["primary_image"]
+    current_alternative_images = timing_details[frame_number]["alternative_images"]
+    current_source_image = timing_details[frame_number]["source_image"]
 
-# timing_details stores frame_number and frame_time map along with other meta details
+    if direction == "Up":
+
+        previous_primary_image = timing_details[frame_number - 1]["primary_image"]
+        previous_alternative_images = timing_details[frame_number - 1]["alternative_images"]
+        previous_source_image = timing_details[frame_number - 1]["source_image"]
+        
+        update_specific_timing_value(project_name, frame_number - 1, "primary_image", current_primary_image)
+        print("current_alternative_images", current_alternative_images)
+        update_specific_timing_value(project_name, frame_number - 1, "alternative_images", str(current_alternative_images))
+        update_specific_timing_value(project_name, frame_number - 1, "source_image", current_source_image)
+        update_specific_timing_value(project_name, frame_number - 1, "interpolated_video", "")
+        update_specific_timing_value(project_name, frame_number - 1, "timing_video", "")
+
+        update_specific_timing_value(project_name, frame_number, "primary_image", previous_primary_image)
+        update_specific_timing_value(project_name, frame_number, "alternative_images", str(previous_alternative_images))
+        update_specific_timing_value(project_name, frame_number, "source_image", previous_source_image)
+
+
+    elif direction == "Down":
+
+        next_primary_image = timing_details[frame_number + 1]["primary_image"]
+        next_alternative_images = timing_details[frame_number + 1]["alternative_images"]
+        next_source_image = timing_details[frame_number + 1]["source_image"]
+
+        update_specific_timing_value(project_name, frame_number + 1, "primary_image", current_primary_image)
+        update_specific_timing_value(project_name, frame_number + 1, "alternative_images", str(current_alternative_images))
+        update_specific_timing_value(project_name, frame_number + 1, "source_image", current_source_image)
+        update_specific_timing_value(project_name, frame_number + 1, "interpolated_video", "")
+        update_specific_timing_value(project_name, frame_number + 1, "timing_video", "")
+
+        update_specific_timing_value(project_name, frame_number, "primary_image", next_primary_image)
+        update_specific_timing_value(project_name, frame_number, "alternative_images", str(next_alternative_images))
+        update_specific_timing_value(project_name, frame_number, "source_image", next_source_image)
+
+
+    update_specific_timing_value(project_name, frame_number, "interpolated_video", "")
+    update_specific_timing_value(project_name, frame_number, "timing_video", "")
+
+
 
 
 def get_timing_details(video_name):
@@ -707,23 +896,6 @@ def dynamic_prompting(prompt, source_image, project_name, index_of_current_item)
 
 
 def trigger_restyling_process(timing_details, project_name, index_of_current_item, model, prompt, strength, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, which_stage_to_run_on, promote_new_generation, project_settings, custom_models, adapter_type, update_inference_settings):
-    print(f"Project Name: {project_name}")
-    print(f"Index of Current Item: {index_of_current_item}")
-    print(f"Model: {model}")
-    print(f"Prompt: {prompt}")
-    print(f"Strength: {strength}")
-    print(f"Custom Pipeline: {custom_pipeline}")
-    print(f"Negative Prompt: {negative_prompt}")
-    print(f"Guidance Scale: {guidance_scale}")
-    print(f"Seed: {seed}")
-    print(f"Num Inference Steps: {num_inference_steps}")
-    print(f"Which Stage to Run On: {which_stage_to_run_on}")
-    print(f"Promote New Generation: {promote_new_generation}")
-    print(f"Project Settings: {project_settings}")
-    print(f"Custom Models: {custom_models}")
-    print(f"Adapter Type: {adapter_type}")
-    print(f"Update Inference Settings: {update_inference_settings}")
-
 
     timing_details = get_timing_details(project_name)
     if update_inference_settings is True:        
@@ -773,19 +945,23 @@ def trigger_restyling_process(timing_details, project_name, index_of_current_ite
     else:
         output_url = restyle_images(
             index_of_current_item, project_name, project_settings, timing_details, source_image)
+        
+    if output_url != None:
 
-    add_image_variant(output_url, index_of_current_item,
-                      project_name, timing_details)
+        add_image_variant(output_url, index_of_current_item,
+                        project_name, timing_details)
 
-    if promote_new_generation == True:
-        timing_details = get_timing_details(project_name)
-        variants = timing_details[index_of_current_item]["alternative_images"]
-        number_of_variants = len(variants)
-        if number_of_variants == 1:
-            print("No new generation to promote")
-        else:
-            promote_image_variant(index_of_current_item,
-                                  project_name, number_of_variants - 1)
+        if promote_new_generation == True:
+            timing_details = get_timing_details(project_name)
+            variants = timing_details[index_of_current_item]["alternative_images"]
+            number_of_variants = len(variants)
+            if number_of_variants == 1:
+                print("No new generation to promote")
+            else:
+                promote_image_variant(index_of_current_item,
+                                    project_name, number_of_variants - 1)
+    else:
+        print("No new generation to promote")
 
 
 def promote_image_variant(index_of_current_item, project_name, variant_to_promote):
@@ -1230,6 +1406,8 @@ def prompt_model_stable_diffusion_xl(project_name, index_of_current_item, timing
         }
     )
 
+    print(multipart_data)
+
     response = r.post(
         f"{api_host}/v1/generation/{engine_id}/image-to-image",
         headers={
@@ -1241,8 +1419,11 @@ def prompt_model_stable_diffusion_xl(project_name, index_of_current_item, timing
     )
     os.unlink(temp_file.name)
 
+    print(response)
+
     if response.status_code != 200:
         st.error("An error occurred: " + str(response.text))
+        time.sleep(5)
         return None
     else:
         data = response.json()
@@ -1252,7 +1433,7 @@ def prompt_model_stable_diffusion_xl(project_name, index_of_current_item, timing
         
         with open(file_location, "wb") as f:
             f.write(generated_image)
-
+    
     return file_location
         
         
@@ -1401,39 +1582,76 @@ def slice_part_of_video(project_name, index_of_current_item, video_start_percent
     clip.write_videofile(output_video, audio=False)
     clip.close()
 
-def update_speed_of_video_clip(project_name, location_of_video, desired_duration, save_to_new_location):
-    # Load the video clip
-    clip = VideoFileClip(location_of_video)
+def update_speed_of_video_clip(project_name, location_of_video, save_to_new_location, index_of_current_item):
 
-    clip = clip.set_fps(120)
+    timing_details = get_timing_details(project_name)
+
+    desired_duration = timing_details[int(index_of_current_item)]["duration_of_clip"]
+
+    animation_style = timing_details[int(index_of_current_item)]["animation_style"]
+
+    if animation_style == "Direct Morphing":
+        
+        # Load the video clip
+        clip = VideoFileClip(location_of_video)
+
+        clip = clip.set_fps(120)
+        
+        # Calculate the number of frames to keep
+        input_duration = clip.duration
+        total_frames = len(list(clip.iter_frames()))
+        target_frames = int(total_frames * (desired_duration / input_duration))
+
+        # Determine which frames to keep
+        keep_every_n_frames = total_frames / target_frames
+        frames_to_keep = [int(i * keep_every_n_frames) for i in range(target_frames)]
+
+        # Create a new video clip with the selected frames
+        updated_clip = concatenate_videoclips([clip.subclip(i/clip.fps, (i+1)/clip.fps) for i in frames_to_keep])
+
+        if save_to_new_location:
+            file_name = ''.join(random.choices(
+                string.ascii_lowercase + string.digits, k=16)) + ".mp4"
+            location_of_video = "videos/" + str(project_name) + "/assets/videos/1_final/" + str(file_name)
+        else:
+            os.remove(location_of_video)
+
+        updated_clip.write_videofile(location_of_video, codec='libx265')
+
+        clip.close()
+        updated_clip.close()
+
+
+    elif animation_style == "Interpolation":
+
+        clip = VideoFileClip(location_of_video)
+
+        input_video_duration = clip.duration
+
+        desired_duration = timing_details[int(index_of_current_item)]["duration_of_clip"]
+
+        desired_speed_change = desired_duration / input_video_duration
+
+        desired_speed_change_text = str(desired_speed_change) + "*PTS"
+
+        video_stream = ffmpeg.input(str(location_of_video))
+
+        video_stream = video_stream.filter('setpts', desired_speed_change_text)
+
+        new_file_name = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16)) + ".mp4"
+        new_file_location = "videos/" + str(project_name) + "/assets/videos/1_final/" + str(new_file_name)
     
-    # Calculate the number of frames to keep
-    input_duration = clip.duration
-    total_frames = len(list(clip.iter_frames()))
-    target_frames = int(total_frames * (desired_duration / input_duration))
+        ffmpeg.output(video_stream, new_file_location).run()
 
-    # Determine which frames to keep
-    keep_every_n_frames = total_frames / target_frames
-    frames_to_keep = [int(i * keep_every_n_frames) for i in range(target_frames)]
+        video_capture = cv2.VideoCapture(new_file_location)
 
-    # Create a new video clip with the selected frames
-    updated_clip = concatenate_videoclips([clip.subclip(i/clip.fps, (i+1)/clip.fps) for i in frames_to_keep])
+        if save_to_new_location:        
+            location_of_video = new_file_location
+        else:
+            os.remove(location_of_video)
+            location_of_video = new_file_location
     
-    if save_to_new_location:
-        file_name = ''.join(random.choices(
-            string.ascii_lowercase + string.digits, k=16)) + ".mp4"
-        location_of_video = "videos/" + str(project_name) + "/assets/videos/1_final/" + str(file_name)
-    else:
-        os.remove(location_of_video)
-
-    # Save the updated video clip
-    updated_clip.write_videofile(location_of_video, codec='libx265')
-
-    clip.close()
-    updated_clip.close()
-
     return location_of_video
-
 
 
 
@@ -1511,6 +1729,27 @@ def update_video_speed(project_name, index_of_current_item, duration_of_static_t
                                  "videos/" + str(project_name) + "/assets/videos/1_final/" + str(file_name))
 
 '''    
+
+def calculate_desired_duration_of_each_clip(timing_details, project_name):
+    for index, timing_detail in enumerate(timing_details):
+        total_duration_of_frame = calculate_desired_duration_of_individual_clip(timing_details, index)
+        update_specific_timing_value(project_name, index, "duration_of_clip", total_duration_of_frame)
+
+def calculate_desired_duration_of_individual_clip(timing_details, index_of_current_item):
+    length_of_list = len(timing_details)
+
+    if index_of_current_item == (length_of_list - 1):
+        time_of_frame = timing_details[index_of_current_item]["frame_time"]
+        duration_of_static_time = 0.0
+        end_duration_of_frame = float(time_of_frame) + float(duration_of_static_time)
+        total_duration_of_frame = float(end_duration_of_frame) - float(time_of_frame)
+    else:
+        time_of_frame = timing_details[index_of_current_item]["frame_time"]
+        time_of_next_frame = timing_details[index_of_current_item + 1]["frame_time"]
+        total_duration_of_frame = float(time_of_next_frame) - float(time_of_frame)
+   
+    return total_duration_of_frame
+
 
 def calculate_desired_duration_of_each_clip(timing_details, project_name):
 
@@ -1728,6 +1967,8 @@ def custom_pipeline_mystique(index_of_current_item, project_name, project_settin
 def create_timings_row_at_frame_number(project_name, index_of_new_item):
 
     csv_processor = CSVProcessor(f'videos/{project_name}/timings.csv')
+    project_settings = get_project_settings(project_name)
+    
     df = csv_processor.get_df_data()
     new_row = pd.DataFrame({'frame_time': [None], 'frame_number': [None]}, index=[0])
     df = pd.concat([df.iloc[:index_of_new_item], new_row, df.iloc[index_of_new_item:]]).reset_index(drop=True)
@@ -1748,7 +1989,8 @@ def create_timings_row_at_frame_number(project_name, index_of_new_item):
     df.to_csv(f'videos/{project_name}/timings.csv', index=False)
     'remove the interpolated video from the current row and the row before and after - unless it is the first or last row'
     update_specific_timing_value(project_name, index_of_new_item, "interpolated_video", "")
-    
+    default_animation_style = project_settings["default_animation_style"]
+    update_specific_timing_value(project_name, index_of_new_item, "animation_style", "")
     
 
     if index_of_new_item != 0:
@@ -1870,7 +2112,7 @@ def render_video(project_name, final_video_name, timing_details, quality):
                 update_specific_timing_value(project_name, index_of_current_item, "interpolation_steps", interpolation_steps)
                 update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", "")                                
         else:
-            if timing_details[index_of_current_item]["interpolation_steps"] == "":
+            if timing_details[index_of_current_item]["interpolation_steps"] == "" or timing_details[index_of_current_item]["interpolation_steps"] < 3:
                 update_specific_timing_value(project_name, index_of_current_item, "interpolation_steps", 3)
         
         timing_details = get_timing_details(project_name)
@@ -1893,35 +2135,48 @@ def render_video(project_name, final_video_name, timing_details, quality):
     for i in timing_details:
         index_of_current_item = timing_details.index(i)
         if index_of_current_item <= total_number_of_videos:
-            if timing_details[index_of_current_item]["timing_video"] == "":
-                                                             
-                desired_duration = float(timing_details[index_of_current_item]["duration_of_clip"])
-                print(f"desired_duration: {desired_duration}")
-                location_of_input_video = timing_details[index_of_current_item]["interpolated_video"]               
-                print(f"Location of input video: {location_of_input_video}")
-                duration_of_input_video = float(get_duration_from_video(location_of_input_video))                                                                
-                print(f"duration_of_input_video: {duration_of_input_video}")       
-                # how much would we need to speed up the video to get the desired duration
+            
+            if timing_details[index_of_current_item]["timing_video"] == "":                                                             
+                desired_duration = float(timing_details[index_of_current_item]["duration_of_clip"])                
+                location_of_input_video = timing_details[index_of_current_item]["interpolated_video"]                               
+                duration_of_input_video = float(get_duration_from_video(location_of_input_video))                                                                                                
                 speed_change_required = float(desired_duration/duration_of_input_video)
                 update_specific_timing_value(project_name, index_of_current_item, "speed_change_factor", speed_change_required)
-                update_specific_timing_value(project_name, index_of_current_item, "input_video_time", duration_of_input_video)
-                
-                print("THISSSS!!!!")
+                update_specific_timing_value(project_name, index_of_current_item, "input_video_time", duration_of_input_video) 
+                location_of_output_video = update_speed_of_video_clip(project_name, location_of_input_video, True, index_of_current_item)
+                if quality == "Preview":
+                    cap = cv2.VideoCapture(location_of_output_video)
 
-                    
+                    # Get video details
+                    fps = cap.get(cv2.CAP_PROP_FPS)
+                    width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
-                    
-                print(f"Speed change required: {speed_change_required}")
-                ''' 
-                new_file_name = str(uuid.uuid4()) + ".mp4"
-                video_location =  f"videos/{project_name}/assets/videos/1_final/{new_file_name}"
-                shutil.copyfile(interpolated_video, video_location)
-                duration_of_video = get_duration_from_video(video_location)                                                                
-                desired_duration = float(timing_details[index_of_item+1]["frame_time"]) - float(timing_details[index_of_item]["frame_time"])
-                speed_change_required = float(desired_duration / duration_of_video)                                
-                update_speed_of_video_clip(project_name,video_location, speed_change_required, False)
-                '''        
-                location_of_output_video = update_speed_of_video_clip(project_name, location_of_input_video, speed_change_required, True)
+                    out = cv2.VideoWriter(location_of_output_video, fourcc, fps, (width, height))
+
+                    # Initialize the text settings
+                    font = cv2.FONT_HERSHEY_SIMPLEX
+                    font_scale = 1
+                    font_color = (255, 255, 255) # white color
+                    line_type = 2
+
+                    while(cap.isOpened()):
+                        ret, frame = cap.read()
+
+                        if ret==True:
+                            # Put the text on the frame
+                            frame = cv2.putText(frame, str(index_of_current_item), (10,height-10), font, font_scale, font_color, line_type)
+
+                            # write the frame
+                            out.write(frame)
+                        else:
+                            break
+
+                    # Release everything after the job is finished
+                    cap.release()
+                    out.release()
+                    cv2.destroyAllWindows()            
                 update_specific_timing_value(project_name, index_of_current_item, "timing_video", location_of_output_video)                
                 update_specific_timing_value(project_name, index_of_current_item, "actual_duration_of_clip", get_actual_clip_duration(location_of_output_video))
 
@@ -1945,8 +2200,12 @@ def render_video(project_name, final_video_name, timing_details, quality):
         audio_clip = AudioFileClip(audio_location)
         finalclip = finalclip.set_audio(audio_clip)
     finalclip.write_videofile(
-        output_video_file, fps=60, audio_bitrate="1000k", bitrate="4000k", codec="libx264")
-
+        output_video_file, 
+        fps=60,  # or 60 if your original video is 60fps
+        audio_bitrate="128k", 
+        bitrate="5000k", 
+        codec="libx264", 
+        audio_codec="aac")
 
 def create_gif_preview(project_name, timing_details):
 
@@ -2077,8 +2336,8 @@ def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
         'n_prompt': timing_details[index_of_current_item]["negative_prompt"] + ", longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
         'detect_resolution': 512,
         'bg_threshold': 0,
-        'low_threshold': 13,
-        'high_threshold': 140,
+        'low_threshold': 100,
+        'high_threshold': 200,
     }
     
     output = version.predict(**inputs)

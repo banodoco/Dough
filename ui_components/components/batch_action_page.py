@@ -13,8 +13,8 @@ def batch_action_page(project_name):
     if st.button("Move initial key frames to completed key frames"):
         for i in timing_details:
             index_of_current_item = timing_details.index(i)
-            add_image_variant(timing_details[index_of_current_item]["source_image"], index_of_current_item, project_name, timing_details)
-            promote_image_variant(index_of_current_item, project_name, 0)
+            number_of_items = add_image_variant(timing_details[index_of_current_item]["source_image"], index_of_current_item, project_name, timing_details)
+            promote_image_variant(index_of_current_item, project_name,number_of_items-1)
         st.success("All initial key frames moved to completed key frames")
 
     st.markdown("***")
