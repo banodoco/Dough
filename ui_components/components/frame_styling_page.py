@@ -7,7 +7,7 @@ from PIL import Image
 import requests as r
 from streamlit_drawable_canvas import st_canvas
 from repository.local_repo.csv_repo import get_app_settings, get_project_settings,update_specific_timing_value,update_project_setting
-from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process,add_image_variant,prompt_interpolation_model,update_speed_of_video_clip,create_timings_row_at_frame_number,extract_canny_lines,get_duration_from_video,get_audio_bytes_for_slice,add_audio_to_video_slice,convert_to_minutes_and_seconds,styling_sidebar,get_primary_variant_location,create_full_preview_video,back_and_forward_buttons,create_single_preview_video,resize_and_rotate_element,crop_image_element,move_frame,calculate_desired_duration_of_individual_clip
+from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process,add_image_variant,prompt_interpolation_model,update_speed_of_video_clip,create_timings_row_at_frame_number,extract_canny_lines,get_duration_from_video,get_audio_bytes_for_slice,add_audio_to_video_slice,convert_to_minutes_and_seconds,styling_sidebar,get_primary_variant_location,create_full_preview_video,back_and_forward_buttons,resize_and_rotate_element,crop_image_element,move_frame,calculate_desired_duration_of_individual_clip,create_or_get_single_preview_video
 from utils.file_upload.s3 import upload_image
 import uuid
 import datetime
@@ -17,6 +17,7 @@ import shutil
 from streamlit_option_menu import option_menu
 from moviepy.editor import concatenate_videoclips
 import moviepy.editor
+import math
 
 
 
@@ -67,6 +68,8 @@ def frame_styling_page(mainheader2, project_name):
             if st.session_state['which_image_value'] != st.session_state['which_image']:
                 st.session_state['which_image_value'] = st.session_state['which_image']
                 st.session_state['reset_canvas'] = True
+                st.session_state['frame_styling_view_type_index'] = 0
+                st.session_state['frame_styling_view_type'] = "Individual View"
                 st.experimental_rerun()       
 
             with st.expander("Notes:"):
@@ -390,68 +393,42 @@ def frame_styling_page(mainheader2, project_name):
 
                     timing1, timing2 = st.columns([1,1])
 
+                    
                     with timing1:
+                        num_timing_details = len(timing_details)
 
-                        if st.session_state['which_image'] == 0:
-                            previous_frame_time = None
-                            st.info("No Previous Frame Time")
-                            current_frame_time = st.slider(f"#{st.session_state['which_image']} Frame Time = {timing_details[st.session_state['which_image']]['frame_time']}",  value=timing_details[st.session_state['which_image']]['frame_time'], step=0.01,disabled=True)
-                            next_frame_max_value = current_frame_time + 10.0                            
-                            
-                        else:
-                            if st.session_state['which_image'] != 1:
-                                previous_frame_time = st.slider(f"#{st.session_state['which_image']-1} Frame Time = {timing_details[st.session_state['which_image']-1]['frame_time']}", min_value=timing_details[st.session_state['which_image']-2]['frame_time'], max_value=timing_details[st.session_state['which_image']]['frame_time'], value=timing_details[st.session_state['which_image']-1]['frame_time'], step=0.01)
+                        for i in range(max(0, st.session_state['which_image'] - 2), min(num_timing_details, st.session_state['which_image'] + 3)):
+                            # calculate minimum and maximum values for slider
+                            if i == 0:
+                                min_frame_time = 0.0  # make sure the value is a float
                             else:
-                                previous_frame_time = st.slider(f"#{st.session_state['which_image']-1} Frame Time = {timing_details[st.session_state['which_image']-1]['frame_time']}", value = timing_details[st.session_state['which_image']-1]['frame_time'], step=0.01,disabled=True)  
+                                min_frame_time = timing_details[i - 1]['frame_time']
 
-                            # if it's the last frame then set the max value to the last frame time + 10
-                            if st.session_state['which_image'] == len(timing_details)-1:
-                                current_frame_max_value = timing_details[st.session_state['which_image']]['frame_time'] + 10.0
-                            else:
-                                current_frame_max_value = timing_details[st.session_state['which_image']+1]['frame_time']
-                 
-                            current_frame_time = st.slider(f"#{st.session_state['which_image']} Frame Time = {timing_details[st.session_state['which_image']]['frame_time']}", 
-                                                        min_value=timing_details[st.session_state['which_image']-1]['frame_time'], max_value=current_frame_max_value, value=timing_details[st.session_state['which_image']]['frame_time'], step=0.01)
-                        
-                        if st.session_state['which_image'] != len(timing_details)-1:
-                            # if it's the second last frame then set the max value to the last frame time
-                            if st.session_state['which_image'] == len(timing_details)-2:
-                                next_frame_max_value = current_frame_time + 10.0
-                            else:
-                                next_frame_max_value = timing_details[st.session_state['which_image']+2]['frame_time']
+                            if i == num_timing_details - 1:
+                                max_frame_time = timing_details[i]['frame_time'] + 10.0
+                            elif i < num_timing_details - 1:
+                                max_frame_time = timing_details[i + 1]['frame_time']
 
-                            # if it's the not the last frame, show the next frame time slider
-                            if st.session_state['which_image'] != len(timing_details)-1:
-                                next_frame_time = st.slider(f"#{st.session_state['which_image']+1} Frame Time = {timing_details[st.session_state['which_image']+1]['frame_time']}", min_value=timing_details[st.session_state['which_image']]['frame_time'], max_value=next_frame_max_value, value=timing_details[st.session_state['which_image']+1]['frame_time'], step=0.01)
-                            
-                        else:
-                            st.info("No Next Frame Time")
-                            next_frame_time = None
-                        
-                        
+                            # disable slider only if it's the first frame
+                            slider_disabled = i == 0
 
-                        
-                        # if there are any differences between the saved times then show a warning
-                        
-                        if st.button("Update Frame Time"):
+                            frame_time = st.slider(
+                                f"#{i} Frame Time = {timing_details[i]['frame_time']}",
+                                min_value=min_frame_time,
+                                max_value=max_frame_time,
+                                value=timing_details[i]['frame_time'],
+                                step=0.01,
+                                disabled=slider_disabled,
+                            )
 
-                            if previous_frame_time is not None:
-                                update_specific_timing_value(project_name, st.session_state['which_image']-1, "frame_time", previous_frame_time)
-                                update_specific_timing_value(project_name, st.session_state['which_image']-1, "preview_video", "")                                
-                                update_specific_timing_value(project_name, st.session_state['which_image']-1, "timing_video", "")
-
-                            update_specific_timing_value(project_name, st.session_state['which_image'], "frame_time", current_frame_time)
-                            update_specific_timing_value(project_name, st.session_state['which_image'], "preview_video", "")                            
-                            update_specific_timing_value(project_name, st.session_state['which_image'], "timing_video", "")
-
-                            if next_frame_time is not None:
-                                update_specific_timing_value(project_name, st.session_state['which_image']+1, "frame_time", next_frame_time)
-                                update_specific_timing_value(project_name, st.session_state['which_image']+1, "preview_video", "")                                
-                                update_specific_timing_value(project_name, st.session_state['which_image']+1, "timing_video", "")
-
-                            st.success("Frame time updated")
-                            time.sleep(0.2)
-                            st.experimental_rerun()
+                            # update timing details
+                            if timing_details[i]['frame_time'] != frame_time:
+                                update_specific_timing_value(project_name, i, "frame_time", frame_time)
+                                for i in range(st.session_state['which_image'] - 1, st.session_state['which_image'] + 1):                                    
+                                    update_specific_timing_value(project_name, i, "timing_video", "")
+                                update_specific_timing_value(project_name, i, "preview_video", "")
+                                st.experimental_rerun()
+                                         
 
                     with timing2:                    
             
@@ -466,21 +443,16 @@ def frame_styling_page(mainheader2, project_name):
                             st.error("No preview video available for this frame")
                         preview_settings_1, preview_settings_2 = st.columns([2,1])
                         with preview_settings_1:
-                            speed = st.slider("Preview Speed", min_value=0.1, max_value=2.0, value=1.0, step=0.01, disabled=True)
+                            speed = st.slider("Preview Speed", min_value=0.1, max_value=2.0, value=1.0, step=0.01)
+                        
                         with preview_settings_2:
-                            small_or_large_preview = st.radio("Preview Size", ("large", "small"))
-                        if variants != [] and variants != None and variants != "":
-                            if st.button("Generate New Preview Video"):                                     
-                                if st.session_state['which_image'] == 0:
-                                    preview_video = create_single_preview_video(st.session_state['which_image'],project_name)                                                                                                            
-                                elif st.session_state['which_image'] == len(timing_details)-1:
-                                    preview_video = create_single_preview_video(st.session_state['which_image']-1,project_name)
-                                else:                       
-                                    preview_video = create_full_preview_video(project_name, st.session_state['which_image'],small_or_large_preview)    
-                                if speed != 1.0:
-                                    preview_video = update_speed_of_video_clip(project_name, preview_video, False,st.session_state['which_image'])
-                                update_specific_timing_value(project_name, st.session_state['which_image'], "preview_video", preview_video)                                    
-                                st.experimental_rerun()   
+                            st.write(" ")                                                    
+                            if variants != [] and variants != None and variants != "":
+                                if st.button("Generate New Preview Video"):                                
+                                    preview_video = create_full_preview_video(project_name, st.session_state['which_image'],speed)                                                                    
+                                    update_specific_timing_value(project_name, st.session_state['which_image'], "preview_video", preview_video)                                    
+                                    st.experimental_rerun()   
+                                
                         back_and_forward_buttons(timing_details) 
                     
                     with st.expander("Animation style"):
@@ -711,17 +683,8 @@ def frame_styling_page(mainheader2, project_name):
                                 previous_image = get_primary_variant_location(timing_details, index_of_current_item)                        
                                 st.image(previous_image, use_column_width=True, caption=f"Image #{index_of_current_item}")
                             if st.button(f"Preview Interpolation From #{index_of_current_item} to #{index_of_current_item+1}", key=f"Preview Interpolation From #{index_of_current_item} to #{index_of_current_item+1}"):
-                                if timing_details[index_of_current_item]['interpolated_video'] == "":
-                                    update_specific_timing_value(project_name, index_of_current_item, "interpolation_steps", 3)
-                                    interpolated_video = prompt_interpolation_model(index_of_current_item, project_name)
-                                    update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", interpolated_video)
-                                    timing_details = get_timing_details(project_name)
-                                if timing_details[index_of_current_item]['timing_video'] == "":                                            
-                                    duration_of_clip = calculate_desired_duration_of_individual_clip(timing_details, index_of_current_item)
-                                    update_specific_timing_value(project_name, index_of_current_item, "duration_of_clip", duration_of_clip)
-                                    location_of_output_video = update_speed_of_video_clip(project_name, timing_details[index_of_current_item]['interpolated_video'], True, index_of_current_item)
-                                    update_specific_timing_value(project_name, index_of_current_item, "timing_video", location_of_output_video)
-                                    timing_details = get_timing_details(project_name)                                        
+                                create_or_get_single_preview_video(index_of_current_item,project_name)      
+                                timing_details = get_timing_details(project_name)                               
                                 st.video(timing_details[index_of_current_item]['timing_video'])           
                         
                         img1, img2 = st.columns(2)
@@ -820,7 +783,28 @@ def frame_styling_page(mainheader2, project_name):
 
 
             elif st.session_state['frame_styling_view_type'] == "List View":
-                for i in range(0, len(timing_details)):
+
+                if 'current_page' not in st.session_state:
+                    st.session_state['current_page'] = 0
+
+                # Calculate number of pages
+                items_per_page = 20
+                num_pages = math.ceil(len(timing_details) / items_per_page)
+
+                # Display radio buttons for pagination at the top
+                st.markdown("---")
+                page_selection = st.radio("Select Page", options=range(1, num_pages+1), horizontal=True)
+                
+                st.markdown("---")
+
+                # Update the current page in session state
+                st.session_state['current_page'] = page_selection - 1
+
+                # Display items for the current page only
+                start_index = st.session_state['current_page'] * items_per_page
+                end_index = min(start_index + items_per_page, len(timing_details))
+
+                for i in range(start_index, end_index):                
                     index_of_current_item = i
                     
                     st.subheader(f"Frame {i}")
@@ -837,17 +821,21 @@ def frame_styling_page(mainheader2, project_name):
                         frame_time = st.number_input("Frame time (seconds):", min_value=0.0, max_value=100.0, value=timing_details[i]["frame_time"], step=0.1, key=f"frame_time_{i}")                                                                   
                         if frame_time != timing_details[i]["frame_time"]:
                             update_specific_timing_value(project_name, i, "frame_time", frame_time)
+                            update_specific_timing_value(project_name, i, "timing_video", "")
                             # if the frame time of this frame is more than the frame time of the next frame, then we need to update the next frame's frame time, and all the frames after that - shift them by the difference between the new frame time and the old frame time
-                            if frame_time > timing_details[i+1]["frame_time"]:
-                                for a in range(i+1, len(timing_details)):
-                                    this_frame_time = timing_details[a]["frame_time"]
-                                    # shift them by the difference between the new frame time and the old frame time
-                                    new_frame_time = this_frame_time + (frame_time - timing_details[i]["frame_time"])                            
-                                    update_specific_timing_value(project_name, a, "frame_time", new_frame_time)
+                            # if it's not the last item
+                            if i < len(timing_details) - 1:
+                                if frame_time > timing_details[i+1]["frame_time"]:
+                                    for a in range(i+1, len(timing_details)):
+                                        this_frame_time = timing_details[a]["frame_time"]
+                                        # shift them by the difference between the new frame time and the old frame time
+                                        new_frame_time = this_frame_time + (frame_time - timing_details[i]["frame_time"])                            
+                                        update_specific_timing_value(project_name, a, "frame_time", new_frame_time)
+                                        update_specific_timing_value(project_name, a, "timing_video", "")
 
 
                             st.experimental_rerun()
-                        if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will switch to a Single Frame view type and open this individual image."):
+                        if st.button(f"Jump to single frame view for #{index_of_current_item}"):
                             st.session_state['which_image_value'] = index_of_current_item
                             st.session_state['frame_styling_view_type'] = "Individual View"
                             st.session_state['frame_styling_view_type_index'] = 0                                    
@@ -866,7 +854,13 @@ def frame_styling_page(mainheader2, project_name):
                             if st.button("⬇️", key=f"Demote {index_of_current_item}"):                                
                                 move_frame("Down",index_of_current_item, project_name)
                                 st.experimental_rerun()
-                    
+                # Display radio buttons for pagination at the bottom
+                
+                st.markdown("---")
+
+                # Update the current page in session state
+            
+                                    
                     
                  
         

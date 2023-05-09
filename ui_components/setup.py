@@ -15,7 +15,6 @@ from ui_components.components.key_frame_selection import key_frame_selection_pag
 from ui_components.components.new_project_page import new_project_page
 from ui_components.components.project_settings_page import project_settings_page
 from ui_components.components.prompt_finder_page import prompt_finder_page
-from ui_components.components.timing_adjustment_page import timing_adjustment_page
 from ui_components.components.video_rendering_page import video_rendering_page
 from ui_components.components.welcome_page import welcome_page
 
@@ -42,6 +41,9 @@ def setup_app_ui():
                 
         st.session_state["project_name"] = st.sidebar.selectbox("Select which project you'd like to work on:", video_list,index=st.session_state["index_of_project_name"])  
         
+        if "which_image_value" not in st.session_state:
+            st.session_state['which_image_value'] = 0
+
         if st.session_state["index_of_project_name"] != video_list.index(st.session_state["project_name"]):
             st.write("Project changed")
             st.session_state["index_of_project_name"] = video_list.index(st.session_state["project_name"])               
@@ -62,11 +64,11 @@ def setup_app_ui():
             pages = [
             {
                 "section_name": "Main Process",        
-                "pages": ["Key Frame Selection","Frame Styling", "Frame Editing","Video Rendering"]
+                "pages": ["Frame Styling","Key Frame Selection", "Frame Editing","Video Rendering"]
             },
             {
                 "section_name": "Tools",
-                "pages": ["Custom Models", "Prompt Finder", "Batch Actions","Timing Adjustment"]
+                "pages": ["Custom Models", "Prompt Finder", "Batch Actions"]
             },
             {
                 "section_name": "Settings",
@@ -108,9 +110,7 @@ def setup_app_ui():
             elif st.session_state["page"] == "Custom Models":
                 custom_models_page(st.session_state["project_name"])
             elif st.session_state["page"] == "Frame Editing":
-                frame_editing_page(st.session_state["project_name"])
-            elif st.session_state["page"] == "Timing Adjustment":
-                timing_adjustment_page(st.session_state["project_name"])                                     
+                frame_editing_page(st.session_state["project_name"])                                
             elif st.session_state["page"] == "Prompt Finder":
                 prompt_finder_page(st.session_state["project_name"])
             else:

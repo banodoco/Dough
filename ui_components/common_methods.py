@@ -11,6 +11,7 @@ import pandas as pd
 import replicate
 import urllib
 import requests as r
+import imageio
 import ffmpeg
 import string
 import json
@@ -27,7 +28,10 @@ import numpy as np
 from repository.local_repo.csv_repo import CSVProcessor, get_app_settings, get_project_settings, update_project_setting, update_specific_timing_value
 from pydub import AudioSegment
 import shutil
-from moviepy.editor import concatenate_videoclips,TextClip
+from moviepy.editor import concatenate_videoclips,TextClip,VideoFileClip, vfx
+from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
+
+
 from moviepy.video.fx.all import speedx
 import moviepy.editor
 from streamlit_cropper import st_cropper
@@ -380,87 +384,90 @@ def rotate_image(location, degree):
 
     return rotated_image
 
-def create_single_preview_video(index_of_item, project_name):
+
+
+def create_or_get_single_preview_video(index_of_current_item, project_name):
+
     timing_details = get_timing_details(project_name)
     project_details = get_project_settings(project_name)
 
-    if timing_details[index_of_item]["interpolated_video"] == "":
-        update_specific_timing_value(project_name, index_of_item, "interpolation_steps", 3)                        
-        interpolated_video = create_individual_clip(index_of_item, project_name)
-        update_specific_timing_value(project_name, index_of_item, "interpolated_video", interpolated_video)
-    else:
-        interpolated_video = timing_details[index_of_item]["interpolated_video"]                                
-    new_file_name = str(uuid.uuid4()) + ".mp4"
-    video_location =  f"videos/{project_name}/assets/videos/1_final/{new_file_name}"
-    shutil.copyfile(interpolated_video, video_location)
-    duration_of_video = get_duration_from_video(video_location)                                                                
-    desired_duration = float(timing_details[index_of_item+1]["frame_time"]) - float(timing_details[index_of_item]["frame_time"])
-    speed_change_required = float(desired_duration / duration_of_video)                                
-    update_speed_of_video_clip(project_name,video_location, False, index_of_item)
+    if timing_details[index_of_current_item]['interpolated_video'] == "":
+        update_specific_timing_value(project_name, index_of_current_item, "interpolation_steps", 3)
+        interpolated_video = prompt_interpolation_model(index_of_current_item, project_name)
+        update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", interpolated_video)
+        timing_details = get_timing_details(project_name)
+    if timing_details[index_of_current_item]['timing_video'] == "":                                            
+        duration_of_clip = calculate_desired_duration_of_individual_clip(timing_details, index_of_current_item)
+        update_specific_timing_value(project_name, index_of_current_item, "duration_of_clip", duration_of_clip)
+        location_of_output_video = update_speed_of_video_clip(project_name, timing_details[index_of_current_item]['interpolated_video'], True, index_of_current_item)
+        update_specific_timing_value(project_name, index_of_current_item, "timing_video", location_of_output_video)
+    timing_details = get_timing_details(project_name)                                 
+        
     if project_details["audio"] != "":
-        audio_bytes = get_audio_bytes_for_slice(project_name, index_of_item)
-        add_audio_to_video_slice(video_location, audio_bytes)
+        audio_bytes = get_audio_bytes_for_slice(project_name, index_of_current_item)
+        add_audio_to_video_slice(timing_details[index_of_current_item]['timing_video'], audio_bytes)
 
-    return video_location
-
-def create_full_preview_video(project_name, index_of_item, small_or_large):
-
-    if small_or_large == "small":
+    print("YOOOOO")
+    print(timing_details[index_of_current_item]['timing_video'])
     
-        last_preview_video = create_single_preview_video(index_of_item-1,project_name)
-        current_preview_video = create_single_preview_video(index_of_item,project_name)
 
-        last_clip = moviepy.editor.VideoFileClip(last_preview_video)
-        current_clip = moviepy.editor.VideoFileClip(current_preview_video)
+    return timing_details[index_of_current_item]['timing_video']
 
-        text1 = TextClip("1", fontsize=50, color='white', bg_color='black', size=(last_clip.w, 50)).set_duration(last_clip.duration)
-        text2 = TextClip("2", fontsize=50, color='white', bg_color='black', size=(current_clip.w, 50)).set_duration(current_clip.duration)
 
-        # Overlay the text on the video clips
-        last_clip_with_text = moviepy.editor.CompositeVideoClip([last_clip, text1.set_position(('center', 'top'))])
-        current_clip_with_text = moviepy.editor.CompositeVideoClip([current_clip, text2.set_position(('center', 'top'))])
-
-        combined_clip = concatenate_videoclips([last_clip_with_text, current_clip_with_text])
+def create_full_preview_video(project_name, index_of_item, speed):
     
-    else:
+    timing_details = get_timing_details(project_name)
+    num_timing_details = len(timing_details)
+    clips = []
 
-        two_preview_videos_back = create_single_preview_video(index_of_item-2,project_name)
-        last_preview_video = create_single_preview_video(index_of_item-1,project_name)
-        current_preview_video = create_single_preview_video(index_of_item,project_name)
-        next_preview_video = create_single_preview_video(index_of_item+1,project_name)
-        two_preview_videos_forward = create_single_preview_video(index_of_item+2,project_name)
+    for i in range(index_of_item - 2, index_of_item + 3):
+        if i < 0 or i >= num_timing_details-1:
+            continue
 
-        two_back_clip = moviepy.editor.VideoFileClip(two_preview_videos_back)
-        last_clip = moviepy.editor.VideoFileClip(last_preview_video)
-        current_clip = moviepy.editor.VideoFileClip(current_preview_video)
-        next_clip = moviepy.editor.VideoFileClip(next_preview_video)
-        two_forward_clip = moviepy.editor.VideoFileClip(two_preview_videos_forward)
+        primary_variant_location = get_primary_variant_location(timing_details, i)
 
-        text1 = TextClip(str(index_of_item-2), fontsize=50, color='white', bg_color='black', size=(two_back_clip.w, 50)).set_duration(two_back_clip.duration)
-        text2 = TextClip(str(index_of_item-1), fontsize=50, color='white', bg_color='black', size=(last_clip.w, 50)).set_duration(last_clip.duration)
-        text3 = TextClip(str(index_of_item), fontsize=50, color='white', bg_color='black', size=(current_clip.w, 50)).set_duration(current_clip.duration)
-        text4 = TextClip(str(index_of_item+1), fontsize=50, color='white', bg_color='black', size=(next_clip.w, 50)).set_duration(next_clip.duration)
-        text5 = TextClip(str(index_of_item+2), fontsize=50, color='white', bg_color='black', size=(two_forward_clip.w, 50)).set_duration(two_forward_clip.duration)
+        if not primary_variant_location:
+            break
 
-        # Overlay the text on the video clips
-        two_back_clip_with_text = moviepy.editor.CompositeVideoClip([two_back_clip, text1.set_position(('center', 'top'))])
-        last_clip_with_text = moviepy.editor.CompositeVideoClip([last_clip, text2.set_position(('center', 'top'))])
-        current_clip_with_text = moviepy.editor.CompositeVideoClip([current_clip, text3.set_position(('center', 'top'))])
-        next_clip_with_text = moviepy.editor.CompositeVideoClip([next_clip, text4.set_position(('center', 'top'))])
-        two_forward_clip_with_text = moviepy.editor.CompositeVideoClip([two_forward_clip, text5.set_position(('center', 'top'))])
+        preview_video = create_or_get_single_preview_video(i, project_name)
+        
+        clip = VideoFileClip(preview_video)
 
-        combined_clip = concatenate_videoclips([two_back_clip_with_text, last_clip_with_text, current_clip_with_text, next_clip_with_text, two_forward_clip_with_text])
+        number_text = TextClip(str(i), fontsize=24, color='white')
+        number_background = TextClip(" ", fontsize=24, color='black', bg_color='black', size=(number_text.w + 10, number_text.h + 10))
+        number_background = number_background.set_position(('right', 'bottom')).set_duration(clip.duration)
+        number_text = number_text.set_position((number_background.w - number_text.w - 5, number_background.h - number_text.h - 5)).set_duration(clip.duration)
+        
+        clip_with_number = CompositeVideoClip([clip, number_background, number_text])
 
+        # remove existing preview video
+        os.remove(preview_video)
+        clip_with_number.write_videofile(preview_video, codec='libx264', bitrate='3000k')
+                                
+        clips.append(preview_video)
+
+        if i == index_of_item - 1 or i == index_of_item:
+            clip.close()
+            
+    video_clips = [VideoFileClip(v) for v in clips]
+
+    combined_clip = concatenate_videoclips(video_clips)
 
     output_filename = str(uuid.uuid4()) + ".mp4"
-    video_location =  f"videos/{project_name}/assets/videos/1_final/{output_filename}"
+
+    video_location = f"videos/{project_name}/assets/videos/1_final/{output_filename}"
+
     combined_clip.write_videofile(video_location)
 
-    # Close video files to release resources
-    last_clip.close()
-    current_clip.close()
+    if speed != 1.0:
+        clip = VideoFileClip(video_location)
+                
+        output_clip = clip.fx(vfx.speedx, speed)
+        
+        os.remove(video_location)
+        
+        output_clip.write_videofile(video_location, codec="libx264", preset="fast")        
 
-    
     return video_location
     
 
@@ -669,7 +676,7 @@ def styling_sidebar(project_name,timing_details):
 def get_primary_variant_location(timing_details, which_image):
 
     if timing_details[which_image]["alternative_images"] == "":
-        return "https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png"
+        return ""
     else:                         
         variants = timing_details[which_image]["alternative_images"]                
         current_variant = int(timing_details[which_image]["primary_image"])       
@@ -1625,25 +1632,19 @@ def update_speed_of_video_clip(project_name, location_of_video, save_to_new_loca
     elif animation_style == "Interpolation":
 
         clip = VideoFileClip(location_of_video)
-
         input_video_duration = clip.duration
-
         desired_duration = timing_details[int(index_of_current_item)]["duration_of_clip"]
+        desired_speed_change = float(input_video_duration) / float(desired_duration) 
 
-        desired_speed_change = desired_duration / input_video_duration
+        print("Desired Speed Change: " + str(desired_speed_change))
 
-        desired_speed_change_text = str(desired_speed_change) + "*PTS"
+        # Apply the speed change using moviepy
+        output_clip = clip.fx(vfx.speedx, desired_speed_change)
 
-        video_stream = ffmpeg.input(str(location_of_video))
-
-        video_stream = video_stream.filter('setpts', desired_speed_change_text)
-
+        # Save the output video
         new_file_name = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16)) + ".mp4"
         new_file_location = "videos/" + str(project_name) + "/assets/videos/1_final/" + str(new_file_name)
-    
-        ffmpeg.output(video_stream, new_file_location).run()
-
-        video_capture = cv2.VideoCapture(new_file_location)
+        output_clip.write_videofile(new_file_location, codec="libx264", preset="fast")
 
         if save_to_new_location:        
             location_of_video = new_file_location
@@ -2105,7 +2106,8 @@ def render_video(project_name, final_video_name, timing_details, quality):
 
     for i in range(0, total_number_of_videos):
         index_of_current_item = i
-        if quality == "High-Quality":            
+        if quality == "High-Quality":     
+            update_specific_timing_value(project_name, index_of_current_item, "timing_video", "")       
             timing_details = get_timing_details(project_name)
             interpolation_steps = calculate_dynamic_interpolations_steps(timing_details[index_of_current_item]["duration_of_clip"])
             if timing_details[index_of_current_item]["interpolation_steps"] == "" or timing_details[index_of_current_item]["interpolation_steps"] < interpolation_steps:
@@ -2145,38 +2147,20 @@ def render_video(project_name, final_video_name, timing_details, quality):
                 update_specific_timing_value(project_name, index_of_current_item, "input_video_time", duration_of_input_video) 
                 location_of_output_video = update_speed_of_video_clip(project_name, location_of_input_video, True, index_of_current_item)
                 if quality == "Preview":
-                    cap = cv2.VideoCapture(location_of_output_video)
 
-                    # Get video details
-                    fps = cap.get(cv2.CAP_PROP_FPS)
-                    width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-                    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                    clip = VideoFileClip(location_of_output_video)
 
-                    out = cv2.VideoWriter(location_of_output_video, fourcc, fps, (width, height))
+                    number_text = TextClip(str(index_of_current_item), fontsize=24, color='white')
+                    number_background = TextClip(" ", fontsize=24, color='black', bg_color='black', size=(number_text.w + 10, number_text.h + 10))
+                    number_background = number_background.set_position(('right', 'bottom')).set_duration(clip.duration)
+                    number_text = number_text.set_position((number_background.w - number_text.w - 5, number_background.h - number_text.h - 5)).set_duration(clip.duration)
 
-                    # Initialize the text settings
-                    font = cv2.FONT_HERSHEY_SIMPLEX
-                    font_scale = 1
-                    font_color = (255, 255, 255) # white color
-                    line_type = 2
+                    clip_with_number = CompositeVideoClip([clip, number_background, number_text])
 
-                    while(cap.isOpened()):
-                        ret, frame = cap.read()
+                    # remove existing preview video
+                    os.remove(location_of_output_video)
+                    clip_with_number.write_videofile(location_of_output_video, codec='libx264', bitrate='3000k')
 
-                        if ret==True:
-                            # Put the text on the frame
-                            frame = cv2.putText(frame, str(index_of_current_item), (10,height-10), font, font_scale, font_color, line_type)
-
-                            # write the frame
-                            out.write(frame)
-                        else:
-                            break
-
-                    # Release everything after the job is finished
-                    cap.release()
-                    out.release()
-                    cv2.destroyAllWindows()            
                 update_specific_timing_value(project_name, index_of_current_item, "timing_video", location_of_output_video)                
                 update_specific_timing_value(project_name, index_of_current_item, "actual_duration_of_clip", get_actual_clip_duration(location_of_output_video))
 
