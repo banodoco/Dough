@@ -9,7 +9,7 @@ from settings import project_init
 def main():
     from ui_components.setup import setup_app_ui
 
-    st.set_page_config(page_title="Banodoco", page_icon="🤖", layout="wide")
+    st.set_page_config(page_title="Banodoco", page_icon="🎨", layout="wide")
     # initializing project constants
     project_init()
     

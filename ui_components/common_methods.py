@@ -420,11 +420,18 @@ def create_full_preview_video(project_name, index_of_item, speed):
     num_timing_details = len(timing_details)
     clips = []
 
+    print("HERE'S THE SHIT")
+
+    print(f"index_of_item: {index_of_item}, num_timing_details: {num_timing_details}")
+
     for i in range(index_of_item - 2, index_of_item + 3):
+        print(f"i: {i}")
         if i < 0 or i >= num_timing_details-1:
             continue
 
         primary_variant_location = get_primary_variant_location(timing_details, i)
+
+        print(f"primary_variant_location for i={i}: {primary_variant_location}")
 
         if not primary_variant_location:
             break
@@ -432,7 +439,7 @@ def create_full_preview_video(project_name, index_of_item, speed):
         preview_video = create_or_get_single_preview_video(i, project_name)
         
         clip = VideoFileClip(preview_video)
-
+        
         number_text = TextClip(str(i), fontsize=24, color='white')
         number_background = TextClip(" ", fontsize=24, color='black', bg_color='black', size=(number_text.w + 10, number_text.h + 10))
         number_background = number_background.set_position(('right', 'bottom')).set_duration(clip.duration)
@@ -443,11 +450,21 @@ def create_full_preview_video(project_name, index_of_item, speed):
         # remove existing preview video
         os.remove(preview_video)
         clip_with_number.write_videofile(preview_video, codec='libx264', bitrate='3000k')
+
+        clip.close()
+        clip_with_number.close()
                                 
         clips.append(preview_video)
 
-        if i == index_of_item - 1 or i == index_of_item:
-            clip.close()
+        # if i == index_of_item - 1 or i == index_of_item:
+        # if i == index_of_item - 1 or i == index_of_item:        
+        #    clips.remove(preview_video)
+        
+
+
+
+    
+    print(clips)
             
     video_clips = [VideoFileClip(v) for v in clips]
 
@@ -492,7 +509,7 @@ def back_and_forward_buttons(timing_details):
                 st.session_state['which_image_value'] = st.session_state['which_image_value'] + 1
                 st.experimental_rerun()
 
-def styling_sidebar(project_name,timing_details):
+def styling_element(project_name,timing_details):
     
     timing_details = get_timing_details(project_name)
         
@@ -529,7 +546,21 @@ def styling_sidebar(project_name,timing_details):
             st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
             st.experimental_rerun()                          
     else:
-        models = ['controlnet','stable_diffusion_xl','stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'Dreambooth', 'LoRA','StyleGAN-NADA']            
+        project_settings = get_project_settings(project_name)        
+
+        models = ['controlnet','stable_diffusion_xl','stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'Dreambooth', 'LoRA','StyleGAN-NADA','real-esrgan-upscaling']
+        
+        if project_settings['last_model'] != "":
+            
+            if 'index_of_last_model' not in st.session_state:
+                st.session_state['model'] = project_settings['last_model']
+                st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
+                st.write(f"Index of last model: {st.session_state['index_of_last_model']}")
+        else:            
+            st.session_state['index_of_last_model'] = 0
+
+
+        
         st.session_state['model'] = st.selectbox(f"Which model would you like to use?", models, index=st.session_state['index_of_last_model'])                    
         if st.session_state['index_of_last_model'] != models.index(st.session_state['model']):
             st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
@@ -547,6 +578,7 @@ def styling_sidebar(project_name,timing_details):
             st.experimental_rerun()
         st.session_state['custom_models'] = []    
         
+    
     elif st.session_state['model'] == "LoRA": 
         if 'index_of_lora_model_1' not in st.session_state:
             st.session_state['index_of_lora_model_1'] = 0
@@ -589,14 +621,36 @@ def styling_sidebar(project_name,timing_details):
         st.session_state['custom_models'] = []
         st.session_state['adapter_type'] = "N"
     
+    if st.session_state['adapter_type'] == "canny":
+
+        canny1, canny2 = st.columns(2)
+
+        if project_settings['last_low_threshold'] != "":
+            low_threshold_value = project_settings['last_low_threshold']
+        else:
+            low_threshold_value = 50
+        
+        if project_settings['last_high_threshold'] != "":
+            high_threshold_value = project_settings['last_high_threshold']
+        else:
+            high_threshold_value = 150
+        
+        with canny1:
+            st.session_state['low_threshold'] = st.slider('Low Threshold', 0, 255, value=int(low_threshold_value))            
+        with canny2:
+            st.session_state['high_threshold'] = st.slider('High Threshold', 0, 255, value=int(high_threshold_value))
+    else:
+        st.session_state['low_threshold'] = 0
+        st.session_state['high_threshold'] = 0
+
+
     if st.session_state['model'] == "StyleGAN-NADA":
         st.warning("StyleGAN-NADA is a custom model that uses StyleGAN to generate a consistent character and style transformation. It only works for square images.")
         st.session_state['prompt'] = st.selectbox("What style would you like to apply to the character?", ['base', 'mona_lisa', 'modigliani', 'cubism', 'elf', 'sketch_hq', 'thomas', 'thanos', 'simpson', 'witcher', 'edvard_munch', 'ukiyoe', 'botero', 'shrek', 'joker', 'pixar', 'zombie', 'werewolf', 'groot', 'ssj', 'rick_morty_cartoon', 'anime', 'white_walker', 'zuckerberg', 'disney_princess', 'all', 'list'])
         st.session_state['strength'] = 0.5
         st.session_state['guidance_scale'] = 7.5
         st.session_state['seed'] = int(0)
-        st.session_state['num_inference_steps'] = int(50)
-                    
+        st.session_state['num_inference_steps'] = int(50)                    
     else:
         st.session_state['prompt'] = st.text_area(f"Prompt", label_visibility="visible", value=st.session_state['prompt_value'],height=150)
         if st.session_state['prompt'] != st.session_state['prompt_value']:
@@ -629,47 +683,46 @@ def styling_sidebar(project_name,timing_details):
             st.session_state['guidance_scale'] = st.number_input(f"Guidance scale", value=float(st.session_state['guidance_scale']))
             st.session_state['seed'] = st.number_input(f"Seed", value=int(st.session_state['seed']))
             st.session_state['num_inference_steps'] = st.number_input(f"Inference steps", value=int(st.session_state['num_inference_steps']))
-                        
-    batch_run_range = st.slider("Select range:", 1, 0, (0, len(timing_details)-1))  
-    first_batch_run_value = batch_run_range[0]
-    last_batch_run_value = batch_run_range[1]
-    
-    st.write(batch_run_range)
-    
-                      
-    st.session_state["promote_new_generation"] = st.checkbox("Promote new generation to main variant", key="promote_new_generation_to_main_variant")
-    st.session_state["use_new_settings"] = st.checkbox("Use new settings for batch query", key="keep_existing_settings", help="If unchecked, the new settings will be applied to the existing variants.")
-
-    if 'restyle_button' not in st.session_state:
-        st.session_state['restyle_button'] = ''
-        st.session_state['item_to_restyle'] = ''                
-
-    btn1, btn2 = st.columns(2)
-
-    with btn1:
-        batch_number_of_variants = st.number_input("How many variants?", value=1, min_value=1, max_value=10, step=1, key="number_of_variants")
+            
+    if len(timing_details) > 1:
+        batch_run_range = st.slider("Select range:", 1, 0, (0, len(timing_details)-1))  
+        first_batch_run_value = batch_run_range[0]
+        last_batch_run_value = batch_run_range[1]
         
-    
+        st.write(batch_run_range)
+        
+                        
+        st.session_state["promote_new_generation"] = st.checkbox("Promote new generation to main variant", key="promote_new_generation_to_main_variant")
+        st.session_state["use_new_settings"] = st.checkbox("Use new settings for batch query", key="keep_existing_settings", help="If unchecked, the new settings will be applied to the existing variants.")
 
-    with btn2:
+        if 'restyle_button' not in st.session_state:
+            st.session_state['restyle_button'] = ''
+            st.session_state['item_to_restyle'] = ''                
 
-        st.write("")
-        st.write("")
-        if st.button(f'Batch restyle') or st.session_state['restyle_button'] == 'yes':
-                            
-            if st.session_state['restyle_button'] == 'yes':
-                range_start = int(st.session_state['item_to_restyle'])
-                range_end = range_start + 1
-                st.session_state['restyle_button'] = ''
-                st.session_state['item_to_restyle'] = ''
+        btn1, btn2 = st.columns(2)
 
-            for i in range(first_batch_run_value, last_batch_run_value+1):
-                for number in range(0, batch_number_of_variants):
-                    index_of_current_item = i
-                    trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],st.session_state['custom_models'],st.session_state['adapter_type'],st.session_state["use_new_settings"])
-            st.experimental_rerun()
+        with btn1:
+            batch_number_of_variants = st.number_input("How many variants?", value=1, min_value=1, max_value=10, step=1, key="number_of_variants")
+            
+        with btn2:
 
-    
+            st.write("")
+            st.write("")
+            if st.button(f'Batch restyle') or st.session_state['restyle_button'] == 'yes':
+                                
+                if st.session_state['restyle_button'] == 'yes':
+                    range_start = int(st.session_state['item_to_restyle'])
+                    range_end = range_start + 1
+                    st.session_state['restyle_button'] = ''
+                    st.session_state['item_to_restyle'] = ''
+
+                for i in range(first_batch_run_value, last_batch_run_value+1):
+                    for number in range(0, batch_number_of_variants):
+                        index_of_current_item = i
+                        trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],st.session_state['custom_models'],st.session_state['adapter_type'],st.session_state["use_new_settings"],st.session_state['low_threshold'],st.session_state['high_threshold'])
+                st.experimental_rerun()
+
+        
     
     
 
@@ -849,7 +902,7 @@ def delete_frame(project_name, index_of_current_item):
     csv_processor.delete_row(index_of_current_item)
 
 
-def batch_update_timing_values(project_name, index_of_current_item, prompt, strength, model, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, source_image, custom_models, adapter_type):
+def batch_update_timing_values(project_name, index_of_current_item, prompt, strength, model, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, source_image, custom_models, adapter_type,low_threshold,high_threshold):
     
     csv_processor = CSVProcessor(
         "videos/" + str(project_name) + "/timings.csv")
@@ -857,22 +910,32 @@ def batch_update_timing_values(project_name, index_of_current_item, prompt, stre
 
     if model != "Dreambooth":
         custom_models = f'"{custom_models}"'
-    df.iloc[index_of_current_item, [18, 10, 9, 4, 5, 6, 7, 8, 12, 13, 14]] = [prompt, float(strength), model, custom_pipeline, negative_prompt, float(
-        guidance_scale), int(seed), int(num_inference_steps), source_image, custom_models, adapter_type]
+    df.iloc[index_of_current_item, [18, 10, 9, 4, 5, 6, 7, 8, 12, 13, 14,24,25]] = [prompt, float(strength), model, custom_pipeline, negative_prompt, float(
+        guidance_scale), int(seed), int(num_inference_steps), source_image, custom_models, adapter_type,int(float(low_threshold)),int(float(high_threshold))]
 
-    df["primary_image"] = pd.to_numeric(
-        df["primary_image"], downcast='integer', errors='coerce')
+    df["primary_image"] = pd.to_numeric(df["primary_image"], downcast='integer', errors='coerce')
+    df["primary_image"].fillna(0, inplace=True)
+    df["primary_image"] = df["primary_image"].astype(int)
+
     df["seed"] = pd.to_numeric(df["seed"], downcast='integer', errors='coerce')
+    df["seed"].fillna(0, inplace=True)
+    df["seed"] = df["seed"].astype(int)
+    
     df["num_inference_steps"] = pd.to_numeric(
         df["num_inference_steps"], downcast='integer', errors='coerce')
-
-    df["primary_image"].fillna(0, inplace=True)
-    df["seed"].fillna(0, inplace=True)
     df["num_inference_steps"].fillna(0, inplace=True)
-
-    df["primary_image"] = df["primary_image"].astype(int)
-    df["seed"] = df["seed"].astype(int)
     df["num_inference_steps"] = df["num_inference_steps"].astype(int)
+
+    df["low_threshold"] = pd.to_numeric(df["low_threshold"], downcast='integer', errors='coerce')
+    df["low_threshold"].fillna(0, inplace=True)
+    df["low_threshold"] = df["low_threshold"].astype(int)
+
+    df["high_threshold"] = pd.to_numeric(df["high_threshold"], downcast='integer', errors='coerce')
+    df["high_threshold"].fillna(0, inplace=True)
+    df["high_threshold"] = df["high_threshold"].astype(int)
+
+
+
 
     df.to_csv("videos/" + str(project_name) + "/timings.csv", index=False)
 
@@ -902,7 +965,7 @@ def dynamic_prompting(prompt, source_image, project_name, index_of_current_item)
         project_name, index_of_current_item, "prompt", prompt)
 
 
-def trigger_restyling_process(timing_details, project_name, index_of_current_item, model, prompt, strength, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, which_stage_to_run_on, promote_new_generation, project_settings, custom_models, adapter_type, update_inference_settings):
+def trigger_restyling_process(timing_details, project_name, index_of_current_item, model, prompt, strength, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, which_stage_to_run_on, promote_new_generation, project_settings, custom_models, adapter_type, update_inference_settings,low_threshold,high_threshold):
 
     timing_details = get_timing_details(project_name)
     if update_inference_settings is True:        
@@ -924,13 +987,18 @@ def trigger_restyling_process(timing_details, project_name, index_of_current_ite
                             which_stage_to_run_on, project_name)
         update_project_setting("last_custom_models", custom_models, project_name)
         update_project_setting("last_adapter_type", adapter_type, project_name)
+        if low_threshold != "":
+            update_project_setting("last_low_threshold", low_threshold, project_name)
+        if high_threshold != "":
+            update_project_setting("last_high_threshold", high_threshold, project_name)
+
 
         if timing_details[index_of_current_item]["source_image"] == "":
             source_image = ""
         else:
             source_image = timing_details[index_of_current_item]["source_image"]
         batch_update_timing_values(project_name, index_of_current_item, '"'+prompt+'"', strength, model, custom_pipeline,
-                                negative_prompt, guidance_scale, seed, num_inference_steps, source_image, custom_models, adapter_type)
+                                negative_prompt, guidance_scale, seed, num_inference_steps, source_image, custom_models, adapter_type,low_threshold,high_threshold)
         dynamic_prompting(prompt, source_image, project_name,
                       index_of_current_item)
     timing_details = get_timing_details(project_name)
@@ -1066,15 +1134,15 @@ def create_working_assets(video_name):
     os.mkdir("videos/" + video_name + "/assets/videos/1_final")
     os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
 
-    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type','guidance_type','default_animation_style'],
-            'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Extracted Frames', "None", "","",""]}
+    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type','guidance_type','default_animation_style','last_low_threshold','last_high_threshold'],
+            'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Extracted Frames', "None", "","","","",""]}
 
     df = pd.DataFrame(data)
 
     df.to_csv(f'videos/{video_name}/settings.csv', index=False)
 
     df = pd.DataFrame(columns=['frame_time', 'frame_number', 'primary_image', 'alternative_images', 'custom_pipeline', 'negative_prompt', 'guidance_scale', 'seed', 'num_inference_steps',
-                      'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'duration_of_clip', 'interpolated_video', 'timing_video', 'prompt', 'mask','canny_image','preview_video','animation_style','interpolation_steps'])
+                      'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'duration_of_clip', 'interpolated_video', 'timing_video', 'prompt', 'mask','canny_image','preview_video','animation_style','interpolation_steps','low_threshold','high_threshold'])
 
     # df.loc[0] = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
 
@@ -1292,6 +1360,24 @@ def prompt_clip_interrogator(input_image, which_model, best_or_fast):
 
     output = version.predict(
         image=input_image, clip_model_name=which_model, mode=best_or_fast)
+
+    return output
+
+
+def prompt_model_real_esrgan_upscaling(input_image):
+    
+    app_settings = get_app_settings()
+
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
+
+    model = replicate.models.get("cjwbw/real-esrgan")
+
+    if not input_image.startswith("http"):
+        input_image = open(input_image, "rb")
+
+    version = model.versions.get("d0ee3d708c9b911f122a4ad90046c5d26a0293b99476d697f6bb7f2e251ce2d4")
+
+    output = version.predict(image=input_image, upscale = 2)
 
     return output
 
@@ -1933,7 +2019,8 @@ def restyle_images(index_of_current_item, project_name, project_settings, timing
         output_url = prompt_model_stylegan_nada(index_of_current_item ,timing_details,source_image,project_name)
     elif model_name == "stable_diffusion_xl":
         output_url = prompt_model_stable_diffusion_xl(project_name, index_of_current_item, timing_details, source_image)
-
+    elif model_name == "real-esrgan-upscaling":
+        output_url = prompt_model_real_esrgan_upscaling(source_image)
     
     return output_url
 
@@ -2142,9 +2229,7 @@ def render_video(project_name, final_video_name, timing_details, quality):
                 desired_duration = float(timing_details[index_of_current_item]["duration_of_clip"])                
                 location_of_input_video = timing_details[index_of_current_item]["interpolated_video"]                               
                 duration_of_input_video = float(get_duration_from_video(location_of_input_video))                                                                                                
-                speed_change_required = float(desired_duration/duration_of_input_video)
-                update_specific_timing_value(project_name, index_of_current_item, "speed_change_factor", speed_change_required)
-                update_specific_timing_value(project_name, index_of_current_item, "input_video_time", duration_of_input_video) 
+                speed_change_required = float(desired_duration/duration_of_input_video)                                
                 location_of_output_video = update_speed_of_video_clip(project_name, location_of_input_video, True, index_of_current_item)
                 if quality == "Preview":
 
@@ -2162,7 +2247,7 @@ def render_video(project_name, final_video_name, timing_details, quality):
                     clip_with_number.write_videofile(location_of_output_video, codec='libx264', bitrate='3000k')
 
                 update_specific_timing_value(project_name, index_of_current_item, "timing_video", location_of_output_video)                
-                update_specific_timing_value(project_name, index_of_current_item, "actual_duration_of_clip", get_actual_clip_duration(location_of_output_video))
+                
 
 
     video_list = []
@@ -2320,8 +2405,8 @@ def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
         'n_prompt': timing_details[index_of_current_item]["negative_prompt"] + ", longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
         'detect_resolution': 512,
         'bg_threshold': 0,
-        'low_threshold': 100,
-        'high_threshold': 200,
+        'low_threshold': int(timing_details[index_of_current_item]["low_threshold"]),
+        'high_threshold': int(timing_details[index_of_current_item]["high_threshold"]),
     }
     
     output = version.predict(**inputs)
