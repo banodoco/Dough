@@ -49,7 +49,7 @@ class CSVProcessor:
     
     # TODO: create a separate interface for this later
     def update_specific_timing_value(self, index_of_current_item, parameter, value):
-        print(parameter, value)
+        
         df = pd.read_csv(self.file_path)
         
         try:

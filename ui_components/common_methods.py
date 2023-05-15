@@ -304,30 +304,58 @@ def crop_image_element(stage,timing_details,project_name):
         elif stage == "Styled":
             input_image = get_primary_variant_location(timing_details, st.session_state['which_image'])
         
-        working_image = get_pillow_image(input_image)
+        if 'current_working_image_number' not in st.session_state:
+            st.session_state['current_working_image_number'] = st.session_state['which_image']
         
+        def get_working_image():
+            st.session_state['working_image'] = get_pillow_image(input_image)
+            st.session_state['working_image'] = ImageOps.expand(st.session_state['working_image'], border=200, fill="black")
+            st.session_state['current_working_image_number'] = st.session_state['which_image']
+                                  
+        
+        if 'working_image' not in st.session_state or st.session_state['current_working_image_number'] != st.session_state['which_image']:
+            get_working_image()
+
         options1,options2,option3, option4 = st.columns([3,1,1,1])
         with options1:
-            degree = st.slider("Rotate Image", -180, 180, 0, 1)
+            sub_options_1, sub_options_2 = st.columns(2)
+            if 'degrees_rotated_to' not in st.session_state:
+                st.session_state['degrees_rotated_to'] = 0
+            with sub_options_1:
+                st.session_state['degree'] = st.slider("Rotate Image", -180, 180, value=st.session_state['degrees_rotated_to'])
+                if st.session_state['degrees_rotated_to'] != st.session_state['degree']:                    
+                    get_working_image()
+                    st.session_state['working_image'] = st.session_state['working_image'].rotate(-st.session_state['degree'], resample=Image.BICUBIC, expand=True)
+                    st.session_state['degrees_rotated_to'] = st.session_state['degree']
+                    st.experimental_rerun()
+
+            with sub_options_2:
+                if st.button("Reset image"):
+                    st.session_state['degree'] = 0
+                    get_working_image()
+                    st.session_state['degrees_rotated_to'] = 0
+                    st.experimental_rerun()
+                    
+
         with options2:
-            if st.button("Flip horizontally", key="cropbtn1"):
-                working_image = working_image.transpose(Image.FLIP_LEFT_RIGHT)
+            if st.button("Flip horizontally", key="cropbtn1"):                
+                st.session_state['working_image'] = st.session_state['working_image'].transpose(Image.FLIP_LEFT_RIGHT)
+                
+                # save 
             if st.button("Flip vertically", key="cropbtn2"):
-                working_image = working_image.transpose(Image.FLIP_TOP_BOTTOM)
+                st.session_state['working_image'] = st.session_state['working_image'].transpose(Image.FLIP_TOP_BOTTOM)
         
 
         with option3:
             brightness_factor = st.slider("Brightness", 0.0, 2.0, 1.0)
             if brightness_factor != 1.0:
-                enhancer = ImageEnhance.Brightness(working_image)
-                working_image = enhancer.enhance(brightness_factor)
+                enhancer = ImageEnhance.Brightness(st.session_state['working_image'])
+                st.session_state['working_image'] = enhancer.enhance(brightness_factor)
         with option4:
             contrast_factor = st.slider("Contrast", 0.0, 2.0, 1.0)
             if contrast_factor != 1.0:
-                enhancer = ImageEnhance.Contrast(working_image)
-                working_image = enhancer.enhance(contrast_factor)
-        if degree != 0:
-            working_image = working_image.rotate(-degree, resample=Image.BICUBIC, expand=True)
+                enhancer = ImageEnhance.Contrast(st.session_state['working_image'])
+                st.session_state['working_image'] = enhancer.enhance(contrast_factor)
         
         project_settings = get_project_settings(project_name)
 
@@ -339,11 +367,16 @@ def crop_image_element(stage,timing_details,project_name):
         aspect_ratio_height = int(height // gcd_value)
         aspect_ratio = (aspect_ratio_width, aspect_ratio_height)
         
-        img1, img2 = st.columns([3,1])
+        img1, img2 = st.columns([3,1.5])
 
         with img1:
-            
-            cropped_img = st_cropper(working_image, realtime_update=True, box_color="#0000FF", aspect_ratio=aspect_ratio)
+
+            # use PIL to add 50 pixels of blackspace to the width and height of the image
+        
+                            
+            cropped_img = st_cropper(st.session_state['working_image'], realtime_update=True, box_color="#0000FF", aspect_ratio=aspect_ratio)
+
+        
 
         with img2:
             st.image(cropped_img, caption="Cropped Image", use_column_width=True,width=200)
@@ -363,6 +396,54 @@ def crop_image_element(stage,timing_details,project_name):
                     st.experimental_rerun()
             with cropbtn2:
                 st.warning("Warning: This will overwrite the original image")
+
+            with st.expander("Inpaint in black space"):
+                inpaint_prompt = st.text_area("Prompt", value=project_settings["last_prompt"])
+                inpaint_negative_prompt = st.text_input("Negative Prompt", value='branches, frame, fractals, text' +project_settings["last_negative_prompt"])
+                if 'inpainted_image' not in st.session_state:
+                    st.session_state['inpainted_image'] = ""
+                if st.button("Inpaint"):
+                    saved_cropped_img = cropped_img.resize((width, height), Image.ANTIALIAS)                
+                    saved_cropped_img.save("temp/cropped.png")
+                    # Convert image to grayscale
+                    # Create a new image with the same size as the cropped image
+                    mask = Image.new('RGB', cropped_img.size)
+
+                    # Get the width and height of the image
+                    width, height = cropped_img.size
+
+                    for x in range(width):
+                        for y in range(height):
+                            # Get the RGB values of the pixel
+                            r, g, b = cropped_img.getpixel((x, y))
+
+                            # If the pixel is black, set it and its adjacent pixels to black in the new image
+                            if r == 0 and g == 0 and b == 0:
+                                mask.putpixel((x, y), (0, 0, 0))  # Black
+                                for i in range(-2, 3):  # Adjust these values to change the range of adjacent pixels
+                                    for j in range(-2, 3):
+                                        # Check that the pixel is within the image boundaries
+                                        if 0 <= x + i < width and 0 <= y + j < height:
+                                            mask.putpixel((x + i, y + j), (0, 0, 0))  # Black
+                            # Otherwise, make the pixel white in the new image
+                            else:
+                                mask.putpixel((x, y), (255, 255, 255))  # White
+                    # Save the mask image
+                    mask.save('temp/mask.png')
+                    
+                    st.session_state['inpainted_image'] = inpainting(project_name, "temp/cropped.png", inpaint_prompt, inpaint_negative_prompt, st.session_state['which_image'], True, pass_mask=True)
+                
+                if st.session_state['inpainted_image'] != "":
+                    st.image(st.session_state['inpainted_image'], caption="Inpainted Image", use_column_width=True,width=200)
+                    if st.button("Make Source Image"):                        
+                        update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", st.session_state['inpainted_image'])
+                        st.session_state['inpainted_image'] = ""
+                        st.experimental_rerun()
+                
+
+                                        
+                    
+
 
         
 
@@ -406,12 +487,28 @@ def create_or_get_single_preview_video(index_of_current_item, project_name):
     if project_details["audio"] != "":
         audio_bytes = get_audio_bytes_for_slice(project_name, index_of_current_item)
         add_audio_to_video_slice(timing_details[index_of_current_item]['timing_video'], audio_bytes)
-
-    print("YOOOOO")
-    print(timing_details[index_of_current_item]['timing_video'])
-    
+            
 
     return timing_details[index_of_current_item]['timing_video']
+
+def single_frame_time_changer(project_name, i, timing_details):
+    frame_time = st.number_input("Frame time (secs):", min_value=0.0, max_value=100.0, value=timing_details[i]["frame_time"], step=0.1, key=f"frame_time_{i}")                                                                   
+    if frame_time != timing_details[i]["frame_time"]:
+        update_specific_timing_value(project_name, i, "frame_time", frame_time)
+        if i != 0:
+            update_specific_timing_value(project_name, i-1, "timing_video", "")
+        update_specific_timing_value(project_name, i, "timing_video", "")
+        # if the frame time of this frame is more than the frame time of the next frame, then we need to update the next frame's frame time, and all the frames after that - shift them by the difference between the new frame time and the old frame time
+        # if it's not the last item
+        if i < len(timing_details) - 1:
+            if frame_time > timing_details[i+1]["frame_time"]:
+                for a in range(i+1, len(timing_details)):
+                    this_frame_time = timing_details[a]["frame_time"]
+                    # shift them by the difference between the new frame time and the old frame time
+                    new_frame_time = this_frame_time + (frame_time - timing_details[i]["frame_time"])                            
+                    update_specific_timing_value(project_name, a, "frame_time", new_frame_time)
+                    update_specific_timing_value(project_name, a, "timing_video", "")
+        st.experimental_rerun()
 
 
 def create_full_preview_video(project_name, index_of_item, speed):
@@ -439,10 +536,10 @@ def create_full_preview_video(project_name, index_of_item, speed):
         preview_video = create_or_get_single_preview_video(i, project_name)
         
         clip = VideoFileClip(preview_video)
-        
+
         number_text = TextClip(str(i), fontsize=24, color='white')
         number_background = TextClip(" ", fontsize=24, color='black', bg_color='black', size=(number_text.w + 10, number_text.h + 10))
-        number_background = number_background.set_position(('right', 'bottom')).set_duration(clip.duration)
+        number_background = number_background.set_position(('left', 'top')).set_duration(clip.duration)
         number_text = number_text.set_position((number_background.w - number_text.w - 5, number_background.h - number_text.h - 5)).set_duration(clip.duration)
         
         clip_with_number = CompositeVideoClip([clip, number_background, number_text])
@@ -450,15 +547,12 @@ def create_full_preview_video(project_name, index_of_item, speed):
         # remove existing preview video
         os.remove(preview_video)
         clip_with_number.write_videofile(preview_video, codec='libx264', bitrate='3000k')
-
-        clip.close()
-        clip_with_number.close()
                                 
         clips.append(preview_video)
 
         # if i == index_of_item - 1 or i == index_of_item:
-        # if i == index_of_item - 1 or i == index_of_item:        
-        #    clips.remove(preview_video)
+        #if i == index_of_item - 1 or i == index_of_item:        
+         #   clips.remove(preview_video)
         
 
 
@@ -492,7 +586,12 @@ def create_full_preview_video(project_name, index_of_item, speed):
 
 
 def back_and_forward_buttons(timing_details):
-    smallbutton1, smallbutton2,smallbutton3, smallbutton4 = st.columns([2,2,2,4])
+    smallbutton0,smallbutton1, smallbutton2,smallbutton3, smallbutton4 = st.columns([2,2,2,2,2])
+    with smallbutton0:
+        if st.session_state['which_image'] > 1:
+            if st.button(f"{st.session_state['which_image']-2} ⏮️", key=f"Previous Previous Image for {st.session_state['which_image']}"):
+                st.session_state['which_image_value'] = st.session_state['which_image_value'] - 2
+                st.experimental_rerun()
     with smallbutton1:
         # if it's not the first image
         if st.session_state['which_image'] != 0:
@@ -508,16 +607,39 @@ def back_and_forward_buttons(timing_details):
             if st.button(f"{st.session_state['which_image']+1} ⏩", key=f"Next Image for {st.session_state['which_image']}"):
                 st.session_state['which_image_value'] = st.session_state['which_image_value'] + 1
                 st.experimental_rerun()
+    with smallbutton4:
+        if st.session_state['which_image'] < len(timing_details)-2:
+            if st.button(f"{st.session_state['which_image']+2} ⏭️", key=f"Next Next Image for {st.session_state['which_image']}"):
+                st.session_state['which_image_value'] = st.session_state['which_image_value'] + 2
+                st.experimental_rerun()
 
 def styling_element(project_name,timing_details):
     
     timing_details = get_timing_details(project_name)
-        
-    if 'index_of_which_stage_to_run_on' not in st.session_state:                        
-        st.session_state['index_of_which_stage_to_run_on'] = 0    
-        
+    project_settings = get_project_settings(project_name)
+
     stages = ["Extracted Key Frames", "Current Main Variants"]
-    st.session_state['which_stage_to_run_on'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True, index =st.session_state['index_of_which_stage_to_run_on'] , help="Extracted frames means the original frames from the video.")                                                                                     
+
+    if project_settings['last_which_stage_to_run_on'] != "":         
+        if 'index_of_which_stage_to_run_on' not in st.session_state:
+            st.session_state['which_stage_to_run_on'] = project_settings['last_which_stage_to_run_on']
+            st.session_state['index_of_which_stage_to_run_on'] = stages.index(st.session_state['which_stage_to_run_on'])            
+    else:            
+        st.session_state['index_of_which_stage_to_run_on'] = 0
+            
+    stages1, stages2 = st.columns([1,1])
+    with stages1:
+        st.session_state['which_stage_to_run_on'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True, index =st.session_state['index_of_which_stage_to_run_on'] , help="Extracted frames means the original frames from the video.")                                                                                     
+    with stages2:
+        if st.session_state['which_stage_to_run_on'] == "Extracted Key Frames":
+            image = timing_details[st.session_state['which_image']]['source_image']            
+        else:
+            image = get_primary_variant_location(timing_details, st.session_state['which_image'])
+        if image != "":
+            st.image(image, use_column_width=True, caption=f"Image {st.session_state['which_image']}")
+        else:
+            st.error(f"No {st.session_state['which_stage_to_run_on']} image found for this variant")
+            
     if stages.index(st.session_state['which_stage_to_run_on']) != st.session_state['index_of_which_stage_to_run_on']:
         st.session_state['index_of_which_stage_to_run_on'] = stages.index(st.session_state['which_stage_to_run_on'])
         st.experimental_rerun()
@@ -545,8 +667,7 @@ def styling_element(project_name,timing_details):
         if st.session_state['index_of_last_model'] != models.index(st.session_state['model']):
             st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
             st.experimental_rerun()                          
-    else:
-        project_settings = get_project_settings(project_name)        
+    else:               
 
         models = ['controlnet','stable_diffusion_xl','stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'Dreambooth', 'LoRA','StyleGAN-NADA','real-esrgan-upscaling']
         
@@ -673,7 +794,7 @@ def styling_element(project_name,timing_details):
         else:
             if st.session_state['model'] == "pix2pix":
                 st.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")                    
-        st.session_state['strength'] = st.number_input(f"Strength", value=float(st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
+        st.session_state['strength'] = st.slider(f"Strength", value=float(st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
         
         with st.expander("Advanced settings 😏"):
             st.session_state['negative_prompt'] = st.text_area(f"Negative prompt", value=st.session_state['negative_prompt_value'], label_visibility="visible")
@@ -683,8 +804,12 @@ def styling_element(project_name,timing_details):
             st.session_state['guidance_scale'] = st.number_input(f"Guidance scale", value=float(st.session_state['guidance_scale']))
             st.session_state['seed'] = st.number_input(f"Seed", value=int(st.session_state['seed']))
             st.session_state['num_inference_steps'] = st.number_input(f"Inference steps", value=int(st.session_state['num_inference_steps']))
+
+        
             
     if len(timing_details) > 1:
+        st.markdown("***")
+        st.markdown("## Batch queries")
         batch_run_range = st.slider("Select range:", 1, 0, (0, len(timing_details)-1))  
         first_batch_run_value = batch_run_range[0]
         last_batch_run_value = batch_run_range[1]
@@ -702,6 +827,7 @@ def styling_element(project_name,timing_details):
         btn1, btn2 = st.columns(2)
 
         with btn1:
+            
             batch_number_of_variants = st.number_input("How many variants?", value=1, min_value=1, max_value=10, step=1, key="number_of_variants")
             
         with btn2:
@@ -1134,8 +1260,8 @@ def create_working_assets(video_name):
     os.mkdir("videos/" + video_name + "/assets/videos/1_final")
     os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
 
-    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type','guidance_type','default_animation_style','last_low_threshold','last_high_threshold'],
-            'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Extracted Frames', "None", "","","","",""]}
+    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type','guidance_type','default_animation_style','last_low_threshold','last_high_threshold','last_stage_run_on'],
+            'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Extracted Frames', '', '', '', '',100,200,'']}
 
     df = pd.DataFrame(data)
 
@@ -1149,10 +1275,10 @@ def create_working_assets(video_name):
     df.to_csv(f'videos/{video_name}/timings.csv', index=False)
 
 
-def inpainting(video_name, input_image, prompt, negative_prompt, index_of_current_item, invert_mask):
+def inpainting(project_name, input_image, prompt, negative_prompt, index_of_current_item, invert_mask, pass_mask=False):
 
     app_settings = get_app_settings()
-    timing_details = get_timing_details(video_name)
+    timing_details = get_timing_details(project_name)
 
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
 
@@ -1160,7 +1286,10 @@ def inpainting(video_name, input_image, prompt, negative_prompt, index_of_curren
 
     version = model.versions.get(
         "e490d072a34a94a11e9711ed5a6ba621c3fab884eda1665d9d3a282d65a21180")
-    mask = timing_details[index_of_current_item]["mask"]
+    if pass_mask == False:
+        mask = timing_details[index_of_current_item]["mask"]
+    else:
+        mask = "temp/mask.png"
 
     if not mask.startswith("http"):
         mask = open(mask, "rb")
@@ -2232,7 +2361,8 @@ def render_video(project_name, final_video_name, timing_details, quality):
                 speed_change_required = float(desired_duration/duration_of_input_video)                                
                 location_of_output_video = update_speed_of_video_clip(project_name, location_of_input_video, True, index_of_current_item)
                 if quality == "Preview":
-
+                    print("")
+                    '''
                     clip = VideoFileClip(location_of_output_video)
 
                     number_text = TextClip(str(index_of_current_item), fontsize=24, color='white')
@@ -2245,7 +2375,7 @@ def render_video(project_name, final_video_name, timing_details, quality):
                     # remove existing preview video
                     os.remove(location_of_output_video)
                     clip_with_number.write_videofile(location_of_output_video, codec='libx264', bitrate='3000k')
-
+                    '''
                 update_specific_timing_value(project_name, index_of_current_item, "timing_video", location_of_output_video)                
                 
 

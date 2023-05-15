@@ -7,7 +7,7 @@ from PIL import Image
 import requests as r
 from streamlit_drawable_canvas import st_canvas
 from repository.local_repo.csv_repo import get_app_settings, get_project_settings,update_specific_timing_value,update_project_setting
-from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process,add_image_variant,prompt_interpolation_model,update_speed_of_video_clip,create_timings_row_at_frame_number,extract_canny_lines,get_duration_from_video,get_audio_bytes_for_slice,add_audio_to_video_slice,convert_to_minutes_and_seconds,styling_element,get_primary_variant_location,create_full_preview_video,back_and_forward_buttons,resize_and_rotate_element,crop_image_element,move_frame,calculate_desired_duration_of_individual_clip,create_or_get_single_preview_video
+from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process,add_image_variant,prompt_interpolation_model,update_speed_of_video_clip,create_timings_row_at_frame_number,extract_canny_lines,get_duration_from_video,get_audio_bytes_for_slice,add_audio_to_video_slice,convert_to_minutes_and_seconds,styling_element,get_primary_variant_location,create_full_preview_video,back_and_forward_buttons,resize_and_rotate_element,crop_image_element,move_frame,calculate_desired_duration_of_individual_clip,create_or_get_single_preview_video,calculate_desired_duration_of_individual_clip,single_frame_time_changer
 from utils.file_upload.s3 import upload_image
 import uuid
 import datetime
@@ -128,7 +128,7 @@ def frame_styling_page(mainheader2, project_name):
                         st.session_state['how_to_guide_index'] = guidance_types.index(how_to_guide)
                         update_project_setting("guidance_type", how_to_guide,project_name)                                    
                         st.experimental_rerun()
-
+                    
                     if how_to_guide == "Drawing":
 
                         canvas1, canvas2 = st.columns([1.25,3])
@@ -344,10 +344,10 @@ def frame_styling_page(mainheader2, project_name):
                         crop_image_element("Source", timing_details, project_name)
                         
 
-                        resize_and_rotate_element("Source", timing_details, project_name)
+                        # resize_and_rotate_element("Source", timing_details, project_name)
                         
 
-                        with st.expander("Upload Image", expanded=False):
+                        with st.expander("Replace Source Image", expanded=False):
 
                             canny1, canny2  = st.columns([1,1])
 
@@ -420,12 +420,15 @@ def frame_styling_page(mainheader2, project_name):
                             # disable slider only if it's the first frame
                             slider_disabled = i == 0
 
-                            frame1, frame2 = st.columns([1,3])
+                            frame1, frame2, frame3 = st.columns([1,1,2])
 
                             with frame1:
                                 st.image(get_primary_variant_location(timing_details, i))                                         
-
                             with frame2:
+                                single_frame_time_changer(project_name, i, timing_details)
+                                st.caption(f"Duration: {calculate_desired_duration_of_individual_clip(timing_details, i):.2f} secs")
+
+                            with frame3:
                                 frame_time = st.slider(
                                 f"#{i} Frame Time = {timing_details[i]['frame_time']}",
                                 min_value=min_frame_time,
@@ -434,6 +437,7 @@ def frame_styling_page(mainheader2, project_name):
                                 step=0.01,
                                 disabled=slider_disabled,
                             )
+                                
 
                             # update timing details
                             if timing_details[i]['frame_time'] != frame_time:
@@ -447,6 +451,8 @@ def frame_styling_page(mainheader2, project_name):
                                     for j in range(i+1, num_timing_details):
                                         new_frame_time = timing_details[j]['frame_time'] + diff_frame_time                                    
                                         update_specific_timing_value(project_name, j, "frame_time", new_frame_time)
+                                        update_specific_timing_value(project_name, j, "timing_video", "")
+                                        update_specific_timing_value(project_name, j, "preview_video", "")
                                 st.experimental_rerun()
                                          
 
@@ -698,10 +704,9 @@ def frame_styling_page(mainheader2, project_name):
                     with st.expander("Compare to previous and next images", expanded=True):      
 
                         def preview_individual_video(index_of_current_item, timing_details, project_name):
-                            variants = timing_details[index_of_current_item]["alternative_images"]
-                            if variants != [] and variants != None and variants != "":
-                                previous_image = get_primary_variant_location(timing_details, index_of_current_item)                        
-                                st.image(previous_image, use_column_width=True, caption=f"Image #{index_of_current_item}")
+                            image = get_primary_variant_location(timing_details, index_of_current_item)
+                            if image != "":                                
+                                st.image(image, use_column_width=True, caption=f"Image #{index_of_current_item}")
                             if st.button(f"Preview Interpolation From #{index_of_current_item} to #{index_of_current_item+1}", key=f"Preview Interpolation From #{index_of_current_item} to #{index_of_current_item+1}"):
                                 create_or_get_single_preview_video(index_of_current_item,project_name)      
                                 timing_details = get_timing_details(project_name)                               
@@ -710,14 +715,28 @@ def frame_styling_page(mainheader2, project_name):
                         img1, img2 = st.columns(2)
                         with img1:
                             # if it's the first image, don't show a previous image
-                            if st.session_state['which_image'] != 0:                                                                                        
-                                preview_individual_video(st.session_state['which_image']-1, timing_details, project_name)                                                                                                        
+                            if st.session_state['which_image'] != 0:
+                                last_image_number = st.session_state['which_image']-1                                                                                                                   
+                                image = get_primary_variant_location(timing_details, last_image_number)
+                                if image != "":                                
+                                    st.image(image, use_column_width=True, caption=f"Image #{last_image_number}")
+                                if st.button(f"Preview Interpolation From #{last_image_number} to #{st.session_state['which_image']}", key=f"Preview Interpolation From #{last_image_number} to #{st.session_state['which_image']}"):
+                                    create_or_get_single_preview_video(last_image_number,project_name)      
+                                    timing_details = get_timing_details(project_name)                               
+                                    st.video(timing_details[last_image_number]['timing_video'])   
                             else:
                                 st.write("")
                         with img2:
                             # if it's the last image, don't show a next image
                             if st.session_state['which_image'] != len(timing_details)-1:
-                                preview_individual_video(st.session_state['which_image'], timing_details, project_name)                                                                                                                                        
+                                next_image_number = st.session_state['which_image']+1                                                                                                                   
+                                image = get_primary_variant_location(timing_details, next_image_number)
+                                if image != "":                                
+                                    st.image(image, use_column_width=True, caption=f"Image #{next_image_number}")
+                                if st.button(f"Preview Interpolation From #{st.session_state['which_image']} to #{next_image_number}", key=f"Preview Interpolation From #{st.session_state['which_image']} to #{next_image_number}"):
+                                    create_or_get_single_preview_video(st.session_state['which_image'],project_name)      
+                                    timing_details = get_timing_details(project_name)                               
+                                    st.video(timing_details[st.session_state['which_image']]['timing_video'])   
                             else:
                                 st.write("")
 
@@ -842,25 +861,23 @@ def frame_styling_page(mainheader2, project_name):
                             st.image(primary_image, use_column_width=True, caption=f"Styled image")                           
 
                     with image3:
-                        frame_time = st.number_input("Frame time (seconds):", min_value=0.0, max_value=100.0, value=timing_details[i]["frame_time"], step=0.1, key=f"frame_time_{i}")                                                                   
-                        if frame_time != timing_details[i]["frame_time"]:
-                            update_specific_timing_value(project_name, i, "frame_time", frame_time)
-                            if i != 0:
-                                update_specific_timing_value(project_name, i-1, "timing_video", "")
-                            update_specific_timing_value(project_name, i, "timing_video", "")
-                            # if the frame time of this frame is more than the frame time of the next frame, then we need to update the next frame's frame time, and all the frames after that - shift them by the difference between the new frame time and the old frame time
-                            # if it's not the last item
-                            if i < len(timing_details) - 1:
-                                if frame_time > timing_details[i+1]["frame_time"]:
-                                    for a in range(i+1, len(timing_details)):
-                                        this_frame_time = timing_details[a]["frame_time"]
-                                        # shift them by the difference between the new frame time and the old frame time
-                                        new_frame_time = this_frame_time + (frame_time - timing_details[i]["frame_time"])                            
-                                        update_specific_timing_value(project_name, a, "frame_time", new_frame_time)
-                                        update_specific_timing_value(project_name, a, "timing_video", "")
+                        time1, time2 = st.columns([1,1])
+                        with time1:
+                            
+                            single_frame_time_changer(project_name, i, timing_details)
+                            
+                            st.info(f"Duration: {calculate_desired_duration_of_individual_clip(timing_details, index_of_current_item):.2f} secs")
 
+                        with time2:
 
-                            st.experimental_rerun()
+                            animation_styles = ["Interpolation", "Direct Morphing"]                            
+                            
+                            animation_style = st.radio("Animation style:", animation_styles, index=animation_styles.index(timing_details[i]['animation_style']), key=f"animation_style_{i}", help="This is for the morph from the current frame to the next one.")
+
+                            if timing_details[st.session_state['which_image']]['animation_style'] != animation_style:
+                                update_specific_timing_value(project_name, st.session_state['which_image'], "animation_style", project_settings["default_animation_style"])
+                                                                                                                             
+                        
                         if st.button(f"Jump to single frame view for #{index_of_current_item}"):
                             st.session_state['which_image_value'] = index_of_current_item
                             st.session_state['frame_styling_view_type'] = "Individual View"
@@ -1138,7 +1155,7 @@ def frame_styling_page(mainheader2, project_name):
                     else:
                         selected_image = ""
                 
-                how_long_after = st.slider("How long after?", min_value=0.0, max_value=10.0, value=1.0, step=0.1)
+                how_long_after = st.slider("How long after?", min_value=0.0, max_value=10.0, value=2.5, step=0.1)
 
             with add2:
                 if selected_image != "":

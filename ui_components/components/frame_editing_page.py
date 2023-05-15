@@ -356,9 +356,9 @@ def frame_editing_page(project_name):
             elif st.session_state["type_of_mask_replacement"] == "Inpainting":
                 btn1, btn2 = st.sidebar.columns([1,1])
                 with btn1:
-                    prompt = st.text_area("Prompt:", help="Describe the whole image, but focus on the details you want changed!")
+                    prompt = st.text_area("Prompt:", help="Describe the whole image, but focus on the details you want changed!", value=st.session_state['project_settings']["last_prompt"])
                 with btn2:
-                    negative_prompt = st.text_area("Negative Prompt:", help="Enter any things you want to make the model avoid!")
+                    negative_prompt = st.text_area("Negative Prompt:", help="Enter any things you want to make the model avoid!", value =st.session_state['project_settings']["last_negative_prompt"])
 
             edit1, edit2 = st.sidebar.columns(2)
 
