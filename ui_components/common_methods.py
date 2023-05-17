@@ -767,7 +767,7 @@ def styling_element(project_name,timing_details):
             st.markdown("How:")
             st.markdown("You can include the following tags in the prompt to vary the prompt dynamically: [expression], [location], [mouth], and [looking]")
         if st.session_state['model'] == "Dreambooth":
-            model_details = get_model_details(st.session_state['custom_models'])
+            model_details = get_model_details_from_csv(st.session_state['custom_models'])
             st.info(f"Must include '{model_details['keyword']}' to run this model")   
             if model_details['controller_type'] != "":                    
                 st.session_state['adapter_type']  = st.selectbox(f"Would you like to use the {model_details['controller_type']} controller?", ['Yes', 'No'])
@@ -1077,7 +1077,7 @@ def dynamic_prompting(prompt, source_image, project_name, index_of_current_item)
 def trigger_restyling_process(timing_details, project_name, index_of_current_item, model, prompt, strength, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, which_stage_to_run_on, promote_new_generation, project_settings, custom_models, adapter_type, update_inference_settings,low_threshold,high_threshold):
     timing_details = get_timing_details(project_name)
     if update_inference_settings is True:        
-        get_model_details(model)
+        get_model_details_from_csv(model)
         prompt = prompt.replace(",", ".")
         prompt = prompt.replace("\n", "")
         update_project_setting("last_prompt", prompt, project_name)

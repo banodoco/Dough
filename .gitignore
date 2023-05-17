@@ -13,11 +13,7 @@ venv
 app_settings.csv
 videos
 videos/*
-<<<<<<< HEAD
 /temp/
-training_data
-=======
 training_data
 inference_log/*
 *.db
->>>>>>> 0d9d276a0bf8951baff0db17e7c7f694d5388f61
