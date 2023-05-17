@@ -213,7 +213,7 @@ def zoom_image(location, zoom_factor, fill_with=None):
 
     # Check if the provided location is a URL
     if location.startswith('http') or location.startswith('https'):
-        response = requests.get(location)
+        response = r.get(location)
         image = Image.open(BytesIO(response.content))
     else:
         if not os.path.exists(location):
@@ -2017,6 +2017,8 @@ def hair_swap(source_image, project_name, index_of_current_item):
     version = model.versions.get(
         "c4c7e5a657e2e1abccd57625093522a9928edeccee77e3f55d57c664bcd96fa2")
 
+    # BUG: FIX VIDEO NAME
+    video_name = ""
     source_hair = upload_image("videos/" + str(video_name) + "/face.png")
 
     target_hair = upload_image("videos/" + str(video_name) +

@@ -15,3 +15,7 @@ mesa
 streamlit-javascript==0.1.5
 psycopg2==2.9.5
 psycopg2-binary==2.9.5
+streamlit-cropper==0.2.1
+pydub==0.25.1
+requests-toolbelt==1.0.0
+streamlit-option-menu==0.3.4
