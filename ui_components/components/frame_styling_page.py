@@ -61,25 +61,7 @@ def frame_styling_page(mainheader2, project_name):
             st.session_state['frame_styling_view_type_index'] = 0
 
 
-        with st.sidebar:
-
-            st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(timing_details)-1, value=st.session_state['which_image_value'], step=1, key="which_image_selector")
-            if st.session_state['which_image_value'] != st.session_state['which_image']:
-                st.session_state['which_image_value'] = st.session_state['which_image']
-                st.session_state['reset_canvas'] = True
-                st.session_state['frame_styling_view_type_index'] = 0
-                st.session_state['frame_styling_view_type'] = "Individual View"
-                st.experimental_rerun()       
-
-            with st.expander("Notes:"):
-                    
-                notes = st.text_area("Frame Notes:", value=timing_details[st.session_state['which_image']]["notes"], height=100, key="notes")
-
-            if notes != timing_details[st.session_state['which_image']]["notes"]:
-                timing_details[st.session_state['which_image']]["notes"] = notes
-                update_specific_timing_value(project_name, st.session_state['which_image'], "notes", notes)
-                st.experimental_rerun()
-            st.markdown("***")
+        
             
 
         if timing_details == []:
@@ -102,6 +84,33 @@ def frame_styling_page(mainheader2, project_name):
             project_settings = get_project_settings(project_name)
 
             if st.session_state['frame_styling_view_type'] == "Individual View":
+
+                with st.sidebar:
+
+                    time1, time2 = st.columns([1,1])
+
+                    with time1:
+
+                        st.session_state['which_image'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(timing_details)-1, value=st.session_state['which_image_value'], step=1, key="which_image_selector")
+                        if st.session_state['which_image_value'] != st.session_state['which_image']:
+                            st.session_state['which_image_value'] = st.session_state['which_image']
+                            st.session_state['reset_canvas'] = True
+                            st.session_state['frame_styling_view_type_index'] = 0
+                            st.session_state['frame_styling_view_type'] = "Individual View"
+                            st.experimental_rerun()       
+
+                    with time2:
+                        single_frame_time_changer(project_name, st.session_state['which_image'], timing_details)
+
+                    with st.expander("Notes:"):
+                            
+                        notes = st.text_area("Frame Notes:", value=timing_details[st.session_state['which_image']]["notes"], height=100, key="notes")
+
+                    if notes != timing_details[st.session_state['which_image']]["notes"]:
+                        timing_details[st.session_state['which_image']]["notes"] = notes
+                        update_specific_timing_value(project_name, st.session_state['which_image'], "notes", notes)
+                        st.experimental_rerun()
+                    st.markdown("***")
 
                 if "section_index" not in st.session_state:
                     st.session_state['section_index'] = 0
