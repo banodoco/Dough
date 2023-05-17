@@ -1,6 +1,6 @@
 import streamlit as st
 import os
-from ui_components.common_methods import create_working_assets, get_timing_details
+from ui_components.common_methods import get_timing_details
 import streamlit as st
 import os
 from moviepy.editor import *
@@ -17,6 +17,7 @@ from ui_components.components.project_settings_page import project_settings_page
 from ui_components.components.prompt_finder_page import prompt_finder_page
 from ui_components.components.video_rendering_page import video_rendering_page
 from ui_components.components.welcome_page import welcome_page
+from utils.common_methods import create_working_assets
 
 def setup_app_ui():
        

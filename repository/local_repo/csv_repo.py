@@ -47,6 +47,11 @@ class CSVProcessor:
         df = df.drop([int(idx)])
         df.to_csv(self.file_path, index=False)
     
+    def add_row(self, new_row):
+        df = pd.read_csv(self.file_path)
+        df = df.append(new_row, ignore_index=True)
+        df.to_csv(self.file_path, index=False)
+    
     # TODO: create a separate interface for this later
     def update_specific_timing_value(self, index_of_current_item, parameter, value):
         
@@ -98,3 +103,7 @@ def update_app_settings(key, value):
 def update_specific_timing_value(project_name, index_of_current_item, parameter, value):
     csv_client = CSVProcessor(f"videos/{project_name}/timings.csv")
     csv_client.update_specific_timing_value(index_of_current_item, parameter, value)
+
+def log_inference_data_in_csv(data):
+    csv_client = CSVProcessor('inference_log/log.csv')
+    csv_client.add_row(data)

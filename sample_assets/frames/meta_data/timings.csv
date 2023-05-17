@@ -1,0 +1,5 @@
+frame_time,frame_number,primary_image,alternative_images,custom_pipeline,negative_prompt,guidance_scale,seed,num_inference_steps,model_id,strength,notes,source_image,custom_models,adapter_type,duration_of_clip,interpolated_video,timing_video,prompt,mask
+0.0,0,0,,,,,0,0,,,,videos/controlnet_test/assets/frames/1_selected/vxno8acjcqqmiiv8.png,,,,,,,
+3.96,99,0,,,,,0,0,,,,videos/controlnet_test/assets/frames/1_selected/3vlb4mr7d95c42i4.png,,,,,,,
+7.92,198,0,,,,,0,0,,,,videos/controlnet_test/assets/frames/1_selected/lgw8rfbmiup8cgxr.png,,,,,,,
+11.88,297,0,,,,,0,0,,,,videos/controlnet_test/assets/frames/1_selected/5l3t6azqz6kgbgzs.png,,,,,,,

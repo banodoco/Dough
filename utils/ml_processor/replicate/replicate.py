@@ -1,18 +1,25 @@
-from settings import REPLICATE_API_TOKEN
+import time
+from repository.local_repo.csv_repo import get_app_settings
 from utils.file_upload.s3 import upload_image
+from utils.logging.logging import AppLogger
 from utils.ml_processor.ml_interface import MachineLearningProcessor
 import replicate
 import os
 import requests as r
 import json
+import zipfile
 
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
+from repository.data_logger import log_model_inference
 
 
 class ReplicateProcessor(MachineLearningProcessor):
     def __init__(self):
-        os.environ["REPLICATE_API_TOKEN"] = REPLICATE_API_TOKEN
+        app_settings = get_app_settings()
+        self.logger = AppLogger()
+        os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
         self._set_urls()
+        super().__init__()
 
     def _set_urls(self):
         self.dreambooth_training_url = "https://dreambooth-api-experimental.replicate.com/v1/trainings"
@@ -30,7 +37,10 @@ class ReplicateProcessor(MachineLearningProcessor):
     
     def predict_model_output(self, model: ReplicateModel, **kwargs):
         model_version = self.get_model(model)
+        start_time = time.time()
         output = model_version.predict(**kwargs)
+        end_time = time.time()
+        log_model_inference(model, end_time - start_time, **kwargs)
         return output
 
     def inpainting(self, video_name, input_image, prompt, negative_prompt):
@@ -42,22 +52,37 @@ class ReplicateProcessor(MachineLearningProcessor):
         if not input_image.startswith("http"):        
             input_image = open(input_image, "rb")
 
+        start_time = time.time()
         output = model.predict(mask=mask, image=input_image,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)    
+        end_time = time.time()
+        log_model_inference(model, end_time - start_time, prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)
 
         return output[0]
     
-    def upload_training_data(self, file_path):
+    # TODO: separate image compression from this function
+    def upload_training_data(self, images_list):
+        # compressing images in zip file
+        for i in range(len(images_list)):
+            images_list[i] = 'training_data/' + images_list[i]
+
+        with zipfile.ZipFile('images.zip', 'w') as zip:
+            for image in images_list:
+                zip.write(image, arcname=os.path.basename(image))
+
         headers = {
             "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),
             "Content-Type": "application/zip"
         }
         response = r.post(self.training_data_upload_url, headers=headers)
-        data = response.json()
-
-        with open(file_path, 'rb') as f:
-            r.put(data['upload_url'], data=f, headers=headers)
+        if response.status_code != 200:
+            raise Exception(str(response.content))
+        upload_url = response.json()["upload_url"]  # this is where data will be uploaded
+        serving_url = response.json()["serving_url"]    # this is where the data will be available
+        with open("images.zip", 'rb') as f:
+            r.put(upload_url, data=f, headers=headers)
         
-        return data['upload_url'], data['serving_url']
+        os.remove('images.zip')
+        return serving_url
     
     def dreambooth_training(self, training_file_url, instance_prompt, class_prompt, max_train_steps, model_name):
         headers = {
@@ -85,5 +110,18 @@ class ReplicateProcessor(MachineLearningProcessor):
             input_image = open(input_image, "rb")
 
         model = self.get_model(REPLICATE_MODEL.pollination_modnet)
+        start_time = time.time()
         output = model.predict(image=input_image)
+        end_time = time.time()
+        log_model_inference(model, end_time - start_time, image=input_image)
+
         return output
+    
+    def get_model_version_from_id(self, model_id):
+        api_key = os.environ.get("REPLICATE_API_TOKEN")
+        headers = {"Authorization": f"Token {api_key}"}
+        url = f"{self.dreambooth_training_url}/{model_id}"
+        response = r.get(url, headers=headers)
+        version = (response.json()["version"])
+
+        return version

@@ -20,9 +20,6 @@ import moviepy.editor
 import math
 
 
-
-
-
 def frame_styling_page(mainheader2, project_name):
 
     
@@ -199,7 +196,6 @@ def frame_styling_page(mainheader2, project_name):
                             resize_and_rotate_element("Source", timing_details, project_name)
                         
                         with canvas2:
-
                             realtime_update = True        
 
                             if "reset_canvas" not in st.session_state:

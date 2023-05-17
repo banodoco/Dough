@@ -1,4 +1,6 @@
 from repository.local_repo.csv_repo import get_app_settings
+from repository.local_repo.db_repo import DBRepo, setup_database
+from utils.common_methods import create_working_assets
 
 
 REPLICATE_API_TOKEN = None
@@ -20,3 +22,11 @@ def project_init():
 
     AWS_ACCESS_KEY_ID = app_settings["aws_access_key_id"]
     AWS_SECRET_ACCESS_KEY = app_settings["aws_secret_access_key"]
+
+    # create asset directories
+    create_working_assets('controlnet_test')
+
+    # setup database
+    setup_database()
+
+

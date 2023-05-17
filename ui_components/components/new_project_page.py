@@ -1,6 +1,6 @@
 import streamlit as st
-from ui_components.common_methods import create_working_assets
 from repository.local_repo.csv_repo import update_project_setting
+from utils.common_methods import create_working_assets
 from utils.media_processor.video import resize_video
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import time
