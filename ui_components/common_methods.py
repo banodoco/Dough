@@ -492,7 +492,7 @@ def create_or_get_single_preview_video(index_of_current_item, project_name):
     return timing_details[index_of_current_item]['timing_video']
 
 def single_frame_time_changer(project_name, i, timing_details):
-    frame_time = st.number_input("Frame time (secs):", min_value=0.0, max_value=100.0, value=timing_details[i]["frame_time"], step=0.1, key=f"frame_time_{i}")                                                                   
+    frame_time = st.number_input("Frame time (secs):", min_value=0.0, max_value=3600.0, value=timing_details[i]["frame_time"], step=0.1, key=f"frame_time_{i}")                                                                   
     if frame_time != timing_details[i]["frame_time"]:
         update_specific_timing_value(project_name, i, "frame_time", frame_time)
         if i != 0:
@@ -1261,7 +1261,7 @@ def create_working_assets(video_name):
     os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
 
     data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type','guidance_type','default_animation_style','last_low_threshold','last_high_threshold','last_stage_run_on'],
-            'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Extracted Frames', '', '', '', '',100,200,'']}
+            'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Extracted Key Frames', '', '', '', '',100,200,'']}
 
     df = pd.DataFrame(data)
 
@@ -1270,7 +1270,9 @@ def create_working_assets(video_name):
     df = pd.DataFrame(columns=['frame_time', 'frame_number', 'primary_image', 'alternative_images', 'custom_pipeline', 'negative_prompt', 'guidance_scale', 'seed', 'num_inference_steps',
                       'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'duration_of_clip', 'interpolated_video', 'timing_video', 'prompt', 'mask','canny_image','preview_video','animation_style','interpolation_steps','low_threshold','high_threshold'])
 
-    # df.loc[0] = ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+    df.loc[0] = [0,"", 0, "", "", "", 0, 0, 0, "", 0, "", "", "", "", 0, "", "", "", "", "", "", "", "", "", ""]
+
+    st.session_state['which_image'] = 0
 
     df.to_csv(f'videos/{video_name}/timings.csv', index=False)
 

@@ -1,6 +1,7 @@
 import streamlit as st
 from ui_components.common_methods import create_working_assets
 from repository.local_repo.csv_repo import update_project_setting
+from repository.local_repo.csv_repo import update_specific_timing_value
 from utils.media_processor.video import resize_video
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import time
@@ -66,6 +67,8 @@ def new_project_page():
         
         update_project_setting("default_animation_style", default_animation_style, new_project_name)
         update_project_setting("guidance_type", guidance_type, new_project_name)
+        update_specific_timing_value(new_project_name, 0, "animation_style", default_animation_style)
+        
         
         
         if uploaded_video is not None:

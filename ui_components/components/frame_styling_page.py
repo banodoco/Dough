@@ -434,7 +434,8 @@ def frame_styling_page(mainheader2, project_name):
                             with frame1:
                                 st.image(get_primary_variant_location(timing_details, i))                                         
                             with frame2:
-                                single_frame_time_changer(project_name, i, timing_details)
+                                if st.session_state['section'] != "Motion":
+                                    single_frame_time_changer(project_name, i, timing_details)
                                 st.caption(f"Duration: {calculate_desired_duration_of_individual_clip(timing_details, i):.2f} secs")
 
                             with frame3:
@@ -452,8 +453,9 @@ def frame_styling_page(mainheader2, project_name):
                             if timing_details[i]['frame_time'] != frame_time:
                                 previous_frame_time = timing_details[i]['frame_time']
                                 update_specific_timing_value(project_name, i, "frame_time", frame_time)
-                                for a in range(st.session_state['which_image'] - 1, st.session_state['which_image'] + 1):                                    
-                                    update_specific_timing_value(project_name, a, "timing_video", "")
+                                for a in range(i - 1, i + 2):                                    
+                                    if a >= 0 and a < num_timing_details:
+                                        update_specific_timing_value(project_name, a, "timing_video", "")
                                 update_specific_timing_value(project_name, i, "preview_video", "")
                                 if shift_frames is True:
                                     diff_frame_time = frame_time - previous_frame_time
@@ -879,12 +881,17 @@ def frame_styling_page(mainheader2, project_name):
 
                         with time2:
 
-                            animation_styles = ["Interpolation", "Direct Morphing"]                            
-                            
-                            animation_style = st.radio("Animation style:", animation_styles, index=animation_styles.index(timing_details[i]['animation_style']), key=f"animation_style_{i}", help="This is for the morph from the current frame to the next one.")
+                            animation_styles = ["Interpolation", "Direct Morphing"]     
 
-                            if timing_details[st.session_state['which_image']]['animation_style'] != animation_style:
-                                update_specific_timing_value(project_name, st.session_state['which_image'], "animation_style", project_settings["default_animation_style"])
+                            if f"animation_style_index_{index_of_current_item}" not in st.session_state:
+                                st.session_state[f"animation_style_index_{index_of_current_item}"] = animation_styles.index(timing_details[i]['animation_style'])
+                                                    
+                            st.session_state[f"animation_style_{index_of_current_item}"]  = st.radio("Animation style:", animation_styles, index=st.session_state[f"animation_style_index_{index_of_current_item}"], key=f"animation_style_radio_{i}", help="This is for the morph from the current frame to the next one.")
+
+                            if st.session_state[f"animation_style_{index_of_current_item}"] != timing_details[i]["animation_style"]:
+                                st.session_state[f"animation_style_index_{index_of_current_item}"] = animation_styles.index(st.session_state[f"animation_style_{index_of_current_item}"])                                                                
+                                update_specific_timing_value(project_name, index_of_current_item, "animation_style",st.session_state[f"animation_style_{index_of_current_item}"])
+                                st.experimental_rerun()
                                                                                                                              
                         
                         if st.button(f"Jump to single frame view for #{index_of_current_item}"):
