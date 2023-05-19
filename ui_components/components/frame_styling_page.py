@@ -7,7 +7,7 @@ from PIL import Image
 import requests as r
 from streamlit_drawable_canvas import st_canvas
 from repository.local_repo.csv_repo import get_app_settings, get_project_settings,update_specific_timing_value,update_project_setting
-from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process,add_image_variant,prompt_interpolation_model,update_speed_of_video_clip,create_timings_row_at_frame_number,extract_canny_lines,get_duration_from_video,get_audio_bytes_for_slice,add_audio_to_video_slice,convert_to_minutes_and_seconds,styling_element,get_primary_variant_location,create_full_preview_video,back_and_forward_buttons,resize_and_rotate_element,crop_image_element,move_frame,calculate_desired_duration_of_individual_clip,create_or_get_single_preview_video,calculate_desired_duration_of_individual_clip,single_frame_time_changer
+from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process,add_image_variant,prompt_interpolation_model,update_speed_of_video_clip,create_timings_row_at_frame_number,extract_canny_lines,get_duration_from_video,get_audio_bytes_for_slice,add_audio_to_video_slice,convert_to_minutes_and_seconds,styling_element,get_primary_variant_location,create_full_preview_video,back_and_forward_buttons,resize_and_rotate_element,manual_cropping_element,precision_cropping_element,move_frame,calculate_desired_duration_of_individual_clip,create_or_get_single_preview_video,calculate_desired_duration_of_individual_clip,single_frame_time_changer
 from utils.file_upload.s3 import upload_image
 import uuid
 import datetime
@@ -132,7 +132,9 @@ def frame_styling_page(mainheader2, project_name):
                             st.session_state['how_to_guide_index'] = 0
                         else:
                             st.session_state['how_to_guide_index'] = guidance_types.index(project_settings["guidance_type"])
-                    how_to_guide = st.radio("How to guide:", guidance_types, key="how_to_guide", horizontal=True, index=st.session_state['how_to_guide_index'])
+                    crop1, crop2 = st.columns([1,1])
+                    with crop1:
+                        how_to_guide = st.radio("How to guide:", guidance_types, key="how_to_guide", horizontal=True, index=st.session_state['how_to_guide_index'])
                     if guidance_types.index(how_to_guide) != st.session_state['how_to_guide_index']:
                         st.session_state['how_to_guide_index'] = guidance_types.index(how_to_guide)
                         update_project_setting("guidance_type", how_to_guide,project_name)                                    
@@ -350,7 +352,40 @@ def frame_styling_page(mainheader2, project_name):
 
                     elif how_to_guide == "Images":
 
-                        crop_image_element("Source", timing_details, project_name)
+                        with crop2:
+
+                            def remember_radio_pre_function(item_name, options, project_settings):
+                                if f'{item_name}_index' not in st.session_state:
+                                    if f'{item_name}' in project_settings:
+                                        if project_settings[f"{item_name}"] == "":
+                                            st.session_state[f'{item_name}_index'] = 0
+                                        else:
+                                            st.session_state[f'{item_name}_index'] = options.index(project_settings[f"{item_name}"])
+                                    else:
+                                        st.session_state[f'{item_name}_index'] = 0
+
+                            def remember_radio_post_function(item_name, options, project_settings, selection, project_name):
+                                if options.index(selection) != st.session_state[f'{item_name}_index']:
+                                    st.session_state[f'{item_name}_index'] = options.index(selection)
+                                    if f'{item_name}' in project_settings:
+                                        update_project_setting(item_name, selection,project_name)                                    
+                                    st.experimental_rerun()
+                            
+                            def radio_button_with_memory(item_name, options, project_settings, project_name):
+                                remember_radio_pre_function(item_name, options, project_settings)                                                              
+                                selection = st.radio(item_name.replace("_", " ").capitalize() + ":", options, index=st.session_state[f'{item_name}_index'])
+                                remember_radio_post_function(item_name, options, project_settings, selection, project_name)
+                                return selection
+                            
+                            how_to_crop = radio_button_with_memory("how_to_crop", ["Manual Cropping", "Precision Cropping"], project_settings, project_name)
+                                                        
+                        if how_to_crop == "Manual Cropping":
+
+                            manual_cropping_element("Source", timing_details, project_name)
+                        
+                        elif how_to_crop == "Precision Cropping":
+
+                            precision_cropping_element("Source", timing_details, project_name,project_settings)
                         
 
                         # resize_and_rotate_element("Source", timing_details, project_name)

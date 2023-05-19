@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 import base64
-from PIL import Image, ImageDraw, ImageFont, ImageOps,ImageEnhance,ImageFilter
+from PIL import Image, ImageDraw, ImageFont, ImageOps,ImageEnhance,ImageFilter, ImageChops
 from moviepy.editor import *
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 import cv2
@@ -14,6 +14,7 @@ import requests as r
 import imageio
 import ffmpeg
 import string
+import math
 import json
 import tempfile
 import boto3
@@ -289,11 +290,95 @@ def zoom_image(location, zoom_factor, fill_with=None):
         cropped_image = resized_image.crop((left, top, right, bottom))
         return cropped_image
     
+def apply_image_transformations(image, zoom_level, rotation_angle, x_shift, y_shift):
+
+    width, height = image.size
+
+    # Zoom
+    new_width = int(width * (zoom_level / 100))
+    new_height = int(height * (zoom_level / 100))
+    zoomed_image = image.resize((new_width, new_height))
+
+    # Create a new image with black background for the zoomed image
+    zoomed_image_new = Image.new("RGB", (width, height), "black")
+    offset = ((width - new_width) // 2, (height - new_height) // 2)
+    zoomed_image_new.paste(zoomed_image, offset)
+
+    # Calculate the diagonal for the rotation
+    diagonal = math.ceil(math.sqrt(width**2 + height**2))
+
+    # Create a new image with black background for rotation
+    rotation_bg = Image.new("RGB", (diagonal, diagonal), "black")
+    rotation_offset = ((diagonal - width) // 2, (diagonal - height) // 2)
+    rotation_bg.paste(zoomed_image_new, rotation_offset)
+
+    # Rotation
+    rotated_image = rotation_bg.rotate(rotation_angle)
+
+    # Shift
+    # Create a new image with black background
+    shift_bg = Image.new("RGB", (diagonal, diagonal), "black")
+    shift_bg.paste(rotated_image, (x_shift, y_shift))
+
+    # Crop the shifted image back to original size
+    crop_x1 = max(rotation_offset[0] - x_shift, 0)
+    crop_y1 = max(rotation_offset[1] - y_shift, 0)
+    crop_x2 = min(crop_x1 + width, diagonal)
+    crop_y2 = min(crop_y1 + height, diagonal)
+    cropped_image = shift_bg.crop((crop_x1, crop_y1, crop_x2, crop_y2))
+
+    return cropped_image
 
 
+def precision_cropping_element(stage,timing_details, project_name, project_settings):
 
+    if timing_details[st.session_state['which_image']]["source_image"] == "":
+        st.error("Please select a source image before cropping")
+        return
+    else:
+        if stage == "Source":
+            input_image = timing_details[st.session_state['which_image']]["source_image"]                                
+        elif stage == "Styled":
+            input_image = get_primary_variant_location(timing_details, st.session_state['which_image'])
+        input_image = get_pillow_image(input_image)
+        
+    col1, col2 = st.columns(2)
 
-def crop_image_element(stage,timing_details,project_name):
+    # Column 1
+    with col1:                    
+        st.subheader("Precision Cropping:")
+        if 'reset_cropping_element' not in st.session_state:
+            st.session_state['zoom_level_value'] = 100
+            st.session_state['rotation_angle_value'] = 0
+            st.session_state['x_shift_value'] = 0
+            st.session_state['y_shift_value'] = 0
+        
+        if st.button("Reset Cropping"):
+            st.session_state['zoom_level_value'] = 100
+            st.session_state['rotation_angle_value'] = 0
+            st.session_state['x_shift_value'] = 0
+            st.session_state['y_shift_value'] = 0            
+            st.experimental_rerun()
+                       
+        
+        zoom_level = st.slider("Zoom Level (%)", min_value=10, max_value=200, value=100)
+        rotation_angle = st.slider("Rotation Angle", min_value=-90, max_value=90, value=0)
+        x_shift = st.slider("Shift Left/Right", min_value=-100, max_value=100, value=0)
+        y_shift = st.slider("Shift Up/Down", min_value=-100, max_value=100, value=0)
+        st.caption("Input Image:")
+        st.image(input_image, caption="Input Image", width=300)
+        
+
+# Column 2
+        with col2:
+            st.caption("Output Image:")     
+            output_image = apply_image_transformations(input_image, zoom_level, rotation_angle, x_shift, y_shift)
+            st.image(output_image, use_column_width=True)
+
+            inpaint_in_black_space_element(output_image,project_settings, project_name)
+    
+
+def manual_cropping_element(stage,timing_details,project_name):
 
     if timing_details[st.session_state['which_image']]["source_image"] == "":
         st.error("Please select a source image before cropping")
@@ -397,58 +482,55 @@ def crop_image_element(stage,timing_details,project_name):
             with cropbtn2:
                 st.warning("Warning: This will overwrite the original image")
 
-            with st.expander("Inpaint in black space"):
-                inpaint_prompt = st.text_area("Prompt", value=project_settings["last_prompt"])
-                inpaint_negative_prompt = st.text_input("Negative Prompt", value='branches, frame, fractals, text' +project_settings["last_negative_prompt"])
-                if 'inpainted_image' not in st.session_state:
-                    st.session_state['inpainted_image'] = ""
-                if st.button("Inpaint"):
-                    saved_cropped_img = cropped_img.resize((width, height), Image.ANTIALIAS)                
-                    saved_cropped_img.save("temp/cropped.png")
-                    # Convert image to grayscale
-                    # Create a new image with the same size as the cropped image
-                    mask = Image.new('RGB', cropped_img.size)
-
-                    # Get the width and height of the image
-                    width, height = cropped_img.size
-
-                    for x in range(width):
-                        for y in range(height):
-                            # Get the RGB values of the pixel
-                            r, g, b = cropped_img.getpixel((x, y))
-
-                            # If the pixel is black, set it and its adjacent pixels to black in the new image
-                            if r == 0 and g == 0 and b == 0:
-                                mask.putpixel((x, y), (0, 0, 0))  # Black
-                                for i in range(-2, 3):  # Adjust these values to change the range of adjacent pixels
-                                    for j in range(-2, 3):
-                                        # Check that the pixel is within the image boundaries
-                                        if 0 <= x + i < width and 0 <= y + j < height:
-                                            mask.putpixel((x + i, y + j), (0, 0, 0))  # Black
-                            # Otherwise, make the pixel white in the new image
-                            else:
-                                mask.putpixel((x, y), (255, 255, 255))  # White
-                    # Save the mask image
-                    mask.save('temp/mask.png')
-                    
-                    st.session_state['inpainted_image'] = inpainting(project_name, "temp/cropped.png", inpaint_prompt, inpaint_negative_prompt, st.session_state['which_image'], True, pass_mask=True)
+            inpaint_in_black_space_element(cropped_img,project_settings, project_name)
                 
-                if st.session_state['inpainted_image'] != "":
-                    st.image(st.session_state['inpainted_image'], caption="Inpainted Image", use_column_width=True,width=200)
-                    if st.button("Make Source Image"):                        
-                        update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", st.session_state['inpainted_image'])
-                        st.session_state['inpainted_image'] = ""
-                        st.experimental_rerun()
-                
+                                                        
 
-                                        
-                    
+def inpaint_in_black_space_element(cropped_img,project_settings, project_name):
+    with st.expander("Inpaint in black space"):
+        inpaint_prompt = st.text_area("Prompt", value=project_settings["last_prompt"])
+        inpaint_negative_prompt = st.text_input("Negative Prompt", value='edge,branches, frame, fractals, text' +project_settings["last_negative_prompt"])
+        if 'inpainted_image' not in st.session_state:
+            st.session_state['inpainted_image'] = ""
+        if st.button("Inpaint"):
+            width = int(project_settings["width"])
+            height = int(project_settings["height"])
+            saved_cropped_img = cropped_img.resize((width, height), Image.ANTIALIAS)                
+            saved_cropped_img.save("temp/cropped.png")
+            # Convert image to grayscale
+            # Create a new image with the same size as the cropped image
+            mask = Image.new('RGB', cropped_img.size)
 
+            # Get the width and height of the image
+            width, height = cropped_img.size
 
+            for x in range(width):
+                for y in range(height):
+                    # Get the RGB values of the pixel
+                    r, g, b = cropped_img.getpixel((x, y))
+
+                    # If the pixel is black, set it and its adjacent pixels to black in the new image
+                    if r == 0 and g == 0 and b == 0:
+                        mask.putpixel((x, y), (0, 0, 0))  # Black
+                        for i in range(-2, 3):  # Adjust these values to change the range of adjacent pixels
+                            for j in range(-2, 3):
+                                # Check that the pixel is within the image boundaries
+                                if 0 <= x + i < width and 0 <= y + j < height:
+                                    mask.putpixel((x + i, y + j), (0, 0, 0))  # Black
+                    # Otherwise, make the pixel white in the new image
+                    else:
+                        mask.putpixel((x, y), (255, 255, 255))  # White
+            # Save the mask image
+            mask.save('temp/mask.png')
+            
+            st.session_state['inpainted_image'] = inpainting(project_name, "temp/cropped.png", inpaint_prompt, inpaint_negative_prompt, st.session_state['which_image'], True, pass_mask=True)
         
-
-
-
+        if st.session_state['inpainted_image'] != "":
+            st.image(st.session_state['inpainted_image'], caption="Inpainted Image", use_column_width=True,width=200)
+        if st.button("Make Source Image"):                        
+            update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", st.session_state['inpainted_image'])
+            st.session_state['inpainted_image'] = ""
+            st.experimental_rerun()
 
 
 def rotate_image(location, degree):
@@ -1872,81 +1954,6 @@ def update_speed_of_video_clip(project_name, location_of_video, save_to_new_loca
     return location_of_video
 
 
-
-
-'''
-
-
-def update_video_speed(project_name, index_of_current_item, duration_of_static_time, total_duration_of_clip, timing_details):
-
-    slice_part_of_video(project_name, index_of_current_item,
-                        0, 0.00000000001, "static", timing_details)
-
-    slice_part_of_video(project_name, index_of_current_item,
-                        0, 1, "moving", timing_details)
-
-    video_capture = cv2.VideoCapture(
-        "videos/" + str(project_name) + "/assets/videos/0_raw/static.mp4")
-
-    frame_rate = video_capture.get(cv2.CAP_PROP_FPS)
-
-    total_duration_of_static = video_capture.get(
-        cv2.CAP_PROP_FRAME_COUNT) / frame_rate
-
-    desired_speed_change_of_static = float(
-        duration_of_static_time) / float(total_duration_of_static)
-
-    update_slice_of_video_speed(
-        project_name, "static.mp4", desired_speed_change_of_static)
-
-    video_capture = cv2.VideoCapture(
-        "videos/" + str(project_name) + "/assets/videos/0_raw/moving.mp4")
-
-    frame_rate = video_capture.get(cv2.CAP_PROP_FPS)
-
-    total_duration_of_moving = video_capture.get(
-        cv2.CAP_PROP_FRAME_COUNT) / frame_rate
-
-    total_duration_of_moving = float(total_duration_of_moving)
-
-    total_duration_of_clip = float(total_duration_of_clip)
-
-    duration_of_static_time = float(duration_of_static_time)
-
-    desired_speed_change_of_moving = (
-        total_duration_of_clip - duration_of_static_time) / total_duration_of_moving
-
-    update_slice_of_video_speed(
-        project_name, "moving.mp4", desired_speed_change_of_moving)
-
-    file_name = ''.join(random.choices(
-        string.ascii_lowercase + string.digits, k=16)) + ".mp4"
-
-    if duration_of_static_time == 0:
-
-        # shutil.move("videos/" + str(video_name) + "/assets/videos/0_raw/moving.mp4", "videos/" + str(video_name) + "/assets/videos/1_final/" + str(video_number) + ".mp4")
-        os.rename("videos/" + str(project_name) + "/assets/videos/0_raw/moving.mp4",
-                  "videos/" + str(project_name) + "/assets/videos/1_final/" + str(file_name))
-        os.remove("videos/" + str(project_name) +
-                  "/assets/videos/0_raw/static.mp4")
-    else:
-        final_clip = concatenate_videoclips([VideoFileClip("videos/" + str(project_name) + "/assets/videos/0_raw/static.mp4"),
-                                            VideoFileClip("videos/" + str(project_name) + "/assets/videos/0_raw/moving.mp4")])
-
-        final_clip.write_videofile(
-            "videos/" + str(project_name) + "/assets/videos/0_raw/full_output.mp4", fps=30)
-
-        os.remove("videos/" + str(project_name) +
-                  "/assets/videos/0_raw/moving.mp4")
-        os.remove("videos/" + str(project_name) +
-                  "/assets/videos/0_raw/static.mp4")
-        os.rename("videos/" + str(project_name) + "/assets/videos/0_raw/full_output.mp4",
-                  "videos/" + str(file_name))
-
-    update_specific_timing_value(project_name, index_of_current_item, "timing_video",
-                                 "videos/" + str(project_name) + "/assets/videos/1_final/" + str(file_name))
-
-'''    
 
 def calculate_desired_duration_of_each_clip(timing_details, project_name):
     for index, timing_detail in enumerate(timing_details):
