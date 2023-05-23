@@ -4,7 +4,7 @@ from streamlit_javascript import st_javascript
 import time
 from repository.local_repo.csv_repo import get_app_settings
 
-from settings import project_init
+from banodoco_settings import project_init
 
 def main():
     from ui_components.setup import setup_app_ui

@@ -41,7 +41,7 @@ def frame_styling_page(mainheader2, project_name):
         if "strength" not in st.session_state:                    
             st.session_state['strength'] = st.session_state['project_settings']["last_strength"]
             st.session_state['prompt_value'] = st.session_state['project_settings']["last_prompt"]
-            st.session_state['model'] = st.session_state['project_settings']["last_model"]
+            st.session_state['model'] = st.session_state['project_settings']["default_model"]
             st.session_state['custom_pipeline'] = st.session_state['project_settings']["last_custom_pipeline"]
             st.session_state['negative_prompt_value'] = st.session_state['project_settings']["last_negative_prompt"]
             st.session_state['guidance_scale'] = st.session_state['project_settings']["last_guidance_scale"]
@@ -440,14 +440,14 @@ def frame_styling_page(mainheader2, project_name):
                                 previous_frame_time = timing_details[i]['frame_time']
                                 update_specific_timing_value(project_name, i, "frame_time", frame_time)
                                 for a in range(st.session_state['which_image'] - 1, st.session_state['which_image'] + 1):                                    
-                                    update_specific_timing_value(project_name, a, "timing_video", "")
+                                    update_specific_timing_value(project_name, a, "timed_clip", "")
                                 update_specific_timing_value(project_name, i, "preview_video", "")
                                 if shift_frames is True:
                                     diff_frame_time = frame_time - previous_frame_time
                                     for j in range(i+1, num_timing_details):
                                         new_frame_time = timing_details[j]['frame_time'] + diff_frame_time                                    
                                         update_specific_timing_value(project_name, j, "frame_time", new_frame_time)
-                                        update_specific_timing_value(project_name, j, "timing_video", "")
+                                        update_specific_timing_value(project_name, j, "timed_clip", "")
                                         update_specific_timing_value(project_name, j, "preview_video", "")
                                 st.experimental_rerun()
                                          
@@ -706,7 +706,7 @@ def frame_styling_page(mainheader2, project_name):
                             if st.button(f"Preview Interpolation From #{index_of_current_item} to #{index_of_current_item+1}", key=f"Preview Interpolation From #{index_of_current_item} to #{index_of_current_item+1}"):
                                 create_or_get_single_preview_video(index_of_current_item,project_name)      
                                 timing_details = get_timing_details(project_name)                               
-                                st.video(timing_details[index_of_current_item]['timing_video'])           
+                                st.video(timing_details[index_of_current_item]['timed_clip'])           
                         
                         img1, img2 = st.columns(2)
                         with img1:
@@ -719,7 +719,7 @@ def frame_styling_page(mainheader2, project_name):
                                 if st.button(f"Preview Interpolation From #{last_image_number} to #{st.session_state['which_image']}", key=f"Preview Interpolation From #{last_image_number} to #{st.session_state['which_image']}"):
                                     create_or_get_single_preview_video(last_image_number,project_name)      
                                     timing_details = get_timing_details(project_name)                               
-                                    st.video(timing_details[last_image_number]['timing_video'])   
+                                    st.video(timing_details[last_image_number]['timed_clip'])   
                             else:
                                 st.write("")
                         with img2:
@@ -732,7 +732,7 @@ def frame_styling_page(mainheader2, project_name):
                                 if st.button(f"Preview Interpolation From #{st.session_state['which_image']} to #{next_image_number}", key=f"Preview Interpolation From #{st.session_state['which_image']} to #{next_image_number}"):
                                     create_or_get_single_preview_video(st.session_state['which_image'],project_name)      
                                     timing_details = get_timing_details(project_name)                               
-                                    st.video(timing_details[st.session_state['which_image']]['timing_video'])   
+                                    st.video(timing_details[st.session_state['which_image']]['timed_clip'])   
                             else:
                                 st.write("")
 

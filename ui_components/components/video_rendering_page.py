@@ -25,7 +25,7 @@ def video_rendering_page(mainheader2, project_name):
     
 
     
-    delete_existing_timing_videos = st.checkbox("Delete all the existing timing clips.", value=False)
+    delete_existing_timed_clips = st.checkbox("Delete all the existing timing clips.", value=False)
     
 
 
@@ -41,10 +41,10 @@ def video_rendering_page(mainheader2, project_name):
             st.info("THIS MEANS")
 
     if st.button("Render New Video"):
-        if delete_existing_timing_videos == True:
+        if delete_existing_timed_clips == True:
             for i in timing_details:   
                 index_of_current_item = timing_details.index(i)                                                             
-                update_specific_timing_value(project_name, timing_details.index(i), "timing_video", "")
+                update_specific_timing_value(project_name, timing_details.index(i), "timed_clip", "")
             timing_details = get_timing_details(project_name)
         
         render_video(project_name, final_video_name, timing_details, quality_of_video)

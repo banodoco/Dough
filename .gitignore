@@ -17,3 +17,5 @@ videos/*
 training_data
 inference_log/*
 *.db
+test.py
+.env

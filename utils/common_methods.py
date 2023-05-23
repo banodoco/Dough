@@ -30,13 +30,13 @@ def create_file_path(path):
         if file_name == 'timings.csv':
             data = [
                 ['frame_time', 'frame_number', 'primary_image', 'alternative_images', 'custom_pipeline', 'negative_prompt', 'guidance_scale', 'seed', 'num_inference_steps',
-                      'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'duration_of_clip', 'interpolated_video', 'timing_video', 'prompt', 'mask'],
+                      'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'clip_duration', 'interpolated_video', 'timed_clip', 'prompt', 'mask'],
             ]
         elif file_name == 'settings.csv':
             data = [
                 ['key', 'value'],
                 ['last_prompt', ''],
-                ['last_model', 'controlnet'],
+                ['default_model', 'controlnet'],
                 ['last_strength', '0.5'],
                 ['last_custom_pipeline', 'None'],
                 ['audio', ''],
