@@ -31,12 +31,98 @@ from pydub import AudioSegment
 import shutil
 from moviepy.editor import concatenate_videoclips,TextClip,VideoFileClip, vfx
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
-
-
+from utils import st_memory
+from urllib.parse import urlparse
+ 
+from typing import Union
 from moviepy.video.fx.all import speedx
 import moviepy.editor
 from streamlit_cropper import st_cropper
 
+def prompt_finder_element(project_name):
+
+    uploaded_file = st.file_uploader("What image would you like to find the prompt for?", type=['png','jpg','jpeg'], key="prompt_file")
+    which_model = st.radio("Which model would you like to get a prompt for?", ["Stable Diffusion 1.5", "Stable Diffusion 2"], key="which_model", help="This is to know which model we should optimize the prompt for. 1.5 is usually best if you're in doubt", horizontal=True)
+    best_or_fast = st.radio("Would you like to optimize for best quality or fastest speed?", ["Best", "Fast"], key="best_or_fast", help="This is to know whether we should optimize for best quality or fastest speed. Best quality is usually best if you're in doubt", horizontal=True).lower()
+    if st.button("Get prompts"):                
+        with open(f"videos/{project_name}/assets/resources/prompt_images/{uploaded_file.name}", "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        prompt = prompt_clip_interrogator(f"videos/{project_name}/assets/resources/prompt_images/{uploaded_file.name}", which_model, best_or_fast)                
+        if not os.path.exists(f"videos/{project_name}/prompts.csv"):
+            with open(f"videos/{project_name}/prompts.csv", "w") as f:
+                f.write("prompt,example_image,which_model\n")
+        # add the prompt to prompts.csv
+        with open(f"videos/{project_name}/prompts.csv", "a") as f:
+            f.write(f'"{prompt}",videos/{project_name}/assets/resources/prompt_images/{uploaded_file.name},{which_model}\n')
+        st.success("Prompt added successfully!")
+        time.sleep(1)
+        uploaded_file = ""
+        st.experimental_rerun()
+    # list all the prompts in prompts.csv
+    if os.path.exists(f"videos/{project_name}/prompts.csv"):
+        
+        df = pd.read_csv(f"videos/{project_name}/prompts.csv",na_filter=False)
+        prompts = df.to_dict('records')
+        
+        prompts.reverse()
+                    
+        col1, col2 = st.columns([1.5,1])
+        with col1:
+            st.markdown("### Prompt")
+        with col2:
+            st.markdown("### Example Image")
+        with open(f"videos/{project_name}/prompts.csv", "r") as f:
+            for i in prompts:
+                index_of_current_item = prompts.index(i)                  
+                col1, col2 = st.columns([1.5,1])
+                with col1:
+                    st.write(prompts[index_of_current_item]["prompt"])                        
+                with col2:                            
+                    st.image(prompts[index_of_current_item]["example_image"], use_column_width=True)
+                st.markdown("***")
+
+
+def save_new_image(img: Union[Image.Image, str, np.ndarray]) -> str:
+    file_name = str(uuid.uuid4()) + ".png"
+    file_path = os.path.join("temp", file_name)
+
+    # Check if img is a PIL image
+    if isinstance(img, Image.Image):
+        img.save(file_path)
+
+    # Check if img is a URL
+    elif isinstance(img, str) and bool(urlparse(img).netloc):
+        response = r.get(img)
+        img = Image.open(BytesIO(response.content))
+        img.save(file_path)
+
+    # Check if img is a local file
+    elif isinstance(img, str):
+        img = Image.open(img)
+        img.save(file_path)
+
+    # Check if img is a numpy ndarray
+    elif isinstance(img, np.ndarray):
+        img = Image.fromarray(img)
+        img.save(file_path)
+
+    else:
+        raise ValueError("Invalid image input. Must be a PIL image, a URL string, a local file path string or a numpy ndarray.")
+
+    return file_path
+
+def save_pillow_image(image, project_name, stage, promote=False):
+    file_name = str(uuid.uuid4()) + ".png"
+    if stage == "Source":
+        save_location = f"videos/{project_name}/assets/frames/1_selected/{file_name}"
+        image.save(save_location)
+        update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", save_location)        
+    elif stage == "Styled":
+        save_location = f"videos/{project_name}/assets/frames/2_character_pipeline_completed/{file_name}"
+        image.save(save_location)
+        number_of_image_variants = add_image_variant(save_location, st.session_state['which_image'], project_name, timing_details)
+        if promote:
+            promote_image_variant(st.session_state['which_image'], project_name,number_of_image_variants - 1)         
 
 def resize_and_rotate_element(stage,timing_details, project_name):
 
@@ -291,18 +377,7 @@ def zoom_image(location, zoom_factor, fill_with=None):
         return cropped_image
     
 def apply_image_transformations(image, zoom_level, rotation_angle, x_shift, y_shift):
-
     width, height = image.size
-
-    # Zoom
-    new_width = int(width * (zoom_level / 100))
-    new_height = int(height * (zoom_level / 100))
-    zoomed_image = image.resize((new_width, new_height))
-
-    # Create a new image with black background for the zoomed image
-    zoomed_image_new = Image.new("RGB", (width, height), "black")
-    offset = ((width - new_width) // 2, (height - new_height) // 2)
-    zoomed_image_new.paste(zoomed_image, offset)
 
     # Calculate the diagonal for the rotation
     diagonal = math.ceil(math.sqrt(width**2 + height**2))
@@ -310,7 +385,7 @@ def apply_image_transformations(image, zoom_level, rotation_angle, x_shift, y_sh
     # Create a new image with black background for rotation
     rotation_bg = Image.new("RGB", (diagonal, diagonal), "black")
     rotation_offset = ((diagonal - width) // 2, (diagonal - height) // 2)
-    rotation_bg.paste(zoomed_image_new, rotation_offset)
+    rotation_bg.paste(image, rotation_offset)
 
     # Rotation
     rotated_image = rotation_bg.rotate(rotation_angle)
@@ -320,63 +395,83 @@ def apply_image_transformations(image, zoom_level, rotation_angle, x_shift, y_sh
     shift_bg = Image.new("RGB", (diagonal, diagonal), "black")
     shift_bg.paste(rotated_image, (x_shift, y_shift))
 
-    # Crop the shifted image back to original size
-    crop_x1 = max(rotation_offset[0] - x_shift, 0)
-    crop_y1 = max(rotation_offset[1] - y_shift, 0)
-    crop_x2 = min(crop_x1 + width, diagonal)
-    crop_y2 = min(crop_y1 + height, diagonal)
-    cropped_image = shift_bg.crop((crop_x1, crop_y1, crop_x2, crop_y2))
+    # Zoom
+    zoomed_width = int(diagonal * (zoom_level / 100))
+    zoomed_height = int(diagonal * (zoom_level / 100))
+    zoomed_image = shift_bg.resize((zoomed_width, zoomed_height))
+
+    # Crop the zoomed image back to original size
+    crop_x1 = (zoomed_width - width) // 2
+    crop_y1 = (zoomed_height - height) // 2
+    crop_x2 = crop_x1 + width
+    crop_y2 = crop_y1 + height
+    cropped_image = zoomed_image.crop((crop_x1, crop_y1, crop_x2, crop_y2))
 
     return cropped_image
 
 
+def fetch_image_by_stage(timing_details, stage):
+    if stage == "Source":
+        return timing_details[st.session_state['which_image']]["source_image"]
+    elif stage == "Styled":
+        return get_primary_variant_location(timing_details, st.session_state['which_image'])
+    else:
+        return ""
+
+
 def precision_cropping_element(stage,timing_details, project_name, project_settings):
 
-    if timing_details[st.session_state['which_image']]["source_image"] == "":
+    def reset_zoom_element():
+        st.session_state['zoom_level_input_value'] = 100
+        st.session_state['rotation_angle_input_value'] = 0
+        st.session_state['x_shift_input_value'] = 0
+        st.session_state['y_shift_input_value'] = 0
+        st.session_state['zoom_level'] = 100
+        st.session_state['rotation_angle'] = 0
+        st.session_state['x_shift'] = 0
+        st.session_state['y_shift'] = 0                        
+        st.experimental_rerun()
+    
+    input_image = fetch_image_by_stage(timing_details, stage)
+
+    if input_image == "":
         st.error("Please select a source image before cropping")
         return
     else:
-        if stage == "Source":
-            input_image = timing_details[st.session_state['which_image']]["source_image"]                                
-        elif stage == "Styled":
-            input_image = get_primary_variant_location(timing_details, st.session_state['which_image'])
         input_image = get_pillow_image(input_image)
         
-    col1, col2 = st.columns(2)
-
-    # Column 1
-    with col1:                    
-        st.subheader("Precision Cropping:")
-        if 'reset_cropping_element' not in st.session_state:
-            st.session_state['zoom_level_value'] = 100
-            st.session_state['rotation_angle_value'] = 0
-            st.session_state['x_shift_value'] = 0
-            st.session_state['y_shift_value'] = 0
-        
-        if st.button("Reset Cropping"):
-            st.session_state['zoom_level_value'] = 100
-            st.session_state['rotation_angle_value'] = 0
-            st.session_state['x_shift_value'] = 0
-            st.session_state['y_shift_value'] = 0            
-            st.experimental_rerun()
-                       
-        
-        zoom_level = st.slider("Zoom Level (%)", min_value=10, max_value=200, value=100)
-        rotation_angle = st.slider("Rotation Angle", min_value=-90, max_value=90, value=0)
-        x_shift = st.slider("Shift Left/Right", min_value=-100, max_value=100, value=0)
-        y_shift = st.slider("Shift Up/Down", min_value=-100, max_value=100, value=0)
-        st.caption("Input Image:")
-        st.image(input_image, caption="Input Image", width=300)
-        
-
-# Column 2
-        with col2:
-            st.caption("Output Image:")     
-            output_image = apply_image_transformations(input_image, zoom_level, rotation_angle, x_shift, y_shift)
-            st.image(output_image, use_column_width=True)
-
-            inpaint_in_black_space_element(output_image,project_settings, project_name)
+    col1, col2 = st.columns(2)    
     
+    with col1:      
+
+        st.subheader("Precision Cropping:")                
+
+        if st.button("Reset Cropping"):            
+            reset_zoom_element()
+                                               
+        st.session_state['zoom_level'] = st_memory.number_input("Zoom Level (%)", min_value=10, max_value=1000, step=10,key="zoom_level_input", default_value=100,project_name=project_name, project_settings=project_settings)
+        st.session_state['rotation_angle'] = st_memory.number_input("Rotation Angle", min_value=-360, max_value=360, step=5, key="rotation_angle_input", default_value=0,project_name=project_name,project_settings=project_settings)
+        st.session_state['x_shift'] = st_memory.number_input("Shift Left/Right", min_value=-1000, max_value=1000, step=5, key="x_shift_input", default_value=0,project_name=project_name,project_settings=project_settings)
+        st.session_state['y_shift'] = st_memory.number_input("Shift Up/Down", min_value=-1000, max_value=1000,step=5, key="y_shift_input", default_value=0,project_name=project_name,project_settings=project_settings)
+    
+        st.caption("Input Image:") 
+        st.image(input_image, caption="Input Image", width=300)
+
+    with col2:
+
+        st.caption("Output Image:")             
+        output_image = apply_image_transformations(input_image, st.session_state['zoom_level'], st.session_state['rotation_angle'], st.session_state['x_shift'], st.session_state['y_shift'])
+        st.image(output_image, use_column_width=True)
+        if st.button("Save Image"):
+            save_pillow_image(output_image,project_name, stage)            
+            zoom_details = f"'{st.session_state['zoom_level_input_value']}', '{st.session_state['rotation_angle_input_value']}', '{st.session_state['x_shift_input_value']}', '{st.session_state['y_shift_input_value']}'"
+            update_specific_timing_value(project_name, st.session_state['which_image'], "zoom_details", zoom_details)                                                      
+            st.success("Image Saved Successfully")                        
+        inpaint_in_black_space_element(output_image,project_settings, project_name)
+                   
+
+
+
 
 def manual_cropping_element(stage,timing_details,project_name):
 
@@ -556,14 +651,32 @@ def create_or_get_single_preview_video(index_of_current_item, project_name):
 
     if timing_details[index_of_current_item]['interpolated_video'] == "":
         update_specific_timing_value(project_name, index_of_current_item, "interpolation_steps", 3)
-        interpolated_video = prompt_interpolation_model(index_of_current_item, project_name)
+        interpolated_video = create_individual_clip(index_of_current_item, project_name)
         update_specific_timing_value(project_name, index_of_current_item, "interpolated_video", interpolated_video)
         timing_details = get_timing_details(project_name)
-    if timing_details[index_of_current_item]['timing_video'] == "":                                            
+
+
+    if timing_details[index_of_current_item]['timing_video'] == "": 
+
+        interpolated_video = timing_details[index_of_current_item]['interpolated_video']
+        output_filename = str(uuid.uuid4()) + ".mp4"
+        output_file_path = "temp/" + output_filename
+        shutil.copy(interpolated_video, output_file_path) 
+        preview_video = output_file_path  
+        clip = VideoFileClip(preview_video)        
+        i = index_of_current_item
+        number_text = TextClip(str(i), fontsize=24, color='white')
+        number_background = TextClip(" ", fontsize=24, color='black', bg_color='black', size=(number_text.w + 10, number_text.h + 10))
+        number_background = number_background.set_position(('left', 'top')).set_duration(clip.duration)
+        number_text = number_text.set_position((number_background.w - number_text.w - 5, number_background.h - number_text.h - 5)).set_duration(clip.duration)
+        clip_with_number = CompositeVideoClip([clip, number_background, number_text])        
+        os.remove(preview_video)        
+        clip_with_number.write_videofile(preview_video)                                                             
         duration_of_clip = calculate_desired_duration_of_individual_clip(timing_details, index_of_current_item)
-        update_specific_timing_value(project_name, index_of_current_item, "duration_of_clip", duration_of_clip)
-        location_of_output_video = update_speed_of_video_clip(project_name, timing_details[index_of_current_item]['interpolated_video'], True, index_of_current_item)
+        update_specific_timing_value(project_name, index_of_current_item, "duration_of_clip", duration_of_clip)        
+        location_of_output_video = update_speed_of_video_clip(project_name, preview_video, False, index_of_current_item)
         update_specific_timing_value(project_name, index_of_current_item, "timing_video", location_of_output_video)
+
     timing_details = get_timing_details(project_name)                                 
         
     if project_details["audio"] != "":
@@ -598,13 +711,10 @@ def create_full_preview_video(project_name, index_of_item, speed):
     timing_details = get_timing_details(project_name)
     num_timing_details = len(timing_details)
     clips = []
-
-    print("HERE'S THE SHIT")
-
-    print(f"index_of_item: {index_of_item}, num_timing_details: {num_timing_details}")
+   
 
     for i in range(index_of_item - 2, index_of_item + 3):
-        print(f"i: {i}")
+        
         if i < 0 or i >= num_timing_details-1:
             continue
 
@@ -631,16 +741,7 @@ def create_full_preview_video(project_name, index_of_item, speed):
         clip_with_number.write_videofile(preview_video, codec='libx264', bitrate='3000k')
                                 
         clips.append(preview_video)
-
-        # if i == index_of_item - 1 or i == index_of_item:
-        #if i == index_of_item - 1 or i == index_of_item:        
-         #   clips.remove(preview_video)
         
-
-
-
-    
-    print(clips)
             
     video_clips = [VideoFileClip(v) for v in clips]
 
@@ -695,11 +796,9 @@ def back_and_forward_buttons(timing_details):
                 st.session_state['which_image_value'] = st.session_state['which_image_value'] + 2
                 st.experimental_rerun()
 
-def styling_element(project_name,timing_details):
+def styling_element(project_name,timing_details, project_settings, view_type="List"):
     
-    timing_details = get_timing_details(project_name)
-    project_settings = get_project_settings(project_name)
-
+        
     stages = ["Extracted Key Frames", "Current Main Variants"]
 
     if project_settings['last_which_stage_to_run_on'] != "":         
@@ -751,7 +850,7 @@ def styling_element(project_name,timing_details):
             st.experimental_rerun()                          
     else:               
 
-        models = ['controlnet','stable_diffusion_xl','stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'Dreambooth', 'LoRA','StyleGAN-NADA','real-esrgan-upscaling']
+        models = ['controlnet','stable_diffusion_xl','stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'Dreambooth', 'LoRA','StyleGAN-NADA','real-esrgan-upscaling','controlnet_1_1_x_realistic_vision_v2_0']
         
         if project_settings['last_model'] != "":
             
@@ -964,9 +1063,8 @@ def calculate_time_at_frame_number(input_video, frame_number, project_name):
     return time_at_frame
 
 
-def preview_frame(project_name, video_name, frame_num):
-    cap = cv2.VideoCapture(
-        f'videos/{project_name}/assets/resources/input_videos/{video_name}')
+def preview_frame(project_name, input_video, frame_num):
+    cap = cv2.VideoCapture(input_video)
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
     ret, frame = cap.read()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -975,8 +1073,7 @@ def preview_frame(project_name, video_name, frame_num):
 
 
 def extract_frame(frame_number, project_name, input_video, extract_frame_number, timing_details):
-    input_video = "videos/" + \
-        str(project_name) + "/assets/resources/input_videos/" + str(input_video)
+    
     input_video = cv2.VideoCapture(input_video)
     total_frames = input_video.get(cv2.CAP_PROP_FRAME_COUNT)
     if extract_frame_number == total_frames:
@@ -990,12 +1087,11 @@ def extract_frame(frame_number, project_name, input_video, extract_frame_number,
 
     file_name = ''.join(random.choices(
         string.ascii_lowercase + string.digits, k=16)) + ".png"
-    cv2.imwrite("videos/" + project_name +
-                "/assets/frames/1_selected/" + str(file_name), frame)
+    file_location = "videos/" + project_name + "/assets/frames/1_selected/" + str(file_name)
+    cv2.imwrite(file_location, frame)
     # img = Image.open("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
     # img.save("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
-    update_specific_timing_value(project_name, frame_number, "source_image",
-                                 "videos/" + project_name + "/assets/frames/1_selected/" + str(file_name))
+    return file_location   
 
 
 def calculate_frame_number_at_time(input_video, time_of_frame, project_name):
@@ -1342,17 +1438,17 @@ def create_working_assets(video_name):
     os.mkdir("videos/" + video_name + "/assets/videos/1_final")
     os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
 
-    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type','guidance_type','default_animation_style','last_low_threshold','last_high_threshold','last_stage_run_on'],
-            'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Extracted Key Frames', '', '', '', '',100,200,'']}
+    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type','guidance_type','default_animation_style','last_low_threshold','last_high_threshold','last_stage_run_on','zoom_level_input_value','rotation_angle_input_value','x_shift_input_value','y_shift_input_value'],
+            'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Extracted Key Frames', '', '', '', '',100,200,'',100,0,0,0]}
 
     df = pd.DataFrame(data)
 
     df.to_csv(f'videos/{video_name}/settings.csv', index=False)
 
     df = pd.DataFrame(columns=['frame_time', 'frame_number', 'primary_image', 'alternative_images', 'custom_pipeline', 'negative_prompt', 'guidance_scale', 'seed', 'num_inference_steps',
-                      'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'duration_of_clip', 'interpolated_video', 'timing_video', 'prompt', 'mask','canny_image','preview_video','animation_style','interpolation_steps','low_threshold','high_threshold'])
+                      'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'duration_of_clip', 'interpolated_video', 'timing_video', 'prompt', 'mask','canny_image','preview_video','animation_style','interpolation_steps','low_threshold','high_threshold','zoom_details'])
 
-    df.loc[0] = [0,"", 0, "", "", "", 0, 0, 0, "", 0, "", "", "", "", 0, "", "", "", "", "", "", "", "", "", ""]
+    df.loc[0] = [0,"", 0, "", "", "", 0, 0, 0, "", 0, "", "", "", "", 0, "", "", "", "", "", "", "", "", "", "",""]
 
     st.session_state['which_image'] = 0
 
@@ -1746,6 +1842,7 @@ def prompt_model_stable_diffusion_xl(project_name, index_of_current_item, timing
    
 
 
+    
     
     
     
@@ -2159,6 +2256,8 @@ def restyle_images(index_of_current_item, project_name, project_settings, timing
         output_url = prompt_model_stable_diffusion_xl(project_name, index_of_current_item, timing_details, source_image)
     elif model_name == "real-esrgan-upscaling":
         output_url = prompt_model_real_esrgan_upscaling(source_image)
+    elif model_name == 'controlnet_1_1_x_realistic_vision_v2_0':
+        output_url = prompt_model_controlnet_1_1_x_realistic_vision_v2_0(timing_details, index_of_current_item,source_image)
     
     return output_url
 
@@ -2400,6 +2499,25 @@ def render_video(project_name, final_video_name, timing_details, quality):
             video_location = timing_details[index_of_current_item]["timing_video"]
             video_list.append(video_location)
 
+    '''
+    input_files = [ffmpeg.input(v) for v in video_list]
+
+    concatenated = ffmpeg.concat(*input_files, v=1).output('concatenated.mp4')
+    ffmpeg.run(concatenated)
+
+    # Final output video file location
+    output_video_file = f"videos/{project_name}/assets/videos/2_completed/{final_video_name}.mp4"
+
+    # Add audio if it is provided
+    if project_settings['audio'] != "":
+        audio_location = f"videos/{project_name}/assets/resources/audio/{project_settings['audio']}"
+        input_video = ffmpeg.input('concatenated.mp4')
+        input_audio = ffmpeg.input(audio_location)
+        final_out = ffmpeg.output(input_video, input_audio, output_video_file, vcodec="libx264", acodec="aac", ab="128k", vb="5000k")
+        ffmpeg.run(final_out)
+    
+    '''
+
     video_clips = [VideoFileClip(v) for v in video_list]
     finalclip = concatenate_videoclips(video_clips)
     output_video_file = f"videos/{project_name}/assets/videos/2_completed/{final_video_name}.mp4"
@@ -2407,13 +2525,17 @@ def render_video(project_name, final_video_name, timing_details, quality):
         audio_location = f"videos/{project_name}/assets/resources/audio/{project_settings['audio']}"
         audio_clip = AudioFileClip(audio_location)
         finalclip = finalclip.set_audio(audio_clip)
+    
+
     finalclip.write_videofile(
         output_video_file, 
-        fps=60,  # or 60 if your original video is 60fps
+        fps=30,  # or 60 if your original video is 60fps
         audio_bitrate="128k", 
         bitrate="5000k", 
         codec="libx264", 
         audio_codec="aac")
+     
+    
 
 def create_gif_preview(project_name, timing_details):
 
@@ -2548,6 +2670,31 @@ def prompt_model_controlnet(timing_details, index_of_current_item, input_image):
         'high_threshold': int(timing_details[index_of_current_item]["high_threshold"]),
     }
     
+    output = version.predict(**inputs)
+
+    return output[1]
+
+def prompt_model_controlnet_1_1_x_realistic_vision_v2_0(timing_details, index_of_current_item, input_image):
+    app_settings = get_app_settings()
+    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
+
+    if not input_image.startswith("http"):
+        input_image = open(input_image, "rb")
+
+    model = replicate.models.get("usamaehsan/controlnet-1.1-x-realistic-vision-v2.0")
+    version = model.versions.get("7fbf4c86671738f97896c9cb4922705adfcdcf54a6edab193bb8c176c6b34a69")
+    
+    inputs = {
+
+        'image': input_image,
+        'prompt': timing_details[index_of_current_item]["prompt"],
+        'ddim_steps': int(timing_details[index_of_current_item]["num_inference_steps"]),
+        'strength': float(timing_details[index_of_current_item]["strength"]),
+        'scale': float(timing_details[index_of_current_item]["guidance_scale"]),
+        'seed': int(timing_details[index_of_current_item]["seed"]),
+
+    }
+
     output = version.predict(**inputs)
 
     return output[1]

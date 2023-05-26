@@ -45,13 +45,13 @@ def key_frame_selection_page(mainheader2, project_name):
             preview1, preview2, preview3 = st.columns([1, 1, 1])
             with preview1:
                 st.image(preview_frame(project_name,
-                         input_video, total_frames * 0.25))
+                         f'videos/{project_name}/assets/resources/input_videos/{input_video}', total_frames * 0.25))
             with preview2:
                 st.image(preview_frame(project_name,
-                         input_video, total_frames * 0.5))
+                         f'videos/{project_name}/assets/resources/input_videos/{input_video}', total_frames * 0.5))
             with preview3:
                 st.image(preview_frame(project_name,
-                         input_video, total_frames * 0.75))
+                         f'videos/{project_name}/assets/resources/input_videos/{input_video}', total_frames * 0.75))
             st.caption(
                 f"This video is {duration} seconds long, and has {total_frames} frames.")
             # st.video(f'videos/{project_name}/assets/resources/input_videos/{input_video}')
@@ -128,8 +128,8 @@ def key_frame_selection_page(mainheader2, project_name):
                     create_timings_row_at_frame_number(
                         project_name, input_video, extract_frame_number, timing_details, last_index)
                     timing_details = get_timing_details(project_name)
-                    extract_frame(i, project_name, input_video,
-                                  extract_frame_number, timing_details)
+                    new_frame_location = extract_frame(i, project_name, "videos/" + str(project_name) + "/assets/resources/input_videos/" + input_video, extract_frame_number, timing_details)
+                    update_specific_timing_value(project_name, created_row, "source_image", new_frame_location)
                 st.experimental_rerun()
         else:
             st.sidebar.button("Extract frames", disabled=True)
@@ -152,8 +152,9 @@ def key_frame_selection_page(mainheader2, project_name):
                     index_of_current_item = timing_details.index(i)
                     extract_frame_number = calculate_frame_number_at_time(
                         input_video, timing_details[index_of_current_item]["frame_time"], project_name)
-                    extract_frame(index_of_current_item, project_name,
+                    new_frame_location = extract_frame(index_of_current_item, project_name,
                                   input_video, extract_frame_number, timing_details)
+                    update_specific_timing_value(project_name, created_row, "source_image", new_frame_location)
 
         else:
             st.sidebar.button("Re-extract frames", disabled=True)
@@ -278,7 +279,7 @@ def key_frame_selection_page(mainheader2, project_name):
                             f"{timing_details[index_of_current_item]['frame_number']} is the current frame")
 
                 st.image(preview_frame(project_name,
-                         input_video, new_frame_number))
+                         f'videos/{project_name}/assets/resources/input_videos/{input_video}', new_frame_number))
 
                 bottom1, bottom2 = st.columns([1, 1])
                 if new_frame_number != int(float(timing_details[index_of_current_item]['frame_number'])):
@@ -288,8 +289,9 @@ def key_frame_selection_page(mainheader2, project_name):
                             update_specific_timing_value(
                                 project_name, index_of_current_item, "frame_number", new_frame_number)
                             timing_details = get_timing_details(project_name)
-                            extract_frame(index_of_current_item, project_name,
-                                          input_video, new_frame_number, timing_details)
+                            new_frame_location = extract_frame(index_of_current_item, project_name,
+                                          "videos/" + str(project_name) + "/assets/resources/input_videos/" + input_video, new_frame_number, timing_details)
+                            update_specific_timing_value(project_name, created_row, "source_image", new_frame_location)
                             st.experimental_rerun()
                     with bottom2:
                         if st.button("Add new key frame at this time"):
@@ -298,15 +300,15 @@ def key_frame_selection_page(mainheader2, project_name):
                                     project_name, input_video, new_frame_number, timing_details, index_of_current_item+1)
                                 timing_details = get_timing_details(
                                     project_name)
-                                extract_frame(
-                                    created_row, project_name, input_video, new_frame_number, timing_details)
+                                new_frame_location = extract_frame(created_row, project_name, "videos/" + str(project_name) + "/assets/resources/input_videos/" + input_video, new_frame_number, timing_details)
+                                update_specific_timing_value(project_name, created_row, "source_image", new_frame_location)
                             elif new_frame_number < int(float(timing_details[index_of_current_item]['frame_number'])):
                                 created_row = create_timings_row_at_frame_number(
                                     project_name, input_video, new_frame_number, timing_details, index_of_current_item)
                                 timing_details = get_timing_details(
                                     project_name)
-                                extract_frame(
-                                    created_row, project_name, input_video, new_frame_number, timing_details)
+                                new_frame_location = extract_frame(created_row, project_name, "videos/" + str(project_name) + "/assets/resources/input_videos/" + input_video, new_frame_number, timing_details)
+                                update_specific_timing_value(project_name, created_row, "source_image", new_frame_location)
                             timing_details = get_timing_details(project_name)
                             st.session_state['which_image_value'] = created_row
                             st.experimental_rerun()
@@ -411,7 +413,7 @@ def key_frame_selection_page(mainheader2, project_name):
             slider = st.slider("Choose frame:", max_value=max_frames,
                                min_value=min_frames, step=granularity, value=min_frames)
 
-            st.image(preview_frame(project_name, input_video, slider),
+            st.image(preview_frame(project_name, f'videos/{project_name}/assets/resources/input_videos/{input_video}', slider),
                      use_column_width=True)
 
             if st.button(f"Add Frame {slider} to Project"):
@@ -422,7 +424,8 @@ def key_frame_selection_page(mainheader2, project_name):
                 frame_time = calculate_time_at_frame_number(input_video, slider, project_name)                
                 update_specific_timing_value(project_name, created_row, "frame_time", frame_time)
                 timing_details = get_timing_details(project_name)
-                extract_frame(created_row, project_name,input_video, slider, timing_details)
+                new_frame_location = extract_frame(created_row, project_name,"videos/" + str(project_name) + "/assets/resources/input_videos/" + input_video, slider, timing_details)
+                update_specific_timing_value(project_name, created_row, "source_image", new_frame_location)
                 st.experimental_rerun()
         st.markdown("***")
         st.subheader("Make preview video at current timings")

@@ -7,8 +7,10 @@ from PIL import Image
 import requests as r
 from streamlit_drawable_canvas import st_canvas
 from repository.local_repo.csv_repo import get_app_settings, get_project_settings,update_specific_timing_value,update_project_setting
-from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process,add_image_variant,prompt_interpolation_model,update_speed_of_video_clip,create_timings_row_at_frame_number,extract_canny_lines,get_duration_from_video,get_audio_bytes_for_slice,add_audio_to_video_slice,convert_to_minutes_and_seconds,styling_element,get_primary_variant_location,create_full_preview_video,back_and_forward_buttons,resize_and_rotate_element,manual_cropping_element,precision_cropping_element,move_frame,calculate_desired_duration_of_individual_clip,create_or_get_single_preview_video,calculate_desired_duration_of_individual_clip,single_frame_time_changer
+from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process,add_image_variant,prompt_interpolation_model,update_speed_of_video_clip,create_timings_row_at_frame_number,extract_canny_lines,get_duration_from_video,get_audio_bytes_for_slice,add_audio_to_video_slice,convert_to_minutes_and_seconds,styling_element,get_primary_variant_location,create_full_preview_video,back_and_forward_buttons,resize_and_rotate_element,manual_cropping_element,precision_cropping_element,move_frame,calculate_desired_duration_of_individual_clip,create_or_get_single_preview_video,calculate_desired_duration_of_individual_clip,single_frame_time_changer,apply_image_transformations,get_pillow_image, save_new_image,prompt_finder_element,preview_frame
 from utils.file_upload.s3 import upload_image
+from utils import st_memory
+import cv2
 import uuid
 import datetime
 from pydub import AudioSegment
@@ -352,45 +354,19 @@ def frame_styling_page(mainheader2, project_name):
 
                     elif how_to_guide == "Images":
 
-                        with crop2:
-
-                            def remember_radio_pre_function(item_name, options, project_settings):
-                                if f'{item_name}_index' not in st.session_state:
-                                    if f'{item_name}' in project_settings:
-                                        if project_settings[f"{item_name}"] == "":
-                                            st.session_state[f'{item_name}_index'] = 0
-                                        else:
-                                            st.session_state[f'{item_name}_index'] = options.index(project_settings[f"{item_name}"])
-                                    else:
-                                        st.session_state[f'{item_name}_index'] = 0
-
-                            def remember_radio_post_function(item_name, options, project_settings, selection, project_name):
-                                if options.index(selection) != st.session_state[f'{item_name}_index']:
-                                    st.session_state[f'{item_name}_index'] = options.index(selection)
-                                    if f'{item_name}' in project_settings:
-                                        update_project_setting(item_name, selection,project_name)                                    
-                                    st.experimental_rerun()
+                        with crop2:                            
                             
-                            def radio_button_with_memory(item_name, options, project_settings, project_name):
-                                remember_radio_pre_function(item_name, options, project_settings)                                                              
-                                selection = st.radio(item_name.replace("_", " ").capitalize() + ":", options, index=st.session_state[f'{item_name}_index'])
-                                remember_radio_post_function(item_name, options, project_settings, selection, project_name)
-                                return selection
-                            
-                            how_to_crop = radio_button_with_memory("how_to_crop", ["Manual Cropping", "Precision Cropping"], project_settings, project_name)
+                            how_to_crop = st_memory.radio("How to crop:",options=["Manual Cropping", "Precision Cropping"],project_name=project_name, project_settings=project_settings,key="how_to_crop")
+                                                        
                                                         
                         if how_to_crop == "Manual Cropping":
 
                             manual_cropping_element("Source", timing_details, project_name)
                         
                         elif how_to_crop == "Precision Cropping":
-
+                                                                                                                                            
                             precision_cropping_element("Source", timing_details, project_name,project_settings)
-                        
-
-                        # resize_and_rotate_element("Source", timing_details, project_name)
-                        
-
+                                                                                
                         with st.expander("Replace Source Image", expanded=False):
 
                             canny1, canny2  = st.columns([1,1])
@@ -701,7 +677,7 @@ def frame_styling_page(mainheader2, project_name):
                         detail1, detail2, detail3, detail4 = st.columns([2.5,2.5,3.5,2])
 
                         with detail1:                            
-                            st.session_state['individual_number_of_variants']  = st.number_input(f"How many variants?", min_value=1, max_value=10, key=f"number_of_variants_{st.session_state['which_image']}")
+                            st.session_state['individual_number_of_variants']  = st.number_input(f"How many variants?", min_value=1, max_value=100, key=f"number_of_variants_{st.session_state['which_image']}")
                             
                             
                         with detail2:
@@ -800,7 +776,9 @@ def frame_styling_page(mainheader2, project_name):
                     
 
                         
-                    resize_and_rotate_element("Styled", timing_details, project_name)
+                    with st.expander("Prompt Finder"):
+                        prompt_finder_element(project_name)
+            
                     
 
                     with st.expander("Replace Frame"):
@@ -965,86 +943,99 @@ def frame_styling_page(mainheader2, project_name):
             with st.sidebar:
                 element = st.radio("Select element:", ["Styling", "Timeline"], index=0, key="element", horizontal=True)
                 if element == "Styling":
-                    styling_element(project_name, timing_details)
+                    styling_element(project_name, timing_details, project_settings,"List")
                 elif element == "Timeline":
                     stage = st.radio("Select stage:", ["Extracted Key Frames", "Current Main Variants"], index=0, key="stage", horizontal=True)
-                    
-
-                    
-                    number_to_show = st.slider("Number of frames to show:", min_value=1, max_value=20, value=3, key="number_to_show")
+                                        
+                    number_to_show = st.slider("Number of frames to show:", min_value=1, max_value=20, value=1, key="number_to_show")
                     for i in range(st.session_state['which_image'] - number_to_show, st.session_state['which_image'] + (number_to_show + 1)):
-                        if i >= 0 and i < len(timing_details):
-                            if i == st.session_state['which_image']:
-                                st.info(f"Frame {i}")
-                            else:
-                                st.write(f"Frame {i}")
-                            if stage == "Current Main Variants":
-                                st.image(get_primary_variant_location(timing_details, i), use_column_width=True)
-                            elif stage == "Extracted Key Frames":
-                                st.image(timing_details[i]["source_image"], use_column_width=True)
+                        col1, col2 = st.columns([1,1])
+                        with col1:
+                            if i >= 0 and i < len(timing_details):
+                                if i == st.session_state['which_image']:
+                                    st.info(f"Frame {i}")
+                                else:
+                                    st.write(f"Frame {i}")
+                                if stage == "Current Main Variants":
+                                    st.image(get_primary_variant_location(timing_details, i), use_column_width=True)
+                                elif stage == "Extracted Key Frames":
+                                    st.image(timing_details[i]["source_image"], use_column_width=True)
                             st.markdown("---")
-                    
+                        
 
                             
     
 
     with st.expander("Add Key Frame", expanded=True):
 
-        if len(timing_details) == 0:
-            st.info("The time on this will automatically be set to 0.0")
-            selected_image = ""
-            
 
-            
+        add1, add2 = st.columns(2)
 
-        # if it's the last frame, ask how long after the previous frame to add the new frame
-
-        else:
-
-            add1, add2 = st.columns(2)
-
-            with add1:
-                source_of_starting_image = st.radio("Where would you like to get the starting image from?", ["Previous frame","Uploaded image"], key="source_of_starting_image")
-                if source_of_starting_image == "Previous frame":
-                    which_stage_for_starting_image = st.radio("Which stage would you like to use?", ["Styled Image","Source Image"], key="which_stage_for_starting_image")
-                    which_number_for_starting_image = st.number_input("Which frame would you like to use?", min_value=0, max_value=len(timing_details)-1, value=st.session_state['which_image'], step=1,key="which_number_for_starting_image")
-                    if which_stage_for_starting_image == "Source Image":
-                        if timing_details[which_number_for_starting_image]["source_image"] != "":
-                            selected_image = timing_details[which_number_for_starting_image]["source_image"]
-                        else:
-                            selected_image = ""
-                    elif which_stage_for_starting_image == "Styled Image":
-                        selected_image = get_primary_variant_location(timing_details, which_number_for_starting_image)
-                elif source_of_starting_image == "Uploaded image":
-                    uploaded_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
-                    if uploaded_image is not None:
-                        # write uploaded_image to location videos/{project_name}/assets/frames/1_selected
-                        file_location = f"videos/{project_name}/assets/frames/1_selected/{uploaded_image.name}"
-                        with open(os.path.join(file_location),"wb") as f:
-                            f.write(uploaded_image.getbuffer())    
-                        selected_image = file_location
+        with add1:
+            source_of_starting_image = st.radio("Where would you like to get the starting image from?", ["Previous frame","Uploaded image","Frame From Video"], key="source_of_starting_image")
+            if source_of_starting_image == "Previous frame":
+                which_stage_for_starting_image = st.radio("Which stage would you like to use?", ["Styled Image","Source Image"], key="which_stage_for_starting_image")
+                which_number_for_starting_image = st.number_input("Which frame would you like to use?", min_value=0, max_value=len(timing_details)-1, value=st.session_state['which_image'], step=1,key="which_number_for_starting_image")
+                if which_stage_for_starting_image == "Source Image":
+                    if timing_details[which_number_for_starting_image]["source_image"] != "":
+                        selected_image = timing_details[which_number_for_starting_image]["source_image"]
                     else:
                         selected_image = ""
-                
-                how_long_after = st.slider("How long after?", min_value=0.0, max_value=10.0, value=2.5, step=0.1)
-
-            with add2:
-                if selected_image != "":
-                    st.image(selected_image)
+                elif which_stage_for_starting_image == "Styled Image":
+                    selected_image = get_primary_variant_location(timing_details, which_number_for_starting_image)
+            elif source_of_starting_image == "Uploaded image":
+                uploaded_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
+                if uploaded_image is not None:
+                    # write uploaded_image to location videos/{project_name}/assets/frames/1_selected
+                    file_location = f"videos/{project_name}/assets/frames/1_selected/{uploaded_image.name}"
+                    with open(os.path.join(file_location),"wb") as f:
+                        f.write(uploaded_image.getbuffer())    
+                    selected_image = file_location
                 else:
-                    st.error("No Image Found")
+                    selected_image = ""
+            elif source_of_starting_image == "Frame From Video":
+                which_video = st.number_input("Which video would you like to use?", min_value=0, max_value=len(timing_details)-1, value=st.session_state['which_image'], step=1,key="which_number_for_starting_image")
+                input_video = timing_details[which_video]["interpolated_video"]   
+                if input_video != "": 
+                    cap = cv2.VideoCapture(input_video)
+                    number_of_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                    cap.release()                   
+                    which_frame = st.slider("Which frame would you like to use?", min_value=0, max_value=number_of_frames, value=0, step=1,key="which_frame_for_starting_image")
+                    input_video = timing_details[which_video]["interpolated_video"]
+                    
+                    selected_image = preview_frame(project_name,input_video, which_frame)                    
+                else:
+                    st.error("No video found")
             
+            how_long_after = st.slider("How long after?", min_value=0.0, max_value=10.0, value=2.5, step=0.1)
+            if project_settings['zoom_level_input_value'] != "":                
+                apply_current_image_transformations = st_memory.radio("Apply the last zoom, rotation & movement to new frame?", ["Yes","No"], key="apply_zoom", horizontal=True,project_name=project_name, project_settings=project_settings)
+            else:
+                apply_current_image_transformations = "No"
+                project_settings['zoom_level_input_value'] = 0
+               
+            also_make_this_the_primary_image = st_memory.radio("Also make this the primary image?", ["Yes","No"], key="also_make_this_the_primary_image", horizontal=True,project_name=project_name, project_settings=project_settings)
+
             
-            
+        with add2:
+            if selected_image != "":
+                if apply_current_image_transformations == "Yes":
+                    selected_image = get_pillow_image(selected_image)
+                    selected_image = apply_image_transformations(selected_image,int(project_settings['zoom_level_input_value']), int(project_settings['rotation_angle_input_value']), int(project_settings['x_shift_input_value']), int(project_settings['y_shift_input_value']))                
+                
+                st.image(selected_image)
+            else:
+                st.error("No Image Found")
+                                    
     
         if st.button(f"Add key frame"):
             if len(timing_details) == 0:
                 index_of_current_item = 0
             else:
                 index_of_current_item = st.session_state['which_image']   
-            st.info(f"This will add a key frame after frame #{index_of_current_item}")                         
+                                 
             timing_details = get_timing_details(project_name)
-            
+                        
             if len(timing_details) == 0:
                 key_frame_time = 0.0
             elif index_of_current_item == len(timing_details) - 1:
@@ -1059,11 +1050,14 @@ def frame_styling_page(mainheader2, project_name):
                 update_specific_timing_value(project_name, 0, "frame_time",0.0)
             else:
                 create_timings_row_at_frame_number(project_name, index_of_current_item +1)
-                update_specific_timing_value(project_name, index_of_current_item + 1, "frame_time", key_frame_time)
-            st.success(f"Key frame added at {key_frame_time} seconds")
-            time.sleep(1)
-            timing_details = get_timing_details(project_name)     
-            update_specific_timing_value(project_name, index_of_current_item + 1, "source_image", selected_image)
+                update_specific_timing_value(project_name, index_of_current_item + 1, "frame_time", key_frame_time)            
+            timing_details = get_timing_details(project_name)    
+            if selected_image != "":
+                selected_image = save_new_image(selected_image) 
+                update_specific_timing_value(project_name, index_of_current_item + 1, "source_image", selected_image)
+            if also_make_this_the_primary_image == "Yes":
+                add_image_variant(selected_image, index_of_current_item + 1, project_name, timing_details)
+                promote_image_variant(index_of_current_item + 1, project_name, 0)
             update_specific_timing_value(project_name, index_of_current_item + 1, "animation_style", project_settings["default_animation_style"])
             if len(timing_details) == 1:
                 st.session_state['which_image'] = 0
