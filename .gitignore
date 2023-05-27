@@ -18,4 +18,5 @@ training_data
 inference_log/*
 *.db
 test.py
+doc.py
 .env

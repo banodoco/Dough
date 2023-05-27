@@ -10,8 +10,8 @@ class UserType(ExtendedEnum):
     ADMIN = 'admin'
 
 class AIModelType(ExtendedEnum):
-    LORA = 'lora'
-    DREAMBOOTH = 'dreambooth'
+    LORA = 'LoRA'
+    DREAMBOOTH = 'Dreambooth'
 
 class GuidanceType(ExtendedEnum):
     DRAWING = 'drawing'

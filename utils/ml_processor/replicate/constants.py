@@ -31,6 +31,7 @@ class REPLICATE_MODEL:
     jagilley_controlnet_hough = ReplicateModel("jagilley/controlnet-hough", "854e8727697a057c525cdb45ab037f64ecca770a1769cc52287c2e56472a247b")
     jagilley_controlnet_depth2img = ReplicateModel("jagilley/controlnet-depth2img", "922c7bb67b87ec32cbc2fd11b1d5f94f0ba4f5519c4dbd02856376444127cc60")
     jagilley_controlnet_pose = ReplicateModel("jagilley/controlnet-pose", "0304f7f774ba7341ef754231f794b1ba3d129e3c46af3022241325ae0c50fb99")
+    real_esrgan_upscale = ReplicateModel("cjwbw/real-esrgan", "d0ee3d708c9b911f122a4ad90046c5d26a0293b99476d697f6bb7f2e251ce2d4")
 
 
 DEFAULT_LORA_MODEL_URL = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"

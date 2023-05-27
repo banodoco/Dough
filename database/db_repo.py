@@ -11,7 +11,7 @@ application = get_wsgi_application()
 
 from database.models import AIModel, AIModelParamMap, AppSetting, InferenceLog, InternalFileObject, Project, Setting, Timing, User
 
-from database.serializers.dao import CreateAIModelDao, CreateAIModelParamMapDao, CreateAppSettingDao, CreateFileDao, CreateInferenceLogDao, CreateProjectDao, CreateSettingDao, CreateTimingDao, CreateUserDao, UpdateSettingDao
+from database.serializers.dao import CreateAIModelDao, CreateAIModelParamMapDao, CreateAppSettingDao, CreateFileDao, CreateInferenceLogDao, CreateProjectDao, CreateSettingDao, CreateTimingDao, CreateUserDao, UpdateAIModelDao, UpdateSettingDao
 from utils.internal_response import InternalResponse
 
 
@@ -68,6 +68,13 @@ class DBRepo:
         return InternalResponse({}, 'user not found', False)
 
     # internal file object
+    def get_file_from_name(self, name):
+        file = InternalFileObject.objects.filter(name=name, is_disabled=False).first()
+        if not file:
+            return InternalResponse({}, 'file not found', False)
+
+        return InternalResponse(file, 'file found', True)
+
     def get_file_from_uuid(self, uuid):
         file = InternalFileObject.objects.filter(uuid=uuid, is_disabled=False).first()
         if not file:
@@ -78,6 +85,15 @@ class DBRepo:
     def get_all_file_list(self, file_type: InternalFileType):
         file_list = InternalFileObject.objects.filter(file_type=file_type.value, is_disabled=False).all()
         return InternalResponse(file_list, 'file list', True)
+    
+    def create_or_update_file(self, filename, type=InternalFileType.IMAGE.value, **kwargs):
+        file = InternalFileType.objects.filter(name=filename, type=type, is_disabled=False).first()
+        if not file:
+            file = InternalFileObject.objects.create(name=filename, file_type=type, **kwargs)
+            return InternalResponse(file, 'file created', True)
+        else:
+            file.update(**kwargs)
+            return InternalResponse(file, 'file updated', True)
     
     def create_file(self, **kwargs):
         data = CreateFileDao(data=kwargs)
@@ -164,6 +180,26 @@ class DBRepo:
         ai_model = InternalFileObject.objects.create(**attributes.data)
         
         return InternalResponse(ai_model, 'ai model created successfully', True)
+    
+    def update_ai_model(self, **kwargs):
+        attirbutes = UpdateAIModelDao(attirbutes=kwargs)
+        if not attirbutes.is_valid():
+            return InternalResponse({}, attirbutes.errors, False)
+        
+        ai_model = AIModel.objects.filter(uuid=attirbutes.data['uuid'], is_disabled=False).first()
+        if not ai_model:
+            return InternalResponse({}, 'invalid ai model uuid', False)
+        
+        if 'user_id' in attirbutes.data and attirbutes.data['user_id']:
+            user = User.objects.filter(uuid=attirbutes.data['user_id'], is_disabled=False).first()
+            if not user:
+                return InternalResponse({}, 'invalid user', False)
+            
+            print(attirbutes.data['user_id'])
+            attirbutes.data['user_id'] = user.id
+        
+        ai_model.update(**attirbutes.data)
+        return InternalResponse({}, 'ai model updated successfully', True)
     
     def delete_ai_model_from_uuid(self, uuid):
         ai_model = AIModel.objects.filter(uuid=uuid, is_disabled=False).first()
@@ -275,6 +311,16 @@ class DBRepo:
         
         return InternalResponse(timing, 'timing fetched', True)
     
+    def get_timing_from_frame_number(self, project_uuid, frame_number):
+        project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        if project:
+            timing = Timing.objects.filter(frame_number=frame_number, project_id=project.id, is_disabled=False).first()
+            if timing:
+                return InternalResponse(timing, 'timing fetched', True)
+            
+        return InternalResponse({}, 'invalid timing frame number', False)
+        
+    
     def get_timing_list_from_project(self, project_id=None):
         if project_id:
             timing_list = Timing.objects.filter(project_id=project_id, is_disabled=False).all()
@@ -298,6 +344,15 @@ class DBRepo:
         timing = Timing.objects.create(**attributes.data)
         
         return InternalResponse(timing, 'timing created successfully', True)
+    
+    def update_specific_timing(self, uuid, **kwargs):
+        timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
+        if not timing:
+            return InternalResponse({}, 'invalid timing uuid', False)
+        
+        # TODO: handle foreign key update
+        timing.update(**kwargs)
+        return InternalResponse({}, 'timing updated successfully', True)
     
     def delete_timing_from_uuid(self, uuid):
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
@@ -377,7 +432,17 @@ class DBRepo:
         
         return InternalResponse(setting, 'setting created successfully', True)
     
-    def update_project_setting(self, **kwargs):
+    def update_project_setting(self, project_id, **kwargs):
+        setting = Setting.objects.filter(project_id=project_id, is_disabled=False).first()
+        if not setting:
+            return InternalResponse({}, 'invalid project', False)
+        
+        for attr, value in kwargs.items():
+            setattr(setting, attr, value)
+        
+        return InternalResponse(setting, 'setting updated successfully', True)
+
+    def bulk_update_project_setting(self, **kwargs):
         attributes = UpdateSettingDao(attributes=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
