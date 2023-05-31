@@ -1,7 +1,7 @@
 from argparse import FileType
 from rest_framework import serializers
 
-from database.constants import AIModelType, GuidanceType, InternalFileType
+from backend.constants import AIModelType, GuidanceType, InternalFileType
 
 class CreateUserDao(serializers.Serializer):
     name = serializers.CharField(max_length=100)

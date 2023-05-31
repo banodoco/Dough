@@ -1,5 +1,5 @@
 from banodoco_settings import SERVER, ServerType
-from database.constants import InternalFileType
+from backend.constants import InternalFileType
 
 def store_file(file_name,  file_type: InternalFileType, file=None, file_location=None):
     if SERVER == ServerType.PRODUCTION.value:

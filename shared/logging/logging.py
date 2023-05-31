@@ -1,8 +1,8 @@
 import logging
 import colorlog
-from repository.local_repo.csv_repo import get_app_settings
+from shared.constants import SERVER, ServerType
 
-from utils.logging.constants import LoggingMode, LoggingPayload, LoggingType
+from shared.logging.constants import LoggingMode, LoggingPayload, LoggingType
 
 class AppLogger(logging.Logger):
     def __init__(self, name='app_logger', log_file=None, log_level=logging.DEBUG):
@@ -35,8 +35,7 @@ class AppLogger(logging.Logger):
         self.addHandler(console_handler)
 
         # setting logging mode
-        app_settings = get_app_settings()
-        if 'online' in app_settings and app_settings['online']:
+        if SERVER != ServerType.PRODUCTION.value:
             self.logging_mode = LoggingMode.OFFLINE.value
         else:
             self.logging_mode = LoggingMode.ONLINE.value

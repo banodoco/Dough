@@ -19,7 +19,7 @@ DATABASES = {
 }
 
 INSTALLED_APPS = (
-    'database',
+    'backend',
 )
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

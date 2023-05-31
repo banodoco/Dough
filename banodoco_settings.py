@@ -1,24 +1,13 @@
+import os
 from dotenv import dotenv_values
 
 from repository.local_repo.csv_repo import get_app_settings
 from utils.common_methods import create_working_assets
 from utils.enum import ExtendedEnum
 
-
-class ServerType(ExtendedEnum):
-    DEVELOPMENT = 'development'
-    STAGING = 'staging'
-    PRODUCTION = 'production'
-
 REPLICATE_API_TOKEN = None
 REPLICATE_USERNAME = None
 
-AWS_ACCESS_KEY_ID = None
-AWS_SECRET_ACCESS_KEY = None
-
-SERVER = ServerType.STAGING.value
-
-LOCAL_DATABASE_LOCATION = 'banodoco_local.db'
 ENCRYPTION_KEY = None
 
 def project_init():
@@ -52,5 +41,3 @@ def project_init():
             env_file.write(f'FERNET_KEY={secret_key.decode()}\n')
         
         ENCRYPTION_KEY = secret_key.decode()
-
-

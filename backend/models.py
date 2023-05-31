@@ -2,6 +2,8 @@ from django.db import models
 import uuid
 import json
 
+from shared.constants import SERVER, ServerType
+
 class BaseModel(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4)
     created_on = models.DateTimeField(auto_now_add=True)
@@ -20,6 +22,7 @@ class InternalFileObject(BaseModel):
 
     class Meta:
         db_table = 'file'
+
 
     @property
     def location(self):
@@ -88,14 +91,14 @@ class Timing(BaseModel):
     mask = models.ForeignKey(InternalFileObject, related_name="mask", on_delete=models.DO_NOTHING, null=True)
     canny_image = models.ForeignKey(InternalFileObject, related_name="canny_image", on_delete=models.DO_NOTHING, null=True)
     preview_video = models.ForeignKey(InternalFileObject, related_name="preview_video", on_delete=models.DO_NOTHING, null=True)
+    primary_image = models.ForeignKey(InternalFileObject, related_name="primary_image", on_delete=models.DO_NOTHING, null=True)   # variant number that is currently selected (among alternative images) NONE if none is present
     custom_model_id_list = models.TextField(default=None, null=True, blank=True)    
     frame_time = models.FloatField(default=None, null=True)
     frame_number = models.IntegerField(default=None, null=True)
-    primary_image = models.IntegerField(default=None, null=True)   # variant number that is currently selected (among alternative images) NONE if none is present
     alternative_images = models.TextField(default=None, null=True)
     custom_pipeline = models.CharField(max_length=255, default="", blank=True)
     prompt = models.TextField(default='', blank=True)
-    negative_prompt = models.TextField(default="", blank=Tue)
+    negative_prompt = models.TextField(default="", blank=True)
     guidance_scale = models.FloatField(default=7.5)
     seed = models.IntegerField(default=0)
     num_inteference_steps = models.IntegerField(default=50)
@@ -107,7 +110,7 @@ class Timing(BaseModel):
     interpolation_steps = models.IntegerField(default=0)
     low_threshold = models.FloatField(default=0)
     high_threshold = models.FloatField(default=0)
-    aux_frame_index = models.IntegerField(default=0)    # TODO: udpate this
+    aux_frame_index = models.IntegerField(default=0)    # starts with 0 # TODO: udpate this
 
     class Meta:
         db_table = 'frame_timing'
@@ -124,12 +127,6 @@ class Timing(BaseModel):
         else:                         
             return self.alternative_images_list[self.primary_image].location if self.primary_image < len(self.alternative_images_list) else ""
     
-    # index starts with 0
-    @property
-    def aux_frame_index(self):
-        project_frames = Timing.objects.filter(project=self.project, is_disabled=False).all()
-        return project_frames.objects.filter(id__lt=self.id).count()
-    
     # gives the next entry in the project timings
     @property
     def next_timing(self):
@@ -145,6 +142,7 @@ class Timing(BaseModel):
 class AppSetting(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     replicate_key = models.CharField(max_length=255, default="", blank=True)
+    aws_secret_access_key = models.CharField(max_length=255, default="", blank=True)
     aws_access_key = models.CharField(max_length=255, default="", blank=True)
     stability_key = models.CharField(max_length=255, default="", blank=True)
     previous_project = models.CharField(max_length=255, default="", blank=True)
@@ -180,19 +178,25 @@ class AppSetting(BaseModel):
     def aws_access_key_decrypted(self):
         from utils.encryption import Encryptor
         encryptor = Encryptor()
-        return encryptor.decrypt(self.aws_access_key)
+        return encryptor.decrypt(self.aws_access_key) if self.aws_access_key else None
+    
+    @property
+    def aws_secret_access_key_decrypted(self):
+        from utils.encryption import Encryptor
+        encryptor = Encryptor()
+        return encryptor.decrypt(self.aws_secret_access_key) if self.aws_secret_access_key else None
     
     @property
     def replicate_key_decrypted(self):
         from utils.encryption import Encryptor
         encryptor = Encryptor()
-        return encryptor.decrypt(self.replicate_key)
+        return encryptor.decrypt(self.replicate_key) if self.replicate_key else None
     
     @property
     def stability_key_decrypted(self):
         from utils.encryption import Encryptor
         encryptor = Encryptor()
-        return encryptor.decrypt(self.stability_key)
+        return encryptor.decrypt(self.stability_key) if self.stability_key else None
 
 
 

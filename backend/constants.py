@@ -4,6 +4,7 @@ class InternalFileType(ExtendedEnum):
     IMAGE = 'image'
     VIDEO = 'video'
     AUDIO = 'audio'
+    GIF = 'gif'
 
 class UserType(ExtendedEnum):
     USER = 'user'

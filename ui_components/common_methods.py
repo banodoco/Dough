@@ -26,20 +26,20 @@ import uuid
 from io import BytesIO
 import ast
 import numpy as np
-from database.constants import AIModelType, InternalFileType
-from database.db_repo import DBRepo
-from database.models import AIModel, AppSetting, InternalFileObject, Project, Setting, Timing
+from backend.constants import AIModelType, InternalFileType
 from pydub import AudioSegment
 import shutil
 from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, vfx
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
+from backend.models import InternalFileObject
+from shared.file_upload.s3 import upload_file
 from ui_components.constants import AnimationStyleType, VideoQuality, WorkflowStageType
-from utils.file_upload.s3 import upload_image
+from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
+from utils.data_repo.data_repo import DataRepo, get_data_repo
 from utils.internal_response import InternalResponse
-from utils.logging.constants import LoggingPayload, LoggingType
-from utils.logging.logging import AppLogger
 from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.replicate.constants import DEFAULT_LORA_MODEL_URL, REPLICATE_MODEL
+from models import InternalFileObject
 
 
 from moviepy.video.fx.all import speedx
@@ -49,14 +49,14 @@ from streamlit_cropper import st_cropper
 from utils.ml_processor.replicate.replicate import ReplicateProcessor
 
 
-def resize_and_rotate_element(stage, project: Project):
-    dp_repo = DBRepo()
-
-    res: InternalResponse = dp_repo.get_timing_list_from_project(project.id)
+def resize_and_rotate_element(stage, project_uuid):
+    data_repo = DataRepo()
+    project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
+    res = data_repo.get_timing_list_from_project(project.uuid)
     if not res.status:
         pass    # TODO: handle failure
 
-    timing_details: Timing = res.payload
+    timing_details: InternalFrameTimingObject = res
 
     if "rotated_image" not in st.session_state:
         st.session_state['rotated_image'] = ""
@@ -71,13 +71,11 @@ def resize_and_rotate_element(stage, project: Project):
             fill_with = st.radio("Fill blank space with: ", ["Blur", None])
         if st.button("Rotate Image"):
             if stage == "Source":
-                res = dp_repo.get_timing_from_uuid(
+                res = data_repo.get_timing_from_uuid(
                     st.session_state['which_image'])
-                input_image = res.payload.source_image
+                input_image = res.source_image
             elif stage == "Styled":
-                timing: Timing = dp_repo.get_timing_from_uuid(
-                    st.session_state['which_image']).payload
-                input_image = timing.primary_variant_location
+                input_image = data_repo.get_primary_variant_location(st.session_state['which_image'])
             if rotation_angle != 0:
                 st.session_state['rotated_image'] = rotate_image(
                     input_image, rotation_angle)
@@ -112,7 +110,7 @@ def resize_and_rotate_element(stage, project: Project):
                         save_location = f"videos/{project.name}/assets/frames/1_selected/{file_name}"
                         # TODO: check offline file saving
                         st.session_state['rotated_image'].save(save_location)
-                        dp_repo.update_specific_timing(
+                        data_repo.update_specific_timing(
                             st.session_state['which_image'], source_image=save_location)
                         st.session_state['rotated_image'] = ""
                         st.experimental_rerun()
@@ -134,12 +132,12 @@ def resize_and_rotate_element(stage, project: Project):
 
 
 def create_individual_clip(timing_uuid):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
     if timing.animation_style == "":
-        project_setting = db_repo.get_project_setting(
-            timing.project.id).payload
+        project_setting = data_repo.get_project_setting(
+            timing.project.uuid)
         animation_style = project_setting.default_animation_style
     else:
         animation_style = timing.animation_style
@@ -159,14 +157,16 @@ and the next frame
 '''
 
 
-def prompt_interpolation_model(timing_uuid):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
+def prompt_interpolation_model(timing_uuid) -> InternalFileType:
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
-    img1 = timing.primary_variant_location
-    img2 = timing.next_timing.primary_variant_location
+    img1 = data_repo.get_primary_variant_location(timing_uuid)
+    next_timing = data_repo.get_next_timing(timing_uuid)
+    img2 = data_repo.get_primary_variant_location(next_timing.uuid)
 
-    app_settings = db_repo.get_app_setting_from_uuid()
+    # TODO: fix direct replicate access
+    app_settings = data_repo.get_app_setting_from_uuid()
     replicate_api_key = app_settings["replicate_com_api_key"]
     os.environ["REPLICATE_API_TOKEN"] = replicate_api_key
     model = replicate.models.get("google-research/frame-interpolation")
@@ -188,18 +188,20 @@ def prompt_interpolation_model(timing_uuid):
         "/assets/videos/0_raw/" + str(file_name)
     try:
         urllib.request.urlretrieve(output, video_location)
-
     except Exception as e:
         print(e)
 
-    return video_location
+    video_file = data_repo.create_file(name=file_name, type=InternalFileType.VIDEO.value, \
+                                       hosted_url=output, local_path=video_location)
+
+    return video_file
 
 
 def create_video_without_interpolation(timing_uuid):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
-    image_path_or_url = timing.primary_variant_location
+    image_path_or_url = data_repo.get_primary_variant_location(timing_uuid)
 
     video_location = "videos/" + timing.project.name + "/assets/videos/0_raw/" + \
                      ''.join(random.choices(string.ascii_lowercase +
@@ -347,17 +349,17 @@ def zoom_image(location, zoom_factor, fill_with=None):
 
 def crop_image_element(stage):
     timing_uuid = st.session_state['which_image']
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
-    if timing.source_image == "":
+    if not timing.source_image:
         st.error("Please select a source image before cropping")
         return
     else:
         if stage == WorkflowStageType.SOURCE.value:
-            input_image = timing.source_image
+            input_image = timing.source_image.location
         elif stage == WorkflowStageType.STYLED.value:
-            input_image = timing.primary_variant_location
+            input_image = data_repo.get_primary_variant_location(timing_uuid)
 
         if 'current_working_image_number' not in st.session_state:
             st.session_state['current_working_image_number'] = st.session_state['which_image']
@@ -418,8 +420,8 @@ def crop_image_element(stage):
                 st.session_state['working_image'] = enhancer.enhance(
                     contrast_factor)
 
-        project_settings: Project = db_repo.get_project_settings(
-            timing.project.id).payload
+        project_settings: InternalProjectObject = data_repo.get_project_settings(
+            timing.project.uuid)
 
         width = project_settings.width
         height = project_settings.height
@@ -453,7 +455,7 @@ def crop_image_element(stage):
                         file_name = f"temp/{uuid.uuid4()}.png"
                         cropped_img.save(file_name)
                         st.success("Cropped Image Saved Successfully")
-                        db_repo.update_specific_timing(
+                        data_repo.update_specific_timing(
                             st.session_state['which_image'], source_image=file_name)
                         time.sleep(1)
                     st.experimental_rerun()
@@ -462,9 +464,9 @@ def crop_image_element(stage):
 
             with st.expander("Inpaint in black space"):
                 inpaint_prompt = st.text_area(
-                    "Prompt", value=project_settings["last_prompt"])
+                    "Prompt", value=project_settings.last_prompt)
                 inpaint_negative_prompt = st.text_input(
-                    "Negative Prompt", value='branches, frame, fractals, text' + project_settings["last_negative_prompt"])
+                    "Negative Prompt", value='branches, frame, fractals, text' + project_settings.last_negative_prompt)
                 if 'inpainted_image' not in st.session_state:
                     st.session_state['inpainted_image'] = ""
                 if st.button("Inpaint"):
@@ -506,7 +508,7 @@ def crop_image_element(stage):
                     st.image(st.session_state['inpainted_image'],
                              caption="Inpainted Image", use_column_width=True, width=200)
                     if st.button("Make Source Image"):
-                        db_repo.update_specific_timing(
+                        data_repo.update_specific_timing(
                             st.session_state['which_image'], source_image=st.session_state['inpainted_image'])
                         st.session_state['inpainted_image'] = ""
                         st.experimental_rerun()
@@ -530,31 +532,27 @@ def rotate_image(location, degree):
 '''
 returns the timed_clip, which is the interpolated video with correct length
 '''
-
-
 def create_or_get_single_preview_video(timing_uuid):
-    db_repo = DBRepo()
+    data_repo = DataRepo()
 
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    project_details = db_repo.get_project_setting(timing.project.id).payload
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    project_details = data_repo.get_project_setting(timing.project.uuid)
 
-    if timing.interpolated_clip.location == "":
-        db_repo.update_specific_timing(timing_uuid, interpolation_steps=3)
-        interpolated_video = prompt_interpolation_model(timing_uuid)
-        db_repo.update_specific_timing(
-            timing_uuid, interpolated_video=interpolated_video)
+    if not (timing.interpolated_clip and timing.interpolated_clip.location):
+        data_repo.update_specific_timing(timing_uuid, interpolation_steps=3)
+        interpolated_video: InternalFileObject = prompt_interpolation_model(timing_uuid)
+        data_repo.update_specific_timing(
+            timing_uuid, interpolated_video_uuid=interpolated_video.uuid)
 
     # timed_clip has the correct length (equal to the time difference between the current and the next frame)
     # which the interpolated video may or maynot have
     if timing.timed_clip.location == "":
-        clip_duration = calculate_desired_duration_of_individual_clip(
-            timing_uuid)
-        db_repo.update_specific_timing(
-            timing_uuid, clip_duration=clip_duration)
+        clip_duration = calculate_desired_duration_of_individual_clip(timing_uuid)
+        data_repo.update_specific_timing(timing_uuid, clip_duration=clip_duration)
         location_of_output_video = update_speed_of_video_clip(
             timing.interpolated_clip, True, timing_uuid)
-        db_repo.update_specific_timing(
-            timing_uuid, timed_clip=location_of_output_video)
+        data_repo.update_specific_timing(
+            timing_uuid, timed_clip_uuid=location_of_output_video.uuid)
 
     # adding audio if the audio file is present
     if project_details["audio"] != "":
@@ -565,50 +563,49 @@ def create_or_get_single_preview_video(timing_uuid):
 
 
 def single_frame_time_changer(timing_uuid):
-    db_repo = DBRepo()
+    data_repo = DataRepo()
 
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
 
     frame_time = st.number_input("Frame time (secs):", min_value=0.0, max_value=100.0,
                                  value=timing.frame_time, step=0.1, key=f"frame_time_{timing.aux_frame_index}")
 
     if frame_time != timing.frame_time:
-        db_repo.update_specific_timing(timing_uuid, frame_time=frame_time)
+        data_repo.update_specific_timing(timing_uuid, frame_time=frame_time)
         if timing.aux_frame_index != 1:
-            db_repo.update_specific_timing(
-                timing.prev_timing.uuid, timed_clip="")
-        db_repo.update_specific_timing(timing_uuid, timed_clip="")
+            data_repo.update_specific_timing(
+                data_repo.get_prev_timing(timing_uuid).uuid, timed_clip="")
+        data_repo.update_specific_timing(timing_uuid, timed_clip="")
 
         # if the frame time of this frame is more than the frame time of the next frame,
         # then we need to update the next frame's frame time, and all the frames after that
         # - shift them by the difference between the new frame time and the old frame time
 
         # if it's not the last item (not last frame = next frame is available)
-        if timing.next_timing:
-            if frame_time > timing.next_timing.frame_time:
+        last_timing = data_repo.get_next_timing(timing_uuid)
+        if last_timing:
+            if frame_time > last_timing['frame_time']:
                 for a in range(timing.aux_frame_index, len(timing_details)):
-                    this_frame_time = timing_details[a]["frame_time"]
+                    this_frame_time = timing_details[a].frame_time
                     # shift them by the difference between the new frame time and the old frame time
                     new_frame_time = this_frame_time + \
                         (frame_time - timing.frame_time)
-                    db_repo.update_specific_timing(
+                    data_repo.update_specific_timing(
                         a, frame_time=new_frame_time)
-                    db_repo.update_specific_timing(a, timed_clip="")
+                    data_repo.update_specific_timing(a, timed_clip="")
         st.experimental_rerun()
 
 
 '''
 preview_clips have frame numbers on them
 '''
-
-
-def create_full_preview_video(timing_uuid, speed):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
+def create_full_preview_video(timing_uuid, speed) -> InternalFileObject:
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
     index_of_item = timing.aux_frame_index
 
     num_timing_details = len(timing_details)
@@ -624,7 +621,7 @@ def create_full_preview_video(timing_uuid, speed):
         if i < 0 or i >= num_timing_details-1:
             continue
 
-        primary_variant_location = timing.primary_variant_location
+        primary_variant_location = data_repo.get_primary_variant_location(timing_uuid)
 
         print(
             f"primary_variant_location for i={i}: {primary_variant_location}")
@@ -651,40 +648,32 @@ def create_full_preview_video(timing_uuid, speed):
         os.remove(preview_video)
         clip_with_number.write_videofile(
             preview_video, codec='libx264', bitrate='3000k')
-
         clips.append(preview_video)
 
     print(clips)
-
     video_clips = [VideoFileClip(v) for v in clips]
-
     combined_clip = concatenate_videoclips(video_clips)
-
     output_filename = str(uuid.uuid4()) + ".mp4"
-
     video_location = f"videos/{timing.project.name}/assets/videos/1_final/{output_filename}"
-
     combined_clip.write_videofile(video_location)
 
     if speed != 1.0:
         clip = VideoFileClip(video_location)
-
         output_clip = clip.fx(vfx.speedx, speed)
-
         os.remove(video_location)
+        output_clip.write_videofile(video_location, codec="libx264", preset="fast")
 
-        output_clip.write_videofile(
-            video_location, codec="libx264", preset="fast")
+    video_file = data_repo.create_file(filename=output_filename, type=InternalFileType.VIDEO.value, local_path=video_location)
 
-    return video_location
+    return video_file
 
 
 def back_and_forward_buttons():
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(
-        st.session_state['which_image']).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        st.session_state['which_image'])
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
 
     smallbutton0, smallbutton1, smallbutton2, smallbutton3, smallbutton4 = st.columns([
                                                                                       2, 2, 2, 2, 2])
@@ -716,18 +705,18 @@ def back_and_forward_buttons():
 
 
 def styling_element(timing_uuid):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
-    project_settings: Setting = db_repo.get_project_setting(
-        timing.project.id).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
+    project_settings: InternalSettingObject = data_repo.get_project_setting(
+        timing.project.uuid)
 
     stages = ["Extracted Key Frames", "Current Main Variants"]
 
-    if project_settings['last_which_stage_to_run_on'] != "":
+    if project_settings.default_stage != "":
         if 'index_of_which_stage_to_run_on' not in st.session_state:
-            st.session_state['which_stage_to_run_on'] = project_settings['last_which_stage_to_run_on']
+            st.session_state['which_stage_to_run_on'] = project_settings.default_stage
             st.session_state['index_of_which_stage_to_run_on'] = stages.index(
                 st.session_state['which_stage_to_run_on'])
     else:
@@ -738,12 +727,12 @@ def styling_element(timing_uuid):
         st.session_state['which_stage_to_run_on'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True,
                                                              index=st.session_state['index_of_which_stage_to_run_on'], help="Extracted frames means the original frames from the video.")
     with stages2:
-        stage_frame: Timing = db_repo.get_timing_from_uuid(
-            st.session_state['which_image']).payload
+        stage_frame: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+            st.session_state['which_image'])
         if st.session_state['which_stage_to_run_on'] == "Extracted Key Frames":
-            image = stage_frame.source_image
+            image = stage_frame.source_image.location
         else:
-            image = stage_frame.primary_variant_location
+            image = data_repo.get_primary_variant_location(stage_frame.uuid).location
         if image != "":
             st.image(image, use_column_width=True,
                      caption=f"Image {st.session_state['which_image']}")
@@ -790,10 +779,10 @@ def styling_element(timing_uuid):
         models = ['controlnet', 'stable_diffusion_xl', 'stable-diffusion-img2img-v2.1',
                   'depth2img', 'pix2pix', 'Dreambooth', 'LoRA', 'StyleGAN-NADA', 'real-esrgan-upscaling']
 
-        if project_settings['default_model'] != "":
+        if project_settings.default_model != "":
 
             if 'index_of_default_model' not in st.session_state:
-                st.session_state['model'] = project_settings['default_model']
+                st.session_state['model'] = project_settings.default_model
                 st.session_state['index_of_default_model'] = models.index(
                     st.session_state['model'])
                 st.write(
@@ -879,13 +868,13 @@ def styling_element(timing_uuid):
 
         canny1, canny2 = st.columns(2)
 
-        if project_settings['last_low_threshold'] != "":
-            low_threshold_value = project_settings['last_low_threshold']
+        if project_settings.last_low_threshold != "":
+            low_threshold_value = project_settings.last_low_threshold
         else:
             low_threshold_value = 50
 
-        if project_settings['last_high_threshold'] != "":
-            high_threshold_value = project_settings['last_high_threshold']
+        if project_settings.last_high_threshold != "":
+            high_threshold_value = project_settings.last_high_threshold
         else:
             high_threshold_value = 150
 
@@ -1003,7 +992,7 @@ def convert_to_minutes_and_seconds(frame_time):
     return f"{minutes} min, {seconds} secs"
 
 
-def calculate_time_at_frame_number(input_video, frame_number, project: Project):
+def calculate_time_at_frame_number(input_video, frame_number, project: InternalProjectObject):
     input_video = "videos/" + \
         str(project.name) + "/assets/resources/input_videos/" + str(input_video)
     video = cv2.VideoCapture(input_video)
@@ -1015,7 +1004,7 @@ def calculate_time_at_frame_number(input_video, frame_number, project: Project):
     return time_at_frame
 
 
-def preview_frame(project: Project, video_name, frame_num):
+def preview_frame(project: InternalProjectObject, video_name, frame_num):
     cap = cv2.VideoCapture(
         f'videos/{project.name}/assets/resources/input_videos/{video_name}')
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
@@ -1024,12 +1013,12 @@ def preview_frame(project: Project, video_name, frame_num):
     cap.release()
     return frame
 
-
+# DOUBT: how is this working?
 def extract_frame(frame_number, timing_uuid, input_video, extract_frame_number):
-    db_repo = DBRepo()
-    timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
+    data_repo = DataRepo()
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
 
     input_video = "videos/" + \
         str(timing.project.name) + \
@@ -1042,7 +1031,7 @@ def extract_frame(frame_number, timing_uuid, input_video, extract_frame_number):
     ret, frame = input_video.read()
 
     if timing_details[frame_number]["frame_number"] == "":
-        db_repo.update_specific_timing(
+        data_repo.update_specific_timing(
             timing_uuid, frame_number=extract_frame_number)
 
     file_name = ''.join(random.choices(
@@ -1051,11 +1040,18 @@ def extract_frame(frame_number, timing_uuid, input_video, extract_frame_number):
                 "/assets/frames/1_selected/" + str(file_name), frame)
     # img = Image.open("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
     # img.save("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
-    db_repo.update_specific_timing(timing.project.name, frame_number, "source_image",
-                                   "videos/" + timing.project.name + "/assets/frames/1_selected/" + str(file_name))
+    
+    final_image = data_repo.create_file(file_name, type=InternalFileType.IMAGE.value, local_path="videos/" + timing.project.name +
+                "/assets/frames/1_selected/" + str(file_name))
+    data_repo.update_specific_timing(timing_uuid, source_image_uuid=final_image.uuid)
+
+    return final_image
 
 
-def calculate_frame_number_at_time(input_video, time_of_frame, project: Project):
+def calculate_frame_number_at_time(input_video, time_of_frame, project_uuid):
+    data_repo = DataRepo()
+    project = data_repo.get_project_from_uuid(project_uuid)
+    
     time_of_frame = float(time_of_frame)
     input_video = "videos/" + \
         str(project.name) + "/assets/resources/input_videos/" + str(input_video)
@@ -1070,65 +1066,56 @@ def calculate_frame_number_at_time(input_video, time_of_frame, project: Project)
     return frame_number
 
 
-def move_frame(direction, frame_number, project: Project):
-    db_repo = DBRepo()
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        project.id).payload
-    timing: Timing = db_repo.get_timing_from_frame_number(frame_number).payload
+def move_frame(direction, timing_uuid, project_uuid):
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(timing_uuid)
 
     current_primary_image = timing.primary_image
     current_alternative_images = timing.alternative_images
     current_source_image = timing.source_image
 
     if direction == "Up":
-        previous_primary_image = timing.prev_timing.primary_image
-        previous_alternative_images = timing.prev_timing.alternative_images
-        previous_source_image = timing.prev_timing.source_image
+        prev_timing = data_repo.get_prev_timing(timing.uuid)
+        previous_primary_image = prev_timing['primary_image']
+        previous_alternative_images = prev_timing['alternative_images']
+        previous_source_image = prev_timing['source_image']
 
-        db_repo.update_specific_timing(
-            timing.prev_timing.uuid, primary_image=current_primary_image)
+        data_repo.update_specific_timing(prev_timing.uuid, primary_image_uuid=current_primary_image.uuid)
         print("current_alternative_images= ", current_alternative_images)
-        db_repo.update_specific_timing(
-            timing.prev_timing.uuid, alternative_images=str(current_alternative_images))
-        db_repo.update_specific_timing(
-            timing.prev_timing.uuid, source_image=current_source_image)
-        db_repo.update_specific_timing(
-            timing.prev_timing.uuid, interpolated_video="")
-        db_repo.update_specific_timing(
-            timing.prev_timing.uuid, timed_clip="")
+        data_repo.update_specific_timing(prev_timing.uuid, alternative_images=str(current_alternative_images))
+        data_repo.update_specific_timing(prev_timing.uuid, source_image_uuid=current_source_image.uuid)
+        data_repo.update_specific_timing(prev_timing.uuid, interpolated_video=None)
+        data_repo.update_specific_timing(prev_timing.uuid, timed_clip=None)
 
-        db_repo.update_specific_timing(
-            timing.uuid, "primary_image", previous_primary_image)
-        db_repo.update_specific_timing(
-            timing.uuid, "alternative_images", str(previous_alternative_images))
-        db_repo.update_specific_timing(
-            timing.uuid, "source_image", previous_source_image)
+        data_repo.update_specific_timing(timing.uuid, primary_image_uuid=previous_primary_image.uuid)
+        data_repo.update_specific_timing(timing.uuid, alternative_images=str(previous_alternative_images))
+        data_repo.update_specific_timing(timing.uuid, source_image_uuid=previous_source_image.uuid)
 
     elif direction == "Down":
-        next_primary_image = timing.next_timing.primary_image
-        next_alternative_images = timing.next_timing.alternative_images
-        next_source_image = timing.next_timing.source_image
+        next_primary_image = data_repo.get_next_timing(timing.uuid).primary_image
+        next_alternative_images = data_repo.get_next_timing(timing.uuid).alternative_images
+        next_source_image = data_repo.get_next_timing(timing.uuid).source_image
 
-        db_repo.update_specific_timing(
-            timing.next_timing.uuid, primary_image=current_primary_image)
-        db_repo.update_specific_timing(
-            timing.next_timing.uuid, alternative_images=str(current_alternative_images))
-        db_repo.update_specific_timing(
-            timing.next_timing.uuid, source_image=current_source_image)
-        db_repo.update_specific_timing(
-            timing.next_timing.uuid, interpolated_video="")
-        db_repo.update_specific_timing(
-            timing.next_timing.uuid, timed_clip="")
+        data_repo.update_specific_timing(
+            data_repo.get_next_timing(timing.uuid).uuid, primary_image_uuid=current_primary_image.uuid)
+        data_repo.update_specific_timing(
+            data_repo.get_next_timing(timing.uuid).uuid, alternative_images=str(current_alternative_images))
+        data_repo.update_specific_timing(
+            data_repo.get_next_timing(timing.uuid).uuid, source_image_uuid=current_source_image.uuid)
+        data_repo.update_specific_timing(
+            data_repo.get_next_timing(timing.uuid).uuid, interpolated_video=None)
+        data_repo.update_specific_timing(
+            data_repo.get_next_timing(timing.uuid).uuid, timed_clip=None)
 
-        db_repo.update_specific_timing(
-            timing.uuid, primary_image=next_primary_image)
-        db_repo.update_specific_timing(
+        data_repo.update_specific_timing(
+            timing.uuid, primary_image_uuid=next_primary_image.uuid)
+        data_repo.update_specific_timing(
             timing.uuid, alternative_images=str(next_alternative_images))
-        db_repo.update_specific_timing(
-            timing.uuid, source_image=next_source_image)
+        data_repo.update_specific_timing(
+            timing.uuid, source_image_uuid=next_source_image.uuid)
 
-    db_repo.update_specific_timing(timing.uuid, interpolated_video="")
-    db_repo.update_specific_timing(timing.uuid, timed_clip="")
+    data_repo.update_specific_timing(timing.uuid, interpolated_video=None)
+    data_repo.update_specific_timing(timing.uuid, timed_clip=None)
 
 
 # def get_timing_details(video_name):
@@ -1162,25 +1149,23 @@ def move_frame(direction, frame_number, project: Project):
 
 
 def delete_frame(timing_uuid):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
 
     index_of_current_item = timing.aux_frame_index
-
-    db_repo.update_specific_timing(
-        timing.next_timing.uuid, "interpolated_video", "")
+    next_timing = data_repo.get_next_timing(timing_uuid)
+    
+    data_repo.update_specific_timing(next_timing.uuid, interpolated_video="")
     if index_of_current_item < len(timing_details) - 1:
-        db_repo.update_specific_timing(
-            timing.next_timing.uuid, "interpolated_video", "")
+        data_repo.update_specific_timing(next_timing.uuid, interpolated_video="")
 
-    db_repo.update_specific_timing(timing.next_timing.uuid, "timed_clip", "")
+    data_repo.update_specific_timing(next_timing.uuid, timed_clip="")
     if index_of_current_item < len(timing_details) - 1:
-        db_repo.update_specific_timing(
-            timing.next_timing.uuid, "timed_clip", "")
+        data_repo.update_specific_timing(next_timing.uuid, timed_clip="")
 
-    db_repo.delete_timing_from_uuid(timing.uuid)
+    data_repo.delete_timing_from_uuid(timing.uuid)
 
 
 # def batch_update_timing_values(timing_uuid, prompt, strength, model, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, source_image, custom_models, adapter_type, low_threshold, high_threshold):
@@ -1222,8 +1207,8 @@ def delete_frame(timing_uuid):
 
 
 def dynamic_prompting(prompt, source_image, timing_uuid):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
     if "[expression]" in prompt:
         prompt_expression = facial_expression_recognition(source_image)
@@ -1244,50 +1229,50 @@ def dynamic_prompting(prompt, source_image, timing_uuid):
             source_image, "the person is looking")
         prompt = prompt.replace("[looking]", "looking " + str(prompt_looking))
 
-    db_repo.update_specific_timing(timing_uuid, prompt=prompt)
+    data_repo.update_specific_timing(timing_uuid, prompt=prompt)
 
 
 def trigger_restyling_process(timing_uuid, model_id, prompt, strength, custom_pipeline, negative_prompt,
                               guidance_scale, seed, num_inference_steps, which_stage_to_run_on,
                               promote_new_generation, custom_models, adapter_type,
                               update_inference_settings, low_threshold, high_threshold):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
-    project_setting: Setting = db_repo.get_project_setting(
-        timing.project.id).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
+    project_setting: InternalSettingObject = data_repo.get_project_setting(
+        timing.project.uuid)
 
     if update_inference_settings is True:
         prompt = prompt.replace(",", ".")
         prompt = prompt.replace("\n", "")
-        db_repo.update_project_setting(
-            timing.project.id, default_prompt=prompt)
-        db_repo.update_project_setting(
-            timing.project.id, default_strength=strength)
-        db_repo.update_project_setting(
-            timing.project.id, default_model_id=model_id)
-        db_repo.update_project_setting(
-            timing.project.id, default_custom_pipeline=custom_pipeline)
-        db_repo.update_project_setting(
-            timing.project.id, default_negative_prompt=negative_prompt)
-        db_repo.update_project_setting(
-            timing.project.id, default_guidance_scale=guidance_scale)
-        db_repo.update_project_setting(timing.project.id, default_seed=seed)
-        db_repo.update_project_setting(
-            timing.project.id, default_num_inference_steps=num_inference_steps)
-        db_repo.update_project_setting(
-            timing.project.id, default_which_stage_to_run_on=which_stage_to_run_on)
-        db_repo.update_project_setting(
-            timing.project.id, default_custom_models=custom_models)
-        db_repo.update_project_setting(
-            timing.project.id, default_adapter_type=adapter_type)
+        data_repo.update_project_setting(
+            timing.project.uuid, default_prompt=prompt)
+        data_repo.update_project_setting(
+            timing.project.uuid, default_strength=strength)
+        data_repo.update_project_setting(
+            timing.project.uuid, default_model_id=model_id)
+        data_repo.update_project_setting(
+            timing.project.uuid, default_custom_pipeline=custom_pipeline)
+        data_repo.update_project_setting(
+            timing.project.uuid, default_negative_prompt=negative_prompt)
+        data_repo.update_project_setting(
+            timing.project.uuid, default_guidance_scale=guidance_scale)
+        data_repo.update_project_setting(timing.project.uuid, default_seed=seed)
+        data_repo.update_project_setting(
+            timing.project.uuid, default_num_inference_steps=num_inference_steps)
+        data_repo.update_project_setting(
+            timing.project.uuid, default_which_stage_to_run_on=which_stage_to_run_on)
+        data_repo.update_project_setting(
+            timing.project.uuid, default_custom_models=custom_models)
+        data_repo.update_project_setting(
+            timing.project.uuid, default_adapter_type=adapter_type)
         if low_threshold != "":
-            db_repo.update_project_setting(
-                timing.project.id, default_low_threshold=low_threshold)
+            data_repo.update_project_setting(
+                timing.project.uuid, default_low_threshold=low_threshold)
         if high_threshold != "":
-            db_repo.update_project_setting(
-                timing.project.id, default_high_threshold=high_threshold)
+            data_repo.update_project_setting(
+                timing.project.uuid, default_high_threshold=high_threshold)
 
         if timing.source_image == "":
             source_image = ""
@@ -1296,12 +1281,12 @@ def trigger_restyling_process(timing_uuid, model_id, prompt, strength, custom_pi
 
         dynamic_prompting(prompt, source_image, timing_uuid)
 
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
     if which_stage_to_run_on == "Extracted Key Frames":
         source_image = timing.source_image
     else:
-        variants: List[InternalFileObject] = timing.alternative_images_list
+        variants: List[InternalFileObject] = data_repo.get_alternative_image_list(timing_uuid)
         number_of_variants = len(variants)
         primary_image = timing.primary_image
         source_image = variants[primary_image].location
@@ -1315,9 +1300,9 @@ def trigger_restyling_process(timing_uuid, model_id, prompt, strength, custom_pi
         add_image_variant(output_url, timing_uuid)
 
         if promote_new_generation == True:
-            timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-                timing.project.id).payload
-            variants = timing.alternative_images_list
+            timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+                timing.project.uuid)
+            variants = data_repo.get_alternative_image_list(timing_uuid)
             number_of_variants = len(variants)
             if number_of_variants == 1:
                 print("No new generation to promote")
@@ -1328,32 +1313,34 @@ def trigger_restyling_process(timing_uuid, model_id, prompt, strength, custom_pi
 
 
 def promote_image_variant(timing_uuid, variant_to_promote):
-    db_repo = DBRepo()
-    db_repo.update_specific_timing(
+    data_repo = DataRepo()
+    data_repo.update_specific_timing(
         timing_uuid, primary_image=variant_to_promote)
-    db_repo.update_specific_timing(timing_uuid - 1, interpolated_video="")
-    db_repo.update_specific_timing(timing_uuid, interpolated_video="")
+    data_repo.update_specific_timing(timing_uuid - 1, interpolated_video="")
+    data_repo.update_specific_timing(timing_uuid, interpolated_video="")
 
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
     frame_idx = timing.aux_frame_index
 
     # DOUBT: setting last interpolated_video to empty?
     if frame_idx < len(timing_details):
-        db_repo.update_specific_timing(timing.uuid, interpolated_video="")
+        data_repo.update_specific_timing(timing.uuid, interpolated_video="")
 
     if frame_idx > 1:
-        db_repo.update_specific_timing(
-            timing.prev_timing.prev_timing.uuid, timed_clip="")
+        data_repo.update_specific_timing(
+            data_repo.get_prev_timing(timing_uuid).uuid, timed_clip="")
 
-    db_repo.update_specific_timing(timing_uuid, timed_clip="")
+    data_repo.update_specific_timing(timing_uuid, timed_clip="")
 
     if frame_idx < len(timing_details):
-        db_repo.update_specific_timing(timing.uuid, timed_clip="")
+        data_repo.update_specific_timing(timing.uuid, timed_clip="")
 
 
-def extract_canny_lines(image_path_or_url, project_name, low_threshold=50, high_threshold=150):
+def extract_canny_lines(image_path_or_url, project_name, low_threshold=50, high_threshold=150) -> InternalFileObject:
+    data_repo = DataRepo()
+
     # Check if the input is a URL
     if image_path_or_url.startswith("http"):
         response = r.get(image_path_or_url)
@@ -1381,27 +1368,26 @@ def extract_canny_lines(image_path_or_url, project_name, low_threshold=50, high_
     os.makedirs(os.path.dirname(file_location), exist_ok=True)
     new_canny_image.save(file_location)
 
-    return file_location
+    canny_image_file = data_repo.create_file(filename=unique_file_name, type=InternalFileType.IMAGE.value, local_path=file_location)
+    return canny_image_file
 
 
-def create_or_update_mask(timing_uuid, image):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing.uuid).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
+def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing.uuid)
 
     mask_base_path = "videos/{project_name}/assets/resources/masks/"
     file_location = None
 
     if timing.mask.location == "":
         unique_file_name = str(uuid.uuid4()) + ".png"
-        mask = db_repo.create_file(name=unique_file_name, type=InternalFileType.IMAGE.value,
+        mask = data_repo.create_file(name=unique_file_name, type=InternalFileType.IMAGE.value,
                                    local_path=mask_base_path + unique_file_name)
-        db_repo.update_specific_timing(timing_uuid, mask_id=mask.id)
+        data_repo.update_specific_timing(timing_uuid, mask_id=mask.id)
         file_location = timing.mask.location
     else:
-        current_timing: Timing = db_repo.get_ai_model_from_uuid(
-            st.session_state['which_image']).payload
+        current_timing: InternalFrameTimingObject = data_repo.get_ai_model_from_uuid(
+            st.session_state['which_image'])
         file_location = current_timing.mask.location
 
     return file_location
@@ -1450,10 +1436,10 @@ def create_working_assets(video_name):
 
 
 def inpainting(input_image, prompt, negative_prompt, timing_uuid, invert_mask, pass_mask=False) -> InternalFileObject:
-    db_repo = DBRepo()
+    data_repo = DataRepo()
 
-    app_settings = db_repo.get_all_app_setting_list()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid)
+    app_settings = data_repo.get_all_app_setting_list()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
     os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
 
@@ -1477,20 +1463,18 @@ def inpainting(input_image, prompt, negative_prompt, timing_uuid, invert_mask, p
                                             invert_mask=invert_mask, negative_prompt=negative_prompt, num_inference_steps=25)
 
     file_name = str(uuid.uuid4()) + ".png"
-    image_file = db_repo.create_file(name=file_name, type=InternalFileType.IMAGE.value, hosted_url=output[0])
+    image_file = data_repo.create_file(name=file_name, type=InternalFileType.IMAGE.value, hosted_url=output[0])
 
     return image_file
 
 
 def add_image_variant(image_url, timing_uuid):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
-    image_file = db_repo.create_file(
+    image_file = data_repo.create_file(
         name="frame_img", type=InternalFileType.IMAGE.value, hosted_url=image_url)
-    if not timing.alternative_images_list:
+    if not data_repo.get_alternative_image_list(timing_uuid):
         alternative_images = json.dump([image_file.id])
         additions = []
     else:
@@ -1503,18 +1487,16 @@ def add_image_variant(image_url, timing_uuid):
         alternative_images.append(image_file.id)
         alternative_images = json.dump(alternative_images)
 
-    db_repo.update_specific_timing(
+    data_repo.update_specific_timing(
         timing_uuid, alternative_images=alternative_images)
 
     if not timing.primary_image:
         timing.primary_image = 0
-        db_repo.update_specific_timing(timing_uuid, primary_image=0)
+        data_repo.update_specific_timing(timing_uuid, primary_image=0)
 
     return len(additions) + 1
 
 # DOUBT: why do we need controller in dreambooth training?
-
-
 def train_dreambooth_model(controller_type, instance_prompt, class_prompt, training_file_url, max_train_steps, model_name, images_list):
     if controller_type == "normal":
         template_version = "b65d36e378a01ef81d81ba49be7deb127e9bb8b74a28af3aa0eaca16b9bcd0eb"
@@ -1569,8 +1551,8 @@ def train_lora_model(training_file_url, type_of_task, resolution, model_name, im
     return f"Successfully trained - the model '{model_name}' is now available for use!"
 
 
-def train_model(app_settings, images_list, instance_prompt, class_prompt, max_train_steps,
-                model_name, project_name, type_of_model, type_of_task, resolution, controller_type):
+def train_model(images_list, instance_prompt, class_prompt, max_train_steps,
+                model_name, type_of_model, type_of_task, resolution, controller_type):
     # prepare and upload the training data (images.zip)
     ml_client = get_ml_client()
     try:
@@ -1616,7 +1598,7 @@ def remove_background(input_image):
 
 
 def replace_background(video_name, foreground_image, background_image) -> InternalFileObject:
-    db_repo = DBRepo()
+    data_repo = DataRepo()
 
     if background_image.startswith("http"):
         response = r.get(background_image)
@@ -1628,7 +1610,7 @@ def replace_background(video_name, foreground_image, background_image) -> Intern
     background_image.save(f"videos/{video_name}/replaced_bg.png")
 
     filename = str(uuid.uuid4()) + ".png"
-    image_file = db_repo.create_file(name=filename, local_path=f"videos/{video_name}/replaced_bg.png", \
+    image_file = data_repo.create_file(name=filename, local_path=f"videos/{video_name}/replaced_bg.png", \
                                      type=InternalFileType.IMAGE.value)
 
     return image_file
@@ -1651,8 +1633,8 @@ def prompt_clip_interrogator(input_image, which_model, best_or_fast):
 
 
 def prompt_model_real_esrgan_upscaling(input_image):
-    db_repo = DBRepo()
-    app_settings = db_repo.get_app_setting_from_uuid()
+    data_repo = DataRepo()
+    app_settings = data_repo.get_app_setting_from_uuid()
 
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
@@ -1663,13 +1645,13 @@ def prompt_model_real_esrgan_upscaling(input_image):
     )
 
     filename = str(uuid.uuid4()) + ".png"
-    image_file = db_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+    image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
                                                         hosted_url=output)
     return output
 
 
 def touch_up_image(image: InternalFileObject):
-    db_repo = DBRepo()
+    data_repo = DataRepo()
 
     input_image = image.location
     if not input_image.startswith("http"):
@@ -1680,7 +1662,7 @@ def touch_up_image(image: InternalFileObject):
         REPLICATE_MODEL.gfp_gan, img=input_image)
 
     filename = str(uuid.uuid4()) + ".png"
-    image_file = db_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+    image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
                                      hosted_url=output)
 
     return image_file
@@ -1698,8 +1680,8 @@ def resize_image(video_name, new_width, new_height, image_file: InternalFileObje
     filepath = "videos/" + str(video_name) + "/temp_image-" + unique_id + ".png"
     resized_image.save(filepath)
 
-    db_repo = DBRepo()
-    image_file = db_repo.create_file(name=unique_id + ".png", type=InternalFileType.IMAGE.value,
+    data_repo = DataRepo()
+    image_file = data_repo.create_file(name=unique_id + ".png", type=InternalFileType.IMAGE.value,
                                      local_path=filepath)
 
     # not uploading or removing the created image as of now
@@ -1712,10 +1694,10 @@ def resize_image(video_name, new_width, new_height, image_file: InternalFileObje
 
 
 def face_swap(timing_uuid, source_image) -> InternalFileObject:
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
-    model_category = timing.model.category
+    model_category = timing['model']['category']
 
     # TODO: check this logic by running the code
     if model_category == "Dreambooth":
@@ -1726,7 +1708,7 @@ def face_swap(timing_uuid, source_image) -> InternalFileObject:
         #     timing_details[index_of_current_item]["custom_models"][1:-1])[0]
         custom_model_uuid = timing.custom_model_id_list[0]
 
-    model: AIModel = db_repo.get_ai_model_from_uuid(custom_model_uuid).payload
+    model: InternalAIModelObject = data_repo.get_ai_model_from_uuid(custom_model_uuid)
     
     # source_face = ast.literal_eval(get_model_details_from_csv(
     #     custom_model)["training_images"][1:-1])[0]
@@ -1745,15 +1727,15 @@ def face_swap(timing_uuid, source_image) -> InternalFileObject:
         REPLICATE_MODEL.arielreplicate, source_path=source_face, target_path=target_face)
     
     filename = str(uuid.uuid4()) + ".png"
-    image_file = db_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+    image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
                                      hosted_url=output)
 
     return image_file
 
 
 def prompt_model_stylegan_nada(timing_uuid, input_image):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
@@ -1767,14 +1749,14 @@ def prompt_model_stylegan_nada(timing_uuid, input_image):
 
 
 def prompt_model_stable_diffusion_xl(timing_uuid, source_image) -> InternalFileObject:
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
 
     engine_id = "stable-diffusion-xl-beta-v2-2-2"
     api_host = os.getenv('API_HOST', 'https://api.stability.ai')
-    app_setting: Setting = db_repo.get_app_setting_from_uuid()
+    app_setting: InternalSettingObject = data_repo.get_app_setting_from_uuid()
     api_key = app_setting.stability_key_decrypted
 
     # if the image starts with http, it's a URL, otherwise it's a file path
@@ -1827,17 +1809,17 @@ def prompt_model_stable_diffusion_xl(timing_uuid, source_image) -> InternalFileO
         generated_image = base64.b64decode(data["artifacts"][0]["base64"])
         # generate a random file name with uuid at the location
         filename = str(uuid.uuid4()) + ".png"
-        image_file: InternalFileObject = db_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+        image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
                                                              local_path="videos/" + str(timing.project.name) + "/assets/frames/2_character_pipeline_completed/")
 
     return image_file
 
 
 def prompt_model_stability(timing_uuid, input_image):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    project_settings: Setting = db_repo.get_project_setting(
-        timing.project.id).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    project_settings: InternalSettingObject = data_repo.get_project_setting(
+        timing.project.uuid)
 
     index_of_current_item = timing.aux_frame_index
     prompt = timing.prompt
@@ -1860,22 +1842,22 @@ def prompt_model_stability(timing_uuid, input_image):
     )
 
     filename = str(uuid.uuid4()) + ".png"
-    image_file: InternalFileObject = db_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+    image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
                                                              hosted_url=output[0])
 
     return image_file
 
 
 def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
 
-    project_settings: Setting = db_repo.get_project_setting(
-        timing.project.id).payload
+    project_settings: InternalSettingObject = data_repo.get_project_setting(
+        timing.project.uuid)
 
-    model_name = timing.model.name
+    model_name = timing['model']['name']
     image_number = timing.aux_frame_index
     prompt = timing.prompt
     strength = timing.strength
@@ -1884,7 +1866,7 @@ def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
     seed = timing.seed
     num_inference_steps = timing.num_inteference_steps
 
-    model_details: AIModel = db_repo.get_ai_model_from_uuid(timing.model.uuid).payload
+    model_details: InternalAIModelObject = data_repo.get_ai_model_from_uuid(timing['model'].uuid)
     model_id = model_details.replicate_model_id
 
     ml_client = get_ml_client()
@@ -1901,7 +1883,7 @@ def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
     # version of models that were custom created has to be fetched
     if model_details["version"] == "":
         version = ml_client.get_model_version_from_id(model_id)
-        db_repo.update_ai_model(model_details.uuid, version=version)
+        data_repo.update_ai_model(model_details.uuid, version=version)
     else:
         version = model_details["version"]
 
@@ -1934,7 +1916,7 @@ def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
 
     for i in output:
         filename = str(uuid.uuid4()) + ".png"
-        image_file = db_repo.create_file(name=filename, type=InternalFileType.IMAGE.value, hosted_url=i).payload
+        image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value, hosted_url=i)
         return image_file
     
     return None
@@ -1979,18 +1961,18 @@ def get_duration_from_video(input_video_file: InternalFileObject):
 get audio_bytes for a given frame
 '''
 def get_audio_bytes_for_slice(timing_uuid):
-    db_repo = DBRepo()
+    data_repo = DataRepo()
 
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    project_settings: Setting = db_repo.get_project_setting(
-        timing.project.id).payload
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    project_settings: InternalSettingObject = data_repo.get_project_setting(
+        timing.project.uuid)
 
     # TODO: add null check for the audio
     audio = AudioSegment.from_file(project_settings.audio.local_path)
 
     # DOUBT: is it checked if it is the last frame or not?
     audio = audio[timing.frame_time *
-                  1000: timing.next_timing.frame_time * 1000]
+                  1000: data_repo.get_next_timing(timing_uuid)['frame_time'] * 1000]
     audio_bytes = BytesIO()
     audio.export(audio_bytes, format='wav')
     audio_bytes.seek(0)
@@ -2011,10 +1993,10 @@ def slice_part_of_video(project_name, index_of_current_item, video_start_percent
     clip.close()
 
 
-def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_location, timing_uuid):
-    db_repo = DBRepo()
+def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_location, timing_uuid) -> InternalFileObject:
+    data_repo = DataRepo()
 
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
     desired_duration = timing.clip_duration
     animation_style = timing.animation_style
@@ -2054,7 +2036,9 @@ def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_locat
         updated_clip.write_videofile(location_of_video, codec='libx265')
         if save_to_new_location:
             file_name = str(uuid.uuid4()) + ".mp4"
-            updated_video_file: InternalFileObject = db_repo.create_file(filename=file_name, type=InternalFileType.VIDEO.value, local_path=location_of_video).payload
+            video_file: InternalFileObject = data_repo.create_file(filename=file_name, type=InternalFileType.VIDEO.value, local_path=location_of_video)
+        else:
+            data_repo.create_or_update_file(video_file.uuid, type=InternalFileType.VIDEO.value, local_path=location_of_video)
 
         clip.close()
         updated_clip.close()
@@ -2083,11 +2067,13 @@ def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_locat
 
         if save_to_new_location:
             location_of_video = new_file_location
+            video_file: InternalFileObject = data_repo.create_file(filename=file_name, type=InternalFileType.VIDEO.value, local_path=location_of_video)
         else:
             os.remove(location_of_video)
             location_of_video = new_file_location
+            data_repo.create_or_update_file(video_file.uuid, type=InternalFileType.VIDEO.value, local_path=location_of_video)
 
-    return location_of_video
+    return video_file
 
 
 '''
@@ -2165,16 +2151,16 @@ def update_video_speed(project_name, index_of_current_item, duration_of_static_t
 '''
 
 
-def calculate_desired_duration_of_each_clip(project: Project):
-    db_repo = DBRepo()
+def calculate_desired_duration_of_each_clip(project: InternalProjectObject):
+    data_repo = DataRepo()
 
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        project.id).payload
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        project.id)
 
     for timing in timing_details:
         total_duration_of_frame = calculate_desired_duration_of_individual_clip(
             timing.uuid)
-        db_repo.update_specific_timing(
+        data_repo.update_specific_timing(
             timing.uuid, clip_duration=total_duration_of_frame)
 
 
@@ -2186,10 +2172,10 @@ clip length
 
 
 def calculate_desired_duration_of_individual_clip(timing_uuid):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
     length_of_list = len(timing_details)
 
     # last frame
@@ -2202,7 +2188,7 @@ def calculate_desired_duration_of_individual_clip(timing_uuid):
             end_duration_of_frame) - float(time_of_frame)
     else:
         time_of_frame = timing.frame_time
-        time_of_next_frame = timing.next_timing.frame_time
+        time_of_next_frame = data_repo.get_next_timing(timing_uuid)['frame_time']
         total_duration_of_frame = float(
             time_of_next_frame) - float(time_of_frame)
 
@@ -2210,46 +2196,48 @@ def calculate_desired_duration_of_individual_clip(timing_uuid):
 
 
 def calculate_desired_duration_of_each_clip(timing_uuid):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
 
     length_of_list = len(timing_details)
 
     for i in timing_details:
         index_of_current_item = timing_details.index(i)
         length_of_list = len(timing_details)
-        timing_item: Timing = db_repo.get_timing_from_frame_number(timing.project.uuid, index_of_current_item).payload
+        timing_item: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(timing.project.uuid, index_of_current_item)
 
         # last frame
         if index_of_current_item == (length_of_list - 1):
-            time_of_frame = timing_item.frame_time
+            time_of_frame = timing_item['frame_time']
             duration_of_static_time = 0.0
             end_duration_of_frame = float(time_of_frame) + float(duration_of_static_time)
             total_duration_of_frame = float(end_duration_of_frame) - float(time_of_frame)
         else:
-            time_of_frame = timing_item.frame_time
-            time_of_next_frame = timing_item.next_timing.frame_time
+            time_of_frame = timing_item['frame_time']
+            time_of_next_frame = timing_item.next_timing['frame_time']
             total_duration_of_frame = float(time_of_next_frame) - float(time_of_frame)
 
         duration_of_static_time = 0.0
         duration_of_morph = float(total_duration_of_frame) - float(duration_of_static_time)
 
-        db_repo.update_specific_timing(timing_item, clip_duration=total_duration_of_frame)
+        data_repo.update_specific_timing(timing_item, clip_duration=total_duration_of_frame)
 
 
 def hair_swap(source_image, timing_uuid):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    app_settings: Setting = db_repo.get_project_setting(timing.project.id).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    app_secret = data_repo.get_app_secrets_from_user_uuid(timing.project.user_uuid)
 
     # DOUBT: what's the video name here?
     video_name = ""
-    source_hair = upload_image("videos/" + str(video_name) + "/face.png")
+    source_hair = upload_file("videos/" + str(video_name) + "/face.png", app_secret['aws_access_key'],\
+                              app_secret['aws_secret_key'])
 
-    target_hair = upload_image("videos/" + str(video_name) +
-                               "/assets/frames/2_character_pipeline_completed/" + str(timing.aux_frame_index) + ".png")
+    target_hair = upload_file("videos/" + str(video_name) +
+                               "/assets/frames/2_character_pipeline_completed/" + str(timing.aux_frame_index) + ".png",\
+                                app_secret['aws_access_key'], app_secret['aws_secret_key'])
 
     if not source_hair.startswith("http"):
         source_hair = open(source_hair, "rb")
@@ -2265,8 +2253,8 @@ def hair_swap(source_image, timing_uuid):
 
 
 def prompt_model_depth2img(strength, timing_uuid, source_image) -> InternalFileObject:
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
     prompt = timing.prompt
     num_inference_steps = timing.num_inteference_steps
@@ -2281,8 +2269,8 @@ def prompt_model_depth2img(strength, timing_uuid, source_image) -> InternalFileO
                                             num_inference_steps=num_inference_steps, guidance_scale=guidance_scale)
 
     filename = str(uuid.uuid4()) + ".png"
-    image_file: InternalFileObject = db_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                             hosted_url=output[0]).payload
+    image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+                                                             hosted_url=output[0])
     return image_file
 
 
@@ -2329,8 +2317,8 @@ def facial_expression_recognition(input_image):
 
 
 def prompt_model_pix2pix(timing_uuid, input_image):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
     prompt = timing.prompt
     guidance_scale = timing.guidance_scale
@@ -2343,16 +2331,16 @@ def prompt_model_pix2pix(timing_uuid, input_image):
                                             seed=seed, cfg_image=1.2, cfg_text=guidance_scale, resolution=704)
 
     filename = str(uuid.uuid4()) + ".png"
-    image_file: InternalFileObject = db_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                             hosted_url=output).payload
+    image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+                                                             hosted_url=output)
     return image_file
 
 
 def restyle_images(timing_uuid, source_image) -> InternalFileObject:
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
-    model_name = timing.model.name
+    model_name = timing['model']['name']
     strength = timing.strength
 
     if model_name == "stable-diffusion-img2img-v2.1":
@@ -2378,13 +2366,11 @@ def restyle_images(timing_uuid, source_image) -> InternalFileObject:
 
 
 def custom_pipeline_mystique(timing_uuid, source_image) -> InternalFileObject:
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(
-        timing.project.id).payload
-    app_settings: AppSetting = db_repo.get_app_setting_from_uuid()
-    project_settings: Setting = db_repo.get_project_setting(
-        timing.project.id).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+
+    project_settings: InternalSettingObject = data_repo.get_project_setting(
+        timing.project.uuid)
 
     output_image_file: InternalFileObject = face_swap(timing_uuid, source_image)
     output_image_file = touch_up_image(output_image_file)
@@ -2398,68 +2384,46 @@ def custom_pipeline_mystique(timing_uuid, source_image) -> InternalFileObject:
     return output_image_file
 
 
-def create_timings_row_at_frame_number(project_name, index_of_new_item):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.create_timing
+def create_timings_row_at_frame_number(project_uuid, index_of_new_item):
+    data_repo = DataRepo()
+    project: InternalProjectObject = data_repo.get_timing_list_from_project(project_uuid)
+    
+    # remove the interpolated video from the current row and the row before and after - unless it is the first or last row
+    timing_data = {
+        "project_uuid": project_uuid,
+        "aux_frame_index": index_of_new_item,
+        "interpolated_video": "",
+        "animation_style": "",
+    }
+    timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
+    
+    prev_timing: InternalFrameTimingObject = data_repo.get_prev_timing(timing.uuid)
+    if prev_timing:
+        data_repo.update_specific_timing(prev_timing.uuid, "interpolated_video", "")
+
+    next_timing: InternalAIModelObject = data_repo.get_next_timing(timing.uuid)
+    if next_timing:
+        data_repo.update_specific_timing_value(next_timing.uuid, "interpolated_video", "")
+
+    return index_of_new_item
 
 
-
-    # csv_processor = CSVProcessor(f'videos/{project_name}/timings.csv')
-    # project_settings = get_project_settings(project_name)
-
-    # df = csv_processor.get_df_data()
-    # new_row = pd.DataFrame(
-    #     {'frame_time': [None], 'frame_number': [None]}, index=[0])
-    # df = pd.concat([df.iloc[:index_of_new_item], new_row,
-    #                df.iloc[index_of_new_item:]]).reset_index(drop=True)
-
-    # # Set the data types for each column
-    # column_types = {
-    #     'frame_time': float,
-    #     'frame_number': int,
-    #     'primary_image': int,
-    #     'guidance_scale': float,
-    #     'seed': int,
-    #     'num_inference_steps': float,
-    #     'strength': float
-    # }
-    # df = df.astype(column_types, errors='ignore')
-
-    # df.to_csv(f'videos/{project_name}/timings.csv', index=False)
-    # 'remove the interpolated video from the current row and the row before and after - unless it is the first or last row'
-    # update_specific_timing_value(
-    #     project_name, index_of_new_item, "interpolated_video", "")
-    # default_animation_style = project_settings["default_animation_style"]
-    # update_specific_timing_value(
-    #     project_name, index_of_new_item, "animation_style", "")
-
-    # if index_of_new_item != 0:
-    #     update_specific_timing_value(
-    #         project_name, index_of_new_item-1, "interpolated_video", "")
-
-    # if index_of_new_item != len(df)-1:
-    #     update_specific_timing_value(
-    #         project_name, index_of_new_item+1, "interpolated_video", "")
-
-    # return index_of_new_item
-
-
-def get_models() -> List[AIModel]:
+def get_models() -> List[InternalAIModelObject]:
     # df = pd.read_csv('models.csv')
     # models = df[df.columns[0]].tolist()
     # return models
 
     # get the default user and all models belonging to him
-    db_repo = DBRepo()
-    model_list = db_repo.get_all_model_list()
+    data_repo = DataRepo()
+    model_list = data_repo.get_all_model_list()
 
     return model_list
 
 
 
 def find_clip_duration(timing_uuid, total_number_of_videos):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
     total_clip_duration = timing.clip_duration
     total_clip_duration = float(total_clip_duration)
@@ -2552,9 +2516,9 @@ def calculate_dynamic_interpolations_steps(clip_duration):
 
 
 def render_video(final_video_name, timing_uuid, quality):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(timing.project.id).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
 
     calculate_desired_duration_of_each_clip(timing_uuid)
 
@@ -2562,17 +2526,17 @@ def render_video(final_video_name, timing_uuid, quality):
 
     for i in range(0, total_number_of_videos):
         index_of_current_item = i
-        current_timing: Timing = db_repo.get_timing_from_frame_number(timing.project.uuid, i).payload
+        current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(timing.project.uuid, i)
 
         if quality == VideoQuality.HIGH.value:
-            db_repo.update_specific_timing(current_timing.uuid, timed_clip="")
+            data_repo.update_specific_timing(current_timing.uuid, timed_clip="")
             interpolation_steps = calculate_dynamic_interpolations_steps(
                 timing_details[index_of_current_item]["clip_duration"])
-            if not timing.interpolation_steps or timing.interpolation_steps < interpolation_steps:
-                db_repo.update_specific_timing(current_timing.uuid, interpolation_steps=interpolation_steps, interpolated_clip="")
+            if not timing["interpolation_steps"] or timing["interpolation_steps"] < interpolation_steps:
+                data_repo.update_specific_timing(current_timing.uuid, interpolation_steps=interpolation_steps, interpolated_clip="")
         else:
-            if not timing.interpolation_steps or timing.interpolation_steps < 3:
-                db_repo.update_specific_timing(current_timing.uuid, interpolation_steps=3)
+            if not timing["interpolation_steps"] or timing["interpolation_steps"] < 3:
+                data_repo.update_specific_timing(current_timing.uuid, interpolation_steps=3)
 
         if not timing.interpolated_clip:
             # DOUBT: if and else condition had the same code
@@ -2583,19 +2547,19 @@ def render_video(final_video_name, timing_uuid, quality):
             #         project_name, index_of_current_item, "interpolated_video", video_location)
             # else:
             video_location = create_individual_clip(current_timing.uuid)
-            db_repo.update_specific_timing(current_timing.uuid, interpolated_clip=video_location)
+            data_repo.update_specific_timing(current_timing.uuid, interpolated_clip=video_location)
 
-    project_settings: Setting = db_repo.get_project_setting(timing.project.id).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(timing.project.id).payload
+    project_settings: InternalSettingObject = data_repo.get_project_setting(timing.project.uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
     total_number_of_videos = len(timing_details) - 2
 
     for i in timing_details:
         index_of_current_item = timing_details.index(i)
-        current_timing: Timing = db_repo.get_timing_from_frame_number(timing.project.uuid, index_of_current_item).payload
+        current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(timing.project.uuid, index_of_current_item)
         if index_of_current_item <= total_number_of_videos:
             if not current_timing.timed_clip:
                 desired_duration = current_timing.clip_duration
-                location_of_input_video_file = current_timing.interpolated_clip
+                location_of_input_video_file = current_timing["interpolated_clip"]
                 duration_of_input_video = float(get_duration_from_video(location_of_input_video_file))
                 location_of_output_video = update_speed_of_video_clip(location_of_input_video_file, True, timing_uuid)
                 
@@ -2616,15 +2580,15 @@ def render_video(final_video_name, timing_uuid, quality):
                     clip_with_number.write_videofile(location_of_output_video, codec='libx264', bitrate='3000k')
                     '''
                 
-                db_repo.update_specific_timing(current_timing, timed_clip=location_of_output_video)
+                data_repo.update_specific_timing(current_timing, timed_clip=location_of_output_video)
 
     video_list = []
 
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(timing.project.id).payload
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
 
     for i in timing_details:
         index_of_current_item = timing_details.index(i)
-        current_timing: Timing = db_repo.get_timing_from_frame_number(index_of_current_item).payload
+        current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(index_of_current_item)
         if index_of_current_item <= total_number_of_videos:
             video_file = current_timing.timed_clip
             video_list.append(video_file.location)
@@ -2648,19 +2612,19 @@ def render_video(final_video_name, timing_uuid, quality):
         audio_codec="aac"
     )
 
-    db_repo.create_or_update_file(final_video_name, InternalFileType.VIDEO.value, local_path=output_video_file)
+    data_repo.create_or_update_file(final_video_name, InternalFileType.VIDEO.value, local_path=output_video_file)
 
 
-def create_gif_preview(project_name, timing_details):
-
+def create_gif_preview(project_uuid):
+    data_repo = DataRepo()
+    project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(project_uuid)
     list_of_images = []
+
     for i in timing_details:
         # make index_of_current_item the index of the current item
         index_of_current_item = timing_details.index(i)
-        variants = timing_details[index_of_current_item]["alternative_images"]
-        primary_image = int(
-            timing_details[index_of_current_item]["primary_image"])
-        source_image = variants[primary_image]
+        source_image = timing_details[index_of_current_item].primary_image.location
         list_of_images.append(source_image)
 
     frames = []
@@ -2676,7 +2640,9 @@ def create_gif_preview(project_name, timing_details):
         draw.text((frame.width - 60, frame.height - 60),
                   str(index_of_current_item), font=font, fill=(255, 255, 255, 255))
         frames.append(np.array(frame))
-    imageio.mimsave(f'videos/{project_name}/preview_gif.gif', frames, fps=0.5)
+    imageio.mimsave(f'videos/{project.name}/preview_gif.gif', frames, fps=0.5)
+
+    # TODO: a function to save temp images
 
 
 def create_depth_mask_image(input_image, layer, project_name, index_of_current_item):
@@ -2729,8 +2695,8 @@ def create_depth_mask_image(input_image, layer, project_name, index_of_current_i
 
 
 def prompt_model_controlnet(timing_uuid, input_image):
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
     if timing.adapter_type == "normal":
         model = REPLICATE_MODEL.jagilley_controlnet_normal
@@ -2778,10 +2744,10 @@ def prompt_model_controlnet(timing_uuid, input_image):
 
 
 def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> InternalFileObject:
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
-    timing_details: List[Timing] = db_repo.get_timing_list_from_project(timing.project.id).payload
-    project_settings: Setting = db_repo.get_project_setting(timing.project.id).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
+    project_settings: InternalSettingObject = data_repo.get_project_setting(timing.project.uuid)
 
     lora_models = timing.custom_model_id_list
     default_model_url = DEFAULT_LORA_MODEL_URL
@@ -2790,7 +2756,7 @@ def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> Int
 
     for lora_model_uuid in lora_models:
         if lora_model_uuid != "":
-            lora_model: AIModel = db_repo.get_ai_model_from_uuid(lora_model_uuid)
+            lora_model: InternalAIModelObject = data_repo.get_ai_model_from_uuid(lora_model_uuid)
             print(lora_model)
             if lora_model.replicate_url != "":
                 lora_model_url = lora_model.replicate_url
@@ -2845,8 +2811,8 @@ def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> Int
                 REPLICATE_MODEL.clones_lora_training_2, **inputs)
             print(output)
             filename = str(uuid.uuid4()) + ".png"
-            file: InternalFileObject = db_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                             hosted_url=output[0]).payload
+            file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+                                                             hosted_url=output[0])
             return output[0]
         except replicate.exceptions.ModelError as e:
             if "NSFW content detected" in str(e):
@@ -2859,19 +2825,19 @@ def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> Int
             raise e
 
     filename = "default_3x_failed-656a7e5f-eca9-4f92-a06b-e1c6ff4a5f5e.png"     # const filename
-    file = db_repo.get_file_from_name(filename)
+    file = data_repo.get_file_from_name(filename)
     if file:
         return file
     else:
-        file: InternalFileObject = db_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                            hosted_url="https://i.ibb.co/ZG0hxzj/Failed-3x-In-A-Row.png").payload
+        file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+                                            hosted_url="https://i.ibb.co/ZG0hxzj/Failed-3x-In-A-Row.png")
         return file
 
 
 def attach_audio_element(project_uuid, expanded):
-    db_repo = DBRepo()
-    project: Project = db_repo.get_project_from_uuid(uuid=project_uuid).payload
-    project_setting: Setting = db_repo.get_project_setting(project_uuid=project_uuid).payload
+    data_repo = DataRepo()
+    project: InternalProjectObject = data_repo.get_project_from_uuid(uuid=project_uuid)
+    project_setting: InternalSettingObject = data_repo.get_project_setting(project_uuid=project_uuid)
 
     with st.expander("Audio"):
         uploaded_file = st.file_uploader("Attach audio", type=[
@@ -2879,7 +2845,7 @@ def attach_audio_element(project_uuid, expanded):
         if st.button("Upload and attach new audio"):
             with open(os.path.join(f"videos/{project.name}/assets/resources/audio", uploaded_file.name), "wb") as f:
                 f.write(uploaded_file.getbuffer())
-                db_repo.update_project_setting(
+                data_repo.update_project_setting(
                     "audio", uploaded_file.name, project.name)
                 st.experimental_rerun()
         if project_setting.audio.name == "extracted_audio.mp3":
@@ -2891,9 +2857,10 @@ def attach_audio_element(project_uuid, expanded):
 def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
                        background_image, editing_image, prompt, negative_prompt, \
                         width, height, layer, timing_uuid) -> InternalFileObject:
-    db_repo = DBRepo()
-    timing: Timing = db_repo.get_timing_from_uuid(timing_uuid).payload
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
     project_name = timing.project.name
+    app_secret = data_repo.get_app_secrets_from_user_uuid(timing.project.user_uuid)
     index_of_current_item = timing.aux_frame_index
 
     if type_of_mask_selection == "Automated Background Selection":
@@ -2904,8 +2871,8 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
         if type_of_mask_replacement == "Replace With Image":
             replace_background(
                 project_name, "masked_image.png", background_image)
-            edited_image = upload_image(
-                f"videos/{project_name}/replaced_bg.png")
+            edited_image = upload_file(f"videos/{project_name}/replaced_bg.png", app_secret['aws_access_key'],\
+                                       app_secret['aws_secret_key'])
         elif type_of_mask_replacement == "Inpainting":
             image = Image.open("masked_image.png")
             converted_image = Image.new("RGB", image.size, (255, 255, 255))
@@ -2928,7 +2895,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
                 bg_img = Image.open(BytesIO(response.content))
             else:
                 bg_img = Image.open(editing_image)
-            timing_details: List[Timing] = db_repo.get_timing_list_from_project(timing.project.uuid)
+            timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
             mask_location = timing.mask.location
             if mask_location.startswith("http"):
                 response = r.get(mask_location)
