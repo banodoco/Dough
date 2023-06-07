@@ -1,22 +1,21 @@
 from rest_framework import serializers
 
-from backend.models import AIModel, AppSetting, InferenceLog, Project, Setting, Timing, User
+from backend.models import AIModel, AppSetting, BackupTiming, InferenceLog, Project, Setting, Timing, User
 
 class InternalFileDto(serializers.ModelSerializer):
     class Meta:
-        ','
-        fields = ('uuid', 'name', 'local_path', 'hosted_url')
+        fields = ('uuid', 'name', 'local_path', 'hosted_url', 'created_on')
 
 class UserDto(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('uuid', 'name', 'local_path', 'hosted_url')
+        fields = ('uuid', 'name', 'local_path', 'hosted_url', 'created_on')
 
 class ProjectDto(serializers.ModelSerializer):
     user_uuid = serializers.SerializerMethodField()
     class Meta:
         model = Project
-        fields = ('uuid', 'name', 'user_uuid')
+        fields = ('uuid', 'name', 'user_uuid', 'created_on')
 
     def get_user_uuid(self, obj):
         return obj.user.uuid
@@ -24,6 +23,7 @@ class ProjectDto(serializers.ModelSerializer):
 
 class AIModelDto(serializers.ModelSerializer):
     user_uuid = serializers.SerializerMethodField()
+    training_image_list = serializers.SerializerMethodField()
     class Meta:
         model = AIModel
         fields = (
@@ -36,10 +36,18 @@ class AIModelDto(serializers.ModelSerializer):
             'diffusers_url',
             'category',
             'training_image_list',
+            'keyword',
+            'created_on'
         )
 
     def get_user_uuid(self, obj):
         return obj.user.uuid
+    
+    def get_training_image_list(self, obj):
+        import json
+
+        image_list = json.loads(obj.training_image_list)
+        return [InternalFileDto(image).data for image in image_list]
     
 
 class TimingDto(serializers.ModelSerializer):
@@ -85,6 +93,7 @@ class TimingDto(serializers.ModelSerializer):
             "low_threshold",
             "high_threshold",
             "aux_frame_index",
+            "created_on"
         )
 
 
@@ -99,6 +108,7 @@ class AppSettingDto(serializers.ModelSerializer):
             "previous_project",
             "replicate_user_name",
             "welcome_state",
+            "created_on"
         )
 
 
@@ -133,6 +143,7 @@ class SettingDto(serializers.ModelSerializer):
             "default_animation_style",
             "default_low_threshold",
             "default_high_threshold",
+            "created_on"
         )
 
 
@@ -147,5 +158,30 @@ class InferenceLogDto(serializers.ModelSerializer):
             "model", 
             "input_params", 
             "output_details", 
-            "total_inference_time", 
+            "total_inference_time",
+            "created_on"
+        )
+
+class BackupDto(serializers.ModelSerializer):
+    project = ProjectDto()
+    class Meta:
+        model = BackupTiming
+        fields = (
+            "name",
+            "project",
+            "note",
+            "data_dump",
+            "created_on"
+        )
+
+class BackupListDto(serializers.ModelSerializer):
+    project = ProjectDto()
+    class Meta:
+        model = BackupTiming
+        fields = (
+            "uuid",
+            "project",
+            "name",
+            "note",
+            "created_on"
         )

@@ -1,21 +1,30 @@
 import ast
 import os
 import time
+from typing import List
 import pandas as pd
 import streamlit as st
+from backend.constants import AIModelType
+from ui_components.common_methods import train_model
 
-from ui_components.common_methods import get_model_details_from_csv, get_models, train_model
-from repository.local_repo.csv_repo import get_app_settings
+from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject
+from utils.data_repo.data_repo import DataRepo
 
 
-def custom_models_page(project_name):
-    app_settings = get_app_settings()
+def custom_models_page(project_uuid):
+    data_repo = DataRepo()
+    project: InternalProjectObject = data_repo.get_project_from_uuid(
+        project_uuid)
+    # TODO: common user_id
+    app_setting: InternalAppSettingObject = data_repo.get_app_setting_from_uuid()
+
     with st.expander("Existing models"):
 
         st.subheader("Existing Models:")
 
-        models = get_models()
-        if models == []:
+        # TODO: common user_id
+        model_list: List[InternalAIModelObject] = data_repo.get_all_ai_model_list()
+        if model_list == []:
             st.info("You don't have any models yet. Train a new model below.")
         else:
             header1, header2, header3, header4, header5, header6 = st.columns(
@@ -33,36 +42,33 @@ def custom_models_page(project_name):
             with header6:
                 st.markdown("###### Example Image #3")
 
-            for i in models:
+            for model in model_list:
                 col1, col2, col3, col4, col5, col6 = st.columns(6)
                 with col1:
-                    model_details = get_model_details_from_csv(i)
-                    st.text(model_details["name"])
+                    st.text(model.name)
                 with col2:
-                    if model_details["keyword"] != "":
-                        st.text(model_details["keyword"])
+                    if model.keyword != "":
+                        st.text(model.keyword)
                 with col3:
-                    if model_details["keyword"] != "":
-                        st.text(model_details["id"])
+                    if model.keyword != "":
+                        st.text(model.replicate_model_id)
                 with col4:
-                    st.image(ast.literal_eval(
-                        model_details["training_images"])[0])
+                    model.training_image_list[0].location
                 with col5:
-                    st.image(ast.literal_eval(
-                        model_details["training_images"])[1])
+                    model.training_image_list[1].location
                 with col6:
-                    st.image(ast.literal_eval(
-                        model_details["training_images"])[2])
+                    model.training_image_list[2].location
                 st.markdown("***")
 
     with st.expander("Train a new model"):
         st.subheader("Train a new model:")
 
-        type_of_model = st.selectbox("Type of model:", [
-                                     "LoRA", "Dreambooth"], help="If you'd like to use other methods for model training, let us know - or implement it yourself :)")
+        type_of_model = st.selectbox("Type of model:", AIModelType.value_list(
+        ), help="If you'd like to use other methods for model training, let us know - or implement it yourself :)")
         model_name = st.text_input(
             "Model name:", value="", help="No spaces or special characters please")
-        if type_of_model == "Dreambooth":
+
+        if type_of_model == AIModelType.DREAMBOOTH.value:
             instance_prompt = st.text_input(
                 "Trigger word:", value="", help="This is the word that will trigger the model")
             class_prompt = st.text_input("Describe what your prompts depict generally:",
@@ -70,10 +76,11 @@ def custom_models_page(project_name):
             max_train_steps = st.number_input(
                 "Max training steps:", value=2000, help=" The number of training steps to run. Fewer steps make it run faster but typically make it worse quality, and vice versa.")
             type_of_task = ""
-            resolution = ""            
-            controller_type = st.selectbox("What ControlNet controller would you like to use?",["normal", "canny", "hed", "scribble", "seg", "openpose", "depth","mlsd"])
-            
-        elif type_of_model == "LoRA":
+            resolution = ""
+            controller_type = st.selectbox("What ControlNet controller would you like to use?", [
+                                           "normal", "canny", "hed", "scribble", "seg", "openpose", "depth", "mlsd"])
+
+        elif type_of_model == AIModelType.LORA.value:
             type_of_task = st.selectbox(
                 "Type of task:", ["Face", "Object", "Style"]).lower()
             resolution = st.selectbox("Resolution:", [
@@ -82,9 +89,10 @@ def custom_models_page(project_name):
             class_prompt = ""
             max_train_steps = ""
             controller_type = ""
-        uploaded_files = st.file_uploader("Images you'd like to train the model based on:", type=['png','jpg','jpeg'], key="prompt_file",accept_multiple_files=True)
-        if uploaded_files is not None:   
-            column = 0                             
+        uploaded_files = st.file_uploader("Images you'd like to train the model based on:", type=[
+                                          'png', 'jpg', 'jpeg'], key="prompt_file", accept_multiple_files=True)
+        if uploaded_files is not None:
+            column = 0
             for image in uploaded_files:
                 # if it's an even number
                 if uploaded_files.index(image) % 2 == 0:
@@ -116,10 +124,11 @@ def custom_models_page(project_name):
                     os.makedirs(directory)
 
                 for image in uploaded_files:
-                    with open(os.path.join(f"training_data",image.name),"wb") as f: 
-                        f.write(image.getbuffer())                                                        
-                        images_for_model.append(image.name)                                                  
-                model_status = train_model(app_settings,images_for_model, instance_prompt,class_prompt,max_train_steps,model_name, project_name, type_of_model, type_of_task, resolution,controller_type)
+                    with open(os.path.join(f"training_data", image.name), "wb") as f:
+                        f.write(image.getbuffer())
+                        images_for_model.append(image.name)
+                model_status = train_model(images_for_model, instance_prompt, class_prompt, max_train_steps,
+                                           model_name, type_of_model, type_of_task, resolution)
                 st.success(model_status)
 
     with st.expander("Add model from internet"):
@@ -142,7 +151,7 @@ def custom_models_page(project_name):
                 directory = "training_data"
                 if not os.path.exists(directory):
                     os.makedirs(directory)
-                    
+
                 for image in uploaded_model_images:
                     with open(os.path.join(f"training_data", image.name), "wb") as f:
                         f.write(image.getbuffer())

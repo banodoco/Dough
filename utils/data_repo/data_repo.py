@@ -1,9 +1,9 @@
 # this repo serves as a middlerware between API backend and the frontend
-from banodoco_settings import SERVER, ServerType
-from backend.constants import InternalFileType
+from shared.constants import InternalFileType
 from backend.db_repo import DBRepo
 from backend.models import InternalFileObject
-from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject, InternalUserObject
+from shared.constants import SERVER, ServerType
+from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject, InternalUserObject
 
 # TODO - to be completed later
 class APIRepo:
@@ -21,9 +21,16 @@ class DataRepo:
         user = self.db_rpeo.create_user(**kwargs).payload
         return InternalUserObject(user) if user else None
     
+    def get_first_active_user(self):
+        user = self.db_repo.get_first_active_user().payload
+        return InternalUserObject(user) if user else None
+    
     def get_user_by_email(self, email):
         user = self.db_repo.get_user_by_email(email).payload
         return InternalUserObject(user) if user else None
+    
+    def get_total_user_count(self):
+        return self.db_repo.get_total_user_count().payload
     
     def get_all_user_list(self):
         user_list = self.db_repo.get_all_user_list().payload
@@ -42,8 +49,15 @@ class DataRepo:
         file = self.db_repo.get_file_from_uuid(uuid).payload
         return InternalUserObject(file) if file else None
     
-    def get_all_file_list(self, file_type: InternalFileType):
-        file_list = self.db_repo.get_all_file_list(file_type).payload
+    def get_all_file_list(self, file_type: InternalFileType, tag = None, project_uuid = None):
+        filter_data = {file_type: file_type}
+        if tag:
+            filter_data['tag'] = tag
+        if project_uuid:
+            filter_data['project_uuid'] = project_uuid
+
+        file_list = self.db_repo.get_all_file_list(**filter_data).payload
+        
         return [InternalFileObject(file) for file in file_list] if file_list else None
     
     def create_or_update_file(self, filename, type=InternalFileType.IMAGE.value, **kwargs):
@@ -152,8 +166,8 @@ class DataRepo:
         prev_timing = self.db_repo.get_prev_timing(uuid).payload
         return InternalFrameTimingObject(prev_timing) if prev_timing else None
     
-    def get_timing_list_from_project(self, project_id=None):
-        timing_list = self.db_repo.get_timing_list_from_project(project_id).payload
+    def get_timing_list_from_project(self, project_uuid=None):
+        timing_list = self.db_repo.get_timing_list_from_project(project_uuid).payload
         return [InternalFrameTimingObject(timing) for timing in timing_list] if timing_list else None
     
     def create_timing(self, **kwargs):
@@ -168,6 +182,20 @@ class DataRepo:
         res = self.db_repo.delete_timing_from_uuid(uuid)
         return res.status
     
+    # removes all timing frames from the project
+    def remove_existing_timing(self, project_uuid):
+        res = self.db_repo.remove_existing_timing(project_uuid)
+        return res.status
+    
+    def remove_primay_frame(self, timing_uuid):
+        res = self.db_repo.remove_primay_frame(timing_uuid)
+        return res.status
+    
+    def remove_source_image(self, timing_uuid):
+        res = self.db_repo.remove_source_image(timing_uuid)
+        return res.status
+
+    
 
     # app setting
     def get_app_setting_from_uuid(self, uuid):
@@ -181,6 +209,10 @@ class DataRepo:
     def get_all_app_setting_list(self):
         app_setting_list = self.db_repo.get_all_app_setting_list().payload
         return [InternalAppSettingObject(app_setting) for app_setting in app_setting_list] if app_setting_list else None
+    
+    def update_app_setting(self, **kwargs):
+        res = self.db_repo.update_app_setting(**kwargs)
+        return res.status
     
     def create_app_setting(self, **kwargs):
         app_setting = self.db_repo.create_app_setting(**kwargs).payload
@@ -201,10 +233,28 @@ class DataRepo:
         project_setting = self.db_repo.create_project_setting(**kwargs).payload
         return InternalSettingObject(project_setting) if project_setting else None
     
-    def update_project_setting(self, project_id, **kwargs):
-        project_setting = self.db_repo.update_project_setting(project_id, **kwargs).payload
+    def update_project_setting(self, project_uuid, **kwargs):
+        project_setting = self.db_repo.update_project_setting(project_uuid, **kwargs).payload
         return InternalSettingObject(project_setting) if project_setting else None
 
     def bulk_update_project_setting(self, **kwargs):
         res = self.db_repo.bulk_update_project_setting(**kwargs)
+        return res.status
+    
+
+    # backup
+    def get_backup_from_uuid(self, uuid):
+        backup = self.db_repo.get_backup_from_uuid(uuid).payload
+        return InternalBackupObject(backup) if backup else None
+    
+    def create_backup(self, **kwargs):
+        backup = self.db_repo.create_backup(**kwargs).payload
+        return InternalBackupObject(backup) if backup else None
+    
+    def get_backup_list(self, project_id=None):
+        backup_list = self.db_repo.get_backup_list(project_id).payload
+        return [InternalBackupObject(backup) for backup in backup_list] if backup_list else None
+    
+    def delete_backup(self, uuid):
+        res = self.db_repo.delete_backup(uuid)
         return res.status

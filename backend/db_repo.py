@@ -1,28 +1,29 @@
+import json
 import os
+
 import sqlite3
+from typing import List
 import uuid
-from backend.constants import InternalFileType
-from backend.serializers.dto import AIModelDto, AppSettingDto, InferenceLogDto, InternalFileDto, ProjectDto, SettingDto, TimingDto, UserDto
+from shared.constants import InternalFileType
+from backend.serializers.dto import AIModelDto, AppSettingDto, BackupDto, BackupListDto, InferenceLogDto, InternalFileDto, ProjectDto, SettingDto, TimingDto, UserDto
 
 from django_settings import DB_LOCATION
-from shared.constants import AUTOMATIC_FILE_HOSTING, LOCAL_DATABASE_NAME
+from shared.constants import AUTOMATIC_FILE_HOSTING, LOCAL_DATABASE_NAME, SERVER, ServerType
 from shared.file_upload.s3 import upload_file
-
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
 
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
 
-from backend.models import AIModel, AIModelParamMap, AppSetting, InferenceLog, InternalFileObject, Project, Setting, Timing, User
+from backend.models import AIModel, AIModelParamMap, AppSetting, BackupTiming, InferenceLog, InternalFileObject, Project, Setting, Timing, User
 
-from backend.serializers.dao import CreateAIModelDao, CreateAIModelParamMapDao, CreateAppSettingDao, CreateFileDao, CreateInferenceLogDao, CreateProjectDao, CreateSettingDao, CreateTimingDao, CreateUserDao, UpdateAIModelDao, UpdateSettingDao
-from utils.internal_response import InternalResponse
+from backend.serializers.dao import CreateAIModelDao, CreateAIModelParamMapDao, CreateAppSettingDao, CreateFileDao, CreateInferenceLogDao, CreateProjectDao, CreateSettingDao, CreateTimingDao, CreateUserDao, UpdateAIModelDao, UpdateAppSettingDao, UpdateSettingDao
+from shared.constants import InternalResponse
 
 
-# TODO: if local and hosted DB inteferences are very different then separate them into different classes
 
 class DBRepo:
     def __init__(self):
+        print("initializing database")
         database_file = '../' + LOCAL_DATABASE_NAME
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
 
@@ -55,6 +56,17 @@ class DBRepo:
         
         return InternalResponse(payload, 'user created successfully', True)
     
+    def get_first_active_user(self):
+        user = User.objects.filter(is_disabled=False).first()
+        if not user:
+            return InternalResponse(None, 'no user found', True)
+        
+        payload = {
+            'data': UserDto(user).data
+        }
+        
+        return InternalResponse(payload, 'user not found', False)
+    
     def get_user_by_email(self, email):
         user = User.objects.filter(email=email, is_disabled=False).first()
         if user:
@@ -73,6 +85,14 @@ class DBRepo:
             'data': UserDto(user_list, many=True).data
         }
         return InternalResponse(payload, 'user list', True)
+    
+    def get_total_user_count(self):
+        if SERVER != ServerType.PRODUCTION.value:
+            count = User.objects.all(is_disabled=False).count()
+        else:
+            count = 0
+        
+        return InternalResponse(count, 'user count fetched', True)
     
     def delete_user_by_email(self, email):
         user = User.objects.filter(email=email, is_disabled=False).first()
@@ -110,8 +130,11 @@ class DBRepo:
 
         return InternalResponse(payload, 'file found', True)
     
-    def get_all_file_list(self, file_type: InternalFileType):
-        file_list = InternalFileObject.objects.filter(file_type=file_type.value, is_disabled=False).all()
+    def get_all_file_list(self, file_type: InternalFileType, tag=None):
+        if tag:
+            file_list = InternalFileObject.objects.filter(file_type=file_type.value, tag=tag, is_disabled=False).all()
+        else:
+            file_list = InternalFileObject.objects.filter(file_type=file_type.value, is_disabled=False).all()
         
         payload = {
             'data': InternalFileDto(file_list, many=True).data
@@ -511,12 +534,95 @@ class DBRepo:
         
         return InternalResponse(payload, 'timing created successfully', True)
     
+    def remove_existing_timing(self, project_uuid):
+        if project_uuid:
+            project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        else:
+            project: Project = Project.objects.filter(is_disabled=False).first()
+        
+        if project:
+            Timing.objects.filter(project_id=project.id, is_disabled=False).update(is_disabled=True)
+        
+        return InternalResponse({}, 'timing removed successfully', True)
+    
     def update_specific_timing(self, uuid, **kwargs):
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)
         
-        # TODO: handle foreign key update
+        if 'primary_image' in kwargs:
+            if kwargs['primary_image'] < len(timing.alternative_images_list):
+                kwargs['primary_image_id'] = timing.alternative_images_list[kwargs['primary_image']].uuid
+                del kwargs['primary_image']
+        
+        if 'primay_image_uuid' in kwargs:
+            primay_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['primay_image_uuid'], is_disabled=False).first()
+            if not primay_image:
+                return InternalResponse({}, 'invalid primary image uuid', False)
+            
+            kwargs['primay_image_id'] = primay_image.id
+
+        if 'model_uuid' in kwargs:
+            model: AIModel = AIModel.objects.filter(uuid=kwargs['model_uuid'], is_disabled=False).first()
+            if not model:
+                return InternalResponse({}, 'invalid model uuid', False)
+        
+
+        if 'source_image_uuid' in kwargs:
+            source_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['source_image_uuid'], is_disabled=False).first()
+            if not source_image:
+                return InternalResponse({}, 'invalid source image uuid', False)
+            
+            kwargs['source_image_id'] = source_image.id
+        
+
+        if 'interpolated_clip_uuid' in kwargs:
+            interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['interpolated_clip_uuid'], is_disabled=False).first()
+            if not interpolated_clip:
+                return InternalResponse({}, 'invalid interpolated clip uuid', False)
+            
+            kwargs['interpolated_clip_id'] = interpolated_clip.id
+        
+
+        if 'timed_clip_uuid' in kwargs:
+            timed_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['timed_clip_uuid'], is_disabled=False).first()
+            if not timed_clip:
+                return InternalResponse({}, 'invalid timed clip uuid', False)
+            
+            kwargs['timed_clip_id'] = timed_clip.id
+        
+
+        if 'mask_uuid' in kwargs:
+            mask: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['mask_uuid'], is_disabled=False).first()
+            if not mask:
+                return InternalResponse({}, 'invalid mask uuid', False)
+            
+            kwargs['mask_id'] = mask.id
+        
+
+        if 'canny_image_uuid' in kwargs:
+            canny_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['canny_image_uuid'], is_disabled=False).first()
+            if not canny_image:
+                return InternalResponse({}, 'invalid canny image uuid', False)
+            
+            kwargs['canny_image_id'] = canny_image.id
+        
+
+        if 'preview_video_uuid' in kwargs:
+            preview_video: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['preview_video_uuid'], is_disabled=False).first()
+            if not preview_video:
+                return InternalResponse({}, 'invalid preview video uuid', False)
+            
+            kwargs['preview_video_id'] = preview_video.id
+        
+
+        if 'primay_image_uuid' in kwargs:
+            primay_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['primay_image_uuid'], is_disabled=False).first()
+            if not primay_image:
+                return InternalResponse({}, 'invalid primary image uuid', False)
+            
+            kwargs['primay_image_id'] = primay_image.id
+        
         timing.update(**kwargs)
         return InternalResponse({}, 'timing updated successfully', True)
     
@@ -528,6 +634,24 @@ class DBRepo:
         timing.is_disabled = True
         timing.save()
         return InternalResponse({}, 'timing deleted successfully', True)
+
+    def remove_primay_frame(self, uuid):
+        timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
+        if not timing:
+            return InternalResponse({}, 'invalid timing uuid', False)
+        
+        timing.primay_image_id = None
+        timing.save()
+        return InternalResponse({}, 'primay frame removed successfully', True)
+    
+    def remove_source_image(self, uuid):
+        timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
+        if not timing:
+            return InternalResponse({}, 'invalid timing uuid', False)
+        
+        timing.source_image_id = None
+        timing.save()
+        return InternalResponse({}, 'source image removed successfully', True)
     
 
     # app setting
@@ -543,6 +667,29 @@ class DBRepo:
         
         return InternalResponse(payload, 'app_setting fetched successfully', True)
     
+    def update_app_setting(self, **kwargs):
+        attributes = UpdateAppSettingDao(attributes=kwargs)
+        if not attributes.is_valid():
+            return InternalResponse({}, attributes.errors, False)
+        
+        if 'uuid' in attributes.data and attributes.data['uuid']:
+            app_setting = AppSetting.objects.filter(uuid=attributes.data['uuid'], is_disabled=False).first()
+        else:
+            app_setting = AppSetting.objects.filter(is_disabled=False).first()
+        
+        if 'user_id' in attributes.data and attributes.data['user_id']:
+            user = User.objects.filter(uuid=attributes.data['user_id'], is_disabled=False).first()
+            if not user:
+                return InternalResponse({}, 'invalid user', False)
+            
+            print(attributes.data)
+            attributes._data['user_id'] = user.id
+
+        app_setting.update(**attributes.data)
+
+        return InternalResponse({}, 'app_setting updated successfully', True)
+
+    
     def get_app_secrets_from_user_uuid(self, user_uuid):
         if user_uuid:
             user: User = User.objects.filter(uuid=user_uuid, is_disabled=False).first()
@@ -557,11 +704,12 @@ class DBRepo:
             'data': {
                 'aws_access_key': app_setting.aws_access_key_decrypted,
                 'aws_secret_key': app_setting.aws_secret_access_key_decrypted,
-                'replicate_key': app_setting.replicate_key_decrypted
+                'replicate_key': app_setting.replicate_key_decrypted,
+                'replicate_username': app_setting.replicate_user_name
             }
         }
 
-        return InternalFileObject(payload, 'app_setting fetched successfully', True)
+        return InternalResponse(payload, 'app_setting fetched successfully', True)
     
     def get_all_app_setting_list(self):
         app_setting_list = AppSetting.objects.filter(is_disabled=False).all()
@@ -607,8 +755,12 @@ class DBRepo:
     
 
     # setting
-    def get_project_setting(self, project_id):
-        setting = Setting.objects.filter(project_id=project_id, is_disabled=False).first()
+    def get_project_setting(self, project_uuid):
+        project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        if not project:
+            return InternalResponse({}, 'invalid project_id', False)
+    
+        setting = Setting.objects.filter(project_id=project.id, is_disabled=False).first()
         if not setting:
             return InternalResponse({}, 'invalid project_id', False)
         
@@ -639,8 +791,12 @@ class DBRepo:
 
         return InternalResponse(payload, 'setting fetched', True)
     
-    def update_project_setting(self, project_id, **kwargs):
-        setting = Setting.objects.filter(project_id=project_id, is_disabled=False).first()
+    def update_project_setting(self, project_uuid, **kwargs):
+        project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        if not project:
+            return InternalResponse({}, 'invalid project', False)
+        
+        setting = Setting.objects.filter(project_id=project.id, is_disabled=False).first()
         if not setting:
             return InternalResponse({}, 'invalid project', False)
         
@@ -700,3 +856,163 @@ class DBRepo:
         }
 
         return InternalResponse(payload, 'setting fetched', True)
+    
+    
+    # backup data
+    def create_backup(self, project_uuid, backup_name):
+        project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        if not project:
+            return InternalResponse({}, 'invalid project', False)
+        
+        timing_list: List[Timing] = self.get_timing_list_from_project(project_uuid)
+        
+        # bulk fetching files and models from the database
+        model_uuid_list = set()
+        file_uuid_list = set()
+        for timing in timing_list:
+            model_uuid_list.add(timing.model.uuid)
+            file_uuid_list.add(timing.source_image.uuid)
+            file_uuid_list.add(timing.interpolated_clip.uuid)
+            file_uuid_list.add(timing.timed_clip.uuid)
+            file_uuid_list.add(timing.mask.uuid)
+            file_uuid_list.add(timing.canny_image.uuid)
+            file_uuid_list.add(timing.preview_video.uuid)
+            file_uuid_list.add(timing.primary_image.uuid)
+        
+        model_uuid_list = list(model_uuid_list)
+        file_uuid_list = list(file_uuid_list)
+        
+        # fetch the models and files from the database
+        model_list = AIModel.objects.filter(uuid__in=model_uuid_list, is_disabled=False).all()
+        file_list = InternalFileObject.objects.filter(uuid__in=file_uuid_list, is_disabled=False).all()
+        id_model_dict, id_file_dict = {}, {}
+
+        for model in model_list:
+            id_model_dict[model.uuid] = model
+        
+        for file in file_list:
+            id_file_dict[file.uuid] = file
+
+        # replacing ids (foreign keys) with uuids
+        final_list = list(timing_list.values())
+        for timing in final_list:
+            timing['model_uuid'] = id_model_dict[timing['model_id']]['uuid']
+            del timing['model_id']
+
+            timing['source_image_uuid'] = id_file_dict[timing['source_image_id']]['uuid']
+            del timing['source_image_id']
+
+            timing['interpolated_clip_uuid'] = id_file_dict[timing['interpolated_clip_id']]['uuid']
+            del timing['interpolated_clip_id']
+
+            timing['timed_clip_uuid'] = id_file_dict[timing['timed_clip_id']]['uuid']
+            del timing['timed_clip_id']
+
+            timing['mask_uuid'] = id_file_dict[timing['mask_id']]['uuid']
+            del timing['mask_id']
+
+            timing['canny_image_uuid'] = id_file_dict[timing['canny_image_id']]['uuid']
+            del timing['canny_image_id']
+
+            timing['preview_video_uuid'] = id_file_dict[timing['preview_video_id']]['uuid']
+            del timing['preview_video_id']
+
+            timing['primary_image_uuid'] = id_file_dict[timing['primary_image_id']]['uuid']
+            del timing['primary_image_id']
+
+
+        serialized_data = json.dumps(list(final_list.values()))
+        backup_data = {
+            "name" : backup_name,
+            "project_id" : project.id,
+            "note" : "",
+            "data_dump" : serialized_data
+        }
+        backup = BackupTiming.objects.create(**backup_data)
+        
+        payload = {
+            'data': BackupDto(backup).data
+        }
+
+        return InternalResponse(payload, 'backup created', True)
+    
+    def get_backup_from_uuid(self, backup_uuid):
+        backup: BackupTiming = BackupTiming.objects.filter(uuid=backup_uuid, is_disabled=False).first()
+        if not backup:
+            return InternalResponse({}, 'invalid backup', False)
+        
+        payload = {
+            'data': BackupDto(backup).data
+        }
+
+        return InternalResponse(payload, 'backup fetched', True)
+    
+    def get_backup_list(self, project_uuid):
+        project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        if not project:
+            return InternalResponse({}, 'invalid project', False)
+        
+        backup_list = BackupTiming.objects.filter(project_id=project.id, is_disabled=False).all()
+        
+        payload = {
+            'data': BackupListDto(backup_list, many=True).data
+        }
+
+        return InternalResponse(payload, 'backup list fetched', True)
+    
+    def delete_backup(self, backup_uuid):
+        backup: BackupTiming = BackupTiming.objects.filter(uuid=backup_uuid, is_disabled=False).first()
+        if not backup:
+            return InternalResponse({}, 'invalid backup', False)
+        
+        backup.is_disabled = True
+        backup.save()
+        
+        return InternalResponse({}, 'backup deleted', True)
+    
+    def restore_backup(self, backup_uuid: str):
+        backup: BackupTiming = self.get_backup_from_uuid(backup_uuid)
+
+        current_timing_list: List[Timing] = self.get_timing_list_from_project(backup.project.uuid)
+        backup_data = backup.data_dump_dict     # contains a list of dict of backed up timings
+
+        if not backup_data:
+            return InternalResponse({}, 'no backup data', False)
+        
+        for timing in current_timing_list:
+            matching_timing_list = [item for item in backup_data if item['uuid'] == str(timing.uuid)]
+
+            if len(matching_timing_list):
+                backup_timing = matching_timing_list[0]
+
+                self.update_specific_timing(
+                    timing.uuid,
+                    model_uuid=backup_timing['model_uuid'],
+                    source_image_uuid=backup_timing['source_image_uuid'],
+                    interpolated_clip=backup_timing['interpolated_clip_uuid'],
+                    timed_clip=backup_timing['timed_clip_uuid'],
+                    mask=backup_timing['mask_uuid'],
+                    canny_image=backup_timing['canny_image_uuid'],
+                    preview_video=backup_timing['preview_video_uuid'],
+                    primary_image=backup_timing['primary_image_uuid'],
+                    custom_model_id_list=backup_timing['custom_model_id_list'],
+                    frame_time=backup_timing['frame_time'],
+                    frame_number=backup_timing['frame_number'],
+                    alternative_images=backup_timing['alternative_images'],
+                    custom_pipeline=backup_timing['custom_pipeline'],
+                    prompt=backup_timing['prompt'],
+                    negative_prompt=backup_timing['negative_prompt'],
+                    guidance_scale=backup_timing['guidance_scale'],
+                    seed=backup_timing['seed'],
+                    num_inteference_steps=backup_timing['num_inteference_steps'],
+                    strength=backup_timing['strength'],
+                    notes=backup_timing['notes'],
+                    adapter_type=backup_timing['adapter_type'],
+                    clip_duration=backup_timing['clip_duration'],
+                    animation_style=backup_timing['animation_style'],
+                    interpolation_steps=backup_timing['interpolation_steps'],
+                    low_threshold=backup_timing['low_threshold'],
+                    high_threshold=backup_timing['high_threshold'],
+                    aux_frame_index=backup_timing['aux_frame_index']
+                )
+

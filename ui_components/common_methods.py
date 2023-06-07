@@ -33,13 +33,15 @@ from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, vfx
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 from backend.models import InternalFileObject
 from shared.file_upload.s3 import upload_file
+from shared.utils import is_online_file_path
 from ui_components.constants import AnimationStyleType, VideoQuality, WorkflowStageType
-from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
-from utils.data_repo.data_repo import DataRepo, get_data_repo
-from utils.internal_response import InternalResponse
+from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
+from utils.data_repo.data_repo import DataRepo
+from shared.constants import InternalResponse
 from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.replicate.constants import DEFAULT_LORA_MODEL_URL, REPLICATE_MODEL
 from models import InternalFileObject
+import utils.local_storage.local_storage as local_storage
 
 
 from moviepy.video.fx.all import speedx
@@ -992,7 +994,10 @@ def convert_to_minutes_and_seconds(frame_time):
     return f"{minutes} min, {seconds} secs"
 
 
-def calculate_time_at_frame_number(input_video, frame_number, project: InternalProjectObject):
+def calculate_time_at_frame_number(input_video, frame_number, project_uuid):
+    data_repo = DataRepo()
+    project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
+    
     input_video = "videos/" + \
         str(project.name) + "/assets/resources/input_videos/" + str(input_video)
     video = cv2.VideoCapture(input_video)
@@ -1004,7 +1009,9 @@ def calculate_time_at_frame_number(input_video, frame_number, project: InternalP
     return time_at_frame
 
 
-def preview_frame(project: InternalProjectObject, video_name, frame_num):
+def preview_frame(project_uuid, video_name, frame_num):
+    data_repo = DataRepo()
+    project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
     cap = cv2.VideoCapture(
         f'videos/{project.name}/assets/resources/input_videos/{video_name}')
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
@@ -1013,26 +1020,24 @@ def preview_frame(project: InternalProjectObject, video_name, frame_num):
     cap.release()
     return frame
 
-# DOUBT: how is this working?
-def extract_frame(frame_number, timing_uuid, input_video, extract_frame_number):
+# extract_frame_number is extracted from the input_video and added at frame_number
+# in the timings table
+def extract_frame(timing_uuid, input_video: InternalFileObject, extract_frame_number):
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
-    timing_details = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
-
-    input_video = "videos/" + \
-        str(timing.project.name) + \
-        "/assets/resources/input_videos/" + str(input_video)
-    input_video = cv2.VideoCapture(input_video)
+    
+    # TODO: standardize the input video path
+    # input_video = "videos/" + \
+    #     str(timing.project.name) + \
+    #     "/assets/resources/input_videos/" + str(input_video)
+    input_video = cv2.VideoCapture(input_video.local_path)
     total_frames = input_video.get(cv2.CAP_PROP_FRAME_COUNT)
     if extract_frame_number == total_frames:
         extract_frame_number = int(total_frames - 1)
     input_video.set(cv2.CAP_PROP_POS_FRAMES, extract_frame_number)
     ret, frame = input_video.read()
 
-    if timing_details[frame_number]["frame_number"] == "":
-        data_repo.update_specific_timing(
-            timing_uuid, frame_number=extract_frame_number)
+    data_repo.update_specific_timing(timing_uuid, frame_number=extract_frame_number)
 
     file_name = ''.join(random.choices(
         string.ascii_lowercase + string.digits, k=16)) + ".png"
@@ -1066,7 +1071,7 @@ def calculate_frame_number_at_time(input_video, time_of_frame, project_uuid):
     return frame_number
 
 
-def move_frame(direction, timing_uuid, project_uuid):
+def move_frame(direction, timing_uuid):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(timing_uuid)
 
@@ -1312,11 +1317,15 @@ def trigger_restyling_process(timing_uuid, model_id, prompt, strength, custom_pi
         print("No new generation to promote")
 
 
-def promote_image_variant(timing_uuid, variant_to_promote):
+def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
     data_repo = DataRepo()
+
+    variant_to_promote = data_repo.get_timing_from_frame_number(variant_to_promote_frame_number)
     data_repo.update_specific_timing(
-        timing_uuid, primary_image=variant_to_promote)
-    data_repo.update_specific_timing(timing_uuid - 1, interpolated_video="")
+        timing_uuid, primary_image_uuid=variant_to_promote.uuid)
+    
+    prev_timing = data_repo.get_prev_timing(timing_uuid)
+    data_repo.update_specific_timing(prev_timing.uuid, interpolated_video="")
     data_repo.update_specific_timing(timing_uuid, interpolated_video="")
 
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
@@ -1371,26 +1380,22 @@ def extract_canny_lines(image_path_or_url, project_name, low_threshold=50, high_
     canny_image_file = data_repo.create_file(filename=unique_file_name, type=InternalFileType.IMAGE.value, local_path=file_location)
     return canny_image_file
 
-
+# the input image is an image created by the PIL library
 def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing.uuid)
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
 
-    mask_base_path = "videos/{project_name}/assets/resources/masks/"
-    file_location = None
-
-    if timing.mask.location == "":
+    if not (timing.mask and timing.mask.location):
         unique_file_name = str(uuid.uuid4()) + ".png"
-        mask = data_repo.create_file(name=unique_file_name, type=InternalFileType.IMAGE.value,
-                                   local_path=mask_base_path + unique_file_name)
-        data_repo.update_specific_timing(timing_uuid, mask_id=mask.id)
-        file_location = timing.mask.location
+        data_repo.update_specific_timing(timing_uuid, \
+                    mask=f"videos/{timing.project.name}/assets/resources/masks/{unique_file_name}")
     else:
-        current_timing: InternalFrameTimingObject = data_repo.get_ai_model_from_uuid(
-            st.session_state['which_image'])
-        file_location = current_timing.mask.location
+        unique_file_name = timing.mask.location.split("/")[-1]
 
-    return file_location
+    file_location = f"videos/{timing.project.name}/assets/resources/masks/{unique_file_name}"
+    image.save(file_location, "PNG")
+    file = data_repo.create_file(filename=unique_file_name, type=InternalFileType.IMAGE.value, local_path=file_location)
+    return file
 
 
 def create_working_assets(video_name):
@@ -1467,15 +1472,14 @@ def inpainting(input_image, prompt, negative_prompt, timing_uuid, invert_mask, p
 
     return image_file
 
-
-def add_image_variant(image_url, timing_uuid):
+# adds the image file in variant (alternative images) list 
+def add_image_variant(image_file_uuid: str, timing_uuid: str):
     data_repo = DataRepo()
+    image_file: InternalFileObject = data_repo.get_file_from_uuid(image_file_uuid)
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
-    image_file = data_repo.create_file(
-        name="frame_img", type=InternalFileType.IMAGE.value, hosted_url=image_url)
     if not data_repo.get_alternative_image_list(timing_uuid):
-        alternative_images = json.dump([image_file.id])
+        alternative_images = json.dump([image_file.uuid])
         additions = []
     else:
         alternative_images = []
@@ -1484,7 +1488,7 @@ def add_image_variant(image_url, timing_uuid):
         for addition in additions:
             alternative_images.append(addition)
 
-        alternative_images.append(image_file.id)
+        alternative_images.append(image_file.uuid)
         alternative_images = json.dump(alternative_images)
 
     data_repo.update_specific_timing(
@@ -1496,63 +1500,82 @@ def add_image_variant(image_url, timing_uuid):
 
     return len(additions) + 1
 
-# DOUBT: why do we need controller in dreambooth training?
-def train_dreambooth_model(controller_type, instance_prompt, class_prompt, training_file_url, max_train_steps, model_name, images_list):
-    if controller_type == "normal":
-        template_version = "b65d36e378a01ef81d81ba49be7deb127e9bb8b74a28af3aa0eaca16b9bcd0eb"
-    elif controller_type == "canny":
-        template_version = "3c60cbfce253b1d82fea02c7692d13c1e96b36a22da784470fcbedc603a1ed4b"
-    elif controller_type == "hed":
-        template_version = "bef0803be223ecb38361097771dbea7cd166514996494123db27907da53d75cd"
-    elif controller_type == "scribble":
-        template_version = "346b487d77a0bdd150c4bbb8f162f7cd4a4491bca5f309105e078556d0789f11"
-    elif controller_type == "seg":
-        template_version = "a0266713f8c30b35a3f4fc8212fc9450cecea61e4181af63cfb54e5a152ecb24"
-    elif controller_type == "openpose":
-        template_version = "141b8753e2973933441880e325fd21404923d0877014c9f8903add05ff530e52"
-    elif controller_type == "depth":
-        template_version = "6cf8fc430894121f2f91867978780011e6859b6956b499b43273afc25ed21121"
-    elif controller_type == "mlsd":
-        template_version == "04982e9aa6d3998c2a2490f92e7ccfab2dbd93f5be9423cdf0405c7b86339022"
+# TODO: complete this function
+def convert_image_list_to_file_list(images_list: str):
+    data_repo = DataRepo()
+    file_list = []
+    for image in images_list:
+        data = {
+            "name": str(uuid.uuid4()),
+            "type": InternalFileType.IMAGE.value
+        }
+        if image.startswith("http"):
+            data['hosted_url'] = image
+        else:
+            data['local_url'] = image
+        
+        image_file = data_repo.create_file(**data)
+        file_list.append(image_file)
+    return file_list
 
+# DOUBT: why do we need controller in dreambooth training?
+# INFO: images_list passed here are converted to internal files after they are used for training
+def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max_train_steps, model_name, images_list: List[str]):
     ml_client = get_ml_client()
     response = ml_client.dreambooth_training(
         training_file_url, instance_prompt, class_prompt, max_train_steps, model_name)
     training_status = response["status"]
+
     model_id = response["id"]
     if training_status == "queued":
-        df = pd.read_csv("models.csv")
-        df = df.append({}, ignore_index=True)
-        new_row_index = df.index[-1]
-        df.iloc[new_row_index, 0] = model_name
-        df.iloc[new_row_index, 1] = model_id
-        df.iloc[new_row_index, 2] = instance_prompt
-        df.iloc[new_row_index, 4] = str(images_list)
-        df.iloc[new_row_index, 5] = "Dreambooth"
-        df.to_csv("models.csv", index=False)
+        file_list = convert_image_list_to_file_list(images_list)
+        file_uuid_list = [file.uuid for file in file_list]
+        file_uuid_list = json.dump(file_uuid_list)
+
+        model_data = {
+            "name": model_name,
+            "user_id": local_storage.get_current_user_uuid(),
+            "replicate_model_id": model_id,
+            "replicate_url": None,
+            "diffusers_url": None,
+            "category": AIModelType.DREAMBOOTH.value,
+            "training_image_list": file_uuid_list,
+            "keyword": instance_prompt,
+        }
+
+        data_repo = DataRepo()
+        data_repo.create_ai_model(**model_data)
+
         return "Success - Training Started. Please wait 10-15 minutes for the model to be trained."
     else:
         return "Failed"
 
-
+# INFO: images_list passed here are converted to internal files after they are used for training
 def train_lora_model(training_file_url, type_of_task, resolution, model_name, images_list):
+    data_repo = DataRepo()
     ml_client = get_ml_client()
     output = ml_client.predict_model_output(REPLICATE_MODEL.clones_lora_training, instance_data=training_file_url,
                                             task=type_of_task, resolution=int(resolution))
 
-    df = pd.read_csv("models.csv")
-    df = df.append({}, ignore_index=True)
-    new_row_index = df.index[-1]
-    df.iloc[new_row_index, 0] = model_name
-    df.iloc[new_row_index, 4] = str(images_list)
-    df.iloc[new_row_index, 5] = "LoRA"
-    df.iloc[new_row_index, 6] = output
-    df.to_csv("models.csv", index=False)
+    file_list = convert_image_list_to_file_list(images_list)
+    file_uuid_list = [file.uuid for file in file_list]
+    file_uuid_list = json.dump(file_uuid_list)
+    model_data = {
+        "name": model_name,
+        "user_id": local_storage.get_current_user_uuid(),
+        "replicate_url": output,
+        "diffusers_url": None,
+        "category": AIModelType.LORA.value,
+        "training_image_list": file_uuid_list
+    }
+
+    data_repo.create_ai_model(**model_data)
     return f"Successfully trained - the model '{model_name}' is now available for use!"
 
-
+# TODO: making an exception for this, passing just the image urls instead of 
+# image files
 def train_model(images_list, instance_prompt, class_prompt, max_train_steps,
-                model_name, type_of_model, type_of_task, resolution, controller_type):
+                model_name, type_of_model, type_of_task, resolution):
     # prepare and upload the training data (images.zip)
     ml_client = get_ml_client()
     try:
@@ -1563,7 +1586,7 @@ def train_model(images_list, instance_prompt, class_prompt, max_train_steps,
     # training the model
     model_name = model_name.replace(" ", "-").lower()
     if type_of_model == "Dreambooth":
-        return train_dreambooth_model(controller_type, instance_prompt, class_prompt, training_file_url,
+        return train_dreambooth_model(instance_prompt, class_prompt, training_file_url,
                                       max_train_steps, model_name, images_list)
     elif type_of_model == "LoRA":
         return train_lora_model(training_file_url, type_of_task, resolution, model_name, images_list)
@@ -2384,14 +2407,16 @@ def custom_pipeline_mystique(timing_uuid, source_image) -> InternalFileObject:
     return output_image_file
 
 
-def create_timings_row_at_frame_number(project_uuid, index_of_new_item):
+def create_timings_row_at_frame_number(project_uuid, frame_number):
     data_repo = DataRepo()
     project: InternalProjectObject = data_repo.get_timing_list_from_project(project_uuid)
     
     # remove the interpolated video from the current row and the row before and after - unless it is the first or last row
     timing_data = {
         "project_uuid": project_uuid,
-        "aux_frame_index": index_of_new_item,
+        "frame_time": 0.0,
+        "frame_number": frame_number,
+        "aux_frame_index": frame_number,
         "interpolated_video": "",
         "animation_style": "",
     }
@@ -2405,7 +2430,7 @@ def create_timings_row_at_frame_number(project_uuid, index_of_new_item):
     if next_timing:
         data_repo.update_specific_timing_value(next_timing.uuid, "interpolated_video", "")
 
-    return index_of_new_item
+    return timing
 
 
 def get_models() -> List[InternalAIModelObject]:
@@ -2515,10 +2540,10 @@ def calculate_dynamic_interpolations_steps(clip_duration):
     return interpolation_steps
 
 
-def render_video(final_video_name, timing_uuid, quality):
+def render_video(final_video_name, project_uuid, quality):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
+
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(project_uuid)
 
     calculate_desired_duration_of_each_clip(timing_uuid)
 

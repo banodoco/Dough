@@ -1,9 +1,8 @@
 import json
 import time
-from repository.local_repo.csv_repo import log_inference_data_in_csv
-from repository.local_repo.db_repo import DBRepo
-from utils.logging.constants import LoggingPayload, LoggingType
-from utils.logging.logging import AppLogger
+from shared.logging.constants import LoggingPayload, LoggingType
+from shared.logging.logging import AppLogger
+
 from utils.ml_processor.replicate.constants import ReplicateModel
 
 
@@ -34,5 +33,6 @@ def log_model_inference(model: ReplicateModel, time_taken, **kwargs):
     # logging data
     # log_inference_data_in_csv(logging_payload.data)
 
-    db_repo = DBRepo()
-    db_repo.log_inference_data_in_local_db(logging_payload.data)
+    # TODO: streamline the logging part
+    # db_repo = DBRepo()
+    # db_repo.log_inference_data_in_local_db(logging_payload.data)

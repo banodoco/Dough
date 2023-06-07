@@ -84,6 +84,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         os.remove('images.zip')
         return serving_url
     
+    # TODO: figure how to resolve model location setting, right now it's hardcoded to peter942/modnet
     def dreambooth_training(self, training_file_url, instance_prompt, class_prompt, max_train_steps, model_name):
         headers = {
             "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),

@@ -1,9 +1,12 @@
 import streamlit as st
 
-from repository.local_repo.csv_repo import get_app_settings, update_app_settings
+from utils.data_repo.data_repo import DataRepo
+
 
 def app_settings_page():
-    app_settings = get_app_settings()
+    # TODO: automatically pick the current user for fetching related details
+    data_repo = DataRepo()
+    app_settings = data_repo.get_app_setting_from_uuid()
             
 
     with st.expander("Replicate API Keys:"):

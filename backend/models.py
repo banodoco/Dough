@@ -3,6 +3,7 @@ import uuid
 import json
 
 from shared.constants import SERVER, ServerType
+from shared.file_upload.s3 import generate_s3_url, is_s3_image_url
 
 class BaseModel(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4)
@@ -11,6 +12,7 @@ class BaseModel(models.Model):
     is_disabled = models.BooleanField(default=False)
 
     class Meta:
+        app_label = 'backend'
         abstract = True
 
 
@@ -19,10 +21,18 @@ class InternalFileObject(BaseModel):
     type = models.CharField(max_length=255, default="")     # image, video, audio
     local_path = models.TextField(default="")
     hosted_url = models.TextField(default="")
+    tag = models.CharField(default="")  # background_image, mask_image, canny_image etc..
 
     class Meta:
+        app_label = 'backend'
         db_table = 'file'
 
+    def save(self, *args, **kwargs):
+        # if the online url is not an s3 url and it's a production environment then we need to save the file in s3
+        if self.hosted_url and not is_s3_image_url(self.hosted_url) and SERVER == ServerType.PRODUCTION.value:
+            self.hosted_url = generate_s3_url(self.hosted_url)
+            
+        super(InternalFileObject, self).save(*args, **kwargs)
 
     @property
     def location(self):
@@ -37,6 +47,7 @@ class User(BaseModel):
     third_party_id = models.CharField(max_length=255, default=None, null=True)
 
     class Meta:
+        app_label = 'backend'
         db_table = 'user'
 
 
@@ -45,6 +56,7 @@ class Project(BaseModel):
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True)
 
     class Meta:
+        app_label = 'backend'
         db_table = 'project'
 
 
@@ -59,6 +71,7 @@ class AIModel(BaseModel):
     training_image_list = models.TextField(default="", blank=True)      # contains an array of uuid of file objects
 
     class Meta:
+        app_label = 'backend'
         db_table = 'ai_model'
     
 
@@ -70,6 +83,7 @@ class InferenceLog(BaseModel):
     total_inference_time = models.IntegerField(default=0)
 
     class Meta:
+        app_label = 'backend'
         db_table = 'inference_log'
 
 
@@ -79,8 +93,22 @@ class AIModelParamMap(BaseModel):
     model_param_key = models.CharField(max_length=255, blank=True)
 
     class Meta:
+        app_label = 'backend'
         db_table = 'model_param_map'
 
+class BackupTiming(BaseModel):
+    name = models.CharField(max_length=255, default="")
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
+    note = models.TextField(default="", blank=True)
+    data_dump = models.TextField(default="", blank=True)
+
+    class Meta:
+        app_label = 'backend'
+        db_table = 'backup_timing'
+
+    @property
+    def data_dump_dict(self):
+        return json.loads(self.data_dump) if self.data_dump else None
 
 class Timing(BaseModel):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
@@ -113,6 +141,7 @@ class Timing(BaseModel):
     aux_frame_index = models.IntegerField(default=0)    # starts with 0 # TODO: udpate this
 
     class Meta:
+        app_label = 'backend'
         db_table = 'frame_timing'
 
     @property
@@ -150,6 +179,7 @@ class AppSetting(BaseModel):
     welcome_state = models.IntegerField(default=0)
 
     class Meta:
+        app_label = 'backend'
         db_table = 'app_setting'
 
     def save(self, *args, **kwargs):
@@ -225,6 +255,7 @@ class Setting(BaseModel):
     default_high_threshold = models.FloatField(default=0)
 
     class Meta:
+        app_label = 'backend'
         db_table = 'setting'
 
 

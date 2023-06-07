@@ -2,12 +2,14 @@ import json
 
 
 class InternalFileObject:
-    def __init__(self, uuid, name, type, local_path, hosted_url):
+    def __init__(self, uuid, name, type, local_path, hosted_url, tag=""):
         self.uuid = uuid
         self.name = name
         self.type = type
         self.local_path = local_path
         self.hosted_url =  hosted_url
+        self.tag = tag
+        self.created_on = created_on
     
     @property
     def location(self):
@@ -79,7 +81,20 @@ class InternalFrameTimingObject:
             return ""
         else:                         
             return self.alternative_images_list[self.primary_image].location if self.primary_image < len(self.alternative_images_list) else ""
+        
+    @property
+    def primary_variant_index(self):
+        if not self.primary_image:
+            return -1
+        
+        alternative_images_list = self.alternative_images_list
+        idx = 0
+        for img in alternative_images_list:
+            if img.uuid == self.primary_image.uuid:
+                return idx
+            idx += 1
 
+        return -1
 
 class InternalAppSettingObject:
     def __init__(self, **kwargs):
@@ -87,7 +102,8 @@ class InternalAppSettingObject:
         self.previous_project = kwargs['previous_project'] if 'previous_project' in kwargs else None
         self.replicate_user_name = kwargs['replicate_user_name'] if 'replicate_user_name' in kwargs else None
         self.welcome_state = kwargs['welcome_state'] if 'welcome_state' in kwargs else None
-
+        self.aws_secret_access_key = kwargs['aws_secret_access_key'] if 'aws_secret_access_key' in kwargs else None
+        self.aws_access_key = kwargs['aws_access_key'] if 'aws_access_key' in kwargs else None
 
 class InternalSettingObject:
     def __init__(self, **kwargs):
@@ -115,6 +131,17 @@ class InternalSettingObject:
         self.default_low_threshold = kwargs['default_low_threshold'] if 'default_low_threshold' in kwargs else None
         self.default_high_threshold = kwargs['default_high_threshold'] if 'default_high_threshold' in kwargs else None
 
+class InternalBackupObject:
+    def __init__(self, **kwargs):
+        self.uuid = kwargs['uuid'] if 'uuid' in kwargs else None
+        self.project = InternalProjectObject(**kwargs["project"]) if 'project' in kwargs else None
+        self.name = kwargs['name'] if 'name' in kwargs else None
+        self.data_dump = kwargs['data_dump'] if 'data_dump' in kwargs else None
+        self.note = kwargs['note'] if 'note' in kwargs else None
+
+    @property
+    def data_dump_dict(self):
+        return json.loads(self.data_dump) if self.data_dump else None
 
 class InternalUserObject:
     def __init__(self, **kwargs):

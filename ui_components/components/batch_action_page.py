@@ -1,20 +1,24 @@
+from typing import List
 import streamlit as st
 import time
-from repository.local_repo.csv_repo import remove_existing_timing, update_specific_timing_value
-from ui_components.common_methods import add_image_variant, get_timing_details, promote_image_variant
 
-def batch_action_page(project_name):
-    timing_details = get_timing_details(project_name)
+from ui_components.common_methods import add_image_variant, promote_image_variant
+from ui_components.models import InternalFrameTimingObject, InternalProjectObject
+from utils.data_repo.data_repo import DataRepo
+
+def batch_action_page(project_uuid):
+    data_repo = DataRepo()
+    project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(project_uuid)
 
     st.markdown("***")
 
     st.markdown("#### Make extracted key frames into completed key frames")
     st.write("This will move all the extracted key frames to completed key frames - good for if you don't want to make any changes to the key frames")
     if st.button("Move initial key frames to completed key frames"):
-        for i in timing_details:
-            index_of_current_item = timing_details.index(i)
-            number_of_items = add_image_variant(timing_details[index_of_current_item]["source_image"], index_of_current_item, project_name, timing_details)
-            promote_image_variant(index_of_current_item, project_name,number_of_items-1)
+        for timing_frame in timing_details:
+            add_image_variant(timing_frame.source_image, timing_frame.uuid)
+            promote_image_variant(timing_frame.uuid, timing_frame.source_image)
         st.success("All initial key frames moved to completed key frames")
 
     st.markdown("***")
@@ -22,7 +26,7 @@ def batch_action_page(project_name):
     st.markdown("#### Remove all existing timings")
     st.write("This will remove all the timings and key frames from the project")
     if st.button("Remove Existing Timings"):
-        remove_existing_timing(project_name)
+        data_repo.remove_existing_timing(project.uuid)
 
     st.markdown("***")
     
@@ -30,10 +34,9 @@ def batch_action_page(project_name):
     st.write("This will adjust the timings of all the key frames by the number of seconds you enter below")
     bulk_adjustment = st.number_input("What multiple would you like to adjust the timings by?", value=1.0)
     if st.button("Adjust Timings"):
-        for i in timing_details:
-            index_of_current_item = timing_details.index(i)
-            new_frame_time = float(timing_details[index_of_current_item]["frame_time"]) * bulk_adjustment
-            update_specific_timing_value(project_name, index_of_current_item, "frame_time", new_frame_time)
+        for timing_frame in timing_details:
+            new_frame_time = float(timing_frame.frame_time) * bulk_adjustment
+            data_repo.update_specific_timing(timing_frame.uuid, frame_time=new_frame_time)
             
         st.success("Timings adjusted successfully!")
         time.sleep(1)
@@ -43,13 +46,11 @@ def batch_action_page(project_name):
     st.markdown("#### Remove all variants other than main")
     st.write("This will remove all the variants of the key frames except the main one")
     if st.button("Remove all variants"):
-        for i in timing_details:            
-            index_of_current_item = timing_details.index(i)                            
-            variants = timing_details[index_of_current_item]["alternative_images"]
-            primary_image = timing_details[index_of_current_item]["primary_image"]
-            current_primary_image = variants[primary_image]            
-            update_specific_timing_value(project_name, index_of_current_item, "alternative_images", '"' + f"['{current_primary_image}']" + '"')
-            update_specific_timing_value(project_name, index_of_current_item, "primary_image", 0)
+        for timing_frame in timing_details:            
+            variants = timing_frame.alternative_images_list
+            current_primary_image = timing_frame.primary_image       
+            data_repo.update_specific_timing(timing_frame.uuid, "alternative_images", '"' + f"['{current_primary_image}']" + '"')
+            data_repo.remove_primay_frame(timing_frame.uuid)
             
                         
         st.success("All variants removed successfully!")

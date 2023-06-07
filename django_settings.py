@@ -1,14 +1,17 @@
 import os
 from dotenv import load_dotenv
 
-from banodoco_settings import SERVER, ServerType
-load_dotenv()
+from shared.constants import SERVER, Colors, ServerType
 
-if SERVER == ServerType.DEVELOPMENT.value:
+
+load_dotenv()
+import django
+django.setup()
+
+if SERVER != ServerType.DEVELOPMENT.value:
     DB_LOCATION = './banodoco-local.db'
 else:
-    # TODO: add ssm connection here
-    pass
+    DB_LOCATION = ''
 
 
 DATABASES = {

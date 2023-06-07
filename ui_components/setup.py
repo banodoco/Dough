@@ -1,11 +1,9 @@
 import streamlit as st
 import os
-from ui_components.common_methods import get_timing_details
 import streamlit as st
 import os
 from moviepy.editor import *
 
-from repository.local_repo.csv_repo import get_app_settings, update_app_settings
 from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.batch_action_page import batch_action_page
 from ui_components.components.custom_models_page import custom_models_page
@@ -18,10 +16,15 @@ from ui_components.components.prompt_finder_page import prompt_finder_page
 from ui_components.components.video_rendering_page import video_rendering_page
 from ui_components.components.welcome_page import welcome_page
 from utils.common_methods import create_working_assets
+from utils.data_repo.data_repo import DataRepo
+
+
 
 def setup_app_ui():
-       
-    app_settings = get_app_settings()
+    data_repo = DataRepo()
+
+    app_settings = data_repo.get_app_setting_from_uuid()
+
     title1, title2 = st.sidebar.columns([3,2])
     with title1:
         st.title("Banodoco")    
@@ -48,7 +51,7 @@ def setup_app_ui():
         if st.session_state["index_of_project_name"] != video_list.index(st.session_state["project_name"]):
             st.write("Project changed")
             st.session_state["index_of_project_name"] = video_list.index(st.session_state["project_name"])               
-            update_app_settings("previous_project", st.session_state["project_name"])
+            data_repo.update_app_setting(previous_project=st.session_state["project_name"])
             st.experimental_rerun()
                 
         if st.session_state["project_name"] == "":
@@ -80,10 +83,6 @@ def setup_app_ui():
                 "pages": ["New Project"]
             }
             ]
-
-            
-
-            timing_details = get_timing_details(st.session_state["project_name"])
 
             st.session_state["section"] = st.sidebar.radio("Select a section:", [page["section_name"] for page in pages],horizontal=True)  
             st.session_state["page"] = st.sidebar.radio("Select a page:", [page for page in pages if page["section_name"] == st.session_state["section"]][0]["pages"],horizontal=False)

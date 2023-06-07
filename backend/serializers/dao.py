@@ -37,6 +37,7 @@ class CreateAIModelDao(serializers.Serializer):
     replicate_url = serializers.CharField(max_length=512, default="", required=False)
     diffusers_url = serializers.CharField(max_length=512, default="", required=False)
     category = serializers.ChoiceField(choices=AIModelType.value_list())
+    keyword = serializers.CharField(max_length=255, required=False)
 
 class UpdateAIModelDao(serializers.Serializer):
     uuid = serializers.CharField(max_length=100)
@@ -46,6 +47,7 @@ class UpdateAIModelDao(serializers.Serializer):
     replicate_url = serializers.CharField(max_length=512, default="", required=False)
     diffusers_url = serializers.CharField(max_length=512, default="", required=False)
     category = serializers.ChoiceField(choices=AIModelType.value_list(), required=False)
+    keyword = serializers.CharField(max_length=255, required=False)
 
 
 class CreateInferenceLogDao(serializers.Serializer):
@@ -100,6 +102,15 @@ class CreateAppSettingDao(serializers.Serializer):
     replicate_user_name = serializers.CharField(max_length=100, required=False)
     welcome_state = serializers.IntegerField(default=0, required=False)
 
+
+class UpdateAppSettingDao(serializers.Serializer):
+    uuid = serializers.CharField(max_length=100)
+    user_id = serializers.CharField(max_length=100, required=False)
+    replicate_key = serializers.CharField(max_length=100, required=False)
+    aws_access_key = serializers.CharField(max_length=100, required=False)
+    previous_project = serializers.CharField(max_length=100, required=False)
+    replicate_user_name = serializers.CharField(max_length=100, required=False)
+    welcome_state = serializers.IntegerField(default=0, required=False)
 
 class CreateSettingDao(serializers.Serializer):
     project_id = serializers.CharField(max_length=255)
