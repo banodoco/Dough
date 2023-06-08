@@ -150,6 +150,9 @@ class InternalUserObject:
         self.email = kwargs['email'] if 'email' in kwargs else None
         self.type = kwargs['type'] if 'type' in kwargs else None
 
+    def to_json(self):
+        return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
+
 
 class InferenceLogObject:
     def __init__(self, **kwargs):

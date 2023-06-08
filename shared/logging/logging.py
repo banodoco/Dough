@@ -40,14 +40,23 @@ class AppLogger(logging.Logger):
         else:
             self.logging_mode = LoggingMode.ONLINE.value
 
-    def log(self, log_type: LoggingType, log_payload: LoggingPayload):
-        if log_type == LoggingType.DEBUG:
-            self.debug(log_payload.message)
-        elif log_type == LoggingType.INFO:
-            self.info(log_payload.message)
-        elif log_type == LoggingType.ERROR:
-            self.error(log_payload.message)
-        elif log_type in [LoggingType.INFERENCE_CALL, LoggingType.INFERENCE_RESULT]:
-            self.info(log_payload.message)
+    # def log(self, log_type: LoggingType, log_payload: LoggingPayload):
+    #     if log_type == LoggingType.DEBUG:
+    #         self.debug(log_payload.message)
+    #     elif log_type == LoggingType.INFO:
+    #         self.info(log_payload.message)
+    #     elif log_type == LoggingType.ERROR:
+    #         self.error(log_payload.message)
+    #     elif log_type in [LoggingType.INFERENCE_CALL, LoggingType.INFERENCE_RESULT]:
+    #         self.info(log_payload.message)
 
+    def log(self, log_type: LoggingType, log_message, log_data = None):
+        if log_type == LoggingType.DEBUG:
+            self.debug(log_message)
+        elif log_type == LoggingType.INFO:
+            self.info(log_message)
+        elif log_type == LoggingType.ERROR:
+            self.error(log_message)
+        elif log_type in [LoggingType.INFERENCE_CALL, LoggingType.INFERENCE_RESULT]:
+            self.info(log_message)
     

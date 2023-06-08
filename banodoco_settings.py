@@ -2,13 +2,18 @@ import os
 from dotenv import dotenv_values
 
 from shared.constants import SERVER, ServerType
+from shared.logging.constants import LoggingType
+from shared.logging.logging import AppLogger
+from ui_components.models import InternalUserObject
 from utils.common_methods import create_working_assets
 from utils.data_repo.data_repo import DataRepo
 
 REPLICATE_API_TOKEN = None
 REPLICATE_USERNAME = None
 
-ENCRYPTION_KEY = None
+ENCRYPTION_KEY = 'J2684nBgNUYa_K0a6oBr5H8MpSRW0EJ52Qmq7jExE-w='
+
+logger = AppLogger()
 
 def project_init():
     global REPLICATE_API_TOKEN
@@ -28,7 +33,15 @@ def project_init():
             "password" : "123",
             "type" : "user"
         }
-        data_repo.create_user(**user_data)
+        user: InternalUserObject = data_repo.create_user(**user_data)
+        logger.log(LoggingType.INFO, "new temp user created: " + user.name)
+
+        # creating it's app setting as well
+        setting_data = {
+            "user_id": user.uuid,
+            "welcome_state": 0
+        }
+        app_setting = data_repo.create_app_setting(**setting_data)
 
     app_secret = data_repo.get_app_secrets_from_user_uuid()
 
@@ -41,18 +54,18 @@ def project_init():
     # create asset directories
     create_working_assets('controlnet_test')
 
-    # create encryption key if not already present
-    env_vars = dotenv_values('.env')
-    desired_key = 'FERNET_KEY'
-    global ENCRYPTION_KEY
-    if desired_key in env_vars:
-        ENCRYPTION_KEY = env_vars[desired_key].decode()
-    else:
-        from cryptography.fernet import Fernet
+    # create encryption key if not already present (not applicable in dev mode)
+    # env_vars = dotenv_values('.env')
+    # desired_key = 'FERNET_KEY'
+    # global ENCRYPTION_KEY
+    # if desired_key in env_vars:
+    #     ENCRYPTION_KEY = env_vars[desired_key].decode()
+    # else:
+    #     from cryptography.fernet import Fernet
 
-        secret_key = Fernet.generate_key()
-        with open('.env', 'a') as env_file:
-            env_file.write(f'FERNET_KEY={secret_key.decode()}\n')
+    #     secret_key = Fernet.generate_key()
+    #     with open('.env', 'a') as env_file:
+    #         env_file.write(f'FERNET_KEY={secret_key.decode()}\n')
         
-        ENCRYPTION_KEY = secret_key.decode()
+    #     ENCRYPTION_KEY = secret_key.decode()
     

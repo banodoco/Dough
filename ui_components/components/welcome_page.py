@@ -14,12 +14,12 @@ def welcome_page():
                     st.write("")
             else:
                 if st.button("Previous Step"):
-                    st.session_state["welcome_state"] = str(int(step) - 1)
+                    st.session_state["welcome_state"] = int(step) - 1
                     data_repo.update_app_setting(welcome_state=st.session_state["welcome_state"])                                    
                     st.experimental_rerun()
             
             if st.button("Skip Intro"):
-                st.session_state["welcome_state"] = '7'
+                st.session_state["welcome_state"] = 7
                 data_repo.update_app_setting(welcome_state=st.session_state["welcome_state"]) 
                 st.experimental_rerun()
         with button2:
@@ -68,6 +68,6 @@ def welcome_page():
                 data_repo.update_app_setting(replicate_user_name=st.session_state["replicate_user_name"])
             if st.session_state["replicate_com_api_key"] != "":
                 data_repo.update_app_setting(replicate_com_api_key=st.session_state["replicate_com_api_key"])
-            data_repo.update_app_setting(welcome_state="7")
-            st.session_state["welcome_state"] = "7"
+            data_repo.update_app_setting(welcome_state=7)
+            st.session_state["welcome_state"] = 7
             st.experimental_rerun()

@@ -20,12 +20,16 @@ def get_current_user():
     if 'current_user' not in data:
         from utils.data_repo.data_repo import DataRepo
         data_repo = DataRepo()
-        data['current_user'] = data_repo.get_first_active_user()
+        user = data_repo.get_first_active_user()
+        data['current_user'] = user.to_json() if user else None
         
     with open(data_store, 'w') as file:
         json.dump(data, file, indent=4)
 
-    return data_store['curent_user']
+    with open(data_store, 'r') as file:
+        data = json.load(file)
+
+    return json.loads(data['current_user']) if data['current_user'] else None
 
 def get_current_user_uuid():
     current_user = get_current_user()

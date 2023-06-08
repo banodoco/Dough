@@ -1,7 +1,5 @@
 import streamlit as st
 import os
-import streamlit as st
-import os
 from moviepy.editor import *
 
 from ui_components.components.app_settings_page import app_settings_page
@@ -34,11 +32,13 @@ def setup_app_ui():
         st.caption(
             "Experiencing issues or have feedback? Please [let me know](mailto:peter@omalley.io)!")
 
-    if int(st.session_state["welcome_state"]) in [0, 1, 2, 3, 4] and st.session_state["online"] == False:
+    if (st.session_state["welcome_state"] in [0, 1, 2, 3, 4] or not st.session_state["welcome_state"]) \
+        and st.session_state["online"] == False:
         welcome_page()
     else:
         project_list = data_repo.get_all_project_list(
             user_id=local_storage.get_current_user_uuid())
+        
         if "index_of_project_name" not in st.session_state:
             if app_settings.previous_project:
                 st.session_state["project_uuid"] = app_settings.previous_project
@@ -65,7 +65,6 @@ def setup_app_ui():
         if st.session_state["project_uuid"] == "":
             st.info("No projects found - create one in the 'New Project' section")
         else:
-
             if not os.path.exists("videos/" + st.session_state["project_uuid"] + "/assets"):
                 create_working_assets(st.session_state["project_uuid"])
 

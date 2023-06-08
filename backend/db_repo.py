@@ -2,6 +2,9 @@ import json
 import os
 
 import sys
+from shared.logging.constants import LoggingType
+
+from shared.logging.logging import AppLogger
 sys.path.append('../')
 
 import sqlite3
@@ -22,11 +25,10 @@ from backend.models import AIModel, AIModelParamMap, AppSetting, BackupTiming, I
 from backend.serializers.dao import CreateAIModelDao, CreateAIModelParamMapDao, CreateAppSettingDao, CreateFileDao, CreateInferenceLogDao, CreateProjectDao, CreateSettingDao, CreateTimingDao, CreateUserDao, UpdateAIModelDao, UpdateAppSettingDao, UpdateSettingDao
 from shared.constants import InternalResponse
 
-
+logger = AppLogger()
 
 class DBRepo:
     def __init__(self):
-        print("initializing database")
         database_file = LOCAL_DATABASE_NAME
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
 
@@ -36,17 +38,18 @@ class DBRepo:
         # creating db if not already present
         if not os.path.exists(database_file):
             from django.core.management import execute_from_command_line
-            print(Colors.RED + "Database not present, creating" + Colors.RESET)
+            logger.log(LoggingType.INFO,  "Database not found. Creating new one.")
             conn = sqlite3.connect(database_file)
             conn.close()
 
             completed_process = subprocess.run(['python', 'manage.py', 'migrate'], capture_output=True, text=True)
             if completed_process.returncode == 0:
-                print(Colors.BLUE + "Migrations completed successfully." + Colors.RESET)
+                logger.log(LoggingType.INFO, "Migrations completed successfully")
             else:
-                print(Colors.RED + "Migrations failed with an error." + Colors.RESET)
+                logger.log(LoggingType.ERROR, "Migrations failed")
         else:
-            print(Colors.BLUE + "Database already present" + Colors.RESET)
+            # logger.log(LoggingType.INFO, "Database already present")
+            pass
 
     # user operations
     def create_user(self, **kwargs):
@@ -217,8 +220,12 @@ class DBRepo:
         
         return InternalResponse(payload, 'project fetched', True)
     
-    def get_all_project_list(self, user_id):
-        project_list = Project.objects.filter(user_id=user_id, is_disabled=False).all()
+    def get_all_project_list(self, user_uuid):
+        user: User = User.objects.filter(uuid=user_uuid, is_disabled=False).first()
+        if not user:
+            return InternalResponse({}, 'invalid user', False)
+        
+        project_list = Project.objects.filter(user_id=user.id, is_disabled=False).all()
         
         payload = {
             'data': ProjectDto(project_list, many=True).data
@@ -281,9 +288,11 @@ class DBRepo:
         return InternalResponse(payload, 'ai_model fetched', True)
     
     def create_ai_model(self, **kwargs):
-        attributes = CreateAIModelDao(attributes=kwargs)
+        attributes = CreateAIModelDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
+        
+        print(attributes.data)
         
         if 'user_id' in attributes.data and attributes.data['user_id']:
             user = User.objects.filter(uuid=attributes.data['user_id'], is_disabled=False).first()
@@ -291,7 +300,7 @@ class DBRepo:
                 return InternalResponse({}, 'invalid user', False)
             
             print(attributes.data['user_id'])
-            attributes.data['user_id'] = user.id
+            attributes._data['user_id'] = user.id
         
         ai_model = InternalFileObject.objects.create(**attributes.data)
         
@@ -361,23 +370,25 @@ class DBRepo:
         return InternalResponse(payload, 'inference log list fetched', True)
     
     def create_inference_log(self, **kwargs):
-        attributes = CreateInferenceLogDao(attributes=kwargs)
+        attributes = CreateInferenceLogDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
+        
+        print(attributes.data)
         
         if 'project_id' in attributes.data and attributes.data['project_id']:
             project = Project.objects.filter(uuid=attributes.data['project_id'], is_disabled=False).first()
             if not project:
                 return InternalResponse({}, 'invalid project', False)
             
-            attributes.data['project_id'] = project.id
+            attributes._data['project_id'] = project.id
         
         if 'model_id' in attributes.data and attributes.data['model_id']:
             model = AIModel.objects.filter(uuid=attributes.data['model_id'], is_disabled=False).first()
             if not model:
                 return InternalResponse({}, 'invalid model', False)
             
-            attributes.data['model_id'] = model.id
+            attributes._data['model_id'] = model.id
 
         log = InferenceLog.objects.create(**attributes.data)
 
@@ -417,16 +428,18 @@ class DBRepo:
         return InternalResponse(map_list, 'ai model param map list fetched', True)
     
     def create_ai_model_param_map(self, **kwargs):
-        attributes = CreateAIModelParamMapDao(attributes=kwargs)
+        attributes = CreateAIModelParamMapDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
+        
+        print(attributes.data)
         
         if 'model_id' in attributes.data and attributes.data['model_id']:
             model = AIModel.objects.filter(uuid=attributes.data['model_id'], is_disabled=False).first()
             if not model:
                 return InternalResponse({}, 'invalid model', False)
             
-            attributes.data['model_id'] = model.id
+            attributes._data['model_id'] = model.id
         
         map = AIModelParamMap.objects.create(**attributes.data)
         
@@ -525,16 +538,19 @@ class DBRepo:
         return InternalResponse(payload, 'timing list fetched', True)
     
     def create_timing(self, **kwargs):
-        attributes = CreateTimingDao(attributes=kwargs)
+        attributes = CreateTimingDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
+        
+        print(attributes.data)
         
         if 'project_id' in attributes.data and attributes.data['project_id']:
             project = Project.objects.filter(uuid=attributes.data['project_id'], is_disabled=False).first()
             if not project:
                 return InternalResponse({}, 'invalid project', False)
             
-            attributes.data['project_id'] = project.id
+            print(attributes.data)
+            attributes._data['project_id'] = project.id
         
         timing = Timing.objects.create(**attributes.data)
         
@@ -665,7 +681,7 @@ class DBRepo:
     
 
     # app setting
-    def get_app_setting_from_uuid(self, uuid):
+    def get_app_setting_from_uuid(self, uuid=None):
         if uuid:
             app_setting = AppSetting.objects.filter(uuid=uuid, is_disabled=False).first()
         else:
@@ -678,9 +694,11 @@ class DBRepo:
         return InternalResponse(payload, 'app_setting fetched successfully', True)
     
     def update_app_setting(self, **kwargs):
-        attributes = UpdateAppSettingDao(attributes=kwargs)
+        attributes = UpdateAppSettingDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
+        
+        print(attributes.data)
         
         if 'uuid' in attributes.data and attributes.data['uuid']:
             app_setting = AppSetting.objects.filter(uuid=attributes.data['uuid'], is_disabled=False).first()
@@ -731,16 +749,18 @@ class DBRepo:
         return InternalResponse(payload, 'app_setting list fetched successfully', True)
     
     def create_app_setting(self, **kwargs):
-        attributes = CreateAppSettingDao(attributes=kwargs)
+        attributes = CreateAppSettingDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
+        
+        print(attributes.data)
         
         if 'user_id' in attributes.data and attributes.data['user_id']:
             user = User.objects.filter(uuid=attributes.data['user_id'], is_disabled=False).first()
             if not user:
                 return InternalResponse({}, 'invalid user', False)
             
-            attributes.data['user_id'] = user.id
+            attributes._data['user_id'] = user.id
         
         app_setting = AppSetting.objects.create(**attributes.data)
         
@@ -782,16 +802,18 @@ class DBRepo:
     
     # TODO: add valid model_id check throughout dp_repo
     def create_project_setting(self, **kwargs):
-        attributes = CreateSettingDao(attributes=kwargs)
+        attributes = CreateSettingDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
+        
+        print(attributes.data)
         
         if 'project_id' in attributes.data and attributes.data['project_id']:
             project = Project.objects.filter(uuid=attributes.data['project_id'], is_disabled=False).first()
             if not project:
                 return InternalResponse({}, 'invalid project', False)
             
-            attributes.data['project_id'] = project.id
+            attributes._data['project_id'] = project.id
         
         setting = Setting.objects.create(**attributes.data)
         
@@ -821,7 +843,7 @@ class DBRepo:
         return InternalResponse(payload, 'setting fetched', True)
 
     def bulk_update_project_setting(self, **kwargs):
-        attributes = UpdateSettingDao(attributes=kwargs)
+        attributes = UpdateSettingDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
         
@@ -829,34 +851,36 @@ class DBRepo:
         if not setting:
             return InternalResponse({}, 'invalid project', False)
         
+        print(attributes.data)
+        
         if 'project_id' in attributes.data and attributes.data['project_id']:
             project = Project.objects.filter(uuid=attributes.data['project_id'], is_disabled=False).first()
             if not project:
                 return InternalResponse({}, 'invalid project', False)
             
             print(attributes.data)
-            attributes.data['project_id'] = project.id
+            attributes._data['project_id'] = project.id
         
         if 'default_model_id' in attributes.data and attributes.data['default_model_id']:
             model = AIModel.objects.filter(uuid=attributes.data['default_model_id'], is_disabled=False).first()
             if not model:
                 return InternalResponse({}, 'invalid model', False)
             
-            attributes.data['default_model_id'] = model.id
+            attributes._data['default_model_id'] = model.id
 
         if 'audio_id' in attributes.data and attributes.data['audio_id']:
             audio = InternalFileObject.objects.filter(uuid=attributes.data['audio_id'], is_disabled=False).first()
             if not audio:
                 return InternalResponse({}, 'invalid audio', False)
             
-            attributes.data['audio_id'] = audio.id
+            attributes._data['audio_id'] = audio.id
 
         if 'input_video_id' in attributes.data and attributes.data['input_video_id']:
             video = InternalFileObject.objects.filter(uuid=attributes.data['input_video_id'], is_disabled=False).first()
             if not video:
                 return InternalResponse({}, 'invalid video', False)
             
-            attributes.data['input_video_id'] = video.id
+            attributes._data['input_video_id'] = video.id
 
         
         setting.update(**attributes.data)

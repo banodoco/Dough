@@ -190,15 +190,15 @@ class AppSetting(BaseModel):
         new_replicate_key = not self.id or ('replicate_key' in kwargs and kwargs['replicate_key'] != self.replicate_key)
         new_stability_key = not self.id or ('stability_key' in kwargs and kwargs['stability_key'] != self.stability_key)
 
-        if new_access_key:
+        if new_access_key and self.aws_access_key:
             encrypted_access_key = encryptor.encrypt(self.aws_access_key)
             self.aws_access_key = encrypted_access_key
         
-        if new_replicate_key:
+        if new_replicate_key and self.replicate_key:
             encrypted_replicate_key = encryptor.encrypt(self.replicate_key)
             self.replicate_key = encrypted_replicate_key
 
-        if new_stability_key:
+        if new_stability_key and self.stability_key:
             encrypted_stability_key = encryptor.encrypt(self.stability_key)
             self.stability_key = encrypted_stability_key
 

@@ -9,7 +9,12 @@ class InternalFileDto(serializers.ModelSerializer):
 class UserDto(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('uuid', 'name', 'local_path', 'hosted_url', 'created_on')
+        fields = (
+            'uuid',
+            'name',
+            'email',
+            'type'
+        )
 
 class ProjectDto(serializers.ModelSerializer):
     user_uuid = serializers.SerializerMethodField()
