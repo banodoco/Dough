@@ -4,7 +4,7 @@ import time
 from typing import List
 import pandas as pd
 import streamlit as st
-from backend.constants import AIModelType
+from shared.constants import AIModelType
 from ui_components.common_methods import train_model
 
 from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject

@@ -8,10 +8,10 @@ from PIL import Image
 import requests as r
 from streamlit_drawable_canvas import st_canvas
 from streamlit_image_comparison import image_comparison
-from shared.constants import BACKGROUND_IMAGE_TAG, InternalFileTag, InternalFileType
+from shared.constants import InternalFileTag, InternalFileType
 from shared.file_upload.s3 import upload_file
 
-from ui_components.common_methods import add_image_variant, create_or_update_mask, execute_image_edit, extract_frame, promote_image_variant, prompt_model_controlnet
+from ui_components.common_methods import add_image_variant, create_or_update_mask, execute_image_edit, extract_frame, promote_image_variant
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
 from utils.data_repo.data_repo import DataRepo
 

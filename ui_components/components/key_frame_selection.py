@@ -8,7 +8,7 @@ from PIL import Image
 from moviepy.video.io.VideoFileClip import VideoFileClip
 from shared.constants import InternalFileType
 
-from ui_components.common_methods import calculate_frame_number_at_time, create_timings_row_at_frame_number, create_video_without_interpolation, delete_frame, extract_frame, get_timing_details, preview_frame,calculate_time_at_frame_number
+from ui_components.common_methods import calculate_frame_number_at_time, create_timings_row_at_frame_number, create_video_without_interpolation, delete_frame, extract_frame, preview_frame,calculate_time_at_frame_number
 from ui_components.models import InternalFileObject, InternalFrameTimingObject
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.video import resize_video

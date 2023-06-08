@@ -1,7 +1,6 @@
 import time
-from repository.local_repo.csv_repo import get_app_settings
-from utils.file_upload.s3 import upload_image
-from utils.logging.logging import AppLogger
+from shared.file_upload.s3 import upload_file
+from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import MachineLearningProcessor
 import replicate
 import os
@@ -11,13 +10,16 @@ import zipfile
 
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
 from repository.data_logger import log_model_inference
+import utils.local_storage.local_storage as local_storage
 
 
 class ReplicateProcessor(MachineLearningProcessor):
     def __init__(self):
-        app_settings = get_app_settings()
-        self.logger = AppLogger()
-        os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
+        data_repo = DataRepo()
+        self.app_settings = data_repo.get_app_secrets_from_user_uuid(uuid=local_storage.get_current_user_uuid())
+
+        self.logger = None
+        os.environ["REPLICATE_API_TOKEN"] = self.app_settings['replicate_key']
         self._set_urls()
         super().__init__()
 
@@ -47,7 +49,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         model = self.get_model(REPLICATE_MODEL.andreas_sd_inpainting)
         
         mask = "mask.png"
-        mask = upload_image("mask.png")
+        mask = upload_file("mask.png", self.app_settings['aws_access_key'], self.app_settings['aws_secret_key'])
             
         if not input_image.startswith("http"):        
             input_image = open(input_image, "rb")

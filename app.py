@@ -15,8 +15,6 @@ from ui_components.models import InternalAppSettingObject
 from utils.data_repo.data_repo import DataRepo
 
 def main():
-    from ui_components.setup import setup_app_ui
-
     st.set_page_config(page_title="Banodoco", page_icon="🎨", layout="wide")
     # initializing project constants
     project_init()
@@ -51,7 +49,7 @@ def main():
         if app_secret["replicate_key"] == "":
             st.error("**To run restyling and other functions, you need to set your Replicate.com API key by going to Settings -> App Settings.**")
     
-
+    from ui_components.setup import setup_app_ui
     setup_app_ui()
                                                     
 if __name__ == '__main__':

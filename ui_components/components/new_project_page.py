@@ -120,7 +120,7 @@ def new_project_page():
                 audio_file: InternalFileObject = data_repo.create_file(**file_data)
                 data_repo.update_project_setting(new_project.uuid, audio_uuid=audio_file.uuid)
 
-        st.session_state["project_name"] = new_project_name
+        st.session_state["project_uuid"] = new_project_name
         st.session_state["project_uuid"] = new_project.uuid
 
         video_list = data_repo.get_all_file_list(file_type=InternalFileType.VIDEO.value)  #[f for f in os.listdir("videos") if not f.startswith('.')]

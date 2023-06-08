@@ -2,7 +2,7 @@ import json
 
 
 class InternalFileObject:
-    def __init__(self, uuid, name, type, local_path, hosted_url, tag=""):
+    def __init__(self, uuid, name, type, local_path, hosted_url, created_on, tag=""):
         self.uuid = uuid
         self.name = name
         self.type = type

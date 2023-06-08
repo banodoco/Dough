@@ -1,13 +1,16 @@
 import json
 import os
 
+import sys
+sys.path.append('../')
+
 import sqlite3
+import subprocess
 from typing import List
 import uuid
-from shared.constants import InternalFileType
-from backend.serializers.dto import AIModelDto, AppSettingDto, BackupDto, BackupListDto, InferenceLogDto, InternalFileDto, ProjectDto, SettingDto, TimingDto, UserDto
+from shared.constants import Colors, InternalFileType
+from backend.serializers.dto import  AIModelDto, AppSettingDto, BackupDto, BackupListDto, InferenceLogDto, InternalFileDto, ProjectDto, SettingDto, TimingDto, UserDto
 
-from django_settings import DB_LOCATION
 from shared.constants import AUTOMATIC_FILE_HOSTING, LOCAL_DATABASE_NAME, SERVER, ServerType
 from shared.file_upload.s3 import upload_file
 
@@ -24,7 +27,7 @@ from shared.constants import InternalResponse
 class DBRepo:
     def __init__(self):
         print("initializing database")
-        database_file = '../' + LOCAL_DATABASE_NAME
+        database_file = LOCAL_DATABASE_NAME
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
 
         from django.core.wsgi import get_wsgi_application
@@ -33,10 +36,17 @@ class DBRepo:
         # creating db if not already present
         if not os.path.exists(database_file):
             from django.core.management import execute_from_command_line
+            print(Colors.RED + "Database not present, creating" + Colors.RESET)
             conn = sqlite3.connect(database_file)
             conn.close()
-            
-            execute_from_command_line(['manage.py', 'migrate'])
+
+            completed_process = subprocess.run(['python', 'manage.py', 'migrate'], capture_output=True, text=True)
+            if completed_process.returncode == 0:
+                print(Colors.BLUE + "Migrations completed successfully." + Colors.RESET)
+            else:
+                print(Colors.RED + "Migrations failed with an error." + Colors.RESET)
+        else:
+            print(Colors.BLUE + "Database already present" + Colors.RESET)
 
     # user operations
     def create_user(self, **kwargs):
@@ -88,7 +98,7 @@ class DBRepo:
     
     def get_total_user_count(self):
         if SERVER != ServerType.PRODUCTION.value:
-            count = User.objects.all(is_disabled=False).count()
+            count = User.objects.filter(is_disabled=False).count()
         else:
             count = 0
         

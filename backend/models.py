@@ -21,7 +21,7 @@ class InternalFileObject(BaseModel):
     type = models.CharField(max_length=255, default="")     # image, video, audio
     local_path = models.TextField(default="")
     hosted_url = models.TextField(default="")
-    tag = models.CharField(default="")  # background_image, mask_image, canny_image etc..
+    tag = models.CharField(max_length=255,default="")  # background_image, mask_image, canny_image etc..
 
     class Meta:
         app_label = 'backend'
@@ -174,7 +174,7 @@ class AppSetting(BaseModel):
     aws_secret_access_key = models.CharField(max_length=255, default="", blank=True)
     aws_access_key = models.CharField(max_length=255, default="", blank=True)
     stability_key = models.CharField(max_length=255, default="", blank=True)
-    previous_project = models.CharField(max_length=255, default="", blank=True)
+    previous_project = models.CharField(max_length=255, default="", blank=True)     # contains the uuid of the previous project
     replicate_user_name = models.CharField(max_length=255, default="", blank=True)
     welcome_state = models.IntegerField(default=0)
 

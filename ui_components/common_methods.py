@@ -26,7 +26,7 @@ import uuid
 from io import BytesIO
 import ast
 import numpy as np
-from backend.constants import AIModelType, InternalFileType
+from shared.constants import AIModelType, InternalFileType
 from pydub import AudioSegment
 import shutil
 from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, vfx
@@ -40,7 +40,7 @@ from utils.data_repo.data_repo import DataRepo
 from shared.constants import InternalResponse
 from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.replicate.constants import DEFAULT_LORA_MODEL_URL, REPLICATE_MODEL
-from models import InternalFileObject
+from ui_components.models import InternalFileObject
 import utils.local_storage.local_storage as local_storage
 
 

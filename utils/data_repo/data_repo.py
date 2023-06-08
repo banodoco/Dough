@@ -203,7 +203,7 @@ class DataRepo:
         return InternalAppSettingObject(app_setting) if app_setting else None
     
     def get_app_secrets_from_user_uuid(self, uuid):
-        app_secrets = self.db_repo.get_app_secrets_from_user_uuid(uuid).payload
+        app_secrets = self.db_repo.get_app_secrets_from_user_uuid(uuid).payload['data']
         return app_secrets
     
     def get_all_app_setting_list(self):
