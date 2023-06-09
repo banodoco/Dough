@@ -43,6 +43,13 @@ def project_init():
         }
         app_setting = data_repo.create_app_setting(**setting_data)
 
+        # creating a new project for this user
+        project_data = {
+            "user_id": user.uuid,
+            "name": "my_first_project",
+        }
+        project = data_repo.create_project(**project_data)
+
     app_secret = data_repo.get_app_secrets_from_user_uuid()
 
     REPLICATE_API_TOKEN = app_secret["replicate_key"]

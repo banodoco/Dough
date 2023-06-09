@@ -18,10 +18,11 @@ class InternalFileObject:
 
 
 class InternalProjectObject:
-    def __init__(self, uuid, name, user_uuid):
+    def __init__(self, uuid, name, user_uuid, created_on):
         self.uuid = uuid
         self.name = name
         self.user_uuid = user_uuid
+        self.created_on = created_on
 
 
 class InternalAIModelObject:

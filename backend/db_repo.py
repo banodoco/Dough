@@ -532,9 +532,13 @@ class DBRepo:
         
         return timing.alternative_image_list
     
-    def get_timing_list_from_project(self, project_id=None):
-        if project_id:
-            timing_list = Timing.objects.filter(project_id=project_id, is_disabled=False).all()
+    def get_timing_list_from_project(self, project_uuid=None):
+        if project_uuid:
+            project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+            if not project:
+                return InternalResponse({}, 'invalid project', False)
+            
+            timing_list = Timing.objects.filter(project_id=project.id, is_disabled=False).all()
         else:
             timing_list = Timing.objects.filter(is_disabled=False).all()
         

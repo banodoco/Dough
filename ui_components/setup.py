@@ -39,16 +39,24 @@ def setup_app_ui():
         project_list = data_repo.get_all_project_list(
             user_id=local_storage.get_current_user_uuid())
         
-        if "index_of_project_name" not in st.session_state:
+        if "index_of_project_name" not in st.session_state or st.session_state["index_of_project_name"] == None:
             if app_settings.previous_project:
                 st.session_state["project_uuid"] = app_settings.previous_project
                 st.session_state["index_of_project_name"] = next((i for i, p in enumerate(
                     project_list) if p.uuid == app_settings.previous_project), None)
+                
+                # if index is not found (project deleted or data mismatch) assigning the first project as default
+                if not st.session_state["index_of_project_name"]:
+                    st.session_state["index_of_project_name"] = 0
+                    st.session_state["project_uuid"] = project_list[0].uuid
             else:
                 st.session_state["index_of_project_name"] = 0
 
-        st.session_state["project_uuid"] = st.sidebar.selectbox("Select which project you'd like to work on:", [
+        selected_project_name = st.sidebar.selectbox("Select which project you'd like to work on:", [
                                                                 p.name for p in project_list], index=st.session_state["index_of_project_name"])
+        
+        selected_index = next(i for i, p in enumerate(project_list) if p.name == selected_project_name)
+        st.session_state["project_uuid"] = project_list[selected_index].uuid
 
         if "which_image_value" not in st.session_state:
             st.session_state['which_image_value'] = 0

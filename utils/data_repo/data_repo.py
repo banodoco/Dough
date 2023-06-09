@@ -169,7 +169,7 @@ class DataRepo:
     
     def get_timing_list_from_project(self, project_uuid=None):
         timing_list = self.db_repo.get_timing_list_from_project(project_uuid).data['data']
-        return [InternalFrameTimingObject(**timing) for timing in timing_list] if timing_list else None
+        return [InternalFrameTimingObject(**timing) for timing in timing_list] if timing_list else []
     
     def create_timing(self, **kwargs):
         timing = self.db_repo.create_timing(**kwargs).data['data']
