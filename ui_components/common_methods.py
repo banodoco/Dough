@@ -74,10 +74,10 @@ def resize_and_rotate_element(stage, project_uuid):
         if st.button("Rotate Image"):
             if stage == "Source":
                 res = data_repo.get_timing_from_uuid(
-                    st.session_state['which_image'])
+                    st.session_state['current_frame_uuid'])
                 input_image = res.source_image
             elif stage == "Styled":
-                input_image = data_repo.get_primary_variant_location(st.session_state['which_image'])
+                input_image = data_repo.get_primary_variant_location(st.session_state['current_frame_uuid'])
             if rotation_angle != 0:
                 st.session_state['rotated_image'] = rotate_image(
                     input_image, rotation_angle)
@@ -113,7 +113,7 @@ def resize_and_rotate_element(stage, project_uuid):
                         # TODO: check offline file saving
                         st.session_state['rotated_image'].save(save_location)
                         data_repo.update_specific_timing(
-                            st.session_state['which_image'], source_image=save_location)
+                            st.session_state['current_frame_uuid'], source_image=save_location)
                         st.session_state['rotated_image'] = ""
                         st.experimental_rerun()
 
@@ -122,9 +122,9 @@ def resize_and_rotate_element(stage, project_uuid):
                         save_location = f"videos/{project.name}/assets/frames/2_character_pipeline_completed/{file_name}"
                         st.session_state['rotated_image'].save(save_location)
                         number_of_image_variants = add_image_variant(
-                            save_location, st.session_state['which_image'], project.name, timing_details)
+                            save_location, st.session_state['current_frame_uuid'], project.name, timing_details)
                         promote_image_variant(
-                            st.session_state['which_image'], number_of_image_variants - 1)
+                            st.session_state['current_frame_uuid'], number_of_image_variants - 1)
                         st.session_state['rotated_image'] = ""
                         st.experimental_rerun()
             with btn2:
@@ -350,7 +350,7 @@ def zoom_image(location, zoom_factor, fill_with=None):
 
 
 def crop_image_element(stage):
-    timing_uuid = st.session_state['which_image']
+    timing_uuid = st.session_state['current_frame_uuid']
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
@@ -364,15 +364,15 @@ def crop_image_element(stage):
             input_image = data_repo.get_primary_variant_location(timing_uuid)
 
         if 'current_working_image_number' not in st.session_state:
-            st.session_state['current_working_image_number'] = st.session_state['which_image']
+            st.session_state['current_working_image_number'] = st.session_state['current_frame_uuid']
 
         def get_working_image():
             st.session_state['working_image'] = get_pillow_image(input_image)
             st.session_state['working_image'] = ImageOps.expand(
                 st.session_state['working_image'], border=200, fill="black")
-            st.session_state['current_working_image_number'] = st.session_state['which_image']
+            st.session_state['current_working_image_number'] = st.session_state['current_frame_uuid']
 
-        if 'working_image' not in st.session_state or st.session_state['current_working_image_number'] != st.session_state['which_image']:
+        if 'working_image' not in st.session_state or st.session_state['current_working_image_number'] != st.session_state['current_frame_uuid']:
             get_working_image()
 
         options1, options2, option3, option4 = st.columns([3, 1, 1, 1])
@@ -458,7 +458,7 @@ def crop_image_element(stage):
                         cropped_img.save(file_name)
                         st.success("Cropped Image Saved Successfully")
                         data_repo.update_specific_timing(
-                            st.session_state['which_image'], source_image=file_name)
+                            st.session_state['current_frame_uuid'], source_image=file_name)
                         time.sleep(1)
                     st.experimental_rerun()
             with cropbtn2:
@@ -504,14 +504,14 @@ def crop_image_element(stage):
                     mask.save('temp/mask.png')
 
                     st.session_state['inpainted_image'] = inpainting(
-                        "temp/cropped.png", inpaint_prompt, inpaint_negative_prompt, st.session_state['which_image'], True, pass_mask=True)
+                        "temp/cropped.png", inpaint_prompt, inpaint_negative_prompt, st.session_state['current_frame_uuid'], True, pass_mask=True)
 
                 if st.session_state['inpainted_image'] != "":
                     st.image(st.session_state['inpainted_image'],
                              caption="Inpainted Image", use_column_width=True, width=200)
                     if st.button("Make Source Image"):
                         data_repo.update_specific_timing(
-                            st.session_state['which_image'], source_image=st.session_state['inpainted_image'])
+                            st.session_state['current_frame_uuid'], source_image=st.session_state['inpainted_image'])
                         st.session_state['inpainted_image'] = ""
                         st.experimental_rerun()
 
@@ -673,7 +673,7 @@ def create_full_preview_video(timing_uuid, speed) -> InternalFileObject:
 def back_and_forward_buttons():
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        st.session_state['which_image'])
+        st.session_state['current_frame_uuid'])
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         timing.project.uuid)
 
@@ -682,13 +682,13 @@ def back_and_forward_buttons():
     with smallbutton0:
         if timing.aux_frame_index > 1:
             if st.button(f"{timing.aux_frame_index-2} ⏮️", key=f"Previous Previous Image for {timing.aux_frame_index}"):
-                st.session_state['which_image_value'] = st.session_state['which_image_value'] - 2
+                st.session_state['current_frame_index'] = st.session_state['current_frame_index'] - 2
                 st.experimental_rerun()
     with smallbutton1:
         # if it's not the first image
         if timing.aux_frame_index != 0:
             if st.button(f"{timing.aux_frame_index-1} ⏪", key=f"Previous Image for {timing.aux_frame_index}"):
-                st.session_state['which_image_value'] = st.session_state['which_image_value'] - 1
+                st.session_state['current_frame_index'] = st.session_state['current_frame_index'] - 1
                 st.experimental_rerun()
 
     with smallbutton2:
@@ -697,12 +697,12 @@ def back_and_forward_buttons():
         # if it's not the last image
         if timing.aux_frame_index != len(timing_details)-1:
             if st.button(f"{timing.aux_frame_index+1} ⏩", key=f"Next Image for {timing.aux_frame_index}"):
-                st.session_state['which_image_value'] = st.session_state['which_image_value'] + 1
+                st.session_state['current_frame_index'] = st.session_state['current_frame_index'] + 1
                 st.experimental_rerun()
     with smallbutton4:
         if timing.aux_frame_index < len(timing_details)-2:
             if st.button(f"{timing.aux_frame_index+2} ⏭️", key=f"Next Next Image for {timing.aux_frame_index}"):
-                st.session_state['which_image_value'] = st.session_state['which_image_value'] + 2
+                st.session_state['current_frame_index'] = st.session_state['current_frame_index'] + 2
                 st.experimental_rerun()
 
 
@@ -730,14 +730,14 @@ def styling_element(timing_uuid):
                                                              index=st.session_state['index_of_which_stage_to_run_on'], help="Extracted frames means the original frames from the video.")
     with stages2:
         stage_frame: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-            st.session_state['which_image'])
+            st.session_state['current_frame_uuid'])
         if st.session_state['which_stage_to_run_on'] == "Extracted Key Frames":
             image = stage_frame.source_image.location
         else:
             image = data_repo.get_primary_variant_location(stage_frame.uuid).location
         if image != "":
             st.image(image, use_column_width=True,
-                     caption=f"Image {st.session_state['which_image']}")
+                     caption=f"Image {st.session_state['current_frame_uuid']}")
         else:
             st.error(
                 f"No {st.session_state['which_stage_to_run_on']} image found for this variant")
@@ -2173,18 +2173,18 @@ def update_video_speed(project_name, index_of_current_item, duration_of_static_t
 
 '''
 
+# DOUBT: there is one other method with exact same name, commenting this one
+# def calculate_desired_duration_of_each_clip(project: InternalProjectObject):
+#     data_repo = DataRepo()
 
-def calculate_desired_duration_of_each_clip(project: InternalProjectObject):
-    data_repo = DataRepo()
+#     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+#         project.id)
 
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-        project.id)
-
-    for timing in timing_details:
-        total_duration_of_frame = calculate_desired_duration_of_individual_clip(
-            timing.uuid)
-        data_repo.update_specific_timing(
-            timing.uuid, clip_duration=total_duration_of_frame)
+#     for timing in timing_details:
+#         total_duration_of_frame = calculate_desired_duration_of_individual_clip(
+#             timing.uuid)
+#         data_repo.update_specific_timing(
+#             timing.uuid, clip_duration=total_duration_of_frame)
 
 
 '''
@@ -2218,18 +2218,17 @@ def calculate_desired_duration_of_individual_clip(timing_uuid):
     return total_duration_of_frame
 
 
-def calculate_desired_duration_of_each_clip(timing_uuid):
+def calculate_desired_duration_of_each_clip(project_uuid):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
+        project_uuid)
 
     length_of_list = len(timing_details)
 
     for i in timing_details:
         index_of_current_item = timing_details.index(i)
         length_of_list = len(timing_details)
-        timing_item: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(timing.project.uuid, index_of_current_item)
+        timing_item: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(project_uuid, index_of_current_item)
 
         # last frame
         if index_of_current_item == (length_of_list - 1):
@@ -2413,12 +2412,11 @@ def create_timings_row_at_frame_number(project_uuid, frame_number):
     
     # remove the interpolated video from the current row and the row before and after - unless it is the first or last row
     timing_data = {
-        "project_uuid": project_uuid,
+        "project_id": project_uuid,
         "frame_time": 0.0,
         "frame_number": frame_number,
         "aux_frame_index": frame_number,
-        "interpolated_video": "",
-        "animation_style": "",
+        "animation_style": None,
     }
     timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
     
@@ -2545,14 +2543,15 @@ def render_video(final_video_name, project_uuid, quality):
 
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(project_uuid)
 
-    calculate_desired_duration_of_each_clip(timing_uuid)
+    calculate_desired_duration_of_each_clip(project_uuid)
 
     total_number_of_videos = len(timing_details) - 1
 
     for i in range(0, total_number_of_videos):
         index_of_current_item = i
-        current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(timing.project.uuid, i)
+        current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(project_uuid, i)
 
+        timing = timing_details[i]
         if quality == VideoQuality.HIGH.value:
             data_repo.update_specific_timing(current_timing.uuid, timed_clip="")
             interpolation_steps = calculate_dynamic_interpolations_steps(
@@ -2580,13 +2579,14 @@ def render_video(final_video_name, project_uuid, quality):
 
     for i in timing_details:
         index_of_current_item = timing_details.index(i)
+        timing = timing_details[index_of_current_item]
         current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(timing.project.uuid, index_of_current_item)
         if index_of_current_item <= total_number_of_videos:
             if not current_timing.timed_clip:
                 desired_duration = current_timing.clip_duration
                 location_of_input_video_file = current_timing["interpolated_clip"]
                 duration_of_input_video = float(get_duration_from_video(location_of_input_video_file))
-                location_of_output_video = update_speed_of_video_clip(location_of_input_video_file, True, timing_uuid)
+                location_of_output_video = update_speed_of_video_clip(location_of_input_video_file, True, timing.uuid)
                 
                 if quality == VideoQuality.PREVIEW.value:
                     print("")

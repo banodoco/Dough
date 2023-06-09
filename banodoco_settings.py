@@ -1,9 +1,10 @@
 import os
 from dotenv import dotenv_values
 
-from shared.constants import SERVER, ServerType
+from shared.constants import SERVER, GuidanceType, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
+from ui_components.constants import AnimationStyleType
 from ui_components.models import InternalUserObject
 from utils.common_methods import create_working_assets
 from utils.data_repo.data_repo import DataRepo
@@ -24,7 +25,7 @@ def project_init():
     data_repo = DataRepo()
 
     # create a user if not already present (if dev mode)
-    # if this is the local server with no user than create one
+    # if this is the local server with no user than create one and related data (it's handled by the backend)
     user_count = data_repo.get_total_user_count()
     if SERVER != ServerType.PRODUCTION.value and not user_count:
         user_data = {
@@ -36,19 +37,7 @@ def project_init():
         user: InternalUserObject = data_repo.create_user(**user_data)
         logger.log(LoggingType.INFO, "new temp user created: " + user.name)
 
-        # creating it's app setting as well
-        setting_data = {
-            "user_id": user.uuid,
-            "welcome_state": 0
-        }
-        app_setting = data_repo.create_app_setting(**setting_data)
-
-        # creating a new project for this user
-        project_data = {
-            "user_id": user.uuid,
-            "name": "my_first_project",
-        }
-        project = data_repo.create_project(**project_data)
+        create_new_user_data(user)
 
     app_secret = data_repo.get_app_secrets_from_user_uuid()
 
@@ -75,4 +64,48 @@ def project_init():
     #         env_file.write(f'FERNET_KEY={secret_key.decode()}\n')
         
     #     ENCRYPTION_KEY = secret_key.decode()
+
+
+# sample data required for starting the project like app settings, project settings
+def create_new_user_data(user: InternalUserObject):
+    data_repo = DataRepo()
     
+    # TODO: write this logic in a separate signal + make it an atomic transaction
+    # creating it's app setting
+    setting_data = {
+        "user_id": user.uuid,
+        "welcome_state": 0
+    }
+    app_setting = data_repo.create_app_setting(**setting_data)
+
+    # creating a new project for this user
+    project_data = {
+        "user_id": user.uuid,
+        "name": "my_first_project",
+        'width': 512,
+        'height': 512
+    }
+    project = data_repo.create_project(**project_data)
+
+    # creating a project settings for this
+    project_setting_data = {
+        "project_id" : project.uuid,
+        "input_type" : "video",
+        "default_strength": 0.63,
+        "extraction_type" : "Extract manually",
+        "width" : 512,
+        "height" : 512,
+        "default_negative_prompt" : "",
+        "default_guidance_scale" : 7.5,
+        "default_seed" : 1234,
+        "default_num_inference_steps" : 30,
+        "default_stage" : "Extracted Key Frames",
+        "default_custom_model_id_list" : "[]",
+        "default_adapter_type" : "N",
+        "guidance_type" : GuidanceType.IMAGE.value,
+        "default_animation_style" : AnimationStyleType.INTERPOLATION.value,
+        "default_low_threshold" : 0,
+        "default_high_threshold" : 0
+    }
+
+    project_setting = data_repo.create_project_setting(**project_setting_data)

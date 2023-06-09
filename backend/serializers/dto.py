@@ -1,9 +1,10 @@
 from rest_framework import serializers
 
-from backend.models import AIModel, AppSetting, BackupTiming, InferenceLog, Project, Setting, Timing, User
+from backend.models import AIModel, AppSetting, BackupTiming, InferenceLog, InternalFileObject, Project, Setting, Timing, User
 
 class InternalFileDto(serializers.ModelSerializer):
     class Meta:
+        model = InternalFileObject
         fields = ('uuid', 'name', 'local_path', 'hosted_url', 'created_on')
 
 class UserDto(serializers.ModelSerializer):
@@ -78,7 +79,7 @@ class TimingDto(serializers.ModelSerializer):
             "mask",
             "canny_image",
             "preview_video",
-            "custom_model_uuid_list",
+            "custom_model_id_list",
             "frame_time",
             "frame_number",
             "primary_image",

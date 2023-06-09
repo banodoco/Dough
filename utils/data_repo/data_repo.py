@@ -154,8 +154,8 @@ class DataRepo:
         timing = self.db_repo.get_timing_from_frame_number(project_uuid, frame_number).data['data']
         return InternalFrameTimingObject(**timing) if timing else None
     
-    def get_primary_variant_location(self, uuid):
-        location = self.db_repo.get_primary_variant_location(uuid).data['data']
+    def get_primary_variant_location(self, timing_uuid):
+        location = self.db_repo.get_primary_variant_location(timing_uuid).data['data']
         return location
     
     # this is based on the aux_frame_index and not the order in the db
@@ -231,7 +231,7 @@ class DataRepo:
 
     # setting
     def get_project_setting(self, project_id):
-        project_setting = self.db_repo.get_project_from_uuid(project_id).data['data']
+        project_setting = self.db_repo.get_project_setting(project_id).data['data']
         return InternalSettingObject(**project_setting) if project_setting else None
     
     # TODO: add valid model_id check throughout dp_repo

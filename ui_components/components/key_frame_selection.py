@@ -185,9 +185,9 @@ def key_frame_selection_page(mainheader2, project_uuid):
     if len(timing_details) == 0:
         st.info("Once you've added key frames, they'll appear here.")
     else:
-        # which_image_value is the current keyframe number
-        if "which_image_value" not in st.session_state:
-            st.session_state['which_image_value'] = 0
+        # current_frame_index is the current keyframe number
+        if "current_frame_index" not in st.session_state:
+            st.session_state['current_frame_index'] = 0
 
         timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
@@ -210,11 +210,11 @@ def key_frame_selection_page(mainheader2, project_uuid):
             header1, header2, header3 = st.columns([1, 1, 1])
             with header1:
                 frame_number = st.number_input(f"Key frame # (out of {len(timing_details)-1})", min_value=0, max_value=len(
-                    timing_details)-1, step=1, value=st.session_state['which_image_value'], key="which_image_checker")
-                st.session_state['which_image'] = timing_details[frame_number].uuid
+                    timing_details)-1, step=1, value=st.session_state['current_frame_index'], key="which_image_checker")
+                st.session_state['current_frame_uuid'] = timing_details[frame_number].uuid
 
-                if st.session_state['which_image_value'] != timing_details[frame_number].aux_frame_index:
-                    st.session_state['which_image_value'] = timing_details[frame_number].aux_frame_index
+                if st.session_state['current_frame_index'] != timing_details[frame_number].aux_frame_index:
+                    st.session_state['current_frame_index'] = timing_details[frame_number].aux_frame_index
                     st.experimental_rerun()
                 index_of_current_item = timing_details[frame_number].aux_frame_index
 
@@ -322,7 +322,7 @@ def key_frame_selection_page(mainheader2, project_uuid):
                                 created_row = create_timings_row_at_frame_number(project_uuid, index_of_current_item)
                                 extract_frame(created_row.uuid, video_file, new_frame_number)
 
-                            st.session_state['which_image_value'] = created_row
+                            st.session_state['current_frame_index'] = created_row
                             st.experimental_rerun()
                 else:
                     with bottom1:
@@ -370,7 +370,7 @@ def key_frame_selection_page(mainheader2, project_uuid):
 
                     with col4:
                         if st.button(f"Jump to single frame view for #{index_of_current_item}", help="This will switch to a Single Frame view type and open this individual image."):
-                            st.session_state['which_image_value'] = index_of_current_item
+                            st.session_state['current_frame_index'] = index_of_current_item
                             st.session_state['key_frame_view_type'] = "Single View"
                             st.session_state['key_frame_view_type_index'] = 1
                             st.session_state['open_manual_extractor'] = False

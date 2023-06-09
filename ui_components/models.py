@@ -42,34 +42,34 @@ class InternalAIModelObject:
 class InternalFrameTimingObject:
     def __init__(self, **kwargs):
         self.uuid = kwargs['uuid'] if 'uuid' in kwargs else None
-        self.project = InternalProjectObject(**kwargs["project"]) if 'project' in kwargs else None
-        self.model = InternalAIModelObject(**kwargs["model"]) if 'model' in kwargs else None
-        self.source_image = InternalFileObject(**kwargs["source_image"]) if 'source_image' in kwargs else None
-        self.interpolated_clip = InternalFileObject(**kwargs["interpolated_clip"]) if 'interpolated_clip' in kwargs else None
-        self.timed_clip = InternalFileObject(**kwargs["timed_clip"]) if 'timed_clip' in kwargs else None
-        self.mask = InternalFileObject(**kwargs["mask"]) if 'mask' in kwargs else None
-        self.canny_image = InternalFileObject(**kwargs["canny_image"]) if 'canny_image' in kwargs else None
-        self.preview_video = InternalFileObject(**kwargs["preview_video"]) if 'preview_video' in kwargs else None
-        self.primary_image = InternalFileObject(**kwargs["primary_image"]) if 'primary_image' in kwargs else None
-        self.custom_model_uuid_list = kwargs['custom_model_uuid_list'] if 'custom_model_uuid_list' in kwargs else []
-        self.frame_time = kwargs['frame_time'] if 'frame_time' in kwargs else None
-        self.frame_number = kwargs['frame_number'] if 'frame_number' in kwargs else None
-        self.alternative_images = kwargs['alternative_images'] if 'alternative_images' in kwargs else []
-        self.custom_pipeline = kwargs['custom_pipeline'] if 'custom_pipeline' in kwargs else None
-        self.prompt = kwargs['prompt'] if 'prompt' in kwargs else None
-        self.negative_prompt = kwargs['negative_prompt'] if 'negative_prompt' in kwargs else None
-        self.guidance_scale = kwargs['guidance_scale'] if 'guidance_scale' in kwargs else None
-        self.seed = kwargs['seed'] if 'seed' in kwargs else None
-        self.num_inteference_steps = kwargs['num_inteference_steps'] if 'num_inteference_steps' in kwargs else None
-        self.strength = kwargs['strength'] if 'strength' in kwargs else None
-        self.notes = kwargs['notes'] if 'notes' in kwargs else None
-        self.adapter_type = kwargs['adapter_type'] if 'adapter_type' in kwargs else None
-        self.clip_duration = kwargs['clip_duration'] if 'clip_duration' in kwargs else None
-        self.animation_style = kwargs['animation_style'] if 'animation_style' in kwargs else None
-        self.interpolation_steps = kwargs['interpolation_steps'] if 'interpolation_steps' in kwargs else None
-        self.low_threshold = kwargs['low_threshold'] if 'low_threshold' in kwargs else None
-        self.high_threshold = kwargs['high_threshold'] if 'high_threshold' in kwargs else None
-        self.aux_frame_index = kwargs['aux_frame_index'] if 'aux_frame_index' in kwargs else None
+        self.project = InternalProjectObject(**kwargs["project"]) if 'project' in kwargs and kwargs["project"] else None
+        self.model = InternalAIModelObject(**kwargs["model"]) if 'model' in kwargs and kwargs["model"]  else None
+        self.source_image = InternalFileObject(**kwargs["source_image"]) if 'source_image' in kwargs and kwargs["source_image"] else None
+        self.interpolated_clip = InternalFileObject(**kwargs["interpolated_clip"]) if 'interpolated_clip' in kwargs and kwargs["interpolated_clip"] else None
+        self.timed_clip = InternalFileObject(**kwargs["timed_clip"]) if 'timed_clip' in kwargs and kwargs["timed_clip"] else None
+        self.mask = InternalFileObject(**kwargs["mask"]) if 'mask' in kwargs and kwargs["mask"] else None
+        self.canny_image = InternalFileObject(**kwargs["canny_image"]) if 'canny_image' in kwargs and kwargs["canny_image"] else None
+        self.preview_video = InternalFileObject(**kwargs["preview_video"]) if 'preview_video' in kwargs and kwargs["preview_video"] else None
+        self.primary_image = InternalFileObject(**kwargs["primary_image"]) if 'primary_image' in kwargs and kwargs["primary_image"] else None
+        self.custom_model_id_list = kwargs['custom_model_id_list'] if 'custom_model_id_list' in kwargs and kwargs["custom_model_id_list"] else []
+        self.frame_time = kwargs['frame_time'] if 'frame_time' in kwargs and kwargs["frame_time"]  else None
+        self.frame_number = kwargs['frame_number'] if 'frame_number' in kwargs and kwargs["frame_number"]   else None
+        self.alternative_images = kwargs['alternative_images'] if 'alternative_images' in kwargs and kwargs["alternative_images"] else []
+        self.custom_pipeline = kwargs['custom_pipeline'] if 'custom_pipeline' in kwargs and kwargs["custom_pipeline"] else None
+        self.prompt = kwargs['prompt'] if 'prompt' in kwargs and kwargs["prompt"] else None
+        self.negative_prompt = kwargs['negative_prompt'] if 'negative_prompt' in kwargs and kwargs["negative_prompt"] else None
+        self.guidance_scale = kwargs['guidance_scale'] if 'guidance_scale' in kwargs and kwargs["guidance_scale"] else None
+        self.seed = kwargs['seed'] if 'seed' in kwargs and kwargs["seed"] else None
+        self.num_inteference_steps = kwargs['num_inteference_steps'] if 'num_inteference_steps' in kwargs and kwargs["num_inteference_steps"] else None
+        self.strength = kwargs['strength'] if 'strength' in kwargs and kwargs["strength"] else None
+        self.notes = kwargs['notes'] if 'notes' in kwargs and kwargs["notes"] else None
+        self.adapter_type = kwargs['adapter_type'] if 'adapter_type' in kwargs and kwargs["adapter_type"] else None
+        self.clip_duration = kwargs['clip_duration'] if 'clip_duration' in kwargs and kwargs["clip_duration"] else None
+        self.animation_style = kwargs['animation_style'] if 'animation_style' in kwargs and kwargs["animation_style"] else None
+        self.interpolation_steps = kwargs['interpolation_steps'] if 'interpolation_steps' in kwargs and kwargs["interpolation_steps"] else None
+        self.low_threshold = kwargs['low_threshold'] if 'low_threshold' in kwargs and kwargs["low_threshold"] else None
+        self.high_threshold = kwargs['high_threshold'] if 'high_threshold' in kwargs and kwargs["high_threshold"] else None
+        self.aux_frame_index = kwargs['aux_frame_index'] if 'aux_frame_index' in kwargs and kwargs["aux_frame_index"] else None
 
     @property
     def alternative_images_list(self):
@@ -110,28 +110,28 @@ class InternalAppSettingObject:
 class InternalSettingObject:
     def __init__(self, **kwargs):
         self.uuid = kwargs['uuid'] if 'uuid' in kwargs else None
-        self.project = InternalProjectObject(**kwargs["project"]) if 'project' in kwargs else None
-        self.default_model = InternalAIModelObject(**kwargs["default_model"]) if 'default_model' in kwargs else None
-        self.audio = InternalFileObject(**kwargs["audio"]) if 'audio' in kwargs else None
-        self.input_video = InternalFileObject(**kwargs["input_video"]) if 'input_video' in kwargs else None
-        self.default_prompt = kwargs['default_prompt'] if 'default_prompt' in kwargs else None
-        self.default_strength = kwargs['default_strength'] if 'default_strength' in kwargs else None
-        self.default_custom_pipeline = kwargs['default_custom_pipeline'] if 'default_custom_pipeline' in kwargs else None
-        self.input_type = kwargs['input_type'] if 'input_type' in kwargs else None
-        self.extraction_type = kwargs['extraction_type'] if 'extraction_type' in kwargs else None
-        self.width = kwargs['width'] if 'width' in kwargs else None
-        self.height = kwargs['height'] if 'height' in kwargs else None
-        self.default_negative_prompt = kwargs['default_negative_prompt'] if 'default_negative_prompt' in kwargs else None
-        self.default_guidance_scale = kwargs['default_guidance_scale'] if 'default_guidance_scale' in kwargs else None
-        self.default_seed = kwargs['default_seed'] if 'default_seed' in kwargs else None
-        self.default_num_inference_steps = kwargs['default_num_inference_steps'] if 'default_num_inference_steps' in kwargs else None
-        self.default_stage = kwargs['default_stage'] if 'default_stage' in kwargs else None
-        self.default_custom_model_uuid_list = kwargs['default_custom_model_uuid_list'] if 'default_custom_model_uuid_list' in kwargs else []
-        self.default_adapter_type = kwargs['default_adapter_type'] if 'default_adapter_type' in kwargs else None
-        self.guidance_type = kwargs['guidance_type'] if 'guidance_type' in kwargs else None
-        self.default_animation_style = kwargs['default_animation_style'] if 'default_animation_style' in kwargs else None
-        self.default_low_threshold = kwargs['default_low_threshold'] if 'default_low_threshold' in kwargs else None
-        self.default_high_threshold = kwargs['default_high_threshold'] if 'default_high_threshold' in kwargs else None
+        self.project = InternalProjectObject(**kwargs["project"]) if key_present('project', kwargs) else None
+        self.default_model = InternalAIModelObject(**kwargs["default_model"]) if key_present('default_model', kwargs) else None
+        self.audio = InternalFileObject(**kwargs["audio"]) if key_present('audio', kwargs) else None
+        self.input_video = InternalFileObject(**kwargs["input_video"]) if key_present('input_video', kwargs) else None
+        self.default_prompt = kwargs['default_prompt'] if key_present('default_prompt', kwargs) else None
+        self.default_strength = kwargs['default_strength'] if key_present('default_strength', kwargs)  else None
+        self.default_custom_pipeline = kwargs['default_custom_pipeline'] if key_present('default_custom_pipeline', kwargs) else None
+        self.input_type = kwargs['input_type'] if key_present('input_type', kwargs) else None
+        self.extraction_type = kwargs['extraction_type'] if key_present('extraction_type', kwargs) else None
+        self.width = kwargs['width'] if key_present('width', kwargs) else None
+        self.height = kwargs['height'] if key_present('height', kwargs) else None
+        self.default_negative_prompt = kwargs['default_negative_prompt'] if key_present('default_negative_prompt', kwargs) else None
+        self.default_guidance_scale = kwargs['default_guidance_scale'] if key_present('default_guidance_scale', kwargs) else None
+        self.default_seed = kwargs['default_seed'] if key_present('default_seed', kwargs) else None
+        self.default_num_inference_steps = kwargs['default_num_inference_steps'] if key_present('default_num_inference_steps', kwargs) else None
+        self.default_stage = kwargs['default_stage'] if key_present('default_stage', kwargs) else None
+        self.default_custom_model_uuid_list = kwargs['default_custom_model_uuid_list'] if key_present('default_custom_model_uuid_list', kwargs) else []
+        self.default_adapter_type = kwargs['default_adapter_type'] if key_present('default_adapter_type', kwargs) else None
+        self.guidance_type = kwargs['guidance_type'] if key_present('guidance_type', kwargs) else None
+        self.default_animation_style = kwargs['default_animation_style'] if key_present('default_animation_style', kwargs) else None
+        self.default_low_threshold = kwargs['default_low_threshold'] if key_present('default_low_threshold', kwargs) else None
+        self.default_high_threshold = kwargs['default_high_threshold'] if key_present('default_high_threshold', kwargs) else None
 
 class InternalBackupObject:
     def __init__(self, **kwargs):
@@ -163,3 +163,10 @@ class InferenceLogObject:
         self.input_params = kwargs['input_params'] if 'input_params' in kwargs else None
         self.output_details = kwargs['output_details'] if 'output_details' in kwargs else None
         self.total_inference_time = kwargs['total_inference_time'] if 'total_inference_time' in kwargs else None
+
+
+def key_present(key, dict):
+    if key in dict and dict[key] is not None:
+        return True
+    
+    return False

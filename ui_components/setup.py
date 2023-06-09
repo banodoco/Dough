@@ -58,8 +58,8 @@ def setup_app_ui():
         selected_index = next(i for i, p in enumerate(project_list) if p.name == selected_project_name)
         st.session_state["project_uuid"] = project_list[selected_index].uuid
 
-        if "which_image_value" not in st.session_state:
-            st.session_state['which_image_value'] = 0
+        if "current_frame_index" not in st.session_state:
+            st.session_state['current_frame_index'] = 0
 
         if st.session_state["index_of_project_name"] != next((i for i, p in enumerate(
                     project_list) if p.uuid == st.session_state["project_uuid"]), None):

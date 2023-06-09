@@ -49,7 +49,7 @@ class User(BaseModel):
     class Meta:
         app_label = 'backend'
         db_table = 'user'
-
+        
 
 class Project(BaseModel):
     name = models.CharField(max_length=255, default="")
@@ -69,6 +69,7 @@ class AIModel(BaseModel):
     diffusers_url = models.TextField(default="", blank=True)    # for downloading and running models offline
     category = models.CharField(max_length=255,default="", blank=True)     # Lora, Dreambooth..
     training_image_list = models.TextField(default="", blank=True)      # contains an array of uuid of file objects
+    keyword = models.CharField(max_length=255,default="", blank=True)
 
     class Meta:
         app_label = 'backend'
@@ -247,7 +248,7 @@ class Setting(BaseModel):
     default_seed = models.IntegerField(default=0)
     default_num_inference_steps = models.IntegerField(default=50)
     default_stage = models.CharField(max_length=255)    # extracted_key_frames
-    default_custom_model_id_list = models.TextField(default=None, null=True, blank=True)
+    default_custom_model_uuid_list = models.TextField(default=None, null=True, blank=True)
     default_adapter_type = models.CharField(max_length=255, default="", blank=True)
     guidance_type = models.CharField(max_length=255)   # "Drawing", "Images", "Video"
     default_animation_style = models.CharField(max_length=255)  # "Interpolation", "Direct Morphing"
