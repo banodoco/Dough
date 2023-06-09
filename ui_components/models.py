@@ -100,10 +100,11 @@ class InternalAppSettingObject:
     def __init__(self, **kwargs):
         self.user = InternalUserObject(**kwargs["user"]) if 'user' in kwargs else None
         self.previous_project = kwargs['previous_project'] if 'previous_project' in kwargs else None
-        self.replicate_user_name = kwargs['replicate_user_name'] if 'replicate_user_name' in kwargs else None
+        self.replicate_user_name = kwargs['replicate_user_name'] if 'replicate_user_name' in kwargs and kwargs['replicate_user_name'] else ""
         self.welcome_state = kwargs['welcome_state'] if 'welcome_state' in kwargs else None
         self.aws_secret_access_key = kwargs['aws_secret_access_key'] if 'aws_secret_access_key' in kwargs else None
         self.aws_access_key = kwargs['aws_access_key'] if 'aws_access_key' in kwargs else None
+        self.replicate_key = kwargs['replicate_key'] if 'replicate_key' in kwargs and kwargs['replicate_key']  else ""
 
 class InternalSettingObject:
     def __init__(self, **kwargs):

@@ -20,3 +20,4 @@ inference_log/*
 test.py
 doc.py
 .env
+data.json

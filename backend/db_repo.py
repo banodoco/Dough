@@ -160,7 +160,12 @@ class DBRepo:
         if not file:
             file = InternalFileObject.objects.create(name=filename, file_type=type, **kwargs)
         else:
-            file.update(**kwargs)
+            kwargs['file_type'] = InternalFileType.IMAGE.value
+            kwargs['name'] = filename
+
+            for attr, value in kwargs.items():
+                setattr(file, attr, value)
+            file.save()
         
         payload = {
             'data': InternalFileDto(file).data
@@ -311,23 +316,25 @@ class DBRepo:
         return InternalResponse(payload, 'ai_model fetched', True)
     
     def update_ai_model(self, **kwargs):
-        attirbutes = UpdateAIModelDao(attirbutes=kwargs)
-        if not attirbutes.is_valid():
-            return InternalResponse({}, attirbutes.errors, False)
+        attributes = UpdateAIModelDao(attributes=kwargs)
+        if not attributes.is_valid():
+            return InternalResponse({}, attributes.errors, False)
         
-        ai_model = AIModel.objects.filter(uuid=attirbutes.data['uuid'], is_disabled=False).first()
+        ai_model = AIModel.objects.filter(uuid=attributes.data['uuid'], is_disabled=False).first()
         if not ai_model:
             return InternalResponse({}, 'invalid ai model uuid', False)
         
-        if 'user_id' in attirbutes.data and attirbutes.data['user_id']:
-            user = User.objects.filter(uuid=attirbutes.data['user_id'], is_disabled=False).first()
+        if 'user_id' in attributes.data and attributes.data['user_id']:
+            user = User.objects.filter(uuid=attributes.data['user_id'], is_disabled=False).first()
             if not user:
                 return InternalResponse({}, 'invalid user', False)
             
-            print(attirbutes.data['user_id'])
-            attirbutes.data['user_id'] = user.id
+            print(attributes.data['user_id'])
+            attributes.data['user_id'] = user.id
         
-        ai_model.update(**attirbutes.data)
+        for attr, value in attributes.data.items():
+            setattr(ai_model, attr, value)
+        ai_model.save()
         
         payload = {
             'data': AIModelDto(ai_model).data
@@ -649,7 +656,10 @@ class DBRepo:
             
             kwargs['primay_image_id'] = primay_image.id
         
-        timing.update(**kwargs)
+        for attr, value in kwargs.items():
+            setattr(timing, attr, value)
+        timing.save()
+
         return InternalResponse({}, 'timing updated successfully', True)
     
     def delete_timing_from_uuid(self, uuid):
@@ -713,7 +723,9 @@ class DBRepo:
             print(attributes.data)
             attributes._data['user_id'] = user.id
 
-        app_setting.update(**attributes.data)
+        for attr, value in attributes.data.items():
+            setattr(app_setting, attr, value)
+        app_setting.save()
 
         return InternalResponse({}, 'app_setting updated successfully', True)
 
@@ -882,8 +894,9 @@ class DBRepo:
             
             attributes._data['input_video_id'] = video.id
 
-        
-        setting.update(**attributes.data)
+        for attr, value in attributes.data.items():
+            setattr(setting, attr, value)
+        setting.save()
         
         payload = {
             'data': SettingDto(setting).data
