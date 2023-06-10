@@ -50,16 +50,16 @@ class DataRepo:
         file = self.db_repo.get_file_from_uuid(uuid).data['data']
         return InternalUserObject(file) if file else None
     
-    def get_all_file_list(self, file_type: InternalFileType, tag = None, project_uuid = None):
-        filter_data = {file_type: file_type}
+    def get_all_file_list(self, file_type: InternalFileType, tag = None, project_id = None):
+        filter_data = {"type": file_type}
         if tag:
             filter_data['tag'] = tag
-        if project_uuid:
-            filter_data['project_uuid'] = project_uuid
+        if project_id:
+            filter_data['project_id'] = project_id
 
         file_list = self.db_repo.get_all_file_list(**filter_data).data['data']
         
-        return [InternalFileObject(**file) for file in file_list] if file_list else None
+        return [InternalFileObject(**file) for file in file_list] if file_list else []
     
     def create_or_update_file(self, filename, type=InternalFileType.IMAGE.value, **kwargs):
         file = self.db_repo.create_or_update_file(filename, type, **kwargs).data['data']

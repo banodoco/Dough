@@ -1,4 +1,5 @@
 import os
+import shutil
 from dotenv import dotenv_values
 
 from shared.constants import SERVER, GuidanceType, ServerType
@@ -6,7 +7,7 @@ from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from ui_components.constants import AnimationStyleType
 from ui_components.models import InternalUserObject
-from utils.common_methods import create_working_assets
+from utils.common_methods import copy_sample_assets, create_working_assets
 from utils.data_repo.data_repo import DataRepo
 
 REPLICATE_API_TOKEN = None
@@ -46,9 +47,6 @@ def project_init():
 
     AWS_ACCESS_KEY_ID = app_secret["aws_access_key"]
     AWS_SECRET_ACCESS_KEY = app_secret["aws_secret_key"]
-
-    # create asset directories
-    create_working_assets('controlnet_test')
 
     # create encryption key if not already present (not applicable in dev mode)
     # env_vars = dotenv_values('.env')
@@ -102,10 +100,12 @@ def create_new_user_data(user: InternalUserObject):
         "default_stage" : "Extracted Key Frames",
         "default_custom_model_id_list" : "[]",
         "default_adapter_type" : "N",
-        "guidance_type" : GuidanceType.IMAGE.value,
+        "guidance_type" : GuidanceType.DRAWING.value,
         "default_animation_style" : AnimationStyleType.INTERPOLATION.value,
         "default_low_threshold" : 0,
         "default_high_threshold" : 0
     }
 
     project_setting = data_repo.create_project_setting(**project_setting_data)
+
+    create_working_assets(project.uuid)

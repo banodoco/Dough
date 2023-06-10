@@ -83,7 +83,7 @@ def setup_app_ui():
             pages = [
                 {
                     "section_name": "Main Process",
-                    "pages": ["Frame Styling", "Key Frame Selection", "Frame Editing", "Video Rendering"]
+                    "pages": ["Key Frame Selection", "Frame Styling", "Frame Editing", "Video Rendering"]
                 },
                 {
                     "section_name": "Tools",

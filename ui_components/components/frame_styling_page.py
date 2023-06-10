@@ -6,7 +6,7 @@ import os
 from PIL import Image
 import requests as r
 from streamlit_drawable_canvas import st_canvas
-from shared.constants import InternalFileType
+from shared.constants import GuidanceType, InternalFileType
 from shared.file_upload.s3 import upload_file
 from ui_components.common_methods import delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, create_timings_row_at_frame_number, extract_canny_lines, convert_to_minutes_and_seconds, styling_element, create_full_preview_video, back_and_forward_buttons, resize_and_rotate_element, crop_image_element, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, single_frame_time_changer
 import uuid
@@ -126,7 +126,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                 if st.session_state['section'] == "Guidance":
 
-                    guidance_types = ["Drawing", "Images", "Video"]
+                    guidance_types = GuidanceType.value_list()
                     if 'how to guide_index' not in st.session_state:
                         if not project_settings.guidance_type:
                             st.session_state['how_to_guide_index'] = 0

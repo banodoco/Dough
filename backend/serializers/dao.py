@@ -15,6 +15,7 @@ class CreateFileDao(serializers.Serializer):
     type = serializers.ChoiceField(choices=InternalFileType.value_list())
     local_path = serializers.CharField(max_length=512, required=False)
     hosted_url = serializers.CharField(max_length=512, required=False)
+    tag = serializers.CharField(max_length=100, required=False)
 
     def validate(self, data):
         local_path = data.get('local_path')

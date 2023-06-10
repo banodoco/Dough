@@ -16,12 +16,34 @@ class BaseModel(models.Model):
         abstract = True
 
 
+class User(BaseModel):
+    name = models.CharField(max_length=255, default="")
+    email = models.CharField(max_length=255)
+    password = models.TextField(default=None, null=True)
+    type = models.CharField(max_length=50, default="user")
+    third_party_id = models.CharField(max_length=255, default=None, null=True)
+
+    class Meta:
+        app_label = 'backend'
+        db_table = 'user'
+
+
+class Project(BaseModel):
+    name = models.CharField(max_length=255, default="")
+    user = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True)
+
+    class Meta:
+        app_label = 'backend'
+        db_table = 'project'
+
+
 class InternalFileObject(BaseModel):
     name = models.TextField(default="")
     type = models.CharField(max_length=255, default="")     # image, video, audio
     local_path = models.TextField(default="")
     hosted_url = models.TextField(default="")
     tag = models.CharField(max_length=255,default="")  # background_image, mask_image, canny_image etc..
+    project = models.ForeignKey(Project, on_delete=models.SET_NULL, default=None, null=True)
 
     class Meta:
         app_label = 'backend'
@@ -37,27 +59,6 @@ class InternalFileObject(BaseModel):
     @property
     def location(self):
         return self.local_path if self.local_path else self.hosted_url
-
-
-class User(BaseModel):
-    name = models.CharField(max_length=255, default="")
-    email = models.CharField(max_length=255)
-    password = models.TextField(default=None, null=True)
-    type = models.CharField(max_length=50, default="user")
-    third_party_id = models.CharField(max_length=255, default=None, null=True)
-
-    class Meta:
-        app_label = 'backend'
-        db_table = 'user'
-        
-
-class Project(BaseModel):
-    name = models.CharField(max_length=255, default="")
-    user = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True)
-
-    class Meta:
-        app_label = 'backend'
-        db_table = 'project'
 
 
 class AIModel(BaseModel):

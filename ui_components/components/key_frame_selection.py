@@ -6,7 +6,7 @@ import os
 import time
 from PIL import Image
 from moviepy.video.io.VideoFileClip import VideoFileClip
-from shared.constants import InternalFileType
+from shared.constants import InternalFileTag, InternalFileType
 
 from ui_components.common_methods import calculate_frame_number_at_time, create_timings_row_at_frame_number, create_video_without_interpolation, delete_frame, extract_frame, preview_frame,calculate_time_at_frame_number
 from ui_components.models import InternalFileObject, InternalFrameTimingObject
@@ -28,20 +28,38 @@ def key_frame_selection_page(mainheader2, project_uuid):
     st.sidebar.write(
         "Open the toggle below to upload and select new inputs video to use for this project.")
 
-    if project_settings.input_video == "":
+    if not project_settings.input_video:
         st.sidebar.warning(
             "No input video selected - please select one below.")
-    if project_settings.input_video != "":
+    else:
         st.sidebar.success("Input video selected - you can change this below.")
 
     with st.sidebar.expander("Select input video", expanded=False):
-        directory_path = f'videos/{project_settings.project.name}/assets/resources/input_videos'
+        directory_path = f'videos/{project_settings.project.uuid}/assets/resources/input_videos'
         if not os.path.exists(directory_path):
             os.makedirs(directory_path)
         
-        input_video_list = [f for f in os.listdir(directory_path) if f.endswith(('.mp4', '.mov', '.MOV', '.avi'))]
+        local_input_video_list = [f for f in os.listdir(directory_path) if f.endswith(('.mp4', '.mov', '.MOV', '.avi'))]
+
+        input_video_list = data_repo.get_all_file_list(file_type=InternalFileType.VIDEO.value, \
+                                                       tag=InternalFileTag.INPUT_VIDEO.value, project_id=project_uuid)
+        
+        # NOTE: this is a hackish solution to sync the local files with the db. will fix this in the future
+        # TODO: figure out how to handle this while hosting
+        input_video_name_list = [f.name for f in input_video_list]
+        for video in local_input_video_list:
+            # if a local video is not present in the db then adding it
+            if video not in input_video_name_list:
+                data_repo.create_file(name=video, type=InternalFileType.VIDEO.value, \
+                                      local_path=f'videos/{project_settings.project.uuid}/assets/resources/input_videos/{video}', \
+                                      tag=InternalFileTag.INPUT_VIDEO.value, project_id=project_uuid)
+        
+        # fetching the updated video list
+        input_video_list = data_repo.get_all_file_list(file_type=InternalFileType.VIDEO.value, \
+                                                       tag=InternalFileTag.INPUT_VIDEO.value, project_id=project_uuid)
+        
         project_name = project_settings.project.name
-        if project_settings.input_video != "":
+        if project_settings.input_video:
             input_video_index = input_video_list.index(
                 project_settings.input_video)
             input_video = st.selectbox(
@@ -64,22 +82,19 @@ def key_frame_selection_page(mainheader2, project_uuid):
                 f"This video is {duration} seconds long, and has {total_frames} frames.")
             # st.video(f'videos/{project_name}/assets/resources/input_videos/{input_video}')
         else:
-            input_video = st.selectbox("Input video:", input_video_list)
-
-        video_data = {
-            "name": str(uuid.uuid4()) + ".png",
-            "type": InternalFileType.VIDEO.value,
-            "local_path": f'videos/{project_name}/assets/resources/input_videos/{input_video}'
-        }
-        video_file: InternalFileObject = data_repo.create_file(**video_data)
+            # NOTE: this is an issue with streamlit. what is displayed in dropdown UI is the output in code (key and value are one and the same)
+            # we should make a custom component for this. Right now handling this in a hackish way
+            input_video_name = st.selectbox("Input video:", [v.name for v in input_video_list])
+            input_video = next(i for i in input_video_list if i.name == input_video_name)
 
         if st.button("Update Video"):
-            data_repo.update_project_setting(project_uuid, "input_video", input_video)
+            data_repo.update_project_setting(project_uuid, input_video_id=input_video.uuid)
             st.experimental_rerun()
+
         st.markdown("***")
         st.subheader("Upload new video")
-        width = int(project_settings["width"])
-        height = int(project_settings["height"])
+        width = int(project_settings.width)
+        height = int(project_settings.height)
 
         uploaded_file = st.file_uploader("Choose a file")
         keep_audio = st.checkbox("Keep audio from original video.")
@@ -91,8 +106,8 @@ def key_frame_selection_page(mainheader2, project_uuid):
             with open(video_path, 'wb') as f:
                 f.write(uploaded_file.getbuffer())
 
-            width = int(project_settings["width"])
-            height = int(project_settings["height"])
+            width = int(project_settings.width)
+            height = int(project_settings.height)
             if resize_this_video == True:
                 resize_video(input_path=video_path,
                              output_path=video_path, width=width, height=height)

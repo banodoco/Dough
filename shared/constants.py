@@ -41,6 +41,7 @@ class InternalFileType(ExtendedEnum):
 class InternalFileTag(ExtendedEnum):
     BACKGROUND_IMAGE = 'background_image'
     COMPLETED_VIDEO = 'completed_video'
+    INPUT_VIDEO = 'input_video'
 
 
 ##################### global constants #####################

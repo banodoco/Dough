@@ -143,11 +143,18 @@ class DBRepo:
 
         return InternalResponse(payload, 'file found', True)
     
-    def get_all_file_list(self, file_type: InternalFileType, tag=None):
-        if tag:
-            file_list = InternalFileObject.objects.filter(file_type=file_type.value, tag=tag, is_disabled=False).all()
-        else:
-            file_list = InternalFileObject.objects.filter(file_type=file_type.value, is_disabled=False).all()
+    # TODO: create a dao for this
+    def get_all_file_list(self, **kwargs):
+        kwargs['is_disabled'] = False
+
+        if 'project_id' in kwargs and kwargs['project_id']:
+            project = Project.objects.filter(uuid=kwargs['project_id'], is_disabled=False).first()
+            if not project:
+                return InternalResponse({}, 'project not found', False)
+
+            kwargs['project_id'] = project.id
+
+        file_list = InternalFileObject.objects.filter(**kwargs).all()
         
         payload = {
             'data': InternalFileDto(file_list, many=True).data
@@ -175,6 +182,8 @@ class DBRepo:
     
     def create_file(self, **kwargs):
         data = CreateFileDao(data=kwargs)
+        if not data.is_valid():
+            return InternalResponse({}, data.errors, False)
 
         # hosting the file if only local path is provided and it's a production environment
         if 'hosted_url' not in kwargs and AUTOMATIC_FILE_HOSTING:
@@ -193,6 +202,14 @@ class DBRepo:
             
             print(data.data)
             data._data['hosted_url'] = hosted_url
+
+        if 'project_id' in kwargs and kwargs['project_id']:
+            project = Project.objects.filter(uuid=kwargs['project_id'], is_disabled=False).first()
+            if not project:
+                return InternalResponse({}, 'invalid project', False)
+            
+            print(data.data)
+            data._data['project_id'] = project.id
         
 
         if not data.is_valid():
@@ -830,6 +847,27 @@ class DBRepo:
                 return InternalResponse({}, 'invalid project', False)
             
             attributes._data['project_id'] = project.id
+
+        if 'default_model_id' in attributes.data and attributes.data['default_model_id']:
+            model = AIModel.objects.filter(uuid=attributes.data['default_model_id'], is_disabled=False).first()
+            if not model:
+                return InternalResponse({}, 'invalid model', False)
+            
+            attributes._data['default_model_id'] = model.id
+
+        if "audio_id" in attributes.data and attributes.data["audio_id"]:
+            audio = InternalFileObject.objects.filter(uuid=attributes.data["audio_id"], is_disabled=False).first()
+            if not audio:
+                return InternalResponse({}, 'invalid audio', False)
+            
+            attributes._data["audio_id"] = audio.id
+    
+        if "input_video_id" in attributes.data and attributes.data["input_video_id"]:
+            video = InternalFileObject.objects.filter(uuid=attributes.data["input_video_id"], is_disabled=False).first()
+            if not video:
+                return InternalResponse({}, 'invalid video', False)
+            
+            attributes._data["input_video_id"] = video.id
         
         setting = Setting.objects.create(**attributes.data)
         
@@ -840,6 +878,10 @@ class DBRepo:
         return InternalResponse(payload, 'setting fetched', True)
     
     def update_project_setting(self, project_uuid, **kwargs):
+        attributes = UpdateSettingDao(data=kwargs)
+        if not attributes.is_valid():
+            return InternalResponse({}, attributes.errors, False)
+        
         project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
         if not project:
             return InternalResponse({}, 'invalid project', False)
@@ -848,7 +890,35 @@ class DBRepo:
         if not setting:
             return InternalResponse({}, 'invalid project', False)
         
-        for attr, value in kwargs.items():
+        if 'project_id' in attributes.data and attributes.data['project_id']:
+            project = Project.objects.filter(uuid=attributes.data['project_id'], is_disabled=False).first()
+            if not project:
+                return InternalResponse({}, 'invalid project', False)
+            
+            attributes._data['project_id'] = project.id
+
+        if 'default_model_id' in attributes.data and attributes.data['default_model_id']:
+            model = AIModel.objects.filter(uuid=attributes.data['default_model_id'], is_disabled=False).first()
+            if not model:
+                return InternalResponse({}, 'invalid model', False)
+            
+            attributes._data['default_model_id'] = model.id
+
+        if "audio_id" in attributes.data and attributes.data["audio_id"]:
+            audio = InternalFileObject.objects.filter(uuid=attributes.data["audio_id"], is_disabled=False).first()
+            if not audio:
+                return InternalResponse({}, 'invalid audio', False)
+            
+            attributes._data["audio_id"] = audio.id
+    
+        if "input_video_id" in attributes.data and attributes.data["input_video_id"]:
+            video = InternalFileObject.objects.filter(uuid=attributes.data["input_video_id"], is_disabled=False).first()
+            if not video:
+                return InternalResponse({}, 'invalid video', False)
+            
+            attributes._data["input_video_id"] = video.id
+        
+        for attr, value in attributes.data.items():
             setattr(setting, attr, value)
         setting.save()
         
