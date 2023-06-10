@@ -240,7 +240,8 @@ class DataRepo:
         return InternalSettingObject(**project_setting) if project_setting else None
     
     def update_project_setting(self, project_uuid, **kwargs):
-        project_setting = self.db_repo.update_project_setting(project_uuid, **kwargs).data['data']
+        kwargs['uuid'] = project_uuid
+        project_setting = self.db_repo.update_project_setting(**kwargs).data['data']
         return InternalSettingObject(**project_setting) if project_setting else None
 
     def bulk_update_project_setting(self, **kwargs):

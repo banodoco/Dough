@@ -52,7 +52,7 @@ class InternalFrameTimingObject:
         self.preview_video = InternalFileObject(**kwargs["preview_video"]) if 'preview_video' in kwargs and kwargs["preview_video"] else None
         self.primary_image = InternalFileObject(**kwargs["primary_image"]) if 'primary_image' in kwargs and kwargs["primary_image"] else None
         self.custom_model_id_list = kwargs['custom_model_id_list'] if 'custom_model_id_list' in kwargs and kwargs["custom_model_id_list"] else []
-        self.frame_time = kwargs['frame_time'] if 'frame_time' in kwargs and kwargs["frame_time"]  else None
+        self.frame_time = kwargs['frame_time'] if 'frame_time' in kwargs else None
         self.frame_number = kwargs['frame_number'] if 'frame_number' in kwargs and kwargs["frame_number"]   else None
         self.alternative_images = kwargs['alternative_images'] if 'alternative_images' in kwargs and kwargs["alternative_images"] else []
         self.custom_pipeline = kwargs['custom_pipeline'] if 'custom_pipeline' in kwargs and kwargs["custom_pipeline"] else None

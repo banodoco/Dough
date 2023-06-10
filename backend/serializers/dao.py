@@ -154,7 +154,7 @@ class UpdateSettingDao(serializers.Serializer):
     default_guidance_scale = serializers.FloatField(required=False)
     default_seed = serializers.IntegerField(required=False)
     default_num_inference_steps = serializers.IntegerField(required=False)
-    default_stage = serializers.CharField(max_length=255)
+    default_stage = serializers.CharField(max_length=255, required=False)
     default_custom_model_id_list = serializers.CharField(max_length=1024, required=False)
     default_adapter_type = serializers.CharField(max_length=255, required=False)
     guidance_type = serializers.CharField(max_length=255, required=False)

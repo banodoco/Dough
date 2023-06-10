@@ -5,7 +5,7 @@ from backend.models import AIModel, AppSetting, BackupTiming, InferenceLog, Inte
 class InternalFileDto(serializers.ModelSerializer):
     class Meta:
         model = InternalFileObject
-        fields = ('uuid', 'name', 'local_path', 'hosted_url', 'created_on')
+        fields = ('uuid', 'name', 'local_path', 'type',  'hosted_url', 'created_on')
 
 class UserDto(serializers.ModelSerializer):
     class Meta:

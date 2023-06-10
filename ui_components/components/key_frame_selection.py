@@ -60,12 +60,14 @@ def key_frame_selection_page(mainheader2, project_uuid):
         
         project_name = project_settings.project.name
         if project_settings.input_video:
-            input_video_index = input_video_list.index(
-                project_settings.input_video)
-            input_video = st.selectbox(
-                "Input video:", input_video_list, index=input_video_index)
+            input_video_index = next(d for d,i in enumerate(input_video_list) if i.name == project_settings.input_video.name)
+            
+            input_video_name = st.selectbox(
+                "Input video:", [v.name for v in input_video_list], index=input_video_index)
+            input_video = next(i for i in input_video_list if i.name == input_video_name)
+
             input_video_cv2 = cv2.VideoCapture(
-                f'videos/{project_name}/assets/resources/input_videos/{input_video}')
+                f'videos/{project_settings.project.uuid}/assets/resources/input_videos/{input_video.name}')
             total_frames = input_video_cv2.get(cv2.CAP_PROP_FRAME_COUNT)
             fps = input_video_cv2.get(cv2.CAP_PROP_FPS)
             # duration to 2 decimal places
@@ -102,7 +104,7 @@ def key_frame_selection_page(mainheader2, project_uuid):
             "Resize video to match project settings: " + str(width) + "px x " + str(height) + "px", value=True)
 
         if st.button("Upload new video"):
-            video_path = f'videos/{project_name}/assets/resources/input_videos/{uploaded_file.name}'
+            video_path = f'videos/{project_settings.project.uuid}/assets/resources/input_videos/{uploaded_file.name}'
             with open(video_path, 'wb') as f:
                 f.write(uploaded_file.getbuffer())
 
@@ -114,18 +116,18 @@ def key_frame_selection_page(mainheader2, project_uuid):
             st.success("Video uploaded successfully")
             if keep_audio == True:
                 clip = VideoFileClip(
-                    f'videos/{project_name}/assets/resources/input_videos/{uploaded_file.name}')
-                clip.audio.write_audiofile(f'videos/{project_name}/assets/resources/audio/extracted_audio.mp3')
+                    f'videos/{project_settings.project.uuid}/assets/resources/input_videos/{uploaded_file.name}')
+                clip.audio.write_audiofile(f'videos/{project_settings.project.uuid}/assets/resources/audio/extracted_audio.mp3')
 
                 file_data = {
                     "name": str(uuid.uuid4()) + ".png",
                     "type": InternalFileType.AUDIO.value,
-                    "local_path": f'videos/{project_name}/assets/resources/audio/extracted_audio.mp3'
+                    "local_path": f'videos/{project_settings.project.uuid}/assets/resources/audio/extracted_audio.mp3'
                 }
                 audio_file: InternalFileObject = data_repo.create_file(**file_data)
                 data_repo.update_project_setting(project_uuid, audio_uuid=audio_file.uuid)
             
-            data_repo.update_project_setting(project_uuid, input_video_uuid=video_file.uuid)
+            data_repo.update_project_setting(project_uuid, input_video_uuid=input_video.uuid)
             project_settings = data_repo.get_project_setting(project_uuid)
             time.sleep(1)
             st.experimental_rerun()
@@ -138,18 +140,11 @@ def key_frame_selection_page(mainheader2, project_uuid):
     type_of_extraction = st.sidebar.radio(
         "Choose type of key frame extraction", types_of_extraction)
     input_video_cv2 = cv2.VideoCapture(
-        f'videos/{project_name}/assets/resources/input_videos/{input_video}')
+        f'videos/{project_settings.project.uuid}/assets/resources/input_videos/{input_video.name}')
     total_frames = input_video_cv2.get(cv2.CAP_PROP_FRAME_COUNT)
     fps = input_video_cv2.get(cv2.CAP_PROP_FPS)
     st.sidebar.caption(
         f"This video is {total_frames} frames long and has a framerate of {fps} fps.")
-    
-    video_data = {
-        "name": str(uuid.uuid4()) + ".png",
-        "type": InternalFileType.VIDEO.value,
-        "local_path": f'videos/{project_name}/assets/resources/input_videos/{input_video}'
-    }
-    video_file: InternalFileObject = data_repo.create_file(**video_data)
 
     if type_of_extraction == "Regular intervals":
         frequency_of_extraction = st.sidebar.slider("How frequently would you like to extract frames?", min_value=1, max_value=120, step=1,
@@ -158,7 +153,7 @@ def key_frame_selection_page(mainheader2, project_uuid):
             if st.sidebar.button("Extract frames"):
                 data_repo.update_project_setting(project_uuid, extraction_type="Regular intervals")
                 
-                data_repo.update_project_setting(project_uuid, input_video_uuid=video_file.uuid)
+                data_repo.update_project_setting(project_uuid, input_video_uuid=input_video.uuid)
 
                 number_of_extractions = int(
                     total_frames/frequency_of_extraction)
@@ -170,7 +165,7 @@ def key_frame_selection_page(mainheader2, project_uuid):
                     last_index = len(timing_details)
                     create_timings_row_at_frame_number(project_uuid, last_index)
                     timing_details = data_repo.get_timing_list_from_project(project_uuid)
-                    extract_frame(timing_details[last_index].uuid, video_file, extract_frame_number)
+                    extract_frame(timing_details[last_index].uuid, input_video, extract_frame_number)
                 st.experimental_rerun()
         else:
             st.sidebar.button("Extract frames", disabled=True)
@@ -185,14 +180,14 @@ def key_frame_selection_page(mainheader2, project_uuid):
         if st.sidebar.checkbox("I understand that running this will remove every existing frame"):
             if st.sidebar.button("Re-extract frames"):
                 data_repo.update_project_setting(project_uuid, extraction_type="Extract from csv")
-                data_repo.update_project_setting(project_uuid, input_video_uuid=video_file.uuid)
+                data_repo.update_project_setting(project_uuid, input_video_uuid=input_video.uuid)
 
                 timing_details = data_repo.get_timing_list_from_project(project_uuid)
                 for i in timing_details:
                     index_of_current_item = timing_details.index(i)
                     extract_frame_number = calculate_frame_number_at_time(
-                        video_file, timing_details[index_of_current_item].frame_time, project_uuid)
-                    extract_frame(timing_details[index_of_current_item].uuid, video_file, extract_frame_number)
+                        input_video, timing_details[index_of_current_item].frame_time, project_uuid)
+                    extract_frame(timing_details[index_of_current_item].uuid, input_video, extract_frame_number)
 
         else:
             st.sidebar.button("Re-extract frames", disabled=True)
@@ -316,7 +311,7 @@ def key_frame_selection_page(mainheader2, project_uuid):
                         st.info(
                             f"{timing_details[index_of_current_item].frame_number} is the current frame")
 
-                st.image(preview_frame(project_name,
+                st.image(preview_frame(project_settings.project.uuid,
                          input_video, new_frame_number))
 
                 bottom1, bottom2 = st.columns([1, 1])
@@ -326,16 +321,16 @@ def key_frame_selection_page(mainheader2, project_uuid):
                         if st.button("Update this frame to here"):
                             data_repo.update_specific_timing(project_uuid, frame_number=new_frame_number)
                             timing_details = data_repo.get_timing_list_from_project(project_uuid)
-                            extract_frame(timing_details[index_of_current_item], video_file, new_frame_number)
+                            extract_frame(timing_details[index_of_current_item], input_video, new_frame_number)
                             st.experimental_rerun()
                     with bottom2:
                         if st.button("Add new key frame at this time"):
                             if new_frame_number > int(float(timing_details[index_of_current_item].frame_number)):
                                 created_row = create_timings_row_at_frame_number(project_uuid, index_of_current_item+1)
-                                extract_frame(created_row.uuid, video_file, new_frame_number)
+                                extract_frame(created_row.uuid, input_video, new_frame_number)
                             elif new_frame_number < int(float(timing_details[index_of_current_item].frame_number)):
                                 created_row = create_timings_row_at_frame_number(project_uuid, index_of_current_item)
-                                extract_frame(created_row.uuid, video_file, new_frame_number)
+                                extract_frame(created_row.uuid, input_video, new_frame_number)
 
                             st.session_state['current_frame_index'] = created_row
                             st.experimental_rerun()
@@ -348,8 +343,8 @@ def key_frame_selection_page(mainheader2, project_uuid):
                                   disabled=True, help="This is the current frame.")
 
         elif st.session_state['key_frame_view_type'] == "List View":
-            for image_name in timing_details:
-                index_of_current_item = timing_details.index(image_name)
+            timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(project_uuid)
+            for index_of_current_item, frame_timing in enumerate(timing_details):
 
                 col1, col2, col3 = st.columns([1, 1, 1])
                 with col1:
@@ -357,19 +352,19 @@ def key_frame_selection_page(mainheader2, project_uuid):
                 col2.empty()
                 with col3:
                     if st.button("Delete this keyframe", key=f'{index_of_current_item}'):
-                        delete_frame(timing_details[index_of_current_item].uuid)
+                        delete_frame(frame_timing.uuid)
                         timing_details = data_repo.get_timing_list_from_project(project_uuid)
                         st.experimental_rerun()
 
                 # if image is empty, skip it
-                if image_name.source_image.location == "":
+                if frame_timing.source_image.location == "":
                     st.error("This is an empty key frame")
                 else:                                
-                    if image_name.source_image.location.startswith("http"):
-                        image = timing_details[index_of_current_item].source_image.location
+                    if frame_timing.source_image.location.startswith("http"):
+                        image = frame_timing.source_image.location
                     else:
                         image = Image.open(
-                            timing_details[index_of_current_item].source_image.location)
+                            frame_timing.source_image.location)
 
                     st.image(image, width=300)
 
@@ -377,7 +372,7 @@ def key_frame_selection_page(mainheader2, project_uuid):
 
                     with col1:
                         frame_time = round(
-                            float(timing_details[index_of_current_item].frame_time), 2)
+                            float(frame_timing.frame_time), 2)
                         st.markdown(f"Frame Time: {frame_time}")
 
                     with col2:
@@ -430,7 +425,7 @@ def key_frame_selection_page(mainheader2, project_uuid):
             slider = st.slider("Choose frame:", max_value=max_frames,
                                min_value=min_frames, step=granularity, value=min_frames)
 
-            st.image(preview_frame(project_uuid, video_file, slider),
+            st.image(preview_frame(project_uuid, input_video, slider),
                      use_column_width=True)
 
             if st.button(f"Add Frame {slider} to Project"):
@@ -438,9 +433,9 @@ def key_frame_selection_page(mainheader2, project_uuid):
                 created_row = create_timings_row_at_frame_number(project_uuid, last_index)                
                 timing_details = data_repo.get_timing_list_from_project(project_uuid)
                 data_repo.update_specific_timing(created_row.uuid, frame_number=slider)
-                frame_time = calculate_time_at_frame_number(video_file, slider, project_uuid)                
+                frame_time = calculate_time_at_frame_number(input_video, slider)                
                 data_repo.update_specific_timing(created_row.uuid, frame_time=frame_time)
-                extract_frame(created_row.uuid, video_file, slider)
+                extract_frame(created_row.uuid, input_video, slider)
                 st.experimental_rerun()
 
         st.markdown("***")
@@ -449,4 +444,4 @@ def key_frame_selection_page(mainheader2, project_uuid):
             # create_video_without_interpolation(timing_details, "preview")
             create_video_without_interpolation(timing_details[last_index].uuid)
             
-            st.video(f'videos/{project_name}/preview.mp4')
+            st.video(f'videos/{project_settings.project.uuid}/preview.mp4')

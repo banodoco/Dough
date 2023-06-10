@@ -994,13 +994,8 @@ def convert_to_minutes_and_seconds(frame_time):
     return f"{minutes} min, {seconds} secs"
 
 
-def calculate_time_at_frame_number(input_video, frame_number, project_uuid):
-    data_repo = DataRepo()
-    project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
-    
-    input_video = "videos/" + \
-        str(project.name) + "/assets/resources/input_videos/" + str(input_video)
-    video = cv2.VideoCapture(input_video)
+def calculate_time_at_frame_number(input_video: InternalFileObject, frame_number):
+    video = cv2.VideoCapture(input_video.local_path)
     frame_count = float(video.get(cv2.CAP_PROP_FRAME_COUNT))
     frame_percentage = float(frame_number / frame_count)
     fps = int(video.get(cv2.CAP_PROP_FPS))
@@ -1009,19 +1004,19 @@ def calculate_time_at_frame_number(input_video, frame_number, project_uuid):
     return time_at_frame
 
 
-def preview_frame(project_uuid, video_name, frame_num):
+def preview_frame(project_uuid, video, frame_num):
     data_repo = DataRepo()
     project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
     cap = cv2.VideoCapture(
-        f'videos/{project.name}/assets/resources/input_videos/{video_name}')
+        f'videos/{project.uuid}/assets/resources/input_videos/{video.name}')
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
     ret, frame = cap.read()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     cap.release()
     return frame
 
-# extract_frame_number is extracted from the input_video and added at frame_number
-# in the timings table
+# extract_frame_number is extracted from the input_video and added as source_image at frame_number
+# (timing_uuid) in the timings table
 def extract_frame(timing_uuid, input_video: InternalFileObject, extract_frame_number):
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
@@ -1030,25 +1025,28 @@ def extract_frame(timing_uuid, input_video: InternalFileObject, extract_frame_nu
     # input_video = "videos/" + \
     #     str(timing.project.name) + \
     #     "/assets/resources/input_videos/" + str(input_video)
-    input_video = cv2.VideoCapture(input_video.local_path)
-    total_frames = input_video.get(cv2.CAP_PROP_FRAME_COUNT)
+    cv_video = cv2.VideoCapture(input_video.local_path)
+    total_frames = cv_video.get(cv2.CAP_PROP_FRAME_COUNT)
     if extract_frame_number == total_frames:
         extract_frame_number = int(total_frames - 1)
-    input_video.set(cv2.CAP_PROP_POS_FRAMES, extract_frame_number)
-    ret, frame = input_video.read()
+    cv_video.set(cv2.CAP_PROP_POS_FRAMES, extract_frame_number)
+    ret, frame = cv_video.read()
+
+    frame_time = calculate_time_at_frame_number(input_video, float(extract_frame_number))
 
     data_repo.update_specific_timing(timing_uuid, frame_number=extract_frame_number)
+    data_repo.update_specific_timing(timing_uuid, frame_time=frame_time)
 
     file_name = ''.join(random.choices(
         string.ascii_lowercase + string.digits, k=16)) + ".png"
-    cv2.imwrite("videos/" + timing.project.name +
-                "/assets/frames/1_selected/" + str(file_name), frame)
+    file_location = "videos/" + timing.project.uuid + "/assets/frames/1_selected/" + str(file_name)
+    cv2.imwrite(file_location, frame)
     # img = Image.open("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
     # img.save("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
     
-    final_image = data_repo.create_file(file_name, type=InternalFileType.IMAGE.value, local_path="videos/" + timing.project.name +
-                "/assets/frames/1_selected/" + str(file_name))
-    data_repo.update_specific_timing(timing_uuid, source_image_uuid=final_image.uuid)
+    final_image = data_repo.create_file(name=file_name, type=InternalFileType.IMAGE.value, \
+                                        local_path=file_location)
+    data_repo.update_specific_timing(timing_uuid, source_image_id=final_image.uuid)
 
     return final_image
 
@@ -1059,7 +1057,7 @@ def calculate_frame_number_at_time(input_video, time_of_frame, project_uuid):
     
     time_of_frame = float(time_of_frame)
     input_video = "videos/" + \
-        str(project.name) + "/assets/resources/input_videos/" + str(input_video)
+        str(project.uuid) + "/assets/resources/input_videos/" + str(input_video)
     video = cv2.VideoCapture(input_video)
     frame_count = float(video.get(cv2.CAP_PROP_FRAME_COUNT))
     fps = int(video.get(cv2.CAP_PROP_FPS))
@@ -2422,11 +2420,11 @@ def create_timings_row_at_frame_number(project_uuid, frame_number):
     
     prev_timing: InternalFrameTimingObject = data_repo.get_prev_timing(timing.uuid)
     if prev_timing:
-        data_repo.update_specific_timing(prev_timing.uuid, "interpolated_video", "")
+        data_repo.update_specific_timing(prev_timing.uuid, interpolated_clip_id=None)
 
     next_timing: InternalAIModelObject = data_repo.get_next_timing(timing.uuid)
     if next_timing:
-        data_repo.update_specific_timing_value(next_timing.uuid, "interpolated_video", "")
+        data_repo.update_specific_timing(next_timing.uuid, interpolated_clip_id=None)
 
     return timing
 

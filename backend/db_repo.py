@@ -580,6 +580,8 @@ class DBRepo:
             print(attributes.data)
             attributes._data['project_id'] = project.id
         
+        attributes._data['aux_frame_index'] = Timing.objects.filter(project_id=attributes.data['project_id'], is_disabled=False).count()
+        
         timing = Timing.objects.create(**attributes.data)
         
         payload = {
@@ -599,83 +601,98 @@ class DBRepo:
         
         return InternalResponse({}, 'timing removed successfully', True)
     
+    # TODO: add dao in this method
     def update_specific_timing(self, uuid, **kwargs):
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)
         
-        if 'primary_image' in kwargs:
-            if kwargs['primary_image'] < len(timing.alternative_images_list):
-                kwargs['primary_image_id'] = timing.alternative_images_list[kwargs['primary_image']].uuid
-                del kwargs['primary_image']
+        if 'primary_image_id' in kwargs:
+            if kwargs['primary_image_id'] != None:
+                primary_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['primary_image_id'], is_disabled=False).first()
+                if not primary_image:
+                    return InternalResponse({}, 'invalid primary image uuid', False)
+                
+                kwargs['primary_image_id'] = primary_image.id
         
-        if 'primay_image_uuid' in kwargs:
-            primay_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['primay_image_uuid'], is_disabled=False).first()
-            if not primay_image:
-                return InternalResponse({}, 'invalid primary image uuid', False)
-            
-            kwargs['primay_image_id'] = primay_image.id
+        if 'primay_image_id' in kwargs:
+            if kwargs['primay_image_id'] != None:
+                primay_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['primay_image_id'], is_disabled=False).first()
+                if not primay_image:
+                    return InternalResponse({}, 'invalid primary image uuid', False)
+                
+                kwargs['primay_image_id'] = primay_image.id
 
-        if 'model_uuid' in kwargs:
-            model: AIModel = AIModel.objects.filter(uuid=kwargs['model_uuid'], is_disabled=False).first()
-            if not model:
-                return InternalResponse({}, 'invalid model uuid', False)
-        
-
-        if 'source_image_uuid' in kwargs:
-            source_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['source_image_uuid'], is_disabled=False).first()
-            if not source_image:
-                return InternalResponse({}, 'invalid source image uuid', False)
-            
-            kwargs['source_image_id'] = source_image.id
-        
-
-        if 'interpolated_clip_uuid' in kwargs:
-            interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['interpolated_clip_uuid'], is_disabled=False).first()
-            if not interpolated_clip:
-                return InternalResponse({}, 'invalid interpolated clip uuid', False)
-            
-            kwargs['interpolated_clip_id'] = interpolated_clip.id
+        if 'model_id' in kwargs:
+            if kwargs['model_id'] != None:
+                model: AIModel = AIModel.objects.filter(uuid=kwargs['model_uuid'], is_disabled=False).first()
+                if not model:
+                    return InternalResponse({}, 'invalid model uuid', False)
+                
+                kwargs['model_id'] = model.id
         
 
-        if 'timed_clip_uuid' in kwargs:
-            timed_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['timed_clip_uuid'], is_disabled=False).first()
-            if not timed_clip:
-                return InternalResponse({}, 'invalid timed clip uuid', False)
-            
-            kwargs['timed_clip_id'] = timed_clip.id
+        if 'source_image_id' in kwargs:
+            if kwargs['source_image_id'] != None:
+                source_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['source_image_id'], is_disabled=False).first()
+                if not source_image:
+                    return InternalResponse({}, 'invalid source image uuid', False)
+                
+                kwargs['source_image_id'] = source_image.id
         
 
-        if 'mask_uuid' in kwargs:
-            mask: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['mask_uuid'], is_disabled=False).first()
-            if not mask:
-                return InternalResponse({}, 'invalid mask uuid', False)
-            
-            kwargs['mask_id'] = mask.id
+        if 'interpolated_clip_id' in kwargs:
+            if kwargs['interpolated_clip_id'] != None:
+                interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['interpolated_clip_id'], is_disabled=False).first()
+                if not interpolated_clip:
+                    return InternalResponse({}, 'invalid interpolated clip uuid', False)
+                
+                kwargs['interpolated_clip_id'] = interpolated_clip.id
         
 
-        if 'canny_image_uuid' in kwargs:
-            canny_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['canny_image_uuid'], is_disabled=False).first()
-            if not canny_image:
-                return InternalResponse({}, 'invalid canny image uuid', False)
-            
-            kwargs['canny_image_id'] = canny_image.id
+        if 'timed_clip_id' in kwargs:
+            if kwargs['timed_clip_id'] != None:
+                timed_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['timed_clip_id'], is_disabled=False).first()
+                if not timed_clip:
+                    return InternalResponse({}, 'invalid timed clip uuid', False)
+                
+                kwargs['timed_clip_id'] = timed_clip.id
         
 
-        if 'preview_video_uuid' in kwargs:
-            preview_video: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['preview_video_uuid'], is_disabled=False).first()
-            if not preview_video:
-                return InternalResponse({}, 'invalid preview video uuid', False)
-            
-            kwargs['preview_video_id'] = preview_video.id
+        if 'mask_id' in kwargs:
+            if kwargs['mask_id'] != None:
+                mask: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['mask_id'], is_disabled=False).first()
+                if not mask:
+                    return InternalResponse({}, 'invalid mask uuid', False)
+                
+                kwargs['mask_id'] = mask.id
         
 
-        if 'primay_image_uuid' in kwargs:
-            primay_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['primay_image_uuid'], is_disabled=False).first()
-            if not primay_image:
-                return InternalResponse({}, 'invalid primary image uuid', False)
-            
-            kwargs['primay_image_id'] = primay_image.id
+        if 'canny_image_id' in kwargs:
+            if kwargs['canny_image_id'] != None:
+                canny_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['canny_image_id'], is_disabled=False).first()
+                if not canny_image:
+                    return InternalResponse({}, 'invalid canny image uuid', False)
+                
+                kwargs['canny_image_id'] = canny_image.id
+        
+
+        if 'preview_video_id' in kwargs:
+            if kwargs['preview_video_id'] != None:
+                preview_video: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['preview_video_id'], is_disabled=False).first()
+                if not preview_video:
+                    return InternalResponse({}, 'invalid preview video uuid', False)
+                
+                kwargs['preview_video_id'] = preview_video.id
+        
+
+        if 'primay_image_id' in kwargs:
+            if kwargs['primay_image_id'] != None:
+                primay_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['primay_image_id'], is_disabled=False).first()
+                if not primay_image:
+                    return InternalResponse({}, 'invalid primary image uuid', False)
+                
+                kwargs['primay_image_id'] = primay_image.id
         
         for attr, value in kwargs.items():
             setattr(timing, attr, value)
@@ -877,12 +894,12 @@ class DBRepo:
 
         return InternalResponse(payload, 'setting fetched', True)
     
-    def update_project_setting(self, project_uuid, **kwargs):
+    def update_project_setting(self, **kwargs):
         attributes = UpdateSettingDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
         
-        project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        project: Project = Project.objects.filter(uuid=kwargs['uuid'], is_disabled=False).first()
         if not project:
             return InternalResponse({}, 'invalid project', False)
         
