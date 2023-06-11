@@ -1,6 +1,7 @@
 from django.db import models
 import uuid
 import json
+from django.db.models import F
 
 from shared.constants import SERVER, ServerType
 from shared.file_upload.s3 import generate_s3_url, is_s3_image_url
@@ -145,6 +146,46 @@ class Timing(BaseModel):
     class Meta:
         app_label = 'backend'
         db_table = 'frame_timing'
+
+    def __init__(self, *args, **kwargs):
+        super(Timing, self).__init__(*args, **kwargs)
+        self.old_is_disabled = self.is_disabled
+        self.old_aux_frame_index = self.aux_frame_index
+
+    def save(self, *args, **kwargs):
+        # TODO: updating details of every frame this way can be slow - implement a better strategy
+        # if the frame is being deleted (disabled)
+        if self.old_is_disabled != self.is_disabled and self.is_disabled:
+            timing_list = Timing.objects.filter(project_id=self.project_id, \
+                                            aux_frame_index__gte=self.aux_frame_index, is_disabled=False).order_by('frame_number')
+            
+            # shifting aux_frame_index of all frames after this frame one backwards
+            if self.is_disabled:
+                timing_list.update(aux_frame_index=F('aux_frame_index') - 1)
+            else:
+                # shifting aux_frame_index of all frames after this frame one forward
+                timing_list.update(aux_frame_index=F('aux_frame_index') + 1)
+
+        # if this is a newly created frame or assigned a new aux_frame_index (and not disabled)
+        if (not self.id or self.old_aux_frame_index != self.aux_frame_index) and not self.is_disabled:
+            timing_list = Timing.objects.filter(project_id=self.project_id, \
+                                            aux_frame_index__gte=self.aux_frame_index, is_disabled=False).order_by('frame_number')
+            
+            if not self.id:
+                # shifting aux_frame_index of all frames after this frame one forward
+                timing_list.update(aux_frame_index=F('aux_frame_index') + 1)
+            elif self.old_aux_frame_index != self.aux_frame_index:
+                # moving frames after the new index one forward
+                timing_list.filter(project_id=self.project_id, aux_frame_index__gte=self.aux_frame_index)\
+                    .update(aux_frame_index=F('aux_frame_index') + 1)
+                
+                # moving the frames between old and new index one step backwards
+                timing_list.filter(project_id=self.project_id, aux_frame_index__gt=self.old_aux_frame_index, \
+                                   aux_frame_index__lt=self.aux_frame_index, is_disabled=False)\
+                    .update(aux_frame_index=F('aux_frame_index') - 1)
+                
+        super().save(*args, **kwargs)
+
 
     @property
     def alternative_images_list(self):

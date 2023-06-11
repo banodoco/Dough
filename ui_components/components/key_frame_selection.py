@@ -319,7 +319,7 @@ def key_frame_selection_page(mainheader2, project_uuid):
 
                     with bottom1:
                         if st.button("Update this frame to here"):
-                            data_repo.update_specific_timing(project_uuid, frame_number=new_frame_number)
+                            data_repo.update_specific_timing(timing_details[index_of_current_item].uuid, frame_number=new_frame_number)
                             timing_details = data_repo.get_timing_list_from_project(project_uuid)
                             extract_frame(timing_details[index_of_current_item], input_video, new_frame_number)
                             st.experimental_rerun()
@@ -332,7 +332,7 @@ def key_frame_selection_page(mainheader2, project_uuid):
                                 created_row = create_timings_row_at_frame_number(project_uuid, index_of_current_item)
                                 extract_frame(created_row.uuid, input_video, new_frame_number)
 
-                            st.session_state['current_frame_index'] = created_row
+                            st.session_state['current_frame_index'] = created_row.aux_frame_index
                             st.experimental_rerun()
                 else:
                     with bottom1:

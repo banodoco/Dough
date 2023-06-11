@@ -24,6 +24,7 @@ from backend.models import AIModel, AIModelParamMap, AppSetting, BackupTiming, I
 
 from backend.serializers.dao import CreateAIModelDao, CreateAIModelParamMapDao, CreateAppSettingDao, CreateFileDao, CreateInferenceLogDao, CreateProjectDao, CreateSettingDao, CreateTimingDao, CreateUserDao, UpdateAIModelDao, UpdateAppSettingDao, UpdateSettingDao
 from shared.constants import InternalResponse
+from django.db.models import F
 
 logger = AppLogger()
 
@@ -555,9 +556,9 @@ class DBRepo:
             if not project:
                 return InternalResponse({}, 'invalid project', False)
             
-            timing_list = Timing.objects.filter(project_id=project.id, is_disabled=False).all()
+            timing_list = Timing.objects.filter(project_id=project.id, is_disabled=False).order_by('aux_frame_index').all()
         else:
-            timing_list = Timing.objects.filter(is_disabled=False).all()
+            timing_list = Timing.objects.filter(is_disabled=False).order_by('aux_frame_index').all()
         
         payload = {
             'data': TimingDto(timing_list, many=True).data
@@ -580,7 +581,8 @@ class DBRepo:
             print(attributes.data)
             attributes._data['project_id'] = project.id
         
-        attributes._data['aux_frame_index'] = Timing.objects.filter(project_id=attributes.data['project_id'], is_disabled=False).count()
+        if 'aux_frame_index' not in attributes.data or attributes.data['aux_frame_index'] == None: 
+            attributes._data['aux_frame_index'] = Timing.objects.filter(project_id=attributes.data['project_id'], is_disabled=False).count()
         
         timing = Timing.objects.create(**attributes.data)
         
@@ -726,6 +728,18 @@ class DBRepo:
         timing.source_image_id = None
         timing.save()
         return InternalResponse({}, 'source image removed successfully', True)
+    
+    def move_frame_one_step_forward(self, project_uuid, index_of_frame):
+        project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        if not project:
+            return InternalResponse({}, 'invalid project uuid', False)
+        
+        timing_list = Timing.objects.filter(project_id=project.id, \
+                                            aux_frame_index__gte=index_of_frame, is_disabled=False).order_by('frame_number')
+        
+        timing_list.update(aux_frame_index=F('aux_frame_index') + 1)
+
+        return InternalResponse({}, 'frames moved successfully', True)
     
 
     # app setting

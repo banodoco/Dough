@@ -196,6 +196,9 @@ class DataRepo:
         res = self.db_repo.remove_source_image(timing_uuid)
         return res.status
 
+    def move_frame_one_step_forward(self, project_uuid, index_of_frame):
+        res = self.db_repo.move_frame_one_step_forward(project_uuid, index_of_frame)
+        return res.status
     
 
     # app setting

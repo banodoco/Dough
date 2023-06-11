@@ -1160,13 +1160,14 @@ def delete_frame(timing_uuid):
     index_of_current_item = timing.aux_frame_index
     next_timing = data_repo.get_next_timing(timing_uuid)
     
-    data_repo.update_specific_timing(next_timing.uuid, interpolated_video="")
-    if index_of_current_item < len(timing_details) - 1:
-        data_repo.update_specific_timing(next_timing.uuid, interpolated_video="")
+    if next_timing:
+        data_repo.update_specific_timing(next_timing.uuid, interpolated_video_id=None)
+        if index_of_current_item < len(timing_details) - 1:
+            data_repo.update_specific_timing(next_timing.uuid, interpolated_video_id=None)
 
-    data_repo.update_specific_timing(next_timing.uuid, timed_clip="")
-    if index_of_current_item < len(timing_details) - 1:
-        data_repo.update_specific_timing(next_timing.uuid, timed_clip="")
+        data_repo.update_specific_timing(next_timing.uuid, timed_clip_id=None)
+        if index_of_current_item < len(timing_details) - 1:
+            data_repo.update_specific_timing(next_timing.uuid, timed_clip_id=None)
 
     data_repo.delete_timing_from_uuid(timing.uuid)
 
@@ -2404,7 +2405,7 @@ def custom_pipeline_mystique(timing_uuid, source_image) -> InternalFileObject:
     return output_image_file
 
 
-def create_timings_row_at_frame_number(project_uuid, frame_number):
+def create_timings_row_at_frame_number(project_uuid, index_of_frame):
     data_repo = DataRepo()
     project: InternalProjectObject = data_repo.get_timing_list_from_project(project_uuid)
     
@@ -2412,9 +2413,8 @@ def create_timings_row_at_frame_number(project_uuid, frame_number):
     timing_data = {
         "project_id": project_uuid,
         "frame_time": 0.0,
-        "frame_number": frame_number,
-        "aux_frame_index": frame_number,
         "animation_style": None,
+        "aux_frame_index": index_of_frame
     }
     timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
     

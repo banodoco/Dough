@@ -76,7 +76,7 @@ class CreateTimingDao(serializers.Serializer):
     preview_video_id = serializers.CharField(max_length=100, required=False)
     custom_model_id_list = serializers.CharField(max_length=100, required=False)
     frame_time = serializers.CharField(max_length=100)
-    frame_number = serializers.CharField(max_length=100)
+    frame_number = serializers.CharField(max_length=100, required=False)
     primary_image = serializers.CharField(max_length=100, required=False)
     alternative_images = serializers.CharField(max_length=100, required=False)
     custom_pipeline = serializers.CharField(max_length=100, required=False)
@@ -93,6 +93,7 @@ class CreateTimingDao(serializers.Serializer):
     interpolation_steps = serializers.IntegerField(required=False)
     low_threshold = serializers.FloatField(default=0, required=False)
     high_threshold = serializers.FloatField(default=0, required=False)
+    aux_frame_index = serializers.IntegerField(required=False)
 
 
 class CreateAppSettingDao(serializers.Serializer):

@@ -53,15 +53,15 @@ class InternalFrameTimingObject:
         self.primary_image = InternalFileObject(**kwargs["primary_image"]) if 'primary_image' in kwargs and kwargs["primary_image"] else None
         self.custom_model_id_list = kwargs['custom_model_id_list'] if 'custom_model_id_list' in kwargs and kwargs["custom_model_id_list"] else []
         self.frame_time = kwargs['frame_time'] if 'frame_time' in kwargs else None
-        self.frame_number = kwargs['frame_number'] if 'frame_number' in kwargs and kwargs["frame_number"]   else None
+        self.frame_number = kwargs['frame_number'] if 'frame_number' in kwargs else None
         self.alternative_images = kwargs['alternative_images'] if 'alternative_images' in kwargs and kwargs["alternative_images"] else []
         self.custom_pipeline = kwargs['custom_pipeline'] if 'custom_pipeline' in kwargs and kwargs["custom_pipeline"] else None
         self.prompt = kwargs['prompt'] if 'prompt' in kwargs and kwargs["prompt"] else None
         self.negative_prompt = kwargs['negative_prompt'] if 'negative_prompt' in kwargs and kwargs["negative_prompt"] else None
-        self.guidance_scale = kwargs['guidance_scale'] if 'guidance_scale' in kwargs and kwargs["guidance_scale"] else None
-        self.seed = kwargs['seed'] if 'seed' in kwargs and kwargs["seed"] else None
+        self.guidance_scale = kwargs['guidance_scale'] if 'guidance_scale' in kwargs else None
+        self.seed = kwargs['seed'] if 'seed' in kwargs else None
         self.num_inteference_steps = kwargs['num_inteference_steps'] if 'num_inteference_steps' in kwargs and kwargs["num_inteference_steps"] else None
-        self.strength = kwargs['strength'] if 'strength' in kwargs and kwargs["strength"] else None
+        self.strength = kwargs['strength'] if 'strength' in kwargs else None
         self.notes = kwargs['notes'] if 'notes' in kwargs and kwargs["notes"] else None
         self.adapter_type = kwargs['adapter_type'] if 'adapter_type' in kwargs and kwargs["adapter_type"] else None
         self.clip_duration = kwargs['clip_duration'] if 'clip_duration' in kwargs and kwargs["clip_duration"] else None
@@ -69,7 +69,7 @@ class InternalFrameTimingObject:
         self.interpolation_steps = kwargs['interpolation_steps'] if 'interpolation_steps' in kwargs and kwargs["interpolation_steps"] else None
         self.low_threshold = kwargs['low_threshold'] if 'low_threshold' in kwargs and kwargs["low_threshold"] else None
         self.high_threshold = kwargs['high_threshold'] if 'high_threshold' in kwargs and kwargs["high_threshold"] else None
-        self.aux_frame_index = kwargs['aux_frame_index'] if 'aux_frame_index' in kwargs and kwargs["aux_frame_index"] else None
+        self.aux_frame_index = kwargs['aux_frame_index'] if 'aux_frame_index' in kwargs else None
 
     @property
     def alternative_images_list(self):
