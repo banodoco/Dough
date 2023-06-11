@@ -1,9 +1,8 @@
 # this repo serves as a middlerware between API backend and the frontend
 from shared.constants import InternalFileType
 from backend.db_repo import DBRepo
-from backend.models import InternalFileObject
 from shared.constants import SERVER, ServerType
-from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject, InternalUserObject
+from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalUserObject
 from utils.local_storage.local_storage import get_current_user_uuid
 
 # TODO - to be completed later
@@ -73,6 +72,10 @@ class DataRepo:
         res = self.db_repo.delete_file_from_uuid(uuid)
         return res.status
     
+    def get_image_list_from_uuid_list(self, image_uuid_list, file_type=InternalFileType.IMAGE.value):
+        image_list = self.db_repo.get_image_list_from_uuid_list(image_uuid_list, file_type=file_type).data['data']
+        return [InternalFileObject(**image) for image in image_list] if image_list else []
+    
     # project
     def get_project_from_uuid(self, uuid):
         project = self.db_repo.get_project_from_uuid(uuid).data['data']
@@ -97,7 +100,7 @@ class DataRepo:
     
     def get_all_ai_model_list(self, user_id=None):
         model_list = self.db_repo.get_all_ai_model_list(user_id).data['data']
-        return [InternalAIModelObject(**model) for model in model_list] if model_list else None
+        return [InternalAIModelObject(**model) for model in model_list] if model_list else []
     
     def create_ai_model(self, **kwargs):
         model = self.db_repo.create_ai_model(**kwargs).data['data']

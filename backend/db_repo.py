@@ -231,6 +231,15 @@ class DBRepo:
         
         return InternalResponse({}, 'file deleted successfully', True)
     
+    def get_image_list_from_uuid_list(self, uuid_list, file_type=InternalFileType.IMAGE.value):
+        file_list = InternalFileObject.objects.filter(uuid__in=uuid_list, \
+                                                      is_disabled=False, file_type=file_type).all()
+        payload = {
+            'data': InternalFileDto(file_list, many=True).data
+        }
+        
+        return InternalResponse(payload, 'file list fetched', True)
+    
     # project
     def get_project_from_uuid(self, uuid):
         project = Project.objects.filter(uuid=uuid, is_disabled=False).first()
@@ -300,7 +309,11 @@ class DBRepo:
     
     def get_all_ai_model_list(self, user_id=None):
         if user_id:
-            ai_model_list = AIModel.objects.filter(user_id=user_id, is_disabled=False).all()
+            user = User.objects.filter(uuid=user_id, is_disabled=False).first()
+            if not user:
+                return InternalResponse({}, 'invalid user', False)
+            
+            ai_model_list = AIModel.objects.filter(user_id=user.id, is_disabled=False).all()
         else:
             ai_model_list = AIModel.objects.filter(is_disabled=False).all()
 

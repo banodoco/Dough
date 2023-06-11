@@ -9,12 +9,14 @@ from ui_components.common_methods import train_model
 
 from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject
 from utils.data_repo.data_repo import DataRepo
+from utils.local_storage.local_storage import get_current_user, get_current_user_uuid
 
 
 def custom_models_page(project_uuid):
     data_repo = DataRepo()
     project: InternalProjectObject = data_repo.get_project_from_uuid(
         project_uuid)
+    
     # TODO: common user_id
     app_setting: InternalAppSettingObject = data_repo.get_app_setting_from_uuid()
 
@@ -23,7 +25,8 @@ def custom_models_page(project_uuid):
         st.subheader("Existing Models:")
 
         # TODO: common user_id
-        model_list: List[InternalAIModelObject] = data_repo.get_all_ai_model_list()
+        current_user_uuid = get_current_user_uuid()
+        model_list: List[InternalAIModelObject] = data_repo.get_all_ai_model_list(current_user_uuid)
         if model_list == []:
             st.info("You don't have any models yet. Train a new model below.")
         else:
