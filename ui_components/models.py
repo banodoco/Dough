@@ -1,3 +1,4 @@
+import datetime
 import json
 
 
@@ -190,6 +191,7 @@ class InternalBackupObject:
         self.name = kwargs['name'] if 'name' in kwargs else None
         self.data_dump = kwargs['data_dump'] if 'data_dump' in kwargs else None
         self.note = kwargs['note'] if 'note' in kwargs else None
+        self.created_on = datetime.datetime.fromisoformat(kwargs['created_on']) if 'created_on' in kwargs else None
 
     @property
     def data_dump_dict(self):

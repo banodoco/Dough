@@ -1029,20 +1029,35 @@ class DBRepo:
         if not project:
             return InternalResponse({}, 'invalid project', False)
         
-        timing_list: List[Timing] = self.get_timing_list_from_project(project_uuid)
+        timing_list = Timing.objects.filter(project_id=project.id, is_disabled=False).order_by('aux_frame_index').all()
         
         # bulk fetching files and models from the database
         model_uuid_list = set()
         file_uuid_list = set()
         for timing in timing_list:
-            model_uuid_list.add(timing.model.uuid)
-            file_uuid_list.add(timing.source_image.uuid)
-            file_uuid_list.add(timing.interpolated_clip.uuid)
-            file_uuid_list.add(timing.timed_clip.uuid)
-            file_uuid_list.add(timing.mask.uuid)
-            file_uuid_list.add(timing.canny_image.uuid)
-            file_uuid_list.add(timing.preview_video.uuid)
-            file_uuid_list.add(timing.primary_image.uuid)
+            if timing.model:
+                model_uuid_list.add(timing.model.uuid)
+            
+            if timing.source_image:
+                file_uuid_list.add(timing.source_image.uuid)
+
+            if timing.interpolated_clip:
+                file_uuid_list.add(timing.interpolated_clip.uuid)
+            
+            if timing.timed_clip:
+                file_uuid_list.add(timing.timed_clip.uuid)
+            
+            if timing.mask:
+                file_uuid_list.add(timing.mask.uuid)
+            
+            if timing.canny_image:
+                file_uuid_list.add(timing.canny_image.uuid)
+            
+            if timing.preview_video:
+                file_uuid_list.add(timing.preview_video.uuid)
+            
+            if timing.primary_image:
+                file_uuid_list.add(timing.primary_image.uuid)
         
         model_uuid_list = list(model_uuid_list)
         file_uuid_list = list(file_uuid_list)
@@ -1053,40 +1068,45 @@ class DBRepo:
         id_model_dict, id_file_dict = {}, {}
 
         for model in model_list:
-            id_model_dict[model.uuid] = model
+            id_model_dict[model.id] = model
         
         for file in file_list:
-            id_file_dict[file.uuid] = file
+            id_file_dict[file.id] = file
 
         # replacing ids (foreign keys) with uuids
         final_list = list(timing_list.values())
         for timing in final_list:
-            timing['model_uuid'] = id_model_dict[timing['model_id']]['uuid']
+            timing['uuid'] = str(timing['uuid'])
+            timing['model_uuid'] = str(id_model_dict[timing['model_id']].uuid) if timing['model_id'] else None
             del timing['model_id']
 
-            timing['source_image_uuid'] = id_file_dict[timing['source_image_id']]['uuid']
+            timing['source_image_uuid'] = str(id_file_dict[timing['source_image_id']].uuid) if timing['source_image_id'] else None
             del timing['source_image_id']
 
-            timing['interpolated_clip_uuid'] = id_file_dict[timing['interpolated_clip_id']]['uuid']
+            timing['interpolated_clip_uuid'] = str(id_file_dict[timing['interpolated_clip_id']].uuid) if timing['interpolated_clip_id'] else None
             del timing['interpolated_clip_id']
 
-            timing['timed_clip_uuid'] = id_file_dict[timing['timed_clip_id']]['uuid']
+            timing['timed_clip_uuid'] = str(id_file_dict[timing['timed_clip_id']].uuid) if timing['timed_clip_id'] else None
             del timing['timed_clip_id']
 
-            timing['mask_uuid'] = id_file_dict[timing['mask_id']]['uuid']
+            timing['mask_uuid'] = str(id_file_dict[timing['mask_id']].uuid) if timing['mask_id'] else None
             del timing['mask_id']
 
-            timing['canny_image_uuid'] = id_file_dict[timing['canny_image_id']]['uuid']
+            timing['canny_image_uuid'] = str(id_file_dict[timing['canny_image_id']].uuid) if timing['canny_image_id'] else None
             del timing['canny_image_id']
 
-            timing['preview_video_uuid'] = id_file_dict[timing['preview_video_id']]['uuid']
+            timing['preview_video_uuid'] = str(id_file_dict[timing['preview_video_id']].uuid) if timing['preview_video_id'] else None
             del timing['preview_video_id']
 
-            timing['primary_image_uuid'] = id_file_dict[timing['primary_image_id']]['uuid']
+            timing['primary_image_uuid'] = str(id_file_dict[timing['primary_image_id']].uuid) if timing['primary_image_id'] else None
             del timing['primary_image_id']
 
+            # converting datetime to isoformat
+            timing['created_on'] = timing['created_on'].isoformat()
+            timing['updated_on'] = timing['updated_on'].isoformat()
 
-        serialized_data = json.dumps(list(final_list.values()))
+
+        serialized_data = json.dumps(list(final_list))
         backup_data = {
             "name" : backup_name,
             "project_id" : project.id,

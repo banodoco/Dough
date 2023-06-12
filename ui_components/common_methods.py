@@ -2860,21 +2860,38 @@ def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> Int
 def attach_audio_element(project_uuid, expanded):
     data_repo = DataRepo()
     project: InternalProjectObject = data_repo.get_project_from_uuid(uuid=project_uuid)
-    project_setting: InternalSettingObject = data_repo.get_project_setting(project_uuid=project_uuid)
+    project_setting: InternalSettingObject = data_repo.get_project_setting(project_id=project_uuid)
 
     with st.expander("Audio"):
         uploaded_file = st.file_uploader("Attach audio", type=[
                                          "mp3"], help="This will attach this audio when you render a video")
         if st.button("Upload and attach new audio"):
-            with open(os.path.join(f"videos/{project.name}/assets/resources/audio", uploaded_file.name), "wb") as f:
-                f.write(uploaded_file.getbuffer())
-                data_repo.update_project_setting(
-                    "audio", uploaded_file.name, project.name)
-                st.experimental_rerun()
-        if project_setting.audio.name == "extracted_audio.mp3":
-            st.info("You have attached the audio from the video you uploaded.")
-        if project_setting.audio.name != "":
-            st.audio(f"videos/{project.name}/assets/resources/audio/{project_setting.audio.name}")
+            if uploaded_file:
+                local_file_location = os.path.join(f"videos/{project.uuid}/assets/resources/audio", uploaded_file.name)
+                if not os.path.exists(f"videos/{project.uuid}/assets/resources/audio"):
+                    os.makedirs(f"videos/{project.uuid}/assets/resources/audio")
+
+                with open(local_file_location, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+
+                    file_data = {
+                        "name": str(uuid.uuid4()) + ".png",
+                        "type": InternalFileType.AUDIO.value,
+                        "local_path": local_file_location
+                    }
+                    audio_file: InternalFileObject = data_repo.create_file(**file_data)
+                    data_repo.update_project_setting(project_uuid, audio_id=audio_file.uuid)
+                    st.experimental_rerun()
+            else:
+                st.warning('No file selected')
+        
+        if project_setting.audio:
+            # TODO: store "extracted_audio.mp3" in a constant
+            if project_setting.audio.name == "extracted_audio.mp3":
+                st.info("You have attached the audio from the video you uploaded.")
+            
+            if project_setting.audio.location:
+                st.audio(project_setting.audio.location)
 
 
 def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
