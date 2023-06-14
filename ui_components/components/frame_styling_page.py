@@ -29,6 +29,7 @@ def frame_styling_page(mainheader2, project_name):
 
     
     timing_details = get_timing_details(project_name)
+    project_settings = get_project_settings(project_name)
 
     if len(timing_details) == 0:
         if st.button("Create timings row"):
@@ -75,13 +76,17 @@ def frame_styling_page(mainheader2, project_name):
             top1, top2, top3 = st.columns([4,1,3])
             with top1:
                 view_types = ["Individual View", "List View"]
-                st.session_state['frame_styling_view_type'] = st.radio("View type:", view_types, key="which_view_type", horizontal=True, index=st.session_state['frame_styling_view_type_index'])                        
+                st.session_state['frame_styling_view_type'] = st_memory.radio("View type:", view_types, key="which_view_type", horizontal=True, index=st.session_state['frame_styling_view_type_index'],project_name=project_name,project_settings=project_settings)                  
+                st.write(st.session_state['frame_styling_view_type'])
                 if view_types.index(st.session_state['frame_styling_view_type']) != st.session_state['frame_styling_view_type_index']:
                     st.session_state['frame_styling_view_type_index'] = view_types.index(st.session_state['frame_styling_view_type'])
                     st.experimental_rerun()
                                                                 
             with top2:
                 st.write("")
+            
+            
+                                        
 
             project_settings = get_project_settings(project_name)
 
@@ -931,21 +936,19 @@ def frame_styling_page(mainheader2, project_name):
                 st.markdown("---")
 
                 # Update the current page in session state
-            
-                                    
-                    
-                 
-        
-                                                
-
+                                                                                                                                         
                                                 
                     
             with st.sidebar:
-                element = st.radio("Select element:", ["Styling", "Timeline"], index=0, key="element", horizontal=True)
+                element = st_memory.radio("Select element:", ["Styling", "Timeline"], index=0, key="element", horizontal=True,project_name=project_name, project_settings=project_settings)
                 if element == "Styling":
-                    styling_element(project_name, timing_details, project_settings,"List")
+                    if st.session_state['frame_styling_view_type'] == "Individual View":                        
+                        styling_element(project_name,timing_details, project_settings, view_type="Single", item_to_show=st.session_state['which_image'])
+                    elif st.session_state['frame_styling_view_type'] == "List View":
+                        styling_element(project_name,timing_details, project_settings, view_type="List", item_to_show=None)
+
                 elif element == "Timeline":
-                    stage = st.radio("Select stage:", ["Extracted Key Frames", "Current Main Variants"], index=0, key="stage", horizontal=True)
+                    stage = st_memory.radio("Select stage:", ["Extracted Key Frames", "Current Main Variants"], index=0, key="stage_to_display_timeline", horizontal=True,project_name=project_name, project_settings=project_settings)
                                         
                     number_to_show = st.slider("Number of frames to show:", min_value=1, max_value=20, value=1, key="number_to_show")
                     for i in range(st.session_state['which_image'] - number_to_show, st.session_state['which_image'] + (number_to_show + 1)):

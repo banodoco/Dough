@@ -47,3 +47,5 @@ def number_input(label, min_value=None, max_value=None, value=None, step=None, f
         st.experimental_rerun()
 
     return selection
+
+

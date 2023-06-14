@@ -796,46 +796,65 @@ def back_and_forward_buttons(timing_details):
                 st.session_state['which_image_value'] = st.session_state['which_image_value'] + 2
                 st.experimental_rerun()
 
-def styling_element(project_name,timing_details, project_settings, view_type="List"):
-    
-        
-    stages = ["Extracted Key Frames", "Current Main Variants"]
 
-    if project_settings['last_which_stage_to_run_on'] != "":         
-        if 'index_of_which_stage_to_run_on' not in st.session_state:
-            st.session_state['which_stage_to_run_on'] = project_settings['last_which_stage_to_run_on']
-            st.session_state['index_of_which_stage_to_run_on'] = stages.index(st.session_state['which_stage_to_run_on'])            
-    else:            
-        st.session_state['index_of_which_stage_to_run_on'] = 0
-            
+
+
+def styling_element(project_name,timing_details, project_settings, view_type="Single", item_to_show=None):
+
+    if view_type == "Single":
+        append_to_item_name = f"{st.session_state['which_image']}"
+    elif view_type == "List":
+        append_to_item_name = "bulk"
+
+    stages = ["Source Image", "Main Variant","Custom"]
+    
+    if view_type == "Single":
+        if timing_details[item_to_show]['which_stage_to_run_on'] != "":
+            if f'index_of_which_stage_to_run_on_{append_to_item_name}' not in st.session_state:
+                st.session_state['which_stage_to_run_on'] = timing_details[item_to_show]['which_stage_to_run_on']
+                st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = stages.index(st.session_state['which_stage_to_run_on'])
+        else:
+            st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = 0
+                    
+    elif view_type == "List":
+        if project_settings[f'last_which_stage_to_run_on'] != "":         
+            if f'index_of_which_stage_to_run_on_{append_to_item_name}' not in st.session_state:
+                st.session_state['which_stage_to_run_on'] = project_settings['last_which_stage_to_run_on']
+                st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = stages.index(st.session_state['which_stage_to_run_on'])            
+        else:            
+            st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = 0
+    
     stages1, stages2 = st.columns([1,1])
     with stages1:
-        st.session_state['which_stage_to_run_on'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True, index =st.session_state['index_of_which_stage_to_run_on'] , help="Extracted frames means the original frames from the video.")                                                                                     
+        st.session_state['which_stage_to_run_on'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True, index =st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] , help="Extracted frames means the original frames from the video.")                                                                                     
     with stages2:
-        if st.session_state['which_stage_to_run_on'] == "Extracted Key Frames":
+        if st.session_state['which_stage_to_run_on'] == "Source Image":
             image = timing_details[st.session_state['which_image']]['source_image']            
-        else:
+        elif st.session_state['which_stage_to_run_on'] == "Main Variant":
             image = get_primary_variant_location(timing_details, st.session_state['which_image'])
         if image != "":
             st.image(image, use_column_width=True, caption=f"Image {st.session_state['which_image']}")
         else:
             st.error(f"No {st.session_state['which_stage_to_run_on']} image found for this variant")
             
-    if stages.index(st.session_state['which_stage_to_run_on']) != st.session_state['index_of_which_stage_to_run_on']:
-        st.session_state['index_of_which_stage_to_run_on'] = stages.index(st.session_state['which_stage_to_run_on'])
+    if stages.index(st.session_state['which_stage_to_run_on']) != st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}']:
+        st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = stages.index(st.session_state['which_stage_to_run_on'])
         st.experimental_rerun()
+    
+    custom_pipelines = ["None","Mystique"]     
+                 
+    if f'index_of_last_custom_pipeline_{append_to_item_name}' not in st.session_state:
+        st.session_state[f'index_of_last_custom_pipeline_{append_to_item_name}'] = 0  
 
-    custom_pipelines = ["None","Mystique"]                   
-    if 'index_of_last_custom_pipeline' not in st.session_state:
-        st.session_state['index_of_last_custom_pipeline'] = 0        
-    st.session_state['custom_pipeline'] = st.selectbox(f"Custom Pipeline:", custom_pipelines, index=st.session_state['index_of_last_custom_pipeline'])
-    if custom_pipelines.index(st.session_state['custom_pipeline']) != st.session_state['index_of_last_custom_pipeline']:
-        st.session_state['index_of_last_custom_pipeline'] = custom_pipelines.index(st.session_state['custom_pipeline'])
+    st.session_state['custom_pipeline'] = st.selectbox(f"Custom Pipeline:", custom_pipelines, index=st.session_state[f'index_of_last_custom_pipeline_{append_to_item_name}'])
+
+    if custom_pipelines.index(st.session_state['custom_pipeline']) != st.session_state[f'index_of_last_custom_pipeline_{append_to_item_name}']:
+        st.session_state[f'index_of_last_custom_pipeline_{append_to_item_name}'] = custom_pipelines.index(st.session_state['custom_pipeline'])
         st.experimental_rerun()
 
     if st.session_state['custom_pipeline'] == "Mystique":
-        if st.session_state['index_of_last_model'] > 1:
-            st.session_state['index_of_last_model'] = 0       
+        if st.session_state[f'index_of_last_model_{append_to_item_name}'] > 1:
+            st.session_state[f'index_of_last_model_{append_to_item_name}'] = 0       
             st.experimental_rerun()           
         with st.expander("Mystique is a custom pipeline that uses a multiple models to generate a consistent character and style transformation."):
             st.markdown("## How to use the Mystique pipeline")                
@@ -845,80 +864,95 @@ def styling_element(project_name,timing_details, project_settings, view_type="Li
             st.markdown("4. In our experience, the best strength for coherent character transformations is 0.25-0.3 - any more than this and details like eye position change.")  
         models = ["LoRA","Dreambooth"]                                     
         st.session_state['model'] = st.selectbox(f"Which type of model is trained on your character?", models, index=st.session_state['index_of_last_model'])                    
-        if st.session_state['index_of_last_model'] != models.index(st.session_state['model']):
-            st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
+        if st.session_state[f'index_of_last_model_{append_to_item_name}'] != models.index(st.session_state['model']):
+            st.session_state[f'index_of_last_model_{append_to_item_name}'] = models.index(st.session_state['model'])
             st.experimental_rerun()                          
     else:               
-
         models = ['controlnet','stable_diffusion_xl','stable-diffusion-img2img-v2.1', 'depth2img', 'pix2pix', 'Dreambooth', 'LoRA','StyleGAN-NADA','real-esrgan-upscaling','controlnet_1_1_x_realistic_vision_v2_0']
         
-        if project_settings['last_model'] != "":
-            
-            if 'index_of_last_model' not in st.session_state:
+        if view_type == "List":
+            if project_settings['last_model'] != "":                                
                 st.session_state['model'] = project_settings['last_model']
-                st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
-                st.write(f"Index of last model: {st.session_state['index_of_last_model']}")
-        else:            
-            st.session_state['index_of_last_model'] = 0
-
-
+                st.session_state[f'index_of_last_model_{append_to_item_name}'] = models.index(st.session_state['model'])                    
+            else:            
+                st.session_state[f'index_of_last_model_{append_to_item_name}'] = 0
+        elif view_type == "Single":
+            if timing_details[item_to_show]['model_id'] != "":
+                st.session_state['model'] = timing_details[item_to_show]['model_id']
+                st.session_state[f'index_of_last_model_{append_to_item_name}'] = models.index(st.session_state['model'])
+            else:
+                st.session_state[f'index_of_last_model_{append_to_item_name}'] = 0
         
-        st.session_state['model'] = st.selectbox(f"Which model would you like to use?", models, index=st.session_state['index_of_last_model'])                    
-        if st.session_state['index_of_last_model'] != models.index(st.session_state['model']):
-            st.session_state['index_of_last_model'] = models.index(st.session_state['model'])
+        st.session_state['model'] = st.selectbox(f"Which model would you like to use?", models, index=st.session_state[f'index_of_last_model_{append_to_item_name}'])
+
+        if st.session_state[f'index_of_last_model_{append_to_item_name}'] != models.index(st.session_state['model']):
+            st.session_state[f'index_of_last_model_{append_to_item_name}'] = models.index(st.session_state['model'])
             st.experimental_rerun() 
             
     
     if st.session_state['model'] == "controlnet":   
         controlnet_adapter_types = ["scribble","normal", "canny", "hed", "seg", "hough", "depth2img", "pose"]
-        if 'index_of_controlnet_adapter_type' not in st.session_state:
-            st.session_state['index_of_controlnet_adapter_type'] = 0
-        st.session_state['adapter_type'] = st.selectbox(f"Adapter Type",controlnet_adapter_types, index=st.session_state['index_of_controlnet_adapter_type'])
         
-        if st.session_state['index_of_controlnet_adapter_type'] != controlnet_adapter_types.index(st.session_state['adapter_type']):
-            st.session_state['index_of_controlnet_adapter_type'] = controlnet_adapter_types.index(st.session_state['adapter_type'])
+        # if f'index_of_controlnet_adapter_type_{append_to_item_name}' not in st.session_state:
+        if view_type == "List":
+            if project_settings['last_adapter_type'] != "" and project_settings['last_adapter_type'] != "N":                 
+                st.session_state[f'index_of_controlnet_adapter_type_{append_to_item_name}'] = controlnet_adapter_types.index(project_settings['last_adapter_type'])
+                st.session_state['adapter_type'] = project_settings['last_adapter_type']
+            else:
+                st.session_state[f'index_of_controlnet_adapter_type_{append_to_item_name}'] = 0
+        elif view_type == "Single":
+            if timing_details[item_to_show]['adapter_type'] != "" and timing_details[item_to_show]['adapter_type'] != "N":                    
+                st.session_state[f'index_of_controlnet_adapter_type_{append_to_item_name}'] = controlnet_adapter_types.index(timing_details[item_to_show]['adapter_type'])
+                st.session_state['adapter_type'] = timing_details[item_to_show]['adapter_type']                    
+            else:                    
+                st.session_state[f'index_of_controlnet_adapter_type_{append_to_item_name}'] = 0
+        
+        
+        st.session_state['adapter_type'] = st.selectbox(f"Adapter Type",controlnet_adapter_types, index=st.session_state[f'index_of_controlnet_adapter_type_{append_to_item_name}'])
+        
+        if st.session_state[f'index_of_controlnet_adapter_type_{append_to_item_name}'] != controlnet_adapter_types.index(st.session_state['adapter_type']):
+            st.session_state[f'index_of_controlnet_adapter_type_{append_to_item_name}'] = controlnet_adapter_types.index(st.session_state['adapter_type'])
             st.experimental_rerun()
-        st.session_state['custom_models'] = []    
-        
-    
+        st.session_state['custom_models'] = []   
+
     elif st.session_state['model'] == "LoRA": 
         if 'index_of_lora_model_1' not in st.session_state:
-            st.session_state['index_of_lora_model_1'] = 0
-            st.session_state['index_of_lora_model_2'] = 0
-            st.session_state['index_of_lora_model_3'] = 0
+            st.session_state[f'index_of_lora_model_1_{append_to_item_name}'] = 0
+            st.session_state[f'index_of_lora_model_2_{append_to_item_name}'] = 0
+            st.session_state[f'index_of_lora_model_3_{append_to_item_name}'] = 0
         df = pd.read_csv('models.csv')
         filtered_df = df[df.iloc[:, 5] == 'LoRA']
         lora_model_list = filtered_df.iloc[:, 0].tolist()
         lora_model_list.insert(0, '')
-        st.session_state['lora_model_1'] = st.selectbox(f"LoRA Model 1", lora_model_list, index=st.session_state['index_of_lora_model_1'])
-        if st.session_state['index_of_lora_model_1'] != lora_model_list.index(st.session_state['lora_model_1']):
-            st.session_state['index_of_lora_model_1'] = lora_model_list.index(st.session_state['lora_model_1'])
+        st.session_state['lora_model_1'] = st.selectbox(f"LoRA Model 1", lora_model_list, index=st.session_state['index_of_lora_model_1_{append_to_item_name}'])
+        if st.session_state[f'index_of_lora_model_1_{append_to_item_name}'] != lora_model_list.index(st.session_state['lora_model_1']):
+            st.session_state[f'index_of_lora_model_1_{append_to_item_name}'] = lora_model_list.index(st.session_state['lora_model_1'])
             st.experimental_rerun()
-        st.session_state['lora_model_2'] = st.selectbox(f"LoRA Model 2", lora_model_list, index=st.session_state['index_of_lora_model_2'])
-        if st.session_state['index_of_lora_model_2'] != lora_model_list.index(st.session_state['lora_model_2']):
-            st.session_state['index_of_lora_model_2'] = lora_model_list.index(st.session_state['lora_model_2'])
+        st.session_state['lora_model_2'] = st.selectbox(f"LoRA Model 2", lora_model_list, index=st.session_state[f'index_of_lora_model_2_{append_to_item_name}'])
+        if st.session_state[f'index_of_lora_model_2_{append_to_item_name}'] != lora_model_list.index(st.session_state['lora_model_2']):
+            st.session_state[f'index_of_lora_model_2_{append_to_item_name}'] = lora_model_list.index(st.session_state['lora_model_2'])
             st.experimental_rerun()
-        st.session_state['lora_model_3'] = st.selectbox(f"LoRA Model 3", lora_model_list, index=st.session_state['index_of_lora_model_3'])
-        if st.session_state['index_of_lora_model_3'] != lora_model_list.index(st.session_state['lora_model_3']):
-            st.session_state['index_of_lora_model_3'] = lora_model_list.index(st.session_state['lora_model_3'])                     
+        st.session_state['lora_model_3'] = st.selectbox(f"LoRA Model 3", lora_model_list, index=st.session_state[f'index_of_lora_model_3_{append_to_item_name}'])
+        if st.session_state[f'index_of_lora_model_3_{append_to_item_name}'] != lora_model_list.index(st.session_state['lora_model_3']):
+            st.session_state[f'index_of_lora_model_3_{append_to_item_name}'] = lora_model_list.index(st.session_state['lora_model_3'])                     
             st.experimental_rerun()
         st.session_state['custom_models'] = [st.session_state['lora_model_1'], st.session_state['lora_model_2'], st.session_state['lora_model_3']]                    
         st.info("You can reference each model in your prompt using the following keywords: <1>, <2>, <3> - for example '<1> in the style of <2>.")
         lora_adapter_types = ['sketch', 'seg', 'keypose', 'depth', None]
-        if "index_of_lora_adapter_type" not in st.session_state:
+        if f"index_of_lora_adapter_type_{append_to_item_name}" not in st.session_state:
             st.session_state['index_of_lora_adapter_type'] = 0
-        st.session_state['adapter_type'] = st.selectbox(f"Adapter Type:", lora_adapter_types, help="This is the method through the model will infer the shape of the object. ", index=st.session_state['index_of_lora_adapter_type'])
-        if st.session_state['index_of_lora_adapter_type'] != lora_adapter_types.index(st.session_state['adapter_type']):
-            st.session_state['index_of_lora_adapter_type'] = lora_adapter_types.index(st.session_state['adapter_type'])
+        st.session_state['adapter_type'] = st.selectbox(f"Adapter Type:", lora_adapter_types, help="This is the method through the model will infer the shape of the object. ", index=st.session_state[f'index_of_lora_adapter_type_{append_to_item_name}'])
+        if st.session_state[f'index_of_lora_adapter_type_{append_to_item_name}'] != lora_adapter_types.index(st.session_state['adapter_type']):
+            st.session_state[f'index_of_lora_adapter_type_{append_to_item_name}'] = lora_adapter_types.index(st.session_state['adapter_type'])
     elif st.session_state['model'] == "Dreambooth":
         df = pd.read_csv('models.csv')
         filtered_df = df[df.iloc[:, 5] == 'Dreambooth']
         dreambooth_model_list = filtered_df.iloc[:, 0].tolist()
-        if 'index_of_dreambooth_model' not in st.session_state:
-            st.session_state['index_of_dreambooth_model'] = 0
-        st.session_state['custom_models'] = st.selectbox(f"Dreambooth Model", dreambooth_model_list, index=st.session_state['index_of_dreambooth_model'])
-        if st.session_state['index_of_dreambooth_model'] != dreambooth_model_list.index(st.session_state['custom_models']):
-            st.session_state['index_of_dreambooth_model'] = dreambooth_model_list.index(st.session_state['custom_models'])                                    
+        if f'index_of_dreambooth_model_{append_to_item_name}' not in st.session_state:
+            st.session_state[f'index_of_dreambooth_model_{append_to_item_name}'] = 0
+        st.session_state['custom_models'] = st.selectbox(f"Dreambooth Model", dreambooth_model_list, index=st.session_state[f'index_of_dreambooth_model_{append_to_item_name}'])
+        if st.session_state[f'index_of_dreambooth_model_{append_to_item_name}'] != dreambooth_model_list.index(st.session_state['custom_models']):
+            st.session_state[f'index_of_dreambooth_model_{append_to_item_name}'] = dreambooth_model_list.index(st.session_state['custom_models'])                                    
     else:
         st.session_state['custom_models'] = []
         st.session_state['adapter_type'] = "N"
@@ -927,15 +961,29 @@ def styling_element(project_name,timing_details, project_settings, view_type="Li
 
         canny1, canny2 = st.columns(2)
 
-        if project_settings['last_low_threshold'] != "":
-            low_threshold_value = project_settings['last_low_threshold']
-        else:
-            low_threshold_value = 50
+        if view_type == "List":
+
+            if project_settings['last_low_threshold'] != "":
+                low_threshold_value = project_settings['last_low_threshold']
+            else:
+                low_threshold_value = 50
+            
+            if project_settings['last_high_threshold'] != "":
+                high_threshold_value = project_settings['last_high_threshold']
+            else:
+                high_threshold_value = 150
         
-        if project_settings['last_high_threshold'] != "":
-            high_threshold_value = project_settings['last_high_threshold']
-        else:
-            high_threshold_value = 150
+        elif view_type == "Single":
+
+            if timing_details[item_to_show]['low_threshold'] != "":
+                low_threshold_value = timing_details[item_to_show]['low_threshold']
+            else:
+                low_threshold_value = 50
+            
+            if timing_details[item_to_show]['high_threshold'] != "":
+                high_threshold_value = timing_details[item_to_show]['high_threshold']
+            else:
+                high_threshold_value = 150
         
         with canny1:
             st.session_state['low_threshold'] = st.slider('Low Threshold', 0, 255, value=int(low_threshold_value))            
@@ -944,17 +992,29 @@ def styling_element(project_name,timing_details, project_settings, view_type="Li
     else:
         st.session_state['low_threshold'] = 0
         st.session_state['high_threshold'] = 0
-
-
+    
     if st.session_state['model'] == "StyleGAN-NADA":
         st.warning("StyleGAN-NADA is a custom model that uses StyleGAN to generate a consistent character and style transformation. It only works for square images.")
         st.session_state['prompt'] = st.selectbox("What style would you like to apply to the character?", ['base', 'mona_lisa', 'modigliani', 'cubism', 'elf', 'sketch_hq', 'thomas', 'thanos', 'simpson', 'witcher', 'edvard_munch', 'ukiyoe', 'botero', 'shrek', 'joker', 'pixar', 'zombie', 'werewolf', 'groot', 'ssj', 'rick_morty_cartoon', 'anime', 'white_walker', 'zuckerberg', 'disney_princess', 'all', 'list'])
         st.session_state['strength'] = 0.5
         st.session_state['guidance_scale'] = 7.5
         st.session_state['seed'] = int(0)
-        st.session_state['num_inference_steps'] = int(50)                    
+        st.session_state['num_inference_steps'] = int(50)      
+
     else:
-        st.session_state['prompt'] = st.text_area(f"Prompt", label_visibility="visible", value=st.session_state['prompt_value'],height=150)
+        if view_type == "List":
+            if project_settings['last_prompt'] != "":
+                st.session_state[f'prompt_value_{append_to_item_name}'] = project_settings['last_prompt']
+            else:
+                st.session_state[f'prompt_value_{append_to_item_name}'] = ""
+            
+        elif view_type == "Single":
+            if timing_details[item_to_show]['prompt'] != "":
+                st.session_state[f'prompt_value_{append_to_item_name}'] = timing_details[item_to_show]['prompt']
+            else:
+                st.session_state[f'prompt_value_{append_to_item_name}'] = ""
+
+        st.session_state['prompt'] = st.text_area(f"Prompt", label_visibility="visible", value=st.session_state[f'prompt_value_{append_to_item_name}'],height=150)
         if st.session_state['prompt'] != st.session_state['prompt_value']:
             st.session_state['prompt_value'] = st.session_state['prompt']
             st.experimental_rerun()
@@ -975,19 +1035,65 @@ def styling_element(project_name,timing_details, project_settings, view_type="Li
         else:
             if st.session_state['model'] == "pix2pix":
                 st.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")                    
+        
+        if view_type == "List":
+            if project_settings['last_strength'] != "":
+                st.session_state['strength'] = project_settings['last_strength']
+            else:
+                st.session_state['strength'] = 0.5
+        
+        elif view_type == "Single":
+            if timing_details[item_to_show]['strength'] != "":
+                st.session_state['strength'] = timing_details[item_to_show]['strength']
+            else:
+                st.session_state['strength'] = 0.5
+
+
         st.session_state['strength'] = st.slider(f"Strength", value=float(st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
         
         with st.expander("Advanced settings 😏"):
+            if view_type == "List":
+                if project_settings['last_guidance_scale'] != "":
+                    st.session_state['guidance_scale'] = project_settings['last_guidance_scale']
+                else:
+                    st.session_state['guidance_scale'] = 7.5
+            elif view_type == "Single":
+                if timing_details[item_to_show]['guidance_scale'] != "":
+                    st.session_state['guidance_scale'] = timing_details[item_to_show]['guidance_scale']
+                else:
+                    st.session_state['guidance_scale'] = 7.5
             st.session_state['negative_prompt'] = st.text_area(f"Negative prompt", value=st.session_state['negative_prompt_value'], label_visibility="visible")
             if st.session_state['negative_prompt'] != st.session_state['negative_prompt_value']:
                 st.session_state['negative_prompt_value'] = st.session_state['negative_prompt']
                 st.experimental_rerun()
             st.session_state['guidance_scale'] = st.number_input(f"Guidance scale", value=float(st.session_state['guidance_scale']))
+            if view_type == "List":
+                if project_settings['last_seed'] != "":
+                    st.session_state['seed'] = project_settings['last_seed']
+                else:
+                    st.session_state['seed'] = 0
+            elif view_type == "Single":
+                if timing_details[item_to_show]['seed'] != "":
+                    st.session_state['seed'] = timing_details[item_to_show]['seed']
+                else:
+                    st.session_state['seed'] = 0
             st.session_state['seed'] = st.number_input(f"Seed", value=int(st.session_state['seed']))
+            if view_type == "List":
+                if project_settings['last_num_inference_steps'] != "":
+                    st.session_state['num_inference_steps'] = project_settings['last_num_inference_steps']
+                else:
+                    st.session_state['num_inference_steps'] = 50
+            elif view_type == "Single":
+                if timing_details[item_to_show]['num_inference_steps'] != "":
+                    st.session_state['num_inference_steps'] = timing_details[item_to_show]['num_inference_steps']
+                else:
+                    st.session_state['num_inference_steps'] = 50
             st.session_state['num_inference_steps'] = st.number_input(f"Inference steps", value=int(st.session_state['num_inference_steps']))
+    
+    st.session_state["promote_new_generation"] = st.checkbox("Promote new generation to main variant", key="promote_new_generation_to_main_variant")
+    st.session_state["use_new_settings"] = st.checkbox("Use new settings for batch query", key="keep_existing_settings", help="If unchecked, the new settings will be applied to the existing variants.")
 
-        
-            
+
     if len(timing_details) > 1:
         st.markdown("***")
         st.markdown("## Batch queries")
@@ -998,9 +1104,7 @@ def styling_element(project_name,timing_details, project_settings, view_type="Li
         st.write(batch_run_range)
         
                         
-        st.session_state["promote_new_generation"] = st.checkbox("Promote new generation to main variant", key="promote_new_generation_to_main_variant")
-        st.session_state["use_new_settings"] = st.checkbox("Use new settings for batch query", key="keep_existing_settings", help="If unchecked, the new settings will be applied to the existing variants.")
-
+        
         if 'restyle_button' not in st.session_state:
             st.session_state['restyle_button'] = ''
             st.session_state['item_to_restyle'] = ''                
@@ -1028,8 +1132,6 @@ def styling_element(project_name,timing_details, project_settings, view_type="Li
                         index_of_current_item = i
                         trigger_restyling_process(timing_details, project_name, index_of_current_item,st.session_state['model'],st.session_state['prompt'],st.session_state['strength'],st.session_state['custom_pipeline'],st.session_state['negative_prompt'],st.session_state['guidance_scale'],st.session_state['seed'],st.session_state['num_inference_steps'],st.session_state['which_stage_to_run_on'],st.session_state["promote_new_generation"], st.session_state['project_settings'],st.session_state['custom_models'],st.session_state['adapter_type'],st.session_state["use_new_settings"],st.session_state['low_threshold'],st.session_state['high_threshold'])
                 st.experimental_rerun()
-
-        
     
     
 
@@ -1206,7 +1308,7 @@ def delete_frame(project_name, index_of_current_item):
     csv_processor.delete_row(index_of_current_item)
 
 
-def batch_update_timing_values(project_name, index_of_current_item, prompt, strength, model, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, source_image, custom_models, adapter_type,low_threshold,high_threshold):
+def batch_update_timing_values(project_name, index_of_current_item, prompt, strength, model, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, source_image, custom_models, adapter_type,low_threshold,high_threshold,which_stage_to_run_on):
     
     csv_processor = CSVProcessor(
         "videos/" + str(project_name) + "/timings.csv")
@@ -1214,8 +1316,8 @@ def batch_update_timing_values(project_name, index_of_current_item, prompt, stre
 
     if model != "Dreambooth":
         custom_models = f'"{custom_models}"'
-    df.iloc[index_of_current_item, [18, 10, 9, 4, 5, 6, 7, 8, 12, 13, 14,24,25]] = [prompt, float(strength), model, custom_pipeline, negative_prompt, float(
-        guidance_scale), int(seed), int(num_inference_steps), source_image, custom_models, adapter_type,int(float(low_threshold)),int(float(high_threshold))]
+    df.iloc[index_of_current_item, [18, 10, 9, 4, 5, 6, 7, 8, 12, 13, 14,24,25,27]] = [prompt, float(strength), model, custom_pipeline, negative_prompt, float(
+        guidance_scale), int(seed), int(num_inference_steps), source_image, custom_models, adapter_type,int(float(low_threshold)),int(float(high_threshold)),which_stage_to_run_on]
 
     df["primary_image"] = pd.to_numeric(df["primary_image"], downcast='integer', errors='coerce')
     df["primary_image"].fillna(0, inplace=True)
@@ -1302,7 +1404,7 @@ def trigger_restyling_process(timing_details, project_name, index_of_current_ite
         else:
             source_image = timing_details[index_of_current_item]["source_image"]
         batch_update_timing_values(project_name, index_of_current_item, '"'+prompt+'"', strength, model, custom_pipeline,
-                                negative_prompt, guidance_scale, seed, num_inference_steps, source_image, custom_models, adapter_type,low_threshold,high_threshold)
+                                negative_prompt, guidance_scale, seed, num_inference_steps, source_image, custom_models, adapter_type,low_threshold,high_threshold,which_stage_to_run_on)
         dynamic_prompting(prompt, source_image, project_name,
                       index_of_current_item)
     timing_details = get_timing_details(project_name)
