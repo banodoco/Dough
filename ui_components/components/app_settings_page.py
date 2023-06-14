@@ -7,14 +7,15 @@ def app_settings_page():
     # TODO: automatically pick the current user for fetching related details
     data_repo = DataRepo()
     app_settings = data_repo.get_app_setting_from_uuid()
+    app_secrets = data_repo.get_app_secrets_from_user_uuid()
             
 
     with st.expander("Replicate API Keys:"):
-        replicate_user_name = st.text_input("replicate_user_name", value = app_settings["replicate_user_name"])
-        replicate_com_api_key = st.text_input("replicate_com_api_key", value = app_settings["replicate_com_api_key"])
+        replicate_username = st.text_input("replicate_username", value = app_secrets["replicate_username"])
+        replicate_key = st.text_input("replicate_key", value = app_secrets["replicate_key"])
         if st.button("Save Settings"):
-            data_repo.update_app_setting(replicate_user_name=replicate_user_name)
-            data_repo.update_app_setting(replicate_com_api_key=replicate_com_api_key)
+            data_repo.update_app_setting(replicate_username=replicate_username)
+            data_repo.update_app_setting(replicate_key=replicate_key)
             # data_repo.update_app_setting("aws_access_key_id=aws_access_key_id)
             # data_repo.update_app_setting("aws_secret_access_key=aws_secret_access_key)
             st.experimental_rerun()

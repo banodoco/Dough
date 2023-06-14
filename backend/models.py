@@ -2,6 +2,7 @@ from django.db import models
 import uuid
 import json
 from django.db.models import F
+import urllib
 
 from shared.constants import SERVER, ServerType
 from shared.file_upload.s3 import generate_s3_url, is_s3_image_url
@@ -54,6 +55,18 @@ class InternalFileObject(BaseModel):
         # if the online url is not an s3 url and it's a production environment then we need to save the file in s3
         if self.hosted_url and not is_s3_image_url(self.hosted_url) and SERVER == ServerType.PRODUCTION.value:
             self.hosted_url = generate_s3_url(self.hosted_url)
+        
+        if self.hosted_url and not self.local_path and SERVER != ServerType.PRODUCTION.value:
+            video = 'temp'
+            if self.project:
+                video = self.project.uuid
+
+            file_location = "videos/" + video + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".png"
+            try:
+                urllib.request.urlretrieve(self.hosted_url, file_location)
+                self.local_path = file_location
+            except Exception as e:
+                print(e)
             
         super(InternalFileObject, self).save(*args, **kwargs)
 
@@ -190,14 +203,14 @@ class Timing(BaseModel):
     @property
     def alternative_images_list(self):
         image_id_list = json.loads(self.alternative_images) if self.alternative_images else []
-        return InternalFileObject.objects.filter(id__in=image_id_list, is_disabled=False).all()
+        return InternalFileObject.objects.filter(uuid__in=image_id_list, is_disabled=False).all()
     
     @property
     def primary_variant_location(self):
-        if not len(self.alternative_images_list):
-            return ""
-        else:                         
-            return self.alternative_images_list[self.primary_image].location if self.primary_image < len(self.alternative_images_list) else ""
+        if self.primary_image:
+            return self.primary_image.location
+
+        return ""
     
     # gives the next entry in the project timings
     @property
@@ -218,20 +231,26 @@ class AppSetting(BaseModel):
     aws_access_key = models.CharField(max_length=255, default="", blank=True)
     stability_key = models.CharField(max_length=255, default="", blank=True)
     previous_project = models.CharField(max_length=255, default="", blank=True)     # contains the uuid of the previous project
-    replicate_user_name = models.CharField(max_length=255, default="", blank=True)
+    replicate_username = models.CharField(max_length=255, default="", blank=True)
     welcome_state = models.IntegerField(default=0)
 
     class Meta:
         app_label = 'backend'
         db_table = 'app_setting'
 
+    def __init__(self, *args, **kwargs):
+        super(AppSetting, self).__init__(*args, **kwargs)
+        self.old_replicate_key = self.replicate_key
+        self.old_aws_access_key = self.aws_access_key
+        self.old_stability_key = self.stability_key
+
     def save(self, *args, **kwargs):
         from utils.encryption import Encryptor
         encryptor = Encryptor()
 
-        new_access_key = not self.id or ('aws_access_key' in kwargs and kwargs['aws_access_key'] != self.aws_access_key)
-        new_replicate_key = not self.id or ('replicate_key' in kwargs and kwargs['replicate_key'] != self.replicate_key)
-        new_stability_key = not self.id or ('stability_key' in kwargs and kwargs['stability_key'] != self.stability_key)
+        new_access_key = not self.id or (self.old_aws_access_key != self.aws_access_key)
+        new_replicate_key = not self.id or (self.old_replicate_key != self.replicate_key)
+        new_stability_key = not self.id or (self.old_stability_key != self.stability_key)
 
         if new_access_key and self.aws_access_key:
             encrypted_access_key = encryptor.encrypt(self.aws_access_key)

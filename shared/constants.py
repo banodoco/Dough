@@ -1,4 +1,6 @@
 from utils.enum import ExtendedEnum
+from dataclasses import dataclass
+
 
 ##################### enums #####################
 class ServerType(ExtendedEnum):
@@ -25,6 +27,10 @@ class Colors:
 class AIModelType(ExtendedEnum):
     LORA = 'LoRA'
     DREAMBOOTH = 'Dreambooth'
+    BASE_SD = 'Base_SD'
+    CONTROLNET = 'controlnet'
+    STYLEGAN_NADA = "StyleGAN-NADA"
+    PIX_2_PIX = 'pix2pix'
 
 class GuidanceType(ExtendedEnum):
     DRAWING = 'drawing'
@@ -42,6 +48,10 @@ class InternalFileTag(ExtendedEnum):
     BACKGROUND_IMAGE = 'background_image'
     COMPLETED_VIDEO = 'completed_video'
     INPUT_VIDEO = 'input_video'
+
+class AnimationStyleType(ExtendedEnum):
+    INTERPOLATION = "Interpolation"
+    DIRECT_MORPHING = "Direct Morphing"
 
 
 ##################### global constants #####################

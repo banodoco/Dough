@@ -14,7 +14,9 @@ class InternalFileObject:
 
     @property
     def location(self):
-        return self.local_path if self.local_path else self.hosted_url
+        if self.local_path:
+            return self.local_path
+        return self.hosted_url
 
 
 class InternalProjectObject:
@@ -26,21 +28,26 @@ class InternalProjectObject:
 
 
 class InternalAIModelObject:
-    def __init__(self, uuid, name, user_uuid, version, replicate_model_id,
-                 diffusers_url, category, training_image_list):
+    def __init__(self, uuid, name, user_uuid, version, replicate_model_id, replicate_url,
+                 diffusers_url, category, training_image_list, keyword, created_on):
         self.uuid = uuid
         self.name = name
         self.user_uuid = user_uuid
         self.version = version
         self.replicate_model_id = replicate_model_id
-        self.replicate_url = replicate_model_id
+        self.replicate_url = replicate_url
         self.diffusers_url = diffusers_url
         self.category = category
         self.training_image_list = self._get_training_image_list(
             training_image_list)
+        self.keyword = keyword
+        self.created_on = created_on
 
     # training_image_list contains uuid list of images
     def _get_training_image_list(self, training_image_list):
+        if not (training_image_list and len(training_image_list)):
+            return []
+        
         from utils.data_repo.data_repo import DataRepo
         data_repo = DataRepo()
         file_list = data_repo.get_image_list_from_uuid_list(
@@ -93,8 +100,11 @@ class InternalFrameTimingObject:
 
     @property
     def alternative_images_list(self):
+        if not (self.alternative_images and len(self.alternative_images)):
+            return []
+        
         from utils.data_repo.data_repo import DataRepo
-
+        
         data_repo = DataRepo()
         image_id_list = json.loads(
             self.alternative_images) if self.alternative_images else []
@@ -102,11 +112,11 @@ class InternalFrameTimingObject:
         return image_list
 
     @property
-    def primary_variant_location(self):
+    def primary_image_location(self):
         if not len(self.alternative_images_list):
             return ""
         else:
-            return self.alternative_images_list[self.primary_image].location if self.primary_image < len(self.alternative_images_list) else ""
+            return self.primary_image.location
 
     @property
     def primary_variant_index(self):
@@ -128,7 +138,7 @@ class InternalAppSettingObject:
         self.user = InternalUserObject(
             **kwargs["user"]) if 'user' in kwargs else None
         self.previous_project = kwargs['previous_project'] if 'previous_project' in kwargs else None
-        self.replicate_user_name = kwargs['replicate_user_name'] if 'replicate_user_name' in kwargs and kwargs['replicate_user_name'] else ""
+        self.replicate_username = kwargs['replicate_username'] if 'replicate_username' in kwargs and kwargs['replicate_username'] else ""
         self.welcome_state = kwargs['welcome_state'] if 'welcome_state' in kwargs else None
         self.aws_secret_access_key = kwargs['aws_secret_access_key'] if 'aws_secret_access_key' in kwargs else None
         self.aws_access_key = kwargs['aws_access_key'] if 'aws_access_key' in kwargs else None

@@ -56,7 +56,7 @@ def welcome_page():
         st.write("Currently, we use Replicate.com for our model hosting. If you don't have an account, you can sign up for free [here](https://replicate.com/signin) and grab your API key [here](https://replicate.com/account) - this data is stored locally on your computer.")
         with st.expander("Why Replicate.com? Can I run the models locally?"):
             st.info("Replicate.com allows us to rapidly implement a wide array of models that work on any computer. Currently, these are delivered via API, which means that you pay for GPU time - but it tends to be very cheap. Getting it locally [via COG](https://github.com/replicate/cog/blob/main/docs/wsl2/wsl2.md) shouldn't be too difficult but I don't have the hardware to do that")
-        st.session_state["replicate_user_name"] = st.text_input("replicate_user_name", value = app_settings.replicate_user_name)
+        st.session_state["replicate_username"] = st.text_input("replicate_username", value = app_settings.replicate_username)
         st.session_state["replicate_com_api_key"]  = st.text_input("replicate_com_api_key", value = app_settings.replicate_key)
         st.warning("You can add this in App Settings later if you wish.")
         nav_buttons(int(st.session_state["welcome_state"]))
@@ -65,8 +65,8 @@ def welcome_page():
         st.subheader("That's it! Just click below when you feel sufficiently welcomed, and you'll be taken to the app!")                        
         if st.button("I feel welcomed!", type="primary"):
             st.balloons()
-            if 'replicate_user_name' in st.session_state and st.session_state["replicate_user_name"] != "":
-                data_repo.update_app_setting(replicate_user_name=st.session_state["replicate_user_name"])
+            if 'replicate_username' in st.session_state and st.session_state["replicate_username"] != "":
+                data_repo.update_app_setting(replicate_username=st.session_state["replicate_username"])
             if 'replicate_com_api_key' in st.session_state and st.session_state["replicate_com_api_key"] != "":
                 data_repo.update_app_setting(replicate_com_api_key=st.session_state["replicate_com_api_key"])
             data_repo.update_app_setting(welcome_state=7)

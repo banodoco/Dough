@@ -29,7 +29,6 @@ class ProjectDto(serializers.ModelSerializer):
 
 class AIModelDto(serializers.ModelSerializer):
     user_uuid = serializers.SerializerMethodField()
-    training_image_list = serializers.SerializerMethodField()
     class Meta:
         model = AIModel
         fields = (
@@ -48,12 +47,6 @@ class AIModelDto(serializers.ModelSerializer):
 
     def get_user_uuid(self, obj):
         return obj.user.uuid
-    
-    def get_training_image_list(self, obj):
-        import json
-
-        image_list = json.loads(obj.training_image_list)
-        return [InternalFileDto(image).data for image in image_list]
     
 
 class TimingDto(serializers.ModelSerializer):
@@ -112,7 +105,7 @@ class AppSettingDto(serializers.ModelSerializer):
             "uuid",
             "user",
             "previous_project",
-            "replicate_user_name",
+            "replicate_username",
             "welcome_state",
             "created_on"
         )

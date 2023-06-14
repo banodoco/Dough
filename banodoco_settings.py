@@ -2,13 +2,14 @@ import os
 import shutil
 from dotenv import dotenv_values
 
-from shared.constants import SERVER, GuidanceType, ServerType
+from shared.constants import SERVER, AIModelType, GuidanceType, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
-from ui_components.constants import AnimationStyleType
+from shared.constants import AnimationStyleType
 from ui_components.models import InternalUserObject
 from utils.common_methods import copy_sample_assets, create_working_assets
 from utils.data_repo.data_repo import DataRepo
+from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
 REPLICATE_API_TOKEN = None
 REPLICATE_USERNAME = None
@@ -26,7 +27,7 @@ def project_init():
     data_repo = DataRepo()
 
     # create a user if not already present (if dev mode)
-    # if this is the local server with no user than create one and related data (it's handled by the backend)
+    # if this is the local server with no user than create one and related data
     user_count = data_repo.get_total_user_count()
     if SERVER != ServerType.PRODUCTION.value and not user_count:
         user_data = {
@@ -85,6 +86,9 @@ def create_new_user_data(user: InternalUserObject):
     }
     project = data_repo.create_project(**project_data)
 
+    # create default ai models
+    model_list = create_predefined_models(user)
+
     # creating a project settings for this
     project_setting_data = {
         "project_id" : project.uuid,
@@ -93,6 +97,8 @@ def create_new_user_data(user: InternalUserObject):
         "extraction_type" : "Extract manually",
         "width" : 512,
         "height" : 512,
+        "default_prompt": "an oil painting",
+        "default_model_id": model_list[0].uuid,
         "default_negative_prompt" : "",
         "default_guidance_scale" : 7.5,
         "default_seed" : 1234,
@@ -109,3 +115,71 @@ def create_new_user_data(user: InternalUserObject):
     project_setting = data_repo.create_project_setting(**project_setting_data)
 
     create_working_assets(project.uuid)
+
+    
+
+def create_predefined_models(user):
+    # create predefined models
+    data = [
+        {
+            "name" : 'stable-diffusion-img2img-v2.1',
+            "user_id" : user.uuid,
+            "version": REPLICATE_MODEL.img2img_sd_2_1.version,
+            "replicate_url" : REPLICATE_MODEL.img2img_sd_2_1.name,
+            "category" : AIModelType.BASE_SD.value,
+            "keyword" : ""
+        },
+        {
+            "name" : 'depth2img',
+            "user_id" : user.uuid,
+            "version": REPLICATE_MODEL.jagilley_controlnet_depth2img.version,
+            "replicate_url" : REPLICATE_MODEL.jagilley_controlnet_depth2img.name,
+            "category" : AIModelType.BASE_SD.value,
+            "keyword" : ""
+        },
+        {
+            "name" : 'pix2pix',
+            "user_id" : user.uuid,
+            "version": REPLICATE_MODEL.arielreplicate.version,
+            "replicate_url" : REPLICATE_MODEL.arielreplicate.name,
+            "category" : AIModelType.BASE_SD.value,
+            "keyword" : ""
+        },
+        {
+            "name" : 'controlnet',
+            "user_id" : user.uuid,
+            "category" : AIModelType.CONTROLNET.value,
+            "keyword" : ""
+        },
+        {
+            "name" : 'Dreambooth',
+            "user_id" : user.uuid,
+            "category" : AIModelType.DREAMBOOTH.value,
+            "keyword" : ""
+        },
+        {
+            "name" : 'LoRA',
+            "user_id" : user.uuid,
+            "category" : AIModelType.LORA.value,
+            "keyword" : ""
+        },
+        {
+            "name" : 'StyleGAN-NADA',
+            "user_id" : user.uuid,
+            "version": REPLICATE_MODEL.stylegan_nada.version,
+            "replicate_url" : REPLICATE_MODEL.stylegan_nada.name,
+            "category" : AIModelType.BASE_SD.value,
+            "keyword" : ""
+        },
+    ]
+
+    model_list = []
+    data_repo = DataRepo()
+    for model in data:
+        model_list.append(data_repo.create_ai_model(**model))
+
+    return model_list
+
+    
+
+    

@@ -60,7 +60,7 @@ def create_file_path(path):
                 ['aws_access_key_id', ''],
                 ['aws_secret_access_key', ''],
                 ['previous_project', ''],
-                ['replicate_user_name', ''],
+                ['replicate_username', ''],
                 ['welcome_state', '0']
             ]
         elif file_name == 'log.csv':
@@ -126,7 +126,10 @@ def create_working_assets(project_name):
         "videos/" + project_name + "/assets/videos/1_final",
         "videos/" + project_name + "/assets/videos/2_completed",
         # app data
-        "inference_log"
+        "inference_log",
+        # temp folder
+        "videos/temp",
+        "videos/temp/assets/videos/0_raw/"
     ]
     
     for directory in directory_list:

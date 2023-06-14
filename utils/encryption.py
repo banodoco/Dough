@@ -12,5 +12,6 @@ class Encryptor:
         return encrypted_data
     
     def decrypt(self, data: str):
-        decrypted_data = self.cipher.decrypt(data)
+        data_bytes = data[2:-1].encode()
+        decrypted_data = self.cipher.decrypt(data_bytes)
         return decrypted_data.decode('utf-8')

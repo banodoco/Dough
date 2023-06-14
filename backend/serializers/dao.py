@@ -1,7 +1,7 @@
 from argparse import FileType
 from rest_framework import serializers
 
-from shared.constants import AIModelType, GuidanceType, InternalFileType
+from shared.constants import AIModelType, AnimationStyleType, GuidanceType, InternalFileType
 
 class CreateUserDao(serializers.Serializer):
     name = serializers.CharField(max_length=100)
@@ -16,6 +16,7 @@ class CreateFileDao(serializers.Serializer):
     local_path = serializers.CharField(max_length=512, required=False)
     hosted_url = serializers.CharField(max_length=512, required=False)
     tag = serializers.CharField(max_length=100, required=False)
+    project_id = serializers.CharField(max_length=100, required=False)
 
     def validate(self, data):
         local_path = data.get('local_path')
@@ -38,7 +39,7 @@ class CreateAIModelDao(serializers.Serializer):
     replicate_url = serializers.CharField(max_length=512, default="", required=False)
     diffusers_url = serializers.CharField(max_length=512, default="", required=False)
     category = serializers.ChoiceField(choices=AIModelType.value_list())
-    keyword = serializers.CharField(max_length=255, required=False)
+    keyword = serializers.CharField(max_length=255, default="", allow_blank=True, required=False)
 
 class UpdateAIModelDao(serializers.Serializer):
     uuid = serializers.CharField(max_length=100)
@@ -89,7 +90,7 @@ class CreateTimingDao(serializers.Serializer):
     notes = serializers.CharField(max_length=1024, required=False)
     adapter_type = serializers.CharField(max_length=255, required=False)
     clip_duration = serializers.FloatField(default=0, required=False)
-    animation_style = serializers.CharField(max_length=100, allow_null=True, required=False)
+    animation_style = serializers.CharField(max_length=100, default=AnimationStyleType.INTERPOLATION.value, required=False)
     interpolation_steps = serializers.IntegerField(required=False)
     low_threshold = serializers.FloatField(default=0, required=False)
     high_threshold = serializers.FloatField(default=0, required=False)
@@ -98,10 +99,10 @@ class CreateTimingDao(serializers.Serializer):
 
 class CreateAppSettingDao(serializers.Serializer):
     user_id = serializers.CharField(max_length=100)
-    replicate_key = serializers.CharField(max_length=100, required=False)
+    replicate_key = serializers.CharField(max_length=100, default="",required=False)
     aws_access_key = serializers.CharField(max_length=100, required=False)
     previous_project = serializers.CharField(max_length=100, required=False)
-    replicate_user_name = serializers.CharField(max_length=100, required=False)
+    replicate_username = serializers.CharField(max_length=100, default="",required=False)
     welcome_state = serializers.IntegerField(default=0, required=False)
 
 
@@ -111,7 +112,7 @@ class UpdateAppSettingDao(serializers.Serializer):
     replicate_key = serializers.CharField(max_length=100, required=False)
     aws_access_key = serializers.CharField(max_length=100, required=False)
     previous_project = serializers.CharField(max_length=100, required=False)
-    replicate_user_name = serializers.CharField(max_length=100, required=False)
+    replicate_username = serializers.CharField(max_length=100, required=False)
     welcome_state = serializers.IntegerField(default=0, required=False)
 
 class CreateSettingDao(serializers.Serializer):
@@ -151,7 +152,7 @@ class UpdateSettingDao(serializers.Serializer):
     extraction_type = serializers.CharField(max_length=255, required=False)
     width = serializers.IntegerField(required=False)
     height = serializers.IntegerField(required=False)
-    default_negative_prompt = serializers.CharField(max_length=1024, required=False)
+    default_negative_prompt = serializers.CharField(max_length=1024, default="", allow_blank=True, required=False)
     default_guidance_scale = serializers.FloatField(required=False)
     default_seed = serializers.IntegerField(required=False)
     default_num_inference_steps = serializers.IntegerField(required=False)

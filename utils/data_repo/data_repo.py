@@ -47,7 +47,7 @@ class DataRepo:
 
     def get_file_from_uuid(self, uuid):
         file = self.db_repo.get_file_from_uuid(uuid).data['data']
-        return InternalUserObject(file) if file else None
+        return InternalUserObject(**file) if file else None
     
     def get_all_file_list(self, file_type: InternalFileType, tag = None, project_id = None):
         filter_data = {"type": file_type}
@@ -73,8 +73,14 @@ class DataRepo:
         return res.status
     
     def get_image_list_from_uuid_list(self, image_uuid_list, file_type=InternalFileType.IMAGE.value):
+        if not (image_uuid_list and len(image_uuid_list)):
+            return []
         image_list = self.db_repo.get_image_list_from_uuid_list(image_uuid_list, file_type=file_type).data['data']
         return [InternalFileObject(**image) for image in image_list] if image_list else []
+    
+    def update_file(self, file_uuid, **kwargs):
+        file = self.db_repo.update_file(uuid=file_uuid, **kwargs).data['data']
+        return InternalFileObject(**file) if file else None
     
     # project
     def get_project_from_uuid(self, uuid):
@@ -98,8 +104,15 @@ class DataRepo:
         model = self.db_repo.get_ai_model_from_uuid(uuid).data['data']
         return InternalAIModelObject(**model) if model else None
     
-    def get_all_ai_model_list(self, user_id=None):
-        model_list = self.db_repo.get_all_ai_model_list(user_id).data['data']
+    def get_ai_model_from_name(self, name):
+        model = self.db_repo.get_ai_model_from_name(name).data['data']
+        return InternalAIModelObject(**model) if model else None
+    
+    def get_all_ai_model_list(self, model_type=None, user_id=None):
+        if not user_id:
+            user_id = get_current_user_uuid()
+
+        model_list = self.db_repo.get_all_ai_model_list(model_type, user_id).data['data']
         return [InternalAIModelObject(**model) for model in model_list] if model_list else []
     
     def create_ai_model(self, **kwargs):

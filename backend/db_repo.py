@@ -233,12 +233,38 @@ class DBRepo:
     
     def get_image_list_from_uuid_list(self, uuid_list, file_type=InternalFileType.IMAGE.value):
         file_list = InternalFileObject.objects.filter(uuid__in=uuid_list, \
-                                                      is_disabled=False, file_type=file_type).all()
+                                                      is_disabled=False, type=file_type).all()
         payload = {
             'data': InternalFileDto(file_list, many=True).data
         }
         
         return InternalResponse(payload, 'file list fetched', True)
+    
+    def update_file(self, **kwargs):
+        if 'uuid' not in kwargs:
+            return InternalResponse({}, 'uuid is required', False)
+        
+        file = InternalFileObject.objects.filter(uuid=kwargs['uuid'], is_disabled=False).first()
+        if not file:
+            return InternalResponse({}, 'invalid file uuid', False)
+        
+        if 'project_id' in kwargs:
+            project = Project.objects.filter(uuid=kwargs['project_id'], is_disabled=False).first()
+            if not project:
+                return InternalResponse({}, 'invalid project', False)
+            
+            kwargs['project_id'] = project.id
+        
+        for k,v in kwargs.items():
+            setattr(file, k, v)
+        
+        file.save()
+
+        payload = {
+            'data': InternalFileDto(file).data
+        }
+
+        return InternalResponse(payload, 'file updated successfully', True)
     
     # project
     def get_project_from_uuid(self, uuid):
@@ -307,16 +333,32 @@ class DBRepo:
         
         return InternalResponse(payload, 'ai_model fetched', True)
     
-    def get_all_ai_model_list(self, user_id=None):
+    def get_ai_model_from_name(self, name):
+        ai_model = AIModel.objects.filter(name=name, is_disabled=False).first()
+        if not ai_model:
+            return InternalResponse({}, 'invalid ai model name', False)
+
+        payload = {
+            'data': AIModelDto(ai_model).data
+        }
+
+        return InternalResponse(payload, 'ai_model fetched', True)
+    
+    def get_all_ai_model_list(self, model_type=None, user_id=None):
+        query = {'is_disabled': False}
+
         if user_id:
             user = User.objects.filter(uuid=user_id, is_disabled=False).first()
             if not user:
                 return InternalResponse({}, 'invalid user', False)
             
-            ai_model_list = AIModel.objects.filter(user_id=user.id, is_disabled=False).all()
-        else:
-            ai_model_list = AIModel.objects.filter(is_disabled=False).all()
+            query['user_id'] = user.id
 
+        if model_type:
+            query['category'] = model_type
+            
+        ai_model_list = AIModel.objects.filter(**query).all()
+        
         payload = {
             'data': AIModelDto(ai_model_list, many=True).data
         }
@@ -338,7 +380,7 @@ class DBRepo:
             print(attributes.data['user_id'])
             attributes._data['user_id'] = user.id
         
-        ai_model = InternalFileObject.objects.create(**attributes.data)
+        ai_model = AIModel.objects.create(**attributes.data)
         
         payload = {
             'data': AIModelDto(ai_model).data
@@ -508,7 +550,7 @@ class DBRepo:
     def get_timing_from_frame_number(self, project_uuid, frame_number):
         project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
         if project:
-            timing = Timing.objects.filter(frame_number=frame_number, project_id=project.id, is_disabled=False).first()
+            timing = Timing.objects.filter(aux_frame_index=frame_number, project_id=project.id, is_disabled=False).first()
             if timing:
                 payload = {
                     'data': TimingDto(timing).data
@@ -629,18 +671,10 @@ class DBRepo:
                     return InternalResponse({}, 'invalid primary image uuid', False)
                 
                 kwargs['primary_image_id'] = primary_image.id
-        
-        if 'primay_image_id' in kwargs:
-            if kwargs['primay_image_id'] != None:
-                primay_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['primay_image_id'], is_disabled=False).first()
-                if not primay_image:
-                    return InternalResponse({}, 'invalid primary image uuid', False)
-                
-                kwargs['primay_image_id'] = primay_image.id
 
         if 'model_id' in kwargs:
             if kwargs['model_id'] != None:
-                model: AIModel = AIModel.objects.filter(uuid=kwargs['model_uuid'], is_disabled=False).first()
+                model: AIModel = AIModel.objects.filter(uuid=kwargs['model_id'], is_disabled=False).first()
                 if not model:
                     return InternalResponse({}, 'invalid model uuid', False)
                 
@@ -810,7 +844,7 @@ class DBRepo:
                 'aws_access_key': app_setting.aws_access_key_decrypted,
                 'aws_secret_key': app_setting.aws_secret_access_key_decrypted,
                 'replicate_key': app_setting.replicate_key_decrypted,
-                'replicate_username': app_setting.replicate_user_name
+                'replicate_username': app_setting.replicate_username
             }
         }
 
@@ -961,6 +995,13 @@ class DBRepo:
                 return InternalResponse({}, 'invalid video', False)
             
             attributes._data["input_video_id"] = video.id
+
+        if 'model_id' in attributes.data and attributes.data['model_id']:
+            model = AIModel.objects.filter(uuid=attributes.data['model_id'], is_disabled=False).first()
+            if not model:
+                return InternalResponse({}, 'invalid model', False)
+            
+            attributes._data['model_id'] = model.id
         
         for attr, value in attributes.data.items():
             setattr(setting, attr, value)
