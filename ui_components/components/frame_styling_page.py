@@ -951,7 +951,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                 for i in range(start_index, end_index):
                     index_of_current_item = i
-
+                    
+                    timing_details = data_repo.get_timing_list_from_project(project_uuid)
                     st.subheader(f"Frame {i}")
 
                     image1, image2, image3 = st.columns([1, 1, 1])
@@ -983,8 +984,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             animation_style = st.radio("Animation style:", animation_styles, index=animation_styles.index(
                                 timing_details[i].animation_style), key=f"animation_style_{i}", help="This is for the morph from the current frame to the next one.")
 
-                            if timing.animation_style != animation_style:
-                                data_repo.update_specific_timing(timing.uuid, animation_style=animation_style)
+                            if timing_details[i].animation_style != animation_style:
+                                data_repo.update_specific_timing(timing_details[i].uuid, animation_style=animation_style)
                                 st.experimental_rerun()
 
                         if st.button(f"Jump to single frame view for #{index_of_current_item}"):
@@ -996,15 +997,15 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         btn1, btn2, btn3 = st.columns([2, 1, 1])
                         with btn1:
                             if st.button("Delete this keyframe", key=f'{index_of_current_item}'):
-                                delete_frame(timing.uuid)
+                                delete_frame(timing_details[i].uuid)
                                 st.experimental_rerun()
                         with btn2:
                             if st.button("⬆️", key=f"Promote {index_of_current_item}"):
-                                move_frame("Up", timing.uuid)
+                                move_frame("Up", timing_details[i].uuid)
                                 st.experimental_rerun()
                         with btn3:
                             if st.button("⬇️", key=f"Demote {index_of_current_item}"):
-                                move_frame("Down", timing.uuid)
+                                move_frame("Down", timing_details[i].uuid)
                                 st.experimental_rerun()
                 # Display radio buttons for pagination at the bottom
 

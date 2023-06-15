@@ -44,10 +44,14 @@ def frame_editing_page(project_uuid: str):
 
         f1, f2, f3 = st.columns([1, 2, 1])
         with f1:
-            st.session_state['current_frame_uuid'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(
+            frame_number = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(
                 timing_details)-1, on_change=reset_new_image, value=st.session_state['current_frame_index'])
-            if st.session_state['current_frame_index'] != st.session_state['current_frame_uuid']:
-                st.session_state['current_frame_index'] = st.session_state['current_frame_uuid']
+            
+            st.session_state['current_frame_uuid'] = timing_details[frame_number].uuid
+            frame_index = next((i for i, t in enumerate(timing_details) if t.uuid == st.session_state['current_frame_uuid']), None)
+
+            if st.session_state['current_frame_index'] != frame_index:
+                st.session_state['current_frame_index'] = frame_index
                 st.experimental_rerun()
         with f2:
             st.session_state['which_stage'] = st.radio('Select stage:', [
@@ -84,10 +88,10 @@ def frame_editing_page(project_uuid: str):
                 editing_image = timing.source_image.location
             elif st.session_state['which_stage'] == "Styled Key Frame":
                 primary_image = timing.primary_image
-                editing_image = timing.primary_variant_location
+                editing_image = timing.primary_image_location
 
-            width = int(project_settings["width"])
-            height = int(project_settings["height"])
+            width = int(project_settings.width)
+            height = int(project_settings.height)
 
             st.sidebar.markdown("### Select Area To Edit:")
             if 'index_of_type_of_mask_selection' not in st.session_state:
@@ -282,7 +286,7 @@ def frame_editing_page(project_uuid: str):
                             }
                             canny_image = data_repo.create_file(**file_data)
                             data_repo.update_specific_timing(
-                                st.session_state['current_frame_uuid'], canny_image_uuid=canny_image.uuid)
+                                st.session_state['current_frame_uuid'], canny_image_id=canny_image.uuid)
                             st.experimental_rerun()
 
                         else:
@@ -322,7 +326,7 @@ def frame_editing_page(project_uuid: str):
                             }
                             canny_image = data_repo.create_file(**file_data)
                             data_repo.update_specific_timing(
-                                st.session_state['current_frame_uuid'], canny_image_uuid=canny_image.uuid)
+                                st.session_state['current_frame_uuid'], canny_image_id=canny_image.uuid)
                             time.sleep(1.5)
                             st.experimental_rerun()
 
@@ -411,10 +415,13 @@ def frame_editing_page(project_uuid: str):
                     with btn2:
                         background_selection = st.sidebar.selectbox(
                             "Range background", background_list)
-                        background_image_uuid = background_selection[1]
-                        background_image = data_repo.get_file_from_uuid(background_image_uuid)
-                        if background_list != []:
-                            st.image(f"{background_image}", use_column_width=True)
+                        
+                        if background_selection:
+                            background_image_uuid = background_selection[1]
+                            background_image = data_repo.get_file_from_uuid(background_image_uuid)
+                            if background_list != []:
+                                st.image(f"{background_image}", use_column_width=True)
+
                 elif source_of_image == "From Other Frame":
                     btn1, btn2 = st.sidebar.columns([1, 1])
                     with btn1:
