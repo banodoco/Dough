@@ -54,9 +54,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
             timing = data_repo.get_timing_list_from_project(project_uuid)[0]
             st.session_state['current_frame_uuid'] = timing.uuid
 
-        # timing for the current state
-        state_timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
-
         if 'frame_styling_view_type' not in st.session_state:
             st.session_state['frame_styling_view_type'] = "List View"
             st.session_state['frame_styling_view_type_index'] = 0
@@ -1109,6 +1106,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 data_repo.update_specific_timing(new_timing.uuid, frame_time=0.0)
             else:
                 create_timings_row_at_frame_number(project_uuid, index_of_current_item + 1)
+                timing_details = data_repo.get_timing_list_from_project(project_uuid)
                 data_repo.update_specific_timing(timing_details[index_of_current_item + 1].uuid, frame_time=key_frame_time)
 
             st.success(f"Key frame added at {key_frame_time} seconds")

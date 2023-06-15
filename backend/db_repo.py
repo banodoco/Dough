@@ -544,7 +544,7 @@ class DBRepo:
     def get_timing_from_uuid(self, uuid):
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
-            return InternalResponse({}, 'invalid timing uuid', False)
+            return InternalResponse({'data': None}, 'invalid timing uuid', False)
         
         payload = {
             'data': TimingDto(timing).data
