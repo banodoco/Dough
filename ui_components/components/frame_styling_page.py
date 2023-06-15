@@ -508,7 +508,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                             with frame3:
                                 frame_time = st.slider(
-                                    f"#{i} Frame Time = {timing_details[i].frame_time}",
+                                    f"#{i} Frame Time = {round(timing_details[i].frame_time, 3)}",
                                     min_value=min_frame_time,
                                     max_value=max_frame_time,
                                     value=timing_details[i].frame_time,
@@ -520,18 +520,17 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             if timing_details[i].frame_time != frame_time:
                                 previous_frame_time = timing_details[i].frame_time
                                 data_repo.update_specific_timing(timing_details[i].uuid, frame_time=frame_time)
-                                for a in range(st.session_state['current_frame_uuid'] - 1, st.session_state['current_frame_uuid'] + 1):
-                                    # TODO: fix setting value none during the timing update
-                                    data_repo.update_specific_timing(timing_details[a].uuid, timed_clip=None)
-                                data_repo.update_specific_timing(timing_details[i], preview_video=None)
+                                for a in range(st.session_state['current_frame_index'] - 1, st.session_state['current_frame_index'] + 1):
+                                    data_repo.update_specific_timing(timing_details[a].uuid, timed_clip_id=None)
+                                data_repo.update_specific_timing(timing_details[i].uuid, preview_video_id=None)
                                 if shift_frames is True:
                                     diff_frame_time = frame_time - previous_frame_time
                                     for j in range(i+1, num_timing_details):
                                         new_frame_time = timing_details[j].frame_time + \
                                             diff_frame_time
                                         data_repo.update_specific_timing(timing_details[j].uuid, frame_time=new_frame_time)
-                                        data_repo.update_specific_timing(timing_details[j].uuid, timed_clip=None)
-                                        data_repo.update_specific_timing(timing_details[j].uuid, preview_video=None)
+                                        data_repo.update_specific_timing(timing_details[j].uuid, timed_clip_id=None)
+                                        data_repo.update_specific_timing(timing_details[j].uuid, preview_video_id=None)
                                 st.experimental_rerun()
 
                     with timing2:
@@ -551,7 +550,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             if variants != [] and variants != None and variants != "":
                                 if st.button("Generate New Preview Video"):
                                     preview_video = create_full_preview_video(st.session_state['current_frame_uuid'], speed)
-                                    data_repo.update_specific_timing(st.session_state['current_frame_uuid'], preview_video_uuid=preview_video.uuid)
+                                    data_repo.update_specific_timing(st.session_state['current_frame_uuid'], preview_video_id=preview_video.uuid)
                                     st.experimental_rerun()
 
                         back_and_forward_buttons()

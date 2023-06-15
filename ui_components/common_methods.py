@@ -576,6 +576,7 @@ def create_or_get_single_preview_video(timing_uuid):
         audio_bytes = get_audio_bytes_for_slice(timing_uuid)
         add_audio_to_video_slice(timing.timed_clip, audio_bytes)
 
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
     return timing.timed_clip
 
 
@@ -591,32 +592,31 @@ def single_frame_time_changer(timing_uuid):
 
     if frame_time != timing.frame_time:
         data_repo.update_specific_timing(timing_uuid, frame_time=frame_time)
-        if timing.aux_frame_index != 1:
-            data_repo.update_specific_timing(
-                data_repo.get_prev_timing(timing_uuid).uuid, timed_clip="")
-        data_repo.update_specific_timing(timing_uuid, timed_clip="")
+        if timing.aux_frame_index != 0:
+            prev_timing = data_repo.get_prev_timing(timing_uuid)
+            data_repo.update_specific_timing(prev_timing.uuid, timed_clip_id=None)
+
+        data_repo.update_specific_timing(timing_uuid, timed_clip_id=None)
 
         # if the frame time of this frame is more than the frame time of the next frame,
         # then we need to update the next frame's frame time, and all the frames after that
         # - shift them by the difference between the new frame time and the old frame time
 
-        # if it's not the last item (not last frame = next frame is available)
-        last_timing = data_repo.get_next_timing(timing_uuid)
-        if last_timing:
-            if frame_time > last_timing['frame_time']:
-                for a in range(timing.aux_frame_index, len(timing_details)):
-                    this_frame_time = timing_details[a].frame_time
-                    # shift them by the difference between the new frame time and the old frame time
-                    new_frame_time = this_frame_time + \
-                        (frame_time - timing.frame_time)
-                    data_repo.update_specific_timing(
-                        a, frame_time=new_frame_time)
-                    data_repo.update_specific_timing(a, timed_clip="")
+        next_timing = data_repo.get_next_timing(timing_uuid)
+        if next_timing and frame_time > next_timing.frame_time:
+            for a in range(timing.aux_frame_index, len(timing_details)):
+                frame = timing_details[a]
+                this_frame_time = frame.frame_time
+                # shift them by the difference between the new frame time and the old frame time
+                new_frame_time = this_frame_time + \
+                    (frame_time - timing.frame_time)
+                data_repo.update_specific_timing(frame.uuid, frame_time=new_frame_time)
+                data_repo.update_specific_timing(frame.uuid, timed_clip_id=None)
         st.experimental_rerun()
 
 
 '''
-preview_clips have frame numbers on them
+preview_clips have frame numbers on them. Preview clip is generated from index-2 to index+2 frames
 '''
 def create_full_preview_video(timing_uuid, speed) -> InternalFileObject:
     data_repo = DataRepo()
@@ -630,25 +630,23 @@ def create_full_preview_video(timing_uuid, speed) -> InternalFileObject:
 
     print("HERE'S THE SHIT")
 
-    print(
-        f"index_of_item: {index_of_item}, num_timing_details: {num_timing_details}")
+    print(f"index_of_item: {index_of_item}, num_timing_details: {num_timing_details}")
 
     for i in range(index_of_item - 2, index_of_item + 3):
         print(f"i: {i}")
         if i < 0 or i >= num_timing_details-1:
             continue
 
-        primary_variant_location = data_repo.get_primary_variant_location(timing_uuid)
+        primary_variant_location = data_repo.get_primary_variant_location(timing_details[i].uuid)
 
-        print(
-            f"primary_variant_location for i={i}: {primary_variant_location}")
+        print(f"primary_variant_location for i={i}: {primary_variant_location}")
 
         if not primary_variant_location:
             break
 
-        preview_video = create_or_get_single_preview_video(timing_uuid)
+        preview_video = create_or_get_single_preview_video(timing_details[i].uuid)
 
-        clip = VideoFileClip(preview_video)
+        clip = VideoFileClip(preview_video.location)
 
         number_text = TextClip(str(i), fontsize=24, color='white')
         number_background = TextClip(" ", fontsize=24, color='black', bg_color='black', size=(
@@ -662,16 +660,17 @@ def create_full_preview_video(timing_uuid, speed) -> InternalFileObject:
             [clip, number_background, number_text])
 
         # remove existing preview video
-        os.remove(preview_video)
+        if preview_video.local_path:
+            os.remove(preview_video.local_path)
         clip_with_number.write_videofile(
-            preview_video, codec='libx264', bitrate='3000k')
+            preview_video.location, codec='libx264', bitrate='3000k')
         clips.append(preview_video)
 
     print(clips)
-    video_clips = [VideoFileClip(v) for v in clips]
+    video_clips = [VideoFileClip(v.location) for v in clips]
     combined_clip = concatenate_videoclips(video_clips)
     output_filename = str(uuid.uuid4()) + ".mp4"
-    video_location = f"videos/{timing.project.name}/assets/videos/1_final/{output_filename}"
+    video_location = f"videos/{timing.project.uuid}/assets/videos/1_final/{output_filename}"
     combined_clip.write_videofile(video_location)
 
     if speed != 1.0:
@@ -680,7 +679,7 @@ def create_full_preview_video(timing_uuid, speed) -> InternalFileObject:
         os.remove(video_location)
         output_clip.write_videofile(video_location, codec="libx264", preset="fast")
 
-    video_file = data_repo.create_file(filename=output_filename, type=InternalFileType.VIDEO.value, local_path=video_location)
+    video_file = data_repo.create_file(name=output_filename, type=InternalFileType.VIDEO.value, local_path=video_location)
 
     return video_file
 
