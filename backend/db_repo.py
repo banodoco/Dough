@@ -582,7 +582,7 @@ class DBRepo:
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)
         
-        next_timing = Timing.objects.filter(aux_frame_index__gt=timing.aux_frame_index, is_disabled=False).order_by('aux_frame_index').first()
+        next_timing = Timing.objects.filter(aux_frame_index=timing.aux_frame_index + 1, is_disabled=False).order_by('aux_frame_index').first()
         
         payload = {
             'data': TimingDto(next_timing).data if next_timing else None
@@ -595,7 +595,7 @@ class DBRepo:
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)
         
-        prev_timing = Timing.objects.filter(aux_frame_index__lt=timing.aux_frame_index, is_disabled=False).order_by('aux_frame_index').first()
+        prev_timing = Timing.objects.filter(aux_frame_index=timing.aux_frame_index - 1, is_disabled=False).order_by('aux_frame_index').first()
         
         payload = {
             'data': TimingDto(prev_timing).data if prev_timing else None
