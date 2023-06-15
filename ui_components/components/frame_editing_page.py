@@ -33,7 +33,7 @@ def frame_editing_page(project_uuid: str):
 
         # initiative value
         if "current_frame_uuid" not in st.session_state:
-            st.session_state['current_frame_uuid'] = 0
+            st.session_state['current_frame_uuid'] = timing_details[0].uuid
 
         def reset_new_image():
             st.session_state['edited_image'] = ""
@@ -461,7 +461,7 @@ def frame_editing_page(project_uuid: str):
                 if st.session_state['edited_image'] != "":
                     if st.button("Promote Last Edit", type="primary"):
                         if st.session_state['which_stage'] == "Unedited Key Frame":
-                            data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_uuid=st.session_state['edited_image'])
+                            data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=st.session_state['edited_image'])
                         elif st.session_state['which_stage'] == "Styled Key Frame":
                             number_of_image_variants = add_image_variant(st.session_state['edited_image'], st.session_state['current_frame_uuid'])
                             promote_image_variant(st.session_state['current_frame_uuid'], number_of_image_variants - 1)
@@ -476,7 +476,7 @@ def frame_editing_page(project_uuid: str):
                             st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project.name,
                                                                                   background_image, editing_image, "", "", width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
                         if st.session_state['which_stage'] == "Unedited Key Frame":
-                            data_repo.update_specific_timing_value(st.session_state['current_frame_uuid'], source_image_uuid=st.session_state['edited_image'])
+                            data_repo.update_specific_timing_value(st.session_state['current_frame_uuid'], source_image_id=st.session_state['edited_image'])
                         elif st.session_state['which_stage'] == "Styled Key Frame":
                             number_of_image_variants = add_image_variant(st.session_state['edited_image'], st.session_state['current_frame_uuid'])
                             promote_image_variant(st.session_state['current_frame_uuid'], number_of_image_variants - 1)
@@ -506,7 +506,7 @@ def frame_editing_page(project_uuid: str):
 
                         if st.button("Replace with selected frame", disabled=False):
                             if st.session_state['which_stage'] == "Unedited Key Frame":
-                                data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_uuid=background_image.uuid)
+                                data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=background_image.uuid)
                             elif st.session_state['which_stage'] == "Styled Key Frame":
                                 number_of_image_variants = add_image_variant(background_image, st.session_state['current_frame_uuid'])
                                 promote_image_variant(st.session_state['current_frame_uuid'], number_of_image_variants - 1)
@@ -546,7 +546,7 @@ def frame_editing_page(project_uuid: str):
                             uploaded_image = data_repo.create_file(**file_data)
                             
                             if st.session_state['which_stage'] == "Unedited Key Frame":
-                                data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_uuid=uploaded_image.uuid)
+                                data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=uploaded_image.uuid)
                             elif st.session_state['which_stage'] == "Styled Key Frame":
                                 number_of_image_variants = add_image_variant(uploaded_image.uuid, st.session_state['current_frame_uuid'])
                                 promote_image_variant(st.session_state['current_frame_uuid'], number_of_image_variants - 1)

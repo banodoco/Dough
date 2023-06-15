@@ -234,6 +234,11 @@ class DBRepo:
     def get_image_list_from_uuid_list(self, uuid_list, file_type=InternalFileType.IMAGE.value):
         file_list = InternalFileObject.objects.filter(uuid__in=uuid_list, \
                                                       is_disabled=False, type=file_type).all()
+        
+        if file_list and len(file_list):
+            uuid_dict = {str(obj.uuid): obj for obj in file_list}
+            file_list = [uuid_dict[uuid] for uuid in uuid_list if uuid in uuid_dict]
+
         payload = {
             'data': InternalFileDto(file_list, many=True).data
         }

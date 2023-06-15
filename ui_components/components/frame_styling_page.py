@@ -288,7 +288,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 canny_image = data_repo.create_file(
                                     **file_data)
                                 data_repo.update_specific_timing(
-                                    st.session_state['current_frame_uuid'], source_image_uuid=canny_image.uuid)
+                                    st.session_state['current_frame_uuid'], source_image_id=canny_image.uuid)
                                 st.success("New Canny Image Saved")
                                 st.session_state['reset_canvas'] = True
                                 time.sleep(1)
@@ -318,7 +318,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         "local_path": canny_timing.source_image.uuid
                                     }
                                     canny_file: InternalFileObject = data_repo.create_file(**file_data)
-                                    data_repo.update_specific_timing(timing_details[st.session_state['current_frame_index']].uuid, source_image_uuid=canny_file.uuid)
+                                    data_repo.update_specific_timing(timing_details[st.session_state['current_frame_index']].uuid, source_image_id=canny_file.uuid)
                                     st.experimental_rerun()
 
                             if canny_timing.source_image.location != "":
@@ -345,7 +345,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         "local_path": f"videos/{timing.project.uuid}/assets/resources/masks/{uploaded_file.name}"
                                     }
                                     image = data_repo.create_file(**file_data)
-                                    data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_uuid=image.uuid)
+                                    data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=image.uuid)
                                     time.sleep(1.5)
                                     st.experimental_rerun()
                         with canny3:
@@ -373,7 +373,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                     with open("temp.png", "wb") as f:
                                         f.write(uploaded_image.getbuffer())
                                         st.success("Your file is uploaded")
-                                        uploaded_image = "temp.png"
+                                        uploaded_image = "videos/temp/assets/videos/0_raw/" + str(uuid.uuid4()) +".png"
 
                             threshold1, threshold2 = st.columns([1, 1])
                             with threshold1:
@@ -388,16 +388,16 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                     canny_image = extract_canny_lines(image_path, timing.project.uuid, low_threshold, high_threshold)
                                 elif source_of_image == "Uploaded Image":
                                     canny_image = extract_canny_lines(uploaded_image, timing.project.uuid, low_threshold, high_threshold)
-                                st.image(canny_image)
+                                
+                                st.session_state['canny_image'] = canny_image.uuid
+
+                            if 'canny_image' in st.session_state and st.session_state['canny_image']:
+                                canny_image = data_repo.get_file_from_uuid(st.session_state['canny_image'])
+                                st.image(canny_image.location)
                                 if st.button("Save Canny Image"):
-                                    file_data = {
-                                        "name": str(uuid.uuid4()) + ".png",
-                                        "type": InternalFileType.IMAGE.value,
-                                        "local_path": canny_image
-                                    }
-                                    canny_image = data_repo.create_file(**file_data)
-                                    data_repo.update_specific_timing(int(st.session_state['current_frame_uuid']), source_image_uuid=canny_image.uuid)
+                                    data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=canny_image.uuid)
                                     st.session_state['reset_canvas'] = True
+                                    st.session_state['canny_image'] = None
                                     st.experimental_rerun()
 
                 # if current item is 0
@@ -425,7 +425,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                             "local_path": f"videos/{timing.project.uuid}/assets/resources/masks/{uploaded_file.name}"
                                         }
                                         source_image = data_repo.create_file(**file_data)
-                                        data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_uuid=source_image.uuid)
+                                        data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=source_image.uuid)
                                         time.sleep(1.5)
                                         st.experimental_rerun()
 
@@ -465,7 +465,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         "hosted_url": current_timing.primary_image_location
                                     }
                                     source_image = data_repo.create_file(**file_data)
-                                    data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_uuid=source_image.uuid)
+                                    data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=source_image.uuid)
                                     st.experimental_rerun()
 
                 elif st.session_state['section'] == "Motion":
@@ -685,18 +685,17 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                     variants = timing_details[timing.aux_frame_index].alternative_images_list
 
-                    if timing.primary_image_location:
-                        primary_image_location = timing.primary_image_location
+                    primary_image_location = timing.primary_image_location if timing.primary_image_location else None
 
                     with mainimages1:
                         if st.session_state['show_comparison'] == "None":
                             project_settings = data_repo.get_project_setting(project_uuid)
-                            if timing.alternative_images:
+                            if primary_image_location:
                                 st.image(primary_image_location, use_column_width=True)
                             else:
                                 st.image('https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png', use_column_width=True)
                         elif st.session_state['show_comparison'] == "Source Frame":
-                            if timing.alternative_images:
+                            if primary_image_location:
                                 img2 = primary_image_location
                             else:
                                 img2 = 'https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'
@@ -781,6 +780,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                     with mainimages2:
                         if timing.alternative_images:
+                            variants = timing.alternative_images_list
                             number_of_variants = len(variants)
                             back_and_forward_buttons()
                             current_variant_uuid = timing.primary_image.uuid
@@ -871,17 +871,17 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 which_image_to_use_for_replacement = st.number_input("Select image to use:", min_value=0, max_value=len(
                                     timing_details)-1, value=0, key="which_image_to_use_for_replacement")
                                 if which_stage_to_use_for_replacement == "Unedited Key Frame":
-                                    selected_image = timing_details[which_image_to_use_for_replacement]["source_image"]
+                                    selected_image = timing_details[which_image_to_use_for_replacement].source_image
                                 elif which_stage_to_use_for_replacement == "Styled Key Frame":
-                                    selected_image = data_repo.get_primary_image_location(timing_details[which_image_to_use_for_replacement].uuid)
+                                    selected_image = timing_details[which_image_to_use_for_replacement].primary_image
                                 if st.button("Replace with selected frame", disabled=False):
-                                    number_of_image_variants = add_image_variant(selected_image, st.session_state['current_frame_uuid'])
+                                    number_of_image_variants = add_image_variant(selected_image.uuid, st.session_state['current_frame_uuid'])
                                     promote_image_variant(st.session_state['current_frame_uuid'], number_of_image_variants - 1)
                                     st.success("Replaced")
                                     time.sleep(1)
                                     st.experimental_rerun()
                             with replace2:
-                                st.image(selected_image, width=300)
+                                st.image(selected_image.location, width=300)
 
                         elif replace_with == "Uploaded Frame":
                             with replace1:
@@ -1123,7 +1123,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     "local_path": selected_image
                 }
                 selected_image = data_repo.create_file(**file_data)
-                data_repo.update_specific_timing(timing_details[index_of_current_item + 1].uuid, source_image_uuid=selected_image.uuid)
+                data_repo.update_specific_timing(timing_details[index_of_current_item + 1].uuid, source_image_id=selected_image.uuid)
                 data_repo.update_specific_timing(timing_details[index_of_current_item + 1].uuid, animation_style=project_settings.default_animation_style)
 
             if len(timing_details) == 1:

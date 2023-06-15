@@ -125,7 +125,7 @@ def resize_and_rotate_element(stage, project_uuid):
                                 "project_id": project_uuid
                             }
                             file: InternalFileObject = data_repo.create_file(**file_data)
-                            data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_uuid=file.uuid)
+                            data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=file.uuid)
 
                         st.session_state['rotated_image'] = ""
                         st.experimental_rerun()
@@ -1130,16 +1130,16 @@ def move_frame(direction, timing_uuid):
         previous_alternative_images = prev_timing['alternative_images']
         previous_source_image = prev_timing['source_image']
 
-        data_repo.update_specific_timing(prev_timing.uuid, primary_image_uuid=current_primary_image.uuid)
+        data_repo.update_specific_timing(prev_timing.uuid, primary_image_id=current_primary_image.uuid)
         print("current_alternative_images= ", current_alternative_images)
         data_repo.update_specific_timing(prev_timing.uuid, alternative_images=str(current_alternative_images))
-        data_repo.update_specific_timing(prev_timing.uuid, source_image_uuid=current_source_image.uuid)
+        data_repo.update_specific_timing(prev_timing.uuid, source_image_id=current_source_image.uuid)
         data_repo.update_specific_timing(prev_timing.uuid, interpolated_video=None)
-        data_repo.update_specific_timing(prev_timing.uuid, timed_clip=None)
+        data_repo.update_specific_timing(prev_timing.uuid, timed_clip_id=None)
 
-        data_repo.update_specific_timing(timing.uuid, primary_image_uuid=previous_primary_image.uuid)
+        data_repo.update_specific_timing(timing.uuid, primary_image_id=previous_primary_image.uuid)
         data_repo.update_specific_timing(timing.uuid, alternative_images=str(previous_alternative_images))
-        data_repo.update_specific_timing(timing.uuid, source_image_uuid=previous_source_image.uuid)
+        data_repo.update_specific_timing(timing.uuid, source_image_id=previous_source_image.uuid)
 
     elif direction == "Down":
         next_primary_image = data_repo.get_next_timing(timing.uuid).primary_image
@@ -1147,25 +1147,25 @@ def move_frame(direction, timing_uuid):
         next_source_image = data_repo.get_next_timing(timing.uuid).source_image
 
         data_repo.update_specific_timing(
-            data_repo.get_next_timing(timing.uuid).uuid, primary_image_uuid=current_primary_image.uuid)
+            data_repo.get_next_timing(timing.uuid).uuid, primary_image_id=current_primary_image.uuid)
         data_repo.update_specific_timing(
             data_repo.get_next_timing(timing.uuid).uuid, alternative_images=str(current_alternative_images))
         data_repo.update_specific_timing(
-            data_repo.get_next_timing(timing.uuid).uuid, source_image_uuid=current_source_image.uuid)
+            data_repo.get_next_timing(timing.uuid).uuid, source_image_id=current_source_image.uuid)
         data_repo.update_specific_timing(
             data_repo.get_next_timing(timing.uuid).uuid, interpolated_video=None)
         data_repo.update_specific_timing(
-            data_repo.get_next_timing(timing.uuid).uuid, timed_clip=None)
+            data_repo.get_next_timing(timing.uuid).uuid, timed_clip_id=None)
 
         data_repo.update_specific_timing(
-            timing.uuid, primary_image_uuid=next_primary_image.uuid)
+            timing.uuid, primary_image_id=next_primary_image.uuid)
         data_repo.update_specific_timing(
             timing.uuid, alternative_images=str(next_alternative_images))
         data_repo.update_specific_timing(
-            timing.uuid, source_image_uuid=next_source_image.uuid)
+            timing.uuid, source_image_id=next_source_image.uuid)
 
     data_repo.update_specific_timing(timing.uuid, interpolated_video=None)
-    data_repo.update_specific_timing(timing.uuid, timed_clip=None)
+    data_repo.update_specific_timing(timing.uuid, timed_clip_id=None)
 
 
 # def get_timing_details(video_name):
@@ -1479,7 +1479,7 @@ def extract_canny_lines(image_path_or_url, project_name, low_threshold=50, high_
     os.makedirs(os.path.dirname(file_location), exist_ok=True)
     new_canny_image.save(file_location)
 
-    canny_image_file = data_repo.create_file(filename=unique_file_name, type=InternalFileType.IMAGE.value, local_path=file_location)
+    canny_image_file = data_repo.create_file(name=unique_file_name, type=InternalFileType.IMAGE.value, local_path=file_location)
     return canny_image_file
 
 # the input image is an image created by the PIL library

@@ -47,7 +47,7 @@ class DataRepo:
 
     def get_file_from_uuid(self, uuid):
         file = self.db_repo.get_file_from_uuid(uuid).data['data']
-        return InternalUserObject(**file) if file else None
+        return InternalFileObject(**file) if file else None
     
     def get_all_file_list(self, file_type: InternalFileType, tag = None, project_id = None):
         filter_data = {"type": file_type}
