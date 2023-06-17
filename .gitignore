@@ -21,3 +21,7 @@ test.py
 doc.py
 .env
 data.json
+
+# generated file TODO: move inside videos
+depth.png
+masked_image.png
