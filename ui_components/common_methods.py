@@ -2679,11 +2679,11 @@ def render_video(final_video_name, project_uuid, quality):
 
         timing = timing_details[i]
         if quality == VideoQuality.HIGH.value:
-            data_repo.update_specific_timing(current_timing.uuid, timed_clip="")
+            data_repo.update_specific_timing(current_timing.uuid, timed_clip_id=None)
             interpolation_steps = calculate_dynamic_interpolations_steps(
                 timing_details[index_of_current_item].clip_duration)
             if not timing.interpolation_steps or timing.interpolation_steps < interpolation_steps:
-                data_repo.update_specific_timing(current_timing.uuid, interpolation_steps=interpolation_steps, interpolated_clip="")
+                data_repo.update_specific_timing(current_timing.uuid, interpolation_steps=interpolation_steps, interpolated_clip_id=None)
         else:
             if not timing.interpolation_steps or timing.interpolation_steps < 3:
                 data_repo.update_specific_timing(current_timing.uuid, interpolation_steps=3)
@@ -2711,7 +2711,7 @@ def render_video(final_video_name, project_uuid, quality):
             if not current_timing.timed_clip:
                 desired_duration = current_timing.clip_duration
                 location_of_input_video_file = current_timing.interpolated_clip
-                duration_of_input_video = float(get_duration_from_video(location_of_input_video_file))
+
                 output_video = update_speed_of_video_clip(location_of_input_video_file, True, timing.uuid)
                 
                 if quality == VideoQuality.PREVIEW.value:
