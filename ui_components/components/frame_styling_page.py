@@ -964,9 +964,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                      caption=f"Source image")
 
                     with image2:
-                        primary_image = timing.primary_image_location
+                        primary_image = timing_details[i].primary_image
                         if primary_image:
-                            st.image(primary_image, use_column_width=True,
+                            st.image(primary_image.location, use_column_width=True,
                                      caption=f"Styled image")
 
                     with image3:

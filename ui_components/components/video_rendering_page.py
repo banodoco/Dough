@@ -1,7 +1,7 @@
 from typing import List
 import datetime
 import streamlit as st
-from shared.constants import InternalFileType
+from shared.constants import InternalFileTag, InternalFileType
 from ui_components.common_methods import attach_audio_element, render_video
 import random
 import time
@@ -52,8 +52,7 @@ def video_rendering_page(mainheader2, project_uuid):
     if st.button("Render New Video"):
         if delete_existing_timed_clips == True:
             for i in timing_details:
-                index_of_current_item = timing_details.index(i)
-                data_repo.update_specific_timing(timing_details[index_of_current_item].uuid, timed_clip_uuid=None)
+                data_repo.update_specific_timing(timing_details[i].uuid, timed_clip_id=None)
             timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
         render_video(final_video_name, project_uuid, quality_of_video)
@@ -66,7 +65,7 @@ def video_rendering_page(mainheader2, project_uuid):
     # video_list = [list_of_files for list_of_files in os.listdir(
     #     "videos/" + project_name + "/assets/videos/2_completed") if list_of_files.endswith('.mp4')]
 
-    video_list: List[InternalFileObject] = data_repo.get_all_file_list(InternalFileType.VIDEO.value, tag=None, project_uuid=project_uuid)
+    video_list: List[InternalFileObject] = data_repo.get_all_file_list(InternalFileType.VIDEO.value, tag=InternalFileTag.GENERATED_VIDEO.value, project_id=project_uuid)
 
     # video_dir = "videos/" + project_name + "/assets/videos/2_completed"
 
@@ -78,7 +77,7 @@ def video_rendering_page(mainheader2, project_uuid):
     for video in video_list:
         st.subheader(video.name)
 
-        st.write(datetime.datetime.fromtimestamp(video.created_on))
+        st.write(datetime.datetime.fromisoformat(video.created_on))
 
         st.video(video.location)
 
@@ -88,7 +87,7 @@ def video_rendering_page(mainheader2, project_uuid):
             if st.checkbox(f"Confirm {video.name} Deletion"):
                 if st.button(f"Delete {video.name}"):
                     # removing locally
-                    video_path = "videos/" + project_name + "/assets/videos/2_completed/" + video.name
+                    video_path = "videos/" + project_uuid + "/assets/videos/2_completed/" + video.name
                     if os.path.exists(video_path):
                         os.remove(video_path)
 

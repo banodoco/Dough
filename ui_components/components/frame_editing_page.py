@@ -195,7 +195,7 @@ def frame_editing_page(project_uuid: str):
             elif type_of_mask_selection == "Edit Canny Image":
                 timing = data_repo.get_timing_from_uuid(
                     st.session_state['current_frame_uuid'])
-                if timing.canny_image.location == "":
+                if not timing.canny_image:
                     st.error("No Canny Image Found From Key Frame")
 
                 else:
@@ -314,7 +314,7 @@ def frame_editing_page(project_uuid: str):
                             data_repo.update_specific_timing(
                                 st.session_state['current_frame_uuid'], "canny_image", timing.canny_image.location)
                             st.experimental_rerun()
-                    if timing.canny_image.location == "":
+                    if not timing.canny_image:
                         st.error("No Canny Image Found From Key Frame")
                 with canny2:
                     st.markdown("#### Upload Canny Image")

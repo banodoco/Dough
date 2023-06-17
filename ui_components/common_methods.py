@@ -26,7 +26,7 @@ import uuid
 from io import BytesIO
 import ast
 import numpy as np
-from shared.constants import AIModelType, InternalFileType
+from shared.constants import AIModelType, InternalFileTag, InternalFileType
 from pydub import AudioSegment
 import shutil
 from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, vfx
@@ -206,7 +206,8 @@ def prompt_interpolation_model(timing_uuid) -> InternalFileType:
         print(e)
 
     video_file = data_repo.create_file(name=file_name, type=InternalFileType.VIDEO.value, \
-                                       hosted_url=output, local_path=video_location, project_id=timing.project.uuid)
+                                       hosted_url=output, local_path=video_location, project_id=timing.project.uuid,\
+                                        tag=InternalFileTag.GENERATED_VIDEO.value)
 
     return video_file
 
@@ -217,7 +218,7 @@ def create_video_without_interpolation(timing_uuid):
 
     image_path_or_url = data_repo.get_primary_variant_location(timing_uuid)
 
-    video_location = "videos/" + timing.project.name + "/assets/videos/0_raw/" + \
+    video_location = "videos/" + timing.project.uuid + "/assets/videos/0_raw/" + \
                      ''.join(random.choices(string.ascii_lowercase +
                              string.digits, k=16)) + ".mp4"
 
@@ -245,7 +246,17 @@ def create_video_without_interpolation(timing_uuid):
 
     video_writer.release()
 
-    return video_location
+    unique_file_name = str(uuid.uuid4())
+    file_data = {
+        "name": unique_file_name,
+        "type": InternalFileType.VIDEO.value,
+        "local_path": video_location,
+        "tag": InternalFileTag.GENERATED_VIDEO.value
+    }
+
+    video_file: InternalFileObject = data_repo.create_file(**file_data)
+
+    return video_file
 
 
 def get_pillow_image(image_location):
@@ -1972,7 +1983,7 @@ def prompt_model_stability(timing_uuid, input_image_file: InternalFileObject):
 
     filename = str(uuid.uuid4()) + ".png"
     image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                             hosted_url=output[0])
+                                                             hosted_url=output[0], tag=InternalFileTag.GENERATED_VIDEO.value)
 
     return image_file
 
@@ -2045,7 +2056,7 @@ def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
 
     for i in output:
         filename = str(uuid.uuid4()) + ".png"
-        image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value, hosted_url=i)
+        image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value, hosted_url=i, tag=InternalFileTag.GENERATED_VIDEO.value)
         return image_file
     
     return None
@@ -2156,7 +2167,7 @@ def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_locat
             file_name = ''.join(random.choices(
                 string.ascii_lowercase + string.digits, k=16)) + ".mp4"
             location_of_video = "videos/" + \
-                str(timing.project.name) + \
+                str(timing.project.uuid) + \
                 "/assets/videos/1_final/" + str(file_name)
         else:
             os.remove(location_of_video)
@@ -2165,7 +2176,13 @@ def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_locat
         updated_clip.write_videofile(location_of_video, codec='libx265')
         if save_to_new_location:
             file_name = str(uuid.uuid4()) + ".mp4"
-            video_file: InternalFileObject = data_repo.create_file(filename=file_name, type=InternalFileType.VIDEO.value, local_path=location_of_video)
+            file_data = {
+                "name" : file_name, 
+                "type" : InternalFileType.VIDEO.value, 
+                "tag" : InternalFileTag.GENERATED_VIDEO.value, 
+                "local_path" : location_of_video
+            }
+            video_file: InternalFileObject = data_repo.create_file(**file_data)
         else:
             data_repo.create_or_update_file(video_file.uuid, type=InternalFileType.VIDEO.value, local_path=location_of_video)
 
@@ -2337,19 +2354,20 @@ def calculate_desired_duration_of_each_clip(project_uuid):
 
         # last frame
         if index_of_current_item == (length_of_list - 1):
-            time_of_frame = timing_item['frame_time']
+            time_of_frame = timing_item.frame_time
             duration_of_static_time = 0.0
             end_duration_of_frame = float(time_of_frame) + float(duration_of_static_time)
             total_duration_of_frame = float(end_duration_of_frame) - float(time_of_frame)
         else:
-            time_of_frame = timing_item['frame_time']
-            time_of_next_frame = timing_item.next_timing['frame_time']
+            time_of_frame = timing_item.frame_time
+            next_timing = data_repo.get_next_timing(timing_item.uuid)
+            time_of_next_frame = next_timing.frame_time
             total_duration_of_frame = float(time_of_next_frame) - float(time_of_frame)
 
         duration_of_static_time = 0.0
         duration_of_morph = float(total_duration_of_frame) - float(duration_of_static_time)
 
-        data_repo.update_specific_timing(timing_item, clip_duration=total_duration_of_frame)
+        data_repo.update_specific_timing(timing_item.uuid, clip_duration=total_duration_of_frame)
 
 
 def hair_swap(source_image, timing_uuid):
@@ -2663,11 +2681,11 @@ def render_video(final_video_name, project_uuid, quality):
         if quality == VideoQuality.HIGH.value:
             data_repo.update_specific_timing(current_timing.uuid, timed_clip="")
             interpolation_steps = calculate_dynamic_interpolations_steps(
-                timing_details[index_of_current_item]["clip_duration"])
-            if not timing["interpolation_steps"] or timing["interpolation_steps"] < interpolation_steps:
+                timing_details[index_of_current_item].clip_duration)
+            if not timing.interpolation_steps or timing.interpolation_steps < interpolation_steps:
                 data_repo.update_specific_timing(current_timing.uuid, interpolation_steps=interpolation_steps, interpolated_clip="")
         else:
-            if not timing["interpolation_steps"] or timing["interpolation_steps"] < 3:
+            if not timing.interpolation_steps or timing.interpolation_steps < 3:
                 data_repo.update_specific_timing(current_timing.uuid, interpolation_steps=3)
 
         if not timing.interpolated_clip:
@@ -2679,7 +2697,7 @@ def render_video(final_video_name, project_uuid, quality):
             #         project_name, index_of_current_item, "interpolated_video", video_location)
             # else:
             video_location = create_individual_clip(current_timing.uuid)
-            data_repo.update_specific_timing(current_timing.uuid, interpolated_clip=video_location)
+            data_repo.update_specific_timing(current_timing.uuid, interpolated_clip_id=video_location.uuid)
 
     project_settings: InternalSettingObject = data_repo.get_project_setting(timing.project.uuid)
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
@@ -2692,9 +2710,9 @@ def render_video(final_video_name, project_uuid, quality):
         if index_of_current_item <= total_number_of_videos:
             if not current_timing.timed_clip:
                 desired_duration = current_timing.clip_duration
-                location_of_input_video_file = current_timing["interpolated_clip"]
+                location_of_input_video_file = current_timing.interpolated_clip
                 duration_of_input_video = float(get_duration_from_video(location_of_input_video_file))
-                location_of_output_video = update_speed_of_video_clip(location_of_input_video_file, True, timing.uuid)
+                output_video = update_speed_of_video_clip(location_of_input_video_file, True, timing.uuid)
                 
                 if quality == VideoQuality.PREVIEW.value:
                     print("")
@@ -2713,7 +2731,7 @@ def render_video(final_video_name, project_uuid, quality):
                     clip_with_number.write_videofile(location_of_output_video, codec='libx264', bitrate='3000k')
                     '''
                 
-                data_repo.update_specific_timing(current_timing, timed_clip=location_of_output_video)
+                data_repo.update_specific_timing(current_timing.uuid, timed_clip_id=output_video.uuid)
 
     video_list = []
 
@@ -2721,7 +2739,7 @@ def render_video(final_video_name, project_uuid, quality):
 
     for i in timing_details:
         index_of_current_item = timing_details.index(i)
-        current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(index_of_current_item)
+        current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(project_uuid, index_of_current_item)
         if index_of_current_item <= total_number_of_videos:
             video_file = current_timing.timed_clip
             video_list.append(video_file.location)
@@ -2729,8 +2747,8 @@ def render_video(final_video_name, project_uuid, quality):
     video_clip_list = [VideoFileClip(v) for v in video_list]
     finalclip = concatenate_videoclips(video_clip_list)
 
-    output_video_file = f"videos/{timing.project.name}/assets/videos/2_completed/{final_video_name}.mp4"
-    if project_settings['audio'] != "":
+    output_video_file = f"videos/{timing.project.uuid}/assets/videos/2_completed/{final_video_name}.mp4"
+    if project_settings.audio:
         audio_location = project_settings.audio.local_path
         audio_clip = AudioFileClip(audio_location)
         finalclip = finalclip.set_audio(audio_clip)
@@ -2745,7 +2763,15 @@ def render_video(final_video_name, project_uuid, quality):
         audio_codec="aac"
     )
 
-    data_repo.create_or_update_file(final_video_name, InternalFileType.VIDEO.value, local_path=output_video_file)
+    file_data = {
+        "name": final_video_name,
+        "type": InternalFileType.VIDEO.value,
+        "local_path": output_video_file,
+        "tag" : InternalFileTag.GENERATED_VIDEO.value,
+        "project_id": project_uuid
+    }
+
+    data_repo.create_file(**file_data)
 
 
 def create_gif_preview(project_uuid):
