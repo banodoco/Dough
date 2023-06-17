@@ -1486,17 +1486,25 @@ def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
 
-    if not (timing.mask and timing.mask.location):
-        unique_file_name = str(uuid.uuid4()) + ".png"
-        data_repo.update_specific_timing(timing_uuid, \
-                    mask=f"videos/{timing.project.name}/assets/resources/masks/{unique_file_name}")
-    else:
-        unique_file_name = timing.mask.location.split("/")[-1]
-
-    file_location = f"videos/{timing.project.name}/assets/resources/masks/{unique_file_name}"
+    unique_file_name = str(uuid.uuid4()) + ".png"
+    file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{unique_file_name}"
     image.save(file_location, "PNG")
-    file = data_repo.create_file(filename=unique_file_name, type=InternalFileType.IMAGE.value, local_path=file_location)
-    return file
+    # if mask is not present than creating a new one
+    if not (timing.mask and timing.mask.location):
+        file_data = {
+            "name": unique_file_name,
+            "type": InternalFileType.IMAGE.value,
+            "local_path": file_location
+        }
+        mask_file: InternalFileObject = data_repo.create_file(**file_data)
+
+        data_repo.update_specific_timing(timing_uuid, mask_id=mask_file.uuid)
+    else:
+        # if it is already present then just updating the file location
+        data_repo.update_file(timing.mask.uuid, local_path=file_location)
+
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
+    return timing.mask
 
 
 def create_working_assets(video_name):
@@ -1543,16 +1551,8 @@ def create_working_assets(video_name):
 
 def inpainting(input_image, prompt, negative_prompt, timing_uuid, invert_mask, pass_mask=False) -> InternalFileObject:
     data_repo = DataRepo()
-
-    app_settings = data_repo.get_all_app_setting_list()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-
-    model = replicate.models.get("andreasjansson/stable-diffusion-inpainting")
-
-    version = model.versions.get(
-        "e490d072a34a94a11e9711ed5a6ba621c3fab884eda1665d9d3a282d65a21180")
     if pass_mask == False:
         mask = timing.mask.location
     else:
@@ -1725,7 +1725,7 @@ def remove_background(input_image):
     return output
 
 
-def replace_background(video_name, foreground_image, background_image) -> InternalFileObject:
+def replace_background(project_uuid, foreground_image, background_image) -> InternalFileObject:
     data_repo = DataRepo()
 
     if background_image.startswith("http"):
@@ -1735,10 +1735,10 @@ def replace_background(video_name, foreground_image, background_image) -> Intern
         background_image = Image.open(f"{background_image}")
     foreground_image = Image.open(f"masked_image.png")
     background_image.paste(foreground_image, (0, 0), foreground_image)
-    background_image.save(f"videos/{video_name}/replaced_bg.png")
+    background_image.save(f"videos/{project_uuid}/replaced_bg.png")
 
     filename = str(uuid.uuid4()) + ".png"
-    image_file = data_repo.create_file(name=filename, local_path=f"videos/{video_name}/replaced_bg.png", \
+    image_file = data_repo.create_file(name=filename, local_path=f"videos/{project_uuid}/replaced_bg.png", \
                                      type=InternalFileType.IMAGE.value)
 
     return image_file
@@ -2778,7 +2778,7 @@ def create_gif_preview(project_uuid):
     # TODO: a function to save temp images
 
 
-def create_depth_mask_image(input_image, layer, project_name, index_of_current_item):
+def create_depth_mask_image(input_image, layer, timing_uuid):
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
 
@@ -2824,7 +2824,7 @@ def create_depth_mask_image(input_image, layer, project_name, index_of_current_i
             if bg_pixels:
                 mask_pixels[i, j] &= bg_pixels[i, j]
 
-    return create_or_update_mask(project_name, index_of_current_item, mask)
+    return create_or_update_mask(timing_uuid, mask)
 
 
 def prompt_model_controlnet(timing_uuid, input_image):
@@ -3010,20 +3010,25 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
                         width, height, layer, timing_uuid) -> InternalFileObject:
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-    project_name = timing.project.name
+    project_uuid = timing.project.uuid
     app_secret = data_repo.get_app_secrets_from_user_uuid(timing.project.user_uuid)
     index_of_current_item = timing.aux_frame_index
 
     if type_of_mask_selection == "Automated Background Selection":
-        removed_background = remove_background(project_name, editing_image)
+        removed_background = remove_background(editing_image)
         response = r.get(removed_background)
         with open("masked_image.png", "wb") as f:
             f.write(response.content)
         if type_of_mask_replacement == "Replace With Image":
-            replace_background(
-                project_name, "masked_image.png", background_image)
-            edited_image = upload_file(f"videos/{project_name}/replaced_bg.png", app_secret['aws_access_key'],\
-                                       app_secret['aws_secret_key'])
+            replace_background(project_uuid, "masked_image.png", background_image)
+            file_location = f"videos/{project_uuid}/replaced_bg.png"
+            file_data = {
+                "name": str(uuid.uuid4()) + ".png",
+                "type": InternalFileType.IMAGE.value,
+                "local_path": file_location,
+            }
+            edited_image: InternalFileObject = data_repo.create_file(**file_data)
+
         elif type_of_mask_replacement == "Inpainting":
             image = Image.open("masked_image.png")
             converted_image = Image.new("RGB", image.size, (255, 255, 255))
@@ -3034,10 +3039,8 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
                         converted_image.putpixel((x, y), (0, 0, 0))
                     else:
                         converted_image.putpixel((x, y), (255, 255, 255))
-            create_or_update_mask(
-                project_name, index_of_current_item, converted_image)
-            edited_image = inpainting(
-                project_name, editing_image, prompt, negative_prompt, index_of_current_item, True)
+            create_or_update_mask(timing_uuid, converted_image)
+            edited_image = inpainting(editing_image, prompt, negative_prompt, timing.uuid, True)
 
     elif type_of_mask_selection == "Manual Background Selection":
         if type_of_mask_replacement == "Replace With Image":
@@ -3046,7 +3049,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
                 bg_img = Image.open(BytesIO(response.content))
             else:
                 bg_img = Image.open(editing_image)
-            timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
+
             mask_location = timing.mask.location
             if mask_location.startswith("http"):
                 response = r.get(mask_location)
@@ -3062,7 +3065,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
                     else:
                         result_img.putpixel((x, y), bg_img.getpixel((x, y)))
             result_img.save("masked_image.png")
-            edited_image = replace_background(project_name, "masked_image.png", background_image)
+            edited_image = replace_background(project_uuid, "masked_image.png", background_image)
         elif type_of_mask_replacement == "Inpainting":
             mask_location = timing.mask.location
             if mask_location.startswith("http"):
@@ -3073,12 +3076,10 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
             if "A" in im.getbands():
                 mask = Image.new('RGB', (width, height), color=(255, 255, 255))
                 mask.paste(im, (0, 0), im)
-                create_or_update_mask(
-                    project_name, index_of_current_item, mask)
+                create_or_update_mask(timing.uuid, mask)
             edited_image = inpainting(editing_image, prompt, negative_prompt, timing_uuid, True)
     elif type_of_mask_selection == "Automated Layer Selection":
-        mask_location = create_depth_mask_image(
-            editing_image, layer, project_name, index_of_current_item)
+        mask_location = create_depth_mask_image(editing_image, layer, timing.uuid)
         if type_of_mask_replacement == "Replace With Image":
             if mask_location.startswith("http"):
                 mask = Image.open(
@@ -3093,7 +3094,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
             masked_img = Image.composite(bg_img, Image.new(
                 'RGBA', bg_img.size, (0, 0, 0, 0)), mask)
             masked_img.save("masked_image.png")
-            edited_image = replace_background(project_name, "masked_image.png", background_image)
+            edited_image = replace_background(project_uuid, "masked_image.png", background_image)
         elif type_of_mask_replacement == "Inpainting":
             edited_image = inpainting(editing_image, prompt, negative_prompt, timing_uuid, True)
 
@@ -3113,7 +3114,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
             masked_img = Image.composite(bg_img, Image.new(
                 'RGBA', bg_img.size, (0, 0, 0, 0)), mask)
             masked_img.save("masked_image.png")
-            edited_image = replace_background(project_name, "masked_image.png", background_image)
+            edited_image = replace_background(project_uuid, "masked_image.png", background_image)
         elif type_of_mask_replacement == "Inpainting":
             edited_image = inpainting(editing_image, prompt, negative_prompt, timing_uuid, True)
 
@@ -3135,7 +3136,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
                 'RGBA', bg_img.size, (0, 0, 0, 0)), inverted_mask)
             # TODO: standardise temproray fixes
             masked_img.save("masked_image.png")
-            edited_image = replace_background(timing.project.name, "masked_image.png", background_image)
+            edited_image = replace_background(project_uuid, "masked_image.png", background_image)
         elif type_of_mask_replacement == "Inpainting":
             edited_image = inpainting(editing_image, prompt, negative_prompt, timing_uuid, False)
 

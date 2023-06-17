@@ -23,3 +23,5 @@ colorlog==6.7.0
 Django==4.2.1
 djangorestframework==3.14.0
 python-dotenv==0.19.2
+scikit-image==0.21.0
+imagecodecs==2023.3.16
