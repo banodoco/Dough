@@ -9,106 +9,161 @@ from repository.local_repo.csv_repo import get_app_settings, update_app_settings
 from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.batch_action_page import batch_action_page
 from ui_components.components.custom_models_page import custom_models_page
-from ui_components.components.frame_editing_page import frame_editing_page
 from ui_components.components.frame_styling_page import frame_styling_page
 from ui_components.components.key_frame_selection import key_frame_selection_page
 from ui_components.components.new_project_page import new_project_page
 from ui_components.components.project_settings_page import project_settings_page
 from ui_components.components.video_rendering_page import video_rendering_page
 from ui_components.components.welcome_page import welcome_page
+# from ui_components.components.motion_page import guidance_page
+# from ui_components.components.motion_page import styling_page
+# from ui_components.components.motion_page import motion_page
+from streamlit_option_menu import option_menu
 
 def setup_app_ui():
        
     app_settings = get_app_settings()
-    title1, title2 = st.sidebar.columns([3,2])
-    with title1:
-        st.title("Banodoco")    
-    with title2:        
-        st.write("")
-        st.caption("Experiencing issues or have feedback? Please [let me know](mailto:peter@omalley.io)!")
-           
+    with st.sidebar:
+
+        h1, h2 = st.columns([1,3])
+
+        with h1:
+           st.markdown("#     :red[Ba]:green[no]:orange[do]:blue[co]")
+
+        
+        sections = ["Open Project", "App Settings", "New Project"]
+
+        if "section" not in st.session_state:
+            st.session_state["section"] = sections[0]
+            st.session_state['change_section'] = False
+
+        if st.session_state['change_section'] == True:
+            st.session_state['section_index'] = sections.index(st.session_state["section"])                                                                         
+        else:
+            st.session_state['section_index'] = None
+                   
+        with h2:
+            st.write("")
+            st.session_state["section"] = option_menu(
+            "", 
+            sections, 
+            icons=['cog', 'cog', 'cog'], 
+            menu_icon="ellipsis-v", 
+            orientation="horizontal", 
+            key="app_settings",     
+            styles={
+                "nav-link": {"font-size": "12px", "margin":"0px", "--hover-color": "#eee"},
+                "nav-link-selected": {"background-color": "grey"}
+            },
+            manual_select=st.session_state['section_index']           
+            )
+        
+        if st.session_state['change_section'] == True:  
+            st.session_state['change_section'] = False
+                               
     if int(st.session_state["welcome_state"]) in [0,1,2,3,4] and st.session_state["online"] == False:
         welcome_page()
-    else:                
-        video_list = [f for f in os.listdir("videos") if not f.startswith('.')]
-        if "index_of_project_name" not in st.session_state:
-            if app_settings["previous_project"] != "":
-                st.session_state["project_name"] = app_settings["previous_project"] 
-                st.session_state["index_of_project_name"] = video_list.index(app_settings["previous_project"])            
-            else:
-                st.session_state["index_of_project_name"] = 0
+    else:        
+        if st.session_state["section"] == "Open Project":        
+            video_list = [f for f in os.listdir("videos") if not f.startswith('.')]
+            if "index_of_project_name" not in st.session_state:
+                if app_settings["previous_project"] != "":
+                    st.session_state["project_name"] = app_settings["previous_project"] 
+                    st.session_state["index_of_project_name"] = video_list.index(app_settings["previous_project"])            
+                else:
+                    st.session_state["index_of_project_name"] = 0
+                    
+            st.session_state["project_name"] = st.sidebar.selectbox("Select which project you'd like to work on:", video_list,index=st.session_state["index_of_project_name"])  
+            
+            if "which_image_value" not in st.session_state:
+                st.session_state['which_image_value'] = 0
+
+            if st.session_state["index_of_project_name"] != video_list.index(st.session_state["project_name"]):
+                st.write("Project changed")
+                st.session_state["index_of_project_name"] = video_list.index(st.session_state["project_name"])               
+                update_app_settings("previous_project", st.session_state["project_name"])
+                st.experimental_rerun()
+                    
+            if st.session_state["project_name"] == "":
+                st.info("No projects found - create one in the 'New Project' section")
+            else:  
+
+                if not os.path.exists("videos/" + st.session_state["project_name"] + "/assets"):
+                    create_working_assets(st.session_state["project_name"])
+                                        
+
+                timing_details = get_timing_details(st.session_state["project_name"])
+
                 
-        st.session_state["project_name"] = st.sidebar.selectbox("Select which project you'd like to work on:", video_list,index=st.session_state["index_of_project_name"])  
-        
-        if "which_image_value" not in st.session_state:
-            st.session_state['which_image_value'] = 0
 
-        if st.session_state["index_of_project_name"] != video_list.index(st.session_state["project_name"]):
-            st.write("Project changed")
-            st.session_state["index_of_project_name"] = video_list.index(st.session_state["project_name"])               
-            update_app_settings("previous_project", st.session_state["project_name"])
-            st.experimental_rerun()
+                with st.sidebar:
+
+                    main_view_types = ["Creative Process","Tools & Settings","Video Rendering"]            
+
+                    st.session_state['main_view_type'] = option_menu(None, main_view_types, icons=['magic', 'tools', "play-circle", 'stopwatch'], menu_icon="cast", default_index=0, key="main_view_type_name",orientation="horizontal",styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#eee"},"nav-link-selected": {"background-color": "red"}})
+
+                                        
+
+                mainheader1, mainheader2 = st.columns([3,2])
+                # with mainheader1:
+                    # st.header(st.session_state["page"])   
+
+
                 
-        if st.session_state["project_name"] == "":
-            st.info("No projects found - create one in the 'New Project' section")
-        else:  
+                if st.session_state["main_view_type"] == "Creative Process":
 
-            if not os.path.exists("videos/" + st.session_state["project_name"] + "/assets"):
-                create_working_assets(st.session_state["project_name"])
-            
-            if "index_of_section" not in st.session_state:
-                st.session_state["index_of_section"] = 0
-                st.session_state["index_of_page"] = 0
-            
-            pages = [
-            {
-                "section_name": "Main Process",        
-                "pages": ["Frame Styling","Key Frame Selection", "Frame Editing","Video Rendering"]
-            },
-            {
-                "section_name": "Tools",
-                "pages": ["Custom Models", "Batch Actions"]
-            },
-            {
-                "section_name": "Settings",
-                "pages": ["Project Settings","App Settings"]
-            },
-            {
-                "section_name": "New Project",
-                "pages": ["New Project"]
-            }
-            ]
+                    with st.sidebar:    
+                    
+                        pages = ["Guidance", "Styling", "Motion"]
 
-            
+                        if 'page' not in st.session_state:
+                            st.session_state["page"] = pages[0]
+                            st.session_state["manual_select"] = None
+                            
 
-            timing_details = get_timing_details(st.session_state["project_name"])
+                        if st.session_state["page"] not in pages:
+                            st.session_state["page"] = pages[0]
+                            st.session_state["manual_select"] = 0               
+                                                            
+                        st.session_state['page'] = option_menu(None, pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal",key="secti2on_selector",styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#eee"},"nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
+                        
+                    frame_styling_page(mainheader2, st.session_state["project_name"])
 
-            st.session_state["section"] = st.sidebar.radio("Select a section:", [page["section_name"] for page in pages],horizontal=True)  
-            st.session_state["page"] = st.sidebar.radio("Select a page:", [page for page in pages if page["section_name"] == st.session_state["section"]][0]["pages"],horizontal=False)
-            
-            mainheader1, mainheader2 = st.columns([3,2])
-            with mainheader1:
-                st.header(st.session_state["page"])   
+                    
 
+                elif st.session_state["main_view_type"] == "Tools & Settings":                
 
-            # APP ROUTING
-            if st.session_state["page"] == "Key Frame Selection":
-                key_frame_selection_page(mainheader2, st.session_state["project_name"])
-            elif st.session_state["page"] == "App Settings":
-                app_settings_page()
-            elif st.session_state["page"] == "New Project":
-                new_project_page()
-            elif st.session_state["page"] == "Frame Styling":
-                frame_styling_page(mainheader2, st.session_state["project_name"])
-            elif st.session_state["page"] == "Video Rendering":
-                video_rendering_page(mainheader2, st.session_state["project_name"])
-            elif st.session_state["page"] == "Batch Actions":
-                batch_action_page(st.session_state["project_name"])
-            elif st.session_state["page"] == "Project Settings":
-                project_settings_page(st.session_state["project_name"])
-            elif st.session_state["page"] == "Custom Models":
-                custom_models_page(st.session_state["project_name"])
-            elif st.session_state["page"] == "Frame Editing":
-                frame_editing_page(st.session_state["project_name"])                                            
-            else:
-                st.info("You haven't added any prompts yet. Add an image to get started.")
+                    with st.sidebar:
+
+                        pages = ["Custom Models", "Batch Actions", "Project Settings"]    
+                        
+                        if st.session_state["page"] not in pages:
+                            st.session_state["page"] = pages[0]
+                            st.session_state["manual_select"] = 0
+
+                        st.session_state['page'] = option_menu(None, pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal",key="secti2on_selector",styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#eee"},"nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
+                                                
+                    if st.session_state["page"] == "Custom Models":
+                        custom_models_page(st.session_state["project_name"])
+                    elif st.session_state["page"] == "Batch Actions":
+                        batch_action_page(st.session_state["project_name"])
+                    elif st.session_state["page"] == "Project Settings":
+                        project_settings_page(st.session_state["project_name"])
+                                                                    
+                
+                elif st.session_state["main_view_type"] == "Video Rendering":
+
+                    video_rendering_page(mainheader2, st.session_state["project_name"])
+
+                
+
+        elif st.session_state["section"] == "App Settings":
+            app_settings_page()
+
+        elif st.session_state["section"] == "New Project":
+
+            new_project_page()
+
+                                                              
+        else:
+            st.info("You haven't added any prompts yet. Add an image to get started.")
