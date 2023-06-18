@@ -90,7 +90,9 @@ def new_project_page():
                                                     
         st.session_state["project_name"] = new_project_name            
         video_list = [f for f in os.listdir("videos") if not f.startswith('.')]
-        st.session_state["index_of_project_name"] = video_list.index(new_project_name)
-        st.success("Project created! It should be open now. Click into 'Main Process' to get started")
-        time.sleep(1)
+        st.session_state["index_of_project_name"] = video_list.index(new_project_name)     
+        st.session_state["section"] = "Open Project"   
+        st.session_state['change_section'] = True      
+        st.success("Project created successfully!")
+        time.sleep(1)      
         st.experimental_rerun()
