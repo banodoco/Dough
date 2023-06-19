@@ -4,6 +4,7 @@ from shared.constants import InternalFileType
 from ui_components.models import InternalFileObject
 from utils.common_methods import create_working_assets
 from utils.data_repo.data_repo import DataRepo
+from ui_components.common_methods import create_working_assets
 from utils.media_processor.video import resize_video
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import time
@@ -132,7 +133,8 @@ def new_project_page():
                 break
 
         st.session_state["index_of_project_name"] = index
-        st.success(
-            "Project created! It should be open now. Click into 'Main Process' to get started")
-        time.sleep(1)
+        st.session_state["section"] = "Open Project"   
+        st.session_state['change_section'] = True      
+        st.success("Project created successfully!")
+        time.sleep(1)   
         st.experimental_rerun()
