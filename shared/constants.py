@@ -48,6 +48,7 @@ class InternalFileTag(ExtendedEnum):
     BACKGROUND_IMAGE = 'background_image'
     GENERATED_VIDEO = 'generated_video'
     INPUT_VIDEO = 'input_video'
+    TEMP_IMAGE = 'temp'
 
 class AnimationStyleType(ExtendedEnum):
     INTERPOLATION = "Interpolation"

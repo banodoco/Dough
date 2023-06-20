@@ -3,7 +3,7 @@ import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 import os
 import base64
-from PIL import Image, ImageDraw, ImageFont, ImageOps,ImageEnhance,ImageFilter, ImageChops
+from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageEnhance, ImageFilter, ImageChops
 from moviepy.editor import *
 from requests_toolbelt.multipart.encoder import MultipartEncoder
 import cv2
@@ -49,7 +49,7 @@ import utils.local_storage.local_storage as local_storage
 
 from utils import st_memory
 from urllib.parse import urlparse
- 
+
 from typing import Union
 from moviepy.video.fx.all import speedx
 import moviepy.editor
@@ -58,70 +58,91 @@ from htbuilder import details, div, p, styles, summary
 from streamlit_image_comparison import image_comparison
 
 
-def clone_styling_settings(source_frame, target_frame, project_name, timing_details):
-    update_specific_timing_value(project_name, target_frame, "custom_pipeline", timing_details[source_frame]["custom_pipeline"])
-    update_specific_timing_value(project_name, target_frame, "negative_prompt", timing_details[source_frame]["negative_prompt"])
-    update_specific_timing_value(project_name, target_frame, "guidance_scale", timing_details[source_frame]["guidance_scale"])
-    update_specific_timing_value(project_name, target_frame, "seed", timing_details[source_frame]["seed"])
-    update_specific_timing_value(project_name, target_frame, "num_inference_steps", timing_details[source_frame]["num_inference_steps"])
-    update_specific_timing_value(project_name, target_frame, "which_stage_to_run_on", timing_details[source_frame]["which_stage_to_run_on"])
-    update_specific_timing_value(project_name, target_frame, "model_id", timing_details[source_frame]["model_id"])
-    update_specific_timing_value(project_name, target_frame, "strength", timing_details[source_frame]["strength"])
-    update_specific_timing_value(project_name, target_frame, "custom_models", timing_details[source_frame]["custom_models"])
-    update_specific_timing_value(project_name, target_frame, "adapter_type", timing_details[source_frame]["adapter_type"])
-    update_specific_timing_value(project_name, target_frame, "low_threshold", timing_details[source_frame]["low_threshold"])
-    update_specific_timing_value(project_name, target_frame, "high_threshold", timing_details[source_frame]["high_threshold"])
-    update_specific_timing_value(project_name, target_frame, "prompt", timing_details[source_frame]["prompt"])
+def clone_styling_settings(source_frame_number, target_frame_uuid):
+    data_repo = DataRepo()
+    target_timing = data_repo.get_timing_from_uuid(target_frame_uuid)
+    timing_details = data_repo.get_timing_list_from_project(
+        target_timing.project.uuid)
+
+    data_repo.update_specific_timing(
+        target_frame_uuid, "custom_pipeline", timing_details[source_frame_number].custom_pipeline)
+    data_repo.update_specific_timing(
+        target_frame_uuid, "negative_prompt", timing_details[source_frame_number].negative_prompt)
+    data_repo.update_specific_timing(
+        target_frame_uuid, "guidance_scale", timing_details[source_frame_number].guidance_scale)
+    data_repo.update_specific_timing(
+        target_frame_uuid, "seed", timing_details[source_frame_number].seed)
+    data_repo.update_specific_timing(
+        target_frame_uuid, "num_inference_steps", timing_details[source_frame_number].num_inference_steps)
+    data_repo.update_specific_timing(
+        target_frame_uuid, "transformation_stage", timing_details[source_frame_number].transformation_stage)
+    data_repo.update_specific_timing(
+        target_frame_uuid, "model_id", timing_details[source_frame_number].model_id)
+    data_repo.update_specific_timing(
+        target_frame_uuid, "strength", timing_details[source_frame_number].strength)
+    data_repo.update_specific_timing(
+        target_frame_uuid, "custom_models", timing_details[source_frame_number].custom_models)
+    data_repo.update_specific_timing(
+        target_frame_uuid, "adapter_type", timing_details[source_frame_number].adapter_type)
+    data_repo.update_specific_timing(
+        target_frame_uuid, "low_threshold", timing_details[source_frame_number].low_threshold)
+    data_repo.update_specific_timing(
+        target_frame_uuid, "high_threshold", timing_details[source_frame_number].high_threshold)
+    data_repo.update_specific_timing(
+        target_frame_uuid, "prompt", timing_details[source_frame_number].prompt)
 
 
-
-
-def prompt_finder_element(project_name):
-
-    uploaded_file = st.file_uploader("What image would you like to find the prompt for?", type=['png','jpg','jpeg'], key="prompt_file")
-    which_model = st.radio("Which model would you like to get a prompt for?", ["Stable Diffusion 1.5", "Stable Diffusion 2"], key="which_model", help="This is to know which model we should optimize the prompt for. 1.5 is usually best if you're in doubt", horizontal=True)
-    best_or_fast = st.radio("Would you like to optimize for best quality or fastest speed?", ["Best", "Fast"], key="best_or_fast", help="This is to know whether we should optimize for best quality or fastest speed. Best quality is usually best if you're in doubt", horizontal=True).lower()
-    if st.button("Get prompts"):                
-        with open(f"videos/{project_name}/assets/resources/prompt_images/{uploaded_file.name}", "wb") as f:
+def prompt_finder_element(project_uuid):
+    uploaded_file = st.file_uploader("What image would you like to find the prompt for?", type=[
+                                     'png', 'jpg', 'jpeg'], key="prompt_file")
+    which_model = st.radio("Which model would you like to get a prompt for?", ["Stable Diffusion 1.5", "Stable Diffusion 2"], key="which_model",
+                           help="This is to know which model we should optimize the prompt for. 1.5 is usually best if you're in doubt", horizontal=True)
+    best_or_fast = st.radio("Would you like to optimize for best quality or fastest speed?", [
+                            "Best", "Fast"], key="best_or_fast", help="This is to know whether we should optimize for best quality or fastest speed. Best quality is usually best if you're in doubt", horizontal=True).lower()
+    if st.button("Get prompts"):
+        with open(f"videos/{project_uuid}/assets/resources/prompt_images/{uploaded_file.name}", "wb") as f:
             f.write(uploaded_file.getbuffer())
-        prompt = prompt_clip_interrogator(f"videos/{project_name}/assets/resources/prompt_images/{uploaded_file.name}", which_model, best_or_fast)                
-        if not os.path.exists(f"videos/{project_name}/prompts.csv"):
-            with open(f"videos/{project_name}/prompts.csv", "w") as f:
+        prompt = prompt_clip_interrogator(
+            f"videos/{project_uuid}/assets/resources/prompt_images/{uploaded_file.name}", which_model, best_or_fast)
+        if not os.path.exists(f"videos/{project_uuid}/prompts.csv"):
+            with open(f"videos/{project_uuid}/prompts.csv", "w") as f:
                 f.write("prompt,example_image,which_model\n")
         # add the prompt to prompts.csv
-        with open(f"videos/{project_name}/prompts.csv", "a") as f:
-            f.write(f'"{prompt}",videos/{project_name}/assets/resources/prompt_images/{uploaded_file.name},{which_model}\n')
+        with open(f"videos/{project_uuid}/prompts.csv", "a") as f:
+            f.write(
+                f'"{prompt}",videos/{project_uuid}/assets/resources/prompt_images/{uploaded_file.name},{which_model}\n')
         st.success("Prompt added successfully!")
         time.sleep(1)
         uploaded_file = ""
         st.experimental_rerun()
     # list all the prompts in prompts.csv
-    if os.path.exists(f"videos/{project_name}/prompts.csv"):
-        
-        df = pd.read_csv(f"videos/{project_name}/prompts.csv",na_filter=False)
+    if os.path.exists(f"videos/{project_uuid}/prompts.csv"):
+
+        df = pd.read_csv(f"videos/{project_uuid}/prompts.csv", na_filter=False)
         prompts = df.to_dict('records')
-        
+
         prompts.reverse()
-                    
-        col1, col2 = st.columns([1.5,1])
+
+        col1, col2 = st.columns([1.5, 1])
         with col1:
             st.markdown("### Prompt")
         with col2:
             st.markdown("### Example Image")
-        with open(f"videos/{project_name}/prompts.csv", "r") as f:
+        with open(f"videos/{project_uuid}/prompts.csv", "r") as f:
             for i in prompts:
-                index_of_current_item = prompts.index(i)                  
-                col1, col2 = st.columns([1.5,1])
+                index_of_current_item = prompts.index(i)
+                col1, col2 = st.columns([1.5, 1])
                 with col1:
-                    st.write(prompts[index_of_current_item]["prompt"])                        
-                with col2:                            
-                    st.image(prompts[index_of_current_item]["example_image"], use_column_width=True)
+                    st.write(prompts[index_of_current_item]["prompt"])
+                with col2:
+                    st.image(prompts[index_of_current_item]
+                             ["example_image"], use_column_width=True)
                 st.markdown("***")
 
 
 def save_new_image(img: Union[Image.Image, str, np.ndarray]) -> str:
     file_name = str(uuid.uuid4()) + ".png"
-    file_path = os.path.join("temp", file_name)
+    file_path = os.path.join("videos/temp", file_name)
 
     # Check if img is a PIL image
     if isinstance(img, Image.Image):
@@ -144,17 +165,18 @@ def save_new_image(img: Union[Image.Image, str, np.ndarray]) -> str:
         img.save(file_path)
 
     else:
-        raise ValueError("Invalid image input. Must be a PIL image, a URL string, a local file path string or a numpy ndarray.")
+        raise ValueError(
+            "Invalid image input. Must be a PIL image, a URL string, a local file path string or a numpy ndarray.")
 
     return file_path
-
-      
 
 
 def resize_and_rotate_element(stage, project_uuid):
     data_repo = DataRepo()
-    project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
-    timing_details: InternalFrameTimingObject = data_repo.get_timing_list_from_project(project.uuid)
+    project: InternalProjectObject = data_repo.get_project_from_uuid(
+        project_uuid)
+    timing_details: InternalFrameTimingObject = data_repo.get_timing_list_from_project(
+        project.uuid)
 
     if "rotated_image" not in st.session_state:
         st.session_state['rotated_image'] = ""
@@ -169,17 +191,20 @@ def resize_and_rotate_element(stage, project_uuid):
             fill_with = st.radio("Fill blank space with: ", ["Blur", None])
         if st.button("Rotate Image"):
             if stage == WorkflowStageType.SOURCE.value:
-                res = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
+                res = data_repo.get_timing_from_uuid(
+                    st.session_state['current_frame_uuid'])
                 input_image = res.source_image
             elif stage == WorkflowStageType.STYLED.value:
-                current_frame = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
+                current_frame = data_repo.get_timing_from_uuid(
+                    st.session_state['current_frame_uuid'])
                 input_image = current_frame.primary_image
-            
+
             if input_image:
                 unique_filename = str(uuid.uuid4())
                 temp_local_location = f'videos/temp/{unique_filename}.png'
                 # if rotation_angle != 0:
-                st.session_state['rotated_image'] = rotate_image(input_image.location, rotation_angle)
+                st.session_state['rotated_image'] = rotate_image(
+                    input_image.location, rotation_angle)
                 st.session_state['rotated_image'].save(temp_local_location)
                 # else:
                 #     st.session_state['rotated_image'] = input_image.location
@@ -195,10 +220,12 @@ def resize_and_rotate_element(stage, project_uuid):
                 #     st.session_state['rotated_image'].save(temp_local_location)
 
                 if zoom_value != 1.0:
-                    st.session_state['rotated_image'] = zoom_image(temp_local_location, zoom_value, fill_with)
-                
+                    st.session_state['rotated_image'] = zoom_image(
+                        temp_local_location, zoom_value, fill_with)
+
         if st.session_state['rotated_image'] != "":
-            st.image(st.session_state['rotated_image'], caption="Rotated image", width=300)
+            st.image(st.session_state['rotated_image'],
+                     caption="Rotated image", width=300)
 
             btn1, btn2 = st.columns(2)
             with btn1:
@@ -210,12 +237,14 @@ def resize_and_rotate_element(stage, project_uuid):
                         save_location = f"videos/{project.uuid}/assets/frames/1_selected/{file_name}"
                         st.session_state['rotated_image'].save(save_location)
 
-                        current_frame = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
+                        current_frame = data_repo.get_timing_from_uuid(
+                            st.session_state['current_frame_uuid'])
                         source_image = current_frame.source_image
 
                         # if source image is already present then updating it
                         if source_image:
-                            data_repo.update_file(source_image.uuid, local_path=save_location)
+                            data_repo.update_file(
+                                source_image.uuid, local_path=save_location)
                         # or else creating a new image
                         else:
                             file_data = {
@@ -224,8 +253,10 @@ def resize_and_rotate_element(stage, project_uuid):
                                 "local_path": save_location,
                                 "project_id": project_uuid
                             }
-                            file: InternalFileObject = data_repo.create_file(**file_data)
-                            data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=file.uuid)
+                            file: InternalFileObject = data_repo.create_file(
+                                **file_data)
+                            data_repo.update_specific_timing(
+                                st.session_state['current_frame_uuid'], source_image_id=file.uuid)
 
                         st.session_state['rotated_image'] = ""
                         st.experimental_rerun()
@@ -240,13 +271,16 @@ def resize_and_rotate_element(stage, project_uuid):
                             "local_path": save_location,
                             "project_id": project_uuid
                         }
-                        file: InternalFileObject = data_repo.create_file(**file_data)
+                        file: InternalFileObject = data_repo.create_file(
+                            **file_data)
 
-                        number_of_image_variants = add_image_variant(file.uuid, st.session_state['current_frame_uuid'])
-                        promote_image_variant(st.session_state['current_frame_uuid'], number_of_image_variants - 1)
+                        number_of_image_variants = add_image_variant(
+                            file.uuid, st.session_state['current_frame_uuid'])
+                        promote_image_variant(
+                            st.session_state['current_frame_uuid'], number_of_image_variants - 1)
                         st.session_state['rotated_image'] = ""
                         st.experimental_rerun()
-                    
+
             with btn2:
                 if st.button("Clear Current Image"):
                     st.session_state['rotated_image'] = ""
@@ -255,7 +289,8 @@ def resize_and_rotate_element(stage, project_uuid):
 
 def create_individual_clip(timing_uuid):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     if timing.animation_style == "":
         project_setting = data_repo.get_project_setting(
@@ -281,7 +316,8 @@ and the next frame
 
 def prompt_interpolation_model(timing_uuid) -> InternalFileType:
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     img1 = data_repo.get_primary_variant_location(timing_uuid)
     next_timing = data_repo.get_next_timing(timing_uuid)
@@ -295,7 +331,7 @@ def prompt_interpolation_model(timing_uuid) -> InternalFileType:
 
     ml_client = get_ml_client()
     output = ml_client.predict_model_output(REPLICATE_MODEL.google_frame_interpolation, frame1=img1, frame2=img2,
-                             times_to_interpolate=timing.interpolation_steps)
+                                            times_to_interpolate=timing.interpolation_steps)
     file_name = ''.join(random.choices(
         string.ascii_lowercase + string.digits, k=16)) + ".mp4"
 
@@ -306,16 +342,17 @@ def prompt_interpolation_model(timing_uuid) -> InternalFileType:
     except Exception as e:
         print(e)
 
-    video_file = data_repo.create_file(name=file_name, type=InternalFileType.VIDEO.value, \
-                                       hosted_url=output, local_path=video_location, project_id=timing.project.uuid,\
-                                        tag=InternalFileTag.GENERATED_VIDEO.value)
+    video_file = data_repo.create_file(name=file_name, type=InternalFileType.VIDEO.value,
+                                       hosted_url=output, local_path=video_location, project_id=timing.project.uuid,
+                                       tag=InternalFileTag.GENERATED_VIDEO.value)
 
     return video_file
 
 
 def create_video_without_interpolation(timing_uuid):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     image_path_or_url = data_repo.get_primary_variant_location(timing_uuid)
 
@@ -471,7 +508,10 @@ def zoom_image(location, zoom_factor, fill_with=None):
 
         cropped_image = resized_image.crop((left, top, right, bottom))
         return cropped_image
-    
+
+# image here is a PIL object
+
+
 def apply_image_transformations(image, zoom_level, rotation_angle, x_shift, y_shift):
     width, height = image.size
 
@@ -506,90 +546,136 @@ def apply_image_transformations(image, zoom_level, rotation_angle, x_shift, y_sh
     return cropped_image
 
 
-def fetch_image_by_stage(timing_details, stage):
-    if stage == "Source":
-        return timing_details[st.session_state['which_image']]["source_image"]
-    elif stage == "Styled":
-        return get_primary_variant_location(timing_details, st.session_state['which_image'])
+def fetch_image_by_stage(project_uuid, stage):
+    data_repo = DataRepo()
+    timing_details = data_repo.get_timing_list_from_project(project_uuid)
+
+    if stage == WorkflowStageType.SOURCE.value:
+        return timing_details[st.session_state['current_frame_uuid']].source_image
+    elif stage == WorkflowStageType.STYLED.value:
+        return timing_details[st.session_state['current_frame_uuid']].primary_image
     else:
-        return ""
+        return None
 
-    
-def save_zoomed_image(image, project_name, stage, timing_details,promote=False):
+
+def save_zoomed_image(image, timing_uuid, stage, promote=False):
+    data_repo = DataRepo()
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
+    project_uuid = timing.project.uuid
+
     file_name = str(uuid.uuid4()) + ".png"
-    if stage == "Source":
-        save_location = f"videos/{project_name}/assets/frames/1_selected/{file_name}"
-        image.save(save_location)
-        update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", save_location)        
-    elif stage == "Styled":
-        save_location = f"videos/{project_name}/assets/frames/2_character_pipeline_completed/{file_name}"
-        image.save(save_location)
-        number_of_image_variants = add_image_variant(save_location, st.session_state['which_image'], project_name, timing_details)
-        if promote:
-            promote_image_variant(st.session_state['which_image'], project_name,number_of_image_variants - 1)          
-    update_project_setting("zoom_level_input_value", st.session_state['zoom_level_input_value'],project_name)
-    update_project_setting("rotation_angle_input_value", st.session_state['rotation_angle_input_value'],project_name)
-    update_project_setting("x_shift_input_value", st.session_state['x_shift_input_value'],project_name)
-    update_project_setting("y_shift_input_value", st.session_state['y_shift_input_value'],project_name)
-    update_specific_timing_value(project_name, st.session_state['which_image'], "zoom_details", f"{st.session_state['zoom_level_input_value']},{st.session_state['rotation_angle_input_value']},{st.session_state['x_shift_input_value']},{st.session_state['y_shift_input_value']}")
 
-def precision_cropping_element(stage,timing_details, project_name, project_settings):
+    if stage == WorkflowStageType.SOURCE.value:
+        save_location = f"videos/{project_uuid}/assets/frames/1_selected/{file_name}"
+        image.save(save_location)
+        file_data = {
+            "name": file_name,
+            "type": InternalFileType.IMAGE.value,
+            "local_path": save_location
+        }
+        source_image: InternalFileObject = data_repo.create_file(**file_data)
+        data_repo.update_specific_timing(
+            st.session_state['current_frame_uuid'], source_image_id=source_image.uuid)
+    elif stage == WorkflowStageType.STYLED.value:
+        save_location = f"videos/{project_uuid}/assets/frames/2_character_pipeline_completed/{file_name}"
+        image.save(save_location)
+        file_data = {
+            "name": file_name,
+            "type": InternalFileType.IMAGE.value,
+            "local_path": save_location
+        }
+        styled_image: InternalFileObject = data_repo.create_file(**file_data)
+
+        number_of_image_variants = add_image_variant(
+            styled_image.uuid, timing_uuid)
+        if promote:
+            promote_image_variant(timing_uuid, number_of_image_variants - 1)
+
+    project_update_data = {
+        "zoom_level_input_value": st.session_state['zoom_level_input_value'],
+        "rotation_angle_input_value": st.session_state['rotation_angle_input_value'],
+        "x_shift": st.session_state['x_shift'],
+        "y_shift": st.session_state['y_shift']
+    }
+
+    data_repo.update_project_setting(project_uuid, **project_update_data)
+
+    # TODO: CORRECT-CODE - make a proper column for zoom details
+    timing_update_data = {
+        "zoom_details": f"{st.session_state['zoom_level_input_value']},{st.session_state['rotation_angle_input_value']},{st.session_state['x_shift']},{st.session_state['y_shift']}",
+
+    }
+    data_repo.update_specific_timing(timing_uuid, **timing_update_data)
+
+
+def precision_cropping_element(stage, project_uuid):
+    data_repo = DataRepo()
+    project_settings: InternalSettingObject = data_repo.get_project_setting(
+        project_uuid)
 
     def reset_zoom_element():
         st.session_state['zoom_level_input_value'] = 100
         st.session_state['rotation_angle_input_value'] = 0
-        st.session_state['x_shift_input_value'] = 0
-        st.session_state['y_shift_input_value'] = 0
+        st.session_state['x_shift'] = 0
+        st.session_state['y_shift'] = 0
         st.session_state['zoom_level'] = 100
         st.session_state['rotation_angle'] = 0
         st.session_state['x_shift'] = 0
-        st.session_state['y_shift'] = 0                        
+        st.session_state['y_shift'] = 0
         st.experimental_rerun()
-    
-    input_image = fetch_image_by_stage(timing_details, stage)
 
-    if input_image == "":
+    input_image = fetch_image_by_stage(project_uuid, stage)
+
+    # TODO: CORRECT-CODE check if this code works
+    if not input_image:
         st.error("Please select a source image before cropping")
         return
     else:
         input_image = get_pillow_image(input_image)
-        
-    col1, col2 = st.columns(2)    
-    
-    with col1:      
 
-        st.subheader("Precision Cropping:")                
+    col1, col2 = st.columns(2)
 
-        if st.button("Reset Cropping"):            
+    with col1:
+
+        st.subheader("Precision Cropping:")
+
+        if st.button("Reset Cropping"):
             reset_zoom_element()
-                                               
-        st.session_state['zoom_level'] = st_memory.number_input("Zoom Level (%)", min_value=10, max_value=1000, step=10,key="zoom_level_input", default_value=100,project_name=project_name, project_settings=project_settings)
-        st.session_state['rotation_angle'] = st_memory.number_input("Rotation Angle", min_value=-360, max_value=360, step=5, key="rotation_angle_input", default_value=0,project_name=project_name,project_settings=project_settings)
-        st.session_state['x_shift'] = st_memory.number_input("Shift Left/Right", min_value=-1000, max_value=1000, step=5, key="x_shift_input", default_value=0,project_name=project_name,project_settings=project_settings)
-        st.session_state['y_shift'] = st_memory.number_input("Shift Up/Down", min_value=-1000, max_value=1000,step=5, key="y_shift_input", default_value=0,project_name=project_name,project_settings=project_settings)
-    
-        st.caption("Input Image:") 
+
+        st.session_state['zoom_level'] = st_memory.number_input(
+            "Zoom Level (%)", min_value=10, max_value=1000, step=10, key="zoom_level_input", default_value=100, project_settings=project_settings)
+        st.session_state['rotation_angle'] = st_memory.number_input(
+            "Rotation Angle", min_value=-360, max_value=360, step=5, key="rotation_angle_input", default_value=0, project_settings=project_settings)
+        st.session_state['x_shift'] = st_memory.number_input("Shift Left/Right", min_value=-1000, max_value=1000,
+                                                             step=5, key="x_shift", default_value=0, project_settings=project_settings)
+        st.session_state['y_shift'] = st_memory.number_input(
+            "Shift Up/Down", min_value=-1000, max_value=1000, step=5, key="y_shift", default_value=0, project_settings=project_settings)
+
+        st.caption("Input Image:")
         st.image(input_image, caption="Input Image", width=300)
 
     with col2:
 
-        
-        st.caption("Output Image:")             
-        output_image = apply_image_transformations(input_image, st.session_state['zoom_level'], st.session_state['rotation_angle'], st.session_state['x_shift'], st.session_state['y_shift'])
+        st.caption("Output Image:")
+        output_image = apply_image_transformations(
+            input_image, st.session_state['zoom_level'], st.session_state['rotation_angle'], st.session_state['x_shift'], st.session_state['y_shift'])
         st.image(output_image, use_column_width=True)
+
         if st.button("Save Image"):
-            save_zoomed_image(output_image, project_name, stage, timing_details,promote=True)
+            save_zoomed_image(output_image, project_uuid, stage, promote=True)
             st.success("Image saved successfully!")
             time.sleep(1)
             st.experimental_rerun()
-                        
-                                
-        inpaint_in_black_space_element(output_image,project_settings, project_name,stage)
+
+        inpaint_in_black_space_element(
+            output_image, project_settings.project.uuid, stage)
 
 
-def manual_cropping_element(stage,timing_details,project_name):
+def manual_cropping_element(stage, timing_uuid):
+    data_repo = DataRepo()
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
 
-    if timing_details[st.session_state['which_image']]["source_image"] == "":
+    if not timing.source_image:
         st.error("Please select a source image before cropping")
         return
     else:
@@ -671,9 +757,7 @@ def manual_cropping_element(stage,timing_details,project_name):
         img1, img2 = st.columns([3, 1.5])
 
         with img1:
-
             # use PIL to add 50 pixels of blackspace to the width and height of the image
-
             cropped_img = st_cropper(
                 st.session_state['working_image'], realtime_update=True, box_color="#0000FF", aspect_ratio=aspect_ratio)
 
@@ -689,7 +773,7 @@ def manual_cropping_element(stage,timing_details,project_name):
                         cropped_img = cropped_img.resize(
                             (width, height), Image.ANTIALIAS)
                         # generate a random filename and save it to /temp
-                        file_name = f"temp/{uuid.uuid4()}.png"
+                        file_name = f"videos/temp/{uuid.uuid4()}.png"
                         cropped_img.save(file_name)
                         st.success("Cropped Image Saved Successfully")
                         data_repo.update_specific_timing(
@@ -699,96 +783,96 @@ def manual_cropping_element(stage,timing_details,project_name):
             with cropbtn2:
                 st.warning("Warning: This will overwrite the original image")
 
-            inpaint_in_black_space_element(cropped_img,project_settings, project_name, stage=stage)
-                
+            inpaint_in_black_space_element(
+                cropped_img, timing.project.uuid, stage=stage)
 
-def ai_frame_editing_element(project_name,timing_details, project_settings, stage="Source"):
-            
+
+def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
+    data_repo = DataRepo()
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
+    project_settings: InternalSettingObject = data_repo.get_project_setting(
+        timing.project.uuid)
+
     if len(timing_details) == 0:
         st.info("You need to add  key frames first in the Key Frame Selection section.")
-
     else:
-
-        main_col_1, main_col_2 = st.columns([1,2])
+        main_col_1, main_col_2 = st.columns([1, 2])
 
         with main_col_1:
             st.write("")
-        
 
-        #initiative value
+        # initiative value
         if "which_image" not in st.session_state:
-            st.session_state['which_image'] = 0
-        
+            st.session_state['current_frame_uuid'] = 0
+
         def reset_new_image():
             st.session_state['edited_image'] = ""
 
-        
-    
-            
-        
         if "edited_image" not in st.session_state:
-            st.session_state.edited_image = ""                        
-        
-        if stage == "Styled" and timing_details[st.session_state['which_image']]["alternative_images"] == "":
+            st.session_state.edited_image = ""
+
+        if stage == WorkflowStageType.STYLED.value and len(timing.alternative_images_list) == 0:
             st.info("You need to add a style first in the Style Selection section.")
         else:
+            if stage == WorkflowStageType.SOURCE.value:
+                editing_image = timing.source_image
+            elif stage == WorkflowStageType.STYLED.value:
+                variants = timing.alternative_images_list
+                primary_image = timing.primary_image
 
-            if stage == "Source":
-                editing_image = timing_details[st.session_state['which_image']]["source_image"]
-            elif stage == "Styled":                                             
-                variants = timing_details[st.session_state['which_image']]["alternative_images"]
-                primary_image = timing_details[st.session_state['which_image']]["primary_image"]             
-                editing_image = variants[primary_image]
-    
-            width = int(project_settings["width"])
-            height = int(project_settings["height"])
+            width = int(project_settings.width)
+            height = int(project_settings.height)
 
-            
             if editing_image == "":
-                st.error(f"You don't have a {stage} image yet so you can't edit it.")
-
+                st.error(
+                    f"You don't have a {stage} image yet so you can't edit it.")
             else:
-
                 with main_col_1:
-                    
                     if 'index_of_type_of_mask_selection' not in st.session_state:
                         st.session_state['index_of_type_of_mask_selection'] = 0
-                    mask_selection_options = ["Manual Background Selection", "Automated Background Selection", "Automated Layer Selection","Re-Use Previous Mask", "Invert Previous Mask"]
-                    type_of_mask_selection = st.radio("How would you like to select what to edit?", mask_selection_options, horizontal=True, index=st.session_state['index_of_type_of_mask_selection'])                                                                      
+                    mask_selection_options = ["Manual Background Selection", "Automated Background Selection",
+                                              "Automated Layer Selection", "Re-Use Previous Mask", "Invert Previous Mask"]
+                    type_of_mask_selection = st.radio("How would you like to select what to edit?", mask_selection_options,
+                                                      horizontal=True, index=st.session_state['index_of_type_of_mask_selection'])
                     if st.session_state['index_of_type_of_mask_selection'] != mask_selection_options.index(type_of_mask_selection):
-                        st.session_state['index_of_type_of_mask_selection'] = mask_selection_options.index(type_of_mask_selection)
+                        st.session_state['index_of_type_of_mask_selection'] = mask_selection_options.index(
+                            type_of_mask_selection)
                         st.experimental_rerun()
-                
+
                     if "which_layer" not in st.session_state:
                         st.session_state['which_layer'] = "Background"
                         st.session_state['which_layer_index'] = 0
 
                     if type_of_mask_selection == "Automated Layer Selection":
                         layers = ["Background", "Middleground", "Foreground"]
-                        st.session_state['which_layer'] = st.multiselect("Which layers would you like to replace?", layers)
-                        
-                    
+                        st.session_state['which_layer'] = st.multiselect(
+                            "Which layers would you like to replace?", layers)
+
                 if type_of_mask_selection == "Manual Background Selection":
-                    if st.session_state['edited_image'] == "":    
-                        with main_col_1:                            
+                    if st.session_state['edited_image'] == "":
+                        with main_col_1:
                             if editing_image.startswith("http"):
                                 canvas_image = r.get(editing_image)
-                                canvas_image = Image.open(BytesIO(canvas_image.content))
-                            else:                            
+                                canvas_image = Image.open(
+                                    BytesIO(canvas_image.content))
+                            else:
                                 canvas_image = Image.open(editing_image)
                             if 'drawing_input' not in st.session_state:
                                 st.session_state['drawing_input'] = 'Magic shapes 🪄'
-                            col1, col2 = st.columns([6,3])
-                                            
+                            col1, col2 = st.columns([6, 3])
+
                             with col1:
                                 st.session_state['drawing_input'] = st.radio(
                                     "Drawing tool:",
-                                    ("Make shapes 🪄","Move shapes 🏋🏾‍♂️", "Make squares □","Draw lines ✏️"), horizontal=True,
+                                    ("Make shapes 🪄", "Move shapes 🏋🏾‍♂️", "Make squares □", "Draw lines ✏️"), horizontal=True,
                                 )
-                            
+
                             if st.session_state['drawing_input'] == "Move shapes 🏋🏾‍♂️":
                                 drawing_mode = "transform"
-                                st.info("To delete something, just move it outside of the image! 🥴")
+                                st.info(
+                                    "To delete something, just move it outside of the image! 🥴")
                             elif st.session_state['drawing_input'] == "Make shapes 🪄":
                                 drawing_mode = "polygon"
                                 st.info("To end a shape, right click!")
@@ -797,20 +881,20 @@ def ai_frame_editing_element(project_name,timing_details, project_settings, stag
                                 st.info("To draw, draw! ")
                             elif st.session_state['drawing_input'] == "Make squares □":
                                 drawing_mode = "rect"
-                            
-                            
-                            with col2:    
-                                if drawing_mode == "freedraw":           
-                                    stroke_width = st.slider("Stroke width: ", 1, 25, 12)
+
+                            with col2:
+                                if drawing_mode == "freedraw":
+                                    stroke_width = st.slider(
+                                        "Stroke width: ", 1, 25, 12)
                                 else:
                                     stroke_width = 3
 
                         with main_col_2:
 
-                            realtime_update = True        
+                            realtime_update = True
 
                             canvas_result = st_canvas(
-                                fill_color="rgba(0, 0, 0)", 
+                                fill_color="rgba(0, 0, 0)",
                                 stroke_width=stroke_width,
                                 stroke_color="rgba(0, 0, 0)",
                                 background_color="rgb(255, 255, 255)",
@@ -828,30 +912,35 @@ def ai_frame_editing_element(project_name,timing_details, project_settings, stag
 
                             if canvas_result.image_data is not None:
                                 img_data = canvas_result.image_data
-                                im = Image.fromarray(img_data.astype("uint8"), mode="RGBA")
-                                create_or_update_mask(project_name, st.session_state['which_image'], im)
+                                im = Image.fromarray(
+                                    img_data.astype("uint8"), mode="RGBA")
+                                create_or_update_mask(
+                                    st.session_state['current_frame_uuid'], im)
                     else:
                         image_comparison(
                             img1=editing_image,
-                            img2=st.session_state['edited_image'], starting_position=5, label1="Original", label2="Edited")  
+                            img2=st.session_state['edited_image'], starting_position=5, label1="Original", label2="Edited")
                         if st.button("Reset Canvas"):
                             st.session_state['edited_image'] = ""
                             st.experimental_rerun()
-                                
 
                 elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection" or type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
                     with main_col_1:
                         if type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
-                            if timing_details[st.session_state['which_image']]["mask"] == "":
-                                st.info("You don't have a previous mask to re-use.")                
+                            if timing_details[st.session_state['current_frame_uuid']]["mask"] == "":
+                                st.info(
+                                    "You don't have a previous mask to re-use.")
                             else:
-                                mask1,mask2 = st.columns([2,1])
+                                mask1, mask2 = st.columns([2, 1])
                                 with mask1:
                                     if type_of_mask_selection == "Re-Use Previous Mask":
-                                        st.info("This will update the **black pixels** in the mask with the pixels from the image you are editing.")
+                                        st.info(
+                                            "This will update the **black pixels** in the mask with the pixels from the image you are editing.")
                                     elif type_of_mask_selection == "Invert Previous Mask":
-                                        st.info("This will update the **white pixels** in the mask with the pixels from the image you are editing.")                
-                                    st.image(timing_details[st.session_state['which_image']]["mask"], use_column_width=True)
+                                        st.info(
+                                            "This will update the **white pixels** in the mask with the pixels from the image you are editing.")
+                                    st.image(
+                                        timing_details[st.session_state['current_frame_uuid']]["mask"], use_column_width=True)
 
                     with main_col_2:
                         if st.session_state['edited_image'] == "":
@@ -859,134 +948,173 @@ def ai_frame_editing_element(project_name,timing_details, project_settings, stag
                         else:
                             image_comparison(
                                 img1=editing_image,
-                                img2=st.session_state['edited_image'], starting_position=5, label1="Original", label2="Edited") 
+                                img2=st.session_state['edited_image'], starting_position=5, label1="Original", label2="Edited")
                             if st.button("Reset Canvas"):
                                 st.session_state['edited_image'] = ""
-                                st.experimental_rerun()                    
-                        
-                                            
+                                st.experimental_rerun()
 
                 with main_col_1:
 
                     if "type_of_mask_replacement" not in st.session_state:
                         st.session_state["type_of_mask_replacement"] = "Replace With Image"
                         st.session_state["index_of_type_of_mask_replacement"] = 0
-                    
-                    types_of_mask_replacement = ["Inpainting","Replace With Image"]
-                    st.session_state["type_of_mask_replacement"] = st.radio("Select type of edit", types_of_mask_replacement, horizontal=True, index=st.session_state["index_of_type_of_mask_replacement"])    
+
+                    types_of_mask_replacement = [
+                        "Inpainting", "Replace With Image"]
+                    st.session_state["type_of_mask_replacement"] = st.radio(
+                        "Select type of edit", types_of_mask_replacement, horizontal=True, index=st.session_state["index_of_type_of_mask_replacement"])
 
                     if st.session_state["index_of_type_of_mask_replacement"] != types_of_mask_replacement.index(st.session_state["type_of_mask_replacement"]):
-                        st.session_state["index_of_type_of_mask_replacement"] = types_of_mask_replacement.index(st.session_state["type_of_mask_replacement"])
+                        st.session_state["index_of_type_of_mask_replacement"] = types_of_mask_replacement.index(
+                            st.session_state["type_of_mask_replacement"])
                         st.experimental_rerun()
 
                     if st.session_state["type_of_mask_replacement"] == "Replace With Image":
                         prompt = ""
                         negative_prompt = ""
-                        background_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/backgrounds') if f.endswith('.png')]                 
-                        background_list = [f for f in os.listdir(f'videos/{project_name}/assets/resources/backgrounds') if f.endswith('.png')]                 
+                        background_list = [f for f in os.listdir(
+                            f'videos/{timing.project.uuid}/assets/resources/backgrounds') if f.endswith('.png')]
+                        background_list = [f for f in os.listdir(
+                            f'videos/{timing.project.uuid}/assets/resources/backgrounds') if f.endswith('.png')]
                         sources_of_images = ["Uploaded", "From Other Frame"]
                         if 'index_of_source_of_image' not in st.session_state:
                             st.session_state['index_of_source_of_image'] = 0
-                        source_of_image = st.radio("Select type of image", sources_of_images,horizontal=True, index=st.session_state['index_of_source_of_image'])
+                        source_of_image = st.radio("Select type of image", sources_of_images,
+                                                   horizontal=True, index=st.session_state['index_of_source_of_image'])
 
                         if st.session_state['index_of_source_of_image'] != sources_of_images.index(source_of_image):
-                            st.session_state['index_of_source_of_image'] = sources_of_images.index(source_of_image)
+                            st.session_state['index_of_source_of_image'] = sources_of_images.index(
+                                source_of_image)
                             st.experimental_rerun()
 
-                        if source_of_image == "Uploaded":                                
-                            btn1, btn2 = st.columns([1,1])
+                        if source_of_image == "Uploaded":
+                            btn1, btn2 = st.columns([1, 1])
                             with btn1:
-                                uploaded_files = st.file_uploader("Add more background images here", accept_multiple_files=True)                    
-                                if st.button("Upload Backgrounds"):                            
+                                uploaded_files = st.file_uploader(
+                                    "Add more background images here", accept_multiple_files=True)
+                                if st.button("Upload Backgrounds"):
                                     for uploaded_file in uploaded_files:
-                                        with open(os.path.join(f"videos/{project_name}/assets/resources/backgrounds",uploaded_file.name),"wb") as f: 
-                                            f.write(uploaded_file.getbuffer())                                                                                                                                                      
-                                            st.success("Your backgrounds are uploaded file - they should appear in the dropdown.")                     
-                                            background_list.append(uploaded_file.name)
+                                        with open(os.path.join(f"videos/{timing.project.uuid}/assets/resources/backgrounds", uploaded_file.name), "wb") as f:
+                                            f.write(uploaded_file.getbuffer())
+                                            st.success(
+                                                "Your backgrounds are uploaded file - they should appear in the dropdown.")
+                                            background_list.append(
+                                                uploaded_file.name)
                                             time.sleep(1.5)
-                                            st.experimental_rerun()                                
+                                            st.experimental_rerun()
                             with btn2:
-                                background_selection = st.selectbox("Range background", background_list)                        
-                                background_image = f'videos/{project_name}/assets/resources/backgrounds/{background_selection}'                        
+                                background_selection = st.selectbox(
+                                    "Range background", background_list)
+                                background_image = f'videos/{timing.project.uuid}/assets/resources/backgrounds/{background_selection}'
                                 if background_list != []:
-                                    st.image(f"{background_image}", use_column_width=True)
+                                    st.image(f"{background_image}",
+                                             use_column_width=True)
                         elif source_of_image == "From Other Frame":
-                            btn1, btn2 = st.columns([1,1])
+                            btn1, btn2 = st.columns([1, 1])
                             with btn1:
-                                which_stage_to_use = st.radio("Select stage to use:", ["Source", "Styled"])
-                                which_image_to_use = st.number_input("Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0)
-                                if which_stage_to_use == "Source":                                    
+                                which_stage_to_use = st.radio(
+                                    "Select stage to use:", ["Source", "Styled"])
+                                which_image_to_use = st.number_input(
+                                    "Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0)
+                                if which_stage_to_use == "Source":
                                     background_image = timing_details[which_image_to_use]["source_image"]
-                                    
+
                                 elif which_stage_to_use == "Styled":
                                     variants = timing_details[which_image_to_use]["alternative_images"]
-                                    primary_image = timing_details[which_image_to_use]["primary_image"]             
+                                    primary_image = timing_details[which_image_to_use]["primary_image"]
                                     background_image = variants[primary_image]
                             with btn2:
-                                st.image(background_image, use_column_width=True)
-                            
+                                st.image(background_image,
+                                         use_column_width=True)
 
                     elif st.session_state["type_of_mask_replacement"] == "Inpainting":
-                        btn1, btn2 = st.columns([1,1])
+                        btn1, btn2 = st.columns([1, 1])
                         with btn1:
-                            prompt = st.text_area("Prompt:", help="Describe the whole image, but focus on the details you want changed!", value=st.session_state['project_settings']["last_prompt"])
+                            prompt = st.text_area("Prompt:", help="Describe the whole image, but focus on the details you want changed!",
+                                                  value=project_settings.default_prompt)
                         with btn2:
-                            negative_prompt = st.text_area("Negative Prompt:", help="Enter any things you want to make the model avoid!", value =st.session_state['project_settings']["last_negative_prompt"])
+                            negative_prompt = st.text_area(
+                                "Negative Prompt:", help="Enter any things you want to make the model avoid!", value=project_settings.default_negative_prompt)
 
                     edit1, edit2 = st.columns(2)
 
                     with edit1:
                         if st.button(f'Run Edit On Current Image'):
                             if st.session_state["type_of_mask_replacement"] == "Inpainting":
-                                st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, "", editing_image, prompt, negative_prompt,width, height,st.session_state['which_layer'], st.session_state['which_image'])
+                                edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
+                                                                  "", editing_image, prompt, negative_prompt, width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
+                                st.session_state['edited_image'] = edited_image.uuid
                             elif st.session_state["type_of_mask_replacement"] == "Replace With Image":
-                                st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, editing_image, "", "",width, height,st.session_state['which_layer'], st.session_state['which_image'])
+                                edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
+                                                                  background_image, editing_image, "", "", width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
+                                st.session_state['edited_image'] = edited_image.uuid
                             st.experimental_rerun()
+
                     with edit2:
-                        if st.session_state['edited_image'] != "":                                     
+                        if st.session_state['edited_image'] != "":
                             if st.button("Promote Last Edit", type="primary"):
-                                if stage == "Source":                                                    
-                                    update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", st.session_state['edited_image'])                               
-                                elif stage == "Styled":
-                                    number_of_image_variants = add_image_variant(st.session_state['edited_image'], st.session_state['which_image'], project_name, timing_details)
-                                    promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1)
+                                if stage == WorkflowStageType.SOURCE.value:
+                                    data_repo.update_specific_timing(
+                                        st.session_state['current_frame_uuid'], source_image_id=st.session_state['edited_image'])
+                                elif stage == WorkflowStageType.STYLED.value:
+                                    number_of_image_variants = add_image_variant(
+                                        st.session_state['edited_image'], st.session_state['current_frame_uuid'])
+                                    promote_image_variant(
+                                        st.session_state['current_frame_uuid'], number_of_image_variants - 1)
                                 st.session_state['edited_image'] = ""
                                 st.experimental_rerun()
                         else:
                             if st.button("Run Edit & Promote"):
                                 if st.session_state["type_of_mask_replacement"] == "Inpainting":
-                                    st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, "", editing_image, prompt, negative_prompt,width, height,st.session_state['which_layer'], st.session_state['which_image'])
+                                    edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
+                                                                      "", editing_image, prompt, negative_prompt, width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
+                                    st.session_state['edited_image'] = edited_image.uuid
                                 elif st.session_state["type_of_mask_replacement"] == "Replace With Image":
-                                    st.session_state['edited_image'] = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"], project_name, background_image, editing_image, "", "",width, height,st.session_state['which_layer'], st.session_state['which_image'])
-                                if stage == "Source": 
-                                    update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", st.session_state['edited_image'])                                                   
-                                elif stage == "Styled":
-                                    number_of_image_variants = add_image_variant(st.session_state['edited_image'], st.session_state['which_image'], project_name, timing_details)
-                                    promote_image_variant(st.session_state['which_image'], project_name, number_of_image_variants - 1)
+                                    edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
+                                                                      background_image, editing_image, "", "", width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
+                                    st.session_state['edited_image'] = edited_image.uuid
+
+                                if stage == WorkflowStageType.SOURCE.value:
+                                    data_repo.update_specific_timing(
+                                        st.session_state['current_frame_uuid'], source_image_id=st.session_state['edited_image'])
+                                elif stage == WorkflowStageType.STYLED.value:
+                                    number_of_image_variants = add_image_variant(
+                                        edited_image.uuid, st.session_state['current_frame_uuid'])
+                                    promote_image_variant(
+                                        st.session_state['current_frame_uuid'], number_of_image_variants - 1)
+
                                 st.session_state['edited_image'] = ""
                                 st.success("Image promoted!")
                                 st.experimental_rerun()
-                        
-       
+
 
 def save_image_by_stage(status):
     st.write("")
 
+# cropped_img here is a PIL image object
 
 
-def inpaint_in_black_space_element(cropped_img,project_settings, project_name, stage="Source"):
+def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStageType.SOURCE.value):
+    data_repo = DataRepo()
+    project_settings: InternalSettingObject = data_repo.get_project_setting(
+        project_uuid)
 
     st.markdown("##### Inpaint in black space:")
-    
-    inpaint_prompt = st.text_area("Prompt", value=project_settings["last_prompt"])
-    inpaint_negative_prompt = st.text_input("Negative Prompt", value='edge,branches, frame, fractals, text' +project_settings["last_negative_prompt"])
-    if 'inpainted_image' not in st.session_state:
-        st.session_state['inpainted_image'] = ""
+
+    inpaint_prompt = st.text_area(
+        "Prompt", value=project_settings.default_prompt)
+    inpaint_negative_prompt = st.text_input(
+        "Negative Prompt", value='edge,branches, frame, fractals, text' + project_settings.default_negative_prompt)
+    if 'inpainted_image_uuid' not in st.session_state:
+        st.session_state['inpainted_image_uuid'] = ""
+
     if st.button("Inpaint"):
-        width = int(project_settings["width"])
-        height = int(project_settings["height"])
-        saved_cropped_img = cropped_img.resize((width, height), Image.ANTIALIAS)                
-        saved_cropped_img.save("temp/cropped.png")
+        width = int(project_settings.width)
+        height = int(project_settings.height)
+
+        saved_cropped_img = cropped_img.resize(
+            (width, height), Image.ANTIALIAS)
+        saved_cropped_img.save("videos/temp/cropped.png")
         # Convert image to grayscale
         # Create a new image with the same size as the cropped image
         mask = Image.new('RGB', cropped_img.size)
@@ -997,8 +1125,6 @@ def inpaint_in_black_space_element(cropped_img,project_settings, project_name, s
         for x in range(width):
             for y in range(height):
                 # Get the RGB values of the pixel
-                
-
                 pixel = cropped_img.getpixel((x, y))
 
                 # If the image is RGB, unpack the pixel into r, g, and b
@@ -1011,38 +1137,52 @@ def inpaint_in_black_space_element(cropped_img,project_settings, project_name, s
                 elif cropped_img.mode == 'L':
                     brightness = pixel
                 else:
-                    raise ValueError(f'Unsupported image mode: {cropped_img.mode}')
-
+                    raise ValueError(
+                        f'Unsupported image mode: {cropped_img.mode}')
 
                 # If the pixel is black, set it and its adjacent pixels to black in the new image
                 if r == 0 and g == 0 and b == 0:
                     mask.putpixel((x, y), (0, 0, 0))  # Black
-                    for i in range(-2, 3):  # Adjust these values to change the range of adjacent pixels
+                    # Adjust these values to change the range of adjacent pixels
+                    for i in range(-2, 3):
                         for j in range(-2, 3):
                             # Check that the pixel is within the image boundaries
                             if 0 <= x + i < width and 0 <= y + j < height:
-                                mask.putpixel((x + i, y + j), (0, 0, 0))  # Black
+                                mask.putpixel((x + i, y + j),
+                                              (0, 0, 0))  # Black
                 # Otherwise, make the pixel white in the new image
                 else:
                     mask.putpixel((x, y), (255, 255, 255))  # White
         # Save the mask image
-        mask.save('temp/mask.png')
-        
-        st.session_state['inpainted_image'] = inpainting(project_name, "temp/cropped.png", inpaint_prompt, inpaint_negative_prompt, st.session_state['which_image'], True, pass_mask=True)
-    
-    if st.session_state['inpainted_image'] != "":
-        st.image(st.session_state['inpainted_image'], caption="Inpainted Image", use_column_width=True,width=200)
-        if stage == "Source":
-            if st.button("Make Source Image"):                        
-                update_specific_timing_value(project_name, st.session_state['which_image'], "source_image", st.session_state['inpainted_image'])
-                st.session_state['inpainted_image'] = ""
+        mask.save('videos/temp/mask.png')
+
+        inpainted_file = inpainting('videos/temp/mask.png', inpaint_prompt,
+                                    inpaint_negative_prompt, st.session_state['current_frame_uuid'], True, pass_mask=True)
+
+        st.session_state['inpainted_image_uuid'] = inpainted_file.uuid
+
+    if st.session_state['inpainted_image_uuid']:
+        img_file = data_repo.get_file_from_uuid(
+            st.session_state['inpainted_image_uuid'])
+        st.image(img_file.location, caption="Inpainted Image",
+                 use_column_width=True, width=200)
+
+        if stage == WorkflowStageType.SOURCE.value:
+            if st.button("Make Source Image"):
+                data_repo.update_specific_timing(
+                    st.session_state['current_frame_uuid'], source_image_id=img_file.uuid)
+                st.session_state['inpainted_image_uuid'] = ""
                 st.experimental_rerun()
-        elif stage == "Styled":
+
+        elif stage == WorkflowStageType.STYLED.value:
             if st.button("Save + Promote Image"):
-                timing_details = get_timing_details(project_name)
-                number_of_image_variants = add_image_variant(st.session_state['inpainted_image'], st.session_state['which_image'], project_name, timing_details)
-                promote_image_variant(st.session_state['which_image'], project_name,number_of_image_variants - 1) 
-                st.session_state['inpainted_image'] = ""
+                timing_details = data_repo.get_timing_list_from_project(
+                    project_uuid)
+                number_of_image_variants = add_image_variant(
+                    st.session_state['inpainted_image_uuid'], st.session_state['current_frame_uuid'])
+                promote_image_variant(
+                    st.session_state['current_frame_uuid'], number_of_image_variants - 1)
+                st.session_state['inpainted_image_uuid'] = ""
                 st.experimental_rerun()
 
 
@@ -1062,18 +1202,19 @@ def rotate_image(location, degree):
     return rotated_image
 
 
-'''
-returns the timed_clip, which is the interpolated video with correct length
-'''
+# returns the timed_clip, which is the interpolated video with correct length
 def create_or_get_single_preview_video(timing_uuid):
     data_repo = DataRepo()
 
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-    project_details: InternalSettingObject = data_repo.get_project_setting(timing.project.uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
+    project_details: InternalSettingObject = data_repo.get_project_setting(
+        timing.project.uuid)
 
     if not timing.interpolated_clip:
         data_repo.update_specific_timing(timing_uuid, interpolation_steps=3)
-        interpolated_video: InternalFileObject = prompt_interpolation_model(timing_uuid)
+        interpolated_video: InternalFileObject = prompt_interpolation_model(
+            timing_uuid)
         data_repo.update_specific_timing(
             timing_uuid, interpolated_clip_id=interpolated_video.uuid)
 
@@ -1081,21 +1222,29 @@ def create_or_get_single_preview_video(timing_uuid):
         timing = data_repo.get_timing_from_uuid(timing_uuid)
 
         clip = VideoFileClip(timing.interpolated_clip.local_path)
-        number_text = TextClip(str(timing.aux_frame_index), fontsize=24, color='white')
-        number_background = TextClip(" ", fontsize=24, color='black', bg_color='black', size=(number_text.w + 10, number_text.h + 10))
-        number_background = number_background.set_position(('left', 'top')).set_duration(clip.duration)
-        number_text = number_text.set_position((number_background.w - number_text.w - 5, number_background.h - number_text.h - 5)).set_duration(clip.duration)
-        clip_with_number = CompositeVideoClip([clip, number_background, number_text])        
+        number_text = TextClip(str(timing.aux_frame_index),
+                               fontsize=24, color='white')
+        number_background = TextClip(" ", fontsize=24, color='black', bg_color='black', size=(
+            number_text.w + 10, number_text.h + 10))
+        number_background = number_background.set_position(
+            ('left', 'top')).set_duration(clip.duration)
+        number_text = number_text.set_position(
+            (number_background.w - number_text.w - 5, number_background.h - number_text.h - 5)).set_duration(clip.duration)
+        clip_with_number = CompositeVideoClip(
+            [clip, number_background, number_text])
 
-        clip_with_number.write_videofile(timing.interpolated_clip.local_path)    
+        clip_with_number.write_videofile(timing.interpolated_clip.local_path)
 
         # timed_clip has the correct length (equal to the time difference between the current and the next frame)
         # which the interpolated video may or maynot have
-        clip_duration = calculate_desired_duration_of_individual_clip(timing_uuid)
-        data_repo.update_specific_timing(timing_uuid, clip_duration=clip_duration)
-        
+        clip_duration = calculate_desired_duration_of_individual_clip(
+            timing_uuid)
+        data_repo.update_specific_timing(
+            timing_uuid, clip_duration=clip_duration)
+
         # TODO: fix refetching of variables
-        timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+        timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+            timing_uuid)
         output_video = update_speed_of_video_clip(
             timing.interpolated_clip, True, timing_uuid)
         data_repo.update_specific_timing(
@@ -1106,14 +1255,16 @@ def create_or_get_single_preview_video(timing_uuid):
         audio_bytes = get_audio_bytes_for_slice(timing_uuid)
         add_audio_to_video_slice(timing.timed_clip, audio_bytes)
 
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
     return timing.timed_clip
 
 
 def single_frame_time_changer(timing_uuid):
     data_repo = DataRepo()
 
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         timing.project.uuid)
 
@@ -1124,7 +1275,8 @@ def single_frame_time_changer(timing_uuid):
         data_repo.update_specific_timing(timing_uuid, frame_time=frame_time)
         if timing.aux_frame_index != 0:
             prev_timing = data_repo.get_prev_timing(timing_uuid)
-            data_repo.update_specific_timing(prev_timing.uuid, timed_clip_id=None)
+            data_repo.update_specific_timing(
+                prev_timing.uuid, timed_clip_id=None)
 
         data_repo.update_specific_timing(timing_uuid, timed_clip_id=None)
 
@@ -1140,38 +1292,45 @@ def single_frame_time_changer(timing_uuid):
                 # shift them by the difference between the new frame time and the old frame time
                 new_frame_time = this_frame_time + \
                     (frame_time - timing.frame_time)
-                data_repo.update_specific_timing(frame.uuid, frame_time=new_frame_time)
-                data_repo.update_specific_timing(frame.uuid, timed_clip_id=None)
+                data_repo.update_specific_timing(
+                    frame.uuid, frame_time=new_frame_time)
+                data_repo.update_specific_timing(
+                    frame.uuid, timed_clip_id=None)
         st.experimental_rerun()
 
 
 '''
 preview_clips have frame numbers on them. Preview clip is generated from index-2 to index+2 frames
 '''
+
+
 def create_full_preview_video(timing_uuid, speed) -> InternalFileObject:
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         timing.project.uuid)
     index_of_item = timing.aux_frame_index
 
     num_timing_details = len(timing_details)
     clips = []
-   
 
     for i in range(index_of_item - 2, index_of_item + 3):
-        
+
         if i < 0 or i >= num_timing_details-1:
             continue
 
-        primary_variant_location = data_repo.get_primary_variant_location(timing_details[i].uuid)
+        primary_variant_location = data_repo.get_primary_variant_location(
+            timing_details[i].uuid)
 
-        print(f"primary_variant_location for i={i}: {primary_variant_location}")
+        print(
+            f"primary_variant_location for i={i}: {primary_variant_location}")
 
         if not primary_variant_location:
             break
 
-        preview_video = create_or_get_single_preview_video(timing_details[i].uuid)
+        preview_video = create_or_get_single_preview_video(
+            timing_details[i].uuid)
 
         clip = VideoFileClip(preview_video.location)
 
@@ -1204,9 +1363,11 @@ def create_full_preview_video(timing_uuid, speed) -> InternalFileObject:
         clip = VideoFileClip(video_location)
         output_clip = clip.fx(vfx.speedx, speed)
         os.remove(video_location)
-        output_clip.write_videofile(video_location, codec="libx264", preset="fast")
+        output_clip.write_videofile(
+            video_location, codec="libx264", preset="fast")
 
-    video_file = data_repo.create_file(name=output_filename, type=InternalFileType.VIDEO.value, local_path=video_location)
+    video_file = data_repo.create_file(
+        name=output_filename, type=InternalFileType.VIDEO.value, local_path=video_location)
 
     return video_file
 
@@ -1251,22 +1412,28 @@ def back_and_forward_buttons():
                 st.experimental_rerun()
 
 # TODO: CORRECT-CODE
-def display_image(idx=0, stage=None, clickable=False, timing_details=None):
+
+
+def display_image(timing_uuid, stage=None, clickable=False):
+    data_repo = DataRepo()
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_idx = timing.aux_frame_index
+
     # if it's less than 0 or greater than the number in timing_details, show nothing
-    if idx < 0 or idx >= len(timing_details):
+    if not timing:
         st.write("")
 
     else:
-        if stage == "Styled":
-            image = get_primary_variant_location(timing_details, idx)                            
-        elif stage == "Source":
-            image = timing_details[idx]["source_image"]
+        if stage == WorkflowStageType.STYLED.value:
+            image = timing.primary_image_location
+        elif stage == WorkflowStageType.SOURCE.value:
+            image = timing.source_image.location
 
         if image != "":
             if clickable is True:
                 if 'counter' not in st.session_state:
                     st.session_state['counter'] = 0
-                
+
                 import base64
 
                 if image.startswith("http"):
@@ -1276,133 +1443,143 @@ def display_image(idx=0, stage=None, clickable=False, timing_details=None):
                         st.write("")
                         encoded = base64.b64encode(image.read()).decode()
                         image = (f"data:image/jpeg;base64,{encoded}")
-                    
-                                                                                                                                            
-                st.session_state[f'{idx}_{stage}_clicked'] = clickable_images([image],div_style={"display": "flex", "justify-content": "center", "flex-wrap": "wrap"},img_style={ "max-width": "100%", "height": "auto"}, key=f"{idx}_{stage}_image_{st.session_state['counter']}")
-                
-                if st.session_state[f'{idx}_{stage}_clicked'] == 0:
-                    st.session_state['which_image'] = idx       
-                    st.session_state['which_image_value'] = idx  
+
+                st.session_state[f'{timing_idx}_{stage}_clicked'] = clickable_images([image], div_style={"display": "flex", "justify-content": "center", "flex-wrap": "wrap"}, img_style={
+                    "max-width": "100%", "height": "auto"}, key=f"{timing_idx}_{stage}_image_{st.session_state['counter']}")
+
+                if st.session_state[f'{timing_idx}_{stage}_clicked'] == 0:
+                    st.session_state['current_frame_uuid'] = timing_idx
+                    st.session_state['current_frame_index'] = timing_idx
                     # st.session_state['frame_styling_view_type_index'] = 0
-                    st.session_state['frame_styling_view_type'] = "Individual View"                                
+                    st.session_state['frame_styling_view_type'] = "Individual View"
                     st.session_state['counter'] += 1
-                    
-                                                                                        
+
             elif clickable is False:
-                st.image(image, use_column_width=True)                            
+                st.image(image, use_column_width=True)
         else:
-            st.error(f"No {stage} image found for #{idx}")
+            st.error(f"No {stage} image found for #{timing_idx}")
 
 
-# TODO: CORRECT-CODE
-def carousal_of_images_element(timing_details, stage="Styled"):                                        
+def carousal_of_images_element(project_uuid, stage="Styled"):
+    data_repo = DataRepo()
+    timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
-    header1, header2, header3, header4, header5 = st.columns([1,1,1,1,1])
+    header1, header2, header3, header4, header5 = st.columns([1, 1, 1, 1, 1])
 
+    current_timing = data_repo.get_timing_from_uuid(
+        st.session_state['current_frame_uuid'])
     with header1:
-        
-        if st.session_state['which_image'] -2 >= 0 and len(timing_details) > st.session_state['which_image']-2:                                                                                   
-            
-            display_image(st.session_state['which_image'] -2, stage=stage,clickable=True, timing_details=timing_details)            
-            
+        prev_2_timing = data_repo.get_timing_from_frame_number(
+            current_timing.aux_frame_index - 2)
+
+        if prev_2_timing:
+            display_image(prev_timing.uuid, stage=stage, clickable=True)
+
     with header2:
-        if st.session_state['which_image'] - 1 >= 0 and len(timing_details) > st.session_state['which_image']-1:
-            
-            display_image(st.session_state['which_image'] -1, stage=stage,clickable=True, timing_details=timing_details)            
-            
-    with header3:                        
-        
-        display_image(st.session_state['which_image'], stage=stage,clickable=True, timing_details=timing_details)
-        
-                                
+        prev_timing = data_repo.get_timing_from_frame_number(
+            current_timing.aux_frame_index - 1)
+        if prev_timing:
+            display_image(prev_timing.uuid, stage=stage, clickable=True)
+
+    with header3:
+        display_image(st.session_state['current_frame_uuid'],
+                      stage=stage, clickable=True)
+
     with header4:
-        if len(timing_details) > st.session_state['which_image']+1:
-        
-            display_image(st.session_state['which_image'] +1, stage=stage,clickable=True, timing_details=timing_details)
-            
+        next_timing = data_repo.get_timing_from_frame_number(
+            current_timing.aux_frame_index + 1)
+        if next_timing:
+            display_image(next_timing.uuid, stage=stage, clickable=True)
+
     with header5:
-        if len(timing_details) > st.session_state['which_image']+2:
-        
-            display_image(st.session_state['which_image'] +2, stage=stage,clickable=True, timing_details=timing_details)
+        next_2_timing = data_repo.get_timing_from_frame_number(
+            current_timing.aux_frame_index + 2)
+        if next_2_timing:
+            display_image(next_2_timing.uuid, stage=stage, clickable=True)
 
     st.markdown("***")
 
 
-
 # TODO: CORRECT-CODE
-def styling_element(timing_uuid, view_type="Single", item_to_show=None):
-    
+def styling_element(timing_uuid, view_type="Single"):
+
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         timing.project.uuid)
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         timing.project.uuid)
-    
+
     if project_settings.default_stage != "":
         if 'index_of_which_stage_to_run_on' not in st.session_state:
-            st.session_state['which_stage_to_run_on'] = project_settings.default_stage
+            st.session_state['transformation_stage'] = project_settings.default_stage
             st.session_state['index_of_which_stage_to_run_on'] = stages.index(
-                st.session_state['which_stage_to_run_on'])
+                st.session_state['transformation_stage'])
     else:
         st.session_state['index_of_which_stage_to_run_on'] = 0
 
     stages1, stages2 = st.columns([1, 1])
     with stages1:
-        st.session_state['which_stage_to_run_on'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True,
+        st.session_state['transformation_stage'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True,
                                                              index=st.session_state['index_of_which_stage_to_run_on'], help="Extracted frames means the original frames from the video.")
     with stages2:
         stage_frame: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
             st.session_state['current_frame_uuid'])
-        if st.session_state['which_stage_to_run_on'] == "Extracted Key Frames":
+        if st.session_state['transformation_stage'] == "Extracted Key Frames":
             image = stage_frame.source_image.location
         else:
             image = data_repo.get_primary_variant_location(stage_frame.uuid)
             image = image.location if image else ""
-    
 
     if view_type == "Single":
-        append_to_item_name = f"{st.session_state['which_image']}"
+        append_to_item_name = f"{st.session_state['current_frame_uuid']}"
     elif view_type == "List":
-        append_to_item_name = "bulk"                
+        append_to_item_name = "bulk"
         st.markdown("## Batch queries")
 
     stages = ["Source Image", "Main Variant"]
-    
+
+    # TODO: CORRECT-CODE transformation_stage add this in db
     if view_type == "Single":
-        if timing_details[item_to_show]['which_stage_to_run_on'] != "":
+        if timing.transformation_stage != "":
             if f'index_of_which_stage_to_run_on_{append_to_item_name}' not in st.session_state:
-                st.session_state['which_stage_to_run_on'] = timing_details[item_to_show]['which_stage_to_run_on']
-                st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = stages.index(st.session_state['which_stage_to_run_on'])
+                st.session_state['transformation_stage'] = timing.transformation_stage
+                st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = stages.index(
+                    st.session_state['transformation_stage'])
         else:
             st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = 0
-                    
+
     elif view_type == "List":
-        if project_settings[f'last_which_stage_to_run_on'] != "":         
+        if project_settings[f'last_which_stage_to_run_on'] != "":
             if f'index_of_which_stage_to_run_on_{append_to_item_name}' not in st.session_state:
-                st.session_state['which_stage_to_run_on'] = project_settings['last_which_stage_to_run_on']
-                st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = stages.index(st.session_state['which_stage_to_run_on'])            
-        else:            
+                st.session_state['transformation_stage'] = project_settings['last_which_stage_to_run_on']
+                st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = stages.index(
+                    st.session_state['transformation_stage'])
+        else:
             st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = 0
-    
-    stages1, stages2 = st.columns([1,1])
+
+    stages1, stages2 = st.columns([1, 1])
     with stages1:
-        st.session_state['which_stage_to_run_on'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True, index =st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] , help="Extracted frames means the original frames from the video.")                                                                                     
+        st.session_state['transformation_stage'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True,
+                                                             index=st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'], help="Extracted frames means the original frames from the video.")
     with stages2:
-        if st.session_state['which_stage_to_run_on'] == "Source Image":
-            image = timing_details[st.session_state['which_image']]['source_image']            
-        elif st.session_state['which_stage_to_run_on'] == "Main Variant":
-            image = get_primary_variant_location(timing_details, st.session_state['which_image'])
+        if st.session_state['transformation_stage'] == "Source Image":
+            image = timing_details[st.session_state['current_frame_uuid']
+                                   ]['source_image']
+        elif st.session_state['transformation_stage'] == "Main Variant":
+            image = get_primary_variant_location(
+                timing_details, st.session_state['current_frame_uuid'])
         if image != "":
             st.image(image, use_column_width=True,
                      caption=f"Image {st.session_state['current_frame_uuid']}")
         else:
             st.error(
-                f"No {st.session_state['which_stage_to_run_on']} image found for this variant")
+                f"No {st.session_state['transformation_stage']} image found for this variant")
 
-    if stages.index(st.session_state['which_stage_to_run_on']) != st.session_state['index_of_which_stage_to_run_on']:
+    if stages.index(st.session_state['transformation_stage']) != st.session_state['index_of_which_stage_to_run_on']:
         st.session_state['index_of_which_stage_to_run_on'] = stages.index(
-            st.session_state['which_stage_to_run_on'])
+            st.session_state['transformation_stage'])
         st.experimental_rerun()
 
     custom_pipelines = ["None", "Mystique"]
@@ -1442,20 +1619,26 @@ def styling_element(timing_uuid, view_type="Single", item_to_show=None):
         if 'index_of_default_model' not in st.session_state:
             if project_settings.default_model:
                 st.session_state['model'] = project_settings.default_model.uuid
-                st.session_state['index_of_default_model'] = next((i for i, obj in enumerate(model_list) if getattr(obj, 'uuid') == project_settings.default_model.uuid), None)
-                st.write(f"Index of last model: {st.session_state['index_of_default_model']}")
+                st.session_state['index_of_default_model'] = next((i for i, obj in enumerate(
+                    model_list) if getattr(obj, 'uuid') == project_settings.default_model.uuid), None)
+                st.write(
+                    f"Index of last model: {st.session_state['index_of_default_model']}")
             else:
                 st.session_state['index_of_default_model'] = 0
 
-        selected_model_name = st.selectbox(f"Which model would you like to use?", model_name_list, index=st.session_state['index_of_default_model'])
-        st.session_state['model'] = next((obj.uuid for i, obj in enumerate(model_list) if getattr(obj, 'name') == selected_model_name), None)
+        selected_model_name = st.selectbox(
+            f"Which model would you like to use?", model_name_list, index=st.session_state['index_of_default_model'])
+        st.session_state['model'] = next((obj.uuid for i, obj in enumerate(
+            model_list) if getattr(obj, 'name') == selected_model_name), None)
 
-        selected_model_index = next((i for i, obj in enumerate(model_list) if getattr(obj, 'name') == selected_model_name), None)
+        selected_model_index = next((i for i, obj in enumerate(
+            model_list) if getattr(obj, 'name') == selected_model_name), None)
         if st.session_state['index_of_default_model'] != selected_model_index:
             st.session_state['index_of_default_model'] = selected_model_index
             st.experimental_rerun()
 
-    current_model_name = data_repo.get_ai_model_from_uuid(st.session_state['model']).name
+    current_model_name = data_repo.get_ai_model_from_uuid(
+        st.session_state['model']).name
 
     # NOTE: there is a check when creating custom models that no two model can have the same name
     if current_model_name == AIModelType.CONTROLNET.value:
@@ -1477,28 +1660,34 @@ def styling_element(timing_uuid, view_type="Single", item_to_show=None):
             st.session_state['index_of_lora_model_1'] = 0
             st.session_state['index_of_lora_model_2'] = 0
             st.session_state['index_of_lora_model_3'] = 0
-        
+
         # df = pd.read_csv('models.csv')
         # filtered_df = df[df.iloc[:, 5] == 'LoRA']
         # lora_model_list = filtered_df.iloc[:, 0].tolist()
-        lora_model_list = data_repo.get_all_ai_model_list(model_type=AIModelType.LORA.value)
-        null_model = InternalAIModelObject(None, "", None, None, None, None, None, None, None)
+        lora_model_list = data_repo.get_all_ai_model_list(
+            model_type=AIModelType.LORA.value)
+        null_model = InternalAIModelObject(
+            None, "", None, None, None, None, None, None, None)
         lora_model_list.insert(0, null_model)
         lora_model_name_list = [m.name for m in lora_model_list]
 
         selected_lora_1_name = st.selectbox(
             f"LoRA Model 1", lora_model_name_list, index=st.session_state['index_of_lora_model_1'])
-        st.session_state['lora_model_1'] = next((obj.uuid for i, obj in enumerate(model_list) if getattr(obj, 'name') == selected_lora_1_name), "")
-        selected_lora_1_index = next((i for i, obj in enumerate(model_list) if getattr(obj, 'name') == selected_lora_1_name), "")
-        
+        st.session_state['lora_model_1'] = next((obj.uuid for i, obj in enumerate(
+            model_list) if getattr(obj, 'name') == selected_lora_1_name), "")
+        selected_lora_1_index = next((i for i, obj in enumerate(
+            model_list) if getattr(obj, 'name') == selected_lora_1_name), "")
+
         if st.session_state['index_of_lora_model_1'] != selected_lora_1_index:
             st.session_state['index_of_lora_model_1'] = selected_lora_1_index
             st.experimental_rerun()
 
         selected_lora_2_name = st.selectbox(
             f"LoRA Model 1", lora_model_name_list, index=st.session_state['index_of_lora_model_1'])
-        st.session_state['lora_model_1'] = next((obj.uuid for i, obj in enumerate(model_list) if getattr(obj, 'name') == selected_lora_2_name), "")
-        selected_lora_2_index = next((i for i, obj in enumerate(model_list) if getattr(obj, 'name') == selected_lora_2_name), "")
+        st.session_state['lora_model_1'] = next((obj.uuid for i, obj in enumerate(
+            model_list) if getattr(obj, 'name') == selected_lora_2_name), "")
+        selected_lora_2_index = next((i for i, obj in enumerate(
+            model_list) if getattr(obj, 'name') == selected_lora_2_name), "")
 
         if st.session_state['index_of_lora_model_2'] != selected_lora_2_index:
             st.session_state['index_of_lora_model_2'] = selected_lora_2_index
@@ -1506,8 +1695,10 @@ def styling_element(timing_uuid, view_type="Single", item_to_show=None):
 
         selected_lora_3_name = st.selectbox(
             f"LoRA Model 1", lora_model_name_list, index=st.session_state['index_of_lora_model_1'])
-        st.session_state['lora_model_1'] = next((obj.uuid for i, obj in enumerate(model_list) if getattr(obj, 'name') == selected_lora_3_name), "")
-        selected_lora_3_index = next((i for i, obj in enumerate(model_list) if getattr(obj, 'name') == selected_lora_3_name), "")
+        st.session_state['lora_model_1'] = next((obj.uuid for i, obj in enumerate(
+            model_list) if getattr(obj, 'name') == selected_lora_3_name), "")
+        selected_lora_3_index = next((i for i, obj in enumerate(
+            model_list) if getattr(obj, 'name') == selected_lora_3_name), "")
 
         if st.session_state['index_of_lora_model_3'] != selected_lora_3_index:
             st.session_state['index_of_lora_model_3'] = selected_lora_3_index
@@ -1515,7 +1706,7 @@ def styling_element(timing_uuid, view_type="Single", item_to_show=None):
 
         st.session_state['custom_models'] = [st.session_state['lora_model_1'],
                                              st.session_state['lora_model_2'], st.session_state['lora_model_3']]
-        
+
         st.info("You can reference each model in your prompt using the following keywords: <1>, <2>, <3> - for example '<1> in the style of <2>.")
 
         lora_adapter_types = ['sketch', 'seg', 'keypose', 'depth', None]
@@ -1524,26 +1715,29 @@ def styling_element(timing_uuid, view_type="Single", item_to_show=None):
 
         st.session_state['adapter_type'] = st.selectbox(
             f"Adapter Type:", lora_adapter_types, help="This is the method through the model will infer the shape of the object. ", index=st.session_state['index_of_lora_adapter_type'])
-        
+
         if st.session_state['index_of_lora_adapter_type'] != lora_adapter_types.index(st.session_state['adapter_type']):
             st.session_state['index_of_lora_adapter_type'] = lora_adapter_types.index(
                 st.session_state['adapter_type'])
-    
+
     elif current_model_name == AIModelType.DREAMBOOTH.value:
         # df = pd.read_csv('models.csv')
         # filtered_df = df[df.iloc[:, 5] == 'Dreambooth']
         # dreambooth_model_list = filtered_df.iloc[:, 0].tolist()
 
-        dreambooth_model_list = data_repo.get_all_ai_model_list(model_type=AIModelType.DREAMBOOTH.value)
+        dreambooth_model_list = data_repo.get_all_ai_model_list(
+            model_type=AIModelType.DREAMBOOTH.value)
         dreambooth_model_name_list = [m.name for m in dreambooth_model_list]
-        
+
         if 'index_of_dreambooth_model' not in st.session_state:
             st.session_state['index_of_dreambooth_model'] = 0
 
         selected_dreambooth_model_name = st.selectbox(
             f"Dreambooth Model", dreambooth_model_name_list, index=st.session_state['index_of_dreambooth_model'])
-        st.session_state['custom_models'] = next((obj.uuid for i, obj in enumerate(dreambooth_model_list) if getattr(obj, 'name') == selected_dreambooth_model_name), "")
-        selected_dreambooth_model_index = next((i for i, obj in enumerate(dreambooth_model_list) if getattr(obj, 'name') == selected_dreambooth_model_name), "")
+        st.session_state['custom_models'] = next((obj.uuid for i, obj in enumerate(
+            dreambooth_model_list) if getattr(obj, 'name') == selected_dreambooth_model_name), "")
+        selected_dreambooth_model_index = next((i for i, obj in enumerate(
+            dreambooth_model_list) if getattr(obj, 'name') == selected_dreambooth_model_name), "")
         if st.session_state['index_of_dreambooth_model'] != selected_dreambooth_model_index:
             st.session_state['index_of_dreambooth_model'] = selected_dreambooth_model_index
     else:
@@ -1560,24 +1754,24 @@ def styling_element(timing_uuid, view_type="Single", item_to_show=None):
                 low_threshold_value = project_settings['last_low_threshold']
             else:
                 low_threshold_value = 50
-            
+
             if project_settings['last_high_threshold'] != "":
                 high_threshold_value = project_settings['last_high_threshold']
             else:
                 high_threshold_value = 150
-        
+
         elif view_type == "Single":
 
-            if timing_details[item_to_show]['low_threshold'] != "":
-                low_threshold_value = timing_details[item_to_show]['low_threshold']
+            if timing.low_threshold != "":
+                low_threshold_value = timing.low_threshold
             else:
                 low_threshold_value = 50
-            
-            if timing_details[item_to_show]['high_threshold'] != "":
-                high_threshold_value = timing_details[item_to_show]['high_threshold']
+
+            if timing.high_threshold != "":
+                high_threshold_value = timing.high_threshold
             else:
                 high_threshold_value = 150
-        
+
         with canny1:
             st.session_state['low_threshold'] = st.slider(
                 'Low Threshold', 0, 255, value=int(low_threshold_value))
@@ -1587,7 +1781,7 @@ def styling_element(timing_uuid, view_type="Single", item_to_show=None):
     else:
         st.session_state['low_threshold'] = 0
         st.session_state['high_threshold'] = 0
-    
+
     if st.session_state['model'] == "StyleGAN-NADA":
         st.warning("StyleGAN-NADA is a custom model that uses StyleGAN to generate a consistent character and style transformation. It only works for square images.")
         st.session_state['prompt'] = st.selectbox("What style would you like to apply to the character?", ['base', 'mona_lisa', 'modigliani', 'cubism', 'elf', 'sketch_hq', 'thomas', 'thanos', 'simpson', 'witcher',
@@ -1595,101 +1789,116 @@ def styling_element(timing_uuid, view_type="Single", item_to_show=None):
         st.session_state['strength'] = 0.5
         st.session_state['guidance_scale'] = 7.5
         st.session_state['seed'] = int(0)
-        st.session_state['num_inference_steps'] = int(50)      
+        st.session_state['num_inference_steps'] = int(50)
 
     else:
         if view_type == "List":
-            if project_settings['last_prompt'] != "":
-                st.session_state[f'prompt_value_{append_to_item_name}'] = project_settings['last_prompt']
-            else:
-                st.session_state[f'prompt_value_{append_to_item_name}'] = ""
-            
-        elif view_type == "Single":
-            if timing_details[item_to_show]['prompt'] != "":
-                st.session_state[f'prompt_value_{append_to_item_name}'] = timing_details[item_to_show]['prompt']
+            if project_settings.default_prompt != "":
+                st.session_state[f'prompt_value_{append_to_item_name}'] = project_settings.default_prompt
             else:
                 st.session_state[f'prompt_value_{append_to_item_name}'] = ""
 
-        st.session_state['prompt'] = st.text_area(f"Prompt", label_visibility="visible", value=st.session_state[f'prompt_value_{append_to_item_name}'],height=150)
+        elif view_type == "Single":
+            if timing.prompt != "":
+                st.session_state[f'prompt_value_{append_to_item_name}'] = timing.prompt
+            else:
+                st.session_state[f'prompt_value_{append_to_item_name}'] = ""
+
+        st.session_state['prompt'] = st.text_area(
+            f"Prompt", label_visibility="visible", value=st.session_state[f'prompt_value_{append_to_item_name}'], height=150)
         if st.session_state['prompt'] != st.session_state['prompt_value']:
             st.session_state['prompt_value'] = st.session_state['prompt']
             st.experimental_rerun()
         if view_type == "List":
-            st.info("You can include the following tags in the prompt to vary the prompt dynamically: [expression], [location], [mouth], and [looking]")
-        if st.session_state['model'] == "Dreambooth":
-            model_details = get_model_details(st.session_state['custom_models'])
-            st.info(f"Must include '{model_details['keyword']}' to run this model")   
-            if model_details['controller_type'] != "":                    
-                st.session_state['adapter_type']  = st.selectbox(f"Would you like to use the {model_details['controller_type']} controller?", ['Yes', 'No'])
+            st.info(
+                "You can include the following tags in the prompt to vary the prompt dynamically: [expression], [location], [mouth], and [looking]")
+        if st.session_state['model'] == AIModelType.DREAMBOOTH.value:
+            model_details: InternalAIModelObject = data_repo.get_ai_model_from_uuid(
+                st.session_state['custom_models'])
+            st.info(
+                f"Must include '{model_details.keyword}' to run this model")
+            # TODO: CORRECT-CODE add controller_type to ai_model
+            if model_details.controller_type != "":
+                st.session_state['adapter_type'] = st.selectbox(
+                    f"Would you like to use the {model_details.controller_type} controller?", ['Yes', 'No'])
             else:
                 st.session_state['adapter_type'] = "No"
 
         else:
-            if st.session_state['model'] == "pix2pix":
-                st.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")                    
-        
+            if st.session_state['model'] == AIModelType.PIX_2_PIX.value:
+                st.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")
+
         if view_type == "List":
             if project_settings['last_strength'] != "":
                 st.session_state['strength'] = project_settings['last_strength']
             else:
                 st.session_state['strength'] = 0.5
-        
+
         elif view_type == "Single":
-            if timing_details[item_to_show]['strength'] != "":
-                st.session_state['strength'] = timing_details[item_to_show]['strength']
+            if timing.strength:
+                st.session_state['strength'] = timing.strength
             else:
                 st.session_state['strength'] = 0.5
 
+        st.session_state['strength'] = st.slider(f"Strength", value=float(
+            st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
 
-        st.session_state['strength'] = st.slider(f"Strength", value=float(st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
-        
-        
         if view_type == "List":
-            if project_settings['last_guidance_scale'] != "":
-                st.session_state['guidance_scale'] = project_settings['last_guidance_scale']
+            if project_settings.default_guidance_scale != "":
+                st.session_state['guidance_scale'] = project_settings.default_guidance_scale
             else:
                 st.session_state['guidance_scale'] = 7.5
         elif view_type == "Single":
-            if timing_details[item_to_show]['guidance_scale'] != "":
-                st.session_state['guidance_scale'] = timing_details[item_to_show]['guidance_scale']
+            if timing.guidance_scale != "":
+                st.session_state['guidance_scale'] = timing.guidance_scale
             else:
                 st.session_state['guidance_scale'] = 7.5
-        st.session_state['negative_prompt'] = st.text_area(f"Negative prompt", value=st.session_state['negative_prompt_value'], label_visibility="visible")
+
+        st.session_state['negative_prompt'] = st.text_area(
+            f"Negative prompt", value=st.session_state['negative_prompt_value'], label_visibility="visible")
+        
         if st.session_state['negative_prompt'] != st.session_state['negative_prompt_value']:
             st.session_state['negative_prompt_value'] = st.session_state['negative_prompt']
             st.experimental_rerun()
-        st.session_state['guidance_scale'] = st.number_input(f"Guidance scale", value=float(st.session_state['guidance_scale']))
+        
+        st.session_state['guidance_scale'] = st.number_input(
+            f"Guidance scale", value=float(st.session_state['guidance_scale']))
+        
         if view_type == "List":
-            if project_settings['last_seed'] != "":
-                st.session_state['seed'] = project_settings['last_seed']
+            if project_settings.default_seed != "":
+                st.session_state['seed'] = project_settings.default_seed
             else:
                 st.session_state['seed'] = 0
-        elif view_type == "Single":
-            if timing_details[item_to_show]['seed'] != "":
-                st.session_state['seed'] = timing_details[item_to_show]['seed']
-            else:
-                st.session_state['seed'] = 0
-        st.session_state['seed'] = st.number_input(f"Seed", value=int(st.session_state['seed']))
-        if view_type == "List":
-            if project_settings['last_num_inference_steps'] != "":
-                st.session_state['num_inference_steps'] = project_settings['last_num_inference_steps']
-            else:
-                st.session_state['num_inference_steps'] = 50
-        elif view_type == "Single":
-            if timing_details[item_to_show]['num_inference_steps'] != "":
-                st.session_state['num_inference_steps'] = timing_details[item_to_show]['num_inference_steps']
-            else:
-                st.session_state['num_inference_steps'] = 50
-        st.session_state['num_inference_steps'] = st.number_input(f"Inference steps", value=int(st.session_state['num_inference_steps']))
 
-    st.session_state["promote_new_generation"] = st.checkbox("Promote new generation to main variant", key="promote_new_generation_to_main_variant")
+        elif view_type == "Single":
+            if timing.seed != "":
+                st.session_state['seed'] = timing.seed
+            else:
+                st.session_state['seed'] = 0
+
+        st.session_state['seed'] = st.number_input(
+            f"Seed", value=int(st.session_state['seed']))
+        
+        if view_type == "List":
+            if project_settings.default_num_inference_steps:
+                st.session_state['num_inference_steps'] = project_settings.default_num_inference_steps
+            else:
+                st.session_state['num_inference_steps'] = 50
+        elif view_type == "Single":
+            if timing.num_inteference_steps:
+                st.session_state['num_inference_steps'] = timing.num_inteference_steps
+            else:
+                st.session_state['num_inference_steps'] = 50
+        st.session_state['num_inference_steps'] = st.number_input(
+            f"Inference steps", value=int(st.session_state['num_inference_steps']))
+
+    st.session_state["promote_new_generation"] = st.checkbox(
+        "Promote new generation to main variant", key="promote_new_generation_to_main_variant")
     st.session_state["use_new_settings"] = True
 
-    
     if view_type == "List":
-        
-        
-        batch_run_range = st.slider("Select range:", 1, 0, (0, len(timing_details)-1))  
+        batch_run_range = st.slider(
+            "Select range:", 1, 0, (0, len(timing_details)-1))
         first_batch_run_value = batch_run_range[0]
         last_batch_run_value = batch_run_range[1]
 
@@ -1726,27 +1935,23 @@ def styling_element(timing_uuid, view_type="Single", item_to_show=None):
                 for i in range(first_batch_run_value, last_batch_run_value+1):
                     for _ in range(0, batch_number_of_variants):
                         trigger_restyling_process(timing_details[i].uuid, st.session_state['model'], st.session_state['prompt'], st.session_state['strength'], st.session_state['custom_pipeline'], st.session_state['negative_prompt'], st.session_state['guidance_scale'], st.session_state['seed'], st.session_state[
-                                                  'num_inference_steps'], st.session_state['which_stage_to_run_on'], st.session_state["promote_new_generation"], st.session_state['custom_models'], st.session_state['adapter_type'], st.session_state["use_new_settings"], st.session_state['low_threshold'], st.session_state['high_threshold'])
+                                                  'num_inference_steps'], st.session_state['transformation_stage'], st.session_state["promote_new_generation"], st.session_state['custom_models'], st.session_state['adapter_type'], st.session_state["use_new_settings"], st.session_state['low_threshold'], st.session_state['high_threshold'])
                 st.experimental_rerun()
-    
-        
-        
-        #if st.button(f'Jump to list view'):
+
+        # if st.button(f'Jump to list view'):
         #    st.session_state['frame_styling_view_type'] = "List View"
         #    st.experimental_rerun()
 
-    
 
 def get_primary_variant_location(timing_details, which_image):
 
     if timing_details[which_image]["alternative_images"] == "":
         return ""
-    else:                         
-        variants = timing_details[which_image]["alternative_images"]                
-        current_variant = int(timing_details[which_image]["primary_image"])       
+    else:
+        variants = timing_details[which_image]["alternative_images"]
+        current_variant = int(timing_details[which_image]["primary_image"])
         primary_variant_location = variants[current_variant]
         return primary_variant_location
-
 
 
 def convert_to_minutes_and_seconds(frame_time):
@@ -1768,7 +1973,8 @@ def calculate_time_at_frame_number(input_video: InternalFileObject, frame_number
 
 def preview_frame(project_uuid, video, frame_num):
     data_repo = DataRepo()
-    project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
+    project: InternalProjectObject = data_repo.get_project_from_uuid(
+        project_uuid)
     cap = cv2.VideoCapture(
         f'videos/{project.uuid}/assets/resources/input_videos/{video.name}')
     cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
@@ -1779,10 +1985,12 @@ def preview_frame(project_uuid, video, frame_num):
 
 # extract_frame_number is extracted from the input_video and added as source_image at frame_number
 # (timing_uuid) in the timings table
+
+
 def extract_frame(timing_uuid, input_video: InternalFileObject, extract_frame_number):
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
-    
+
     # TODO: standardize the input video path
     # input_video = "videos/" + \
     #     str(timing.project.name) + \
@@ -1794,21 +2002,25 @@ def extract_frame(timing_uuid, input_video: InternalFileObject, extract_frame_nu
     cv_video.set(cv2.CAP_PROP_POS_FRAMES, extract_frame_number)
     ret, frame = cv_video.read()
 
-    frame_time = calculate_time_at_frame_number(input_video, float(extract_frame_number))
+    frame_time = calculate_time_at_frame_number(
+        input_video, float(extract_frame_number))
 
-    data_repo.update_specific_timing(timing_uuid, frame_number=extract_frame_number)
+    data_repo.update_specific_timing(
+        timing_uuid, frame_number=extract_frame_number)
     data_repo.update_specific_timing(timing_uuid, frame_time=frame_time)
 
     file_name = ''.join(random.choices(
         string.ascii_lowercase + string.digits, k=16)) + ".png"
-    file_location = "videos/" + timing.project.uuid + "/assets/frames/1_selected/" + str(file_name)
+    file_location = "videos/" + timing.project.uuid + \
+        "/assets/frames/1_selected/" + str(file_name)
     cv2.imwrite(file_location, frame)
     # img = Image.open("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
     # img.save("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
-    
-    final_image = data_repo.create_file(name=file_name, type=InternalFileType.IMAGE.value, \
+
+    final_image = data_repo.create_file(name=file_name, type=InternalFileType.IMAGE.value,
                                         local_path=file_location)
-    data_repo.update_specific_timing(timing_uuid, source_image_id=final_image.uuid)
+    data_repo.update_specific_timing(
+        timing_uuid, source_image_id=final_image.uuid)
 
     return final_image
 
@@ -1816,7 +2028,7 @@ def extract_frame(timing_uuid, input_video: InternalFileObject, extract_frame_nu
 def calculate_frame_number_at_time(input_video, time_of_frame, project_uuid):
     data_repo = DataRepo()
     project = data_repo.get_project_from_uuid(project_uuid)
-    
+
     time_of_frame = float(time_of_frame)
     input_video = "videos/" + \
         str(project.uuid) + "/assets/resources/input_videos/" + str(input_video)
@@ -1833,7 +2045,8 @@ def calculate_frame_number_at_time(input_video, time_of_frame, project_uuid):
 
 def move_frame(direction, timing_uuid):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(
+        timing_uuid)
 
     current_primary_image = timing.primary_image
     current_alternative_images = timing.alternative_images
@@ -1845,20 +2058,29 @@ def move_frame(direction, timing_uuid):
         previous_alternative_images = prev_timing['alternative_images']
         previous_source_image = prev_timing['source_image']
 
-        data_repo.update_specific_timing(prev_timing.uuid, primary_image_id=current_primary_image.uuid)
+        data_repo.update_specific_timing(
+            prev_timing.uuid, primary_image_id=current_primary_image.uuid)
         print("current_alternative_images= ", current_alternative_images)
-        data_repo.update_specific_timing(prev_timing.uuid, alternative_images=str(current_alternative_images))
-        data_repo.update_specific_timing(prev_timing.uuid, source_image_id=current_source_image.uuid)
-        data_repo.update_specific_timing(prev_timing.uuid, interpolated_video=None)
+        data_repo.update_specific_timing(
+            prev_timing.uuid, alternative_images=str(current_alternative_images))
+        data_repo.update_specific_timing(
+            prev_timing.uuid, source_image_id=current_source_image.uuid)
+        data_repo.update_specific_timing(
+            prev_timing.uuid, interpolated_video=None)
         data_repo.update_specific_timing(prev_timing.uuid, timed_clip_id=None)
 
-        data_repo.update_specific_timing(timing.uuid, primary_image_id=previous_primary_image.uuid)
-        data_repo.update_specific_timing(timing.uuid, alternative_images=str(previous_alternative_images))
-        data_repo.update_specific_timing(timing.uuid, source_image_id=previous_source_image.uuid)
+        data_repo.update_specific_timing(
+            timing.uuid, primary_image_id=previous_primary_image.uuid)
+        data_repo.update_specific_timing(
+            timing.uuid, alternative_images=str(previous_alternative_images))
+        data_repo.update_specific_timing(
+            timing.uuid, source_image_id=previous_source_image.uuid)
 
     elif direction == "Down":
-        next_primary_image = data_repo.get_next_timing(timing.uuid).primary_image
-        next_alternative_images = data_repo.get_next_timing(timing.uuid).alternative_images
+        next_primary_image = data_repo.get_next_timing(
+            timing.uuid).primary_image
+        next_alternative_images = data_repo.get_next_timing(
+            timing.uuid).alternative_images
         next_source_image = data_repo.get_next_timing(timing.uuid).source_image
 
         data_repo.update_specific_timing(
@@ -1915,21 +2137,25 @@ def move_frame(direction, timing_uuid):
 
 def delete_frame(timing_uuid):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         timing.project.uuid)
 
     index_of_current_item = timing.aux_frame_index
     next_timing = data_repo.get_next_timing(timing_uuid)
-    
+
     if next_timing:
-        data_repo.update_specific_timing(next_timing.uuid, interpolated_video_id=None)
+        data_repo.update_specific_timing(
+            next_timing.uuid, interpolated_video_id=None)
         if index_of_current_item < len(timing_details) - 1:
-            data_repo.update_specific_timing(next_timing.uuid, interpolated_video_id=None)
+            data_repo.update_specific_timing(
+                next_timing.uuid, interpolated_video_id=None)
 
         data_repo.update_specific_timing(next_timing.uuid, timed_clip_id=None)
         if index_of_current_item < len(timing_details) - 1:
-            data_repo.update_specific_timing(next_timing.uuid, timed_clip_id=None)
+            data_repo.update_specific_timing(
+                next_timing.uuid, timed_clip_id=None)
 
     data_repo.delete_timing_from_uuid(timing.uuid)
 
@@ -1973,35 +2199,35 @@ def delete_frame(timing_uuid):
 
 # TODO: redundant function, absorb this in another function
 def batch_update_timing_values(
-        timing_uuid, 
-        model_uuid,
-        source_image_uuid,
-        prompt, 
-        strength,
-        custom_pipeline, 
-        negative_prompt, 
-        guidance_scale, 
-        seed, 
-        num_inference_steps,
-        custom_models, 
-        adapter_type, 
-        low_threshold, 
-        high_threshold
-    ):
+    timing_uuid,
+    model_uuid,
+    source_image_uuid,
+    prompt,
+    strength,
+    custom_pipeline,
+    negative_prompt,
+    guidance_scale,
+    seed,
+    num_inference_steps,
+    custom_models,
+    adapter_type,
+    low_threshold,
+    high_threshold
+):
     data_repo = DataRepo()
-    
+
     data_repo.update_specific_timing(
         uuid=timing_uuid,
         model_id=model_uuid,
         source_image_id=source_image_uuid,
-        prompt=prompt, 
+        prompt=prompt,
         strength=strength,
-        custom_pipeline=custom_pipeline, 
+        custom_pipeline=custom_pipeline,
         negative_prompt=negative_prompt,
-        guidance_scale=guidance_scale, 
-        seed=seed, 
+        guidance_scale=guidance_scale,
+        seed=seed,
         num_inference_steps=num_inference_steps,
-        custom_models=custom_models, 
+        custom_models=custom_models,
         adapter_type=adapter_type,
         low_threshold=low_threshold,
         high_threshold=high_threshold
@@ -2010,7 +2236,8 @@ def batch_update_timing_values(
 
 def dynamic_prompting(prompt, source_image, timing_uuid):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     if "[expression]" in prompt:
         prompt_expression = facial_expression_recognition(source_image)
@@ -2035,25 +2262,26 @@ def dynamic_prompting(prompt, source_image, timing_uuid):
 
 
 def trigger_restyling_process(
-        timing_uuid, 
-        model_uuid, 
-        prompt, 
-        strength, 
-        custom_pipeline, 
-        negative_prompt,
-        guidance_scale, 
-        seed, 
-        num_inference_steps, 
-        which_stage_to_run_on,
-        promote_new_generation, 
-        custom_models, 
-        adapter_type,
-        update_inference_settings, 
-        low_threshold, 
-        high_threshold
-    ):
+    timing_uuid,
+    model_uuid,
+    prompt,
+    strength,
+    custom_pipeline,
+    negative_prompt,
+    guidance_scale,
+    seed,
+    num_inference_steps,
+    transformation_stage,
+    promote_new_generation,
+    custom_models,
+    adapter_type,
+    update_inference_settings,
+    low_threshold,
+    high_threshold
+):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         timing.project.uuid)
     project_setting: InternalSettingObject = data_repo.get_project_setting(
@@ -2063,20 +2291,20 @@ def trigger_restyling_process(
         prompt = prompt.replace(",", ".")
         prompt = prompt.replace("\n", "")
         data_repo.update_project_setting(
-            timing.project.uuid, 
-            default_prompt=prompt, 
-            default_strength=strength, 
+            timing.project.uuid,
+            default_prompt=prompt,
+            default_strength=strength,
             default_model_id=model_uuid,
             default_custom_pipeline=custom_pipeline,
             default_negative_prompt=negative_prompt,
             default_guidance_scale=guidance_scale,
             default_seed=seed,
             default_num_inference_steps=num_inference_steps,
-            default_which_stage_to_run_on=which_stage_to_run_on,
+            default_which_stage_to_run_on=transformation_stage,
             default_custom_models=custom_models,
             default_adapter_type=adapter_type
         )
-        
+
         if low_threshold != "":
             data_repo.update_project_setting(
                 timing.project.uuid, default_low_threshold=low_threshold)
@@ -2108,10 +2336,11 @@ def trigger_restyling_process(
         dynamic_prompting(prompt, source_image, timing_uuid)
 
     timing = data_repo.get_timing_from_uuid(timing_uuid)
-    if which_stage_to_run_on == "Extracted Key Frames":
+    if transformation_stage == "Extracted Key Frames":
         source_image = timing.source_image
     else:
-        variants: List[InternalFileObject] = data_repo.get_alternative_image_list(timing_uuid)
+        variants: List[InternalFileObject] = data_repo.get_alternative_image_list(
+            timing_uuid)
         number_of_variants = len(variants)
         primary_image = timing.primary_image
         source_image = variants[primary_image].location
@@ -2140,12 +2369,15 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
     timing = data_repo.get_timing_from_uuid(timing_uuid)
 
     variant_to_promote = timing.alternative_images_list[variant_to_promote_frame_number]
-    data_repo.update_specific_timing(timing_uuid, primary_image_id=variant_to_promote.uuid)
-    
+    data_repo.update_specific_timing(
+        timing_uuid, primary_image_id=variant_to_promote.uuid)
+
     prev_timing = data_repo.get_prev_timing(timing_uuid)
     if prev_timing:
-        data_repo.update_specific_timing(prev_timing.uuid, interpolated_clip_id=None)
-        data_repo.update_specific_timing(timing_uuid, interpolated_clip_id=None)
+        data_repo.update_specific_timing(
+            prev_timing.uuid, interpolated_clip_id=None)
+        data_repo.update_specific_timing(
+            timing_uuid, interpolated_clip_id=None)
 
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         timing.project.uuid)
@@ -2153,7 +2385,8 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
 
     # DOUBT: setting last interpolated_video to empty?
     if frame_idx < len(timing_details):
-        data_repo.update_specific_timing(timing.uuid, interpolated_clip_id=None)
+        data_repo.update_specific_timing(
+            timing.uuid, interpolated_clip_id=None)
 
     if frame_idx > 1:
         data_repo.update_specific_timing(
@@ -2165,7 +2398,7 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
         data_repo.update_specific_timing(timing.uuid, timed_clip_id=None)
 
 
-def extract_canny_lines(image_path_or_url, project_name, low_threshold=50, high_threshold=150) -> InternalFileObject:
+def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_threshold=150) -> InternalFileObject:
     data_repo = DataRepo()
 
     # Check if the input is a URL
@@ -2191,14 +2424,17 @@ def extract_canny_lines(image_path_or_url, project_name, low_threshold=50, high_
 
     # Save the new image
     unique_file_name = str(uuid.uuid4()) + ".png"
-    file_location = f"videos/{project_name}/assets/resources/masks/{unique_file_name}"
+    file_location = f"videos/{project_uuid}/assets/resources/masks/{unique_file_name}"
     os.makedirs(os.path.dirname(file_location), exist_ok=True)
     new_canny_image.save(file_location)
 
-    canny_image_file = data_repo.create_file(name=unique_file_name, type=InternalFileType.IMAGE.value, local_path=file_location)
+    canny_image_file = data_repo.create_file(
+        name=unique_file_name, type=InternalFileType.IMAGE.value, local_path=file_location, project_id=project_uuid)
     return canny_image_file
 
 # the input image is an image created by the PIL library
+
+
 def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
@@ -2224,6 +2460,8 @@ def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
     return timing.mask
 
 # TODO: CORRECT-CODE: Update columns in the timing table
+
+
 def create_working_assets(video_name):
     os.mkdir("videos/" + video_name)
     os.mkdir("videos/" + video_name + "/assets")
@@ -2251,31 +2489,33 @@ def create_working_assets(video_name):
     os.mkdir("videos/" + video_name + "/assets/videos/1_final")
     os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
 
-    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type','guidance_type','default_animation_style','last_low_threshold','last_high_threshold','last_stage_run_on','zoom_level_input_value','rotation_angle_input_value','x_shift_input_value','y_shift_input_value'],
-            'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Source Image', '', '', '', '',100,200,'',100,0,0,0]}
+    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type', 'guidance_type', 'default_animation_style', 'last_low_threshold', 'last_high_threshold', 'last_stage_run_on', 'zoom_level_input_value', 'rotation_angle_input_value', 'x_shift', 'y_shift'],
+            'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Source Image', '', '', '', '', 100, 200, '', 100, 0, 0, 0]}
 
     df = pd.DataFrame(data)
 
     df.to_csv(f'videos/{video_name}/settings.csv', index=False)
 
     df = pd.DataFrame(columns=['frame_time', 'frame_number', 'primary_image', 'alternative_images', 'custom_pipeline', 'negative_prompt', 'guidance_scale', 'seed', 'num_inference_steps',
-                      'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'duration_of_clip', 'interpolated_video', 'timing_video', 'prompt', 'mask','canny_image','preview_video','animation_style','interpolation_steps','low_threshold','high_threshold','zoom_details','which_stage_to_run_on'])
+                      'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'duration_of_clip', 'interpolated_video', 'timing_video', 'prompt', 'mask', 'canny_image', 'preview_video', 'animation_style', 'interpolation_steps', 'low_threshold', 'high_threshold', 'zoom_details', 'transformation_stage'])
 
-    df.loc[0] = [0,"", 0, "", "", "", 0, 0, 0, "", 0, "", "", "", "", 0, "", "", "", "", "", "", "", "", "", "","",""]
+    df.loc[0] = [0, "", 0, "", "", "", 0, 0, 0, "", 0, "", "",
+                 "", "", 0, "", "", "", "", "", "", "", "", "", "", "", ""]
 
-    st.session_state['which_image'] = 0
+    st.session_state['current_frame_uuid'] = 0
 
     df.to_csv(f'videos/{video_name}/timings.csv', index=False)
 
 
-def inpainting(input_image, prompt, negative_prompt, timing_uuid, invert_mask, pass_mask=False) -> InternalFileObject:
+def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, invert_mask, pass_mask=False) -> InternalFileObject:
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     if pass_mask == False:
         mask = timing.mask.location
     else:
-        mask = "temp/mask.png"
+        mask = "videos/temp/mask.png"
 
     if not mask.startswith("http"):
         mask = open(mask, "rb")
@@ -2288,15 +2528,20 @@ def inpainting(input_image, prompt, negative_prompt, timing_uuid, invert_mask, p
                                             invert_mask=invert_mask, negative_prompt=negative_prompt, num_inference_steps=25)
 
     file_name = str(uuid.uuid4()) + ".png"
-    image_file = data_repo.create_file(name=file_name, type=InternalFileType.IMAGE.value, hosted_url=output[0])
+    image_file = data_repo.create_file(
+        name=file_name, type=InternalFileType.IMAGE.value, hosted_url=output[0])
 
     return image_file
 
-# adds the image file in variant (alternative images) list 
+# adds the image file in variant (alternative images) list
+
+
 def add_image_variant(image_file_uuid: str, timing_uuid: str):
     data_repo = DataRepo()
-    image_file: InternalFileObject = data_repo.get_file_from_uuid(image_file_uuid)
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    image_file: InternalFileObject = data_repo.get_file_from_uuid(
+        image_file_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     # if not (timing.alternative_images_list and len(timing.alternative_images_list)):
     #     alternative_images = [image_file.uuid]
@@ -2320,11 +2565,14 @@ def add_image_variant(image_file_uuid: str, timing_uuid: str):
         timing_uuid, alternative_images=alternative_image_uuid_list)
 
     if not timing.primary_image:
-        data_repo.update_specific_timing(timing_uuid, primary_image_id=primary_image_uuid)
+        data_repo.update_specific_timing(
+            timing_uuid, primary_image_id=primary_image_uuid)
 
     return len(alternative_image_list)
 
 # TODO: complete this function
+
+
 def convert_image_list_to_file_list(images_list: str):
     data_repo = DataRepo()
     file_list = []
@@ -2337,13 +2585,15 @@ def convert_image_list_to_file_list(images_list: str):
             data['hosted_url'] = image
         else:
             data['local_url'] = image
-        
+
         image_file = data_repo.create_file(**data)
         file_list.append(image_file)
     return file_list
 
 # DOUBT: why do we need controller in dreambooth training?
 # INFO: images_list passed here are converted to internal files after they are used for training
+
+
 def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max_train_steps, model_name, images_list: List[str]):
     ml_client = get_ml_client()
     response = ml_client.dreambooth_training(
@@ -2375,6 +2625,8 @@ def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max
         return "Failed"
 
 # INFO: images_list passed here are converted to internal files after they are used for training
+
+
 def train_lora_model(training_file_url, type_of_task, resolution, model_name, images_list):
     data_repo = DataRepo()
     ml_client = get_ml_client()
@@ -2396,8 +2648,10 @@ def train_lora_model(training_file_url, type_of_task, resolution, model_name, im
     data_repo.create_ai_model(**model_data)
     return f"Successfully trained - the model '{model_name}' is now available for use!"
 
-# TODO: making an exception for this, passing just the image urls instead of 
+# TODO: making an exception for this, passing just the image urls instead of
 # image files
+
+
 def train_model(images_list, instance_prompt, class_prompt, max_train_steps,
                 model_name, type_of_model, type_of_task, resolution):
     # prepare and upload the training data (images.zip)
@@ -2457,8 +2711,8 @@ def replace_background(project_uuid, foreground_image, background_image) -> Inte
     background_image.save(f"videos/{project_uuid}/replaced_bg.png")
 
     filename = str(uuid.uuid4()) + ".png"
-    image_file = data_repo.create_file(name=filename, local_path=f"videos/{project_uuid}/replaced_bg.png", \
-                                     type=InternalFileType.IMAGE.value)
+    image_file = data_repo.create_file(name=filename, local_path=f"videos/{project_uuid}/replaced_bg.png",
+                                       type=InternalFileType.IMAGE.value)
 
     return image_file
 
@@ -2493,7 +2747,7 @@ def prompt_model_real_esrgan_upscaling(input_image):
 
     filename = str(uuid.uuid4()) + ".png"
     image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                        hosted_url=output)
+                                       hosted_url=output)
     return output
 
 
@@ -2510,7 +2764,7 @@ def touch_up_image(image: InternalFileObject):
 
     filename = str(uuid.uuid4()) + ".png"
     image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                     hosted_url=output)
+                                       hosted_url=output)
 
     return image_file
 
@@ -2524,12 +2778,13 @@ def resize_image(video_name, new_width, new_height, image_file: InternalFileObje
     time.sleep(0.1)
 
     unique_id = str(uuid.uuid4())
-    filepath = "videos/" + str(video_name) + "/temp_image-" + unique_id + ".png"
+    filepath = "videos/" + str(video_name) + \
+        "/temp_image-" + unique_id + ".png"
     resized_image.save(filepath)
 
     data_repo = DataRepo()
     image_file = data_repo.create_file(name=unique_id + ".png", type=InternalFileType.IMAGE.value,
-                                     local_path=filepath)
+                                       local_path=filepath)
 
     # not uploading or removing the created image as of now
     # resized_image = upload_image(
@@ -2542,7 +2797,8 @@ def resize_image(video_name, new_width, new_height, image_file: InternalFileObje
 
 def face_swap(timing_uuid, source_image) -> InternalFileObject:
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     model_category = timing['model']['category']
 
@@ -2555,8 +2811,9 @@ def face_swap(timing_uuid, source_image) -> InternalFileObject:
         #     timing_details[index_of_current_item]["custom_models"][1:-1])[0]
         custom_model_uuid = timing.custom_model_id_list[0]
 
-    model: InternalAIModelObject = data_repo.get_ai_model_from_uuid(custom_model_uuid)
-    
+    model: InternalAIModelObject = data_repo.get_ai_model_from_uuid(
+        custom_model_uuid)
+
     # source_face = ast.literal_eval(get_model_details_from_csv(
     #     custom_model)["training_images"][1:-1])[0]
 
@@ -2572,17 +2829,18 @@ def face_swap(timing_uuid, source_image) -> InternalFileObject:
     ml_client = get_ml_client()
     output = ml_client.predict_model_output(
         REPLICATE_MODEL.arielreplicate, source_path=source_face, target_path=target_face)
-    
+
     filename = str(uuid.uuid4()) + ".png"
     image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                     hosted_url=output)
+                                       hosted_url=output)
 
     return image_file
 
 
 def prompt_model_stylegan_nada(timing_uuid, input_image):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
@@ -2597,7 +2855,8 @@ def prompt_model_stylegan_nada(timing_uuid, input_image):
 
 def prompt_model_stable_diffusion_xl(timing_uuid, source_image) -> InternalFileObject:
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         timing.project.uuid)
 
@@ -2657,14 +2916,15 @@ def prompt_model_stable_diffusion_xl(timing_uuid, source_image) -> InternalFileO
         # generate a random file name with uuid at the location
         filename = str(uuid.uuid4()) + ".png"
         image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                             local_path="videos/" + str(timing.project.name) + "/assets/frames/2_character_pipeline_completed/")
+                                                               local_path="videos/" + str(timing.project.name) + "/assets/frames/2_character_pipeline_completed/")
 
     return image_file
 
 
 def prompt_model_stability(timing_uuid, input_image_file: InternalFileObject):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         timing.project.uuid)
 
@@ -2691,14 +2951,15 @@ def prompt_model_stability(timing_uuid, input_image_file: InternalFileObject):
 
     filename = str(uuid.uuid4()) + ".png"
     image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                             hosted_url=output[0], tag=InternalFileTag.GENERATED_VIDEO.value)
+                                                           hosted_url=output[0], tag=InternalFileTag.GENERATED_VIDEO.value)
 
     return image_file
 
 
 def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         timing.project.uuid)
 
@@ -2714,7 +2975,8 @@ def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
     seed = timing.seed
     num_inference_steps = timing.num_inteference_steps
 
-    model_details: InternalAIModelObject = data_repo.get_ai_model_from_uuid(timing['model'].uuid)
+    model_details: InternalAIModelObject = data_repo.get_ai_model_from_uuid(
+        timing['model'].uuid)
     model_id = model_details.replicate_model_id
 
     ml_client = get_ml_client()
@@ -2764,12 +3026,11 @@ def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
 
     for i in output:
         filename = str(uuid.uuid4()) + ".png"
-        image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value, hosted_url=i, tag=InternalFileTag.GENERATED_VIDEO.value)
+        image_file = data_repo.create_file(
+            name=filename, type=InternalFileType.IMAGE.value, hosted_url=i, tag=InternalFileTag.GENERATED_VIDEO.value)
         return image_file
-    
+
     return None
-
-
 
 
 def get_duration_from_video(input_video_file: InternalFileObject):
@@ -2784,10 +3045,13 @@ def get_duration_from_video(input_video_file: InternalFileObject):
 '''
 get audio_bytes of correct duration for a given frame
 '''
+
+
 def get_audio_bytes_for_slice(timing_uuid):
     data_repo = DataRepo()
 
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         timing.project.uuid)
 
@@ -2820,7 +3084,8 @@ def slice_part_of_video(project_name, index_of_current_item, video_start_percent
 def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_location, timing_uuid) -> InternalFileObject:
     data_repo = DataRepo()
 
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     desired_duration = timing.clip_duration
     animation_style = timing.animation_style
@@ -2855,20 +3120,21 @@ def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_locat
                 "/assets/videos/1_final/" + str(file_name)
         else:
             os.remove(location_of_video)
-        
+
         # TODO: add this in save override of the model
         updated_clip.write_videofile(location_of_video, codec='libx265')
         if save_to_new_location:
             file_name = str(uuid.uuid4()) + ".mp4"
             file_data = {
-                "name" : file_name, 
-                "type" : InternalFileType.VIDEO.value, 
-                "tag" : InternalFileTag.GENERATED_VIDEO.value, 
-                "local_path" : location_of_video
+                "name": file_name,
+                "type": InternalFileType.VIDEO.value,
+                "tag": InternalFileTag.GENERATED_VIDEO.value,
+                "local_path": location_of_video
             }
             video_file: InternalFileObject = data_repo.create_file(**file_data)
         else:
-            data_repo.create_or_update_file(video_file.uuid, type=InternalFileType.VIDEO.value, local_path=location_of_video)
+            data_repo.create_or_update_file(
+                video_file.uuid, type=InternalFileType.VIDEO.value, local_path=location_of_video)
 
         clip.close()
         updated_clip.close()
@@ -2896,11 +3162,13 @@ def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_locat
             new_file_location, codec="libx264", preset="fast")
 
         if save_to_new_location:
-            video_file: InternalFileObject = data_repo.create_file(name=new_file_name, type=InternalFileType.VIDEO.value, local_path=new_file_location)
+            video_file: InternalFileObject = data_repo.create_file(
+                name=new_file_name, type=InternalFileType.VIDEO.value, local_path=new_file_location)
         else:
             os.remove(location_of_video)
             location_of_video = new_file_location
-            data_repo.create_or_update_file(video_file.uuid, type=InternalFileType.VIDEO.value, local_path=location_of_video)
+            data_repo.create_or_update_file(
+                video_file.uuid, type=InternalFileType.VIDEO.value, local_path=location_of_video)
 
     return video_file
 
@@ -3002,7 +3270,8 @@ clip length
 
 def calculate_desired_duration_of_individual_clip(timing_uuid):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
     timing_details = data_repo.get_timing_list_from_project(
         timing.project.uuid)
     length_of_list = len(timing_details)
@@ -3034,39 +3303,48 @@ def calculate_desired_duration_of_each_clip(project_uuid):
     for i in timing_details:
         index_of_current_item = timing_details.index(i)
         length_of_list = len(timing_details)
-        timing_item: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(project_uuid, index_of_current_item)
+        timing_item: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(
+            project_uuid, index_of_current_item)
 
         # last frame
         if index_of_current_item == (length_of_list - 1):
             time_of_frame = timing_item.frame_time
             duration_of_static_time = 0.0
-            end_duration_of_frame = float(time_of_frame) + float(duration_of_static_time)
-            total_duration_of_frame = float(end_duration_of_frame) - float(time_of_frame)
+            end_duration_of_frame = float(
+                time_of_frame) + float(duration_of_static_time)
+            total_duration_of_frame = float(
+                end_duration_of_frame) - float(time_of_frame)
         else:
             time_of_frame = timing_item.frame_time
             next_timing = data_repo.get_next_timing(timing_item.uuid)
             time_of_next_frame = next_timing.frame_time
-            total_duration_of_frame = float(time_of_next_frame) - float(time_of_frame)
+            total_duration_of_frame = float(
+                time_of_next_frame) - float(time_of_frame)
 
         duration_of_static_time = 0.0
-        duration_of_morph = float(total_duration_of_frame) - float(duration_of_static_time)
+        duration_of_morph = float(
+            total_duration_of_frame) - float(duration_of_static_time)
 
-        data_repo.update_specific_timing(timing_item.uuid, clip_duration=total_duration_of_frame)
+        data_repo.update_specific_timing(
+            timing_item.uuid, clip_duration=total_duration_of_frame)
 
 
 def hair_swap(source_image, timing_uuid):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-    app_secret = data_repo.get_app_secrets_from_user_uuid(timing.project.user_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
+    app_secret = data_repo.get_app_secrets_from_user_uuid(
+        timing.project.user_uuid)
 
     # DOUBT: what's the video name here?
     video_name = ""
-    source_hair = upload_file("videos/" + str(video_name) + "/face.png", app_secret['aws_access_key'],\
+    source_hair = upload_file("videos/" + str(video_name) + "/face.png", app_secret['aws_access_key'],
                               app_secret['aws_secret_key'])
 
     target_hair = upload_file("videos/" + str(video_name) +
-                               "/assets/frames/2_character_pipeline_completed/" + str(timing.aux_frame_index) + ".png",\
-                                app_secret['aws_access_key'], app_secret['aws_secret_key'])
+                              "/assets/frames/2_character_pipeline_completed/" +
+                              str(timing.aux_frame_index) + ".png",
+                              app_secret['aws_access_key'], app_secret['aws_secret_key'])
 
     if not source_hair.startswith("http"):
         source_hair = open(source_hair, "rb")
@@ -3083,7 +3361,8 @@ def hair_swap(source_image, timing_uuid):
 
 def prompt_model_depth2img(strength, timing_uuid, source_image) -> InternalFileObject:
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     prompt = timing.prompt
     num_inference_steps = timing.num_inteference_steps
@@ -3099,7 +3378,7 @@ def prompt_model_depth2img(strength, timing_uuid, source_image) -> InternalFileO
 
     filename = str(uuid.uuid4()) + ".png"
     image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                             hosted_url=output[0])
+                                                           hosted_url=output[0])
     return image_file
 
 
@@ -3147,7 +3426,8 @@ def facial_expression_recognition(input_image):
 
 def prompt_model_pix2pix(timing_uuid, input_image_file: InternalFileObject):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     prompt = timing.prompt
     guidance_scale = timing.guidance_scale
@@ -3162,14 +3442,17 @@ def prompt_model_pix2pix(timing_uuid, input_image_file: InternalFileObject):
 
     filename = str(uuid.uuid4()) + ".png"
     image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                             hosted_url=output)
+                                                           hosted_url=output)
     return image_file
 
 # TODO: make this into an unified method, which just takes model_uuid and gives the output
 # without need the if-else clause and other methods
+
+
 def restyle_images(timing_uuid, source_image) -> InternalFileObject:
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     model_name = timing.model.name
     strength = timing.strength
@@ -3177,7 +3460,8 @@ def restyle_images(timing_uuid, source_image) -> InternalFileObject:
     if model_name == "stable-diffusion-img2img-v2.1":
         output_file = prompt_model_stability(timing_uuid, source_image)
     elif model_name == "depth2img":
-        output_file = prompt_model_depth2img(strength, timing_uuid, source_image)
+        output_file = prompt_model_depth2img(
+            strength, timing_uuid, source_image)
     elif model_name == "pix2pix":
         output_file = prompt_model_pix2pix(timing_uuid, source_image)
     elif model_name == "LoRA":
@@ -3189,11 +3473,13 @@ def restyle_images(timing_uuid, source_image) -> InternalFileObject:
     elif model_name == 'StyleGAN-NADA':
         output_file = prompt_model_stylegan_nada(timing_uuid, source_image)
     elif model_name == "stable_diffusion_xl":
-        output_file = prompt_model_stable_diffusion_xl(timing_uuid, source_image)
+        output_file = prompt_model_stable_diffusion_xl(
+            timing_uuid, source_image)
     elif model_name == "real-esrgan-upscaling":
         output_file = prompt_model_real_esrgan_upscaling(source_image)
     elif model_name == 'controlnet_1_1_x_realistic_vision_v2_0':
-        output_file = prompt_model_controlnet_1_1_x_realistic_vision_v2_0(source_image)
+        output_file = prompt_model_controlnet_1_1_x_realistic_vision_v2_0(
+            source_image)
     elif model_name == 'urpm-v1.3':
         output_file = prompt_model_urpm_v1_3(source_image)
 
@@ -3202,17 +3488,21 @@ def restyle_images(timing_uuid, source_image) -> InternalFileObject:
 
 def custom_pipeline_mystique(timing_uuid, source_image) -> InternalFileObject:
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         timing.project.uuid)
 
-    output_image_file: InternalFileObject = face_swap(timing_uuid, source_image)
+    output_image_file: InternalFileObject = face_swap(
+        timing_uuid, source_image)
     output_image_file = touch_up_image(output_image_file)
-    output_image_file = resize_image(timing.project.name, project_settings.width, project_settings.height, output_image_file)
+    output_image_file = resize_image(
+        timing.project.name, project_settings.width, project_settings.height, output_image_file)
 
     if timing.model.category == AIModelType.DREAMBOOTH.value:
-        output_image_file = prompt_model_dreambooth(timing_uuid, output_image_file)
+        output_image_file = prompt_model_dreambooth(
+            timing_uuid, output_image_file)
     elif timing.model.category == AIModelType.LORA.value:
         output_image_file = prompt_model_lora(timing_uuid, output_image_file)
 
@@ -3221,8 +3511,9 @@ def custom_pipeline_mystique(timing_uuid, source_image) -> InternalFileObject:
 
 def create_timings_row_at_frame_number(project_uuid, index_of_frame):
     data_repo = DataRepo()
-    project: InternalProjectObject = data_repo.get_timing_list_from_project(project_uuid)
-    
+    project: InternalProjectObject = data_repo.get_timing_list_from_project(
+        project_uuid)
+
     # remove the interpolated video from the current row and the row before and after - unless it is the first or last row
     timing_data = {
         "project_id": project_uuid,
@@ -3231,14 +3522,17 @@ def create_timings_row_at_frame_number(project_uuid, index_of_frame):
         "aux_frame_index": index_of_frame
     }
     timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
-    
-    prev_timing: InternalFrameTimingObject = data_repo.get_prev_timing(timing.uuid)
+
+    prev_timing: InternalFrameTimingObject = data_repo.get_prev_timing(
+        timing.uuid)
     if prev_timing:
-        data_repo.update_specific_timing(prev_timing.uuid, interpolated_clip_id=None)
+        data_repo.update_specific_timing(
+            prev_timing.uuid, interpolated_clip_id=None)
 
     next_timing: InternalAIModelObject = data_repo.get_next_timing(timing.uuid)
     if next_timing:
-        data_repo.update_specific_timing(next_timing.uuid, interpolated_clip_id=None)
+        data_repo.update_specific_timing(
+            next_timing.uuid, interpolated_clip_id=None)
 
     return timing
 
@@ -3255,10 +3549,10 @@ def get_models() -> List[InternalAIModelObject]:
     return model_list
 
 
-
 def find_clip_duration(timing_uuid, total_number_of_videos):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     total_clip_duration = timing.clip_duration
     total_clip_duration = float(total_clip_duration)
@@ -3355,7 +3649,8 @@ def calculate_dynamic_interpolations_steps(clip_duration):
 def render_video(final_video_name, project_uuid, quality):
     data_repo = DataRepo()
 
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(project_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        project_uuid)
 
     calculate_desired_duration_of_each_clip(project_uuid)
 
@@ -3363,18 +3658,22 @@ def render_video(final_video_name, project_uuid, quality):
 
     for i in range(0, total_number_of_videos):
         index_of_current_item = i
-        current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(project_uuid, i)
+        current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(
+            project_uuid, i)
 
         timing = timing_details[i]
         if quality == VideoQuality.HIGH.value:
-            data_repo.update_specific_timing(current_timing.uuid, timed_clip_id=None)
+            data_repo.update_specific_timing(
+                current_timing.uuid, timed_clip_id=None)
             interpolation_steps = calculate_dynamic_interpolations_steps(
                 timing_details[index_of_current_item].clip_duration)
             if not timing.interpolation_steps or timing.interpolation_steps < interpolation_steps:
-                data_repo.update_specific_timing(current_timing.uuid, interpolation_steps=interpolation_steps, interpolated_clip_id=None)
+                data_repo.update_specific_timing(
+                    current_timing.uuid, interpolation_steps=interpolation_steps, interpolated_clip_id=None)
         else:
             if not timing.interpolation_steps or timing.interpolation_steps < 3:
-                data_repo.update_specific_timing(current_timing.uuid, interpolation_steps=3)
+                data_repo.update_specific_timing(
+                    current_timing.uuid, interpolation_steps=3)
 
         if not timing.interpolated_clip:
             # DOUBT: if and else condition had the same code
@@ -3385,23 +3684,28 @@ def render_video(final_video_name, project_uuid, quality):
             #         project_name, index_of_current_item, "interpolated_video", video_location)
             # else:
             video_location = create_individual_clip(current_timing.uuid)
-            data_repo.update_specific_timing(current_timing.uuid, interpolated_clip_id=video_location.uuid)
+            data_repo.update_specific_timing(
+                current_timing.uuid, interpolated_clip_id=video_location.uuid)
 
-    project_settings: InternalSettingObject = data_repo.get_project_setting(timing.project.uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
+    project_settings: InternalSettingObject = data_repo.get_project_setting(
+        timing.project.uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
     total_number_of_videos = len(timing_details) - 2
 
     for i in timing_details:
         index_of_current_item = timing_details.index(i)
         timing = timing_details[index_of_current_item]
-        current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(timing.project.uuid, index_of_current_item)
+        current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(
+            timing.project.uuid, index_of_current_item)
         if index_of_current_item <= total_number_of_videos:
             if not current_timing.timed_clip:
                 desired_duration = current_timing.clip_duration
                 location_of_input_video_file = current_timing.interpolated_clip
 
-                output_video = update_speed_of_video_clip(location_of_input_video_file, True, timing.uuid)
-                
+                output_video = update_speed_of_video_clip(
+                    location_of_input_video_file, True, timing.uuid)
+
                 if quality == VideoQuality.PREVIEW.value:
                     print("")
                     '''
@@ -3418,17 +3722,20 @@ def render_video(final_video_name, project_uuid, quality):
                     os.remove(location_of_output_video)
                     clip_with_number.write_videofile(location_of_output_video, codec='libx264', bitrate='3000k')
                     '''
-                
-                data_repo.update_specific_timing(current_timing.uuid, timed_clip_id=output_video.uuid)
+
+                data_repo.update_specific_timing(
+                    current_timing.uuid, timed_clip_id=output_video.uuid)
 
     video_list = []
 
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
 
-    # TODO: CORRECT-CODE 
+    # TODO: CORRECT-CODE
     for i in timing_details:
         index_of_current_item = timing_details.index(i)
-        current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(project_uuid, index_of_current_item)
+        current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(
+            project_uuid, index_of_current_item)
         if index_of_current_item <= total_number_of_videos:
             video_file = current_timing.timed_clip
             video_list.append(video_file.location)
@@ -3441,7 +3748,7 @@ def render_video(final_video_name, project_uuid, quality):
         audio_location = project_settings.audio.local_path
         audio_clip = AudioFileClip(audio_location)
         finalclip = finalclip.set_audio(audio_clip)
-    
+
     # TODO: add this in the save override
     finalclip.write_videofile(
         output_video_file,
@@ -3456,7 +3763,7 @@ def render_video(final_video_name, project_uuid, quality):
         "name": final_video_name,
         "type": InternalFileType.VIDEO.value,
         "local_path": output_video_file,
-        "tag" : InternalFileTag.GENERATED_VIDEO.value,
+        "tag": InternalFileTag.GENERATED_VIDEO.value,
         "project_id": project_uuid
     }
 
@@ -3465,8 +3772,10 @@ def render_video(final_video_name, project_uuid, quality):
 
 def create_gif_preview(project_uuid):
     data_repo = DataRepo()
-    project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(project_uuid)
+    project: InternalProjectObject = data_repo.get_project_from_uuid(
+        project_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        project_uuid)
     list_of_images = []
 
     for i in timing_details:
@@ -3544,7 +3853,8 @@ def create_depth_mask_image(input_image, layer, timing_uuid):
 
 def prompt_model_controlnet(timing_uuid, input_image):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
 
     if timing.adapter_type == "normal":
         model = REPLICATE_MODEL.jagilley_controlnet_normal
@@ -3590,66 +3900,62 @@ def prompt_model_controlnet(timing_uuid, input_image):
 
     return output[1]
 
-def prompt_model_urpm_v1_3(timing_details, index_of_current_item, source_image):
-    
-        app_settings = get_app_settings()
-        os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
-    
-        if not source_image.startswith("http"):
-            source_image = open(source_image, "rb")
-        
-        model = replicate.models.get("mcai/urpm-v1.3-img2img")
-        version = model.versions.get("4df956e8dbfebf1afaf0c3ee98ad426ec58c4262d24360d054582e5eab2cb5f6")
-        
 
-        inputs = {
+def prompt_model_urpm_v1_3(timing_uuid, source_image):
+    data_repo = DataRepo()
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
 
-            'image': source_image,
-            'prompt': timing_details[index_of_current_item]["prompt"],
-            'negative_prompt': timing_details[index_of_current_item]["negative_prompt"],
-            'strength': float(timing_details[index_of_current_item]["strength"]),
-            'guidance_scale': float(timing_details[index_of_current_item]["guidance_scale"]),
-            'num_inference_steps': int(timing_details[index_of_current_item]["num_inference_steps"]),
-            'upscale': 1,
-            'seed': int(timing_details[index_of_current_item]["seed"]),
+    if not source_image.startswith("http"):
+        source_image = open(source_image, "rb")
 
-        }
+    inputs = {
+        'image': source_image,
+        'prompt': timing.prompt,
+        'negative_prompt': timing.negative_prompt,
+        'strength': timing.strength,
+        'guidance_scale': timing.guidance_scale,
+        'num_inference_steps': timing.num_inference_steps,
+        'upscale': 1,
+        'seed': timing.seed,
+    }
 
-        output = version.predict(**inputs)
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.urpm, **inputs)
 
-        return output[0]
+    return output[0]
 
-def prompt_model_controlnet_1_1_x_realistic_vision_v2_0(timing_details, index_of_current_item, input_image):
-    app_settings = get_app_settings()
-    os.environ["REPLICATE_API_TOKEN"] = app_settings["replicate_com_api_key"]
+
+def prompt_model_controlnet_1_1_x_realistic_vision_v2_0(timing_uuid, input_image):
+    data_repo = DataRepo()
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
 
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
 
-    model = replicate.models.get("usamaehsan/controlnet-1.1-x-realistic-vision-v2.0")
-    version = model.versions.get("7fbf4c86671738f97896c9cb4922705adfcdcf54a6edab193bb8c176c6b34a69")
-    
     inputs = {
-
         'image': input_image,
-        'prompt': timing_details[index_of_current_item]["prompt"],
-        'ddim_steps': int(timing_details[index_of_current_item]["num_inference_steps"]),
-        'strength': float(timing_details[index_of_current_item]["strength"]),
-        'scale': float(timing_details[index_of_current_item]["guidance_scale"]),
-        'seed': int(timing_details[index_of_current_item]["seed"]),
-
+        'prompt': timing.prompt,
+        'ddim_steps': timing.num_inference_steps,
+        'strength': timing.strength,
+        'scale': timing.guidance_scale,
+        'seed': timing.seed,
     }
 
-    output = version.predict(**inputs)
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(
+        REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0, **inputs)
 
     return output[1]
 
 
 def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> InternalFileObject:
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
-    project_settings: InternalSettingObject = data_repo.get_project_setting(timing.project.uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
+    project_settings: InternalSettingObject = data_repo.get_project_setting(
+        timing.project.uuid)
 
     lora_models = timing.custom_model_id_list
     default_model_url = DEFAULT_LORA_MODEL_URL
@@ -3658,7 +3964,8 @@ def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> Int
 
     for lora_model_uuid in lora_models:
         if lora_model_uuid != "":
-            lora_model: InternalAIModelObject = data_repo.get_ai_model_from_uuid(lora_model_uuid)
+            lora_model: InternalAIModelObject = data_repo.get_ai_model_from_uuid(
+                lora_model_uuid)
             print(lora_model)
             if lora_model.replicate_url != "":
                 lora_model_url = lora_model.replicate_url
@@ -3732,23 +4039,27 @@ def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> Int
         return file
     else:
         file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                            hosted_url="https://i.ibb.co/ZG0hxzj/Failed-3x-In-A-Row.png")
+                                                         hosted_url="https://i.ibb.co/ZG0hxzj/Failed-3x-In-A-Row.png")
         return file
 
 
 def attach_audio_element(project_uuid, expanded):
     data_repo = DataRepo()
-    project: InternalProjectObject = data_repo.get_project_from_uuid(uuid=project_uuid)
-    project_setting: InternalSettingObject = data_repo.get_project_setting(project_id=project_uuid)
+    project: InternalProjectObject = data_repo.get_project_from_uuid(
+        uuid=project_uuid)
+    project_setting: InternalSettingObject = data_repo.get_project_setting(
+        project_id=project_uuid)
 
     with st.expander("Audio"):
         uploaded_file = st.file_uploader("Attach audio", type=[
                                          "mp3"], help="This will attach this audio when you render a video")
         if st.button("Upload and attach new audio"):
             if uploaded_file:
-                local_file_location = os.path.join(f"videos/{project.uuid}/assets/resources/audio", uploaded_file.name)
+                local_file_location = os.path.join(
+                    f"videos/{project.uuid}/assets/resources/audio", uploaded_file.name)
                 if not os.path.exists(f"videos/{project.uuid}/assets/resources/audio"):
-                    os.makedirs(f"videos/{project.uuid}/assets/resources/audio")
+                    os.makedirs(
+                        f"videos/{project.uuid}/assets/resources/audio")
 
                 with open(local_file_location, "wb") as f:
                     f.write(uploaded_file.getbuffer())
@@ -3759,28 +4070,32 @@ def attach_audio_element(project_uuid, expanded):
                         "local_path": local_file_location,
                         "project_id": project_uuid
                     }
-                    audio_file: InternalFileObject = data_repo.create_file(**file_data)
-                    data_repo.update_project_setting(project_uuid, audio_id=audio_file.uuid)
+                    audio_file: InternalFileObject = data_repo.create_file(
+                        **file_data)
+                    data_repo.update_project_setting(
+                        project_uuid, audio_id=audio_file.uuid)
                     st.experimental_rerun()
             else:
                 st.warning('No file selected')
-        
+
         if project_setting.audio:
             # TODO: store "extracted_audio.mp3" in a constant
             if project_setting.audio.name == "extracted_audio.mp3":
                 st.info("You have attached the audio from the video you uploaded.")
-            
+
             if project_setting.audio.location:
                 st.audio(project_setting.audio.location)
 
 
-def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
-                       background_image, editing_image, prompt, negative_prompt, \
-                        width, height, layer, timing_uuid) -> InternalFileObject:
+def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
+                       background_image, editing_image, prompt, negative_prompt,
+                       width, height, layer, timing_uuid) -> InternalFileObject:
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+        timing_uuid)
     project_uuid = timing.project.uuid
-    app_secret = data_repo.get_app_secrets_from_user_uuid(timing.project.user_uuid)
+    app_secret = data_repo.get_app_secrets_from_user_uuid(
+        timing.project.user_uuid)
     index_of_current_item = timing.aux_frame_index
 
     if type_of_mask_selection == "Automated Background Selection":
@@ -3789,14 +4104,16 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
         with open("masked_image.png", "wb") as f:
             f.write(response.content)
         if type_of_mask_replacement == "Replace With Image":
-            replace_background(project_uuid, "masked_image.png", background_image)
+            replace_background(
+                project_uuid, "masked_image.png", background_image)
             file_location = f"videos/{project_uuid}/replaced_bg.png"
             file_data = {
                 "name": str(uuid.uuid4()) + ".png",
                 "type": InternalFileType.IMAGE.value,
                 "local_path": file_location,
             }
-            edited_image: InternalFileObject = data_repo.create_file(**file_data)
+            edited_image: InternalFileObject = data_repo.create_file(
+                **file_data)
 
         elif type_of_mask_replacement == "Inpainting":
             image = Image.open("masked_image.png")
@@ -3809,7 +4126,8 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
                     else:
                         converted_image.putpixel((x, y), (255, 255, 255))
             create_or_update_mask(timing_uuid, converted_image)
-            edited_image = inpainting(editing_image, prompt, negative_prompt, timing.uuid, True)
+            edited_image = inpainting(
+                editing_image, prompt, negative_prompt, timing.uuid, True)
 
     elif type_of_mask_selection == "Manual Background Selection":
         if type_of_mask_replacement == "Replace With Image":
@@ -3834,7 +4152,8 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
                     else:
                         result_img.putpixel((x, y), bg_img.getpixel((x, y)))
             result_img.save("masked_image.png")
-            edited_image = replace_background(project_uuid, "masked_image.png", background_image)
+            edited_image = replace_background(
+                project_uuid, "masked_image.png", background_image)
         elif type_of_mask_replacement == "Inpainting":
             mask_location = timing.mask.location
             if mask_location.startswith("http"):
@@ -3846,9 +4165,11 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
                 mask = Image.new('RGB', (width, height), color=(255, 255, 255))
                 mask.paste(im, (0, 0), im)
                 create_or_update_mask(timing.uuid, mask)
-            edited_image = inpainting(editing_image, prompt, negative_prompt, timing_uuid, True)
+            edited_image = inpainting(
+                editing_image, prompt, negative_prompt, timing_uuid, True)
     elif type_of_mask_selection == "Automated Layer Selection":
-        mask_location = create_depth_mask_image(editing_image, layer, timing.uuid)
+        mask_location = create_depth_mask_image(
+            editing_image, layer, timing.uuid)
         if type_of_mask_replacement == "Replace With Image":
             if mask_location.startswith("http"):
                 mask = Image.open(
@@ -3863,9 +4184,11 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
             masked_img = Image.composite(bg_img, Image.new(
                 'RGBA', bg_img.size, (0, 0, 0, 0)), mask)
             masked_img.save("masked_image.png")
-            edited_image = replace_background(project_uuid, "masked_image.png", background_image)
+            edited_image = replace_background(
+                project_uuid, "masked_image.png", background_image)
         elif type_of_mask_replacement == "Inpainting":
-            edited_image = inpainting(editing_image, prompt, negative_prompt, timing_uuid, True)
+            edited_image = inpainting(
+                editing_image, prompt, negative_prompt, timing_uuid, True)
 
     elif type_of_mask_selection == "Re-Use Previous Mask":
         mask_location = timing.mask.location
@@ -3883,9 +4206,11 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
             masked_img = Image.composite(bg_img, Image.new(
                 'RGBA', bg_img.size, (0, 0, 0, 0)), mask)
             masked_img.save("masked_image.png")
-            edited_image = replace_background(project_uuid, "masked_image.png", background_image)
+            edited_image = replace_background(
+                project_uuid, "masked_image.png", background_image)
         elif type_of_mask_replacement == "Inpainting":
-            edited_image = inpainting(editing_image, prompt, negative_prompt, timing_uuid, True)
+            edited_image = inpainting(
+                editing_image, prompt, negative_prompt, timing_uuid, True)
 
     elif type_of_mask_selection == "Invert Previous Mask":
         mask_location = timing.mask.location
@@ -3905,9 +4230,11 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement, \
                 'RGBA', bg_img.size, (0, 0, 0, 0)), inverted_mask)
             # TODO: standardise temproray fixes
             masked_img.save("masked_image.png")
-            edited_image = replace_background(project_uuid, "masked_image.png", background_image)
+            edited_image = replace_background(
+                project_uuid, "masked_image.png", background_image)
         elif type_of_mask_replacement == "Inpainting":
-            edited_image = inpainting(editing_image, prompt, negative_prompt, timing_uuid, False)
+            edited_image = inpainting(
+                editing_image, prompt, negative_prompt, timing_uuid, False)
 
     return edited_image
 
