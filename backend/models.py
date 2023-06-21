@@ -316,6 +316,8 @@ class Setting(BaseModel):
     default_low_threshold = models.FloatField(default=0)
     default_high_threshold = models.FloatField(default=0)
     zoom_level = models.IntegerField(default=0)
+    x_shift = models.IntegerField(default=0)
+    y_shift = models.IntegerField(default=0)
 
     class Meta:
         app_label = 'backend'

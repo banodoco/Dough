@@ -169,7 +169,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     st.caption(
                         f"Main Styled Image for Frame #{st.session_state['current_frame_index']}:")
                     display_image(
-                        timing_uuid=st.session_state['current_frame_uuid'], stage="Styled", clickable=False)
+                        timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
                 st.markdown("***")
 
                 if st.button("Delete key frame"):
@@ -190,7 +190,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             else:
                 st.markdown(
-                    f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{st.session_state['page']}] > :blue[Frame #{st.session_state['current_frame_uuid']}]")
+                    f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{st.session_state['page']}] > :blue[Frame #{st.session_state['current_frame_index']}]")
 
             project_settings = data_repo.get_project_setting(project_uuid)
 
@@ -500,7 +500,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     elif how_to_guide == "Images":
                         with crop2:
                             how_to_crop = st_memory.radio("How to crop:", options=[
-                                                          "Manual Cropping", "Precision Cropping"], project_uuid=project_uuid, key="how_to_crop")
+                                                          "Manual Cropping", "Precision Cropping"], project_settings=project_settings, key="how_to_crop")
 
                         if how_to_crop == "Manual Cropping":
 
@@ -802,13 +802,13 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                 elif st.session_state['page'] == "Styling":
 
-                    carousal_of_images_element(timing_details, stage="Styled")
+                    carousal_of_images_element(timing_details, stage=WorkflowStageType.STYLED.value)
 
                     comparison_values = [
                         "Other Variants", "Source Frame", "Previous & Next Frame", "None"]
 
                     st.session_state['show_comparison'] = st_memory.radio(
-                        "Show comparison to:", options=comparison_values, horizontal=True, project_uuid=project_uuid, key="show_comparison_radio")
+                        "Show comparison to:", options=comparison_values, horizontal=True, project_settings=project_settings, key="show_comparison_radio")
 
                     variants = timing_details[timing.aux_frame_index].alternative_images_list
 
@@ -926,7 +926,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                     elif st.session_state['show_comparison'] == "None":
                         display_image(
-                            idx=st.session_state['current_frame_uuid'], stage="Styled", clickable=False, timing_details=timing_details)
+                            idx=st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False, timing_details=timing_details)
 
                     st.markdown("***")
 
@@ -970,7 +970,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                                 with copy2:
                                     display_image(
-                                        idx=which_frame_to_copy_from, stage="Styled", clickable=False, timing_details=timing_details)
+                                        idx=which_frame_to_copy_from, stage=WorkflowStageType.STYLED.value, clickable=False, timing_details=timing_details)
                                     st.caption("Prompt:")
                                     st.caption(
                                         timing_details[which_frame_to_copy_from]["prompt"])
@@ -1116,11 +1116,11 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     with image1:
 
                         display_image(
-                            idx=i, stage="Source", clickable=False, timing_details=timing_details)
+                            idx=i, stage=WorkflowStageType.SOURCE.value, clickable=False, timing_details=timing_details)
 
                     with image2:
                         display_image(
-                            idx=i, stage="Styled", clickable=False, timing_details=timing_details)
+                            idx=i, stage=WorkflowStageType.STYLED.value, clickable=False, timing_details=timing_details)
 
                     with image3:
                         time1, time2 = st.columns([1, 1])
@@ -1237,18 +1237,18 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             how_long_after = st.slider(
                 "How long after?", min_value=0.0, max_value=10.0, value=2.5, step=0.1)
-            if project_settings.zoom_level != "":
-                apply_current_image_transformations = st_memory.radio("Apply the last zoom, rotation & movement to new frame?", [
-                                                                      "Yes", "No"], key="apply_zoom", horizontal=True, project_uuid=project_uuid)
+            if not project_settings.zoom_level:
+                apply_current_image_transformations = st_memory.radio(label="Apply the last zoom, rotation & movement to new frame?", options=[
+                                                                      "Yes", "No"], key="apply_zoom", horizontal=True, project_settings=project_settings)
             else:
                 apply_current_image_transformations = "No"
                 project_settings.zoom_level = 0
 
             also_make_this_the_primary_image = st_memory.radio("Also make this the primary image?", [
-                                                               "Yes", "No"], key="also_make_this_the_primary_image", horizontal=True, project_uuid=project_uuid)
+                                                               "Yes", "No"], key="also_make_this_the_primary_image", horizontal=True, project_settings=project_settings)
 
             inherit_styling_settings = st_memory.radio("Inherit styling settings from the selected frame?", [
-                                                       "Yes", "No"], key="inherit_styling_settings", horizontal=True, project_uuid=project_uuid)
+                                                       "Yes", "No"], key="inherit_styling_settings", horizontal=True, project_settings=project_settings)
 
         with add2:
             if selected_image != "":

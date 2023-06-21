@@ -1,4 +1,4 @@
-streamlit==1.19.0
+streamlit==1.23.1
 streamlit-image-comparison==0.0.3
 opencv-python-headless
 sahi
@@ -28,3 +28,4 @@ imagecodecs==2023.3.16
 st-clickable-images==0.0.3
 htbuilder==0.6.1
 streamlit-extras==0.2.7
+cryptography==41.0.1

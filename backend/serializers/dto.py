@@ -142,7 +142,8 @@ class SettingDto(serializers.ModelSerializer):
             "default_animation_style",
             "default_low_threshold",
             "default_high_threshold",
-            "created_on"
+            "created_on",
+            "zoom_level"
         )
 
 

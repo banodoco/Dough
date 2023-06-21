@@ -643,13 +643,13 @@ def precision_cropping_element(stage, project_uuid):
             reset_zoom_element()
 
         st.session_state['zoom_level_input'] = st_memory.number_input(
-            "Zoom Level (%)", min_value=10, max_value=1000, step=10, key="zoom_level_input", default_value=100, project_uuid=project_uuid)
+            "Zoom Level (%)", min_value=10, max_value=1000, step=10, key="zoom_level_input", default_value=100, project_settings=project_settings)
         st.session_state['rotation_angle'] = st_memory.number_input(
-            "Rotation Angle", min_value=-360, max_value=360, step=5, key="rotation_angle_input", default_value=0, project_uuid=project_uuid)
+            "Rotation Angle", min_value=-360, max_value=360, step=5, key="rotation_angle_input", default_value=0, project_settings=project_settings)
         st.session_state['x_shift'] = st_memory.number_input("Shift Left/Right", min_value=-1000, max_value=1000,
-                                                             step=5, key="x_shift", default_value=0, project_uuid=project_uuid)
+                                                             step=5, key="x_shift", default_value=0, project_settings=project_settings)
         st.session_state['y_shift'] = st_memory.number_input(
-            "Shift Up/Down", min_value=-1000, max_value=1000, step=5, key="y_shift", default_value=0, project_uuid=project_uuid)
+            "Shift Up/Down", min_value=-1000, max_value=1000, step=5, key="y_shift", default_value=0, project_settings=project_settings)
 
         st.caption("Input Image:")
         st.image(input_image, caption="Input Image", width=300)
@@ -1459,7 +1459,7 @@ def display_image(timing_uuid, stage=None, clickable=False):
             st.error(f"No {stage} image found for #{timing_idx}")
 
 
-def carousal_of_images_element(project_uuid, stage="Styled"):
+def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.value):
     data_repo = DataRepo()
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
@@ -1481,7 +1481,8 @@ def carousal_of_images_element(project_uuid, stage="Styled"):
             display_image(prev_timing.uuid, stage=stage, clickable=True)
 
     with header3:
-        display_image(st.session_state['current_frame_uuid'],
+        timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
+        display_image(timing.uuid,
                       stage=stage, clickable=True)
 
     with header4:

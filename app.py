@@ -37,13 +37,13 @@ def main():
         time.sleep(1.5)
         # if current_url contains streamlit.app
         if current_url and "streamlit.app" in current_url:
-            st.session_state["online"] = True    
+            st.session_state["online"] = True
         else:
             st.session_state["online"] = False
                            
         st.session_state["welcome_state"] = app_settings.welcome_state
 
-    if st.session_state["online"] == True:
+    if 'online' in st.session_state and st.session_state["online"] == True:
         st.error("**PLEASE READ:** This is a demo app. While you can click around, *buttons & queries won't work* and some things won't display properly. To use the proper version, follow the instructions [here](https://github.com/peter942/banodoco) to run it locally.")
     else:
         if app_secret["replicate_key"] == "":

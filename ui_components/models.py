@@ -191,6 +191,8 @@ class InternalSettingObject:
             'default_low_threshold', kwargs) else None
         self.default_high_threshold = kwargs['default_high_threshold'] if key_present(
             'default_high_threshold', kwargs) else None
+        self.zoom_level = kwargs['zoom_level'] if key_present(
+            'zoom_level', kwargs) else None
 
 
 class InternalBackupObject:
