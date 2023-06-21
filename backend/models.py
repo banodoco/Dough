@@ -78,7 +78,7 @@ class InternalFileObject(BaseModel):
 class AIModel(BaseModel):
     name = models.CharField(max_length=255, default="")
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True)      # incase this is a user specific custom model
-    version = models.CharField(max_length=255, default="", blank=True)
+    version = models.CharField(max_length=255, default="", blank=True, null=True)
     replicate_model_id = models.CharField(max_length=255, default="", blank=True)      # for models which were custom created
     replicate_url = models.TextField(default="", blank=True)
     diffusers_url = models.TextField(default="", blank=True)    # for downloading and running models offline
@@ -315,6 +315,7 @@ class Setting(BaseModel):
     default_animation_style = models.CharField(max_length=255)  # "Interpolation", "Direct Morphing"
     default_low_threshold = models.FloatField(default=0)
     default_high_threshold = models.FloatField(default=0)
+    zoom_level = models.IntegerField(default=0)
 
     class Meta:
         app_label = 'backend'

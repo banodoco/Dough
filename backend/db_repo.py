@@ -563,7 +563,7 @@ class DBRepo:
                 
                 return InternalResponse(payload, 'timing fetched', True)
             
-        return InternalResponse({}, 'invalid timing frame number', False)
+        return InternalResponse({'data': None}, 'invalid timing frame number', False)
     
     def get_primary_variant_location(self, uuid):
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
@@ -643,6 +643,78 @@ class DBRepo:
         
         if 'aux_frame_index' not in attributes.data or attributes.data['aux_frame_index'] == None: 
             attributes._data['aux_frame_index'] = Timing.objects.filter(project_id=attributes.data['project_id'], is_disabled=False).count()
+        
+        if 'model_id' in attributes.data:
+            if attributes.data['model_id'] != None:
+                model: AIModel = AIModel.objects.filter(uuid=attributes.data['model_id'], is_disabled=False).first()
+                if not model:
+                    return InternalResponse({}, 'invalid model uuid', False)
+                
+                attributes._data['model_id'] = model.id
+        
+
+        if 'source_image_id' in attributes.data:
+            if attributes.data['source_image_id'] != None:
+                source_image: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['source_image_id'], is_disabled=False).first()
+                if not source_image:
+                    return InternalResponse({}, 'invalid source image uuid', False)
+                
+                attributes._data['source_image_id'] = source_image.id
+        
+
+        if 'interpolated_clip_id' in attributes.data:
+            if attributes.data['interpolated_clip_id'] != None:
+                interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['interpolated_clip_id'], is_disabled=False).first()
+                if not interpolated_clip:
+                    return InternalResponse({}, 'invalid interpolated clip uuid', False)
+                
+                attributes._data['interpolated_clip_id'] = interpolated_clip.id
+        
+
+        if 'timed_clip_id' in attributes.data:
+            if attributes.data['timed_clip_id'] != None:
+                timed_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['timed_clip_id'], is_disabled=False).first()
+                if not timed_clip:
+                    return InternalResponse({}, 'invalid timed clip uuid', False)
+                
+                attributes._data['timed_clip_id'] = timed_clip.id
+        
+
+        if 'mask_id' in attributes.data:
+            if attributes.data['mask_id'] != None:
+                mask: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['mask_id'], is_disabled=False).first()
+                if not mask:
+                    return InternalResponse({}, 'invalid mask uuid', False)
+                
+                attributes._data['mask_id'] = mask.id
+        
+
+        if 'canny_image_id' in attributes.data:
+            if attributes.data['canny_image_id'] != None:
+                canny_image: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['canny_image_id'], is_disabled=False).first()
+                if not canny_image:
+                    return InternalResponse({}, 'invalid canny image uuid', False)
+                
+                attributes._data['canny_image_id'] = canny_image.id
+        
+
+        if 'preview_video_id' in attributes.data:
+            if attributes.data['preview_video_id'] != None:
+                preview_video: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['preview_video_id'], is_disabled=False).first()
+                if not preview_video:
+                    return InternalResponse({}, 'invalid preview video uuid', False)
+                
+                attributes._data['preview_video_id'] = preview_video.id
+        
+
+        if 'primay_image_id' in attributes.data:
+            if attributes.data['primay_image_id'] != None:
+                primay_image: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['primay_image_id'], is_disabled=False).first()
+                if not primay_image:
+                    return InternalResponse({}, 'invalid primary image uuid', False)
+                
+                attributes._data['primay_image_id'] = primay_image.id
+        
         
         timing = Timing.objects.create(**attributes.data)
         

@@ -1,12 +1,13 @@
 import os
 import shutil
+import uuid
 from dotenv import dotenv_values
 
-from shared.constants import SERVER, AIModelType, GuidanceType, ServerType
+from shared.constants import SERVER, AIModelType, GuidanceType, InternalFileType, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from shared.constants import AnimationStyleType
-from ui_components.models import InternalUserObject
+from ui_components.models import InternalFrameTimingObject, InternalUserObject
 from utils.common_methods import copy_sample_assets, create_working_assets
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
@@ -85,6 +86,24 @@ def create_new_user_data(user: InternalUserObject):
         'height': 512
     }
     project = data_repo.create_project(**project_data)
+
+    # create a sample timing frame
+    file_data = {
+        "name": str(uuid.uuid4()),
+        "type": InternalFileType.IMAGE.value,
+        "local_path": "sample_assets/frames/selected_sample/3vlb4mr7d95c42i4.png",
+        "project_id": project.uuid
+    }
+    source_image = data_repo.create_file(**file_data)
+
+    timing_data = {
+        "project_id": project.uuid,
+        "frame_time": 0.0,
+        "animation_style": AnimationStyleType.INTERPOLATION.value,
+        "aux_frame_index": 0,
+        "source_image_id": source_image.uuid
+    }
+    timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
 
     # create default ai models
     model_list = create_predefined_models(user)

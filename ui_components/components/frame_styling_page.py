@@ -8,8 +8,8 @@ import requests as r
 from streamlit_drawable_canvas import st_canvas
 from shared.constants import GuidanceType, InternalFileType
 from shared.file_upload.s3 import upload_file
-from ui_components.common_methods import delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, create_timings_row_at_frame_number, extract_canny_lines, convert_to_minutes_and_seconds, styling_element, create_full_preview_video, back_and_forward_buttons, resize_and_rotate_element, crop_image_element, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, single_frame_time_changer
-from ui_components.common_methods import create_gif_preview, delete_frame, get_model_details, get_timing_details, promote_image_variant, trigger_restyling_process, add_image_variant, prompt_interpolation_model, update_speed_of_video_clip, create_timings_row_at_frame_number, extract_canny_lines, get_duration_from_video, get_audio_bytes_for_slice, add_audio_to_video_slice, convert_to_minutes_and_seconds, styling_element, get_primary_variant_location, create_full_preview_video, back_and_forward_buttons, resize_and_rotate_element, manual_cropping_element, precision_cropping_element, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, single_frame_time_changer, apply_image_transformations, get_pillow_image, save_new_image, prompt_finder_element, preview_frame, carousal_of_images_element, display_image, ai_frame_editing_element, clone_styling_settings
+from ui_components.common_methods import delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, create_timings_row_at_frame_number, extract_canny_lines, convert_to_minutes_and_seconds, styling_element, create_full_preview_video, back_and_forward_buttons, resize_and_rotate_element, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, single_frame_time_changer
+from ui_components.common_methods import create_gif_preview, delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, prompt_interpolation_model, update_speed_of_video_clip, create_timings_row_at_frame_number, extract_canny_lines, get_duration_from_video, get_audio_bytes_for_slice, add_audio_to_video_slice, convert_to_minutes_and_seconds, styling_element, get_primary_variant_location, create_full_preview_video, back_and_forward_buttons, resize_and_rotate_element, manual_cropping_element, precision_cropping_element, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, single_frame_time_changer, apply_image_transformations, get_pillow_image, save_new_image, prompt_finder_element, preview_frame, carousal_of_images_element, display_image, ai_frame_editing_element, clone_styling_settings
 from utils import st_memory
 import uuid
 
@@ -75,6 +75,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 st.session_state['frame_styling_view_type'] = "Individual View"
                 st.session_state['change_view_type'] = False
 
+            if 'change_view_type' not in st.session_state:
+                st.session_state['change_view_type'] = False
+
             if st.session_state['change_view_type'] == True:
                 st.session_state['frame_styling_view_type_index'] = view_types.index(
                     st.session_state['frame_styling_view_type'])
@@ -109,7 +112,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                 if len(timing_details) > 1:
                     percentage = round(
-                        (float(st.session_state['current_frame_uuid']) / float(len(timing_details)-1)) * 100.00)
+                        (float(st.session_state['current_frame_index']) / float(len(timing_details)-1)) * 100.00)
 
                     st.progress(percentage)
                 else:
@@ -119,10 +122,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                 with time1:
 
-                    st.session_state['current_frame_uuid'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(
+                    frame_number = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(
                         timing_details)-1, value=st.session_state['current_frame_index'], step=1, key="which_image_selector")
-                    if st.session_state['current_frame_index'] != st.session_state['current_frame_uuid']:
-                        st.session_state['current_frame_index'] = st.session_state['current_frame_uuid']
+                    
+                    st.session_state['current_frame_uuid'] = timing_details[frame_number].uuid
+                    frame_index = next((i for i, t in enumerate(timing_details) if t.uuid == st.session_state['current_frame_uuid']), None)
+
+                    if st.session_state['current_frame_index'] != frame_index:
+                        st.session_state['current_frame_index'] = frame_index
                         st.session_state['reset_canvas'] = True
                         st.session_state['frame_styling_view_type_index'] = 0
                         st.session_state['frame_styling_view_type'] = "Individual View"
@@ -135,11 +142,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 with st.expander("Notes:"):
 
                     notes = st.text_area(
-                        "Frame Notes:", value=timing_details[st.session_state['current_frame_uuid']]["notes"], height=100, key="notes")
+                        "Frame Notes:", value=timing_details[st.session_state['current_frame_index']].notes, height=100, key="notes")
 
-                if notes != timing_details[st.session_state['current_frame_uuid']]["notes"]:
-                    timing_details[st.session_state['current_frame_uuid']
-                                   ]["notes"] = notes
+                if notes != timing_details[st.session_state['current_frame_index']].notes:
                     data_repo.update_specific_timing(
                         st.session_state['current_frame_uuid'], notes=notes)
                     st.experimental_rerun()
@@ -157,14 +162,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 image_1, image_2 = st.columns([image_1_size, image_2_size])
                 with image_1:
                     st.caption(
-                        f"Guidance Image for Frame #{st.session_state['current_frame_uuid']}:")
+                        f"Guidance Image for Frame #{st.session_state['current_frame_index']}:")
                     display_image(
-                        idx=st.session_state['current_frame_uuid'], stage="Source", clickable=False, timing_details=timing_details)
+                        timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
                 with image_2:
                     st.caption(
-                        f"Main Styled Image for Frame #{st.session_state['current_frame_uuid']}:")
+                        f"Main Styled Image for Frame #{st.session_state['current_frame_index']}:")
                     display_image(
-                        idx=st.session_state['current_frame_uuid'], stage="Styled", clickable=False, timing_details=timing_details)
+                        timing_uuid=st.session_state['current_frame_uuid'], stage="Styled", clickable=False)
                 st.markdown("***")
 
                 if st.button("Delete key frame"):
@@ -192,15 +197,15 @@ def frame_styling_page(mainheader2, project_uuid: str):
             if st.session_state['frame_styling_view_type'] == "Individual View":
                 if st.session_state['page'] == "Guidance":
 
-                    carousal_of_images_element(project_uuid, stage="Source")
+                    carousal_of_images_element(project_uuid, stage=WorkflowStageType.SOURCE.value)
 
-                    guidance_types = ["Images", "Drawing", "Video"]
+                    guidance_types = GuidanceType.value_list()
                     if 'how to guide_index' not in st.session_state:
                         if not project_settings.guidance_type:
                             st.session_state['how_to_guide_index'] = 0
                         else:
                             st.session_state['how_to_guide_index'] = guidance_types.index(
-                                project_settings["guidance_type"])
+                                project_settings.guidance_type)
                     crop1, crop2 = st.columns([1, 1])
                     with crop1:
                         how_to_guide = st.radio("How to guide:", guidance_types, key="how_to_guide",
@@ -495,7 +500,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     elif how_to_guide == "Images":
                         with crop2:
                             how_to_crop = st_memory.radio("How to crop:", options=[
-                                                          "Manual Cropping", "Precision Cropping"], project_settings=project_settings, key="how_to_crop")
+                                                          "Manual Cropping", "Precision Cropping"], project_uuid=project_uuid, key="how_to_crop")
 
                         if how_to_crop == "Manual Cropping":
 
@@ -550,7 +555,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 which_number_image = st.number_input("Which frame would you like to use?", min_value=0, max_value=len(
                                     timing_details)-1, value=value, step=1, key="canny_frame_number")
 
-                                current_timing = data_repo.get_timing_from_frame_number(
+                                current_timing = data_repo.get_timing_from_frame_number(project_uuid,
                                     which_number_image)
                                 if which_stage == "Source Image":
                                     if current_timing.source_image_location != "":
@@ -579,7 +584,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                         # with st.expander("Inpainting, Background Removal & More", expanded=False):
                         with st.expander("Inpainting, Background Removal & More"):
-                            ai_frame_editing_element(st.session_state['current_frame_uuid'], "Source")
+                            ai_frame_editing_element(st.session_state['current_frame_uuid'], WorkflowStageType.SOURCE.value)
 
                 elif st.session_state['page'] == "Motion":
 
@@ -803,14 +808,13 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         "Other Variants", "Source Frame", "Previous & Next Frame", "None"]
 
                     st.session_state['show_comparison'] = st_memory.radio(
-                        "Show comparison to:", options=comparison_values, horizontal=True, project_settings=project_settings, key="show_comparison_radio")
+                        "Show comparison to:", options=comparison_values, horizontal=True, project_uuid=project_uuid, key="show_comparison_radio")
 
                     variants = timing_details[timing.aux_frame_index].alternative_images_list
 
                     if variants != [] and variants != None and variants != "":
 
-                        primary_variant_location = get_primary_variant_location(
-                            timing_details, st.session_state['current_frame_uuid'])
+                        primary_variant_location = timing_details[st.session_state['current_frame_index']].primary_image_location
 
                     if st.session_state['show_comparison'] == "Other Variants":
 
@@ -884,40 +888,37 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         image_comparison(starting_position=50,
                                          img1=timing_details[st.session_state['current_frame_uuid']
                                                              ]["source_image"],
-                                         img2=img2, make_responsive=False, label1="Source", label2="Styled")
+                                         img2=img2, make_responsive=False, label1=WorkflowStageType.SOURCE.value, label2=WorkflowStageType.STYLED.value)
                     elif st.session_state['show_comparison'] == "Previous & Next Frame":
 
                         mainimages1, mainimages2, mainimages3 = st.columns([
                                                                            1, 1, 1])
 
                         with mainimages1:
-                            if st.session_state['current_frame_uuid']-1 >= 0:
-                                previous_image = get_primary_variant_location(
-                                    timing_details, st.session_state['current_frame_uuid']-1)
+                            if st.session_state['current_frame_index']-1 >= 0:
+                                previous_image = data_repo.get_timing_from_frame_number(st.session_state['current_frame_index'] - 1)
                                 st.info(f"Previous image")
                                 display_image(
-                                    idx=st.session_state['current_frame_uuid']-1, stage="Styled", clickable=False, timing_details=timing_details)
+                                    timing_uuid=previous_image.uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
 
-                                if st.button(f"Preview Interpolation From #{st.session_state['current_frame_uuid']-1} to #{st.session_state['current_frame_uuid']}", key=f"Preview Interpolation From #{st.session_state['current_frame_uuid']-1} to #{st.session_state['current_frame_uuid']}", use_container_width=True):
+                                if st.button(f"Preview Interpolation From #{st.session_state['current_frame_index']-1} to #{st.session_state['current_frame_index']}", key=f"Preview Interpolation From #{st.session_state['current_frame_uuid']-1} to #{st.session_state['current_frame_uuid']}", use_container_width=True):
                                     prev_frame_timing = data_repo.get_prev_timing(st.session_state['current_frame_uuid'])
-                                    create_or_get_single_preview_video(prev_frame_timing)
+                                    create_or_get_single_preview_video(prev_frame_timing.uuid)
                                     prev_frame_timing = data_repo.get_timing_from_uuid(prev_frame_timing.uuid)
                                     st.video(prev_frame_timing.timed_clip.location)
 
                         with mainimages2:
                             st.success(f"Current image")
                             display_image(
-                                idx=st.session_state['current_frame_uuid'], stage="Styled", clickable=False, timing_details=timing_details)
+                                timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
 
                         with mainimages3:
-
-                            if st.session_state['current_frame_uuid']+1 < len(timing_details):
-
+                            if st.session_state['current_frame_index']+1 < len(timing_details):
+                                next_image = data_repo.get_timing_from_frame_number(st.session_state['current_frame_index'] + 1)
                                 st.info(f"Next image")
-                                display_image(
-                                    idx=st.session_state['current_frame_uuid']+1, stage="Styled", clickable=False, timing_details=timing_details)
+                                display_image(timing_uuid=next_image.uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
 
-                                if st.button(f"Preview Interpolation From #{st.session_state['current_frame_uuid']} to #{st.session_state['current_frame_uuid']+1}", key=f"Preview Interpolation From #{st.session_state['current_frame_uuid']} to #{st.session_state['current_frame_uuid']+1}", use_container_width=True):
+                                if st.button(f"Preview Interpolation From #{st.session_state['current_frame_index']} to #{st.session_state['current_frame_index']+1}", key=f"Preview Interpolation From #{st.session_state['current_frame_uuid']} to #{st.session_state['current_frame_uuid']+1}", use_container_width=True):
                                     create_or_get_single_preview_video(
                                         st.session_state['current_frame_uuid'])
                                     current_frame = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
@@ -932,19 +933,18 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     with st.expander("🛠️ Generate Variants + Prompt Settings", expanded=True):
                         col1, col2 = st.columns([1, 1])
                         with col1:
-                            styling_element(st.session_state['current_frame_uuid'], timing_details, project_settings,
-                                            view_type="Single",)
+                            styling_element(st.session_state['current_frame_uuid'], view_type="Single")
                         with col2:
                             detail1, detail2 = st.columns([1, 1])
                             with detail1:
                                 st.session_state['individual_number_of_variants'] = st.number_input(
-                                    f"How many variants?", min_value=1, max_value=100, key=f"number_of_variants_{st.session_state['current_frame_uuid']}")
+                                    f"How many variants?", min_value=1, max_value=100, key=f"number_of_variants_{st.session_state['current_frame_index']}")
 
                             with detail2:
                                 st.write("")
                                 st.write("")
 
-                                if st.button(f"Generate variants", key=f"new_variations_{st.session_state['current_frame_uuid']}", help="This will generate new variants based on the settings to the left."):
+                                if st.button(f"Generate variants", key=f"new_variations_{st.session_state['current_frame_index']}", help="This will generate new variants based on the settings to the left."):
                                     for i in range(0, st.session_state['individual_number_of_variants']):
                                         trigger_restyling_process(st.session_state['current_frame_uuid'], st.session_state['model'], st.session_state['prompt'], st.session_state['strength'], st.session_state['custom_pipeline'], st.session_state['negative_prompt'], st.session_state['guidance_scale'], st.session_state['seed'], st.session_state[
                                                                   'num_inference_steps'], st.session_state['transformation_stage'], st.session_state["promote_new_generation"], st.session_state['custom_models'], st.session_state['adapter_type'], True, st.session_state['low_threshold'], st.session_state['high_threshold'])
@@ -963,7 +963,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 copy1, copy2 = st.columns([1, 1])
                                 with copy1:
                                     which_frame_to_copy_from = st.number_input("Which frame would you like to copy styling settings from?", min_value=0, max_value=len(
-                                        timing_details)-1, value=st.session_state['current_frame_uuid']-1, step=1)
+                                        timing_details)-1, value=st.session_state['current_frame_index']-1, step=1)
                                     if st.button("Copy styling settings from this frame"):
                                         clone_styling_settings(which_frame_to_copy_from, st.session_state['current_frame_uuid'])
                                         st.experimental_rerun()
@@ -1195,16 +1195,15 @@ def frame_styling_page(mainheader2, project_uuid: str):
             if source_of_starting_image == "Previous frame":
                 which_stage_for_starting_image = st.radio("Which stage would you like to use?", [
                                                           "Styled Image", "Source Image"], key="which_stage_for_starting_image")
-                which_number_for_starting_image = st.number_input("Which frame would you like to use?", min_value=0, max_value=len(
-                    timing_details)-1, value=st.session_state['current_frame_uuid'], step=1, key="which_number_for_starting_image")
+                which_number_for_starting_image = st.number_input("Which frame would you like to use?", min_value=0, max_value=
+                                                                  max(0, len(timing_details)-1), value=st.session_state['current_frame_index'], step=1, key="which_number_for_starting_image")
                 if which_stage_for_starting_image == "Source Image":
                     if timing_details[which_number_for_starting_image]["source_image"] != "":
                         selected_image = timing_details[which_number_for_starting_image]["source_image"]
                     else:
                         selected_image = ""
                 elif which_stage_for_starting_image == "Styled Image":
-                    selected_image = get_primary_variant_location(
-                        timing_details, which_number_for_starting_image)
+                    selected_image = timing_details[which_number_for_starting_image].primary_image_location
             elif source_of_starting_image == "Uploaded image":
                 uploaded_image = st.file_uploader(
                     "Upload an image", type=["png", "jpg", "jpeg"])
@@ -1238,24 +1237,24 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             how_long_after = st.slider(
                 "How long after?", min_value=0.0, max_value=10.0, value=2.5, step=0.1)
-            if project_settings['zoom_level_input_value'] != "":
+            if project_settings.zoom_level != "":
                 apply_current_image_transformations = st_memory.radio("Apply the last zoom, rotation & movement to new frame?", [
-                                                                      "Yes", "No"], key="apply_zoom", horizontal=True, project_settings=project_settings)
+                                                                      "Yes", "No"], key="apply_zoom", horizontal=True, project_uuid=project_uuid)
             else:
                 apply_current_image_transformations = "No"
-                project_settings['zoom_level_input_value'] = 0
+                project_settings.zoom_level = 0
 
             also_make_this_the_primary_image = st_memory.radio("Also make this the primary image?", [
-                                                               "Yes", "No"], key="also_make_this_the_primary_image", horizontal=True, project_settings=project_settings)
+                                                               "Yes", "No"], key="also_make_this_the_primary_image", horizontal=True, project_uuid=project_uuid)
 
             inherit_styling_settings = st_memory.radio("Inherit styling settings from the selected frame?", [
-                                                       "Yes", "No"], key="inherit_styling_settings", horizontal=True, project_settings=project_settings)
+                                                       "Yes", "No"], key="inherit_styling_settings", horizontal=True, project_uuid=project_uuid)
 
         with add2:
             if selected_image != "":
                 if apply_current_image_transformations == "Yes":
                     selected_image = get_pillow_image(selected_image)
-                    selected_image = apply_image_transformations(selected_image, project_settings.zoom_level_input_value, 
+                    selected_image = apply_image_transformations(selected_image, project_settings.zoom_level, 
                         project_settings.rotation_angle_input_value, project_settings.x_shift, project_settings.y_shift)
 
                 st.image(selected_image)

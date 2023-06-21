@@ -319,9 +319,9 @@ def prompt_interpolation_model(timing_uuid) -> InternalFileType:
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
 
-    img1 = data_repo.get_primary_variant_location(timing_uuid)
+    img1 = timing.primary_image_location
     next_timing = data_repo.get_next_timing(timing_uuid)
-    img2 = data_repo.get_primary_variant_location(next_timing.uuid)
+    img2 = next_timing.primary_image_location
 
     if not img1.startswith("http"):
         img1 = open(img1, "rb")
@@ -354,7 +354,7 @@ def create_video_without_interpolation(timing_uuid):
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
 
-    image_path_or_url = data_repo.get_primary_variant_location(timing_uuid)
+    image_path_or_url = timing.primary_image_location
 
     video_location = "videos/" + timing.project.uuid + "/assets/videos/0_raw/" + \
                      ''.join(random.choices(string.ascii_lowercase +
@@ -592,7 +592,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
             promote_image_variant(timing_uuid, number_of_image_variants - 1)
 
     project_update_data = {
-        "zoom_level_input_value": st.session_state['zoom_level_input_value'],
+        "zoom_level": st.session_state['zoom_level'],
         "rotation_angle_input_value": st.session_state['rotation_angle_input_value'],
         "x_shift": st.session_state['x_shift'],
         "y_shift": st.session_state['y_shift']
@@ -602,7 +602,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
 
     # TODO: CORRECT-CODE - make a proper column for zoom details
     timing_update_data = {
-        "zoom_details": f"{st.session_state['zoom_level_input_value']},{st.session_state['rotation_angle_input_value']},{st.session_state['x_shift']},{st.session_state['y_shift']}",
+        "zoom_details": f"{st.session_state['zoom_level']},{st.session_state['rotation_angle_input_value']},{st.session_state['x_shift']},{st.session_state['y_shift']}",
 
     }
     data_repo.update_specific_timing(timing_uuid, **timing_update_data)
@@ -614,11 +614,11 @@ def precision_cropping_element(stage, project_uuid):
         project_uuid)
 
     def reset_zoom_element():
-        st.session_state['zoom_level_input_value'] = 100
+        st.session_state['zoom_level'] = 100
         st.session_state['rotation_angle_input_value'] = 0
         st.session_state['x_shift'] = 0
         st.session_state['y_shift'] = 0
-        st.session_state['zoom_level'] = 100
+        st.session_state['zoom_level_input'] = 100
         st.session_state['rotation_angle'] = 0
         st.session_state['x_shift'] = 0
         st.session_state['y_shift'] = 0
@@ -642,14 +642,14 @@ def precision_cropping_element(stage, project_uuid):
         if st.button("Reset Cropping"):
             reset_zoom_element()
 
-        st.session_state['zoom_level'] = st_memory.number_input(
-            "Zoom Level (%)", min_value=10, max_value=1000, step=10, key="zoom_level_input", default_value=100, project_settings=project_settings)
+        st.session_state['zoom_level_input'] = st_memory.number_input(
+            "Zoom Level (%)", min_value=10, max_value=1000, step=10, key="zoom_level_input", default_value=100, project_uuid=project_uuid)
         st.session_state['rotation_angle'] = st_memory.number_input(
-            "Rotation Angle", min_value=-360, max_value=360, step=5, key="rotation_angle_input", default_value=0, project_settings=project_settings)
+            "Rotation Angle", min_value=-360, max_value=360, step=5, key="rotation_angle_input", default_value=0, project_uuid=project_uuid)
         st.session_state['x_shift'] = st_memory.number_input("Shift Left/Right", min_value=-1000, max_value=1000,
-                                                             step=5, key="x_shift", default_value=0, project_settings=project_settings)
+                                                             step=5, key="x_shift", default_value=0, project_uuid=project_uuid)
         st.session_state['y_shift'] = st_memory.number_input(
-            "Shift Up/Down", min_value=-1000, max_value=1000, step=5, key="y_shift", default_value=0, project_settings=project_settings)
+            "Shift Up/Down", min_value=-1000, max_value=1000, step=5, key="y_shift", default_value=0, project_uuid=project_uuid)
 
         st.caption("Input Image:")
         st.image(input_image, caption="Input Image", width=300)
@@ -658,7 +658,7 @@ def precision_cropping_element(stage, project_uuid):
 
         st.caption("Output Image:")
         output_image = apply_image_transformations(
-            input_image, st.session_state['zoom_level'], st.session_state['rotation_angle'], st.session_state['x_shift'], st.session_state['y_shift'])
+            input_image, st.session_state['zoom_level_input'], st.session_state['rotation_angle'], st.session_state['x_shift'], st.session_state['y_shift'])
         st.image(output_image, use_column_width=True)
 
         if st.button("Save Image"):
@@ -682,7 +682,7 @@ def manual_cropping_element(stage, timing_uuid):
         if stage == WorkflowStageType.SOURCE.value:
             input_image = timing.source_image.location
         elif stage == WorkflowStageType.STYLED.value:
-            input_image = data_repo.get_primary_variant_location(timing_uuid)
+            input_image = timing.primary_image_location
 
         if 'current_working_image_number' not in st.session_state:
             st.session_state['current_working_image_number'] = st.session_state['current_frame_uuid']
@@ -768,7 +768,7 @@ def manual_cropping_element(stage, timing_uuid):
             cropbtn1, cropbtn2 = st.columns(2)
             with cropbtn1:
                 if st.button("Save Cropped Image"):
-                    if stage == "Source":
+                    if stage == WorkflowStageType.SOURCE.value:
                         # resize the image to the original width and height
                         cropped_img = cropped_img.resize(
                             (width, height), Image.ANTIALIAS)
@@ -1013,13 +1013,13 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
                             btn1, btn2 = st.columns([1, 1])
                             with btn1:
                                 which_stage_to_use = st.radio(
-                                    "Select stage to use:", ["Source", "Styled"])
+                                    "Select stage to use:", WorkflowStageType.value_list())
                                 which_image_to_use = st.number_input(
                                     "Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0)
-                                if which_stage_to_use == "Source":
+                                if which_stage_to_use == WorkflowStageType.SOURCE.value:
                                     background_image = timing_details[which_image_to_use]["source_image"]
 
-                                elif which_stage_to_use == "Styled":
+                                elif which_stage_to_use == WorkflowStageType.STYLED.value:
                                     variants = timing_details[which_image_to_use]["alternative_images"]
                                     primary_image = timing_details[which_image_to_use]["primary_image"]
                                     background_image = variants[primary_image]
@@ -1320,8 +1320,7 @@ def create_full_preview_video(timing_uuid, speed) -> InternalFileObject:
         if i < 0 or i >= num_timing_details-1:
             continue
 
-        primary_variant_location = data_repo.get_primary_variant_location(
-            timing_details[i].uuid)
+        primary_variant_location = timing_details[i].primary_image_location
 
         print(
             f"primary_variant_location for i={i}: {primary_variant_location}")
@@ -1469,14 +1468,14 @@ def carousal_of_images_element(project_uuid, stage="Styled"):
     current_timing = data_repo.get_timing_from_uuid(
         st.session_state['current_frame_uuid'])
     with header1:
-        prev_2_timing = data_repo.get_timing_from_frame_number(
+        prev_2_timing = data_repo.get_timing_from_frame_number(project_uuid,
             current_timing.aux_frame_index - 2)
 
         if prev_2_timing:
             display_image(prev_timing.uuid, stage=stage, clickable=True)
 
     with header2:
-        prev_timing = data_repo.get_timing_from_frame_number(
+        prev_timing = data_repo.get_timing_from_frame_number(project_uuid,
             current_timing.aux_frame_index - 1)
         if prev_timing:
             display_image(prev_timing.uuid, stage=stage, clickable=True)
@@ -1486,13 +1485,13 @@ def carousal_of_images_element(project_uuid, stage="Styled"):
                       stage=stage, clickable=True)
 
     with header4:
-        next_timing = data_repo.get_timing_from_frame_number(
+        next_timing = data_repo.get_timing_from_frame_number(project_uuid,
             current_timing.aux_frame_index + 1)
         if next_timing:
             display_image(next_timing.uuid, stage=stage, clickable=True)
 
     with header5:
-        next_2_timing = data_repo.get_timing_from_frame_number(
+        next_2_timing = data_repo.get_timing_from_frame_number(project_uuid,
             current_timing.aux_frame_index + 2)
         if next_2_timing:
             display_image(next_2_timing.uuid, stage=stage, clickable=True)
@@ -1529,7 +1528,7 @@ def styling_element(timing_uuid, view_type="Single"):
         if st.session_state['transformation_stage'] == "Extracted Key Frames":
             image = stage_frame.source_image.location
         else:
-            image = data_repo.get_primary_variant_location(stage_frame.uuid)
+            image = stage_frame.primary_image_location
             image = image.location if image else ""
 
     if view_type == "Single":
@@ -1551,9 +1550,9 @@ def styling_element(timing_uuid, view_type="Single"):
             st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = 0
 
     elif view_type == "List":
-        if project_settings[f'last_which_stage_to_run_on'] != "":
+        if project_settings.default_stage != "":
             if f'index_of_which_stage_to_run_on_{append_to_item_name}' not in st.session_state:
-                st.session_state['transformation_stage'] = project_settings['last_which_stage_to_run_on']
+                st.session_state['transformation_stage'] = project_settings.default_stage
                 st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = stages.index(
                     st.session_state['transformation_stage'])
         else:
@@ -1565,14 +1564,13 @@ def styling_element(timing_uuid, view_type="Single"):
                                                              index=st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'], help="Extracted frames means the original frames from the video.")
     with stages2:
         if st.session_state['transformation_stage'] == "Source Image":
-            image = timing_details[st.session_state['current_frame_uuid']
+            image = timing_details[st.session_state['current_frame_index']
                                    ]['source_image']
         elif st.session_state['transformation_stage'] == "Main Variant":
-            image = get_primary_variant_location(
-                timing_details, st.session_state['current_frame_uuid'])
+            image = timing_details[st.session_state['current_frame_index']].primary_image_location
         if image != "":
             st.image(image, use_column_width=True,
-                     caption=f"Image {st.session_state['current_frame_uuid']}")
+                     caption=f"Image {st.session_state['current_frame_index']}")
         else:
             st.error(
                 f"No {st.session_state['transformation_stage']} image found for this variant")
@@ -1750,13 +1748,13 @@ def styling_element(timing_uuid, view_type="Single"):
 
         if view_type == "List":
 
-            if project_settings['last_low_threshold'] != "":
-                low_threshold_value = project_settings['last_low_threshold']
+            if project_settings.default_low_threshold != "":
+                low_threshold_value = project_settings.default_low_threshold
             else:
                 low_threshold_value = 50
 
-            if project_settings['last_high_threshold'] != "":
-                high_threshold_value = project_settings['last_high_threshold']
+            if project_settings.default_high_threshold != "":
+                high_threshold_value = project_settings.default_high_threshold
             else:
                 high_threshold_value = 150
 
@@ -1829,8 +1827,8 @@ def styling_element(timing_uuid, view_type="Single"):
                 st.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")
 
         if view_type == "List":
-            if project_settings['last_strength'] != "":
-                st.session_state['strength'] = project_settings['last_strength']
+            if project_settings.default_strength != "":
+                st.session_state['strength'] = project_settings.default_strength
             else:
                 st.session_state['strength'] = 0.5
 
@@ -2045,7 +2043,7 @@ def calculate_frame_number_at_time(input_video, time_of_frame, project_uuid):
 
 def move_frame(direction, timing_uuid):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
 
     current_primary_image = timing.primary_image
@@ -2489,7 +2487,7 @@ def create_working_assets(video_name):
     os.mkdir("videos/" + video_name + "/assets/videos/1_final")
     os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
 
-    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type', 'guidance_type', 'default_animation_style', 'last_low_threshold', 'last_high_threshold', 'last_stage_run_on', 'zoom_level_input_value', 'rotation_angle_input_value', 'x_shift', 'y_shift'],
+    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type', 'guidance_type', 'default_animation_style', 'last_low_threshold', 'last_high_threshold', 'last_stage_run_on', 'zoom_level', 'rotation_angle_input_value', 'x_shift', 'y_shift'],
             'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Source Image', '', '', '', '', 100, 200, '', 100, 0, 0, 0]}
 
     df = pd.DataFrame(data)
@@ -3010,8 +3008,8 @@ def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
         "image": input_image,
         "prompt": prompt,
         "prompt_strength": float(strength),
-        "height": int(project_settings["height"]),
-        "width": int(project_settings["width"]),
+        "height": int(project_settings.height),
+        "width": int(project_settings.width),
         "disable_safety_check": True,
         "negative_prompt": negative_prompt,
         "guidance_scale": float(guidance_scale),

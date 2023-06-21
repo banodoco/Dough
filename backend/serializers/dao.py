@@ -35,7 +35,7 @@ class CreateProjectDao(serializers.Serializer):
 class CreateAIModelDao(serializers.Serializer):
     name = serializers.CharField(max_length=100)
     user_id = serializers.CharField(max_length=100)     # this is user UUID
-    version = serializers.CharField(max_length=100, required=False)
+    version = serializers.CharField(max_length=100, allow_null=True, required=False)
     replicate_url = serializers.CharField(max_length=512, default="", required=False)
     diffusers_url = serializers.CharField(max_length=512, default="", required=False)
     category = serializers.ChoiceField(choices=AIModelType.value_list())

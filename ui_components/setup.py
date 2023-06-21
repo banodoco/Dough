@@ -34,7 +34,7 @@ def setup_app_ui():
         h1, h2 = st.columns([1, 3])
 
         with h1:
-            st.markdown("#     :red[Ba]:green[no]:orange[do]:blue[co]")
+            st.markdown("#:red[Ba]:green[no]:orange[do]:blue[co]")
 
         sections = ["Open Project", "App Settings", "New Project"]
 

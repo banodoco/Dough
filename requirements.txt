@@ -18,7 +18,7 @@ psycopg2-binary==2.9.5
 streamlit-cropper==0.2.1
 pydub==0.25.1
 requests-toolbelt==1.0.0
-streamlit-option-menu==0.3.4
+streamlit-option-menu==0.3.6
 colorlog==6.7.0
 Django==4.2.1
 djangorestframework==3.14.0
