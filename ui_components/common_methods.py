@@ -593,8 +593,8 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
             promote_image_variant(timing_uuid, number_of_image_variants - 1)
 
     project_update_data = {
-        "zoom_level": st.session_state['zoom_level'],
-        "rotation_angle_value": st.session_state['rotation_angle_value'],
+        "zoom_level": st.session_state['zoom_level_input'],
+        "rotation_angle_value": st.session_state['rotation_angle_input'],
         "x_shift": st.session_state['x_shift'],
         "y_shift": st.session_state['y_shift']
     }
@@ -603,7 +603,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
 
     # TODO: CORRECT-CODE - make a proper column for zoom details
     timing_update_data = {
-        "zoom_details": f"{st.session_state['zoom_level']},{st.session_state['rotation_angle_value']},{st.session_state['x_shift']},{st.session_state['y_shift']}",
+        "zoom_details": f"{st.session_state['zoom_level_input']},{st.session_state['rotation_angle_input']},{st.session_state['x_shift']},{st.session_state['y_shift']}",
 
     }
     data_repo.update_specific_timing(timing_uuid, **timing_update_data)
@@ -615,12 +615,12 @@ def precision_cropping_element(stage, project_uuid):
         project_uuid)
 
     def reset_zoom_element():
-        st.session_state['zoom_level'] = 100
-        st.session_state['rotation_angle_value'] = 0
-        st.session_state['x_shift'] = 0
-        st.session_state['y_shift'] = 0
+        st.session_state['zoom_level_input_key'] = 100
+        st.session_state['rotation_angle_input_key'] = 0
+        st.session_state['x_shift_key'] = 0
+        st.session_state['y_shift_key'] = 0
         st.session_state['zoom_level_input'] = 100
-        st.session_state['rotation_angle'] = 0
+        st.session_state['rotation_angle_input'] = 0
         st.session_state['x_shift'] = 0
         st.session_state['y_shift'] = 0
         st.experimental_rerun()
@@ -645,7 +645,7 @@ def precision_cropping_element(stage, project_uuid):
 
         st.session_state['zoom_level_input'] = st_memory.number_input(
             "Zoom Level (%)", min_value=10, max_value=1000, step=10, key="zoom_level_input_key", default_value=100, project_settings=project_settings)
-        st.session_state['rotation_angle'] = st_memory.number_input(
+        st.session_state['rotation_angle_input'] = st_memory.number_input(
             "Rotation Angle", min_value=-360, max_value=360, step=5, key="rotation_angle_input_key", default_value=0, project_settings=project_settings)
         st.session_state['x_shift'] = st_memory.number_input("Shift Left/Right", min_value=-1000, max_value=1000,
                                                              step=5, key="x_shift_key", default_value=0, project_settings=project_settings)
@@ -659,11 +659,11 @@ def precision_cropping_element(stage, project_uuid):
 
         st.caption("Output Image:")
         output_image = apply_image_transformations(
-            input_image, st.session_state['zoom_level_input'], st.session_state['rotation_angle'], st.session_state['x_shift'], st.session_state['y_shift'])
+            input_image, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'])
         st.image(output_image, use_column_width=True)
 
         if st.button("Save Image"):
-            save_zoomed_image(output_image, project_uuid, stage, promote=True)
+            save_zoomed_image(output_image, st.session_state['current_frame_uuid'], stage, promote=True)
             st.success("Image saved successfully!")
             time.sleep(1)
             st.experimental_rerun()
@@ -918,9 +918,10 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
                                 create_or_update_mask(
                                     st.session_state['current_frame_uuid'], im)
                     else:
+                        image_file = data_repo.get_file_from_uuid(st.session_state['edited_image'])
                         image_comparison(
                             img1=editing_image,
-                            img2=st.session_state['edited_image'], starting_position=5, label1="Original", label2="Edited")
+                            img2=image_file.location, starting_position=5, label1="Original", label2="Edited")
                         if st.button("Reset Canvas"):
                             st.session_state['edited_image'] = ""
                             st.experimental_rerun()
@@ -1093,8 +1094,6 @@ def save_image_by_stage(status):
     st.write("")
 
 # cropped_img here is a PIL image object
-
-
 def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStageType.SOURCE.value):
     data_repo = DataRepo()
     project_settings: InternalSettingObject = data_repo.get_project_setting(
@@ -1157,7 +1156,7 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
         # Save the mask image
         mask.save('videos/temp/mask.png')
 
-        inpainted_file = inpainting('videos/temp/mask.png', inpaint_prompt,
+        inpainted_file = inpainting('videos/temp/cropped.png', inpaint_prompt,
                                     inpaint_negative_prompt, st.session_state['current_frame_uuid'], True, pass_mask=True)
 
         st.session_state['inpainted_image_uuid'] = inpainted_file.uuid
