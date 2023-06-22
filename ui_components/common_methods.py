@@ -744,7 +744,7 @@ def manual_cropping_element(stage, timing_uuid):
                 st.session_state['working_image'] = enhancer.enhance(
                     contrast_factor)
 
-        project_settings: InternalProjectObject = data_repo.get_project_settings(
+        project_settings: InternalProjectObject = data_repo.get_project_setting(
             timing.project.uuid)
 
         width = project_settings.width
@@ -818,10 +818,10 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
             st.info("You need to add a style first in the Style Selection section.")
         else:
             if stage == WorkflowStageType.SOURCE.value:
-                editing_image = timing.source_image
+                editing_image = timing.source_image.location
             elif stage == WorkflowStageType.STYLED.value:
                 variants = timing.alternative_images_list
-                primary_image = timing.primary_image
+                primary_image = timing.primary_image.location
 
             width = int(project_settings.width)
             height = int(project_settings.height)
@@ -1385,14 +1385,14 @@ def back_and_forward_buttons():
         if timing.aux_frame_index > 1:
             if st.button(f"{timing.aux_frame_index-2} ⏮️", key=f"Previous Previous Image for {timing.aux_frame_index}"):
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] - 2
-                # st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
+                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
                 st.experimental_rerun()
     with smallbutton1:
         # if it's not the first image
         if timing.aux_frame_index != 0:
             if st.button(f"{timing.aux_frame_index-1} ⏪", key=f"Previous Image for {timing.aux_frame_index}"):
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] - 1
-                # st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
+                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
                 st.experimental_rerun()
 
     with smallbutton2:
@@ -1402,13 +1402,13 @@ def back_and_forward_buttons():
         if timing.aux_frame_index != len(timing_details)-1:
             if st.button(f"{timing.aux_frame_index+1} ⏩", key=f"Next Image for {timing.aux_frame_index}"):
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] + 1
-                # st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
+                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
                 st.experimental_rerun()
     with smallbutton4:
         if timing.aux_frame_index < len(timing_details)-2:
             if st.button(f"{timing.aux_frame_index+2} ⏭️", key=f"Next Next Image for {timing.aux_frame_index}"):
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] + 2
-                # st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
+                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
                 st.experimental_rerun()
 
 # TODO: CORRECT-CODE
@@ -1427,7 +1427,7 @@ def display_image(timing_uuid, stage=None, clickable=False):
         if stage == WorkflowStageType.STYLED.value:
             image = timing.primary_image_location
         elif stage == WorkflowStageType.SOURCE.value:
-            image = timing.source_image.location
+            image = timing.source_image.location if timing.source_image else ""
 
         if image != "":
             if clickable is True:

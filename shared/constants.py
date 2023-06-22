@@ -35,7 +35,6 @@ class AIModelType(ExtendedEnum):
 class GuidanceType(ExtendedEnum):
     DRAWING = 'drawing'
     IMAGE = 'image'
-    VIDEO = 'video'
 
 class InternalFileType(ExtendedEnum):
     IMAGE = 'image'
