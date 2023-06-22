@@ -9,6 +9,7 @@ import requests
 from shared.constants import AWS_S3_BUCKET, AWS_S3_REGION, SERVER, ServerType
 from shared.logging.logging import AppLogger
 from shared.logging.constants import LoggingPayload, LoggingType
+logger = AppLogger()
 
 
 def upload_file(file_location, aws_access_key, aws_secret_key, bucket=AWS_S3_BUCKET):
@@ -23,16 +24,17 @@ def upload_file(file_location, aws_access_key, aws_secret_key, bucket=AWS_S3_BUC
         s3.put_object_acl(ACL='public-read', Bucket=bucket, Key=s3_file)
         url = f"https://s3.amazonaws.com/{bucket}/{s3_file}"
     except Exception as e:
-        # saving locally in the code directory if S3 upload fails (ONLY for LOCAL/DEV SERVER)
-        if SERVER != ServerType.PRODUCTION.value:
-            logger = AppLogger()
-            logger.log(LoggingType.ERROR, LoggingPayload(
-                message=str(e), data={}))
+        # # saving locally in the code directory if S3 upload fails (ONLY for LOCAL/DEV SERVER)
+        # if SERVER != ServerType.PRODUCTION.value:
+        #     logger = AppLogger()
+        #     logger.log(LoggingType.ERROR, LoggingPayload(
+        #         message=str(e), data={}))
 
-            # TODO: fix the local destinations for different files
-            dest = "videos/controlnet_test/assets/frames/1_selected/" + unique_file_name
-            shutil.copy(file_location, dest)
-            url = dest
+        #     # TODO: fix the local destinations for different files
+        #     dest = "videos/controlnet_test/assets/frames/1_selected/" + unique_file_name
+        #     shutil.copy(file_location, dest)
+        #     url = dest
+        logger.log(LoggingType.ERROR, 'unable to upload to s3')
 
     return url
 

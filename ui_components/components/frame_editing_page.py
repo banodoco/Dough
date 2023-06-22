@@ -558,8 +558,12 @@ def frame_editing_page(project_uuid: str):
                             file_data = {
                                 "name": str(uuid.uuid4()) + ".png",
                                 "type": InternalFileType.IMAGE.value,
-                                "hosted_url": uploaded_image_url
+                                "local_path": f"videos/{project_uuid}/{replacement_frame.name}"
                             }
+
+                            if uploaded_image_url:
+                                file_data["hosted_url"] = uploaded_image_url
+                                
                             uploaded_image = data_repo.create_file(**file_data)
                             
                             if st.session_state['which_stage'] == "Unedited Key Frame":

@@ -19,7 +19,10 @@ class ReplicateProcessor(MachineLearningProcessor):
         self.app_settings = data_repo.get_app_secrets_from_user_uuid(uuid=local_storage.get_current_user_uuid())
 
         self.logger = None
-        os.environ["REPLICATE_API_TOKEN"] = self.app_settings['replicate_key']
+        try:
+            os.environ["REPLICATE_API_TOKEN"] = self.app_settings['replicate_key']
+        except Exception as e:
+            print('no replicate key found')
         self._set_urls()
         super().__init__()
 

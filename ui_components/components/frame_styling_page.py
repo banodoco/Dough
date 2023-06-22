@@ -624,7 +624,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 if st.session_state['page'] != "Motion":
                                     single_frame_time_changer(timing_details[i].uuid)
                                 st.caption(
-                                    f"Duration: {calculate_desired_duration_of_individual_clip(timing_details, i):.2f} secs")
+                                    f"Duration: {calculate_desired_duration_of_individual_clip(timing_details[i].uuid):.2f} secs")
 
                             with frame3:
                                 frame_time = st.slider(
@@ -637,8 +637,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 )
 
                             # update timing details
-                            if timing_details[i]['frame_time'] != frame_time:
-                                previous_frame_time = timing_details[i]['frame_time']
+                            if timing_details[i].frame_time != frame_time:
+                                previous_frame_time = timing_details[i].frame_time
                                 data_repo.update_specific_timing(
                                     timing_details[i].uuid, frame_time=frame_time)
                                 for a in range(i - 1, i + 2):
@@ -812,7 +812,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                     timing = data_repo.get_timing_from_uuid(
                             st.session_state['current_frame_uuid'])
-                    variants = timing_details[timing.aux_frame_index].alternative_images_list
+                    variants = timing.alternative_images_list
 
                     if variants != [] and variants != None and variants != "":
 
@@ -854,7 +854,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             project_settings = data_repo.get_project_setting(project_uuid)
                             st.success("Main variant")
                             if len(timing_details[st.session_state['current_frame_index']].alternative_images_list):
-                                st.image(primary_variant_location,
+                                st.image(timing_details[st.session_state['current_frame_index']].primary_image_location,
                                          use_column_width=True)
                             else:
                                 st.error("No variants found for this frame")
@@ -867,7 +867,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                                 else:
                                     st.info(f"Variant #{which_variant}")
-
+                                
                                 st.image(variants[which_variant].location,
                                          use_column_width=True)
 
@@ -1033,14 +1033,13 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         f.write(replacement_frame.getbuffer())
 
                                     app_setting: InternalAppSettingObject = data_repo.get_app_setting_from_uuid()
-                                    uploaded_image_url = upload_file(
-                                        f"videos/{timing.project.uuid}/{replacement_frame.name}",  app_setting.aws_access_key, app_setting.aws_secret_access_key)
-
+                                    
                                     file_data = {
                                         "name": str(uuid.uuid4()) + ".png",
                                         "type": InternalFileType.IMAGE.value,
-                                        "hosted_url": uploaded_image_url
+                                        "local_path": f"videos/{timing.project.uuid}/{replacement_frame.name}"
                                     }
+                                    
                                     replacement_image = data_repo.create_file(
                                         **file_data)
 
@@ -1050,8 +1049,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         st.session_state['current_frame_uuid'], number_of_image_variants - 1)
 
                                     # delete the uploaded file
-                                    os.remove(
-                                        f"videos/{timing.project.uuid}/{replacement_frame.name}")
                                     st.success("Replaced")
                                     time.sleep(1)
                                     st.experimental_rerun()
@@ -1288,10 +1285,10 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 data_repo.update_specific_timing(
                     new_timing.uuid, frame_time=0.0)
             else:
-                create_timings_row_at_frame_number(
+                new_timing = create_timings_row_at_frame_number(
                     project_uuid, index_of_current_item + 1)
                 data_repo.update_specific_timing(
-                    project_uuid, frame_time=key_frame_time)
+                    new_timing.uuid, frame_time=key_frame_time)
             
             timing_details = data_repo.get_timing_list_from_project(project_uuid)
             if selected_image != "":
@@ -1319,8 +1316,10 @@ def frame_styling_page(mainheader2, project_uuid: str):
             
             if len(timing_details) == 1:
                 st.session_state['current_frame_index'] = 0
+                st.session_state['current_frame_uuid'] = timing_details[0].uuid
             else:
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] + 1
+                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
 
             st.session_state['page'] = "Guidance"
             st.session_state['section_index'] = 0
