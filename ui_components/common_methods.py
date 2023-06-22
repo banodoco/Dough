@@ -632,7 +632,7 @@ def precision_cropping_element(stage, project_uuid):
         st.error("Please select a source image before cropping")
         return
     else:
-        input_image = get_pillow_image(input_image)
+        input_image = get_pillow_image(input_image.location)
 
     col1, col2 = st.columns(2)
 
@@ -644,13 +644,13 @@ def precision_cropping_element(stage, project_uuid):
             reset_zoom_element()
 
         st.session_state['zoom_level_input'] = st_memory.number_input(
-            "Zoom Level (%)", min_value=10, max_value=1000, step=10, key="zoom_level_input", default_value=100, project_settings=project_settings)
+            "Zoom Level (%)", min_value=10, max_value=1000, step=10, key="zoom_level_input_key", default_value=100, project_settings=project_settings)
         st.session_state['rotation_angle'] = st_memory.number_input(
-            "Rotation Angle", min_value=-360, max_value=360, step=5, key="rotation_angle_input", default_value=0, project_settings=project_settings)
+            "Rotation Angle", min_value=-360, max_value=360, step=5, key="rotation_angle_input_key", default_value=0, project_settings=project_settings)
         st.session_state['x_shift'] = st_memory.number_input("Shift Left/Right", min_value=-1000, max_value=1000,
-                                                             step=5, key="x_shift", default_value=0, project_settings=project_settings)
+                                                             step=5, key="x_shift_key", default_value=0, project_settings=project_settings)
         st.session_state['y_shift'] = st_memory.number_input(
-            "Shift Up/Down", min_value=-1000, max_value=1000, step=5, key="y_shift", default_value=0, project_settings=project_settings)
+            "Shift Up/Down", min_value=-1000, max_value=1000, step=5, key="y_shift_key", default_value=0, project_settings=project_settings)
 
         st.caption("Input Image:")
         st.image(input_image, caption="Input Image", width=300)
@@ -821,7 +821,7 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
                 editing_image = timing.source_image.location
             elif stage == WorkflowStageType.STYLED.value:
                 variants = timing.alternative_images_list
-                primary_image = timing.primary_image.location
+                editing_image = timing.primary_image_location
 
             width = int(project_settings.width)
             height = int(project_settings.height)
@@ -1454,6 +1454,7 @@ def display_image(timing_uuid, stage=None, clickable=False):
                     # st.session_state['frame_styling_view_type_index'] = 0
                     st.session_state['frame_styling_view_type'] = "Individual View"
                     st.session_state['counter'] += 1
+                    st.experimental_rerun()
 
             elif clickable is False:
                 st.image(image, use_column_width=True)
@@ -1469,12 +1470,13 @@ def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.valu
 
     current_timing = data_repo.get_timing_from_uuid(
         st.session_state['current_frame_uuid'])
+    
     with header1:
         prev_2_timing = data_repo.get_timing_from_frame_number(project_uuid,
             current_timing.aux_frame_index - 2)
 
         if prev_2_timing:
-            display_image(prev_timing.uuid, stage=stage, clickable=True)
+            display_image(prev_2_timing.uuid, stage=stage, clickable=True)
 
     with header2:
         prev_timing = data_repo.get_timing_from_frame_number(project_uuid,
@@ -1513,6 +1515,8 @@ def styling_element(timing_uuid, view_type="Single"):
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         timing.project.uuid)
 
+    stages = ["Source Image", "Main Variant"]
+
     if project_settings.default_stage != "":
         if 'index_of_which_stage_to_run_on' not in st.session_state:
             st.session_state['transformation_stage'] = project_settings.default_stage
@@ -1520,19 +1524,6 @@ def styling_element(timing_uuid, view_type="Single"):
                 st.session_state['transformation_stage'])
     else:
         st.session_state['index_of_which_stage_to_run_on'] = 0
-
-    stages1, stages2 = st.columns([1, 1])
-    with stages1:
-        st.session_state['transformation_stage'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True,
-                                                             index=st.session_state['index_of_which_stage_to_run_on'], help="Extracted frames means the original frames from the video.")
-    with stages2:
-        stage_frame: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-            st.session_state['current_frame_uuid'])
-        if st.session_state['transformation_stage'] == "Extracted Key Frames":
-            image = stage_frame.source_image.location
-        else:
-            image = stage_frame.primary_image_location
-            image = image.location if image else ""
 
     if view_type == "Single":
         append_to_item_name = f"{st.session_state['current_frame_index']}"
@@ -1544,7 +1535,7 @@ def styling_element(timing_uuid, view_type="Single"):
 
     # TODO: CORRECT-CODE transformation_stage add this in db
     if view_type == "Single":
-        if timing.transformation_stage != "":
+        if timing.transformation_stage:
             if f'index_of_which_stage_to_run_on_{append_to_item_name}' not in st.session_state:
                 st.session_state['transformation_stage'] = timing.transformation_stage
                 st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = stages.index(
@@ -1563,12 +1554,13 @@ def styling_element(timing_uuid, view_type="Single"):
 
     stages1, stages2 = st.columns([1, 1])
     with stages1:
-        st.session_state['transformation_stage'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True,
+        st.session_state['transformation_stage'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True, key=str(uuid.uuid4()),
                                                              index=st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'], help="Extracted frames means the original frames from the video.")
     with stages2:
         if st.session_state['transformation_stage'] == "Source Image":
-            image = timing_details[st.session_state['current_frame_index']
-                                   ]['source_image']
+            source_img = timing_details[st.session_state['current_frame_index']
+                                   ].source_image
+            image = source_img.location if source_img else ""
         elif st.session_state['transformation_stage'] == "Main Variant":
             image = timing_details[st.session_state['current_frame_index']].primary_image_location
         if image != "":
@@ -2337,14 +2329,13 @@ def trigger_restyling_process(
         dynamic_prompting(prompt, source_image, timing_uuid)
 
     timing = data_repo.get_timing_from_uuid(timing_uuid)
-    if transformation_stage == "Extracted Key Frames":
+    if transformation_stage == "Source Image":
         source_image = timing.source_image
     else:
-        variants: List[InternalFileObject] = data_repo.get_alternative_image_list(
-            timing_uuid)
+        variants: List[InternalFileObject] = timing.alternative_images_list
         number_of_variants = len(variants)
         primary_image = timing.primary_image
-        source_image = variants[primary_image].location
+        source_image = primary_image.location
 
     if st.session_state['custom_pipeline'] == "Mystique":
         output_file = custom_pipeline_mystique(timing_uuid, source_image)

@@ -802,7 +802,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                 elif st.session_state['page'] == "Styling":
 
-                    carousal_of_images_element(timing_details, stage=WorkflowStageType.STYLED.value)
+                    carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.value)
 
                     comparison_values = [
                         "Other Variants", "Source Frame", "Previous & Next Frame", "None"]
@@ -810,6 +810,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     st.session_state['show_comparison'] = st_memory.radio(
                         "Show comparison to:", options=comparison_values, horizontal=True, project_settings=project_settings, key="show_comparison_radio")
 
+                    timing = data_repo.get_timing_from_uuid(
+                            st.session_state['current_frame_uuid'])
                     variants = timing_details[timing.aux_frame_index].alternative_images_list
 
                     if variants != [] and variants != None and variants != "":
@@ -825,7 +827,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                         with aboveimage1:
                             st.info(
-                                f"Current variant = {timing_details[st.session_state['current_frame_index']].primary_image.aux_frame_index}")
+                                f"Current variant = {timing_details[st.session_state['current_frame_index']].primary_variant_index}")
 
                         with aboveimage2:
                             show_more_than_10_variants = st.checkbox(
@@ -836,14 +838,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                             if show_more_than_10_variants is True:
                                 current_variant = int(
-                                    timing_details[st.session_state['current_frame_index']].primary_image.aux_frame_index)
+                                    timing_details[st.session_state['current_frame_index']].primary_variant_index)
                                 which_variant = st.radio(f'Main variant = {current_variant}', range(
                                     number_of_variants), index=number_of_variants-1, horizontal=True, key=f"Main variant for {st.session_state['current_frame_index']}")
                             else:
                                 last_ten_variants = range(
                                     max(0, number_of_variants - 10), number_of_variants)
                                 current_variant = int(
-                                    timing_details[st.session_state['current_frame_index']].primary_image.aux_frame_index)
+                                    timing_details[st.session_state['current_frame_index']].primary_variant_index)
                                 which_variant = st.radio(f'Main variant = {current_variant}', last_ten_variants, index=len(
                                     last_ten_variants)-1, horizontal=True, key=f"Main variant for {st.session_state['current_frame_index']}")
 
@@ -866,7 +868,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 else:
                                     st.info(f"Variant #{which_variant}")
 
-                                st.image(variants[which_variant],
+                                st.image(variants[which_variant].location,
                                          use_column_width=True)
 
                                 if which_variant != current_variant:

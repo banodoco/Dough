@@ -125,7 +125,7 @@ def create_new_user_data(user: InternalUserObject):
         "default_guidance_scale" : 7.5,
         "default_seed" : 1234,
         "default_num_inference_steps" : 30,
-        "default_stage" : "Extracted Key Frames",
+        "default_stage" : "Source Image",
         "default_custom_model_id_list" : "[]",
         "default_adapter_type" : "N",
         "guidance_type" : GuidanceType.DRAWING.value,
