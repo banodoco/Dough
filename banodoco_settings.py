@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 import uuid
 from dotenv import dotenv_values
 
@@ -27,6 +28,8 @@ def project_init():
 
     data_repo = DataRepo()
 
+    # db initialization takes some time
+    time.sleep(2)
     # create a user if not already present (if dev mode)
     # if this is the local server with no user than create one and related data
     user_count = data_repo.get_total_user_count()
@@ -82,7 +85,7 @@ def create_new_user_data(user: InternalUserObject):
     project_data = {
         "user_id": user.uuid,
         "name": "my_first_project",
-        'width': 512,
+        'width': 704,
         'height': 512
     }
     project = data_repo.create_project(**project_data)

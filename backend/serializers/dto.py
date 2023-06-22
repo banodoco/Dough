@@ -92,7 +92,8 @@ class TimingDto(serializers.ModelSerializer):
             "low_threshold",
             "high_threshold",
             "aux_frame_index",
-            "created_on"
+            "created_on",
+            "transformation_stage"
         )
 
 
@@ -143,7 +144,10 @@ class SettingDto(serializers.ModelSerializer):
             "default_low_threshold",
             "default_high_threshold",
             "created_on",
-            "zoom_level"
+            "zoom_level",
+            "x_shift",
+            "y_shift",
+            "rotation_angle_value"
         )
 
 

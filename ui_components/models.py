@@ -83,20 +83,21 @@ class InternalFrameTimingObject:
         self.alternative_images = kwargs['alternative_images'] if 'alternative_images' in kwargs and kwargs["alternative_images"] else [
         ]
         self.custom_pipeline = kwargs['custom_pipeline'] if 'custom_pipeline' in kwargs and kwargs["custom_pipeline"] else None
-        self.prompt = kwargs['prompt'] if 'prompt' in kwargs and kwargs["prompt"] else None
-        self.negative_prompt = kwargs['negative_prompt'] if 'negative_prompt' in kwargs and kwargs["negative_prompt"] else None
+        self.prompt = kwargs['prompt'] if 'prompt' in kwargs and kwargs["prompt"] else ""
+        self.negative_prompt = kwargs['negative_prompt'] if 'negative_prompt' in kwargs and kwargs["negative_prompt"] else ""
         self.guidance_scale = kwargs['guidance_scale'] if 'guidance_scale' in kwargs else None
         self.seed = kwargs['seed'] if 'seed' in kwargs else None
         self.num_inteference_steps = kwargs['num_inteference_steps'] if 'num_inteference_steps' in kwargs and kwargs["num_inteference_steps"] else None
         self.strength = kwargs['strength'] if 'strength' in kwargs else None
-        self.notes = kwargs['notes'] if 'notes' in kwargs and kwargs["notes"] else None
+        self.notes = kwargs['notes'] if 'notes' in kwargs and kwargs["notes"] else ""
         self.adapter_type = kwargs['adapter_type'] if 'adapter_type' in kwargs and kwargs["adapter_type"] else None
         self.clip_duration = kwargs['clip_duration'] if 'clip_duration' in kwargs and kwargs["clip_duration"] else None
         self.animation_style = kwargs['animation_style'] if 'animation_style' in kwargs and kwargs["animation_style"] else None
-        self.interpolation_steps = kwargs['interpolation_steps'] if 'interpolation_steps' in kwargs and kwargs["interpolation_steps"] else None
-        self.low_threshold = kwargs['low_threshold'] if 'low_threshold' in kwargs and kwargs["low_threshold"] else None
-        self.high_threshold = kwargs['high_threshold'] if 'high_threshold' in kwargs and kwargs["high_threshold"] else None
-        self.aux_frame_index = kwargs['aux_frame_index'] if 'aux_frame_index' in kwargs else None
+        self.interpolation_steps = kwargs['interpolation_steps'] if 'interpolation_steps' in kwargs and kwargs["interpolation_steps"] else 0
+        self.low_threshold = kwargs['low_threshold'] if 'low_threshold' in kwargs and kwargs["low_threshold"] else 0
+        self.high_threshold = kwargs['high_threshold'] if 'high_threshold' in kwargs and kwargs["high_threshold"] else 0
+        self.aux_frame_index = kwargs['aux_frame_index'] if 'aux_frame_index' in kwargs else 0
+        self.transformation_stage = kwargs['transformation_stage'] if 'transformation_stage' in kwargs else None
 
     @property
     def alternative_images_list(self):
@@ -193,6 +194,9 @@ class InternalSettingObject:
             'default_high_threshold', kwargs) else None
         self.zoom_level = kwargs['zoom_level'] if key_present(
             'zoom_level', kwargs) else None
+        self.x_shift = kwargs['x_shift'] if key_present('x_shift', kwargs) else None
+        self.y_shift = kwargs['y_shift'] if key_present('y_shift', kwargs) else None
+        self.rotation_angle_value = kwargs['rotation_angle_value'] if key_present('rotation_angle_value', kwargs) else None
 
 
 class InternalBackupObject:

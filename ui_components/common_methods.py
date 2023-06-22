@@ -65,31 +65,32 @@ def clone_styling_settings(source_frame_number, target_frame_uuid):
         target_timing.project.uuid)
 
     data_repo.update_specific_timing(
-        target_frame_uuid, "custom_pipeline", timing_details[source_frame_number].custom_pipeline)
+        target_frame_uuid, custom_pipeline=timing_details[source_frame_number].custom_pipeline)
     data_repo.update_specific_timing(
-        target_frame_uuid, "negative_prompt", timing_details[source_frame_number].negative_prompt)
+        target_frame_uuid, negative_prompt=timing_details[source_frame_number].negative_prompt)
     data_repo.update_specific_timing(
-        target_frame_uuid, "guidance_scale", timing_details[source_frame_number].guidance_scale)
+        target_frame_uuid, guidance_scale=timing_details[source_frame_number].guidance_scale)
     data_repo.update_specific_timing(
-        target_frame_uuid, "seed", timing_details[source_frame_number].seed)
+        target_frame_uuid, seed=timing_details[source_frame_number].seed)
     data_repo.update_specific_timing(
-        target_frame_uuid, "num_inference_steps", timing_details[source_frame_number].num_inference_steps)
+        target_frame_uuid, num_inteference_steps=timing_details[source_frame_number].num_inteference_steps)
     data_repo.update_specific_timing(
-        target_frame_uuid, "transformation_stage", timing_details[source_frame_number].transformation_stage)
+        target_frame_uuid, transformation_stage=timing_details[source_frame_number].transformation_stage)
+    if timing_details[source_frame_number].model:
+        data_repo.update_specific_timing(
+            target_frame_uuid, model_id=timing_details[source_frame_number].model.uuid)
     data_repo.update_specific_timing(
-        target_frame_uuid, "model_id", timing_details[source_frame_number].model_id)
+        target_frame_uuid, strength=timing_details[source_frame_number].strength)
     data_repo.update_specific_timing(
-        target_frame_uuid, "strength", timing_details[source_frame_number].strength)
+        target_frame_uuid, custom_models=timing_details[source_frame_number].custom_model_id_list)
     data_repo.update_specific_timing(
-        target_frame_uuid, "custom_models", timing_details[source_frame_number].custom_models)
+        target_frame_uuid, adapter_type=timing_details[source_frame_number].adapter_type)
     data_repo.update_specific_timing(
-        target_frame_uuid, "adapter_type", timing_details[source_frame_number].adapter_type)
+        target_frame_uuid, low_threshold=timing_details[source_frame_number].low_threshold)
     data_repo.update_specific_timing(
-        target_frame_uuid, "low_threshold", timing_details[source_frame_number].low_threshold)
+        target_frame_uuid, high_threshold=timing_details[source_frame_number].high_threshold)
     data_repo.update_specific_timing(
-        target_frame_uuid, "high_threshold", timing_details[source_frame_number].high_threshold)
-    data_repo.update_specific_timing(
-        target_frame_uuid, "prompt", timing_details[source_frame_number].prompt)
+        target_frame_uuid, prompt=timing_details[source_frame_number].prompt)
 
 
 def prompt_finder_element(project_uuid):
@@ -551,9 +552,9 @@ def fetch_image_by_stage(project_uuid, stage):
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
     if stage == WorkflowStageType.SOURCE.value:
-        return timing_details[st.session_state['current_frame_uuid']].source_image
+        return timing_details[st.session_state['current_frame_index']].source_image
     elif stage == WorkflowStageType.STYLED.value:
-        return timing_details[st.session_state['current_frame_uuid']].primary_image
+        return timing_details[st.session_state['current_frame_index']].primary_image
     else:
         return None
 
@@ -593,7 +594,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
 
     project_update_data = {
         "zoom_level": st.session_state['zoom_level'],
-        "rotation_angle_input_value": st.session_state['rotation_angle_input_value'],
+        "rotation_angle_value": st.session_state['rotation_angle_value'],
         "x_shift": st.session_state['x_shift'],
         "y_shift": st.session_state['y_shift']
     }
@@ -602,7 +603,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
 
     # TODO: CORRECT-CODE - make a proper column for zoom details
     timing_update_data = {
-        "zoom_details": f"{st.session_state['zoom_level']},{st.session_state['rotation_angle_input_value']},{st.session_state['x_shift']},{st.session_state['y_shift']}",
+        "zoom_details": f"{st.session_state['zoom_level']},{st.session_state['rotation_angle_value']},{st.session_state['x_shift']},{st.session_state['y_shift']}",
 
     }
     data_repo.update_specific_timing(timing_uuid, **timing_update_data)
@@ -615,7 +616,7 @@ def precision_cropping_element(stage, project_uuid):
 
     def reset_zoom_element():
         st.session_state['zoom_level'] = 100
-        st.session_state['rotation_angle_input_value'] = 0
+        st.session_state['rotation_angle_value'] = 0
         st.session_state['x_shift'] = 0
         st.session_state['y_shift'] = 0
         st.session_state['zoom_level_input'] = 100
@@ -685,15 +686,15 @@ def manual_cropping_element(stage, timing_uuid):
             input_image = timing.primary_image_location
 
         if 'current_working_image_number' not in st.session_state:
-            st.session_state['current_working_image_number'] = st.session_state['current_frame_uuid']
+            st.session_state['current_working_image_number'] = st.session_state['current_frame_index']
 
         def get_working_image():
             st.session_state['working_image'] = get_pillow_image(input_image)
             st.session_state['working_image'] = ImageOps.expand(
                 st.session_state['working_image'], border=200, fill="black")
-            st.session_state['current_working_image_number'] = st.session_state['current_frame_uuid']
+            st.session_state['current_working_image_number'] = st.session_state['current_frame_index']
 
-        if 'working_image' not in st.session_state or st.session_state['current_working_image_number'] != st.session_state['current_frame_uuid']:
+        if 'working_image' not in st.session_state or st.session_state['current_working_image_number'] != st.session_state['current_frame_index']:
             get_working_image()
 
         options1, options2, option3, option4 = st.columns([3, 1, 1, 1])
@@ -804,8 +805,8 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
             st.write("")
 
         # initiative value
-        if "which_image" not in st.session_state:
-            st.session_state['current_frame_uuid'] = 0
+        if "current_frame_uuid" not in st.session_state:
+            st.session_state['current_frame_uuid'] = timing_details[0].uuid
 
         def reset_new_image():
             st.session_state['edited_image'] = ""
@@ -927,7 +928,7 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
                 elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection" or type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
                     with main_col_1:
                         if type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
-                            if timing_details[st.session_state['current_frame_uuid']]["mask"] == "":
+                            if timing_details[st.session_state['current_frame_index']]["mask"] == "":
                                 st.info(
                                     "You don't have a previous mask to re-use.")
                             else:
@@ -940,7 +941,7 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
                                         st.info(
                                             "This will update the **white pixels** in the mask with the pixels from the image you are editing.")
                                     st.image(
-                                        timing_details[st.session_state['current_frame_uuid']]["mask"], use_column_width=True)
+                                        timing_details[st.session_state['current_frame_index']]["mask"], use_column_width=True)
 
                     with main_col_2:
                         if st.session_state['edited_image'] == "":
@@ -1447,7 +1448,8 @@ def display_image(timing_uuid, stage=None, clickable=False):
                     "max-width": "100%", "height": "auto"}, key=f"{timing_idx}_{stage}_image_{st.session_state['counter']}")
 
                 if st.session_state[f'{timing_idx}_{stage}_clicked'] == 0:
-                    st.session_state['current_frame_uuid'] = timing_idx
+                    timing_details = data_repo.get_timing_list_from_project(timing.project.uuid)
+                    st.session_state['current_frame_uuid'] = timing_details[timing_idx].uuid
                     st.session_state['current_frame_index'] = timing_idx
                     # st.session_state['frame_styling_view_type_index'] = 0
                     st.session_state['frame_styling_view_type'] = "Individual View"
@@ -1533,7 +1535,7 @@ def styling_element(timing_uuid, view_type="Single"):
             image = image.location if image else ""
 
     if view_type == "Single":
-        append_to_item_name = f"{st.session_state['current_frame_uuid']}"
+        append_to_item_name = f"{st.session_state['current_frame_index']}"
     elif view_type == "List":
         append_to_item_name = "bulk"
         st.markdown("## Batch queries")
@@ -2488,7 +2490,7 @@ def create_working_assets(video_name):
     os.mkdir("videos/" + video_name + "/assets/videos/1_final")
     os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
 
-    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type', 'guidance_type', 'default_animation_style', 'last_low_threshold', 'last_high_threshold', 'last_stage_run_on', 'zoom_level', 'rotation_angle_input_value', 'x_shift', 'y_shift'],
+    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type', 'guidance_type', 'default_animation_style', 'last_low_threshold', 'last_high_threshold', 'last_stage_run_on', 'zoom_level', 'rotation_angle_value', 'x_shift', 'y_shift'],
             'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Source Image', '', '', '', '', 100, 200, '', 100, 0, 0, 0]}
 
     df = pd.DataFrame(data)
@@ -2501,7 +2503,7 @@ def create_working_assets(video_name):
     df.loc[0] = [0, "", 0, "", "", "", 0, 0, 0, "", 0, "", "",
                  "", "", 0, "", "", "", "", "", "", "", "", "", "", "", ""]
 
-    st.session_state['current_frame_uuid'] = 0
+    st.session_state['current_frame_index'] = 0
 
     df.to_csv(f'videos/{video_name}/timings.csv', index=False)
 

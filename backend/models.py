@@ -140,7 +140,7 @@ class Timing(BaseModel):
     frame_time = models.FloatField(default=None, null=True)
     frame_number = models.IntegerField(default=None, null=True)
     alternative_images = models.TextField(default=None, null=True)
-    custom_pipeline = models.CharField(max_length=255, default="", blank=True)
+    custom_pipeline = models.CharField(max_length=255, default=None, null=True, blank=True)
     prompt = models.TextField(default='', blank=True)
     negative_prompt = models.TextField(default="", blank=True)
     guidance_scale = models.FloatField(default=7.5)
@@ -148,13 +148,14 @@ class Timing(BaseModel):
     num_inteference_steps = models.IntegerField(default=50)
     strength = models.FloatField(default=4)
     notes = models.TextField(default="", blank=True)
-    adapter_type = models.CharField(max_length=255, default="", blank=True)
+    adapter_type = models.CharField(max_length=255, default=None, null=True, blank=True)
     clip_duration = models.FloatField(default=None, null=True)     # clip duration of the timed_clip
     animation_style = models.CharField(max_length=255, default=None, null=True)
     interpolation_steps = models.IntegerField(default=0)
     low_threshold = models.FloatField(default=0)
     high_threshold = models.FloatField(default=0)
     aux_frame_index = models.IntegerField(default=0)    # starts with 0 # TODO: udpate this
+    transformation_stage = models.CharField(max_length=255, default=None, null=True)
 
     class Meta:
         app_label = 'backend'
@@ -315,9 +316,10 @@ class Setting(BaseModel):
     default_animation_style = models.CharField(max_length=255)  # "Interpolation", "Direct Morphing"
     default_low_threshold = models.FloatField(default=0)
     default_high_threshold = models.FloatField(default=0)
-    zoom_level = models.IntegerField(default=0)
+    zoom_level = models.IntegerField(default=100)
     x_shift = models.IntegerField(default=0)
     y_shift = models.IntegerField(default=0)
+    rotation_angle_value = models.FloatField(default=0.0)
 
     class Meta:
         app_label = 'backend'
