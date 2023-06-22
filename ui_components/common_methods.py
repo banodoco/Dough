@@ -948,9 +948,10 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
                         if st.session_state['edited_image'] == "":
                             st.image(editing_image, use_column_width=True)
                         else:
+                            image_file = data_repo.get_file_from_uuid(st.session_state['edited_image'])
                             image_comparison(
                                 img1=editing_image,
-                                img2=st.session_state['edited_image'], starting_position=5, label1="Original", label2="Edited")
+                                img2=image_file.location, starting_position=5, label1="Original", label2="Edited")
                             if st.button("Reset Canvas"):
                                 st.session_state['edited_image'] = ""
                                 st.experimental_rerun()
@@ -3801,11 +3802,11 @@ def create_depth_mask_image(input_image, layer, timing_uuid):
     output = ml_client.predict_model_output(
         REPLICATE_MODEL.cjwbw_midas, image=input_image, model_type="dpt_beit_large_512")
     try:
-        urllib.request.urlretrieve(output, "depth.png")
+        urllib.request.urlretrieve(output, "videos/temp/depth.png")
     except Exception as e:
         print(e)
 
-    depth_map = Image.open("depth.png")
+    depth_map = Image.open("videos/temp/depth.png")
     depth_map = depth_map.convert("L")  # Convert to grayscale image
     pixels = depth_map.load()
     mask = Image.new("L", depth_map.size)
