@@ -824,7 +824,9 @@ class DBRepo:
             setattr(timing, attr, value)
         timing.save()
 
-        return InternalResponse({}, 'timing updated successfully', True)
+        payload = {}
+
+        return InternalResponse(payload, 'timing updated successfully', True)
     
     def delete_timing_from_uuid(self, uuid):
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()

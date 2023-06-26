@@ -193,6 +193,30 @@ def create_predefined_models(user):
             "category" : AIModelType.BASE_SD.value,
             "keyword" : ""
         },
+        {
+            "name" : 'real-esrgan-upscaling',
+            "user_id" : user.uuid,
+            "version": REPLICATE_MODEL.real_esrgan_upscale.version,
+            "replicate_url" : REPLICATE_MODEL.real_esrgan_upscale.name,
+            "category" : AIModelType.BASE_SD.value,
+            "keyword" : ""
+        },
+        {
+            "name" : 'controlnet_1_1_x_realistic_vision_v2_0',
+            "user_id" : user.uuid,
+            "version": REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0.version,
+            "replicate_url" : REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0.name,
+            "category" : AIModelType.BASE_SD.value,
+            "keyword" : ""
+        },
+        {
+            "name" : 'urpm-v1.3',
+            "user_id" : user.uuid,
+            "version": REPLICATE_MODEL.urpm.version,
+            "replicate_url" : REPLICATE_MODEL.urpm.name,
+            "category" : AIModelType.BASE_SD.value,
+            "keyword" : ""
+        },
     ]
 
     model_list = []

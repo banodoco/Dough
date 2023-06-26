@@ -8,6 +8,8 @@ import requests as r
 from streamlit_drawable_canvas import st_canvas
 from shared.constants import GuidanceType, InternalFileType
 from shared.file_upload.s3 import upload_file
+from shared.logging.constants import LoggingType
+from shared.logging.logging import AppLogger
 from ui_components.common_methods import delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, create_timings_row_at_frame_number, extract_canny_lines, convert_to_minutes_and_seconds, styling_element, create_full_preview_video, back_and_forward_buttons, resize_and_rotate_element, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, single_frame_time_changer
 from ui_components.common_methods import create_gif_preview, delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, prompt_interpolation_model, update_speed_of_video_clip, create_timings_row_at_frame_number, extract_canny_lines, get_duration_from_video, get_audio_bytes_for_slice, add_audio_to_video_slice, convert_to_minutes_and_seconds, styling_element, get_primary_variant_location, create_full_preview_video, back_and_forward_buttons, resize_and_rotate_element, manual_cropping_element, precision_cropping_element, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, single_frame_time_changer, apply_image_transformations, get_pillow_image, save_new_image, prompt_finder_element, preview_frame, carousal_of_images_element, display_image, ai_frame_editing_element, clone_styling_settings
 from utils import st_memory
@@ -30,7 +32,6 @@ from streamlit_extras.annotated_text import annotated_text
 from utils.data_repo.data_repo import DataRepo
 
 
-# TODO: CORRECT-CODE
 def frame_styling_page(mainheader2, project_uuid: str):
     data_repo = DataRepo()
 
@@ -1324,3 +1325,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
             st.session_state['page'] = "Guidance"
             st.session_state['section_index'] = 0
             st.experimental_rerun()
+
+    logger = AppLogger()
+    logger.log(LoggingType.DEBUG, "*********** " + str(data_repo.total_count) + " ***********", data_repo.call_counts)

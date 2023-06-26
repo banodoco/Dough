@@ -3,6 +3,8 @@ from shared.constants import InternalFileType
 from backend.db_repo import DBRepo
 from shared.constants import SERVER, ServerType
 from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalUserObject
+from utils.cache.cache_methods import CacheKey, CacheMode, cache_data
+from utils.common_decorators import count_calls
 from utils.local_storage.local_storage import get_current_user_uuid
 
 # TODO - to be completed later
@@ -10,6 +12,7 @@ class APIRepo:
     def __init__(self):
         pass
 
+@cache_data
 class DataRepo:
     def __init__(self):
         if SERVER != ServerType.PRODUCTION.value:
@@ -170,9 +173,6 @@ class DataRepo:
         timing = self.db_repo.get_timing_from_frame_number(project_uuid, frame_number).data['data']
         return InternalFrameTimingObject(**timing) if timing else None
     
-    def get_primary_variant_location(self, timing_uuid):
-        location = self.db_repo.get_primary_variant_location(timing_uuid).data['data']
-        return location
     
     # this is based on the aux_frame_index and not the order in the db
     def get_next_timing(self, uuid):
