@@ -122,12 +122,12 @@ def custom_models_page(project_uuid):
                 st.info("Loading...")
                 images_for_model = []
 
-                directory = "training_data"
+                directory = "videos/training_data"
                 if not os.path.exists(directory):
                     os.makedirs(directory)
 
                 for image in uploaded_files:
-                    with open(os.path.join(f"training_data", image.name), "wb") as f:
+                    with open(os.path.join(f"videos/training_data", image.name), "wb") as f:
                         f.write(image.getbuffer())
                         images_for_model.append(image.name)
                 model_status = train_model(images_for_model, instance_prompt, class_prompt, max_train_steps,
@@ -151,16 +151,16 @@ def custom_models_page(project_uuid):
         else:
             if st.button("Upload Model", disabled=False):
                 images_for_model = []
-                directory = "training_data"
+                directory = "videos/training_data"
                 if not os.path.exists(directory):
                     os.makedirs(directory)
 
                 for image in uploaded_model_images:
-                    with open(os.path.join(f"training_data", image.name), "wb") as f:
+                    with open(os.path.join(f"videos/training_data", image.name), "wb") as f:
                         f.write(image.getbuffer())
                         images_for_model.append(image.name)
                 for i in range(len(images_for_model)):
-                    images_for_model[i] = 'training_data/' + \
+                    images_for_model[i] = 'videos/training_data/' + \
                         images_for_model[i]
                 df = pd.read_csv("models.csv")
                 df = df.append({}, ignore_index=True)

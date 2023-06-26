@@ -68,7 +68,7 @@ class ReplicateProcessor(MachineLearningProcessor):
     def upload_training_data(self, images_list):
         # compressing images in zip file
         for i in range(len(images_list)):
-            images_list[i] = 'training_data/' + images_list[i]
+            images_list[i] = 'videos/training_data/' + images_list[i]
 
         with zipfile.ZipFile('images.zip', 'w') as zip:
             for image in images_list:

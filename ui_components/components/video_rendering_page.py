@@ -66,7 +66,7 @@ def video_rendering_page(mainheader2, project_uuid):
     #     "videos/" + project_name + "/assets/videos/2_completed") if list_of_files.endswith('.mp4')]
 
     video_list: List[InternalFileObject] = data_repo.get_all_file_list(InternalFileType.VIDEO.value, tag=InternalFileTag.GENERATED_VIDEO.value, project_id=project_uuid)
-
+    video_list = sorted(video_list, key=lambda x: x.created_on, reverse=True)
     # video_dir = "videos/" + project_name + "/assets/videos/2_completed"
 
     # video_list.sort(key=lambda f: int(re.sub('\D', '', f)))
