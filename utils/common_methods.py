@@ -1,6 +1,13 @@
 from pathlib import Path
 import os
 import csv
+import streamlit as st
+import json
+from shared.logging.constants import LoggingType
+from shared.logging.logging import AppLogger
+
+from utils.constants import LOGGED_USER
+from utils.data_repo.data_repo import DataRepo
 
 # creates a file path if it's not already present
 def create_file_path(path):
@@ -149,3 +156,19 @@ def create_working_assets(project_name):
     for csv_file in csv_file_list:
         create_file_path(csv_file)
 
+def get_current_user():
+    logger = AppLogger()
+    # changing the code to operate on streamlit state rather than local file
+    if not LOGGED_USER in st.session_state:
+        data_repo = DataRepo()
+        user = data_repo.get_first_active_user()
+        st.session_state[LOGGED_USER] = user.to_json() if user else None
+    
+    return json.loads(st.session_state[LOGGED_USER]) if LOGGED_USER in st.session_state else None
+
+def get_current_user_uuid():
+    current_user = get_current_user()
+    if current_user and 'uuid' in current_user:
+        return current_user['uuid']
+    else: 
+        return None

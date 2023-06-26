@@ -1325,6 +1325,3 @@ def frame_styling_page(mainheader2, project_uuid: str):
             st.session_state['page'] = "Guidance"
             st.session_state['section_index'] = 0
             st.experimental_rerun()
-
-    logger = AppLogger()
-    logger.log(LoggingType.DEBUG, "*********** " + str(data_repo.total_count) + " ***********", data_repo.call_counts)

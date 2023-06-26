@@ -39,6 +39,7 @@ from shared.file_upload.s3 import upload_file
 from shared.utils import is_online_file_path
 from ui_components.constants import VideoQuality, WorkflowStageType
 from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
+from utils.common_methods import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import InternalResponse, AnimationStyleType
 from utils.ml_processor.ml_interface import get_ml_client
@@ -2600,7 +2601,7 @@ def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max
 
         model_data = {
             "name": model_name,
-            "user_id": local_storage.get_current_user_uuid(),
+            "user_id": get_current_user_uuid(),
             "replicate_model_id": model_id,
             "replicate_url": None,
             "diffusers_url": None,
@@ -2630,7 +2631,7 @@ def train_lora_model(training_file_url, type_of_task, resolution, model_name, im
     file_uuid_list = json.dump(file_uuid_list)
     model_data = {
         "name": model_name,
-        "user_id": local_storage.get_current_user_uuid(),
+        "user_id": get_current_user_uuid(),
         "replicate_url": output,
         "diffusers_url": None,
         "category": AIModelType.LORA.value,

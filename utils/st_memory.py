@@ -13,7 +13,7 @@ def radio(label, options, index=0, key=None, help=None, on_change=None, disabled
         else:
             st.session_state[key] = options.index(getattr(project_settings, key, default_value))
 
-    logger.log(LoggingType.DEBUG, "radio session_state key: " + str(st.session_state[key]) + " type: " + str(type(st.session_state[key])))
+    # logger.log(LoggingType.DEBUG, "radio session_state key: " + str(st.session_state[key]) + " type: " + str(type(st.session_state[key])))
     selection = st.radio(label=label, options=options, index=st.session_state[key], horizontal=horizontal, label_visibility=label_visibility)
 
     if options.index(selection) != st.session_state[key]:

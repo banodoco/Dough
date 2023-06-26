@@ -17,6 +17,7 @@ from ui_components.components.welcome_page import welcome_page
 # from ui_components.components.motion_page import motion_page
 from streamlit_option_menu import option_menu
 from ui_components.models import InternalAppSettingObject
+from utils.common_methods import get_current_user_uuid
 import utils.local_storage.local_storage as local_storage
 
 from utils.data_repo.data_repo import DataRepo
@@ -71,7 +72,7 @@ def setup_app_ui():
         welcome_page()
     else:
         project_list = data_repo.get_all_project_list(
-            user_id=local_storage.get_current_user_uuid())
+            user_id=get_current_user_uuid())
 
         if st.session_state["section"] == "Open Project":
 

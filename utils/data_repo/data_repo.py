@@ -3,9 +3,8 @@ from shared.constants import InternalFileType
 from backend.db_repo import DBRepo
 from shared.constants import SERVER, ServerType
 from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalUserObject
-from utils.cache.cache_methods import CacheKey, CacheMode, cache_data
+from utils.cache.cache_methods import CacheKey, cache_data
 from utils.common_decorators import count_calls
-from utils.local_storage.local_storage import get_current_user_uuid
 
 # TODO - to be completed later
 class APIRepo:
@@ -112,6 +111,7 @@ class DataRepo:
         return InternalAIModelObject(**model) if model else None
     
     def get_all_ai_model_list(self, model_type=None, user_id=None):
+        from utils.common_methods import get_current_user_uuid
         if not user_id:
             user_id = get_current_user_uuid()
 
@@ -224,6 +224,7 @@ class DataRepo:
         return InternalAppSettingObject(**app_setting) if app_setting else None
     
     def get_app_secrets_from_user_uuid(self, uuid=None):
+        from utils.common_methods import get_current_user_uuid
         # if user is not defined then take the current user
         if not uuid:
             uuid = get_current_user_uuid()

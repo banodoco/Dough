@@ -1,5 +1,6 @@
 import time
 from shared.file_upload.s3 import upload_file
+from utils.common_methods import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import MachineLearningProcessor
 import replicate
@@ -16,7 +17,7 @@ import utils.local_storage.local_storage as local_storage
 class ReplicateProcessor(MachineLearningProcessor):
     def __init__(self):
         data_repo = DataRepo()
-        self.app_settings = data_repo.get_app_secrets_from_user_uuid(uuid=local_storage.get_current_user_uuid())
+        self.app_settings = data_repo.get_app_secrets_from_user_uuid(uuid=get_current_user_uuid())
 
         self.logger = None
         try:

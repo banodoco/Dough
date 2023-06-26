@@ -17,9 +17,6 @@ from backend.serializers.dto import  AIModelDto, AppSettingDto, BackupDto, Backu
 from shared.constants import AUTOMATIC_FILE_HOSTING, LOCAL_DATABASE_NAME, SERVER, ServerType
 from shared.file_upload.s3 import upload_file
 
-from django.core.wsgi import get_wsgi_application
-application = get_wsgi_application()
-
 from backend.models import AIModel, AIModelParamMap, AppSetting, BackupTiming, InferenceLog, InternalFileObject, Project, Setting, Timing, User
 
 from backend.serializers.dao import CreateAIModelDao, CreateAIModelParamMapDao, CreateAppSettingDao, CreateFileDao, CreateInferenceLogDao, CreateProjectDao, CreateSettingDao, CreateTimingDao, CreateUserDao, UpdateAIModelDao, UpdateAppSettingDao, UpdateSettingDao
@@ -32,9 +29,6 @@ class DBRepo:
     def __init__(self):
         database_file = LOCAL_DATABASE_NAME
         os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
-
-        from django.core.wsgi import get_wsgi_application
-        application = get_wsgi_application()
 
         # creating db if not already present
         if not os.path.exists(database_file):

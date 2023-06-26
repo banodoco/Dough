@@ -8,8 +8,8 @@ from shared.constants import AIModelType
 from ui_components.common_methods import train_model
 
 from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject
+from utils.common_methods import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
-from utils.local_storage.local_storage import get_current_user, get_current_user_uuid
 
 
 def custom_models_page(project_uuid):

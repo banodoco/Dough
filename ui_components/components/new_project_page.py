@@ -2,7 +2,7 @@ import uuid
 import streamlit as st
 from shared.constants import InternalFileType
 from ui_components.models import InternalFileObject
-from utils.common_methods import create_working_assets
+from utils.common_methods import create_working_assets, get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
 from ui_components.common_methods import create_working_assets
 from utils.media_processor.video import resize_video
@@ -74,7 +74,7 @@ def new_project_page():
         new_project_name = new_project_name.replace(" ", "_")
         create_working_assets(new_project_name)
 
-        current_user_uuid = local_storage.get_current_user_uuid()
+        current_user_uuid = get_current_user_uuid()
         new_project = data_repo.create_project(name=new_project_name, user_id=current_user_uuid)
         
         data_repo.update_project_setting(new_project.uuid, width=width)
