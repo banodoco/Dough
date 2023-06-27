@@ -13,19 +13,11 @@ from utils.common_methods import copy_sample_assets, create_working_assets
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
-REPLICATE_API_TOKEN = None
-REPLICATE_USERNAME = None
-
 ENCRYPTION_KEY = 'J2684nBgNUYa_K0a6oBr5H8MpSRW0EJ52Qmq7jExE-w='
 
 logger = AppLogger()
 
 def project_init():
-    global REPLICATE_API_TOKEN
-    global REPLICATE_USERNAME
-    global AWS_ACCESS_KEY_ID
-    global AWS_SECRET_ACCESS_KEY
-
     data_repo = DataRepo()
 
     # db initialization takes some time
@@ -44,14 +36,6 @@ def project_init():
         logger.log(LoggingType.INFO, "new temp user created: " + user.name)
 
         create_new_user_data(user)
-
-    app_secret = data_repo.get_app_secrets_from_user_uuid()
-
-    REPLICATE_API_TOKEN = app_secret["replicate_key"]
-    REPLICATE_USERNAME = app_secret["replicate_username"]
-
-    AWS_ACCESS_KEY_ID = app_secret["aws_access_key"]
-    AWS_SECRET_ACCESS_KEY = app_secret["aws_secret_key"]
 
     # create encryption key if not already present (not applicable in dev mode)
     # env_vars = dotenv_values('.env')

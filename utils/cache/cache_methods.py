@@ -1,60 +1,50 @@
 import streamlit as st
-from utils.cache.cache import StCache
+import inspect
+from shared.logging.constants import LoggingType
+from shared.logging.logging import AppLogger
+from utils.cache.cache import StCache, synchronized
 
 from utils.enum import ExtendedEnum
 
+logger = AppLogger()
 
 class CacheKey(ExtendedEnum):
-    USER = 'user'
-    FILE = 'file'
-    AI_MODEL = 'model'
-    TIMING = 'timing'
-    PROJECT = 'project'
-    INFERENCE_LOG = 'inference_log'
-    APP_SETTING = 'app_setting'
-    APP_SECRET = 'app_secret'
-    PROJECT_SETTING = 'project_setting'
-    BACKUP = 'backup'
+    USER = "user"
+    FILE = "file"
+    AI_MODEL = "model"
+    TIMING = "timing"
+    PROJECT = "project"
+    INFERENCE_LOG = "inference_log"
+    APP_SETTING = "app_setting"
+    APP_SECRET = "app_secret"
+    PROJECT_SETTING = "project_setting"
+    BACKUP = "backup"
 
 def cache_data(cls):
-    class_methods = [method for method in dir(cls) if callable(getattr(cls, method))]
-
-    # Apply cache decorator to class methods
-    for method_name in class_methods:
-        # skipping magic methods
-        if method_name.startswith('__') and method_name.endswith('__'):
-            continue
-
-        cache_method_name = f"_cache_{method_name}"
-        cache_method = getattr(cls, cache_method_name, None)
-
-        if cache_method:
-            setattr(cls, method_name, cache_method(method_name))
-
-
-    def _cache_create_user(create_user):
-        def _cache_create_user_wrapper(self, *args, **kwargs):
-            user = create_user(*args, **kwargs)
-            if user:
-                StCache.add(user.uuid, user, CacheKey.USER.value)
-            
-            return user
-            
-        return _cache_create_user_wrapper
-    
-    def _cache_get_first_active_user(get_first_active_user):
+    def _cache_get_first_active_user():
         def _cache_get_first_active_user_wrapper(self, *args, **kwargs):
-            user_list = StCache.get_all(CacheKey.USER.value)
+            logger.log(LoggingType.DEBUG, 'get first user cache', {})
+            # user_list = StCache.get_all(CacheKey.USER.value)
+            user_list = st.session_state.get('user', None)
             if user_list and len(user_list):
+                logger.log(LoggingType.DEBUG, '&&&&&& first user found', {'user_list': user_list})
                 return user_list[0]
             
-            user = get_first_active_user(*args, **kwargs)
+            original_func = getattr(cls, '_original_get_first_active_user')
+            user = original_func(self, *args, **kwargs)
             if user:
-                StCache.add(user, CacheKey.USER.value)
+                # StCache.add(user, CacheKey.USER.value)
+                st.session_state['user'] = [user]
+                print(st.session_state['user'])
             
             return user
             
         return _cache_get_first_active_user_wrapper
+    
+    setattr(cls, '_original_get_first_active_user', cls.get_first_active_user)
+    setattr(cls, "get_first_active_user", _cache_get_first_active_user())
+
+    return cls
     
     def _cache_get_user_by_email(get_user_by_email):
         def _cache_get_user_by_email_wrapper(self, *args, **kwargs):

@@ -1,17 +1,22 @@
 # this repo serves as a middlerware between API backend and the frontend
+import threading
 from shared.constants import InternalFileType
 from backend.db_repo import DBRepo
 from shared.constants import SERVER, ServerType
 from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalUserObject
+from utils.cache.cache import synchronized_class
 from utils.cache.cache_methods import CacheKey, cache_data
 from utils.common_decorators import count_calls
+import streamlit as st
+import wrapt
 
 # TODO - to be completed later
 class APIRepo:
     def __init__(self):
         pass
 
-@cache_data
+# @cache_data
+# @wrapt.synchronized
 class DataRepo:
     def __init__(self):
         if SERVER != ServerType.PRODUCTION.value:
@@ -219,7 +224,6 @@ class DataRepo:
 
     # app setting
     def get_app_setting_from_uuid(self, uuid=None):
-        
         app_setting = self.db_repo.get_app_setting_from_uuid(uuid).data['data']
         return InternalAppSettingObject(**app_setting) if app_setting else None
     
