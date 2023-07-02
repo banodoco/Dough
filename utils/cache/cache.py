@@ -79,7 +79,6 @@ class StCache:
             current_thread = threading.current_thread()
             print("Current thread before:", current_thread.ident)
             print("Current thread before name:", current_thread.name)
-            st.session_state['mango'] = 'good'
             current_thread = threading.current_thread()
             print("Current thread after:", current_thread.ident)
             print("session state key length: ", len(st.session_state.keys()))

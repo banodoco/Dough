@@ -16,7 +16,6 @@ class APIRepo:
         pass
 
 # @cache_data
-# @wrapt.synchronized
 class DataRepo:
     def __init__(self):
         if SERVER != ServerType.PRODUCTION.value:
@@ -225,9 +224,6 @@ class DataRepo:
     # app setting
     def get_app_setting_from_uuid(self, uuid=None):
         app_setting = self.db_repo.get_app_setting_from_uuid(uuid).data['data']
-        st.session_state['mango'] = 'good'
-        print('here')
-        print(st.session_state['mango'])
         return InternalAppSettingObject(**app_setting) if app_setting else None
     
     def get_app_secrets_from_user_uuid(self, uuid=None):
