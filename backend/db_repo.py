@@ -157,13 +157,12 @@ class DBRepo:
 
         return InternalResponse(payload, 'file found', True)
     
-    def create_or_update_file(self, filename, type=InternalFileType.IMAGE.value, **kwargs):
-        file = InternalFileType.objects.filter(name=filename, type=type, is_disabled=False).first()
+    def create_or_update_file(self, file_uuid, type=InternalFileType.IMAGE.value, **kwargs):
+        file = InternalFileType.objects.filter(uuid=file_uuid, type=type, is_disabled=False).first()
         if not file:
-            file = InternalFileObject.objects.create(name=filename, file_type=type, **kwargs)
+            file = InternalFileObject.objects.create(uuid=file_uuid, name=str(uuid.uuid4()), file_type=type, **kwargs)
         else:
-            kwargs['file_type'] = InternalFileType.IMAGE.value
-            kwargs['name'] = filename
+            kwargs['file_type'] = type
 
             for attr, value in kwargs.items():
                 setattr(file, attr, value)
@@ -1040,13 +1039,6 @@ class DBRepo:
         setting = Setting.objects.filter(project_id=project.id, is_disabled=False).first()
         if not setting:
             return InternalResponse({}, 'invalid project', False)
-        
-        if 'project_id' in attributes.data and attributes.data['project_id']:
-            project = Project.objects.filter(uuid=attributes.data['project_id'], is_disabled=False).first()
-            if not project:
-                return InternalResponse({}, 'invalid project', False)
-            
-            attributes._data['project_id'] = project.id
 
         if 'default_model_id' in attributes.data and attributes.data['default_model_id']:
             model = AIModel.objects.filter(uuid=attributes.data['default_model_id'], is_disabled=False).first()

@@ -67,8 +67,8 @@ class DataRepo:
         
         return [InternalFileObject(**file) for file in file_list] if file_list else []
     
-    def create_or_update_file(self, filename, type=InternalFileType.IMAGE.value, **kwargs):
-        file = self.db_repo.create_or_update_file(filename, type, **kwargs).data['data']
+    def create_or_update_file(self, uuid, type=InternalFileType.IMAGE.value, **kwargs):
+        file = self.db_repo.create_or_update_file(uuid, type, **kwargs).data['data']
         return InternalFileObject(**file) if file else None
     
     def create_file(self, **kwargs):
@@ -225,6 +225,9 @@ class DataRepo:
     # app setting
     def get_app_setting_from_uuid(self, uuid=None):
         app_setting = self.db_repo.get_app_setting_from_uuid(uuid).data['data']
+        st.session_state['mango'] = 'good'
+        print('here')
+        print(st.session_state['mango'])
         return InternalAppSettingObject(**app_setting) if app_setting else None
     
     def get_app_secrets_from_user_uuid(self, uuid=None):

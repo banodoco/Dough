@@ -777,9 +777,16 @@ def manual_cropping_element(stage, timing_uuid):
                         # generate a random filename and save it to /temp
                         file_name = f"videos/temp/{uuid.uuid4()}.png"
                         cropped_img.save(file_name)
+                        file_data = {
+                            "name": str(uuid.uuid4()),
+                            "type": InternalFileType.IMAGE.value,
+                            "local_path": file_name
+                        }
+                        cropped_image: InternalFileObject = data_repo.create_file(**file_data)
+
                         st.success("Cropped Image Saved Successfully")
                         data_repo.update_specific_timing(
-                            st.session_state['current_frame_uuid'], source_image=file_name)
+                            st.session_state['current_frame_uuid'], source_image_id=cropped_image.uuid)
                         time.sleep(1)
                     st.experimental_rerun()
             with cropbtn2:
