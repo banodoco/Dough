@@ -1,54 +1,143 @@
-# this repo serves as a middlerware between API backend and the frontend
-import threading
-from shared.constants import InternalFileType
-from backend.db_repo import DBRepo
-from shared.constants import SERVER, ServerType
-from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalUserObject
-from utils.common_decorators import count_calls
+
+import os
+
+import requests
 import streamlit as st
-import wrapt
+from shared.constants import SERVER, InternalFileType, ServerType
 
-from utils.data_repo.api_repo import APIRepo
+from utils.constants import AUTH_DETAILS, LOGGED_USER
 
-# @cache_data
-class DataRepo:
+
+class APIRepo:
     def __init__(self):
-        if SERVER != ServerType.PRODUCTION.value:
-            self.db_repo = DBRepo()
-        else:
-            self.db_repo = APIRepo()
+        import dotenv
+        dotenv.load_dotenv()
+
+        SERVER_URL = os.getenv('SERVER_URL', '')
+        self.base_url = SERVER_URL
+
+        self._setup_urls()
+
+    def _setup_url(self):
+        # user
+        self.USER_OP_URL = '/v1/user/op'
+        self.USER_LIST_URL = '/v1/user/list'
+
+        # payment
+        self.ORDER_OP_URL = '/v1/payment/order'
+        self.ORDER_LIST_URL = '/v1/payment/order/list'
+        
+        # auth
+        self.AUTH_OP_URL = '/v1/authentication/op'
+        self.AUTH_REFRESH_URL = '/v1/authentication/refresh'
+        self.GOOGLE_LOGIN_URL = '/v1/authentication/google'
+
+        # timing
+        self.TIMING_URL = '/v1/data/timing'
+        self.PROJECT_TIMING_URL = '/v1/data/timing/project'
+        self.TIMING_NUMBER_URL = '/v1/data/timing/number'
+        self.SHIFT_TIMING_URL = '/v1/data/timing/shift'
+        self.TIMING_LIST_URL = '/v1/data/timing/list'
+
+        # project
+        self.PROJECT_URL = '/v1/data/project'
+        self.PROJECT_LIST_URL = '/v1/data/project/list'
+        
+        # project setting
+        self.PROJECT_SETTING_URL = '/v1/data/project-setting'
+        
+        # inference log
+        self.LOG_URL = '/v1/data/log'
+        self.LOG_LIST_URL = '/v1/data/log/list'
+        
+        # file
+        self.FILE_URL = '/v1/data/file'
+        self.FILE_LIST_URL = '/v1/data/file/list'
+        self.FILE_UUID_LIST_URL = '/v1/data/file/uuid-list'
+        
+        # app setting
+        self.APP_SETTING_URL = '/v1/data/app-setting'
+        self.APP_SECRET_URL = '/v1/data/app-secret'
+        
+        # ai model
+        self.MODEL_URL = '/v1/data/model'
+        self.MODEL_LIST_URL = '/v1/data/model/list'
+
+    def logout(self):
+        pass
+
+    ################### base http methods
+    def _get_headers(self):
+        if AUTH_DETAILS not in st.session_state and SERVER != ServerType.DEVELOPMENT.value:
+            self.logout()
+
+        headers = {}
+        if AUTH_DETAILS in st.session_state and st.session_state[AUTH_DETAILS]:
+            token = st.session_state[AUTH_DETAILS]['auth_token']
+            headers["Authorization"] = f"Bearer {token}"
+            headers["Content-Type"] = "application/json"
+
+        return headers
+
+    def http_get(self, url, params = None):
+        res = requests.get(self.base_url + url, params = params, headers=self._get_headers())
+        return res.json()
+
+    def http_post(self, url, data = None):
+        res = requests.post(self.base_url + url, data=data, headers=self._get_headers())
+        return res.json()
     
+    def http_put(self, url, data = None):
+        res = requests.put(self.base_url + url, data=data, headers=self._get_headers())
+        return res.json()
+    
+    def http_delete(self, url, params=None):
+        res = requests.delete(self.base_url + url, params=params, headers=self._get_headers())
+        return res.json()
+
+    #########################################
+
     def create_user(self, **kwargs):
-        user = self.db_repo.create_user(**kwargs).data['data']
-        return InternalUserObject(**user) if user else None
+        res = self.http_post(url=self.USER_OP_URL, data=kwargs)
+        return res
     
+    # making it fetch the current logged in user
     def get_first_active_user(self):
-        user = self.db_repo.get_first_active_user().data['data']
-        return InternalUserObject(**user) if user else None
+        if LOGGED_USER not in st.session_state:
+            return None
+        
+        logged_user = st.session_state[LOGGED_USER]
+        res = self.http_get(self.USER_OP_URL, params={'uuid': logged_user['uuid']})
+        return res
     
     def get_user_by_email(self, email):
-        user = self.db_repo.get_user_by_email(email).data['data']
-        return InternalUserObject(**user) if user else None
+        res = self.http_get(self.USER_OP_URL, params={'email': email})
+        return res
     
     def get_total_user_count(self):
-        return self.db_repo.get_total_user_count().data
+        res = self.http_get(self.USER_LIST_URL)
+        payload = {
+            'data': res['data']['total_count']
+        }
+        return payload
     
     def get_all_user_list(self):
-        user_list = self.db_repo.get_all_user_list().data['data']
-        return [InternalUserObject(**user) for user in user_list] if user_list else None
+        res = self.http_get(self.USER_LIST_URL)
+        return res
     
+    # TODO: remove this method from everywhere
     def delete_user_by_email(self, email):
         res = self.db_repo.delete_user_by_email(email)
         return res.status
 
     # internal file object
+    # TODO: remove this method from everywhere
     def get_file_from_name(self, name):
-        file = self.db_repo.get_file_from_name(name).data['data']
-        return InternalFileObject(**file) if file else None
+        pass
 
     def get_file_from_uuid(self, uuid):
-        file = self.db_repo.get_file_from_uuid(uuid).data['data']
-        return InternalFileObject(**file) if file else None
+        res = self.http_get(self.FILE_URL, params={'uuid': uuid})
+        return res
     
     def get_all_file_list(self, file_type: InternalFileType, tag = None, project_id = None):
         filter_data = {"type": file_type}
@@ -57,57 +146,61 @@ class DataRepo:
         if project_id:
             filter_data['project_id'] = project_id
 
-        file_list = self.db_repo.get_all_file_list(**filter_data).data['data']
-        
-        return [InternalFileObject(**file) for file in file_list] if file_list else []
+        res = self.http_get(self.FILE_LIST_URL, params=filter_data)
+        return res
     
     def create_or_update_file(self, uuid, type=InternalFileType.IMAGE.value, **kwargs):
-        file = self.db_repo.create_or_update_file(uuid, type, **kwargs).data['data']
-        return InternalFileObject(**file) if file else None
-    
+        update_data = kwargs
+        update_data['uuid'] = uuid
+        update_data['type'] = type
+        res = self.http_put(url=self.FILE_URL, data=update_data)
+        return res
+        
     def create_file(self, **kwargs):
-        file = self.db_repo.create_file(**kwargs).data['data']
-        return InternalFileObject(**file) if file else None
+        res = self.http_post(url=self.FILE_URL, data=kwargs)
+        return res
     
     def delete_file_from_uuid(self, uuid):
         res = self.db_repo.delete_file_from_uuid(uuid)
         return res.status
     
+    # TODO: remove file_type from this method
     def get_image_list_from_uuid_list(self, image_uuid_list, file_type=InternalFileType.IMAGE.value):
-        if not (image_uuid_list and len(image_uuid_list)):
-            return []
-        image_list = self.db_repo.get_image_list_from_uuid_list(image_uuid_list, file_type=file_type).data['data']
-        return [InternalFileObject(**image) for image in image_list] if image_list else []
+        res = self.http_get(self.FILE_UUID_LIST_URL, params={'uuid_list': image_uuid_list, 'type': file_type})
+        return res
     
     def update_file(self, file_uuid, **kwargs):
-        file = self.db_repo.update_file(uuid=file_uuid, **kwargs).data['data']
-        return InternalFileObject(**file) if file else None
+        update_data = kwargs
+        update_data['uuid'] = file_uuid
+        res = self.http_put(url=self.FILE_URL, data=update_data)
+        return res
     
     # project
     def get_project_from_uuid(self, uuid):
-        project = self.db_repo.get_project_from_uuid(uuid).data['data']
-        return InternalProjectObject(**project) if project else None
+        res = self.http_get(self.PROJECT_URL, params={'uuid': uuid})
+        return res
     
     def get_all_project_list(self, user_id):
-        project_list = self.db_repo.get_all_project_list(user_id).data['data']
-        return [InternalProjectObject(**project) for project in project_list] if project_list else None
+        res = self.http_get(self.PROJECT_LIST_URL, params={'user_id': user_id})
+        return res
     
     def create_project(self, **kwargs):
-        project = self.db_repo.create_project(**kwargs).data['data']
-        return InternalProjectObject(**project) if project else None
+        res = self.http_post(url=self.PROJECT_URL, data=kwargs)
+        return res
     
     def delete_project_from_uuid(self, uuid):
-        res = self.db_repo.delete_project_from_uuid(uuid)
-        return res.status
+        res = self.http_delete(self.PROJECT_URL, params={'uuid': uuid})
+        return res
     
     # ai model (custom ai model)
     def get_ai_model_from_uuid(self, uuid):
-        model = self.db_repo.get_ai_model_from_uuid(uuid).data['data']
-        return InternalAIModelObject(**model) if model else None
+        res = self.http_get(self.MODEL_URL, params={'uuid': uuid})
+        return res
     
+    # TODO: remove this method from everywhere
     def get_ai_model_from_name(self, name):
-        model = self.db_repo.get_ai_model_from_name(name).data['data']
-        return InternalAIModelObject(**model) if model else None
+        res = self.http_get(self.MODEL_URL, params={'name': name})
+
     
     def get_all_ai_model_list(self, model_type=None, user_id=None):
         from utils.common_methods import get_current_user_uuid
