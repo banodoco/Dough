@@ -200,49 +200,43 @@ class APIRepo:
     # TODO: remove this method from everywhere
     def get_ai_model_from_name(self, name):
         res = self.http_get(self.MODEL_URL, params={'name': name})
+        return res
 
     
     def get_all_ai_model_list(self, model_type=None, user_id=None):
-        from utils.common_methods import get_current_user_uuid
-        if not user_id:
-            user_id = get_current_user_uuid()
-
-        model_list = self.db_repo.get_all_ai_model_list(model_type, user_id).data['data']
-        return [InternalAIModelObject(**model) for model in model_list] if model_list else []
+        res = self.http_get(self.MODEL_LIST_URL, params={'user_id': user_id})
+        return res
     
     def create_ai_model(self, **kwargs):
-        model = self.db_repo.create_ai_model(**kwargs).data['data']
-        return InternalAIModelObject(**model) if model else None
+        res = self.http_post(url=self.MODEL_URL, data=kwargs)
+        return res
     
     def update_ai_model(self, **kwargs):
-        model = self.db_repo.update_ai_model(**kwargs).data['data']
-        return  InternalAIModelObject(**model) if model else None
+        res = self.http_put(url=self.MODEL_URL, data=kwargs)
+        return res
     
     def delete_ai_model_from_uuid(self, uuid):
-        res = self.db_repo.delete_ai_model_from_uuid(uuid)
+        res = self.http_delete(self.MODEL_URL, params={'uuid': uuid})
         return res.status
-    
 
     # inference log
     def get_inference_log_from_uuid(self, uuid):
-        log = self.db_repo.get_inference_log_from_uuid(uuid).data['data']
-        return InferenceLogObject(**log) if log else None
+        res = self.http_get(self.LOG_URL, params={'uuid': uuid})
+        return res
     
-    def get_all_inference_log_list(self, project_id=None):
-        log_list = self.db_repo.get_all_inference_log_list(project_id).data['data']
-        return [InferenceLogObject(**log) for log in log_list] if log_list else None
+    def get_all_inference_log_list(self, project_id=None, model_id=None):
+        res = self.http_get(self.LOG_LIST_URL, params={'project_id': project_id, 'model_id': model_id})
+        return res
     
     def create_inference_log(self, **kwargs):
-        log = self.db_repo.create_inference_log(**kwargs).data['data']
-        return InferenceLogObject(**log) if log else None
+        res = self.http_post(url=self.LOG_URL, data=kwargs)
+        return res
     
     def delete_inference_log_from_uuid(self, uuid):
         res = self.db_repo.delete_inference_log_from_uuid(uuid)
         return res.status
     
-
-    # ai model param map
-    # TODO: add DTO in the output
+    # TODO: complete this
     def get_ai_model_param_map_from_uuid(self, uuid):
         pass
     
@@ -258,82 +252,90 @@ class APIRepo:
 
     # timing
     def get_timing_from_uuid(self, uuid):
-        timing = self.db_repo.get_timing_from_uuid(uuid).data['data']
-        return InternalFrameTimingObject(**timing) if timing else None
+       res = self.http_get(self.TIMING_URL, params={'uuid': uuid})
+       return res
     
     def get_timing_from_frame_number(self, project_uuid, frame_number):
-        timing = self.db_repo.get_timing_from_frame_number(project_uuid, frame_number).data['data']
-        return InternalFrameTimingObject(**timing) if timing else None
-    
+        res = self.http_get(self.PROJECT_TIMING_URL, params={'project_id': project_uuid, 'frame_number': frame_number})
+        return res 
     
     # this is based on the aux_frame_index and not the order in the db
     def get_next_timing(self, uuid):
-        next_timing = self.db_repo.get_next_timing(uuid).data['data']
-        return InternalFrameTimingObject(**next_timing) if next_timing else None
+        res = self.http_get(self.NEXT_TIMING_URL, params={'uuid': uuid, 'distance': 1})
+        return res
     
     def get_prev_timing(self, uuid):
-        prev_timing = self.db_repo.get_prev_timing(uuid).data['data']
-        return InternalFrameTimingObject(**prev_timing) if prev_timing else None
+        res = self.http_get(self.NEXT_TIMING_URL, params={'uuid': uuid, 'distance': -1})
+        return res
     
     def get_timing_list_from_project(self, project_uuid=None):
-        timing_list = self.db_repo.get_timing_list_from_project(project_uuid).data['data']
-        return [InternalFrameTimingObject(**timing) for timing in timing_list] if timing_list else []
+        res = self.http_get(self.TIMING_LIST_URL, params={'project_id': project_uuid, 'page': 1})
+        return res
     
     def create_timing(self, **kwargs):
-        timing = self.db_repo.create_timing(**kwargs).data['data']
-        return InternalFrameTimingObject(**timing) if timing else None
+        res = self.http_post(url=self.TIMING_URL, data=kwargs)
+        return res
     
     def update_specific_timing(self, uuid, **kwargs):
-        res = self.db_repo.update_specific_timing(uuid, **kwargs)
-        return res.status
-    
+        kwargs['uuid'] = uuid
+        res = self.http_put(url=self.TIMING_URL, data=kwargs)
+        return res
+
     def delete_timing_from_uuid(self, uuid):
-        res = self.db_repo.delete_timing_from_uuid(uuid)
+        res = self.http_delete(self.TIMING_URL, params={'uuid': uuid})
         return res.status
     
     # removes all timing frames from the project
     def remove_existing_timing(self, project_uuid):
-        res = self.db_repo.remove_existing_timing(project_uuid)
+        res = self.http_delete(self.PROJECT_TIMING_URL, params={'uuid': project_uuid})
         return res.status
     
     def remove_primay_frame(self, timing_uuid):
-        res = self.db_repo.remove_primay_frame(timing_uuid)
-        return res.status
+        update_data = {
+            'uuid': timing_uuid,
+            'primary_image_id': None
+        }
+        res = self.http_put(self.TIMING_URL, data=update_data)
+        return res
     
     def remove_source_image(self, timing_uuid):
-        res = self.db_repo.remove_source_image(timing_uuid)
-        return res.status
+        update_data = {
+            'uuid': timing_uuid,
+            'source_image_id': None
+        }
+        res = self.http_put(self.TIMING_URL, data=update_data)
+        return res
 
     def move_frame_one_step_forward(self, project_uuid, index_of_frame):
-        res = self.db_repo.move_frame_one_step_forward(project_uuid, index_of_frame)
-        return res.status
+        data = {
+            "project_id": project_uuid,
+            "index_of_frame": index_of_frame
+        }
+        
+        res = self.http_post(self.SHIFT_TIMING_URL, data=data)
+        return res
     
 
     # app setting
     def get_app_setting_from_uuid(self, uuid=None):
-        app_setting = self.db_repo.get_app_setting_from_uuid(uuid).data['data']
-        return InternalAppSettingObject(**app_setting) if app_setting else None
+        res = self.http_get(self.APP_SETTING_URL, params={'uuid': uuid})
+        return res
     
     def get_app_secrets_from_user_uuid(self, uuid=None):
-        from utils.common_methods import get_current_user_uuid
-        # if user is not defined then take the current user
-        if not uuid:
-            uuid = get_current_user_uuid()
-        
-        app_secrets = self.db_repo.get_app_secrets_from_user_uuid(uuid).data['data']
-        return app_secrets
+        res = self.http_get(self.APP_SECRET_URL)
+        return res
     
+    # TODO: complete this code
     def get_all_app_setting_list(self):
-        app_setting_list = self.db_repo.get_all_app_setting_list().data['data']
-        return [InternalAppSettingObject(**app_setting) for app_setting in app_setting_list] if app_setting_list else None
+        pass
     
     def update_app_setting(self, **kwargs):
-        res = self.db_repo.update_app_setting(**kwargs)
-        return res.status
+        res = self.http_put(url=self.APP_SETTING_URL, data=kwargs)
+        return res
     
     def create_app_setting(self, **kwargs):
-        app_setting = self.db_repo.create_app_setting(**kwargs).data['data']
-        return InternalAppSettingObject(**app_setting) if app_setting else None
+        res = self.http_post(url=self.APP_SETTING_URL, data=kwargs)
+        return res
 
     def delete_app_setting(self, user_id):
         res = self.db_repo.delete_app_setting(user_id)
@@ -342,41 +344,40 @@ class APIRepo:
 
     # setting
     def get_project_setting(self, project_id):
-        project_setting = self.db_repo.get_project_setting(project_id).data['data']
-        return InternalSettingObject(**project_setting) if project_setting else None
+        res = self.http_get(self.SETTING_URL, params={'uuid': project_id})
+        return res
     
     # TODO: add valid model_id check throughout dp_repo
     def create_project_setting(self, **kwargs):
-        project_setting = self.db_repo.create_project_setting(**kwargs).data['data']
-        return InternalSettingObject(**project_setting) if project_setting else None
+        res = self.http_post(url=self.SETTING_URL, data=kwargs)
+        return res
     
     def update_project_setting(self, project_uuid, **kwargs):
         kwargs['uuid'] = project_uuid
-        project_setting = self.db_repo.update_project_setting(**kwargs).data['data']
-        return InternalSettingObject(**project_setting) if project_setting else None
+        res = self.http_put(url=self.SETTING_URL, data=kwargs)
+        return res
 
+    # TODO: update or remove this
     def bulk_update_project_setting(self, **kwargs):
-        res = self.db_repo.bulk_update_project_setting(**kwargs)
-        return res.status
+        pass
     
 
     # backup
     def get_backup_from_uuid(self, uuid):
-        backup = self.db_repo.get_backup_from_uuid(uuid).data['data']
-        return InternalBackupObject(**backup) if backup else None
+        pass
     
-    def create_backup(self, project_uuid, version_name):
-        backup = self.db_repo.create_backup(project_uuid, version_name).data['data']
-        return InternalBackupObject(**backup) if backup else None
+    # def create_backup(self, project_uuid, version_name):
+    #     backup = self.db_repo.create_backup(project_uuid, version_name).data['data']
+    #     return InternalBackupObject(**backup) if backup else None
     
-    def get_backup_list(self, project_id=None):
-        backup_list = self.db_repo.get_backup_list(project_id).data['data']
-        return [InternalBackupObject(**backup) for backup in backup_list] if backup_list else []
+    # def get_backup_list(self, project_id=None):
+    #     backup_list = self.db_repo.get_backup_list(project_id).data['data']
+    #     return [InternalBackupObject(**backup) for backup in backup_list] if backup_list else []
     
-    def delete_backup(self, uuid):
-        res = self.db_repo.delete_backup(uuid)
-        return res.status
+    # def delete_backup(self, uuid):
+    #     res = self.db_repo.delete_backup(uuid)
+    #     return res.status
     
-    def restore_backup(self, uuid):
-        res = self.db_repo.restore_backup(uuid)
-        return res.status
+    # def restore_backup(self, uuid):
+    #     res = self.db_repo.restore_backup(uuid)
+    #     return res.status
