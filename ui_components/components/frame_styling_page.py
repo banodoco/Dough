@@ -63,10 +63,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
             st.session_state['current_frame_uuid'] = timing.uuid
 
         if 'frame_styling_view_type' not in st.session_state:
-            st.session_state['frame_styling_view_type'] = "List View"
+            st.session_state['frame_styling_view_type'] = "Individual View"
             st.session_state['frame_styling_view_type_index'] = 0
-
-            sections = ["Guidance", "Styling", "Motion"]
 
             # TODO: CORRECT-CODE
             view_types = ["Individual View", "List View"]
@@ -92,92 +90,92 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         st.session_state['current_frame_index'] / 10)
 
             # Option menu
-            st.session_state['frame_styling_view_type'] = option_menu(
-                None,
-                view_types,
-                icons=['aspect-ratio', 'bookshelf', "hourglass", 'stopwatch'],
-                menu_icon="cast",
-                orientation="horizontal",
-                key="section-selecto1r",
-                styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"},
-                        "nav-link-selected": {"background-color": "green"}},
-                manual_select=st.session_state['frame_styling_view_type_index'],
-                on_change=on_change_view_type
-            )
+            # st.session_state['frame_styling_view_type'] = option_menu(
+            #     None,
+            #     view_types,
+            #     icons=['aspect-ratio', 'bookshelf', "hourglass", 'stopwatch'],
+            #     menu_icon="cast",
+            #     orientation="horizontal",
+            #     key="section-selecto1r",
+            #     styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"},
+            #             "nav-link-selected": {"background-color": "green"}},
+            #     manual_select=st.session_state['frame_styling_view_type_index'],
+            #     on_change=on_change_view_type
+            # )
 
-            if st.session_state['change_view_type'] == True:
-                st.session_state['change_view_type'] = False
-                # round down st.session_state['current_frame_uuid']to nearest 10
+            # if st.session_state['change_view_type'] == True:
+            #     st.session_state['change_view_type'] = False
+            #     # round down st.session_state['current_frame_uuid']to nearest 10
 
-            if st.session_state['frame_styling_view_type'] == "Individual View":
+            # if st.session_state['frame_styling_view_type'] == "Individual View":
 
-                if len(timing_details) > 1:
-                    percentage = round(
-                        (float(st.session_state['current_frame_index']) / float(len(timing_details)-1)) * 100.00)
+            #     if len(timing_details) > 1:
+            #         percentage = round(
+            #             (float(st.session_state['current_frame_index']) / float(len(timing_details)-1)) * 100.00)
 
-                    st.progress(percentage)
-                else:
-                    st.progress(100)
+            #         st.progress(percentage)
+            #     else:
+            #         st.progress(100)
 
-                time1, time2 = st.columns([1, 1])
+            #     time1, time2 = st.columns([1, 1])
 
-                with time1:
+            #     with time1:
 
-                    frame_number = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(
-                        timing_details)-1, value=st.session_state['current_frame_index'], step=1, key="which_image_selector")
+            #         frame_number = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(
+            #             timing_details)-1, value=st.session_state['current_frame_index'], step=1, key="which_image_selector")
                     
-                    st.session_state['current_frame_uuid'] = timing_details[frame_number].uuid
-                    frame_index = next((i for i, t in enumerate(timing_details) if t.uuid == st.session_state['current_frame_uuid']), None)
+            #         st.session_state['current_frame_uuid'] = timing_details[frame_number].uuid
+            #         frame_index = next((i for i, t in enumerate(timing_details) if t.uuid == st.session_state['current_frame_uuid']), None)
 
-                    if st.session_state['current_frame_index'] != frame_index:
-                        st.session_state['current_frame_index'] = frame_index
-                        st.session_state['reset_canvas'] = True
-                        st.session_state['frame_styling_view_type_index'] = 0
-                        st.session_state['frame_styling_view_type'] = "Individual View"
+            #         if st.session_state['current_frame_index'] != frame_index:
+            #             st.session_state['current_frame_index'] = frame_index
+            #             st.session_state['reset_canvas'] = True
+            #             st.session_state['frame_styling_view_type_index'] = 0
+            #             st.session_state['frame_styling_view_type'] = "Individual View"
 
-                        st.experimental_rerun()
+            #             st.experimental_rerun()
 
-                with time2:
-                    single_frame_time_changer(st.session_state['current_frame_uuid'])
+            #     with time2:
+            #         single_frame_time_changer(st.session_state['current_frame_uuid'])
 
-                with st.expander("Notes:"):
+            #     with st.expander("Notes:"):
 
-                    notes = st.text_area(
-                        "Frame Notes:", value=timing_details[st.session_state['current_frame_index']].notes, height=100, key="notes")
+            #         notes = st.text_area(
+            #             "Frame Notes:", value=timing_details[st.session_state['current_frame_index']].notes, height=100, key="notes")
 
-                if notes != timing_details[st.session_state['current_frame_index']].notes:
-                    data_repo.update_specific_timing(
-                        st.session_state['current_frame_uuid'], notes=notes)
-                    st.experimental_rerun()
+            #     if notes != timing_details[st.session_state['current_frame_index']].notes:
+            #         data_repo.update_specific_timing(
+            #             st.session_state['current_frame_uuid'], notes=notes)
+            #         st.experimental_rerun()
 
-                if st.session_state['page'] == "Guidance":
-                    image_1_size = 2
-                    image_2_size = 1.5
-                elif st.session_state['page'] == "Styling":
-                    image_1_size = 1.5
-                    image_2_size = 2
-                elif st.session_state['page'] == "Motion":
-                    image_1_size = 1.5
-                    image_2_size = 1.5
+            #     if st.session_state['page'] == "Guidance":
+            #         image_1_size = 2
+            #         image_2_size = 1.5
+            #     elif st.session_state['page'] == "Styling":
+            #         image_1_size = 1.5
+            #         image_2_size = 2
+            #     elif st.session_state['page'] == "Motion":
+            #         image_1_size = 1.5
+            #         image_2_size = 1.5
 
-                image_1, image_2 = st.columns([image_1_size, image_2_size])
-                with image_1:
-                    st.caption(
-                        f"Guidance Image for Frame #{st.session_state['current_frame_index']}:")
-                    display_image(
-                        timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
-                with image_2:
-                    st.caption(
-                        f"Main Styled Image for Frame #{st.session_state['current_frame_index']}:")
-                    display_image(
-                        timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
-                st.markdown("***")
+            #     image_1, image_2 = st.columns([image_1_size, image_2_size])
+            #     with image_1:
+            #         st.caption(
+            #             f"Guidance Image for Frame #{st.session_state['current_frame_index']}:")
+            #         display_image(
+            #             timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
+            #     with image_2:
+            #         st.caption(
+            #             f"Main Styled Image for Frame #{st.session_state['current_frame_index']}:")
+            #         display_image(
+            #             timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
+            #     st.markdown("***")
 
-                if st.button("Delete key frame"):
-                    delete_frame(st.session_state['current_frame_uuid'])
-                    timing_details = data_repo.get_timing_list_from_project(
-                        project_uuid)
-                    st.experimental_rerun()
+            #     if st.button("Delete key frame"):
+            #         delete_frame(st.session_state['current_frame_uuid'])
+            #         timing_details = data_repo.get_timing_list_from_project(
+            #             project_uuid)
+            #         st.experimental_rerun()
 
         if timing_details == []:
             st.info(
@@ -201,7 +199,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     carousal_of_images_element(project_uuid, stage=WorkflowStageType.SOURCE.value)
 
                     guidance_types = GuidanceType.value_list()
-                    if 'how to guide_index' not in st.session_state:
+                    if 'how_to_guide_index' not in st.session_state:
                         if not project_settings.guidance_type:
                             st.session_state['how_to_guide_index'] = 0
                         else:
@@ -303,7 +301,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 st.session_state['reset_canvas'] = False
 
                             if st.session_state['reset_canvas'] != True:
-
                                 canvas_result = st_canvas(
                                     fill_color=fill_color,
                                     stroke_width=stroke_width,
@@ -497,7 +494,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         st.session_state['canny_image'] = None
                                         st.experimental_rerun()
 
-                # if current item is 0
                     elif how_to_guide == GuidanceType.IMAGE.value:
                         with crop2:
                             how_to_crop = st_memory.radio("How to crop:", options=[
@@ -1325,3 +1321,4 @@ def frame_styling_page(mainheader2, project_uuid: str):
             st.session_state['page'] = "Guidance"
             st.session_state['section_index'] = 0
             st.experimental_rerun()
+

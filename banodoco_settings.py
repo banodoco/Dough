@@ -21,7 +21,7 @@ def project_init():
     data_repo = DataRepo()
 
     # db initialization takes some time
-    time.sleep(2)
+    # time.sleep(2)
     # create a user if not already present (if dev mode)
     # if this is the local server with no user than create one and related data
     user_count = data_repo.get_total_user_count()

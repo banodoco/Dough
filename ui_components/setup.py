@@ -1,3 +1,4 @@
+import time
 import streamlit as st
 import os
 from moviepy.editor import *
@@ -118,8 +119,6 @@ def setup_app_ui():
                     st.session_state["index_of_section"] = 0
                     st.session_state["index_of_page"] = 0
 
-                timing_details = data_repo.get_timing_list_from_project(st.session_state['project_uuid'])
-
                 with st.sidebar:
                     main_view_types = ["Creative Process", "Tools & Settings", "Video Rendering"]
                     st.session_state['main_view_type'] = option_menu(None, main_view_types, icons=['magic', 'tools', "play-circle", 'stopwatch'], menu_icon="cast", default_index=0, key="main_view_type_name", orientation="horizontal", styles={
@@ -128,6 +127,7 @@ def setup_app_ui():
                 mainheader1, mainheader2 = st.columns([3, 2])
                 # with mainheader1:
                 # st.header(st.session_state["page"])
+
 
                 if st.session_state["main_view_type"] == "Creative Process":
 
@@ -141,7 +141,7 @@ def setup_app_ui():
 
                         if st.session_state["page"] not in pages:
                             st.session_state["page"] = pages[0]
-                            st.session_state["manual_select"] = 0
+                            st.session_state["manual_select"] = None
 
                         st.session_state['page'] = option_menu(None, pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
                                                                "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
@@ -158,7 +158,7 @@ def setup_app_ui():
 
                         if st.session_state["page"] not in pages:
                             st.session_state["page"] = pages[0]
-                            st.session_state["manual_select"] = 0
+                            st.session_state["manual_select"] = None
 
                         st.session_state['page'] = option_menu(None, pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
                                                                "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])

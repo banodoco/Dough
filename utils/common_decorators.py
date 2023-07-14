@@ -1,3 +1,5 @@
+import time
+
 def count_calls(cls):
     class Wrapper(cls):
         def __init__(self, *args, **kwargs):
@@ -21,3 +23,27 @@ def count_calls(cls):
             return attr
 
     return Wrapper
+
+
+def measure_execution_time(cls):
+    class WrapperClass:
+        def __init__(self, *args, **kwargs):
+            self.wrapped_instance = cls(*args, **kwargs)
+        
+        def __getattr__(self, name):
+            attr = getattr(self.wrapped_instance, name)
+            if callable(attr):
+                return self.measure_method_execution(attr)
+            return attr
+        
+        def measure_method_execution(self, method):
+            def wrapper(*args, **kwargs):
+                start_time = time.time()
+                result = method(*args, **kwargs)
+                end_time = time.time()
+                execution_time = end_time - start_time
+                print(f"Execution time of {method.__name__}: {execution_time} seconds")
+                return result
+            return wrapper
+    
+    return WrapperClass
