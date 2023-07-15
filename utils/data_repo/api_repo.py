@@ -261,11 +261,11 @@ class APIRepo:
     
     # this is based on the aux_frame_index and not the order in the db
     def get_next_timing(self, uuid):
-        res = self.http_get(self.NEXT_TIMING_URL, params={'uuid': uuid, 'distance': 1})
+        res = self.http_get(self.TIMING_NUMBER_URL, params={'uuid': uuid, 'distance': 1})
         return res
     
     def get_prev_timing(self, uuid):
-        res = self.http_get(self.NEXT_TIMING_URL, params={'uuid': uuid, 'distance': -1})
+        res = self.http_get(self.TIMING_NUMBER_URL, params={'uuid': uuid, 'distance': -1})
         return res
     
     def get_timing_list_from_project(self, project_uuid=None):
@@ -344,17 +344,17 @@ class APIRepo:
 
     # setting
     def get_project_setting(self, project_id):
-        res = self.http_get(self.SETTING_URL, params={'uuid': project_id})
+        res = self.http_get(self.PROJECT_SETTING_URL, params={'uuid': project_id})
         return res
     
     # TODO: add valid model_id check throughout dp_repo
     def create_project_setting(self, **kwargs):
-        res = self.http_post(url=self.SETTING_URL, data=kwargs)
+        res = self.http_post(url=self.PROJECT_SETTING_URL, data=kwargs)
         return res
     
     def update_project_setting(self, project_uuid, **kwargs):
         kwargs['uuid'] = project_uuid
-        res = self.http_put(url=self.SETTING_URL, data=kwargs)
+        res = self.http_put(url=self.PROJECT_SETTING_URL, data=kwargs)
         return res
 
     # TODO: update or remove this
@@ -363,8 +363,8 @@ class APIRepo:
     
 
     # backup
-    def get_backup_from_uuid(self, uuid):
-        pass
+    # def get_backup_from_uuid(self, uuid):
+    #     pass
     
     # def create_backup(self, project_uuid, version_name):
     #     backup = self.db_repo.create_backup(project_uuid, version_name).data['data']
