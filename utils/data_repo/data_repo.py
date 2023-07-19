@@ -1,6 +1,6 @@
 # this repo serves as a middlerware between API backend and the frontend
 import threading
-from shared.constants import InternalFileType
+from shared.constants import InternalFileType, InternalResponse
 from backend.db_repo import DBRepo
 from shared.constants import SERVER, ServerType
 from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalUserObject
@@ -13,17 +13,26 @@ from utils.data_repo.api_repo import APIRepo
 # @cache_data
 class DataRepo:
     def __init__(self):
-        if SERVER != ServerType.PRODUCTION.value:
+        if SERVER == ServerType.DEVELOPMENT.value:
             self.db_repo = DBRepo()
         else:
             self.db_repo = APIRepo()
     
+    # TODO: make a dummy user login in the local db repo
+    def google_user_login(self, **kwargs):
+        data = self.db_repo.google_user_login(**kwargs).data['data']
+        user = InternalUserObject(**data['user']) if data and data['user'] else None
+        token = data['token'] if data and data['token'] else None
+        refresh_token = data['refresh_token'] if data and data['refresh_token'] else None
+        return user, token, refresh_token
+
     def create_user(self, **kwargs):
         user = self.db_repo.create_user(**kwargs).data['data']
         return InternalUserObject(**user) if user else None
     
     def get_first_active_user(self):
-        user = self.db_repo.get_first_active_user().data['data']
+        res: InternalResponse = self.db_repo.get_first_active_user()
+        user = res.data['data'] if res.status else None
         return InternalUserObject(**user) if user else None
     
     def get_user_by_email(self, email):
@@ -218,7 +227,8 @@ class DataRepo:
 
     # app setting
     def get_app_setting_from_uuid(self, uuid=None):
-        app_setting = self.db_repo.get_app_setting_from_uuid(uuid).data['data']
+        res = self.db_repo.get_app_setting_from_uuid(uuid)
+        app_setting = res.data['data'] if res.status else None
         return InternalAppSettingObject(**app_setting) if app_setting else None
     
     def get_app_secrets_from_user_uuid(self, uuid=None):

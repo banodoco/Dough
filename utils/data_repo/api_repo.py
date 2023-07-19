@@ -1,11 +1,13 @@
 
+import json
 import os
 
 import requests
 import streamlit as st
-from shared.constants import SERVER, InternalFileType, ServerType
+from shared.constants import SERVER, InternalFileType, InternalResponse, ServerType
 
-from utils.constants import AUTH_DETAILS, LOGGED_USER
+from utils.constants import AUTH_TOKEN, AUTH_TOKEN, LOGGED_USER
+from utils.local_storage.url_storage import delete_url_param, get_url_param
 
 
 class APIRepo:
@@ -18,7 +20,7 @@ class APIRepo:
 
         self._setup_urls()
 
-    def _setup_url(self):
+    def _setup_urls(self):
         # user
         self.USER_OP_URL = '/v1/user/op'
         self.USER_LIST_URL = '/v1/user/list'
@@ -64,18 +66,18 @@ class APIRepo:
         self.MODEL_LIST_URL = '/v1/data/model/list'
 
     def logout(self):
-        pass
+        delete_url_param(AUTH_TOKEN)
+        st.experimental_rerun()
 
     ################### base http methods
     def _get_headers(self):
-        if AUTH_DETAILS not in st.session_state and SERVER != ServerType.DEVELOPMENT.value:
+        auth_token = get_url_param(AUTH_TOKEN)
+        if not auth_token and SERVER != ServerType.DEVELOPMENT.value:
             self.logout()
 
         headers = {}
-        if AUTH_DETAILS in st.session_state and st.session_state[AUTH_DETAILS]:
-            token = st.session_state[AUTH_DETAILS]['auth_token']
-            headers["Authorization"] = f"Bearer {token}"
-            headers["Content-Type"] = "application/json"
+        headers["Authorization"] = f"Bearer {auth_token}"
+        headers["Content-Type"] = "application/json"
 
         return headers
 
@@ -84,7 +86,7 @@ class APIRepo:
         return res.json()
 
     def http_post(self, url, data = None):
-        res = requests.post(self.base_url + url, data=data, headers=self._get_headers())
+        res = requests.post(self.base_url + url, json=data, headers=self._get_headers())
         return res.json()
     
     def http_put(self, url, data = None):
@@ -96,39 +98,42 @@ class APIRepo:
         return res.json()
 
     #########################################
+    def google_user_login(self, **kwargs):
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        res = requests.post(self.base_url + self.GOOGLE_LOGIN_URL, json=kwargs, headers=headers)
+        payload = { 'data': None }
+        res_json = json.loads(res._content)
+        if res.status_code == 200 and res_json['status']:
+            payload = { 'data': res_json['payload']}
+        return InternalResponse(payload, 'user login successfully', res_json['status'])
 
     def create_user(self, **kwargs):
         res = self.http_post(url=self.USER_OP_URL, data=kwargs)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     # making it fetch the current logged in user
     def get_first_active_user(self):
-        if LOGGED_USER not in st.session_state:
-            return None
-        
-        logged_user = st.session_state[LOGGED_USER]
-        res = self.http_get(self.USER_OP_URL, params={'uuid': logged_user['uuid']})
-        return res
+        res = self.http_get(self.USER_OP_URL)
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def get_user_by_email(self, email):
         res = self.http_get(self.USER_OP_URL, params={'email': email})
-        return res
+        return InternalResponse(res['payload'], 'user fetched successfully', True)
     
     def get_total_user_count(self):
         res = self.http_get(self.USER_LIST_URL)
-        payload = {
-            'data': res['data']['total_count']
-        }
-        return payload
+        payload = res['payload']['count'] if 'count' in res['payload'] else 0
+        return InternalResponse(payload, 'user count fetched successfully', True)
     
     def get_all_user_list(self):
         res = self.http_get(self.USER_LIST_URL)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     # TODO: remove this method from everywhere
     def delete_user_by_email(self, email):
         res = self.db_repo.delete_user_by_email(email)
-        return res.status
+        return InternalResponse(res['payload'], 'success', res['status']).status
 
     # internal file object
     # TODO: remove this method from everywhere
@@ -137,7 +142,7 @@ class APIRepo:
 
     def get_file_from_uuid(self, uuid):
         res = self.http_get(self.FILE_URL, params={'uuid': uuid})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def get_all_file_list(self, file_type: InternalFileType, tag = None, project_id = None):
         filter_data = {"type": file_type}
@@ -147,94 +152,94 @@ class APIRepo:
             filter_data['project_id'] = project_id
 
         res = self.http_get(self.FILE_LIST_URL, params=filter_data)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def create_or_update_file(self, uuid, type=InternalFileType.IMAGE.value, **kwargs):
         update_data = kwargs
         update_data['uuid'] = uuid
         update_data['type'] = type
         res = self.http_put(url=self.FILE_URL, data=update_data)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
         
     def create_file(self, **kwargs):
         res = self.http_post(url=self.FILE_URL, data=kwargs)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def delete_file_from_uuid(self, uuid):
         res = self.db_repo.delete_file_from_uuid(uuid)
-        return res.status
+        return InternalResponse(res['payload'], 'success', res['status']).status
     
     # TODO: remove file_type from this method
     def get_image_list_from_uuid_list(self, image_uuid_list, file_type=InternalFileType.IMAGE.value):
         res = self.http_get(self.FILE_UUID_LIST_URL, params={'uuid_list': image_uuid_list, 'type': file_type})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def update_file(self, file_uuid, **kwargs):
         update_data = kwargs
         update_data['uuid'] = file_uuid
         res = self.http_put(url=self.FILE_URL, data=update_data)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     # project
     def get_project_from_uuid(self, uuid):
         res = self.http_get(self.PROJECT_URL, params={'uuid': uuid})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def get_all_project_list(self, user_id):
         res = self.http_get(self.PROJECT_LIST_URL, params={'user_id': user_id})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def create_project(self, **kwargs):
         res = self.http_post(url=self.PROJECT_URL, data=kwargs)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def delete_project_from_uuid(self, uuid):
         res = self.http_delete(self.PROJECT_URL, params={'uuid': uuid})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     # ai model (custom ai model)
     def get_ai_model_from_uuid(self, uuid):
         res = self.http_get(self.MODEL_URL, params={'uuid': uuid})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     # TODO: remove this method from everywhere
     def get_ai_model_from_name(self, name):
         res = self.http_get(self.MODEL_URL, params={'name': name})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
 
     
     def get_all_ai_model_list(self, model_type=None, user_id=None):
         res = self.http_get(self.MODEL_LIST_URL, params={'user_id': user_id})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def create_ai_model(self, **kwargs):
         res = self.http_post(url=self.MODEL_URL, data=kwargs)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def update_ai_model(self, **kwargs):
         res = self.http_put(url=self.MODEL_URL, data=kwargs)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def delete_ai_model_from_uuid(self, uuid):
         res = self.http_delete(self.MODEL_URL, params={'uuid': uuid})
-        return res.status
+        return InternalResponse(res['payload'], 'success', res['status']).status
 
     # inference log
     def get_inference_log_from_uuid(self, uuid):
         res = self.http_get(self.LOG_URL, params={'uuid': uuid})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def get_all_inference_log_list(self, project_id=None, model_id=None):
         res = self.http_get(self.LOG_LIST_URL, params={'project_id': project_id, 'model_id': model_id})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def create_inference_log(self, **kwargs):
         res = self.http_post(url=self.LOG_URL, data=kwargs)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def delete_inference_log_from_uuid(self, uuid):
         res = self.db_repo.delete_inference_log_from_uuid(uuid)
-        return res.status
+        return InternalResponse(res['payload'], 'success', res['status']).status
     
     # TODO: complete this
     def get_ai_model_param_map_from_uuid(self, uuid):
@@ -253,42 +258,42 @@ class APIRepo:
     # timing
     def get_timing_from_uuid(self, uuid):
        res = self.http_get(self.TIMING_URL, params={'uuid': uuid})
-       return res
+       return InternalResponse(res['payload'], 'success', res['status'])
     
     def get_timing_from_frame_number(self, project_uuid, frame_number):
         res = self.http_get(self.PROJECT_TIMING_URL, params={'project_id': project_uuid, 'frame_number': frame_number})
-        return res 
+        return InternalResponse(res['payload'], 'success', res['status']) 
     
     # this is based on the aux_frame_index and not the order in the db
     def get_next_timing(self, uuid):
         res = self.http_get(self.TIMING_NUMBER_URL, params={'uuid': uuid, 'distance': 1})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def get_prev_timing(self, uuid):
         res = self.http_get(self.TIMING_NUMBER_URL, params={'uuid': uuid, 'distance': -1})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def get_timing_list_from_project(self, project_uuid=None):
         res = self.http_get(self.TIMING_LIST_URL, params={'project_id': project_uuid, 'page': 1})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def create_timing(self, **kwargs):
         res = self.http_post(url=self.TIMING_URL, data=kwargs)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def update_specific_timing(self, uuid, **kwargs):
         kwargs['uuid'] = uuid
         res = self.http_put(url=self.TIMING_URL, data=kwargs)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
 
     def delete_timing_from_uuid(self, uuid):
         res = self.http_delete(self.TIMING_URL, params={'uuid': uuid})
-        return res.status
+        return InternalResponse(res['payload'], 'success', res['status']).status
     
     # removes all timing frames from the project
     def remove_existing_timing(self, project_uuid):
         res = self.http_delete(self.PROJECT_TIMING_URL, params={'uuid': project_uuid})
-        return res.status
+        return InternalResponse(res['payload'], 'success', res['status']).status
     
     def remove_primay_frame(self, timing_uuid):
         update_data = {
@@ -296,7 +301,7 @@ class APIRepo:
             'primary_image_id': None
         }
         res = self.http_put(self.TIMING_URL, data=update_data)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def remove_source_image(self, timing_uuid):
         update_data = {
@@ -304,7 +309,7 @@ class APIRepo:
             'source_image_id': None
         }
         res = self.http_put(self.TIMING_URL, data=update_data)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
 
     def move_frame_one_step_forward(self, project_uuid, index_of_frame):
         data = {
@@ -313,17 +318,17 @@ class APIRepo:
         }
         
         res = self.http_post(self.SHIFT_TIMING_URL, data=data)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
 
     # app setting
     def get_app_setting_from_uuid(self, uuid=None):
         res = self.http_get(self.APP_SETTING_URL, params={'uuid': uuid})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def get_app_secrets_from_user_uuid(self, uuid=None):
         res = self.http_get(self.APP_SECRET_URL)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     # TODO: complete this code
     def get_all_app_setting_list(self):
@@ -331,31 +336,31 @@ class APIRepo:
     
     def update_app_setting(self, **kwargs):
         res = self.http_put(url=self.APP_SETTING_URL, data=kwargs)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def create_app_setting(self, **kwargs):
         res = self.http_post(url=self.APP_SETTING_URL, data=kwargs)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
 
     def delete_app_setting(self, user_id):
         res = self.db_repo.delete_app_setting(user_id)
-        return res.status
+        return InternalResponse(res['payload'], 'success', res['status']).status
     
 
     # setting
     def get_project_setting(self, project_id):
         res = self.http_get(self.PROJECT_SETTING_URL, params={'uuid': project_id})
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     # TODO: add valid model_id check throughout dp_repo
     def create_project_setting(self, **kwargs):
         res = self.http_post(url=self.PROJECT_SETTING_URL, data=kwargs)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     def update_project_setting(self, project_uuid, **kwargs):
         kwargs['uuid'] = project_uuid
         res = self.http_put(url=self.PROJECT_SETTING_URL, data=kwargs)
-        return res
+        return InternalResponse(res['payload'], 'success', res['status'])
 
     # TODO: update or remove this
     def bulk_update_project_setting(self, **kwargs):
@@ -376,8 +381,8 @@ class APIRepo:
     
     # def delete_backup(self, uuid):
     #     res = self.db_repo.delete_backup(uuid)
-    #     return res.status
+    #     return InternalResponse(res['payload'], 'success', res['status']).status
     
     # def restore_backup(self, uuid):
     #     res = self.db_repo.restore_backup(uuid)
-    #     return res.status
+    #     return InternalResponse(res['payload'], 'success', res['status']).status

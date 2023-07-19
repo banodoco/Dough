@@ -8,7 +8,7 @@ from shared.constants import SERVER, AIModelType, GuidanceType, InternalFileType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from shared.constants import AnimationStyleType
-from ui_components.models import InternalFrameTimingObject, InternalUserObject
+from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalUserObject
 from utils.common_methods import copy_sample_assets, create_working_assets
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
@@ -25,7 +25,7 @@ def project_init():
     # create a user if not already present (if dev mode)
     # if this is the local server with no user than create one and related data
     user_count = data_repo.get_total_user_count()
-    if SERVER != ServerType.PRODUCTION.value and not user_count:
+    if SERVER == ServerType.DEVELOPMENT.value and not user_count:
         user_data = {
             "name" : "banodoco_user",
             "email" : "banodoco@tempuser.com",
@@ -36,6 +36,12 @@ def project_init():
         logger.log(LoggingType.INFO, "new temp user created: " + user.name)
 
         create_new_user_data(user)
+    # creating data for online user
+    else:
+        app_settings: InternalAppSettingObject = data_repo.get_app_setting_from_uuid()
+        if not app_settings:
+            online_user = data_repo.get_first_active_user()
+            create_new_user_data(online_user)
 
     # create encryption key if not already present (not applicable in dev mode)
     # env_vars = dotenv_values('.env')

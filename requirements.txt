@@ -30,3 +30,5 @@ htbuilder==0.6.1
 streamlit-extras==0.2.7
 cryptography==41.0.1
 watchdog==3.0.0
+httpx-oauth==0.13.0
+extra-streamlit-components==0.1.56
