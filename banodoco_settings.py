@@ -63,12 +63,12 @@ def project_init():
 def create_new_user_data(user: InternalUserObject):
     data_repo = DataRepo()
     
-    # TODO: write this logic in a separate signal + make it an atomic transaction
-    # creating it's app setting
+    # TODO: disable updating aws or replicate settings in staging or production
     setting_data = {
         "user_id": user.uuid,
         "welcome_state": 0
     }
+
     app_setting = data_repo.create_app_setting(**setting_data)
 
     # creating a new project for this user
@@ -81,12 +81,19 @@ def create_new_user_data(user: InternalUserObject):
     project = data_repo.create_project(**project_data)
 
     # create a sample timing frame
+    sample_file_location = "sample_assets/frames/selected_sample/3vlb4mr7d95c42i4.png"
     file_data = {
         "name": str(uuid.uuid4()),
         "type": InternalFileType.IMAGE.value,
-        "local_path": "sample_assets/frames/selected_sample/3vlb4mr7d95c42i4.png",
+        "local_path": sample_file_location,
         "project_id": project.uuid
     }
+
+    if SERVER != ServerType.DEVELOPMENT.value:
+        file_content = ('file', open(sample_file_location, 'rb'))
+        uploaded_file_url = data_repo.upload_file(file_content)
+        file_data.update({'hosted_url':uploaded_file_url})
+
     source_image = data_repo.create_file(**file_data)
 
     timing_data = {
@@ -126,6 +133,7 @@ def create_new_user_data(user: InternalUserObject):
 
     project_setting = data_repo.create_project_setting(**project_setting_data)
 
+    # TODO: remove this from the hosted version
     create_working_assets(project.uuid)
 
     

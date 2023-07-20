@@ -16,7 +16,7 @@ from shared.constants import Colors, InternalFileType
 from backend.serializers.dto import  AIModelDto, AppSettingDto, BackupDto, BackupListDto, InferenceLogDto, InternalFileDto, ProjectDto, SettingDto, TimingDto, UserDto
 
 from shared.constants import AUTOMATIC_FILE_HOSTING, LOCAL_DATABASE_NAME, SERVER, ServerType
-from shared.file_upload.s3 import upload_file
+from shared.file_upload.s3 import upload_file, upload_file_from_obj
 
 from backend.models import AIModel, AIModelParamMap, AppSetting, BackupTiming, InferenceLog, InternalFileObject, Project, Setting, Timing, User
 
@@ -174,6 +174,14 @@ class DBRepo:
         }
 
         return InternalResponse(payload, 'file found', True)
+    
+    def upload_file(self, file):
+        url = upload_file_from_obj(file)
+        payload = {
+            'data': url
+        }
+
+        return InternalResponse(payload, 'file uploaded', True)
     
     def create_file(self, **kwargs):
         data = CreateFileDao(data=kwargs)

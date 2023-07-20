@@ -60,5 +60,6 @@ SERVER = ServerType.STAGING.value
 AUTOMATIC_FILE_HOSTING = SERVER != ServerType.DEVELOPMENT.value  # automatically upload project files to s3 (images, videos, gifs)
 AWS_S3_BUCKET = 'banodoco'
 AWS_S3_REGION = 'ap-south-1'    # TODO: discuss this
+OFFLINE_MODE = True     # for picking up secrets and file storage
 
 LOCAL_DATABASE_NAME = 'banodoco_local.db'

@@ -56,6 +56,7 @@ class APIRepo:
         self.FILE_URL = '/v1/data/file'
         self.FILE_LIST_URL = '/v1/data/file/list'
         self.FILE_UUID_LIST_URL = '/v1/data/file/uuid-list'
+        self.FILE_UPLOAD_URL = 'v1/data/file/upload'
         
         # app setting
         self.APP_SETTING_URL = '/v1/data/app-setting'
@@ -70,14 +71,15 @@ class APIRepo:
         st.experimental_rerun()
 
     ################### base http methods
-    def _get_headers(self):
+    def _get_headers(self, content_type="application/json"):
         auth_token = get_url_param(AUTH_TOKEN)
         if not auth_token and SERVER != ServerType.DEVELOPMENT.value:
             self.logout()
 
         headers = {}
         headers["Authorization"] = f"Bearer {auth_token}"
-        headers["Content-Type"] = "application/json"
+        if content_type:
+            headers["Content-Type"] = content_type
 
         return headers
 
@@ -85,8 +87,13 @@ class APIRepo:
         res = requests.get(self.base_url + url, params = params, headers=self._get_headers())
         return res.json()
 
-    def http_post(self, url, data = None):
-        res = requests.post(self.base_url + url, json=data, headers=self._get_headers())
+    def http_post(self, url, data = {}, file_content = None):
+        if file_content:
+            files = {file_content}
+            res = requests.post(self.base_url + url, json=data, files=files, headers=self._get_headers(None))
+        else:
+            res = requests.post(self.base_url + url, json=data, headers=self._get_headers())
+
         return res.json()
     
     def http_put(self, url, data = None):
@@ -159,6 +166,10 @@ class APIRepo:
         update_data['uuid'] = uuid
         update_data['type'] = type
         res = self.http_put(url=self.FILE_URL, data=update_data)
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def upload_file(self, file_content):
+        res = self.http_post(url=self.FILE_UPLOAD_URL, data={}, file_content=file_content)
         return InternalResponse(res['payload'], 'success', res['status'])
         
     def create_file(self, **kwargs):

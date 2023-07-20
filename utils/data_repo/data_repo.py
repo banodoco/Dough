@@ -74,8 +74,14 @@ class DataRepo:
         file = self.db_repo.create_or_update_file(uuid, type, **kwargs).data['data']
         return InternalFileObject(**file) if file else None
     
+    def upload_file(self, file_content):
+        res = self.db_repo.upload_file(file_content)
+        file_url = res.data['data'] if res.status else None
+        return file_url
+
     def create_file(self, **kwargs):
-        file = self.db_repo.create_file(**kwargs).data['data']
+        res = self.db_repo.create_file(**kwargs)
+        file = res.data['data'] if res.status else None
         return InternalFileObject(**file) if file else None
     
     def delete_file_from_uuid(self, uuid):
@@ -196,7 +202,8 @@ class DataRepo:
         return [InternalFrameTimingObject(**timing) for timing in timing_list] if timing_list else []
     
     def create_timing(self, **kwargs):
-        timing = self.db_repo.create_timing(**kwargs).data['data']
+        res = self.db_repo.create_timing(**kwargs)
+        timing = res.data['data'] if res.status else None
         return InternalFrameTimingObject(**timing) if timing else None
     
     def update_specific_timing(self, uuid, **kwargs):
@@ -264,7 +271,8 @@ class DataRepo:
     
     # TODO: add valid model_id check throughout dp_repo
     def create_project_setting(self, **kwargs):
-        project_setting = self.db_repo.create_project_setting(**kwargs).data['data']
+        res = self.db_repo.create_project_setting(**kwargs)
+        project_setting = res.data['data'] if res.status else None
         return InternalSettingObject(**project_setting) if project_setting else None
     
     def update_project_setting(self, project_uuid, **kwargs):

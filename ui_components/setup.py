@@ -69,6 +69,9 @@ def setup_app_ui():
         if st.session_state['change_section'] == True:
             st.session_state['change_section'] = False
 
+    if "welcome_state" not in st.session_state:
+        st.session_state["welcome_state"] = 0
+
     if int(st.session_state["welcome_state"]) in [0, 1, 2, 3, 4] and st.session_state["online"] == False:
         welcome_page()
     else:

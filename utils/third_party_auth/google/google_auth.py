@@ -3,11 +3,11 @@ import os
 from httpx_oauth.clients.google import GoogleOAuth2
 import asyncio
 
-from shared.constants import SERVER, ServerType
+from shared.constants import OFFLINE_MODE, SERVER, ServerType
 
 load_dotenv()
 
-if SERVER != ServerType.PRODUCTION.value:
+if OFFLINE_MODE:
     GOOGLE_AUTH_CLIENT_ID = os.getenv('GOOGLE_AUTH_CLIENT_ID', '')
     GOOGLE_SECRET = os.getenv('GOOGLE_SECRET', '')
     REDIRECT_URI = os.getenv('REDIRECT_URI', '')

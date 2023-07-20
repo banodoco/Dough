@@ -8,7 +8,7 @@ import django
 from shared.constants import SERVER, ServerType
 
 from utils.constants import AUTH_TOKEN, LOGGED_USER
-from utils.local_storage.url_storage import delete_url_param, get_url_param, set_only_url_param, set_url_param
+from utils.local_storage.url_storage import delete_url_param, get_url_param, set_url_param
 from utils.third_party_auth.google.google_auth import get_google_auth_url
 
 # loading the django app
@@ -33,7 +33,7 @@ def main():
         
         params = st.experimental_get_query_params()
         if params and 'code' in params:
-            st.write(params['code'])
+            # st.write(params['code'])
             data = {
                 "id_token": params['code'][0]
             }
@@ -43,10 +43,10 @@ def main():
                 st.session_state[LOGGED_USER] = user.to_json() if user else None
                 set_url_param(AUTH_TOKEN, str(token))
                 # st.experimental_set_query_params(test='testing')
-                # st.experimental_rerun()
+                st.experimental_rerun()
             else:
                 delete_url_param(AUTH_TOKEN)
-                st.write("please login again")
+                st.error("please login again")
     else:
         # initializing project constants
         project_init()

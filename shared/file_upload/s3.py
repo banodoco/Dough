@@ -6,7 +6,7 @@ import os
 import shutil
 
 import requests
-from shared.constants import AWS_S3_BUCKET, AWS_S3_REGION, SERVER, ServerType
+from shared.constants import AWS_S3_BUCKET, AWS_S3_REGION
 from shared.logging.logging import AppLogger
 from shared.logging.constants import LoggingPayload, LoggingType
 logger = AppLogger()
@@ -24,19 +24,36 @@ def upload_file(file_location, aws_access_key, aws_secret_key, bucket=AWS_S3_BUC
         s3.put_object_acl(ACL='public-read', Bucket=bucket, Key=s3_file)
         url = f"https://s3.amazonaws.com/{bucket}/{s3_file}"
     except Exception as e:
-        # # saving locally in the code directory if S3 upload fails (ONLY for LOCAL/DEV SERVER)
-        # if SERVER != ServerType.PRODUCTION.value:
-        #     logger = AppLogger()
-        #     logger.log(LoggingType.ERROR, LoggingPayload(
-        #         message=str(e), data={}))
-
-        #     # TODO: fix the local destinations for different files
-        #     dest = "videos/controlnet_test/assets/frames/1_selected/" + unique_file_name
-        #     shutil.copy(file_location, dest)
-        #     url = dest
         logger.log(LoggingType.ERROR, 'unable to upload to s3')
 
     return url
+
+def upload_file_from_obj(file, aws_access_key, aws_secret_key, bucket=AWS_S3_BUCKET):
+    folder = 'test/'
+    unique_tag = str(uuid.uuid4())
+    file_extension = os.path.splitext(file.name)[1]
+    filename = unique_tag + file_extension
+
+    # Upload the file
+    content_type = mimetypes.guess_type(file.name)[0]
+    data = {
+        "Body": file,
+        "Bucket": bucket,
+        "Key": folder + filename,
+        "ACL": "public-read"
+    }
+    if content_type:
+        data['ContentType'] = content_type
+    
+    s3_client = boto3.client('s3', aws_access_key_id=aws_access_key,
+                          aws_secret_access_key=aws_secret_key)
+    resp = s3_client.put_object(**data)
+    object_url = "https://s3-{0}.amazonaws.com/{1}/{2}".format(
+        AWS_S3_REGION,
+        bucket,
+        folder + filename)
+    return object_url
+
 
 # TODO: fix the structuring of s3 for different users and different files
 def generate_s3_url(image_url, aws_access_key, aws_secret_key, bucket=AWS_S3_BUCKET, file_ext='png', folder='posts/'):

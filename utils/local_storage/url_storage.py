@@ -7,24 +7,23 @@ def get_url_param(key):
     params = st.experimental_get_query_params()
     val = params.get(key)
     if isinstance(val, list):
-        return val[0]
-    return val
-
+        res = val[0]
+    else:
+        res = val
+    
+    if not res and ( key in st.session_state and st.session_state[key]):
+        return st.session_state[key]
+    return res
 
 def set_url_param(key, value):
     print("setting param: ", key, value, len(value))
+    st.session_state[key] = value
     st.experimental_set_query_params(**{key: [value]})
-
-
-def set_only_url_param(key, value):
-    print("setting param: ", key, value)
-    params = st.experimental_get_query_params()
-    for k, _ in params.items():
-        st.experimental_set_query_params(**{k: None})
-
-    st.experimental_set_query_params(**{key: value})
 
 
 def delete_url_param(key):
     print("deleting key: ", key)
+    if key in st.session_state:
+        del st.session_state[key]
+
     st.experimental_set_query_params(**{key: None})
