@@ -184,7 +184,8 @@ class DataRepo:
         return InternalFrameTimingObject(**timing) if timing else None
     
     def get_timing_from_frame_number(self, project_uuid, frame_number):
-        timing = self.db_repo.get_timing_from_frame_number(project_uuid, frame_number).data['data']
+        res = self.db_repo.get_timing_from_frame_number(project_uuid, frame_number)
+        timing = res.data['data'] if res.status else None
         return InternalFrameTimingObject(**timing) if timing else None
     
     
@@ -198,7 +199,8 @@ class DataRepo:
         return InternalFrameTimingObject(**prev_timing) if prev_timing else None
     
     def get_timing_list_from_project(self, project_uuid=None):
-        timing_list = self.db_repo.get_timing_list_from_project(project_uuid).data['data']
+        res = self.db_repo.get_timing_list_from_project(project_uuid)
+        timing_list = res.data['data'] if res.status else None
         return [InternalFrameTimingObject(**timing) for timing in timing_list] if timing_list else []
     
     def create_timing(self, **kwargs):
@@ -266,7 +268,8 @@ class DataRepo:
 
     # setting
     def get_project_setting(self, project_id):
-        project_setting = self.db_repo.get_project_setting(project_id).data['data']
+        res = self.db_repo.get_project_setting(project_id)
+        project_setting = res.data['data'] if res.status else None
         return InternalSettingObject(**project_setting) if project_setting else None
     
     # TODO: add valid model_id check throughout dp_repo

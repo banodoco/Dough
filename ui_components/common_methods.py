@@ -1480,17 +1480,19 @@ def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.valu
         st.session_state['current_frame_uuid'])
     
     with header1:
-        prev_2_timing = data_repo.get_timing_from_frame_number(project_uuid,
-            current_timing.aux_frame_index - 2)
+        if current_timing.aux_frame_index - 2 >=0:
+            prev_2_timing = data_repo.get_timing_from_frame_number(project_uuid,
+                current_timing.aux_frame_index - 2)
 
-        if prev_2_timing:
-            display_image(prev_2_timing.uuid, stage=stage, clickable=True)
+            if prev_2_timing:
+                display_image(prev_2_timing.uuid, stage=stage, clickable=True)
 
     with header2:
-        prev_timing = data_repo.get_timing_from_frame_number(project_uuid,
-            current_timing.aux_frame_index - 1)
-        if prev_timing:
-            display_image(prev_timing.uuid, stage=stage, clickable=True)
+        if current_timing.aux_frame_index - 1 >= 0:
+            prev_timing = data_repo.get_timing_from_frame_number(project_uuid,
+                current_timing.aux_frame_index - 1)
+            if prev_timing:
+                display_image(prev_timing.uuid, stage=stage, clickable=True)
 
     with header3:
         timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
@@ -1498,16 +1500,18 @@ def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.valu
                       stage=stage, clickable=True)
 
     with header4:
-        next_timing = data_repo.get_timing_from_frame_number(project_uuid,
-            current_timing.aux_frame_index + 1)
-        if next_timing:
-            display_image(next_timing.uuid, stage=stage, clickable=True)
+        if current_timing.aux_frame_index + 1 <= len(timing_details):
+            next_timing = data_repo.get_timing_from_frame_number(project_uuid,
+                current_timing.aux_frame_index + 1)
+            if next_timing:
+                display_image(next_timing.uuid, stage=stage, clickable=True)
 
     with header5:
-        next_2_timing = data_repo.get_timing_from_frame_number(project_uuid,
-            current_timing.aux_frame_index + 2)
-        if next_2_timing:
-            display_image(next_2_timing.uuid, stage=stage, clickable=True)
+        if current_timing.aux_frame_index + 2 <= len(timing_details):
+            next_2_timing = data_repo.get_timing_from_frame_number(project_uuid,
+                current_timing.aux_frame_index + 2)
+            if next_2_timing:
+                display_image(next_2_timing.uuid, stage=stage, clickable=True)
 
     st.markdown("***")
 

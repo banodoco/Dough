@@ -97,7 +97,7 @@ class APIRepo:
         return res.json()
     
     def http_put(self, url, data = None):
-        res = requests.put(self.base_url + url, data=data, headers=self._get_headers())
+        res = requests.put(self.base_url + url, json=data, headers=self._get_headers())
         return res.json()
     
     def http_delete(self, url, params=None):
