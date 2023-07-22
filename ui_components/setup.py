@@ -155,15 +155,14 @@ def setup_app_ui():
                 elif st.session_state["main_view_type"] == "Tools & Settings":
 
                     with st.sidebar:
-
-                        pages = ["Custom Models",
+                        tool_pages = ["Custom Models",
                                  "Batch Actions", "Project Settings"]
 
-                        if st.session_state["page"] not in pages:
-                            st.session_state["page"] = pages[0]
+                        if st.session_state["page"] not in tool_pages:
+                            st.session_state["page"] = tool_pages[0]
                             st.session_state["manual_select"] = None
 
-                        st.session_state['page'] = option_menu(None, pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
+                        st.session_state['page'] = option_menu(None, tool_pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
                                                                "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
 
                     if st.session_state["page"] == "Custom Models":

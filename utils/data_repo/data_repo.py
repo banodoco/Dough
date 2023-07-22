@@ -66,7 +66,8 @@ class DataRepo:
         if project_id:
             filter_data['project_id'] = project_id
 
-        file_list = self.db_repo.get_all_file_list(**filter_data).data['data']
+        res = self.db_repo.get_all_file_list(**filter_data)
+        file_list = res.data['data'] if res.status else None
         
         return [InternalFileObject(**file) for file in file_list] if file_list else []
     
@@ -117,7 +118,8 @@ class DataRepo:
     
     # ai model (custom ai model)
     def get_ai_model_from_uuid(self, uuid):
-        model = self.db_repo.get_ai_model_from_uuid(uuid).data['data']
+        res = self.db_repo.get_ai_model_from_uuid(uuid)
+        model = res.data['data'] if res.status else None
         return InternalAIModelObject(**model) if model else None
     
     def get_ai_model_from_name(self, name):

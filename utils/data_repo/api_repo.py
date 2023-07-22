@@ -151,8 +151,8 @@ class APIRepo:
         res = self.http_get(self.FILE_URL, params={'uuid': uuid})
         return InternalResponse(res['payload'], 'success', res['status'])
     
-    def get_all_file_list(self, file_type: InternalFileType, tag = None, project_id = None):
-        filter_data = {"type": file_type}
+    def get_all_file_list(self, type: InternalFileType, tag = None, project_id = None):
+        filter_data = {"type": type}
         if tag:
             filter_data['tag'] = tag
         if project_id:
@@ -379,21 +379,26 @@ class APIRepo:
     
 
     # backup
-    # def get_backup_from_uuid(self, uuid):
-    #     pass
+    # TODO: complete this
+    def get_backup_from_uuid(self, uuid):
+        pass
     
-    # def create_backup(self, project_uuid, version_name):
-    #     backup = self.db_repo.create_backup(project_uuid, version_name).data['data']
-    #     return InternalBackupObject(**backup) if backup else None
+    def create_backup(self, project_uuid, version_name):
+        # backup = self.db_repo.create_backup(project_uuid, version_name).data['data']
+        # return InternalBackupObject(**backup) if backup else None
+        return None
     
-    # def get_backup_list(self, project_id=None):
-    #     backup_list = self.db_repo.get_backup_list(project_id).data['data']
-    #     return [InternalBackupObject(**backup) for backup in backup_list] if backup_list else []
+    def get_backup_list(self, project_id=None):
+        # backup_list = self.db_repo.get_backup_list(project_id).data['data']
+        # return [InternalBackupObject(**backup) for backup in backup_list] if backup_list else []
+        return InternalResponse({'data': []}, 'success', True)
     
-    # def delete_backup(self, uuid):
-    #     res = self.db_repo.delete_backup(uuid)
-    #     return InternalResponse(res['payload'], 'success', res['status']).status
+    def delete_backup(self, uuid):
+        # res = self.db_repo.delete_backup(uuid)
+        # return InternalResponse(res['payload'], 'success', res['status']).status
+        return True
     
-    # def restore_backup(self, uuid):
-    #     res = self.db_repo.restore_backup(uuid)
-    #     return InternalResponse(res['payload'], 'success', res['status']).status
+    def restore_backup(self, uuid):
+        # res = self.db_repo.restore_backup(uuid)
+        # return InternalResponse(res['payload'], 'success', res['status']).status
+        return True

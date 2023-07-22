@@ -56,11 +56,14 @@ def custom_models_page(project_uuid):
                     if model.keyword != "":
                         st.text(model.replicate_model_id)
                 with col4:
-                    model.training_image_list[0].location
+                    if len(model.training_image_list) > 0:
+                        model.training_image_list[0].location
                 with col5:
-                    model.training_image_list[1].location
+                    if len(model.training_image_list) > 1:
+                        model.training_image_list[1].location
                 with col6:
-                    model.training_image_list[2].location
+                    if len(model.training_image_list) > 2:
+                        model.training_image_list[2].location
                 st.markdown("***")
 
     with st.expander("Train a new model"):
