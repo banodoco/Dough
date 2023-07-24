@@ -131,12 +131,12 @@ class DataRepo:
         model = self.db_repo.get_ai_model_from_name(name).data['data']
         return InternalAIModelObject(**model) if model else None
     
-    def get_all_ai_model_list(self, model_type=None, user_id=None):
+    def get_all_ai_model_list(self, model_type_list=None, user_id=None):
         from utils.common_methods import get_current_user_uuid
         if not user_id:
             user_id = get_current_user_uuid()
 
-        model_list = self.db_repo.get_all_ai_model_list(model_type, user_id).data['data']
+        model_list = self.db_repo.get_all_ai_model_list(model_type_list, user_id).data['data']
         return [InternalAIModelObject(**model) for model in model_list] if model_list else []
     
     def create_ai_model(self, **kwargs):

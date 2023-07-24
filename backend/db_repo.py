@@ -351,7 +351,7 @@ class DBRepo:
 
         return InternalResponse(payload, 'ai_model fetched', True)
     
-    def get_all_ai_model_list(self, model_type=None, user_id=None):
+    def get_all_ai_model_list(self, model_type_list=None, user_id=None):
         query = {'is_disabled': False}
 
         if user_id:
@@ -361,8 +361,8 @@ class DBRepo:
             
             query['user_id'] = user.id
 
-        if model_type:
-            query['category'] = model_type
+        if model_type_list:
+            query['category__in'] = model_type_list
             
         ai_model_list = AIModel.objects.filter(**query).all()
         

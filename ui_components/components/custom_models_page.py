@@ -17,16 +17,17 @@ def custom_models_page(project_uuid):
     project: InternalProjectObject = data_repo.get_project_from_uuid(
         project_uuid)
     
-    # TODO: common user_id
     app_setting: InternalAppSettingObject = data_repo.get_app_setting_from_uuid()
 
     with st.expander("Existing models"):
 
         st.subheader("Existing Models:")
 
-        # TODO: common user_id
+        # TODO: the list should only show models trained by the user (not the default ones)
         current_user_uuid = get_current_user_uuid()
-        model_list: List[InternalAIModelObject] = data_repo.get_all_ai_model_list(current_user_uuid)
+        model_list: List[InternalAIModelObject] = data_repo.get_all_ai_model_list(\
+            model_type_list=[AIModelType.DREAMBOOTH.value, AIModelType.LORA.value], \
+                user_id=current_user_uuid)
         if model_list == []:
             st.info("You don't have any models yet. Train a new model below.")
         else:

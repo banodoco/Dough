@@ -77,7 +77,10 @@ def video_rendering_page(mainheader2, project_uuid):
     for video in video_list:
         st.subheader(video.name)
 
-        st.write(datetime.datetime.fromisoformat(video.created_on))
+        try:
+            st.write(datetime.datetime.fromisoformat(video.created_on))
+        except Exception as e:
+            st.write(datetime.datetime.strptime(video.created_on, '%Y-%m-%dT%H:%M:%S.%fZ'))
 
         st.video(video.location)
 

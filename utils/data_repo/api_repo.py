@@ -217,8 +217,11 @@ class APIRepo:
         return InternalResponse(res['payload'], 'success', res['status'])
 
     
-    def get_all_ai_model_list(self, model_type=None, user_id=None):
-        res = self.http_get(self.MODEL_LIST_URL, params={'user_id': user_id})
+    def get_all_ai_model_list(self, model_type_list=None, user_id=None):
+        params = {'user_id': user_id}
+        if model_type_list:
+            params.update({'model_type_list': model_type_list})
+        res = self.http_get(self.MODEL_LIST_URL, params=params)
         return InternalResponse(res['payload'], 'success', res['status'])
     
     def create_ai_model(self, **kwargs):
