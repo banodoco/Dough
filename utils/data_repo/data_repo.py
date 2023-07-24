@@ -81,6 +81,11 @@ class DataRepo:
         return file_url
 
     def create_file(self, **kwargs):
+        if 'hostel_url' not in kwargs and SERVER != ServerType.DEVELOPMENT.value:
+            file_content = ('file', open(kwargs['local_path'], 'rb'))
+            uploaded_file_url = self.upload_file(file_content)
+            kwargs.update({'hosted_url':uploaded_file_url})
+
         res = self.db_repo.create_file(**kwargs)
         file = res.data['data'] if res.status else None
         return InternalFileObject(**file) if file else None

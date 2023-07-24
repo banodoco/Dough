@@ -1098,8 +1098,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
         selected_image = ""
         with add1:
+            # removed "Frame From Video" for now
             source_of_starting_image = st.radio("Where would you like to get the starting image from?", [
-                                                "Previous frame", "Uploaded image", "Frame From Video"], key="source_of_starting_image")
+                                                "Previous frame", "Uploaded image"], key="source_of_starting_image")
             if source_of_starting_image == "Previous frame":
                 which_stage_for_starting_image = st.radio("Which stage would you like to use?", [
                                                           "Styled Image", "Source Image"], key="which_stage_for_starting_image")
@@ -1213,9 +1214,10 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 data_repo.update_specific_timing(
                     timing_details[index_of_current_item + 1].uuid, source_image_id=new_source_image.uuid)
                 
-            if also_make_this_the_primary_image == "Yes":
                 add_image_variant(
                     new_source_image.uuid, timing_details[index_of_current_item + 1].uuid)
+                
+            if also_make_this_the_primary_image == "Yes":
                 promote_image_variant(timing_details[index_of_current_item + 1].uuid, 0)
             if inherit_styling_settings == "Yes":
                 clone_styling_settings(which_number_for_starting_image, timing_details[index_of_current_item + 1].uuid)

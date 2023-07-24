@@ -8,6 +8,7 @@ from shared.constants import SERVER, AIModelType, GuidanceType, InternalFileType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from shared.constants import AnimationStyleType
+from ui_components.common_methods import add_image_variant
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalUserObject
 from utils.common_methods import copy_sample_assets, create_working_assets
 from utils.data_repo.data_repo import DataRepo
@@ -89,11 +90,6 @@ def create_new_user_data(user: InternalUserObject):
         "project_id": project.uuid
     }
 
-    if SERVER != ServerType.DEVELOPMENT.value:
-        file_content = ('file', open(sample_file_location, 'rb'))
-        uploaded_file_url = data_repo.upload_file(file_content)
-        file_data.update({'hosted_url':uploaded_file_url})
-
     source_image = data_repo.create_file(**file_data)
 
     timing_data = {
@@ -104,6 +100,8 @@ def create_new_user_data(user: InternalUserObject):
         "source_image_id": source_image.uuid
     }
     timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
+
+    add_image_variant(source_image.uuid, timing.uuid)
 
     # create default ai models
     model_list = create_predefined_models(user)

@@ -116,8 +116,10 @@ class InternalFrameTimingObject:
     def primary_image_location(self):
         if not len(self.alternative_images_list):
             return ""
-        else:
+        elif self.primary_image:
             return self.primary_image.location
+        else:
+            return ""
 
     @property
     def primary_variant_index(self):

@@ -3,7 +3,6 @@ import streamlit as st
 
 
 def get_url_param(key):
-    print("fetching url param: ", key)
     params = st.experimental_get_query_params()
     val = params.get(key)
     if isinstance(val, list):
@@ -12,11 +11,11 @@ def get_url_param(key):
         res = val
     
     if not res and ( key in st.session_state and st.session_state[key]):
+        set_url_param(key, st.session_state[key])
         return st.session_state[key]
     return res
 
 def set_url_param(key, value):
-    print("setting param: ", key, value, len(value))
     st.session_state[key] = value
     st.experimental_set_query_params(**{key: [value]})
 
