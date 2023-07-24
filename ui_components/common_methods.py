@@ -1028,12 +1028,10 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
                                 which_image_to_use = st.number_input(
                                     "Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0)
                                 if which_stage_to_use == WorkflowStageType.SOURCE.value:
-                                    background_image = timing_details[which_image_to_use]["source_image"]
+                                    background_image = timing_details[which_image_to_use].source_image.location
 
                                 elif which_stage_to_use == WorkflowStageType.STYLED.value:
-                                    variants = timing_details[which_image_to_use]["alternative_images"]
-                                    primary_image = timing_details[which_image_to_use]["primary_image"]
-                                    background_image = variants[primary_image]
+                                    background_image = timing_details[which_image_to_use].primary_image.location
                             with btn2:
                                 st.image(background_image,
                                          use_column_width=True)
@@ -1114,8 +1112,8 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
         "Prompt", value=project_settings.default_prompt)
     inpaint_negative_prompt = st.text_input(
         "Negative Prompt", value='edge,branches, frame, fractals, text' + project_settings.default_negative_prompt)
-    if 'inpainted_image_uuid' not in st.session_state:
-        st.session_state['inpainted_image_uuid'] = ""
+    if 'precision_cropping_inpainted_image_uuid' not in st.session_state:
+        st.session_state['precision_cropping_inpainted_image_uuid'] = ""
 
     if st.button("Inpaint"):
         width = int(project_settings.width)
@@ -1168,11 +1166,11 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
         inpainted_file = inpainting('videos/temp/cropped.png', inpaint_prompt,
                                     inpaint_negative_prompt, st.session_state['current_frame_uuid'], True, pass_mask=True)
 
-        st.session_state['inpainted_image_uuid'] = inpainted_file.uuid
+        st.session_state['precision_cropping_inpainted_image_uuid'] = inpainted_file.uuid
 
-    if st.session_state['inpainted_image_uuid']:
+    if st.session_state['precision_cropping_inpainted_image_uuid']:
         img_file = data_repo.get_file_from_uuid(
-            st.session_state['inpainted_image_uuid'])
+            st.session_state['precision_cropping_inpainted_image_uuid'])
         st.image(img_file.location, caption="Inpainted Image",
                  use_column_width=True, width=200)
 
@@ -1180,7 +1178,7 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
             if st.button("Make Source Image"):
                 data_repo.update_specific_timing(
                     st.session_state['current_frame_uuid'], source_image_id=img_file.uuid)
-                st.session_state['inpainted_image_uuid'] = ""
+                st.session_state['precision_cropping_inpainted_image_uuid'] = ""
                 st.experimental_rerun()
 
         elif stage == WorkflowStageType.STYLED.value:
@@ -1188,10 +1186,10 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
                 timing_details = data_repo.get_timing_list_from_project(
                     project_uuid)
                 number_of_image_variants = add_image_variant(
-                    st.session_state['inpainted_image_uuid'], st.session_state['current_frame_uuid'])
+                    st.session_state['precision_cropping_inpainted_image_uuid'], st.session_state['current_frame_uuid'])
                 promote_image_variant(
                     st.session_state['current_frame_uuid'], number_of_image_variants - 1)
-                st.session_state['inpainted_image_uuid'] = ""
+                st.session_state['precision_cropping_inpainted_image_uuid'] = ""
                 st.experimental_rerun()
 
 
@@ -4148,13 +4146,16 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
             else:
                 mask_img = Image.open(mask_location)
 
+            # TODO: fix this logic, if the uploaded image and the image to be editted are of different sizes then
+            # this code will cause issues
             result_img = Image.new("RGBA", bg_img.size, (255, 255, 255, 0))
             for x in range(bg_img.size[0]):
                 for y in range(bg_img.size[1]):
-                    if mask_img.getpixel((x, y)) == (0, 0, 0, 255):
-                        result_img.putpixel((x, y), (255, 255, 255, 0))
-                    else:
-                        result_img.putpixel((x, y), bg_img.getpixel((x, y)))
+                    if x < mask_img.size[0] and y < mask_img.size[1]:
+                        if mask_img.getpixel((x, y)) == (0, 0, 0, 255):
+                            result_img.putpixel((x, y), (255, 255, 255, 0))
+                        else:
+                            result_img.putpixel((x, y), bg_img.getpixel((x, y)))
             result_img.save("masked_image.png")
             edited_image = replace_background(
                 project_uuid, "masked_image.png", background_image)

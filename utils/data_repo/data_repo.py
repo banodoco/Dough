@@ -81,7 +81,7 @@ class DataRepo:
         return file_url
 
     def create_file(self, **kwargs):
-        if 'hostel_url' not in kwargs and SERVER != ServerType.DEVELOPMENT.value:
+        if 'hosted_url' not in kwargs and SERVER != ServerType.DEVELOPMENT.value:
             file_content = ('file', open(kwargs['local_path'], 'rb'))
             uploaded_file_url = self.upload_file(file_content)
             kwargs.update({'hosted_url':uploaded_file_url})
@@ -285,8 +285,9 @@ class DataRepo:
         project_setting = res.data['data'] if res.status else None
         return InternalSettingObject(**project_setting) if project_setting else None
     
+    # TODO: remove db calls for updating guidance_type
     def update_project_setting(self, project_uuid, **kwargs):
-        kwargs['uuid'] = project_uuid
+        kwargs['project_id'] = project_uuid
         project_setting = self.db_repo.update_project_setting(**kwargs).data['data']
         return InternalSettingObject(**project_setting) if project_setting else None
 

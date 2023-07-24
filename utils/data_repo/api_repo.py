@@ -185,10 +185,8 @@ class APIRepo:
         res = self.http_get(self.FILE_UUID_LIST_URL, params={'uuid_list': image_uuid_list, 'type': file_type})
         return InternalResponse(res['payload'], 'success', res['status'])
     
-    def update_file(self, file_uuid, **kwargs):
-        update_data = kwargs
-        update_data['uuid'] = file_uuid
-        res = self.http_put(url=self.FILE_URL, data=update_data)
+    def update_file(self, **kwargs):
+        res = self.http_put(url=self.FILE_URL, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
     
     # project
@@ -368,8 +366,7 @@ class APIRepo:
         res = self.http_post(url=self.PROJECT_SETTING_URL, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
     
-    def update_project_setting(self, project_uuid, **kwargs):
-        kwargs['uuid'] = project_uuid
+    def update_project_setting(self, **kwargs):
         res = self.http_put(url=self.PROJECT_SETTING_URL, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
 

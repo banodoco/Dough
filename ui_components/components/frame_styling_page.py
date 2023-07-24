@@ -312,7 +312,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             canny_timing = timing_details[canny_frame_number]
 
                             if st.button("Use Guidance Image From Other Frame"):
-                                if timing_details[canny_frame_number]["source_image"] != "":
+                                if timing_details[canny_frame_number].source_image and timing_details[canny_frame_number].source_image.location:
                                     data_repo.update_specific_timing(
                                         st.session_state['current_frame_uuid'], source_image_id=timing_details[canny_frame_number].source_image.uuid)
                                     st.experimental_rerun()
