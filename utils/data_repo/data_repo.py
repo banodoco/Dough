@@ -101,6 +101,13 @@ class DataRepo:
         return [InternalFileObject(**image) for image in image_list] if image_list else []
     
     def update_file(self, file_uuid, **kwargs):
+        # TODO: we are updating hosted_url whenever local_path is updated but we 
+        # are not checking if the local_path is a different one - handle this correctly
+        if 'local_path' in kwargs and SERVER != ServerType.DEVELOPMENT.value:
+            file_content = ('file', open(kwargs['local_path'], 'rb'))
+            uploaded_file_url = self.upload_file(file_content)
+            kwargs.update({'hosted_url':uploaded_file_url})
+
         file = self.db_repo.update_file(uuid=file_uuid, **kwargs).data['data']
         return InternalFileObject(**file) if file else None
     
@@ -120,6 +127,10 @@ class DataRepo:
     def delete_project_from_uuid(self, uuid):
         res = self.db_repo.delete_project_from_uuid(uuid)
         return res.status
+    
+    def update_project(self, **kwargs):
+        project = self.db_repo.update_project(kwargs).data['data']
+        return InternalProjectObject(**project) if project else None
     
     # ai model (custom ai model)
     def get_ai_model_from_uuid(self, uuid):

@@ -285,6 +285,22 @@ class DBRepo:
         
         return InternalResponse(payload, 'project fetched', True)
     
+    def update_project(self, **kwargs):
+        project = Project.objects.filter(uuid=kwargs['uuid'], is_disabled=False).first()
+        if not project:
+            return InternalResponse({}, 'invalid project uuid', False)
+        
+        for k,v in kwargs.items():
+            setattr(project, k, v)
+
+        project.save()
+
+        payload = {
+            'data': ProjectDto(project).data
+        }
+
+        return InternalResponse(payload, 'successfully updated project', True)
+    
     def get_all_project_list(self, user_uuid):
         user: User = User.objects.filter(uuid=user_uuid, is_disabled=False).first()
         if not user:

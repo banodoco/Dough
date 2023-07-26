@@ -206,6 +206,10 @@ class APIRepo:
         res = self.http_delete(self.PROJECT_URL, params={'uuid': uuid})
         return InternalResponse(res['payload'], 'success', res['status'])
     
+    def update_project(self, **kwargs):
+        res = self.http_put(self.PROJECT_URL, data=kwargs)
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
     # ai model (custom ai model)
     def get_ai_model_from_uuid(self, uuid):
         res = self.http_get(self.MODEL_URL, params={'uuid': uuid})

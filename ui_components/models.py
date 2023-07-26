@@ -1,6 +1,8 @@
 import datetime
 import json
 
+from ui_components.constants import TEMP_MASK_FILE
+
 
 class InternalFileObject:
     def __init__(self, uuid, name, type, local_path, hosted_url, created_on, tag=""):
@@ -20,11 +22,28 @@ class InternalFileObject:
 
 
 class InternalProjectObject:
-    def __init__(self, uuid, name, user_uuid, created_on):
+    def __init__(self, uuid, name, user_uuid, created_on, temp_file_list):
         self.uuid = uuid
         self.name = name
         self.user_uuid = user_uuid
         self.created_on = created_on
+        self.temp_file_list = temp_file_list
+
+    @property
+    def project_temp_file_list(self):
+        return json.loads(self.temp_file_list) if self.temp_file_list else {}
+    
+    @property
+    def temp_mask_file(self):
+        temp_files_list = self.project_temp_file_list
+        for k, v in temp_files_list.items():
+            if k == TEMP_MASK_FILE:
+                from utils.data_repo.data_repo import DataRepo
+                data_repo = DataRepo()
+                file = data_repo.get_file_from_uuid(k)
+                return file
+            
+        return None
 
 
 class InternalAIModelObject:

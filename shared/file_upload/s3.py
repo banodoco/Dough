@@ -11,6 +11,7 @@ from shared.logging.logging import AppLogger
 from shared.logging.constants import LoggingPayload, LoggingType
 logger = AppLogger()
 
+# TODO: fix proper paths for file uploads 
 
 def upload_file(file_location, aws_access_key, aws_secret_key, bucket=AWS_S3_BUCKET):
     url = None
@@ -54,6 +55,28 @@ def upload_file_from_obj(file, aws_access_key, aws_secret_key, bucket=AWS_S3_BUC
         folder + filename)
     return object_url
 
+def upload_file_from_bytes(file_bytes, aws_access_key, aws_secret_key, key=None, bucket=AWS_S3_BUCKET):
+    if not key:
+        key = 'test/' + str(uuid.uuid4()) + '.png'
+    
+    content_type = 'image/png'
+    data = {
+        "Body": file_bytes,
+        "Bucket": bucket,
+        "Key": key,
+        "ACL": "public-read"
+    }
+    if content_type:
+        data['ContentType'] = content_type
+    
+    s3_client = boto3.client('s3', aws_access_key_id=aws_access_key,
+                          aws_secret_access_key=aws_secret_key)
+    resp = s3_client.put_object(**data)
+    object_url = "https://s3-{0}.amazonaws.com/{1}/{2}".format(
+        AWS_S3_REGION,
+        bucket,
+        key)
+    return object_url
 
 # TODO: fix the structuring of s3 for different users and different files
 def generate_s3_url(image_url, aws_access_key, aws_secret_key, bucket=AWS_S3_BUCKET, file_ext='png', folder='posts/'):

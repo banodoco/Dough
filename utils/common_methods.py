@@ -1,10 +1,15 @@
+from io import BytesIO
 from pathlib import Path
 import os
 import csv
+from typing import Union
 import streamlit as st
 import json
+from shared.constants import SERVER, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
+from PIL import Image
+import numpy as np
 
 from utils.constants import LOGGED_USER
 from utils.data_repo.data_repo import DataRepo
@@ -172,3 +177,18 @@ def get_current_user_uuid():
         return current_user['uuid']
     else: 
         return None
+
+# depending on the environment it will either save or host the PIL image object
+def save_or_host_pil_img(img: Union[Image.Image, str, np.ndarray], path):
+    uploaded_url = None
+    if SERVER != ServerType.DEVELOPMENT.value:
+        image_bytes = BytesIO()
+        img.save(image_bytes, format='PNG')
+        image_bytes.seek(0)
+
+        data_repo = DataRepo()
+        uploaded_url = data_repo.upload_file(image_bytes)
+    else:
+        img.save(path)
+
+    return uploaded_url

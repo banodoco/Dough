@@ -1202,15 +1202,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
             
             timing_details = data_repo.get_timing_list_from_project(project_uuid)
             if selected_image != "":
-                selected_image = save_new_image(selected_image)
-                file_data = {
-                    "name": str(uuid.uuid4()) + ".png",
-                    "type": InternalFileType.IMAGE.value,
-                    "local_path": selected_image,
-                    "project_id": project_uuid
-                }
-
-                new_source_image = data_repo.create_file(**file_data)
+                new_source_image = save_new_image(selected_image, project_uuid)
                 data_repo.update_specific_timing(
                     timing_details[index_of_current_item + 1].uuid, source_image_id=new_source_image.uuid)
                 

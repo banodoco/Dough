@@ -29,7 +29,7 @@ from io import BytesIO
 from st_clickable_images import clickable_images
 import ast
 import numpy as np
-from shared.constants import AIModelType, InternalFileTag, InternalFileType
+from shared.constants import SERVER, AIModelType, InternalFileTag, InternalFileType, ServerType
 from pydub import AudioSegment
 import shutil
 from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, vfx
@@ -37,9 +37,9 @@ from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 from backend.models import InternalFileObject
 from shared.file_upload.s3 import upload_file
 from shared.utils import is_online_file_path
-from ui_components.constants import VideoQuality, WorkflowStageType
+from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE, VideoQuality, WorkflowStageType
 from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
-from utils.common_methods import get_current_user_uuid
+from utils.common_methods import get_current_user_uuid, save_or_host_pil_img
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import InternalResponse, AnimationStyleType
 from utils.ml_processor.ml_interface import get_ml_client
@@ -142,35 +142,48 @@ def prompt_finder_element(project_uuid):
                 st.markdown("***")
 
 
-def save_new_image(img: Union[Image.Image, str, np.ndarray]) -> str:
-    file_name = str(uuid.uuid4()) + ".png"
-    file_path = os.path.join("videos/temp", file_name)
-
+# TODO: image format is assumed to be PNG, change this later
+def save_new_image(img: Union[Image.Image, str, np.ndarray], project_uuid) -> InternalFileObject:
     # Check if img is a PIL image
     if isinstance(img, Image.Image):
-        img.save(file_path)
+        pass
 
     # Check if img is a URL
     elif isinstance(img, str) and bool(urlparse(img).netloc):
         response = r.get(img)
         img = Image.open(BytesIO(response.content))
-        img.save(file_path)
 
     # Check if img is a local file
     elif isinstance(img, str):
         img = Image.open(img)
-        img.save(file_path)
 
     # Check if img is a numpy ndarray
     elif isinstance(img, np.ndarray):
         img = Image.fromarray(img)
-        img.save(file_path)
 
     else:
         raise ValueError(
             "Invalid image input. Must be a PIL image, a URL string, a local file path string or a numpy ndarray.")
+    
+    file_name = str(uuid.uuid4()) + ".png"
+    file_path = os.path.join("videos/temp", file_name)
 
-    return file_path
+    hosted_url = save_or_host_pil_img(img, file_path)
+
+    file_data = {
+        "name": str(uuid.uuid4()) + ".png",
+        "type": InternalFileType.IMAGE.value,
+        "project_id": project_uuid
+    }
+
+    if hosted_url:
+        file_data.update({'hosted_url': hosted_url})
+    else:
+        file_data.update({'local_path': file_path})
+
+    data_repo = DataRepo()
+    new_image = data_repo.create_file(**file_data)
+    return new_image
 
 
 def resize_and_rotate_element(stage, project_uuid):
@@ -202,28 +215,15 @@ def resize_and_rotate_element(stage, project_uuid):
                 input_image = current_frame.primary_image
 
             if input_image:
-                unique_filename = str(uuid.uuid4())
-                temp_local_location = f'videos/temp/{unique_filename}.png'
+                # unique_filename = str(uuid.uuid4())
+                # temp_local_location = f'videos/temp/{unique_filename}.png'
                 # if rotation_angle != 0:
                 st.session_state['rotated_image'] = rotate_image(
                     input_image.location, rotation_angle)
-                st.session_state['rotated_image'].save(temp_local_location)
-                # else:
-                #     st.session_state['rotated_image'] = input_image.location
-                #     if st.session_state['rotated_image'].startswith("http"):
-                #         st.session_state['rotated_image'] = r.get(
-                #             st.session_state['rotated_image'])
-                #         st.session_state['rotated_image'] = Image.open(
-                #             BytesIO(st.session_state['rotated_image'].content))
-                #     else:
-                #         st.session_state['rotated_image'] = Image.open(
-                #             st.session_state['rotated_image'])
-
-                #     st.session_state['rotated_image'].save(temp_local_location)
+                # st.session_state['rotated_image'].save(temp_local_location)
 
                 if zoom_value != 1.0:
-                    st.session_state['rotated_image'] = zoom_image(
-                        temp_local_location, zoom_value, fill_with)
+                    st.session_state['rotated_image'] = zoom_image(st.session_state['rotated_image'], zoom_value, fill_with)
 
         if st.session_state['rotated_image'] != "":
             st.image(st.session_state['rotated_image'],
@@ -237,7 +237,7 @@ def resize_and_rotate_element(stage, project_uuid):
                     if stage == WorkflowStageType.SOURCE.value:
                         time.sleep(1)
                         save_location = f"videos/{project.uuid}/assets/frames/1_selected/{file_name}"
-                        st.session_state['rotated_image'].save(save_location)
+                        hosted_url = save_or_host_pil_img(st.session_state['rotated_image'], save_location)
 
                         current_frame = data_repo.get_timing_from_uuid(
                             st.session_state['current_frame_uuid'])
@@ -245,16 +245,29 @@ def resize_and_rotate_element(stage, project_uuid):
 
                         # if source image is already present then updating it
                         if source_image:
-                            data_repo.update_file(
-                                source_image.uuid, local_path=save_location)
+                            image_data = {
+                                "file_uuid" : source_image.uuid,
+                            }
+
+                            if hosted_url:
+                                image_data.update({'hosted_url': hosted_url})
+                            else:
+                                image_data.update({'local_path': save_location})
+                                
+                            data_repo.update_file(**image_data)
                         # or else creating a new image
                         else:
                             file_data = {
                                 "name": str(uuid.uuid4()) + ".png",
                                 "type": InternalFileType.IMAGE.value,
-                                "local_path": save_location,
                                 "project_id": project_uuid
                             }
+
+                            if hosted_url:
+                                image_data.update({'hosted_url': hosted_url})
+                            else:
+                                image_data.update({'local_path': save_location})
+
                             file: InternalFileObject = data_repo.create_file(
                                 **file_data)
                             data_repo.update_specific_timing(
@@ -265,14 +278,19 @@ def resize_and_rotate_element(stage, project_uuid):
 
                     elif stage == WorkflowStageType.STYLED.value:
                         save_location = f"videos/{project.uuid}/assets/frames/2_character_pipeline_completed/{file_name}"
-                        st.session_state['rotated_image'].save(save_location)
+                        hosted_url = save_or_host_pil_img(st.session_state['rotated_image'], save_location)
 
                         file_data = {
                             "name": str(uuid.uuid4()) + ".png",
                             "type": InternalFileType.IMAGE.value,
-                            "local_path": save_location,
                             "project_id": project_uuid
                         }
+
+                        if hosted_url:
+                            image_data.update({'hosted_url': hosted_url})
+                        else:
+                            image_data.update({'local_path': save_location})
+                        
                         file: InternalFileObject = data_repo.create_file(
                             **file_data)
 
@@ -420,8 +438,8 @@ def create_alpha_mask(size, edge_blur_radius):
     mask = mask.filter(ImageFilter.GaussianBlur(radius=edge_blur_radius))
     return mask
 
-
-def zoom_image(location, zoom_factor, fill_with=None):
+# returns a PIL Image object
+def zoom_image(image, zoom_factor, fill_with=None):
     blur_radius = 5
     edge_blur_radius = 15
 
@@ -429,13 +447,13 @@ def zoom_image(location, zoom_factor, fill_with=None):
         raise ValueError("Zoom factor must be greater than 0")
 
     # Check if the provided location is a URL
-    if location.startswith('http') or location.startswith('https'):
-        response = r.get(location)
-        image = Image.open(BytesIO(response.content))
-    else:
-        if not os.path.exists(location):
-            raise FileNotFoundError(f"File not found: {location}")
-        image = Image.open(location)
+    # if location.startswith('http') or location.startswith('https'):
+    #     response = r.get(location)
+    #     image = Image.open(BytesIO(response.content))
+    # else:
+    #     if not os.path.exists(location):
+    #         raise FileNotFoundError(f"File not found: {location}")
+    #     image = Image.open(location)
 
     # Calculate new dimensions based on zoom factor
     width, height = image.size
@@ -569,23 +587,35 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
 
     if stage == WorkflowStageType.SOURCE.value:
         save_location = f"videos/{project_uuid}/assets/frames/1_selected/{file_name}"
-        image.save(save_location)
+        hosted_url = save_or_host_pil_img(image, save_location)
         file_data = {
             "name": file_name,
             "type": InternalFileType.IMAGE.value,
             "local_path": save_location
         }
+
+        if hosted_url:
+            file_data.update({'hosted_url': hosted_url})
+        else:
+            file_data.update({'local_path': save_location})
+
         source_image: InternalFileObject = data_repo.create_file(**file_data)
         data_repo.update_specific_timing(
             st.session_state['current_frame_uuid'], source_image_id=source_image.uuid)
     elif stage == WorkflowStageType.STYLED.value:
         save_location = f"videos/{project_uuid}/assets/frames/2_character_pipeline_completed/{file_name}"
-        image.save(save_location)
+        hosted_url = save_or_host_pil_img(image, save_location)
         file_data = {
             "name": file_name,
             "type": InternalFileType.IMAGE.value,
             "local_path": save_location
         }
+
+        if hosted_url:
+            file_data.update({'hosted_url': hosted_url})
+        else:
+            file_data.update({'local_path': save_location})
+            
         styled_image: InternalFileObject = data_repo.create_file(**file_data)
 
         number_of_image_variants = add_image_variant(
@@ -775,13 +805,18 @@ def manual_cropping_element(stage, timing_uuid):
                         cropped_img = cropped_img.resize(
                             (width, height), Image.ANTIALIAS)
                         # generate a random filename and save it to /temp
-                        file_name = f"videos/temp/{uuid.uuid4()}.png"
-                        cropped_img.save(file_name)
+                        file_path = f"videos/temp/{uuid.uuid4()}.png"
+                        hosted_url = save_or_host_pil_img(cropped_img, file_path)
+                        
                         file_data = {
                             "name": str(uuid.uuid4()),
                             "type": InternalFileType.IMAGE.value,
-                            "local_path": file_name
                         }
+
+                        if hosted_url:
+                            file_data.update({'hosted_url': hosted_url})
+                        else:
+                            file_data.update({'local_path': file_path})
                         cropped_image: InternalFileObject = data_repo.create_file(**file_data)
 
                         st.success("Cropped Image Saved Successfully")
@@ -936,8 +971,8 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
 
                 elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection" or type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
                     with main_col_1:
-                        if type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
-                            if timing_details[st.session_state['current_frame_index']]["mask"] == "":
+                        if type_of_mask_selection in ["Re-Use Previous Mask", "Invert Previous Mask"]:
+                            if not timing_details[st.session_state['current_frame_index']].mask:
                                 st.info(
                                     "You don't have a previous mask to re-use.")
                             else:
@@ -950,7 +985,7 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
                                         st.info(
                                             "This will update the **white pixels** in the mask with the pixels from the image you are editing.")
                                     st.image(
-                                        timing_details[st.session_state['current_frame_index']]["mask"], use_column_width=True)
+                                        timing_details[st.session_state['current_frame_index']].mask.location, use_column_width=True)
 
                     with main_col_2:
                         if st.session_state['edited_image'] == "":
@@ -1121,7 +1156,9 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
 
         saved_cropped_img = cropped_img.resize(
             (width, height), Image.ANTIALIAS)
-        saved_cropped_img.save("videos/temp/cropped.png")
+        
+        hosted_cropped_img_path = save_or_host_pil_img(saved_cropped_img, CROPPED_IMG_LOCAL_PATH)
+
         # Convert image to grayscale
         # Create a new image with the same size as the cropped image
         mask = Image.new('RGB', cropped_img.size)
@@ -1161,9 +1198,27 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
                 else:
                     mask.putpixel((x, y), (255, 255, 255))  # White
         # Save the mask image
-        mask.save('videos/temp/mask.png')
+        hosted_url = save_or_host_pil_img(mask, MASK_IMG_LOCAL_PATH)
+        if hosted_url:
+            file_data = {
+                "name": str(uuid.uuid4()) + ".png",
+                "type": InternalFileType.IMAGE.value,
+                "hosted_url": hosted_url
+            }
 
-        inpainted_file = inpainting('videos/temp/cropped.png', inpaint_prompt,
+            mask_file = data_repo.create_file(**file_data)
+            project = data_repo.get_project_from_uuid(project_uuid)
+            temp_file_list = project.project_temp_file_list
+            temp_file_list.update({TEMP_MASK_FILE: mask_file.uuid})
+            temp_file_list = json.dumps(temp_file_list)
+            project_data = {
+                'uuid': project_uuid,
+                'temp_file_list': temp_file_list
+            }
+            data_repo.update_project(**project_data)
+
+        cropped_img_path = hosted_cropped_img_path if hosted_cropped_img_path else CROPPED_IMG_LOCAL_PATH
+        inpainted_file = inpainting(cropped_img_path, inpaint_prompt,
                                     inpaint_negative_prompt, st.session_state['current_frame_uuid'], True, pass_mask=True)
 
         st.session_state['precision_cropping_inpainted_image_uuid'] = inpainted_file.uuid
@@ -2517,7 +2572,10 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, invert_ma
     if pass_mask == False:
         mask = timing.mask.location
     else:
-        mask = "videos/temp/mask.png"
+        if SERVER != ServerType.DEVELOPMENT.value:
+            mask = timing.project.temp_mask_file.location
+        else:
+            mask = MASK_IMG_LOCAL_PATH
 
     if not mask.startswith("http"):
         mask = open(mask, "rb")
@@ -4218,8 +4276,8 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
                 editing_image, prompt, negative_prompt, timing_uuid, True)
 
     elif type_of_mask_selection == "Invert Previous Mask":
-        mask_location = timing.mask.location
         if type_of_mask_replacement == "Replace With Image":
+            mask_location = timing.mask.location
             if mask_location.startswith("http"):
                 response = r.get(mask_location)
                 mask = Image.open(BytesIO(response.content)).convert('1')
