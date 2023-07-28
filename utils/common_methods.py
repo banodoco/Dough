@@ -3,9 +3,10 @@ from pathlib import Path
 import os
 import csv
 from typing import Union
+import uuid
 import streamlit as st
 import json
-from shared.constants import SERVER, ServerType
+from shared.constants import SERVER, InternalFileType, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from PIL import Image
@@ -189,6 +190,28 @@ def save_or_host_pil_img(img: Union[Image.Image, str, np.ndarray], path):
         data_repo = DataRepo()
         uploaded_url = data_repo.upload_file(image_bytes)
     else:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         img.save(path)
 
     return uploaded_url
+
+def add_temp_file_to_project(project_uuid, key, hosted_url):
+    data_repo = DataRepo()
+
+    file_data = {
+        "name": str(uuid.uuid4()) + ".png",
+        "type": InternalFileType.IMAGE.value,
+        "project_id": project_uuid,
+        'hosted_url': hosted_url
+    }
+
+    temp_file = data_repo.create_file(**file_data)
+    project = data_repo.get_project_from_uuid(project_uuid)
+    temp_file_list = project.project_temp_file_list
+    temp_file_list.update({key: temp_file.uuid})
+    temp_file_list = json.dumps(temp_file_list)
+    project_data = {
+        'uuid': project_uuid,
+        'temp_file_list': temp_file_list
+    }
+    data_repo.update_project(**project_data)

@@ -37,9 +37,9 @@ from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 from backend.models import InternalFileObject
 from shared.file_upload.s3 import upload_file
 from shared.utils import is_online_file_path
-from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE, VideoQuality, WorkflowStageType
+from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, VideoQuality, WorkflowStageType
 from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
-from utils.common_methods import get_current_user_uuid, save_or_host_pil_img
+from utils.common_methods import add_temp_file_to_project, get_current_user_uuid, save_or_host_pil_img
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import InternalResponse, AnimationStyleType
 from utils.ml_processor.ml_interface import get_ml_client
@@ -591,7 +591,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
         file_data = {
             "name": file_name,
             "type": InternalFileType.IMAGE.value,
-            "local_path": save_location
+            "project_id": project_uuid
         }
 
         if hosted_url:
@@ -608,7 +608,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
         file_data = {
             "name": file_name,
             "type": InternalFileType.IMAGE.value,
-            "local_path": save_location
+            "project_id": project_uuid
         }
 
         if hosted_url:
@@ -706,6 +706,7 @@ def precision_cropping_element(stage, project_uuid):
 def manual_cropping_element(stage, timing_uuid):
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
+    project_uuid = timing.project.uuid
 
     if not timing.source_image:
         st.error("Please select a source image before cropping")
@@ -811,6 +812,7 @@ def manual_cropping_element(stage, timing_uuid):
                         file_data = {
                             "name": str(uuid.uuid4()),
                             "type": InternalFileType.IMAGE.value,
+                            "project_id": project_uuid
                         }
 
                         if hosted_url:
@@ -1200,22 +1202,7 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
         # Save the mask image
         hosted_url = save_or_host_pil_img(mask, MASK_IMG_LOCAL_PATH)
         if hosted_url:
-            file_data = {
-                "name": str(uuid.uuid4()) + ".png",
-                "type": InternalFileType.IMAGE.value,
-                "hosted_url": hosted_url
-            }
-
-            mask_file = data_repo.create_file(**file_data)
-            project = data_repo.get_project_from_uuid(project_uuid)
-            temp_file_list = project.project_temp_file_list
-            temp_file_list.update({TEMP_MASK_FILE: mask_file.uuid})
-            temp_file_list = json.dumps(temp_file_list)
-            project_data = {
-                'uuid': project_uuid,
-                'temp_file_list': temp_file_list
-            }
-            data_repo.update_project(**project_data)
+            add_temp_file_to_project(project_uuid, TEMP_MASK_FILE, hosted_url)
 
         cropped_img_path = hosted_cropped_img_path if hosted_cropped_img_path else CROPPED_IMG_LOCAL_PATH
         inpainted_file = inpainting(cropped_img_path, inpaint_prompt,
@@ -2048,6 +2035,7 @@ def preview_frame(project_uuid, video, frame_num):
 def extract_frame(timing_uuid, input_video: InternalFileObject, extract_frame_number):
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
+    project_uuid = timing.project.uuid
 
     # TODO: standardize the input video path
     # input_video = "videos/" + \
@@ -2071,12 +2059,26 @@ def extract_frame(timing_uuid, input_video: InternalFileObject, extract_frame_nu
         string.ascii_lowercase + string.digits, k=16)) + ".png"
     file_location = "videos/" + timing.project.uuid + \
         "/assets/frames/1_selected/" + str(file_name)
-    cv2.imwrite(file_location, frame)
+    
+    # cv2.imwrite(file_location, frame)
     # img = Image.open("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
     # img.save("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
 
-    final_image = data_repo.create_file(name=file_name, type=InternalFileType.IMAGE.value,
-                                        local_path=file_location)
+    pil_img = Image.fromarray(frame)
+    hosted_url = save_or_host_pil_img(pil_img, file_location)
+
+    file_data = {
+        "name": file_name,
+        "type": InternalFileType.IMAGE.value,
+        "project_id": project_uuid
+    }
+
+    if hosted_url:
+        file_data.update({'hosted_url': hosted_url})
+    else:
+        file_data.update({'local_path': file_location})
+
+    final_image = data_repo.create_file(**file_data)
     data_repo.update_specific_timing(
         timing_uuid, source_image_id=final_image.uuid)
 
@@ -2481,37 +2483,52 @@ def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_
 
     # Save the new image
     unique_file_name = str(uuid.uuid4()) + ".png"
-    file_location = f"videos/{project_uuid}/assets/resources/masks/{unique_file_name}"
-    os.makedirs(os.path.dirname(file_location), exist_ok=True)
-    new_canny_image.save(file_location)
+    file_path = f"videos/{project_uuid}/assets/resources/masks/{unique_file_name}"
+    hosted_url = save_or_host_pil_img(new_canny_image, file_path)
 
-    canny_image_file = data_repo.create_file(
-        name=unique_file_name, type=InternalFileType.IMAGE.value, local_path=file_location, project_id=project_uuid)
+    file_data = {
+        "name": unique_file_name,
+        "type": InternalFileType.IMAGE.value,
+        "project_id": project_uuid
+    }
+
+    if hosted_url:
+        file_data.update({'hosted_url': hosted_url})
+    else:
+        file_data.update({'local_path': file_path})
+
+    canny_image_file = data_repo.create_file(**file_data)
     return canny_image_file
 
 # the input image is an image created by the PIL library
-
-
 def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
 
     unique_file_name = str(uuid.uuid4()) + ".png"
     file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{unique_file_name}"
-    image.save(file_location, "PNG")
+
+    hosted_url = save_or_host_pil_img(image, file_location)
     # if mask is not present than creating a new one
     if not (timing.mask and timing.mask.location):
         file_data = {
             "name": unique_file_name,
-            "type": InternalFileType.IMAGE.value,
-            "local_path": file_location
+            "type": InternalFileType.IMAGE.value
         }
-        mask_file: InternalFileObject = data_repo.create_file(**file_data)
 
+        if hosted_url:
+            file_data.update({'hosted_url': hosted_url})
+        else:
+            file_data.update({'local_path': file_location})
+
+        mask_file: InternalFileObject = data_repo.create_file(**file_data)
         data_repo.update_specific_timing(timing_uuid, mask_id=mask_file.uuid)
     else:
         # if it is already present then just updating the file location
-        data_repo.update_file(timing.mask.uuid, local_path=file_location)
+        if hosted_url:
+            data_repo.update_file(timing.mask.uuid, hosted_url=hosted_url)
+        else:
+            data_repo.update_file(timing.mask.uuid, local_path=file_location)
 
     timing = data_repo.get_timing_from_uuid(timing_uuid)
     return timing.mask
@@ -2572,8 +2589,9 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, invert_ma
     if pass_mask == False:
         mask = timing.mask.location
     else:
+        # TODO: store the local temp files in the db too
         if SERVER != ServerType.DEVELOPMENT.value:
-            mask = timing.project.temp_mask_file.location
+            mask = timing.project.get_temp_mask_file(TEMP_MASK_FILE).location
         else:
             mask = MASK_IMG_LOCAL_PATH
 
@@ -2758,21 +2776,39 @@ def remove_background(input_image):
     return output
 
 
-def replace_background(project_uuid, foreground_image, background_image) -> InternalFileObject:
+def replace_background(project_uuid, background_image) -> InternalFileObject:
     data_repo = DataRepo()
+    project = data_repo.get_project_from_uuid(project_uuid)
 
     if background_image.startswith("http"):
         response = r.get(background_image)
         background_image = Image.open(BytesIO(response.content))
     else:
         background_image = Image.open(f"{background_image}")
-    foreground_image = Image.open(f"masked_image.png")
-    background_image.paste(foreground_image, (0, 0), foreground_image)
-    background_image.save(f"videos/{project_uuid}/replaced_bg.png")
+    
+    if SERVER == ServerType.DEVELOPMENT.value:
+        foreground_image = Image.open(SECOND_MASK_FILE_PATH)
+    else:
+        path = project.get_temp_mask_file(SECOND_MASK_FILE).location
+        response = r.get(path)
+        foreground_image = Image.open(BytesIO(response.content))
 
+    background_image.paste(foreground_image, (0, 0), foreground_image)
     filename = str(uuid.uuid4()) + ".png"
-    image_file = data_repo.create_file(name=filename, local_path=f"videos/{project_uuid}/replaced_bg.png",
-                                       type=InternalFileType.IMAGE.value)
+    background_img_path = f"videos/{project_uuid}/replaced_bg.png"
+    hosted_url = save_or_host_pil_img(background_image, background_img_path)
+    file_data = {
+        "name": filename,
+        "type": InternalFileType.IMAGE.value,
+        "project_id": project_uuid
+    }
+
+    if hosted_url:
+        file_data.update({'hosted_url': hosted_url})
+    else:
+        file_data.update({'local_path': background_img_path})
+    
+    image_file = data_repo.create_file(**file_data)
 
     return image_file
 
@@ -2828,7 +2864,7 @@ def touch_up_image(image: InternalFileObject):
 
     return image_file
 
-
+# TODO: don't save or upload image where just passing the PIL object can work
 def resize_image(video_name, new_width, new_height, image_file: InternalFileObject) -> InternalFileObject:
     image = image_file.location
     response = r.get(image)
@@ -2840,11 +2876,20 @@ def resize_image(video_name, new_width, new_height, image_file: InternalFileObje
     unique_id = str(uuid.uuid4())
     filepath = "videos/" + str(video_name) + \
         "/temp_image-" + unique_id + ".png"
-    resized_image.save(filepath)
+    
+    hosted_url = save_or_host_pil_img(resized_image, filepath)
+    file_data = {
+        "name": str(uuid.uuid4()) + ".png",
+        "type": InternalFileType.IMAGE.value
+    }
+
+    if hosted_url:
+        file_data.update({'hosted_url': hosted_url})
+    else:
+        file_data.update({'local_path': filepath})
 
     data_repo = DataRepo()
-    image_file = data_repo.create_file(name=unique_id + ".png", type=InternalFileType.IMAGE.value,
-                                       local_path=filepath)
+    image_file = data_repo.create_file(**file_data)
 
     # not uploading or removing the created image as of now
     # resized_image = upload_image(
@@ -4153,7 +4198,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
-    project_uuid = timing.project.uuid
+    project = timing.project
     app_secret = data_repo.get_app_secrets_from_user_uuid(
         timing.project.user_uuid)
     index_of_current_item = timing.aux_frame_index
@@ -4161,22 +4206,22 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
     if type_of_mask_selection == "Automated Background Selection":
         removed_background = remove_background(editing_image)
         response = r.get(removed_background)
-        with open("masked_image.png", "wb") as f:
-            f.write(response.content)
+        img = Image.open(BytesIO(response.content))
+        hosted_url = save_or_host_pil_img(img, SECOND_MASK_FILE_PATH)
+        if hosted_url:
+            add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_url)
+
         if type_of_mask_replacement == "Replace With Image":
-            replace_background(
-                project_uuid, "masked_image.png", background_image)
-            file_location = f"videos/{project_uuid}/replaced_bg.png"
-            file_data = {
-                "name": str(uuid.uuid4()) + ".png",
-                "type": InternalFileType.IMAGE.value,
-                "local_path": file_location,
-            }
-            edited_image: InternalFileObject = data_repo.create_file(
-                **file_data)
+            edited_image = replace_background(project.uuid, background_image)
 
         elif type_of_mask_replacement == "Inpainting":
-            image = Image.open("masked_image.png")
+            if SERVER == ServerType.DEVELOPMENT.value:
+                image = Image.open(SECOND_MASK_FILE_PATH)
+            else:
+                path = project.get_temp_mask_file(SECOND_MASK_FILE).location
+                response = r.get(path)
+                image = Image.open(BytesIO(response.content))
+
             converted_image = Image.new("RGB", image.size, (255, 255, 255))
             for x in range(image.width):
                 for y in range(image.height):
@@ -4214,9 +4259,12 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
                             result_img.putpixel((x, y), (255, 255, 255, 0))
                         else:
                             result_img.putpixel((x, y), bg_img.getpixel((x, y)))
-            result_img.save("masked_image.png")
+            
+            hosted_manual_bg_url = save_or_host_pil_img(result_img, SECOND_MASK_FILE_PATH)
+            if hosted_manual_bg_url:
+                add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_manual_bg_url)
             edited_image = replace_background(
-                project_uuid, "masked_image.png", background_image)
+                project.uuid, SECOND_MASK_FILE_PATH, background_image)
         elif type_of_mask_replacement == "Inpainting":
             mask_location = timing.mask.location
             if mask_location.startswith("http"):
@@ -4246,9 +4294,11 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
                 bg_img = Image.open(editing_image).convert('RGBA')
             masked_img = Image.composite(bg_img, Image.new(
                 'RGBA', bg_img.size, (0, 0, 0, 0)), mask)
-            masked_img.save("masked_image.png")
+            hosted_automated_bg_url = save_or_host_pil_img(result_img, SECOND_MASK_FILE_PATH)
+            if hosted_automated_bg_url:
+                add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_automated_bg_url)
             edited_image = replace_background(
-                project_uuid, "masked_image.png", background_image)
+                project.uuid, SECOND_MASK_FILE_PATH, background_image)
         elif type_of_mask_replacement == "Inpainting":
             edited_image = inpainting(
                 editing_image, prompt, negative_prompt, timing_uuid, True)
@@ -4268,9 +4318,12 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
                 bg_img = Image.open(editing_image).convert('RGBA')
             masked_img = Image.composite(bg_img, Image.new(
                 'RGBA', bg_img.size, (0, 0, 0, 0)), mask)
-            masked_img.save("masked_image.png")
+            hosted_image_replace_url = save_or_host_pil_img(result_img, SECOND_MASK_FILE_PATH)
+            if hosted_image_replace_url:
+                add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_image_replace_url)
+            
             edited_image = replace_background(
-                project_uuid, "masked_image.png", background_image)
+                project.uuid, SECOND_MASK_FILE_PATH, background_image)
         elif type_of_mask_replacement == "Inpainting":
             edited_image = inpainting(
                 editing_image, prompt, negative_prompt, timing_uuid, True)
@@ -4292,9 +4345,12 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
             masked_img = Image.composite(bg_img, Image.new(
                 'RGBA', bg_img.size, (0, 0, 0, 0)), inverted_mask)
             # TODO: standardise temproray fixes
-            masked_img.save("masked_image.png")
+            hosted_prvious_invert_url = save_or_host_pil_img(result_img, SECOND_MASK_FILE_PATH)
+            if hosted_prvious_invert_url:
+                add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_prvious_invert_url)
+            
             edited_image = replace_background(
-                project_uuid, "masked_image.png", background_image)
+                project.uuid, SECOND_MASK_FILE_PATH, background_image)
         elif type_of_mask_replacement == "Inpainting":
             edited_image = inpainting(
                 editing_image, prompt, negative_prompt, timing_uuid, False)

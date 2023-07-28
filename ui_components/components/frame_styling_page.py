@@ -28,6 +28,7 @@ import math
 from ui_components.constants import WorkflowStageType
 from ui_components.models import InternalAppSettingObject, InternalFileObject, InternalFrameTimingObject
 from streamlit_extras.annotated_text import annotated_text
+from utils.common_methods import save_or_host_pil_img
 
 from utils.data_repo.data_repo import DataRepo
 
@@ -279,12 +280,17 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                                 unique_file_name = str(uuid.uuid4()) + ".png"
                                 file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{unique_file_name}"
-                                new_canny_image.save(file_location)
+                                hosted_url = save_or_host_pil_img(new_canny_image, file_location)
                                 file_data = {
                                     "name": str(uuid.uuid4()) + ".png",
                                     "type": InternalFileType.IMAGE.value,
-                                    "local_path": file_location
+                                    "project_id": project_uuid
                                 }
+
+                                if hosted_url:
+                                    file_data.update({'hosted_url': hosted_url})
+                                else:
+                                    file_data.update({'local_path': file_location})
 
                                 canny_image = data_repo.create_file(
                                     **file_data)

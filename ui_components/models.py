@@ -33,11 +33,10 @@ class InternalProjectObject:
     def project_temp_file_list(self):
         return json.loads(self.temp_file_list) if self.temp_file_list else {}
     
-    @property
-    def temp_mask_file(self):
+    def get_temp_mask_file(self, key):
         temp_files_list = self.project_temp_file_list
         for k, v in temp_files_list.items():
-            if k == TEMP_MASK_FILE:
+            if k == key:
                 from utils.data_repo.data_repo import DataRepo
                 data_repo = DataRepo()
                 file = data_repo.get_file_from_uuid(k)
