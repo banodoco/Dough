@@ -89,7 +89,7 @@ class APIRepo:
 
     def http_post(self, url, data = {}, file_content = None):
         if file_content:
-            files = {file_content}
+            files = {'file': file_content}
             res = requests.post(self.base_url + url, json=data, files=files, headers=self._get_headers(None))
         else:
             res = requests.post(self.base_url + url, json=data, headers=self._get_headers())

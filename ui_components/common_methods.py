@@ -2533,52 +2533,50 @@ def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
     timing = data_repo.get_timing_from_uuid(timing_uuid)
     return timing.mask
 
-# TODO: CORRECT-CODE: Update columns in the timing table
+# NOTE: method not in use
+# def create_working_assets(video_name):
+#     os.mkdir("videos/" + video_name)
+#     os.mkdir("videos/" + video_name + "/assets")
 
+#     os.mkdir("videos/" + video_name + "/assets/frames")
 
-def create_working_assets(video_name):
-    os.mkdir("videos/" + video_name)
-    os.mkdir("videos/" + video_name + "/assets")
+#     os.mkdir("videos/" + video_name + "/assets/frames/0_extracted")
+#     os.mkdir("videos/" + video_name + "/assets/frames/1_selected")
+#     os.mkdir("videos/" + video_name +
+#              "/assets/frames/2_character_pipeline_completed")
+#     os.mkdir("videos/" + video_name +
+#              "/assets/frames/3_backdrop_pipeline_completed")
 
-    os.mkdir("videos/" + video_name + "/assets/frames")
+#     os.mkdir("videos/" + video_name + "/assets/resources")
 
-    os.mkdir("videos/" + video_name + "/assets/frames/0_extracted")
-    os.mkdir("videos/" + video_name + "/assets/frames/1_selected")
-    os.mkdir("videos/" + video_name +
-             "/assets/frames/2_character_pipeline_completed")
-    os.mkdir("videos/" + video_name +
-             "/assets/frames/3_backdrop_pipeline_completed")
+#     os.mkdir("videos/" + video_name + "/assets/resources/backgrounds")
+#     os.mkdir("videos/" + video_name + "/assets/resources/masks")
+#     os.mkdir("videos/" + video_name + "/assets/resources/audio")
+#     os.mkdir("videos/" + video_name + "/assets/resources/input_videos")
+#     os.mkdir("videos/" + video_name + "/assets/resources/prompt_images")
 
-    os.mkdir("videos/" + video_name + "/assets/resources")
+#     os.mkdir("videos/" + video_name + "/assets/videos")
 
-    os.mkdir("videos/" + video_name + "/assets/resources/backgrounds")
-    os.mkdir("videos/" + video_name + "/assets/resources/masks")
-    os.mkdir("videos/" + video_name + "/assets/resources/audio")
-    os.mkdir("videos/" + video_name + "/assets/resources/input_videos")
-    os.mkdir("videos/" + video_name + "/assets/resources/prompt_images")
+#     os.mkdir("videos/" + video_name + "/assets/videos/0_raw")
+#     os.mkdir("videos/" + video_name + "/assets/videos/1_final")
+#     os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
 
-    os.mkdir("videos/" + video_name + "/assets/videos")
+#     data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type', 'guidance_type', 'default_animation_style', 'last_low_threshold', 'last_high_threshold', 'last_stage_run_on', 'zoom_level', 'rotation_angle_value', 'x_shift', 'y_shift'],
+#             'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Source Image', '', '', '', '', 100, 200, '', 100, 0, 0, 0]}
 
-    os.mkdir("videos/" + video_name + "/assets/videos/0_raw")
-    os.mkdir("videos/" + video_name + "/assets/videos/1_final")
-    os.mkdir("videos/" + video_name + "/assets/videos/2_completed")
+#     df = pd.DataFrame(data)
 
-    data = {'key': ['last_prompt', 'last_model', 'last_strength', 'last_custom_pipeline', 'audio', 'input_type', 'input_video', 'extraction_type', 'width', 'height', 'last_negative_prompt', 'last_guidance_scale', 'last_seed', 'last_num_inference_steps', 'last_which_stage_to_run_on', 'last_custom_models', 'last_adapter_type', 'guidance_type', 'default_animation_style', 'last_low_threshold', 'last_high_threshold', 'last_stage_run_on', 'zoom_level', 'rotation_angle_value', 'x_shift', 'y_shift'],
-            'value': ['prompt', 'controlnet', '0.5', 'None', '', 'video', '', 'Extract manually', '', '', '', 7.5, 0, 50, 'Source Image', '', '', '', '', 100, 200, '', 100, 0, 0, 0]}
+#     df.to_csv(f'videos/{video_name}/settings.csv', index=False)
 
-    df = pd.DataFrame(data)
+#     df = pd.DataFrame(columns=['frame_time', 'frame_number', 'primary_image', 'alternative_images', 'custom_pipeline', 'negative_prompt', 'guidance_scale', 'seed', 'num_inference_steps',
+#                       'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'duration_of_clip', 'interpolated_video', 'timing_video', 'prompt', 'mask', 'canny_image', 'preview_video', 'animation_style', 'interpolation_steps', 'low_threshold', 'high_threshold', 'zoom_details', 'transformation_stage'])
 
-    df.to_csv(f'videos/{video_name}/settings.csv', index=False)
+#     df.loc[0] = [0, "", 0, "", "", "", 0, 0, 0, "", 0, "", "",
+#                  "", "", 0, "", "", "", "", "", "", "", "", "", "", "", ""]
 
-    df = pd.DataFrame(columns=['frame_time', 'frame_number', 'primary_image', 'alternative_images', 'custom_pipeline', 'negative_prompt', 'guidance_scale', 'seed', 'num_inference_steps',
-                      'model_id', 'strength', 'notes', 'source_image', 'custom_models', 'adapter_type', 'duration_of_clip', 'interpolated_video', 'timing_video', 'prompt', 'mask', 'canny_image', 'preview_video', 'animation_style', 'interpolation_steps', 'low_threshold', 'high_threshold', 'zoom_details', 'transformation_stage'])
+#     st.session_state['current_frame_index'] = 0
 
-    df.loc[0] = [0, "", 0, "", "", "", 0, 0, 0, "", 0, "", "",
-                 "", "", 0, "", "", "", "", "", "", "", "", "", "", "", ""]
-
-    st.session_state['current_frame_index'] = 0
-
-    df.to_csv(f'videos/{video_name}/timings.csv', index=False)
+#     df.to_csv(f'videos/{video_name}/timings.csv', index=False)
 
 
 def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, invert_mask, pass_mask=False) -> InternalFileObject:

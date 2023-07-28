@@ -4,7 +4,6 @@ from shared.constants import InternalFileType
 from ui_components.models import InternalFileObject
 from utils.common_methods import create_working_assets, get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
-from ui_components.common_methods import create_working_assets
 from utils.media_processor.video import resize_video
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import time

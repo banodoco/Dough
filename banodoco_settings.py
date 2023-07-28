@@ -4,13 +4,14 @@ import time
 import uuid
 from dotenv import dotenv_values
 
+from PIL import Image
 from shared.constants import SERVER, AIModelType, GuidanceType, InternalFileType, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from shared.constants import AnimationStyleType
 from ui_components.common_methods import add_image_variant
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalUserObject
-from utils.common_methods import copy_sample_assets, create_working_assets
+from utils.common_methods import copy_sample_assets, create_working_assets, save_or_host_pil_img
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
@@ -83,12 +84,18 @@ def create_new_user_data(user: InternalUserObject):
 
     # create a sample timing frame
     sample_file_location = "sample_assets/frames/selected_sample/3vlb4mr7d95c42i4.png"
+    img = Image.open(sample_file_location)
+    hosted_url = save_or_host_pil_img(img, sample_file_location)
     file_data = {
         "name": str(uuid.uuid4()),
         "type": InternalFileType.IMAGE.value,
-        "local_path": sample_file_location,
         "project_id": project.uuid
     }
+
+    if hosted_url:
+        file_data.update({'hosted_url': hosted_url})
+    else:
+        file_data.update({'local_path': sample_file_location})
 
     source_image = data_repo.create_file(**file_data)
 

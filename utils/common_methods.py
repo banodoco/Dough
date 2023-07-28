@@ -115,6 +115,9 @@ def copy_sample_assets(project_name):
     shutil.copyfile(source, dest)
 
 def create_working_assets(project_name):
+    if SERVER != ServerType.DEVELOPMENT.value:
+        return
+
     new_project = True
     if os.path.exists("videos/"+project_name):
         new_project = False

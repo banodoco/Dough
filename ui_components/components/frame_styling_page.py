@@ -1124,10 +1124,12 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     "Upload an image", type=["png", "jpg", "jpeg"])
                 if uploaded_image is not None:
                     # write uploaded_image to location videos/{project_name}/assets/frames/1_selected
+                    image = Image.open(uploaded_image)
                     file_location = f"videos/{project_uuid}/assets/frames/1_selected/{uploaded_image.name}"
-                    with open(os.path.join(file_location), "wb") as f:
-                        f.write(uploaded_image.getbuffer())
-                    selected_image = file_location
+                    # with open(os.path.join(file_location), "wb") as f:
+                    #     f.write(uploaded_image.getbuffer())
+                    selected_image = save_or_host_pil_img(image, file_location)
+                    selected_image = selected_image or file_location
                 else:
                     selected_image = ""
                 which_number_for_starting_image = st.session_state['current_frame_index']
