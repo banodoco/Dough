@@ -2342,10 +2342,10 @@ def trigger_restyling_process(
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
-    project_setting: InternalSettingObject = data_repo.get_project_setting(
-        timing.project.uuid)
+    # timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+    #     timing.project.uuid)
+    # project_setting: InternalSettingObject = data_repo.get_project_setting(
+    #     timing.project.uuid)
 
     if update_inference_settings is True:
         prompt = prompt.replace(",", ".")
@@ -2413,6 +2413,7 @@ def trigger_restyling_process(
         add_image_variant(output_file.uuid, timing_uuid)
 
         if promote_new_generation == True:
+            timing = data_repo.get_timing_from_uuid(timing_uuid)
             variants = timing.alternative_images_list
             number_of_variants = len(variants)
             if number_of_variants == 1:
@@ -2618,19 +2619,6 @@ def add_image_variant(image_file_uuid: str, timing_uuid: str):
         image_file_uuid)
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
-
-    # if not (timing.alternative_images_list and len(timing.alternative_images_list)):
-    #     alternative_images = [image_file.uuid]
-    #     additions = []
-    # else:
-    #     alternative_images = []
-
-    #     additions = timing.alternative_images
-    #     for addition in additions:
-    #         alternative_images.append(addition)
-
-    #     alternative_images.append(image_file.uuid)
-    #     alternative_images = alternative_images
 
     alternative_image_list = timing.alternative_images_list + [image_file]
     alternative_image_uuid_list = [img.uuid for img in alternative_image_list]

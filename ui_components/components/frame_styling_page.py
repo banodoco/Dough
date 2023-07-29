@@ -859,6 +859,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 st.write("")
                                 st.write("")
 
+                                # TODO: add custom model validation such for sd img2img the value of strength can only be 1
                                 if st.button(f"Generate variants", key=f"new_variations_{st.session_state['current_frame_index']}", help="This will generate new variants based on the settings to the left."):
                                     for i in range(0, st.session_state['individual_number_of_variants']):
                                         trigger_restyling_process(st.session_state['current_frame_uuid'], st.session_state['model'], st.session_state['prompt'], st.session_state['strength'], st.session_state['custom_pipeline'], st.session_state['negative_prompt'], st.session_state['guidance_scale'], st.session_state['seed'], st.session_state[

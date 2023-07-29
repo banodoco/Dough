@@ -39,7 +39,7 @@ class InternalProjectObject:
             if k == key:
                 from utils.data_repo.data_repo import DataRepo
                 data_repo = DataRepo()
-                file = data_repo.get_file_from_uuid(k)
+                file = data_repo.get_file_from_uuid(v)
                 return file
             
         return None

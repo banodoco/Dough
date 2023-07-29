@@ -129,7 +129,7 @@ class DataRepo:
         return res.status
     
     def update_project(self, **kwargs):
-        project = self.db_repo.update_project(kwargs).data['data']
+        project = self.db_repo.update_project(**kwargs).data['data']
         return InternalProjectObject(**project) if project else None
     
     # ai model (custom ai model)
