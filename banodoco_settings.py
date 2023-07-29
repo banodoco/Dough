@@ -11,7 +11,7 @@ from shared.logging.logging import AppLogger
 from shared.constants import AnimationStyleType
 from ui_components.common_methods import add_image_variant
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalUserObject
-from utils.common_methods import copy_sample_assets, create_working_assets, save_or_host_pil_img
+from utils.common_methods import copy_sample_assets, create_working_assets, save_or_host_file
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
@@ -85,7 +85,7 @@ def create_new_user_data(user: InternalUserObject):
     # create a sample timing frame
     sample_file_location = "sample_assets/frames/selected_sample/3vlb4mr7d95c42i4.png"
     img = Image.open(sample_file_location)
-    hosted_url = save_or_host_pil_img(img, sample_file_location)
+    hosted_url = save_or_host_file(img, sample_file_location)
     file_data = {
         "name": str(uuid.uuid4()),
         "type": InternalFileType.IMAGE.value,

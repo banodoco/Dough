@@ -1,8 +1,12 @@
+from io import BytesIO
+import tempfile
 import uuid
+import requests
 import streamlit as st
-from shared.constants import InternalFileType
+from shared.constants import SERVER, InternalFileType, ServerType
+from ui_components.constants import AUDIO_FILE
 from ui_components.models import InternalFileObject
-from utils.common_methods import create_working_assets, get_current_user_uuid
+from utils.common_methods import create_working_assets, get_current_user_uuid, save_or_host_file
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.video import resize_video
 from moviepy.video.io.VideoFileClip import VideoFileClip
@@ -83,40 +87,87 @@ def new_project_page():
 
         if uploaded_video is not None:
             video_path = f'videos/{new_project_name}/assets/resources/input_videos/{uploaded_video.name}'
-            with open(video_path, 'wb') as f:
-                f.write(uploaded_video.getbuffer())
+            hosted_url = save_or_host_file(uploaded_video, video_path)
             
             file_data = {
                 "name": str(uuid.uuid4()) + ".png",
                 "type": InternalFileType.VIDEO.value,
-                "local_path": f'videos/{new_project_name}/assets/resources/input_videos/{uploaded_video.name}'
+                "project_id": new_project.uuid
             }
+
+            if hosted_url:
+                file_data.update({"hosted_url": hosted_url})
+            else:
+                file_data.update({"local_path": video_path})
+
             video_file: InternalFileObject = data_repo.create_file(**file_data)
             data_repo.update_project_setting(new_project.uuid, input_video_uuid=video_file.uuid)
 
             if resize_this_video == True:
-                resize_video(input_path=video_path, output_path=video_path, width=width, height=height)
+                resize_video(input_video_uuid=video_file.uuid, width=width, height=height)
+
             if audio == "Keep audio from original video":
+                audio_file_path = f'videos/{new_project_name}/assets/resources/audio/extracted_audio.mp3'
+
+                video_path = video_file.location
+                temp_file = None
+                if video_path.contains('http'):
+                    response = requests.get(video_path)
+                    if not response.ok:
+                        raise ValueError(f"Could not download video from URL: {video_path}")
+
+                    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
+                    temp_file.write(response.content)
+                    temp_file.close()
+                    video_path = temp_file.name
+
                 clip = VideoFileClip(video_path)
-                clip.audio.write_audiofile(
-                    f'videos/{new_project_name}/assets/resources/audio/extracted_audio.mp3')
+                uploaded_url = None
+                if SERVER != ServerType.DEVELOPMENT.value:
+                    temp_audio_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3", mode='wb')
+                    clip.audio.write_audiofile(temp_audio_file)
+                    file_bytes = BytesIO()
+
+                    with open(temp_file.name, 'rb') as f:
+                        file_bytes.write(f.read())
+                    file_bytes.seek(0)
+                    uploaded_url = data_repo.upload_file(file_bytes)
+                    os.remove(temp_audio_file.name)
+                    if temp_file:
+                        os.remove(temp_file.name)
+                else:
+                    clip.audio.write_audiofile(audio_file_path)
+
                 file_data = {
                     "name": str(uuid.uuid4()) + ".png",
                     "type": InternalFileType.AUDIO.value,
-                    "local_path": f'videos/{new_project_name}/assets/resources/audio/extracted_audio.mp3'
+                    "project_id": new_project.uuid
                 }
+
+                if uploaded_url:
+                    file_data.update({"hosted_url": uploaded_url})
+                else:
+                    file_data.update({"local_path": audio_file_path})
+
                 audio_file: InternalFileObject = data_repo.create_file(**file_data)
                 data_repo.update_project_setting(new_project.uuid, audio_uuid=audio_file.uuid)
 
         if audio == "Attach new audio":
             if uploaded_audio is not None:
-                with open(os.path.join(f"videos/{new_project_name}/assets/resources/audio", uploaded_audio.name), "wb") as f:
-                    f.write(uploaded_audio.getbuffer())
+                uploaded_file_path = f"videos/{new_project_name}/assets/resources/audio/{uploaded_audio.name}"
+                hosted_url = save_or_host_file(uploaded_audio, uploaded_file_path)
+                
                 file_data = {
                     "name": str(uuid.uuid4()) + ".png",
                     "type": InternalFileType.AUDIO.value,
-                    "local_path": f"videos/{new_project_name}/assets/resources/audio/{uploaded_audio.name}"
+                    "project_id": new_project.uuid 
                 }
+
+                if hosted_url:
+                    file_data.update({"hosted_url": hosted_url})
+                else:
+                    file_data.update({"local_path": uploaded_file_path})
+
                 audio_file: InternalFileObject = data_repo.create_file(**file_data)
                 data_repo.update_project_setting(new_project.uuid, audio_uuid=audio_file.uuid)
 

@@ -4,6 +4,7 @@ import pandas as pd
 import streamlit as st
 
 from ui_components.common_methods import prompt_clip_interrogator
+from utils.common_methods import save_or_host_file
 from utils.data_repo.data_repo import DataRepo
 
 
@@ -21,11 +22,15 @@ def prompt_finder_page(project_uuid):
                             "Best", "Fast"], key="best_or_fast", help="This is to know whether we should optimize for best quality or fastest speed. Best quality is usually best if you're in doubt", horizontal=True).lower()
 
     if st.button("Get prompts"):
-        with open(f"videos/{project_name}/assets/resources/prompt_images/{uploaded_file.name}", "wb") as f:
-            f.write(uploaded_file.getbuffer())
+        # FILE UPLOAD HANDLE
+        if not uploaded_file:
+            return
         
-        prompt = prompt_clip_interrogator(
-            f"videos/{project_name}/assets/resources/prompt_images/{uploaded_file.name}", which_model, best_or_fast)
+        uploaded_file_path = f"videos/{project_name}/assets/resources/prompt_images/{uploaded_file.name}"
+        hosted_url = save_or_host_file(uploaded_file, uploaded_file_path)
+        uploaded_file_path = hosted_url or uploaded_file_path
+        
+        prompt = prompt_clip_interrogator(uploaded_file_path, which_model, best_or_fast)
         
         if not os.path.exists(f"videos/{project_name}/prompts.csv"):
             with open(f"videos/{project_name}/prompts.csv", "w") as f:

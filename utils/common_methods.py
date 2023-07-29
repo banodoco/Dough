@@ -183,18 +183,19 @@ def get_current_user_uuid():
         return None
 
 # depending on the environment it will either save or host the PIL image object
-def save_or_host_pil_img(img: Union[Image.Image, str, np.ndarray], path):
+def save_or_host_file(file, path):
     uploaded_url = None
+    mime_type = file.type
     if SERVER != ServerType.DEVELOPMENT.value:
         image_bytes = BytesIO()
-        img.save(image_bytes, format='PNG')
+        file.save(image_bytes, format=mime_type.split('/')[1])
         image_bytes.seek(0)
 
         data_repo = DataRepo()
         uploaded_url = data_repo.upload_file(image_bytes)
     else:
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        img.save(path)
+        file.save(path)
 
     return uploaded_url
 

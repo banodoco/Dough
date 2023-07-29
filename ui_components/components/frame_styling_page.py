@@ -28,7 +28,7 @@ import math
 from ui_components.constants import WorkflowStageType
 from ui_components.models import InternalAppSettingObject, InternalFileObject, InternalFrameTimingObject
 from streamlit_extras.annotated_text import annotated_text
-from utils.common_methods import save_or_host_pil_img
+from utils.common_methods import save_or_host_file
 
 from utils.data_repo.data_repo import DataRepo
 
@@ -280,7 +280,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                                 unique_file_name = str(uuid.uuid4()) + ".png"
                                 file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{unique_file_name}"
-                                hosted_url = save_or_host_pil_img(new_canny_image, file_location)
+                                hosted_url = save_or_host_file(new_canny_image, file_location)
                                 file_data = {
                                     "name": str(uuid.uuid4()) + ".png",
                                     "type": InternalFileType.IMAGE.value,
@@ -333,17 +333,25 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 "This will upload a canny image from your computer. This will take a few seconds.")
                             uploaded_file = st.file_uploader("Choose a file")
                             if st.button("Upload Guidance Image"):
-                                with open(os.path.join(f"videos/{timing.project.uuid}/assets/resources/masks", uploaded_file.name), "wb") as f:
-                                    f.write(uploaded_file.getbuffer())
-                                    st.success("Your file is uploaded")
+                                if uploaded_image is not None:
+                                    guidance_img = Image.open(uploaded_file)
+                                    file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{uploaded_file.name}"
+                                    hosted_url = save_or_host_file(guidance_img, file_location)
+
                                     file_data = {
                                         "name": str(uuid.uuid4()) + ".png",
-                                        "type": InternalFileType.IMAGE.value,
-                                        "local_path": f"videos/{timing.project.uuid}/assets/resources/masks/{uploaded_file.name}"
+                                        "type": InternalFileType.IMAGE.value
                                     }
+
+                                    if hosted_url:
+                                        file_data.update({"hosted_url": hosted_url})
+                                    else:
+                                        file_data.update({"local_path": file_location})
+
                                     image = data_repo.create_file(**file_data)
                                     data_repo.update_specific_timing(
                                         st.session_state['current_frame_uuid'], source_image_id=image.uuid)
+                                    st.success("Your file is uploaded")
                                     time.sleep(1.5)
                                     st.experimental_rerun()
                         with canny3:
@@ -368,12 +376,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 uploaded_image = st.file_uploader(
                                     "Choose a file", key="uploaded_image")
                                 if uploaded_image is not None:
-                                    # download image as temp.png
-                                    with open("temp.png", "wb") as f:
-                                        f.write(uploaded_image.getbuffer())
-                                        st.success("Your file is uploaded")
-                                        uploaded_image = "videos/temp/assets/videos/0_raw/" + \
-                                            str(uuid.uuid4()) + ".png"
+                                    uploaded_pil_img = Image.open(uploaded_image)
+                                    uploaded_image_location = "videos/temp/assets/videos/0_raw/" + \
+                                        str(uuid.uuid4()) + ".png"
+                                    
+                                    hosted_url = save_or_host_file(uploaded_pil_img, uploaded_image_location)
+                                    uploaded_image_location = hosted_url or uploaded_image_location
+
+                                    st.success("Your file is uploaded")
 
                             threshold1, threshold2 = st.columns([1, 1])
                             with threshold1:
@@ -437,18 +447,22 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 uploaded_file = st.file_uploader(
                                     "Choose a file")
                                 if st.button("Upload Source Image"):
-                                    base_location = f"videos/{timing.project.uuid}/assets/resources/masks"
-                                    if not os.path.exists(base_location):
-                                        os.makedirs(base_location)
+                                    if uploaded_file:
+                                        file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{uploaded_file.name}"
+                                        uploaded_source_pil_img = Image.open(uploaded_file)
+                                        hosted_url = save_or_host_file(uploaded_source_pil_img, file_location)
 
-                                    with open(os.path.join(base_location, uploaded_file.name), "wb") as f:
-                                        f.write(uploaded_file.getbuffer())
-                                        st.success("Your file is uploaded")
                                         file_data = {
                                             "name": str(uuid.uuid4()) + ".png",
                                             "type": InternalFileType.IMAGE.value,
-                                            "local_path": f"videos/{timing.project.uuid}/assets/resources/masks/{uploaded_file.name}"
+                                            "project_id": project_uuid
                                         }
+
+                                        if not hosted_url:
+                                            file_data.update({"hosted_url": hosted_url})
+                                        else:
+                                            file_data.update({"local_path": file_location})
+                                    
                                         source_image = data_repo.create_file(
                                             **file_data)
                                         data_repo.update_specific_timing(
@@ -1123,13 +1137,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
             elif source_of_starting_image == "Uploaded image":
                 uploaded_image = st.file_uploader(
                     "Upload an image", type=["png", "jpg", "jpeg"])
+                # FILE UPLOAD HANDLE--
                 if uploaded_image is not None:
                     # write uploaded_image to location videos/{project_name}/assets/frames/1_selected
                     image = Image.open(uploaded_image)
                     file_location = f"videos/{project_uuid}/assets/frames/1_selected/{uploaded_image.name}"
                     # with open(os.path.join(file_location), "wb") as f:
                     #     f.write(uploaded_image.getbuffer())
-                    selected_image = save_or_host_pil_img(image, file_location)
+                    selected_image = save_or_host_file(image, file_location)
                     selected_image = selected_image or file_location
                 else:
                     selected_image = ""

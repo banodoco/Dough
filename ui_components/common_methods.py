@@ -39,7 +39,7 @@ from shared.file_upload.s3 import upload_file
 from shared.utils import is_online_file_path
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, VideoQuality, WorkflowStageType
 from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
-from utils.common_methods import add_temp_file_to_project, get_current_user_uuid, save_or_host_pil_img
+from utils.common_methods import add_temp_file_to_project, get_current_user_uuid, save_or_host_file
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import InternalResponse, AnimationStyleType
 from utils.ml_processor.ml_interface import get_ml_client
@@ -168,7 +168,7 @@ def save_new_image(img: Union[Image.Image, str, np.ndarray], project_uuid) -> In
     file_name = str(uuid.uuid4()) + ".png"
     file_path = os.path.join("videos/temp", file_name)
 
-    hosted_url = save_or_host_pil_img(img, file_path)
+    hosted_url = save_or_host_file(img, file_path)
 
     file_data = {
         "name": str(uuid.uuid4()) + ".png",
@@ -237,7 +237,7 @@ def resize_and_rotate_element(stage, project_uuid):
                     if stage == WorkflowStageType.SOURCE.value:
                         time.sleep(1)
                         save_location = f"videos/{project.uuid}/assets/frames/1_selected/{file_name}"
-                        hosted_url = save_or_host_pil_img(st.session_state['rotated_image'], save_location)
+                        hosted_url = save_or_host_file(st.session_state['rotated_image'], save_location)
 
                         current_frame = data_repo.get_timing_from_uuid(
                             st.session_state['current_frame_uuid'])
@@ -278,7 +278,7 @@ def resize_and_rotate_element(stage, project_uuid):
 
                     elif stage == WorkflowStageType.STYLED.value:
                         save_location = f"videos/{project.uuid}/assets/frames/2_character_pipeline_completed/{file_name}"
-                        hosted_url = save_or_host_pil_img(st.session_state['rotated_image'], save_location)
+                        hosted_url = save_or_host_file(st.session_state['rotated_image'], save_location)
 
                         file_data = {
                             "name": str(uuid.uuid4()) + ".png",
@@ -587,7 +587,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
 
     if stage == WorkflowStageType.SOURCE.value:
         save_location = f"videos/{project_uuid}/assets/frames/1_selected/{file_name}"
-        hosted_url = save_or_host_pil_img(image, save_location)
+        hosted_url = save_or_host_file(image, save_location)
         file_data = {
             "name": file_name,
             "type": InternalFileType.IMAGE.value,
@@ -604,7 +604,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
             st.session_state['current_frame_uuid'], source_image_id=source_image.uuid)
     elif stage == WorkflowStageType.STYLED.value:
         save_location = f"videos/{project_uuid}/assets/frames/2_character_pipeline_completed/{file_name}"
-        hosted_url = save_or_host_pil_img(image, save_location)
+        hosted_url = save_or_host_file(image, save_location)
         file_data = {
             "name": file_name,
             "type": InternalFileType.IMAGE.value,
@@ -807,7 +807,7 @@ def manual_cropping_element(stage, timing_uuid):
                             (width, height), Image.ANTIALIAS)
                         # generate a random filename and save it to /temp
                         file_path = f"videos/temp/{uuid.uuid4()}.png"
-                        hosted_url = save_or_host_pil_img(cropped_img, file_path)
+                        hosted_url = save_or_host_file(cropped_img, file_path)
                         
                         file_data = {
                             "name": str(uuid.uuid4()),
@@ -1159,7 +1159,7 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
         saved_cropped_img = cropped_img.resize(
             (width, height), Image.ANTIALIAS)
         
-        hosted_cropped_img_path = save_or_host_pil_img(saved_cropped_img, CROPPED_IMG_LOCAL_PATH)
+        hosted_cropped_img_path = save_or_host_file(saved_cropped_img, CROPPED_IMG_LOCAL_PATH)
 
         # Convert image to grayscale
         # Create a new image with the same size as the cropped image
@@ -1200,7 +1200,7 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
                 else:
                     mask.putpixel((x, y), (255, 255, 255))  # White
         # Save the mask image
-        hosted_url = save_or_host_pil_img(mask, MASK_IMG_LOCAL_PATH)
+        hosted_url = save_or_host_file(mask, MASK_IMG_LOCAL_PATH)
         if hosted_url:
             add_temp_file_to_project(project_uuid, TEMP_MASK_FILE, hosted_url)
 
@@ -2065,7 +2065,7 @@ def extract_frame(timing_uuid, input_video: InternalFileObject, extract_frame_nu
     # img.save("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
 
     pil_img = Image.fromarray(frame)
-    hosted_url = save_or_host_pil_img(pil_img, file_location)
+    hosted_url = save_or_host_file(pil_img, file_location)
 
     file_data = {
         "name": file_name,
@@ -2485,7 +2485,7 @@ def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_
     # Save the new image
     unique_file_name = str(uuid.uuid4()) + ".png"
     file_path = f"videos/{project_uuid}/assets/resources/masks/{unique_file_name}"
-    hosted_url = save_or_host_pil_img(new_canny_image, file_path)
+    hosted_url = save_or_host_file(new_canny_image, file_path)
 
     file_data = {
         "name": unique_file_name,
@@ -2509,7 +2509,7 @@ def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
     unique_file_name = str(uuid.uuid4()) + ".png"
     file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{unique_file_name}"
 
-    hosted_url = save_or_host_pil_img(image, file_location)
+    hosted_url = save_or_host_file(image, file_location)
     # if mask is not present than creating a new one
     if not (timing.mask and timing.mask.location):
         file_data = {
@@ -2782,7 +2782,7 @@ def replace_background(project_uuid, background_image) -> InternalFileObject:
     background_image.paste(foreground_image, (0, 0), foreground_image)
     filename = str(uuid.uuid4()) + ".png"
     background_img_path = f"videos/{project_uuid}/replaced_bg.png"
-    hosted_url = save_or_host_pil_img(background_image, background_img_path)
+    hosted_url = save_or_host_file(background_image, background_img_path)
     file_data = {
         "name": filename,
         "type": InternalFileType.IMAGE.value,
@@ -2863,7 +2863,7 @@ def resize_image(video_name, new_width, new_height, image_file: InternalFileObje
     filepath = "videos/" + str(video_name) + \
         "/temp_image-" + unique_id + ".png"
     
-    hosted_url = save_or_host_pil_img(resized_image, filepath)
+    hosted_url = save_or_host_file(resized_image, filepath)
     file_data = {
         "name": str(uuid.uuid4()) + ".png",
         "type": InternalFileType.IMAGE.value
@@ -4193,7 +4193,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
         removed_background = remove_background(editing_image)
         response = r.get(removed_background)
         img = Image.open(BytesIO(response.content))
-        hosted_url = save_or_host_pil_img(img, SECOND_MASK_FILE_PATH)
+        hosted_url = save_or_host_file(img, SECOND_MASK_FILE_PATH)
         if hosted_url:
             add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_url)
 
@@ -4246,7 +4246,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
                         else:
                             result_img.putpixel((x, y), bg_img.getpixel((x, y)))
             
-            hosted_manual_bg_url = save_or_host_pil_img(result_img, SECOND_MASK_FILE_PATH)
+            hosted_manual_bg_url = save_or_host_file(result_img, SECOND_MASK_FILE_PATH)
             if hosted_manual_bg_url:
                 add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_manual_bg_url)
             edited_image = replace_background(
@@ -4280,7 +4280,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
                 bg_img = Image.open(editing_image).convert('RGBA')
             masked_img = Image.composite(bg_img, Image.new(
                 'RGBA', bg_img.size, (0, 0, 0, 0)), mask)
-            hosted_automated_bg_url = save_or_host_pil_img(result_img, SECOND_MASK_FILE_PATH)
+            hosted_automated_bg_url = save_or_host_file(result_img, SECOND_MASK_FILE_PATH)
             if hosted_automated_bg_url:
                 add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_automated_bg_url)
             edited_image = replace_background(
@@ -4304,7 +4304,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
                 bg_img = Image.open(editing_image).convert('RGBA')
             masked_img = Image.composite(bg_img, Image.new(
                 'RGBA', bg_img.size, (0, 0, 0, 0)), mask)
-            hosted_image_replace_url = save_or_host_pil_img(result_img, SECOND_MASK_FILE_PATH)
+            hosted_image_replace_url = save_or_host_file(result_img, SECOND_MASK_FILE_PATH)
             if hosted_image_replace_url:
                 add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_image_replace_url)
             
@@ -4331,7 +4331,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
             masked_img = Image.composite(bg_img, Image.new(
                 'RGBA', bg_img.size, (0, 0, 0, 0)), inverted_mask)
             # TODO: standardise temproray fixes
-            hosted_prvious_invert_url = save_or_host_pil_img(result_img, SECOND_MASK_FILE_PATH)
+            hosted_prvious_invert_url = save_or_host_file(result_img, SECOND_MASK_FILE_PATH)
             if hosted_prvious_invert_url:
                 add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_prvious_invert_url)
             
