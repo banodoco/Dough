@@ -183,9 +183,8 @@ def get_current_user_uuid():
         return None
 
 # depending on the environment it will either save or host the PIL image object
-def save_or_host_file(file, path):
+def save_or_host_file(file, path, mime_type='image/png'):
     uploaded_url = None
-    mime_type = file.type
     if SERVER != ServerType.DEVELOPMENT.value:
         image_bytes = BytesIO()
         file.save(image_bytes, format=mime_type.split('/')[1])
