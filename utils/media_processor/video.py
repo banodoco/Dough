@@ -3,6 +3,7 @@ import cv2, os
 
 import requests
 import tempfile
+from utils.common_utils import generate_temp_file
 
 from utils.data_repo.data_repo import DataRepo
 
@@ -13,13 +14,7 @@ def resize_video(input_video_uuid, width, height, crop_type=None, output_format=
     input_path = input_video.location
 
     if input_path.contains('http'):
-        response = requests.get(input_path)
-        if not response.ok:
-            raise ValueError(f"Could not download video from URL: {input_path}")
-
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
-        temp_file.write(response.content)
-        temp_file.close()
+        temp_file = generate_temp_file(input_path)
         input_video = cv2.VideoCapture(temp_file.name)
     else:
         input_video = cv2.VideoCapture(input_path)

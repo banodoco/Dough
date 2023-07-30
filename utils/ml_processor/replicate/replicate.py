@@ -1,6 +1,6 @@
 import time
 from shared.file_upload.s3 import upload_file
-from utils.common_methods import get_current_user_uuid
+from utils.common_utils import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import MachineLearningProcessor
 import replicate

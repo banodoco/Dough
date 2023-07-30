@@ -8,7 +8,7 @@ from shared.constants import AIModelType
 from ui_components.common_methods import train_model
 
 from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject
-from utils.common_methods import get_current_user_uuid
+from utils.common_utils import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
 
 

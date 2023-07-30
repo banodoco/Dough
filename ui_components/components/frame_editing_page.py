@@ -13,7 +13,7 @@ from shared.file_upload.s3 import upload_file
 
 from ui_components.common_methods import add_image_variant, create_or_update_mask, execute_image_edit, extract_frame, promote_image_variant
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
-from utils.common_methods import save_or_host_file
+from utils.common_utils import save_or_host_file
 from utils.data_repo.data_repo import DataRepo
 
 

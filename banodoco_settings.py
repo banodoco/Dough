@@ -11,7 +11,7 @@ from shared.logging.logging import AppLogger
 from shared.constants import AnimationStyleType
 from ui_components.common_methods import add_image_variant
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalUserObject
-from utils.common_methods import copy_sample_assets, create_working_assets, save_or_host_file
+from utils.common_utils import copy_sample_assets, create_working_assets, save_or_host_file
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 

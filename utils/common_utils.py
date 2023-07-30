@@ -2,8 +2,10 @@ from io import BytesIO
 from pathlib import Path
 import os
 import csv
+import tempfile
 from typing import Union
 import uuid
+import requests
 import streamlit as st
 import json
 from shared.constants import SERVER, InternalFileType, ServerType
@@ -198,6 +200,17 @@ def save_or_host_file(file, path, mime_type='image/png'):
 
     return uploaded_url
 
+def save_or_host_file_bytes(video_bytes, path, ext):
+    uploaded_url = None
+    if SERVER != ServerType.DEVELOPMENT.value:
+        data_repo = DataRepo()
+        uploaded_url = data_repo.upload_file(video_bytes)
+    else:
+        with open(path, 'wb') as f:
+            f.write(video_bytes)
+    
+    return uploaded_url
+
 def add_temp_file_to_project(project_uuid, key, hosted_url):
     data_repo = DataRepo()
 
@@ -218,3 +231,15 @@ def add_temp_file_to_project(project_uuid, key, hosted_url):
         'temp_file_list': temp_file_list
     }
     data_repo.update_project(**project_data)
+
+
+def generate_temp_file(url, ext=".mp4"):
+    response = requests.get(url)
+    if not response.ok:
+        raise ValueError(f"Could not download video from URL: {url}")
+
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=ext, mode='wb')
+    temp_file.write(response.content)
+    temp_file.close()
+
+    return temp_file

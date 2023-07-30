@@ -143,7 +143,7 @@ class DataRepo:
         return InternalAIModelObject(**model) if model else None
     
     def get_all_ai_model_list(self, model_type_list=None, user_id=None):
-        from utils.common_methods import get_current_user_uuid
+        from utils.common_utils import get_current_user_uuid
         if not user_id:
             user_id = get_current_user_uuid()
 
@@ -259,7 +259,7 @@ class DataRepo:
         return InternalAppSettingObject(**app_setting) if app_setting else None
     
     def get_app_secrets_from_user_uuid(self, uuid=None):
-        from utils.common_methods import get_current_user_uuid
+        from utils.common_utils import get_current_user_uuid
         # if user is not defined then take the current user
         if not uuid:
             uuid = get_current_user_uuid()

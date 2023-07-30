@@ -17,7 +17,7 @@ from ui_components.components.welcome_page import welcome_page
 # from ui_components.components.motion_page import motion_page
 from streamlit_option_menu import option_menu
 from ui_components.models import InternalAppSettingObject
-from utils.common_methods import create_working_assets, get_current_user_uuid
+from utils.common_utils import create_working_assets, get_current_user_uuid
 import utils.local_storage.local_storage as local_storage
 
 from utils.data_repo.data_repo import DataRepo

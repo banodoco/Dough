@@ -39,7 +39,7 @@ from shared.file_upload.s3 import upload_file
 from shared.utils import is_online_file_path
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, VideoQuality, WorkflowStageType
 from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
-from utils.common_methods import add_temp_file_to_project, get_current_user_uuid, save_or_host_file
+from utils.common_utils import add_temp_file_to_project, generate_temp_file, get_current_user_uuid, save_or_host_file, save_or_host_file_bytes
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import InternalResponse, AnimationStyleType
 from utils.ml_processor.ml_interface import get_ml_client
@@ -1282,8 +1282,14 @@ def create_or_get_single_preview_video(timing_uuid):
 
     if not timing.timed_clip:
         timing = data_repo.get_timing_from_uuid(timing_uuid)
+        
+        temp_video_file = None
+        if timing.interpolated_clip.hosted_url:
+            temp_video_file = generate_temp_file(timing.interpolated_clip.hosted_url, '.mp4')
 
-        clip = VideoFileClip(timing.interpolated_clip.local_path)
+        file_path = temp_video_file.name if temp_video_file else timing.interpolated_clip.local_path
+        clip = VideoFileClip(file_path)
+            
         number_text = TextClip(str(timing.aux_frame_index),
                                fontsize=24, color='white')
         number_background = TextClip(" ", fontsize=24, color='black', bg_color='black', size=(
@@ -1295,7 +1301,15 @@ def create_or_get_single_preview_video(timing_uuid):
         clip_with_number = CompositeVideoClip(
             [clip, number_background, number_text])
 
-        clip_with_number.write_videofile(timing.interpolated_clip.local_path)
+        # clip_with_number.write_videofile(timing.interpolated_clip.local_path)
+        video_bytes = clip_with_number.write_videofile(filename=".mp4", codec='libx264', audio_codec='aac', mode='bytes')
+        hosted_url = save_or_host_file_bytes(video_bytes, timing.interpolated_clip.local_path)
+
+        if hosted_url:
+            data_repo.update_file(timing.interpolated_clip.uuid, hosted_url=hosted_url)
+
+        if temp_video_file:
+            os.remove(temp_video_file.name)
 
         # timed_clip has the correct length (equal to the time difference between the current and the next frame)
         # which the interpolated video may or maynot have

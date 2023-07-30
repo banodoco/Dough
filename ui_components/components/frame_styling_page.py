@@ -28,7 +28,7 @@ import math
 from ui_components.constants import WorkflowStageType
 from ui_components.models import InternalAppSettingObject, InternalFileObject, InternalFrameTimingObject
 from streamlit_extras.annotated_text import annotated_text
-from utils.common_methods import save_or_host_file
+from utils.common_utils import save_or_host_file
 
 from utils.data_repo.data_repo import DataRepo
 
