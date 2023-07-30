@@ -90,7 +90,7 @@ class APIRepo:
     def http_post(self, url, data = {}, file_content = None):
         if file_content:
             files = {'file': file_content}
-            res = requests.post(self.base_url + url, json=data, files=files, headers=self._get_headers(None))
+            res = requests.post(self.base_url + url, data=data, files=files, headers=self._get_headers(None))
         else:
             res = requests.post(self.base_url + url, json=data, headers=self._get_headers())
 
@@ -168,8 +168,8 @@ class APIRepo:
         res = self.http_put(url=self.FILE_URL, data=update_data)
         return InternalResponse(res['payload'], 'success', res['status'])
     
-    def upload_file(self, file_content):
-        res = self.http_post(url=self.FILE_UPLOAD_URL, data={}, file_content=file_content)
+    def upload_file(self, file_content, ext):
+        res = self.http_post(url=self.FILE_UPLOAD_URL, data={'extension': ext}, file_content=file_content)
         return InternalResponse(res['payload'], 'success', res['status'])
         
     def create_file(self, **kwargs):

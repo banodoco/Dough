@@ -127,7 +127,7 @@ def prompt_finder_element(project_uuid):
         uploaded_file = ""
         st.experimental_rerun()
     
-    if st.session_state['last_generated_prompt']:
+    if 'last_generated_prompt' in st.session_state and st.session_state['last_generated_prompt']:
         st.write("Generated prompt - ", st.session_state['last_generated_prompt'])
     
     # list all the prompts in prompts.csv
@@ -1302,7 +1302,13 @@ def create_or_get_single_preview_video(timing_uuid):
             [clip, number_background, number_text])
 
         # clip_with_number.write_videofile(timing.interpolated_clip.local_path)
-        video_bytes = clip_with_number.write_videofile(filename=".mp4", codec='libx264', audio_codec='aac', mode='bytes')
+        temp_output_file = generate_temp_file(timing.interpolated_clip.hosted_url, '.mp4')
+        clip_with_number.write_videofile(filename=temp_output_file.name, codec='libx264', audio_codec='aac')
+
+        video_bytes = None
+        with open(temp_output_file.name, 'rb') as f:
+            video_bytes = f.read()
+
         hosted_url = save_or_host_file_bytes(video_bytes, timing.interpolated_clip.local_path)
 
         if hosted_url:
@@ -1380,7 +1386,7 @@ preview_clips have frame numbers on them. Preview clip is generated from index-2
 '''
 
 
-def create_full_preview_video(timing_uuid, speed) -> InternalFileObject:
+def create_full_preview_video(timing_uuid, speed=1) -> InternalFileObject:
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
@@ -1390,6 +1396,8 @@ def create_full_preview_video(timing_uuid, speed) -> InternalFileObject:
 
     num_timing_details = len(timing_details)
     clips = []
+
+    temp_file_list = []
 
     for i in range(index_of_item - 2, index_of_item + 3):
 
@@ -1421,28 +1429,70 @@ def create_full_preview_video(timing_uuid, speed) -> InternalFileObject:
             [clip, number_background, number_text])
 
         # remove existing preview video
-        if preview_video.local_path:
-            os.remove(preview_video.local_path)
-        clip_with_number.write_videofile(
-            preview_video.location, codec='libx264', bitrate='3000k')
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
+        temp_file_list.append(temp_file)
+        clip_with_number.write_videofile(temp_file.name, codec='libx264', bitrate='3000k')
+        video_bytes = None
+        with open(temp_file.name, 'rb') as f:
+            video_bytes = f.read()
+
+        hosted_url = save_or_host_file_bytes(video_bytes, preview_video.local_path)
+        if hosted_url:
+            data_repo.update_file(preview_video.uuid, hosted_url=hosted_url)
+        
         clips.append(preview_video)
 
+        if preview_video.local_path:
+            os.remove(preview_video.local_path)
+
     print(clips)
-    video_clips = [VideoFileClip(v.location) for v in clips]
+    video_clips = []
+
+    for v in clips:
+        path = v.location
+        if 'http' in path:
+            temp_file = generate_temp_file(path)
+            temp_file_list.append(temp_file)
+            path = temp_file.name
+        
+        video_clips.append(VideoFileClip(path))
+
+    # video_clips = [VideoFileClip(v.location) for v in clips]
     combined_clip = concatenate_videoclips(video_clips)
     output_filename = str(uuid.uuid4()) + ".mp4"
     video_location = f"videos/{timing.project.uuid}/assets/videos/1_final/{output_filename}"
-    combined_clip.write_videofile(video_location)
 
-    if speed != 1.0:
-        clip = VideoFileClip(video_location)
-        output_clip = clip.fx(vfx.speedx, speed)
-        os.remove(video_location)
-        output_clip.write_videofile(
-            video_location, codec="libx264", preset="fast")
+    temp_output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
+    combined_clip = combined_clip.fx(vfx.speedx, speed)
+    combined_clip.write_videofile(temp_output_file.name)
 
-    video_file = data_repo.create_file(
-        name=output_filename, type=InternalFileType.VIDEO.value, local_path=video_location)
+    video_bytes = None
+    with open(temp_output_file.name, 'rb') as f:
+        video_bytes = f.read()
+    
+    hosted_url = save_or_host_file_bytes(video_bytes, video_location)
+
+    video_data = {
+        "name": output_filename,
+        "type": InternalFileType.VIDEO.value,
+        "project_id": timing.project.uuid
+    }
+    if hosted_url:
+        video_data.update({"hosted_url": hosted_url})
+    else:
+        video_data.update({"local_path": video_location})
+
+    # if speed != 1.0:
+    #     clip = VideoFileClip(video_location)
+    #     output_clip = clip.fx(vfx.speedx, speed)
+    #     os.remove(video_location)
+    #     output_clip.write_videofile(
+    #         video_location, codec="libx264", preset="fast")
+
+    for file in temp_file_list:
+        os.remove(file.name)
+
+    video_file = data_repo.create_file(**video_data)
 
     return video_file
 
@@ -3209,6 +3259,13 @@ def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_locat
     animation_style = timing.animation_style
     location_of_video = video_file.local_path
 
+    temp_video_file, temp_output_file = None, None
+    if video_file.hosted_url:
+        temp_video_file = generate_temp_file(video_file.hosted_url, '.mp4')
+
+    file_path = temp_video_file.name if temp_video_file else video_file.local_path
+    
+
     if animation_style == AnimationStyleType.DIRECT_MORPHING.value:
 
         # Load the video clip
@@ -3259,7 +3316,7 @@ def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_locat
 
     elif animation_style == AnimationStyleType.INTERPOLATION.value:
 
-        clip = VideoFileClip(location_of_video)
+        clip = VideoFileClip(file_path)
         input_video_duration = clip.duration
         desired_duration = timing.clip_duration
         desired_speed_change = float(
@@ -3276,17 +3333,41 @@ def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_locat
         new_file_location = "videos/" + \
             str(timing.project.uuid) + \
             "/assets/videos/1_final/" + str(new_file_name)
-        output_clip.write_videofile(
-            new_file_location, codec="libx264", preset="fast")
+        
+        temp_output_file = generate_temp_file(timing.interpolated_clip.hosted_url, '.mp4')
 
+        output_clip.write_videofile(
+            filename=temp_output_file.name, codec="libx264", preset="fast")
+        
+        video_bytes = None
+        with open(temp_output_file.name, 'rb') as f:
+            video_bytes = f.read()
+        
+        hosted_url = save_or_host_file_bytes(video_bytes, new_file_location)
+
+        # TODO: simplify this logic
         if save_to_new_location:
-            video_file: InternalFileObject = data_repo.create_file(
-                name=new_file_name, type=InternalFileType.VIDEO.value, local_path=new_file_location)
+            if hosted_url:
+                video_file: InternalFileObject = data_repo.create_file(
+                    name=new_file_name, type=InternalFileType.VIDEO.value, hosted_url=hosted_url)
+            else:
+                video_file: InternalFileObject = data_repo.create_file(
+                    name=new_file_name, type=InternalFileType.VIDEO.value, local_path=new_file_location)
         else:
             os.remove(location_of_video)
             location_of_video = new_file_location
-            data_repo.create_or_update_file(
-                video_file.uuid, type=InternalFileType.VIDEO.value, local_path=location_of_video)
+            if hosted_url:
+                video_file: InternalFileObject = data_repo.create_file(
+                    name=new_file_name, type=InternalFileType.VIDEO.value, hosted_url=hosted_url)
+            else:
+                data_repo.create_or_update_file(
+                    video_file.uuid, type=InternalFileType.VIDEO.value, local_path=location_of_video)
+
+    if temp_video_file:
+        os.remove(temp_video_file.name)
+    
+    if temp_output_file:
+        os.remove(temp_output_file.name)
 
     return video_file
 

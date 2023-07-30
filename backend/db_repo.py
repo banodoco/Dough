@@ -175,8 +175,8 @@ class DBRepo:
 
         return InternalResponse(payload, 'file found', True)
     
-    def upload_file(self, file):
-        url = upload_file_from_obj(file)
+    def upload_file(self, file, ext):
+        url = upload_file_from_obj(file, ext)
         payload = {
             'data': url
         }

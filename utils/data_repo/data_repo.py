@@ -75,8 +75,8 @@ class DataRepo:
         file = self.db_repo.create_or_update_file(uuid, type, **kwargs).data['data']
         return InternalFileObject(**file) if file else None
     
-    def upload_file(self, file_content):
-        res = self.db_repo.upload_file(file_content)
+    def upload_file(self, file_content, ext):
+        res = self.db_repo.upload_file(file_content, ext)
         file_url = res.data['data'] if res.status else None
         return file_url
 

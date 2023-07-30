@@ -193,18 +193,18 @@ def save_or_host_file(file, path, mime_type='image/png'):
         image_bytes.seek(0)
 
         data_repo = DataRepo()
-        uploaded_url = data_repo.upload_file(image_bytes)
+        uploaded_url = data_repo.upload_file(image_bytes, '.png')
     else:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         file.save(path)
 
     return uploaded_url
 
-def save_or_host_file_bytes(video_bytes, path, ext):
+def save_or_host_file_bytes(video_bytes, path, ext=".mp4"):
     uploaded_url = None
     if SERVER != ServerType.DEVELOPMENT.value:
         data_repo = DataRepo()
-        uploaded_url = data_repo.upload_file(video_bytes)
+        uploaded_url = data_repo.upload_file(video_bytes, ext)
     else:
         with open(path, 'wb') as f:
             f.write(video_bytes)
