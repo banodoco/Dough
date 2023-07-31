@@ -35,6 +35,7 @@ class AIModelDto(serializers.ModelSerializer):
             'uuid',
             'name',
             'user_uuid',
+            'custom_trained',
             'version',
             'replicate_model_id',
             'replicate_url',

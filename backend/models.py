@@ -78,7 +78,8 @@ class InternalFileObject(BaseModel):
 
 class AIModel(BaseModel):
     name = models.CharField(max_length=255, default="")
-    user = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True)      # incase this is a user specific custom model
+    user = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True)
+    custom_trained = models.BooleanField(default=False)
     version = models.CharField(max_length=255, default="", blank=True, null=True)
     replicate_model_id = models.CharField(max_length=255, default="", blank=True)      # for models which were custom created
     replicate_url = models.TextField(default="", blank=True)
