@@ -1735,7 +1735,7 @@ def styling_element(timing_uuid, view_type="Single"):
             st.experimental_rerun()
     else:
 
-        model_list = data_repo.get_all_ai_model_list()
+        model_list = data_repo.get_all_ai_model_list(custom_trained=None)
         model_name_list = [m.name for m in model_list]
 
         if 'index_of_default_model' not in st.session_state:

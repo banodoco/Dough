@@ -221,8 +221,8 @@ class APIRepo:
         return InternalResponse(res['payload'], 'success', res['status'])
 
     
-    def get_all_ai_model_list(self, model_type_list=None, user_id=None, custom_trained=False):
-        params = {'user_id': user_id, 'custom_trained': custom_trained}
+    def get_all_ai_model_list(self, model_type_list=None, user_id=None, custom_trained=None):
+        params = {'user_id': user_id, 'custom_trained': "all" if custom_trained == None else ("user" if custom_trained else "predefined")}
         if model_type_list:
             params.update({'model_type_list': model_type_list})
         res = self.http_get(self.MODEL_LIST_URL, params=params)
