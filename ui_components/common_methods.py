@@ -2711,21 +2711,24 @@ def add_image_variant(image_file_uuid: str, timing_uuid: str):
 
     return len(alternative_image_list)
 
-# TODO: complete this function
-
-
-def convert_image_list_to_file_list(images_list: str):
+# image_list is a list of uploaded_obj
+def convert_image_list_to_file_list(image_list):
     data_repo = DataRepo()
     file_list = []
-    for image in images_list:
+    for image in image_list:
+        img = Image.open(image)
+        filename = str(uuid.uuid4())
+        file_path = "videos/training_data/" + filename
+        hosted_url = save_or_host_file(img, file_path)
         data = {
             "name": str(uuid.uuid4()),
-            "type": InternalFileType.IMAGE.value
+            "type": InternalFileType.IMAGE.value,
         }
-        if image.startswith("http"):
-            data['hosted_url'] = image
+
+        if hosted_url:
+            data['hosted_url'] = hosted_url
         else:
-            data['local_url'] = image
+            data['local_url'] = file_path
 
         image_file = data_repo.create_file(**data)
         file_list.append(image_file)
@@ -2735,27 +2738,28 @@ def convert_image_list_to_file_list(images_list: str):
 # INFO: images_list passed here are converted to internal files after they are used for training
 
 
-def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max_train_steps, model_name, images_list: List[str]):
+def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max_train_steps, model_name, images_list: List[str], controller_type):
     ml_client = get_ml_client()
     response = ml_client.dreambooth_training(
-        training_file_url, instance_prompt, class_prompt, max_train_steps, model_name)
+        training_file_url, instance_prompt, class_prompt, max_train_steps, model_name, controller_type)
     training_status = response["status"]
-
+    
     model_id = response["id"]
     if training_status == "queued":
         file_list = convert_image_list_to_file_list(images_list)
         file_uuid_list = [file.uuid for file in file_list]
-        file_uuid_list = json.dump(file_uuid_list)
+        file_uuid_list = json.dumps(file_uuid_list)
 
         model_data = {
             "name": model_name,
             "user_id": get_current_user_uuid(),
             "replicate_model_id": model_id,
-            "replicate_url": None,
-            "diffusers_url": None,
+            "replicate_url": response["model"],
+            "diffusers_url": "",
             "category": AIModelType.DREAMBOOTH.value,
             "training_image_list": file_uuid_list,
             "keyword": instance_prompt,
+            "custom_trained": True
         }
 
         data_repo = DataRepo()
@@ -2794,7 +2798,7 @@ def train_lora_model(training_file_url, type_of_task, resolution, model_name, im
 
 
 def train_model(images_list, instance_prompt, class_prompt, max_train_steps,
-                model_name, type_of_model, type_of_task, resolution):
+                model_name, type_of_model, type_of_task, resolution, controller_type):
     # prepare and upload the training data (images.zip)
     ml_client = get_ml_client()
     try:
@@ -2806,7 +2810,7 @@ def train_model(images_list, instance_prompt, class_prompt, max_train_steps,
     model_name = model_name.replace(" ", "-").lower()
     if type_of_model == "Dreambooth":
         return train_dreambooth_model(instance_prompt, class_prompt, training_file_url,
-                                      max_train_steps, model_name, images_list)
+                                      max_train_steps, model_name, images_list, controller_type)
     elif type_of_model == "LoRA":
         return train_lora_model(training_file_url, type_of_task, resolution, model_name, images_list)
 

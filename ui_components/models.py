@@ -47,7 +47,7 @@ class InternalProjectObject:
 
 class InternalAIModelObject:
     def __init__(self, uuid, name, user_uuid, version, replicate_model_id, replicate_url,
-                 diffusers_url, category, training_image_list, keyword, created_on):
+                 diffusers_url, category, custom_trained, training_image_list, keyword, created_on):
         self.uuid = uuid
         self.name = name
         self.user_uuid = user_uuid
@@ -60,6 +60,7 @@ class InternalAIModelObject:
             training_image_list)
         self.keyword = keyword
         self.created_on = created_on
+        self.custom_trained = custom_trained
 
     # training_image_list contains uuid list of images
     def _get_training_image_list(self, training_image_list):
@@ -68,6 +69,7 @@ class InternalAIModelObject:
         
         from utils.data_repo.data_repo import DataRepo
         data_repo = DataRepo()
+        training_image_list = json.loads(training_image_list)
         file_list = data_repo.get_image_list_from_uuid_list(
             training_image_list)
         return file_list

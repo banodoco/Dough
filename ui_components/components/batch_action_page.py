@@ -23,17 +23,17 @@ def batch_action_page(project_uuid):
     if st.button("Move initial key frames to completed key frames"):
         for timing_frame in timing_details:
             add_image_variant(timing_frame.source_image.uuid, timing_frame.uuid)
-            promote_image_variant(timing_frame.uuid, len(timing_details) - 1)
+            promote_image_variant(timing_frame.uuid, 0)
         st.success("All initial key frames moved to completed key frames")
 
     st.markdown("***")
 
-    st.markdown("#### Remove all existing timings")
-    st.write("This will remove all the timings and key frames from the project")
-    if st.button("Remove Existing Timings"):
-        data_repo.remove_existing_timing(project.uuid)
+    # st.markdown("#### Remove all existing timings")
+    # st.write("This will remove all the timings and key frames from the project")
+    # if st.button("Remove Existing Timings"):
+    #     data_repo.remove_existing_timing(project.uuid)
 
-    st.markdown("***")
+    # st.markdown("***")
 
     st.markdown("#### Bulk adjust the timings")
     st.write(
