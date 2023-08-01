@@ -1781,7 +1781,7 @@ def styling_element(timing_uuid, view_type="Single"):
         st.session_state['custom_models'] = []
 
     elif current_model_name == AIModelType.LORA.value:
-        if 'index_of_lora_model_1' not in st.session_state:
+        if not ('index_of_lora_model_1' in st.session_state and st.session_state['index_of_lora_model_1']):
             st.session_state['index_of_lora_model_1'] = 0
             st.session_state['index_of_lora_model_2'] = 0
             st.session_state['index_of_lora_model_3'] = 0
@@ -1790,47 +1790,60 @@ def styling_element(timing_uuid, view_type="Single"):
         # filtered_df = df[df.iloc[:, 5] == 'LoRA']
         # lora_model_list = filtered_df.iloc[:, 0].tolist()
         lora_model_list = data_repo.get_all_ai_model_list(
-            model_type=AIModelType.LORA.value)
+            model_type_list=[AIModelType.LORA.value], custom_trained=True)
         null_model = InternalAIModelObject(
-            None, "", None, None, None, None, None, None, None)
+            None, "", None, None, None, None, None, None, None, None, None, None)
         lora_model_list.insert(0, null_model)
         lora_model_name_list = [m.name for m in lora_model_list]
 
+        # TODO: remove this array from db table
+        custom_models = []
         selected_lora_1_name = st.selectbox(
-            f"LoRA Model 1", lora_model_name_list, index=st.session_state['index_of_lora_model_1'])
+            f"LoRA Model 1", lora_model_name_list, index=st.session_state['index_of_lora_model_1'], key="lora_1")
         st.session_state['lora_model_1'] = next((obj.uuid for i, obj in enumerate(
-            model_list) if getattr(obj, 'name') == selected_lora_1_name), "")
+            lora_model_list) if getattr(obj, 'name') == selected_lora_1_name), "")
+        st.session_state['lora_model_1_url'] = next((obj.replicate_url for i, obj in enumerate(
+            lora_model_list) if getattr(obj, 'name') == selected_lora_1_name), "")
         selected_lora_1_index = next((i for i, obj in enumerate(
-            model_list) if getattr(obj, 'name') == selected_lora_1_name), "")
+            lora_model_list) if getattr(obj, 'name') == selected_lora_1_name), 0)
 
         if st.session_state['index_of_lora_model_1'] != selected_lora_1_index:
             st.session_state['index_of_lora_model_1'] = selected_lora_1_index
-            st.experimental_rerun()
+
+        if st.session_state['index_of_lora_model_1'] != 0:
+            custom_models.append(st.session_state['lora_model_1'])
 
         selected_lora_2_name = st.selectbox(
-            f"LoRA Model 1", lora_model_name_list, index=st.session_state['index_of_lora_model_1'])
-        st.session_state['lora_model_1'] = next((obj.uuid for i, obj in enumerate(
-            model_list) if getattr(obj, 'name') == selected_lora_2_name), "")
+            f"LoRA Model 2", lora_model_name_list, index=st.session_state['index_of_lora_model_2'], key="lora_2")
+        st.session_state['lora_model_2'] = next((obj.uuid for i, obj in enumerate(
+            lora_model_list) if getattr(obj, 'name') == selected_lora_2_name), "")
+        st.session_state['lora_model_2_url'] = next((obj.replicate_url for i, obj in enumerate(
+            lora_model_list) if getattr(obj, 'name') == selected_lora_2_name), "")
         selected_lora_2_index = next((i for i, obj in enumerate(
-            model_list) if getattr(obj, 'name') == selected_lora_2_name), "")
+            lora_model_list) if getattr(obj, 'name') == selected_lora_2_name), 0)
 
         if st.session_state['index_of_lora_model_2'] != selected_lora_2_index:
             st.session_state['index_of_lora_model_2'] = selected_lora_2_index
-            st.experimental_rerun()
+
+        if st.session_state['index_of_lora_model_2'] != 0:
+            custom_models.append(st.session_state['lora_model_2'])
 
         selected_lora_3_name = st.selectbox(
-            f"LoRA Model 1", lora_model_name_list, index=st.session_state['index_of_lora_model_1'])
-        st.session_state['lora_model_1'] = next((obj.uuid for i, obj in enumerate(
-            model_list) if getattr(obj, 'name') == selected_lora_3_name), "")
+            f"LoRA Model 3", lora_model_name_list, index=st.session_state['index_of_lora_model_3'], key="lora_3")
+        st.session_state['lora_model_3'] = next((obj.uuid for i, obj in enumerate(
+            lora_model_list) if getattr(obj, 'name') == selected_lora_3_name), "")
+        st.session_state['lora_model_3_url'] = next((obj.replicate_url for i, obj in enumerate(
+            lora_model_list) if getattr(obj, 'name') == selected_lora_3_name), "")
         selected_lora_3_index = next((i for i, obj in enumerate(
-            model_list) if getattr(obj, 'name') == selected_lora_3_name), "")
+            lora_model_list) if getattr(obj, 'name') == selected_lora_3_name), 0)
 
         if st.session_state['index_of_lora_model_3'] != selected_lora_3_index:
             st.session_state['index_of_lora_model_3'] = selected_lora_3_index
-            st.experimental_rerun()
 
-        st.session_state['custom_models'] = [st.session_state['lora_model_1'],
-                                             st.session_state['lora_model_2'], st.session_state['lora_model_3']]
+        if st.session_state['index_of_lora_model_3'] != 0:
+            custom_models.append(st.session_state['lora_model_3'])
+
+        st.session_state['custom_models'] = json.dumps(custom_models)
 
         st.info("You can reference each model in your prompt using the following keywords: <1>, <2>, <3> - for example '<1> in the style of <2>.")
 
@@ -1859,8 +1872,8 @@ def styling_element(timing_uuid, view_type="Single"):
 
         selected_dreambooth_model_name = st.selectbox(
             f"Dreambooth Model", dreambooth_model_name_list, index=st.session_state['index_of_dreambooth_model'])
-        st.session_state['custom_models'] = next((obj.uuid for i, obj in enumerate(
-            dreambooth_model_list) if getattr(obj, 'name') == selected_dreambooth_model_name), "")
+        # st.session_state['custom_models'] = next((obj.uuid for i, obj in enumerate(
+        #     dreambooth_model_list) if getattr(obj, 'name') == selected_dreambooth_model_name), "")
         selected_dreambooth_model_index = next((i for i, obj in enumerate(
             dreambooth_model_list) if getattr(obj, 'name') == selected_dreambooth_model_name), "")
         if st.session_state['index_of_dreambooth_model'] != selected_dreambooth_model_index:
@@ -1944,7 +1957,7 @@ def styling_element(timing_uuid, view_type="Single"):
                 "You can include the following tags in the prompt to vary the prompt dynamically: [expression], [location], [mouth], and [looking]")
         if st.session_state['model'] == AIModelType.DREAMBOOTH.value:
             model_details: InternalAIModelObject = data_repo.get_ai_model_from_uuid(
-                st.session_state['custom_models'])
+                st.session_state['dreambooth_model_uuid'])
             st.info(
                 f"Must include '{model_details.keyword}' to run this model")
             # TODO: CORRECT-CODE add controller_type to ai_model
@@ -4173,33 +4186,41 @@ def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> Int
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         timing.project.uuid)
 
-    lora_models = timing.custom_model_id_list
-    default_model_url = DEFAULT_LORA_MODEL_URL
+    # lora_models = timing.custom_model_id_list
+    # default_model_url = DEFAULT_LORA_MODEL_URL
 
-    lora_model_urls = []
+    # lora_model_urls = []
 
-    for lora_model_uuid in lora_models:
-        if lora_model_uuid != "":
-            lora_model: InternalAIModelObject = data_repo.get_ai_model_from_uuid(
-                lora_model_uuid)
-            print(lora_model)
-            if lora_model.replicate_url != "":
-                lora_model_url = lora_model.replicate_url
-            else:
-                lora_model_url = default_model_url
-        else:
-            lora_model_url = default_model_url
+    # for lora_model_uuid in lora_models:
+    #     if lora_model_uuid != "":
+    #         lora_model: InternalAIModelObject = data_repo.get_ai_model_from_uuid(
+    #             lora_model_uuid)
+    #         print(lora_model)
+    #         if lora_model.replicate_url != "":
+    #             lora_model_url = lora_model.replicate_url
+    #         else:
+    #             lora_model_url = default_model_url
+    #     else:
+    #         lora_model_url = default_model_url
 
-        lora_model_urls.append(lora_model_url)
+    #     lora_model_urls.append(lora_model_url)
 
-    lora_model_1_model_url = lora_model_urls[0]
-    lora_model_2_model_url = lora_model_urls[1]
-    lora_model_3_model_url = lora_model_urls[2]
+    lora_urls = ""
+    lora_scales = ""
+    if "lora_model_1_url" in st.session_state and st.session_state["lora_model_1_url"]:
+        lora_urls += st.session_state["lora_model_1_url"]
+        lora_scales += "0.5"
+    if "lora_model_2_url" in st.session_state and st.session_state["lora_model_2_url"]:
+        ctn = "" if not len(lora_urls) else " | "
+        lora_urls += ctn + st.session_state["lora_model_2_url"]
+        lora_scales += ctn + "0.5"
+    if st.session_state["lora_model_3_url"]:
+        ctn = "" if not len(lora_urls) else " | "
+        lora_urls += ctn + st.session_state["lora_model_3_url"]
+        lora_scales += ctn + "0.5"
 
     source_image = source_image_file.location
     if source_image[:4] == "http":
@@ -4222,12 +4243,12 @@ def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> Int
         'height': project_settings.height,
         'num_outputs': 1,
         'image': input_image,
-        'num_inference_steps': timing.num_inference_steps,
+        'num_inference_steps': timing.num_inteference_steps,
         'guidance_scale': timing.guidance_scale,
         'prompt_strength': timing.strength,
         'scheduler': "DPMSolverMultistep",
-        'lora_urls': lora_model_1_model_url + "|" + lora_model_2_model_url + "|" + lora_model_3_model_url,
-        'lora_scales': "0.5 | 0.5 | 0.5",
+        'lora_urls': lora_urls,
+        'lora_scales': lora_scales,
         'adapter_type': timing.adapter_type,
         'adapter_condition_image': adapter_condition_image,
     }
@@ -4243,7 +4264,7 @@ def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> Int
             filename = str(uuid.uuid4()) + ".png"
             file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
                                                              hosted_url=output[0])
-            return output[0]
+            return file
         except replicate.exceptions.ModelError as e:
             if "NSFW content detected" in str(e):
                 print("NSFW content detected. Attempting to rerun code...")
@@ -4254,14 +4275,14 @@ def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> Int
         except Exception as e:
             raise e
 
-    filename = "default_3x_failed-656a7e5f-eca9-4f92-a06b-e1c6ff4a5f5e.png"     # const filename
-    file = data_repo.get_file_from_name(filename)
-    if file:
-        return file
-    else:
-        file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                         hosted_url="https://i.ibb.co/ZG0hxzj/Failed-3x-In-A-Row.png")
-        return file
+    # filename = "default_3x_failed-656a7e5f-eca9-4f92-a06b-e1c6ff4a5f5e.png"     # const filename
+    # file = data_repo.get_file_from_name(filename)
+    # if file:
+    #     return file
+    # else:
+    #     file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+    #                                                      hosted_url="https://i.ibb.co/ZG0hxzj/Failed-3x-In-A-Row.png")
+    #     return file
 
 
 def attach_audio_element(project_uuid, expanded):
