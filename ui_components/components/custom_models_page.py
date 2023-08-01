@@ -54,7 +54,7 @@ def custom_models_page(project_uuid):
                     if model.keyword != "":
                         st.text(model.keyword)
                 with col3:
-                    if model.keyword != "":
+                    if model.category != "":
                         st.text(model.category)
                 with col4:
                     if len(model.training_image_list) > 0:
@@ -124,9 +124,10 @@ def custom_models_page(project_uuid):
             if st.button("Train Model", disabled=False):
                 st.info("Loading...")
 
-                directory = "videos/training_data"
-                if not os.path.exists(directory):
-                    os.makedirs(directory)
+                # TODO: check the local storage
+                # directory = "videos/training_data"
+                # if not os.path.exists(directory):
+                #     os.makedirs(directory)
 
                 # for image in uploaded_files:
                 #     with open(os.path.join(f"videos/training_data", image.name), "wb") as f:

@@ -2780,14 +2780,15 @@ def train_lora_model(training_file_url, type_of_task, resolution, model_name, im
 
     file_list = convert_image_list_to_file_list(images_list)
     file_uuid_list = [file.uuid for file in file_list]
-    file_uuid_list = json.dump(file_uuid_list)
+    file_uuid_list = json.dumps(file_uuid_list)
     model_data = {
         "name": model_name,
         "user_id": get_current_user_uuid(),
         "replicate_url": output,
-        "diffusers_url": None,
+        "diffusers_url": "",
         "category": AIModelType.LORA.value,
-        "training_image_list": file_uuid_list
+        "training_image_list": file_uuid_list,
+        "custom_trained": True
     }
 
     data_repo.create_ai_model(**model_data)
