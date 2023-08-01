@@ -177,8 +177,8 @@ class APIRepo:
         return InternalResponse(res['payload'], 'success', res['status'])
     
     def delete_file_from_uuid(self, uuid):
-        res = self.db_repo.delete_file_from_uuid(uuid)
-        return InternalResponse(res['payload'], 'success', res['status']).status
+        res = self.http_delete(url=self.FILE_URL, params={"uuid": uuid})
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     # TODO: remove file_type from this method
     def get_image_list_from_uuid_list(self, image_uuid_list, file_type=InternalFileType.IMAGE.value):

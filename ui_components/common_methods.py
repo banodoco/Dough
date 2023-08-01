@@ -1,3 +1,4 @@
+import io
 from typing import List
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
@@ -3961,6 +3962,7 @@ def render_video(final_video_name, project_uuid, quality):
                     current_timing.uuid, timed_clip_id=output_video.uuid)
 
     video_list = []
+    temp_file_list = []
 
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         timing.project.uuid)
@@ -3971,21 +3973,32 @@ def render_video(final_video_name, project_uuid, quality):
         current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(
             project_uuid, index_of_current_item)
         if index_of_current_item <= total_number_of_videos:
-            video_file = current_timing.timed_clip
-            video_list.append(video_file.location)
+            temp_video_file = None
+            if current_timing.timed_clip.hosted_url:
+                temp_video_file = generate_temp_file(current_timing.timed_clip.hosted_url, '.mp4')
+                temp_file_list.append(temp_video_file)
+
+            file_path = temp_video_file.name if temp_video_file else current_timing.timed_clip.local_path
+        
+            video_list.append(file_path)
 
     video_clip_list = [VideoFileClip(v) for v in video_list]
     finalclip = concatenate_videoclips(video_clip_list)
 
     output_video_file = f"videos/{timing.project.uuid}/assets/videos/2_completed/{final_video_name}.mp4"
     if project_settings.audio:
-        audio_location = project_settings.audio.local_path
+        temp_audio_file = generate_temp_file(project_settings.audio.location, '.mp4')
+        temp_file_list.append(temp_audio_file)
+
+        audio_location = temp_audio_file.name if temp_audio_file else project_settings.audio.location
+        
         audio_clip = AudioFileClip(audio_location)
         finalclip = finalclip.set_audio(audio_clip)
 
-    # TODO: add this in the save override
+    temp_video_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
+
     finalclip.write_videofile(
-        output_video_file,
+        temp_video_file.name,
         fps=60,  # or 60 if your original video is 60fps
         audio_bitrate="128k",
         bitrate="5000k",
@@ -3993,15 +4006,29 @@ def render_video(final_video_name, project_uuid, quality):
         audio_codec="aac"
     )
 
+    temp_video_file.close()
+    video_bytes = None
+    with open(temp_video_file.name, "rb") as f:
+        video_bytes = io.BytesIO(f.read())
+    
+    hosted_url = save_or_host_file_bytes(video_bytes, output_video_file)
+
     file_data = {
         "name": final_video_name,
         "type": InternalFileType.VIDEO.value,
-        "local_path": output_video_file,
         "tag": InternalFileTag.GENERATED_VIDEO.value,
         "project_id": project_uuid
     }
 
+    if hosted_url:
+        file_data.update({"hosted_url": hosted_url})
+    else:
+        file_data.update({"local_path": output_video_file})
+
     data_repo.create_file(**file_data)
+
+    for file in temp_file_list:
+        os.remove(file.name)
 
 
 def create_gif_preview(project_uuid):
@@ -4299,24 +4326,32 @@ def attach_audio_element(project_uuid, expanded):
             if uploaded_file:
                 local_file_location = os.path.join(
                     f"videos/{project.uuid}/assets/resources/audio", uploaded_file.name)
-                if not os.path.exists(f"videos/{project.uuid}/assets/resources/audio"):
-                    os.makedirs(
-                        f"videos/{project.uuid}/assets/resources/audio")
+                
+                # if not os.path.exists(f"videos/{project.uuid}/assets/resources/audio"):
+                #     os.makedirs(
+                #         f"videos/{project.uuid}/assets/resources/audio")
 
-                with open(local_file_location, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
+                if uploaded_file is not None:
+                    audio_bytes = io.BytesIO(uploaded_file.read())
+                
+                hosted_url = save_or_host_file_bytes(audio_bytes, local_file_location, ".mp3")
 
-                    file_data = {
-                        "name": str(uuid.uuid4()) + ".mp3",
-                        "type": InternalFileType.AUDIO.value,
-                        "local_path": local_file_location,
-                        "project_id": project_uuid
-                    }
-                    audio_file: InternalFileObject = data_repo.create_file(
-                        **file_data)
-                    data_repo.update_project_setting(
-                        project_uuid, audio_id=audio_file.uuid)
-                    st.experimental_rerun()
+                file_data = {
+                    "name": str(uuid.uuid4()) + ".mp3",
+                    "type": InternalFileType.AUDIO.value,
+                    "project_id": project_uuid
+                }
+
+                if hosted_url:
+                    file_data.update({"hosted_url": hosted_url})
+                else:
+                    file_data.update({"local_path": local_file_location})
+
+                audio_file: InternalFileObject = data_repo.create_file(
+                    **file_data)
+                data_repo.update_project_setting(
+                    project_uuid, audio_id=audio_file.uuid)
+                st.experimental_rerun()
             else:
                 st.warning('No file selected')
 

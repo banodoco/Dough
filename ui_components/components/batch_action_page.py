@@ -9,24 +9,24 @@ from utils.data_repo.data_repo import DataRepo
 
 def batch_action_page(project_uuid):
     data_repo = DataRepo()
-    project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
+    # project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
     timing_details: List[
         InternalFrameTimingObject
     ] = data_repo.get_timing_list_from_project(project_uuid)
 
     st.markdown("***")
 
-    st.markdown("#### Make extracted key frames into completed key frames")
-    st.write(
-        "This will move all the extracted key frames to completed key frames - good for if you don't want to make any changes to the key frames"
-    )
-    if st.button("Move initial key frames to completed key frames"):
-        for timing_frame in timing_details:
-            add_image_variant(timing_frame.source_image.uuid, timing_frame.uuid)
-            promote_image_variant(timing_frame.uuid, 0)
-        st.success("All initial key frames moved to completed key frames")
+    # st.markdown("#### Make extracted key frames into completed key frames")
+    # st.write(
+    #     "This will move all the extracted key frames to completed key frames - good for if you don't want to make any changes to the key frames"
+    # )
+    # if st.button("Move initial key frames to completed key frames"):
+    #     for timing_frame in timing_details:
+    #         add_image_variant(timing_frame.source_image.uuid, timing_frame.uuid)
+    #         promote_image_variant(timing_frame.uuid, 0)
+    #     st.success("All initial key frames moved to completed key frames")
 
-    st.markdown("***")
+    # st.markdown("***")
 
     # st.markdown("#### Remove all existing timings")
     # st.write("This will remove all the timings and key frames from the project")

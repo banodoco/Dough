@@ -206,6 +206,7 @@ def save_or_host_file_bytes(video_bytes, path, ext=".mp4"):
         data_repo = DataRepo()
         uploaded_url = data_repo.upload_file(video_bytes, ext)
     else:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, 'wb') as f:
             f.write(video_bytes)
     
@@ -243,3 +244,9 @@ def generate_temp_file(url, ext=".mp4"):
     temp_file.close()
 
     return temp_file
+
+def generate_temp_file_from_uploaded_file(uploaded_file):
+    if uploaded_file is not None:
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(uploaded_file.read())
+            return temp_file
