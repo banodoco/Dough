@@ -1,5 +1,6 @@
 import io
 import time
+from shared.constants import REPLICATE_USER
 from shared.file_upload.s3 import upload_file
 from utils.common_utils import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
@@ -32,6 +33,7 @@ class ReplicateProcessor(MachineLearningProcessor):
     def _set_urls(self):
         self.dreambooth_training_url = "https://dreambooth-api-experimental.replicate.com/v1/trainings"
         self.training_data_upload_url = "https://dreambooth-api-experimental.replicate.com/v1/upload/data.zip"
+        self.model_version_url = "https://api.replicate.com/v1/models"
 
     def get_model(self, input_model: ReplicateModel):
         model = replicate.models.get(input_model.name)
@@ -150,7 +152,7 @@ class ReplicateProcessor(MachineLearningProcessor):
                 "instance_data": training_file_url,
                 "max_train_steps": max_train_steps
             },
-            "model": "piyushk52/" + str(model_name),
+            "model": REPLICATE_USER + "/" + str(model_name),
             "trainer_version": "cd3f925f7ab21afaef7d45224790eedbb837eeac40d22e8fefe015489ab644aa",
             "template_version": template_version,
             "webhook_completed": "https://example.com/dreambooth-webhook"
@@ -175,8 +177,9 @@ class ReplicateProcessor(MachineLearningProcessor):
     def get_model_version_from_id(self, model_id):
         api_key = os.environ.get("REPLICATE_API_TOKEN")
         headers = {"Authorization": f"Token {api_key}"}
-        url = f"{self.dreambooth_training_url}/{model_id}"
+        url = f"{self.model_version_url}/{model_id}/versions"
         response = r.get(url, headers=headers)
-        version = (response.json()["version"])
+        # version = (response.json()["version"])
 
+        version = (response.json())['results'][0]['id']
         return version

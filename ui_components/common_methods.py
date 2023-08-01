@@ -29,7 +29,7 @@ from io import BytesIO
 from st_clickable_images import clickable_images
 import ast
 import numpy as np
-from shared.constants import SERVER, AIModelType, InternalFileTag, InternalFileType, ServerType
+from shared.constants import REPLICATE_USER, SERVER, AIModelType, InternalFileTag, InternalFileType, ServerType
 from pydub import AudioSegment
 import shutil
 from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, vfx
@@ -1735,14 +1735,17 @@ def styling_element(timing_uuid, view_type="Single"):
             st.experimental_rerun()
     else:
 
-        model_list = data_repo.get_all_ai_model_list(custom_trained=None)
+        model_list = data_repo.get_all_ai_model_list(custom_trained=False)
         model_name_list = [m.name for m in model_list]
 
-        if 'index_of_default_model' not in st.session_state:
+        # user_model_list = data_repo.get_all_ai_model_list(custom_trained=True)
+        # user_model_name_list = [m.name for m in user_model_list]
+
+        if not ('index_of_default_model' in st.session_state and st.session_state['index_of_default_model']):
             if project_settings.default_model:
                 st.session_state['model'] = project_settings.default_model.uuid
                 st.session_state['index_of_default_model'] = next((i for i, obj in enumerate(
-                    model_list) if getattr(obj, 'uuid') == project_settings.default_model.uuid), None)
+                    model_list) if getattr(obj, 'uuid') == project_settings.default_model.uuid), 0)
                 st.write(
                     f"Index of last model: {st.session_state['index_of_default_model']}")
             else:
@@ -1848,10 +1851,10 @@ def styling_element(timing_uuid, view_type="Single"):
         # dreambooth_model_list = filtered_df.iloc[:, 0].tolist()
 
         dreambooth_model_list = data_repo.get_all_ai_model_list(
-            model_type=AIModelType.DREAMBOOTH.value)
+            model_type_list=[AIModelType.DREAMBOOTH.value], custom_trained=True)
         dreambooth_model_name_list = [m.name for m in dreambooth_model_list]
 
-        if 'index_of_dreambooth_model' not in st.session_state:
+        if not ('index_of_dreambooth_model' in st.session_state and st.session_state['index_of_dreambooth_model']):
             st.session_state['index_of_dreambooth_model'] = 0
 
         selected_dreambooth_model_name = st.selectbox(
@@ -1862,9 +1865,14 @@ def styling_element(timing_uuid, view_type="Single"):
             dreambooth_model_list) if getattr(obj, 'name') == selected_dreambooth_model_name), "")
         if st.session_state['index_of_dreambooth_model'] != selected_dreambooth_model_index:
             st.session_state['index_of_dreambooth_model'] = selected_dreambooth_model_index
+
+        st.session_state['dreambooth_model_uuid'] = dreambooth_model_list[st.session_state['index_of_dreambooth_model']].uuid
     else:
         st.session_state['custom_models'] = []
         st.session_state['adapter_type'] = "N"
+
+    if not ( 'adapter_type' in st.session_state and st.session_state['adapter_type']):
+        st.session_state['adapter_type'] = 'N'
 
     if st.session_state['adapter_type'] == "canny":
 
@@ -2423,6 +2431,11 @@ def trigger_restyling_process(
     #     timing.project.uuid)
     # project_setting: InternalSettingObject = data_repo.get_project_setting(
     #     timing.project.uuid)
+
+    # TODO: add proper form validations throughout the code
+    if not prompt:
+        st.error("Please enter a prompt")
+        return
 
     if update_inference_settings is True:
         prompt = prompt.replace(",", ".")
@@ -3131,6 +3144,11 @@ def prompt_model_stability(timing_uuid, input_image_file: InternalFileObject):
 
 def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
     data_repo = DataRepo()
+
+    if not ('dreambooth_model_uuid' in st.session_state and st.session_state['dreambooth_model_uuid']):
+        st.error('No dreambooth model selected')
+        return
+
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
@@ -3138,8 +3156,10 @@ def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
 
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         timing.project.uuid)
-
-    model_name = timing['model']['name']
+    
+    dreambooth_model: InternalAIModelObject = data_repo.get_ai_model_from_uuid(st.session_state['dreambooth_model_uuid'])
+    
+    model_name = dreambooth_model.name
     image_number = timing.aux_frame_index
     prompt = timing.prompt
     strength = timing.strength
@@ -3148,14 +3168,12 @@ def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
     seed = timing.seed
     num_inference_steps = timing.num_inteference_steps
 
-    model_details: InternalAIModelObject = data_repo.get_ai_model_from_uuid(
-        timing['model'].uuid)
-    model_id = model_details.replicate_model_id
+    model_id = dreambooth_model.replicate_url
 
     ml_client = get_ml_client()
 
     source_image = source_image_file.location
-    if timing_details[image_number]["adapter_type"] == "Yes":
+    if timing_details[image_number].adapter_type == "Yes":
         if source_image.startswith("http"):
             control_image = source_image
         else:
@@ -3164,15 +3182,14 @@ def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
         control_image = None
 
     # version of models that were custom created has to be fetched
-    if model_details["version"] == "":
+    if not dreambooth_model.version:
         version = ml_client.get_model_version_from_id(model_id)
-        data_repo.update_ai_model(model_details.uuid, version=version)
+        data_repo.update_ai_model(uuid=dreambooth_model.uuid, version=version)
     else:
-        version = model_details["version"]
+        version = dreambooth_model.version
 
-    # TODO: change to custom user
     model_version = ml_client.get_model_by_name(
-        f"peter942/{model_name}", version)
+        f"{REPLICATE_USER}/{model_name}", version)
 
     if source_image.startswith("http"):
         input_image = source_image

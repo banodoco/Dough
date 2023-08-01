@@ -117,7 +117,7 @@ def create_new_user_data(user: InternalUserObject):
     project_setting_data = {
         "project_id" : project.uuid,
         "input_type" : "video",
-        "default_strength": 0.63,
+        "default_strength": 1,
         "extraction_type" : "Extract manually",
         "width" : 512,
         "height" : 512,
