@@ -123,7 +123,8 @@ class ReplicateProcessor(MachineLearningProcessor):
         return serving_url
     
     # TODO: figure how to resolve model location setting, right now it's hardcoded to peter942/modnet
-    def dreambooth_training(self, training_file_url, instance_prompt, class_prompt, max_train_steps, model_name, controller_type):
+    def dreambooth_training(self, training_file_url, instance_prompt, \
+                            class_prompt, max_train_steps, model_name, controller_type, image_len):
         if controller_type == "normal":
             template_version = "b65d36e378a01ef81d81ba49be7deb127e9bb8b74a28af3aa0eaca16b9bcd0eb"
         elif controller_type == "canny":
@@ -160,6 +161,11 @@ class ReplicateProcessor(MachineLearningProcessor):
 
         response = r.post(self.dreambooth_training_url, headers=headers, data=json.dumps(payload))
         response = (response.json())
+
+        # TODO: currently approximating total credit cost of training based on image len, will fix this in the future
+        cost = image_len * 3 * (1/5) # per image 3 mins, per min $0.2
+        
+
         return response
     
     def remove_background(self, project_name, input_image):

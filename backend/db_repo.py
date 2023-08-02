@@ -88,7 +88,11 @@ class DBRepo:
         return InternalResponse(payload, 'user not found', False)
     
     def update_user(self, user_id, **kwargs):
-        user = User.objects.filter(uuid=user_id, is_disabled=False).first()
+        if user_id:
+            user = User.objects.filter(uuid=user_id, is_disabled=False).first()
+        else:
+            user = User.objects.filter(is_disabled=False).first()
+            
         if not user:
             return InternalResponse({}, 'invalid user id', False)
         

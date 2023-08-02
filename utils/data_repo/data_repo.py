@@ -333,7 +333,7 @@ class DataRepo:
         res = self.db_repo.restore_backup(uuid)
         return res.status
     
-    # update user credits
-    def update_usage_credits(self, user_id, credits_to_add):
-        user = self.update_user(user_id, credits_to_add=credits_to_add)
+    # update user credits - updates the credit of the user calling the API
+    def update_usage_credits(self, credits_to_add):
+        user = self.update_user(user_id=None, credits_to_add=credits_to_add)
         return True if user else None

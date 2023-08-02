@@ -2768,7 +2768,7 @@ def convert_image_list_to_file_list(image_list):
 def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max_train_steps, model_name, images_list: List[str], controller_type):
     ml_client = get_ml_client()
     response = ml_client.dreambooth_training(
-        training_file_url, instance_prompt, class_prompt, max_train_steps, model_name, controller_type)
+        training_file_url, instance_prompt, class_prompt, max_train_steps, model_name, controller_type, len(images_list))
     training_status = response["status"]
     
     model_id = response["id"]
