@@ -4331,9 +4331,7 @@ def attach_audio_element(project_uuid, expanded):
                 #     os.makedirs(
                 #         f"videos/{project.uuid}/assets/resources/audio")
 
-                if uploaded_file is not None:
-                    audio_bytes = io.BytesIO(uploaded_file.read())
-                
+                audio_bytes = io.BytesIO(uploaded_file.read())
                 hosted_url = save_or_host_file_bytes(audio_bytes, local_file_location, ".mp3")
 
                 file_data = {

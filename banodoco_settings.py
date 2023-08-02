@@ -65,7 +65,6 @@ def project_init():
 def create_new_user_data(user: InternalUserObject):
     data_repo = DataRepo()
     
-    # TODO: disable updating aws or replicate settings in staging or production
     setting_data = {
         "user_id": user.uuid,
         "welcome_state": 0
@@ -73,12 +72,19 @@ def create_new_user_data(user: InternalUserObject):
 
     app_setting = data_repo.create_app_setting(**setting_data)
 
+    create_new_project(user, 'my_first_project')
+
+
+def create_new_project(user: InternalUserObject, project_name: str, width=512, height=512,\
+                        guidance_type=GuidanceType.DRAWING.value, animation_style=AnimationStyleType.INTERPOLATION.value):
+    data_repo = DataRepo()
+
     # creating a new project for this user
     project_data = {
         "user_id": user.uuid,
-        "name": "my_first_project",
-        'width': 704,
-        'height': 512
+        "name": project_name,
+        'width': width,
+        'height': height
     }
     project = data_repo.create_project(**project_data)
 
@@ -102,7 +108,7 @@ def create_new_user_data(user: InternalUserObject):
     timing_data = {
         "project_id": project.uuid,
         "frame_time": 0.0,
-        "animation_style": AnimationStyleType.INTERPOLATION.value,
+        "animation_style": animation_style,
         "aux_frame_index": 0,
         "source_image_id": source_image.uuid
     }
@@ -119,8 +125,8 @@ def create_new_user_data(user: InternalUserObject):
         "input_type" : "video",
         "default_strength": 1,
         "extraction_type" : "Extract manually",
-        "width" : 512,
-        "height" : 512,
+        "width" : width,
+        "height" : height,
         "default_prompt": "an oil painting",
         "default_model_id": model_list[0].uuid,
         "default_negative_prompt" : "",
@@ -130,20 +136,22 @@ def create_new_user_data(user: InternalUserObject):
         "default_stage" : "Source Image",
         "default_custom_model_id_list" : "[]",
         "default_adapter_type" : "N",
-        "guidance_type" : GuidanceType.DRAWING.value,
-        "default_animation_style" : AnimationStyleType.INTERPOLATION.value,
+        "guidance_type" : guidance_type,
+        "default_animation_style" : animation_style,
         "default_low_threshold" : 0,
         "default_high_threshold" : 0
     }
 
     project_setting = data_repo.create_project_setting(**project_setting_data)
 
-    # TODO: remove this from the hosted version
     create_working_assets(project.uuid)
 
+    return project
     
 
 def create_predefined_models(user):
+    data_repo = DataRepo()
+
     # create predefined models
     data = [
         {
@@ -222,8 +230,14 @@ def create_predefined_models(user):
         },
     ]
 
+    # only creating pre-defined models for the first time
+    available_models = data_repo.get_all_ai_model_list(\
+        model_type_list=[AIModelType.BASE_SD.value], user_id=user.uuid, custom_trained=None)
+    
+    if available_models and len(available_models):
+        return available_models
+
     model_list = []
-    data_repo = DataRepo()
     for model in data:
         model_list.append(data_repo.create_ai_model(**model))
 
