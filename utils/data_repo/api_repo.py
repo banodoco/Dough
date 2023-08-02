@@ -119,6 +119,11 @@ class APIRepo:
         res = self.http_post(url=self.USER_OP_URL, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
     
+    def update_user(self, user_id, **kwargs):
+        kwargs['uuid'] = user_id
+        res = self.http_put(url=self.USER_OP_URL, data=kwargs)
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
     # making it fetch the current logged in user
     def get_first_active_user(self):
         res = self.http_get(self.USER_OP_URL)

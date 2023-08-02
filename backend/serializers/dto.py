@@ -14,7 +14,8 @@ class UserDto(serializers.ModelSerializer):
             'uuid',
             'name',
             'email',
-            'type'
+            'type',
+            'total_credits'
         )
 
 class ProjectDto(serializers.ModelSerializer):

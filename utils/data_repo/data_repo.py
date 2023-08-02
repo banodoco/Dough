@@ -46,6 +46,11 @@ class DataRepo:
         user_list = self.db_repo.get_all_user_list().data['data']
         return [InternalUserObject(**user) for user in user_list] if user_list else None
     
+    def update_user(self, user_id, **kwargs):
+        res = self.db_repo.update_user(user_id, **kwargs)
+        user = res.data['data'] if res.status else None
+        return InternalUserObject(**user) if user else None 
+
     def delete_user_by_email(self, email):
         res = self.db_repo.delete_user_by_email(email)
         return res.status
@@ -329,3 +334,6 @@ class DataRepo:
         return res.status
     
     # update user credits
+    def update_usage_credits(self, user_id, credits_to_add):
+        user = self.update_user(user_id, credits_to_add=credits_to_add)
+        return True if user else None

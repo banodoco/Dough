@@ -422,6 +422,16 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         st.session_state['canny_image'] = None
                                         st.experimental_rerun()
 
+                        user = data_repo.get_first_active_user()
+                        st.write("user credits: ", user.total_credits)
+                        if st.button("add 10 points"):
+                            data_repo.update_usage_credits(user.uuid, 10)
+                            st.experimental_rerun()
+
+                        if st.button("subtract 10 points"):
+                            data_repo.update_usage_credits(user.uuid, -10)
+                            st.experimental_rerun()
+
                     elif how_to_guide == GuidanceType.IMAGE.value:
                         with crop2:
                             how_to_crop = st_memory.radio("How to crop:", options=[

@@ -87,6 +87,24 @@ class DBRepo:
         
         return InternalResponse(payload, 'user not found', False)
     
+    def update_user(self, user_id, **kwargs):
+        user = User.objects.filter(uuid=user_id, is_disabled=False).first()
+        if not user:
+            return InternalResponse({}, 'invalid user id', False)
+        
+        if 'credits_to_add' in kwargs:
+            kwargs['total_credits'] = max(user.total_credits + kwargs['credits_to_add'], 0)
+
+        for k,v in kwargs.items():
+            setattr(user, k, v)
+
+        user.save()
+        payload = {
+            'data': UserDto(user).data
+        }
+
+        return InternalResponse(payload, 'user updated successfully', True)
+
     def get_all_user_list(self):
         user_list = User.objects.all()
 
@@ -1331,4 +1349,3 @@ class DBRepo:
                     high_threshold=backup_timing['high_threshold'],
                     aux_frame_index=backup_timing['aux_frame_index']
                 )
-

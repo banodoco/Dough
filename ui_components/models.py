@@ -243,6 +243,7 @@ class InternalUserObject:
         self.name = kwargs['name'] if 'name' in kwargs else None
         self.email = kwargs['email'] if 'email' in kwargs else None
         self.type = kwargs['type'] if 'type' in kwargs else None
+        self.total_credits = kwargs['total_credits'] if 'total_credits' in kwargs else 0
 
     def to_json(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
