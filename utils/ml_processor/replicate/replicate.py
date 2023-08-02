@@ -35,6 +35,11 @@ class ReplicateProcessor(MachineLearningProcessor):
         self.training_data_upload_url = "https://dreambooth-api-experimental.replicate.com/v1/upload/data.zip"
         self.model_version_url = "https://api.replicate.com/v1/models"
 
+    def _update_usage_credits(self, time_taken):
+        data_repo = DataRepo()
+        cost = round((time_taken / 60) * 0.17, 3)
+        data_repo.update_usage_credits(-cost)
+
     def get_model(self, input_model: ReplicateModel):
         model = replicate.models.get(input_model.name)
         model_version = model.versions.get(input_model.version) if input_model.version else model
@@ -51,6 +56,8 @@ class ReplicateProcessor(MachineLearningProcessor):
         output = model_version.predict(**kwargs)
         end_time = time.time()
         log_model_inference(model, end_time - start_time, **kwargs)
+        self._update_usage_credits(end_time - start_time)
+
         return output
 
     def inpainting(self, video_name, input_image, prompt, negative_prompt):
@@ -66,6 +73,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         output = model.predict(mask=mask, image=input_image,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)    
         end_time = time.time()
         log_model_inference(model, end_time - start_time, prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)
+        self._update_usage_credits(end_time - start_time)
 
         return output[0]
     
@@ -163,8 +171,8 @@ class ReplicateProcessor(MachineLearningProcessor):
         response = (response.json())
 
         # TODO: currently approximating total credit cost of training based on image len, will fix this in the future
-        cost = image_len * 3 * (1/5) # per image 3 mins, per min $0.2
-        
+        time_taken = image_len * 3 * 60 # per image 3 mins
+        self._update_usage_credits(time_taken)
 
         return response
     
@@ -177,6 +185,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         output = model.predict(image=input_image)
         end_time = time.time()
         log_model_inference(model, end_time - start_time, image=input_image)
+        self._update_usage_credits(end_time - start_time)
 
         return output
     
