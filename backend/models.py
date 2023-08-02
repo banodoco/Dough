@@ -24,11 +24,17 @@ class User(BaseModel):
     password = models.TextField(default=None, null=True)
     type = models.CharField(max_length=50, default="user")
     third_party_id = models.CharField(max_length=255, default=None, null=True)
+    total_credits = models.FloatField(default=0)
 
     class Meta:
         app_label = 'backend'
         db_table = 'user'
 
+    def save(self, *args, **kwargs):
+        if not self.id:
+            self.total_credits = 1000
+        
+        super(User, self).save(*args, **kwargs)
 
 class Project(BaseModel):
     name = models.CharField(max_length=255, default="")

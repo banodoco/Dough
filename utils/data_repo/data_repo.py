@@ -327,3 +327,5 @@ class DataRepo:
     def restore_backup(self, uuid):
         res = self.db_repo.restore_backup(uuid)
         return res.status
+    
+    # update user credits
