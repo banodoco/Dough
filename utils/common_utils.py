@@ -250,3 +250,55 @@ def generate_temp_file_from_uploaded_file(uploaded_file):
         with tempfile.NamedTemporaryFile(delete=False) as temp_file:
             temp_file.write(uploaded_file.read())
             return temp_file
+
+def reset_project_state():
+    keys_to_delete = [
+        "page",
+        "current_frame_uuid",
+        "rotated_image",
+        "current_frame_index",
+        "zoom_level_input",
+        "rotation_angle_input",
+        "x_shift",
+        "y_shift",
+        "working_image",
+        "degrees_rotated_to",
+        "degree",
+        "edited_image",
+        "index_of_type_of_mask_selection",
+        "type_of_mask_replacement",
+        "which_layer",
+        "which_layer_index",
+        "drawing_input",
+        "image_created",
+        "precision_cropping_inpainted_image_uuid",
+        "frame_styling_view_type",
+        "transformation_stage",
+        "custom_pipeline",
+        "index_of_last_custom_pipeline",
+        "index_of_controlnet_adapter_type",
+        "lora_model_1",
+        "lora_model_2",
+        "lora_model_3",
+        "index_of_lora_model_1",
+        "index_of_lora_model_2",
+        "index_of_lora_model_3",
+        "custom_models",
+        "adapter_type",
+        "low_threshold",
+        "high_threshold",
+        "model",
+        "prompt",
+        "strength",
+        "guidance_scale",
+        "seed",
+        "num_inference_steps"
+        "dreambooth_model_uuid",
+        "seed",
+        "promote_new_generation",
+        "use_new_settings",
+    ]
+
+    for k in keys_to_delete:
+        if k in st.session_state:
+            del st.session_state[k]

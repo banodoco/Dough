@@ -17,7 +17,7 @@ from ui_components.components.welcome_page import welcome_page
 # from ui_components.components.motion_page import motion_page
 from streamlit_option_menu import option_menu
 from ui_components.models import InternalAppSettingObject
-from utils.common_utils import create_working_assets, get_current_user_uuid
+from utils.common_utils import create_working_assets, get_current_user_uuid, reset_project_state
 import utils.local_storage.local_storage as local_storage
 
 from utils.data_repo.data_repo import DataRepo
@@ -96,7 +96,13 @@ def setup_app_ui():
                                                                 p.name for p in project_list], index=st.session_state["index_of_project_name"])
         
             selected_index = next(i for i, p in enumerate(project_list) if p.name == selected_project_name)
+            project_changed = False
+            if 'project_uuid' in st.session_state and st.session_state['project_uuid'] != project_list[selected_index].uuid:
+                project_changed = True
             st.session_state["project_uuid"] = project_list[selected_index].uuid
+            
+            if project_changed:
+                reset_project_state()
 
             if "current_frame_index" not in st.session_state:
                 st.session_state['current_frame_index'] = 0
