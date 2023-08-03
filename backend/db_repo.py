@@ -74,7 +74,7 @@ class DBRepo:
             'data': UserDto(user).data
         }
         
-        return InternalResponse(payload, 'user not found', False)
+        return InternalResponse(payload, 'user found', True)
     
     def get_user_by_email(self, email):
         user = User.objects.filter(email=email, is_disabled=False).first()

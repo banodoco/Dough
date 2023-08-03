@@ -12,7 +12,7 @@ from shared.constants import LOCAL_DATABASE_NAME, SERVER, ServerType
 
 load_dotenv()
 
-if SERVER != ServerType.DEVELOPMENT.value:
+if SERVER == ServerType.DEVELOPMENT.value:
     DB_LOCATION = LOCAL_DATABASE_NAME
 else:
     DB_LOCATION = ''
