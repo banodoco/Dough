@@ -3994,8 +3994,10 @@ def render_video(final_video_name, project_uuid, quality):
 
     output_video_file = f"videos/{timing.project.uuid}/assets/videos/2_completed/{final_video_name}.mp4"
     if project_settings.audio:
-        temp_audio_file = generate_temp_file(project_settings.audio.location, '.mp4')
-        temp_file_list.append(temp_audio_file)
+        temp_audio_file = None
+        if 'http' in project_settings.audio.location:
+            temp_audio_file = generate_temp_file(project_settings.audio.location, '.mp4')
+            temp_file_list.append(temp_audio_file)
 
         audio_location = temp_audio_file.name if temp_audio_file else project_settings.audio.location
         
@@ -4016,7 +4018,7 @@ def render_video(final_video_name, project_uuid, quality):
     temp_video_file.close()
     video_bytes = None
     with open(temp_video_file.name, "rb") as f:
-        video_bytes = io.BytesIO(f.read())
+        video_bytes = f.read()
     
     hosted_url = save_or_host_file_bytes(video_bytes, output_video_file)
 
@@ -4338,7 +4340,8 @@ def attach_audio_element(project_uuid, expanded):
                 #     os.makedirs(
                 #         f"videos/{project.uuid}/assets/resources/audio")
 
-                audio_bytes = io.BytesIO(uploaded_file.read())
+                # audio_bytes = io.BytesIO(uploaded_file.read())
+                audio_bytes = uploaded_file.read()
                 hosted_url = save_or_host_file_bytes(audio_bytes, local_file_location, ".mp3")
 
                 file_data = {
