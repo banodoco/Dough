@@ -13,4 +13,16 @@ venv
 app_settings.csv
 videos
 videos/*
+/temp/
 training_data
+inference_log/*
+*.db
+test.py
+doc.py
+.env
+data.json
+
+# generated file TODO: move inside videos
+depth.png
+masked_image.png
+concatenated.mp4

@@ -1,7 +1,7 @@
 import pandas as pd
 import csv
 
-from utils.common_methods import create_file_path
+from utils.common_utils import create_file_path
 
 class CSVProcessor:
     def __init__(self, file_path):
@@ -47,8 +47,14 @@ class CSVProcessor:
         df = df.drop([int(idx)])
         df.to_csv(self.file_path, index=False)
     
+    def add_row(self, new_row):
+        df = pd.read_csv(self.file_path)
+        df = df.append(new_row, ignore_index=True)
+        df.to_csv(self.file_path, index=False)
+    
     # TODO: create a separate interface for this later
     def update_specific_timing_value(self, index_of_current_item, parameter, value):
+        
         df = pd.read_csv(self.file_path)
         
         try:
@@ -57,7 +63,9 @@ class CSVProcessor:
             raise ValueError(f"Invalid parameter: {parameter}")
         
         df.iloc[index_of_current_item, col_index] = value
-        numeric_cols = ["primary_image", "seed", "num_inference_steps"]
+        
+
+        numeric_cols = ["primary_image", "seed", "num_inference_steps","interpolation_steps"]
 
         for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], downcast="integer", errors="coerce")
@@ -67,31 +75,35 @@ class CSVProcessor:
         df.to_csv(self.file_path, index=False)
 
 
-def get_project_settings(project_name):
-    csv_client = CSVProcessor(f'videos/{project_name}/settings.csv')
-    return csv_client.get_all_json_data()
+# def get_project_settings(project_name):
+#     csv_client = CSVProcessor(f'videos/{project_name}/settings.csv')
+#     return csv_client.get_all_json_data()
 
-def update_project_setting(key, value, project_name):
-    if isinstance(value, str):
-        value = value.strip()
-        print("striped newline: ", value)
+# def update_project_setting(key, value, project_name):
+#     if isinstance(value, str):
+#         value = value.strip()
+#         print("striped newline: ", value)
     
-    print("setting ", key, " value to: ", value)
-    csv_client = CSVProcessor(f'videos/{project_name}/settings.csv')
-    csv_client.update_csv_data(key, value)
+#     print("setting ", key, " value to: ", value)
+#     csv_client = CSVProcessor(f'videos/{project_name}/settings.csv')
+#     csv_client.update_csv_data(key, value)
 
-def remove_existing_timing(project_name):
-    csv_client = CSVProcessor("videos/" + str(project_name) + "/timings.csv")
-    csv_client.clear_all_data()
+# def remove_existing_timing(project_name):
+#     csv_client = CSVProcessor("videos/" + str(project_name) + "/timings.csv")
+#     csv_client.clear_all_data()
 
-def get_app_settings():
-    csv_client = CSVProcessor("app_settings.csv")
-    return csv_client.get_all_json_data()
+# def get_app_settings():
+#     csv_client = CSVProcessor("app_settings.csv")
+#     return csv_client.get_all_json_data()
 
-def update_app_settings(key, value):
-    csv_client = CSVProcessor("app_settings.csv")
-    csv_client.update_csv_data(key, value)
+# def update_app_settings(key, value):
+#     csv_client = CSVProcessor("app_settings.csv")
+#     csv_client.update_csv_data(key, value)
 
-def update_specific_timing_value(project_name, index_of_current_item, parameter, value):
-    csv_client = CSVProcessor(f"videos/{project_name}/timings.csv")
-    csv_client.update_specific_timing_value(index_of_current_item, parameter, value)
+# def update_specific_timing_value(project_name, index_of_current_item, parameter, value):
+#     csv_client = CSVProcessor(f"videos/{project_name}/timings.csv")
+#     csv_client.update_specific_timing_value(index_of_current_item, parameter, value)
+
+# def log_inference_data_in_csv(data):
+#     csv_client = CSVProcessor('inference_log/log.csv')
+#     csv_client.add_row(data)
