@@ -5,6 +5,7 @@ import sys
 from shared.logging.constants import LoggingType
 
 from shared.logging.logging import AppLogger
+from utils.common_decorators import count_calls, measure_execution_time
 sys.path.append('../')
 
 import sqlite3
@@ -15,7 +16,7 @@ from shared.constants import Colors, InternalFileType
 from backend.serializers.dto import  AIModelDto, AppSettingDto, BackupDto, BackupListDto, InferenceLogDto, InternalFileDto, ProjectDto, SettingDto, TimingDto, UserDto
 
 from shared.constants import AUTOMATIC_FILE_HOSTING, LOCAL_DATABASE_NAME, SERVER, ServerType
-from shared.file_upload.s3 import upload_file
+from shared.file_upload.s3 import upload_file, upload_file_from_obj
 
 from backend.models import AIModel, AIModelParamMap, AppSetting, BackupTiming, InferenceLog, InternalFileObject, Project, Setting, Timing, User
 
@@ -73,7 +74,7 @@ class DBRepo:
             'data': UserDto(user).data
         }
         
-        return InternalResponse(payload, 'user not found', False)
+        return InternalResponse(payload, 'user found', True)
     
     def get_user_by_email(self, email):
         user = User.objects.filter(email=email, is_disabled=False).first()
@@ -86,6 +87,29 @@ class DBRepo:
         
         return InternalResponse(payload, 'user not found', False)
     
+    def update_user(self, user_id, **kwargs):
+        if user_id:
+            user = User.objects.filter(uuid=user_id, is_disabled=False).first()
+        else:
+            user = User.objects.filter(is_disabled=False).first()
+            
+        if not user:
+            return InternalResponse({}, 'invalid user id', False)
+        
+        if 'credits_to_add' in kwargs:
+            # credits won't change in the local environment
+            kwargs['total_credits'] = 1000     # max(user.total_credits + kwargs['credits_to_add'], 0)
+
+        for k,v in kwargs.items():
+            setattr(user, k, v)
+
+        user.save()
+        payload = {
+            'data': UserDto(user).data
+        }
+
+        return InternalResponse(payload, 'user updated successfully', True)
+
     def get_all_user_list(self):
         user_list = User.objects.all()
 
@@ -173,6 +197,14 @@ class DBRepo:
         }
 
         return InternalResponse(payload, 'file found', True)
+    
+    def upload_file(self, file, ext):
+        url = upload_file_from_obj(file, ext)
+        payload = {
+            'data': url
+        }
+
+        return InternalResponse(payload, 'file uploaded', True)
     
     def create_file(self, **kwargs):
         data = CreateFileDao(data=kwargs)
@@ -276,6 +308,22 @@ class DBRepo:
         
         return InternalResponse(payload, 'project fetched', True)
     
+    def update_project(self, **kwargs):
+        project = Project.objects.filter(uuid=kwargs['uuid'], is_disabled=False).first()
+        if not project:
+            return InternalResponse({}, 'invalid project uuid', False)
+        
+        for k,v in kwargs.items():
+            setattr(project, k, v)
+
+        project.save()
+
+        payload = {
+            'data': ProjectDto(project).data
+        }
+
+        return InternalResponse(payload, 'successfully updated project', True)
+    
     def get_all_project_list(self, user_uuid):
         user: User = User.objects.filter(uuid=user_uuid, is_disabled=False).first()
         if not user:
@@ -342,9 +390,8 @@ class DBRepo:
 
         return InternalResponse(payload, 'ai_model fetched', True)
     
-    def get_all_ai_model_list(self, model_type=None, user_id=None):
-        query = {'is_disabled': False}
-
+    def get_all_ai_model_list(self, model_type_list=None, user_id=None, custom_trained=False):
+        query = {'custom_trained': "all" if custom_trained == None else ("user" if custom_trained else "predefined"), 'is_disabled': False}
         if user_id:
             user = User.objects.filter(uuid=user_id, is_disabled=False).first()
             if not user:
@@ -352,8 +399,9 @@ class DBRepo:
             
             query['user_id'] = user.id
 
-        if model_type:
-            query['category'] = model_type
+        if model_type_list:
+            query['category__in'] = model_type_list
+        query['custom_trained'] = custom_trained
             
         ai_model_list = AIModel.objects.filter(**query).all()
         
@@ -1032,9 +1080,12 @@ class DBRepo:
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
         
-        project: Project = Project.objects.filter(uuid=kwargs['uuid'], is_disabled=False).first()
+        project: Project = Project.objects.filter(uuid=kwargs['project_id'], is_disabled=False).first()
         if not project:
             return InternalResponse({}, 'invalid project', False)
+        
+        print(attributes.data)
+        attributes._data['project_id'] = project.id
         
         setting = Setting.objects.filter(project_id=project.id, is_disabled=False).first()
         if not setting:
@@ -1306,4 +1357,3 @@ class DBRepo:
                     high_threshold=backup_timing['high_threshold'],
                     aux_frame_index=backup_timing['aux_frame_index']
                 )
-

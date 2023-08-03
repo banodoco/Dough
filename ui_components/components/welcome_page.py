@@ -1,7 +1,10 @@
 import streamlit as st
+from shared.constants import SERVER, ServerType
 from ui_components.models import InternalAppSettingObject
+import webbrowser
 
 from utils.data_repo.data_repo import DataRepo
+from utils.third_party_auth.google.google_auth import get_google_auth_url
 
 def welcome_page():
     data_repo = DataRepo()
@@ -52,14 +55,20 @@ def welcome_page():
         nav_buttons(int(st.session_state["welcome_state"]))
 
     elif int(st.session_state["welcome_state"]) == 3 and st.session_state["online"] == False:
-        st.subheader("Add your Replicate credentials")
-        st.write("Currently, we use Replicate.com for our model hosting. If you don't have an account, you can sign up for free [here](https://replicate.com/signin) and grab your API key [here](https://replicate.com/account) - this data is stored locally on your computer.")
-        with st.expander("Why Replicate.com? Can I run the models locally?"):
-            st.info("Replicate.com allows us to rapidly implement a wide array of models that work on any computer. Currently, these are delivered via API, which means that you pay for GPU time - but it tends to be very cheap. Getting it locally [via COG](https://github.com/replicate/cog/blob/main/docs/wsl2/wsl2.md) shouldn't be too difficult but I don't have the hardware to do that")
-        st.session_state["replicate_username"] = st.text_input("replicate_username", value = app_settings.replicate_username)
-        st.session_state["replicate_com_api_key"]  = st.text_input("replicate_com_api_key", value = app_settings.replicate_key)
-        st.warning("You can add this in App Settings later if you wish.")
-        nav_buttons(int(st.session_state["welcome_state"]))
+        if SERVER == ServerType.DEVELOPMENT.value:
+            st.subheader("Add your Replicate credentials")
+            st.write("Currently, we use Replicate.com for our model hosting. If you don't have an account, you can sign up for free [here](https://replicate.com/signin) and grab your API key [here](https://replicate.com/account) - this data is stored locally on your computer.")
+            with st.expander("Why Replicate.com? Can I run the models locally?"):
+                st.info("Replicate.com allows us to rapidly implement a wide array of models that work on any computer. Currently, these are delivered via API, which means that you pay for GPU time - but it tends to be very cheap. Getting it locally [via COG](https://github.com/replicate/cog/blob/main/docs/wsl2/wsl2.md) shouldn't be too difficult but I don't have the hardware to do that")
+            st.session_state["replicate_username"] = st.text_input("replicate_username", value = app_settings.replicate_username)
+            st.session_state["replicate_com_api_key"]  = st.text_input("replicate_com_api_key", value = app_settings.replicate_key)
+            st.warning("You can add this in App Settings later if you wish.")
+            nav_buttons(int(st.session_state["welcome_state"]))
+        else:
+            # skipping this step if this is a hosted version
+            st.session_state["welcome_state"] = 4
+            data_repo.update_app_setting(welcome_state=st.session_state["welcome_state"])                  
+            st.experimental_rerun()
 
     elif int(st.session_state["welcome_state"]) == 4 and st.session_state["online"] == False:
         st.subheader("That's it! Just click below when you feel sufficiently welcomed, and you'll be taken to the app!")                        

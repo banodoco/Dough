@@ -1,6 +1,8 @@
 import datetime
 import json
 
+from ui_components.constants import TEMP_MASK_FILE
+
 
 class InternalFileObject:
     def __init__(self, uuid, name, type, local_path, hosted_url, created_on, tag=""):
@@ -14,22 +16,38 @@ class InternalFileObject:
 
     @property
     def location(self):
-        if self.local_path:
-            return self.local_path
-        return self.hosted_url
+        if self.hosted_url:
+            return self.hosted_url
+        return self.local_path
 
 
 class InternalProjectObject:
-    def __init__(self, uuid, name, user_uuid, created_on):
+    def __init__(self, uuid, name, user_uuid, created_on, temp_file_list):
         self.uuid = uuid
         self.name = name
         self.user_uuid = user_uuid
         self.created_on = created_on
+        self.temp_file_list = temp_file_list
+
+    @property
+    def project_temp_file_list(self):
+        return json.loads(self.temp_file_list) if self.temp_file_list else {}
+    
+    def get_temp_mask_file(self, key):
+        temp_files_list = self.project_temp_file_list
+        for k, v in temp_files_list.items():
+            if k == key:
+                from utils.data_repo.data_repo import DataRepo
+                data_repo = DataRepo()
+                file = data_repo.get_file_from_uuid(v)
+                return file
+            
+        return None
 
 
 class InternalAIModelObject:
     def __init__(self, uuid, name, user_uuid, version, replicate_model_id, replicate_url,
-                 diffusers_url, category, training_image_list, keyword, created_on):
+                 diffusers_url, category, custom_trained, training_image_list, keyword, created_on):
         self.uuid = uuid
         self.name = name
         self.user_uuid = user_uuid
@@ -42,6 +60,7 @@ class InternalAIModelObject:
             training_image_list)
         self.keyword = keyword
         self.created_on = created_on
+        self.custom_trained = custom_trained
 
     # training_image_list contains uuid list of images
     def _get_training_image_list(self, training_image_list):
@@ -50,6 +69,7 @@ class InternalAIModelObject:
         
         from utils.data_repo.data_repo import DataRepo
         data_repo = DataRepo()
+        training_image_list = json.loads(training_image_list)
         file_list = data_repo.get_image_list_from_uuid_list(
             training_image_list)
         return file_list
@@ -116,8 +136,10 @@ class InternalFrameTimingObject:
     def primary_image_location(self):
         if not len(self.alternative_images_list):
             return ""
-        else:
+        elif self.primary_image:
             return self.primary_image.location
+        else:
+            return ""
 
     @property
     def primary_variant_index(self):
@@ -221,6 +243,7 @@ class InternalUserObject:
         self.name = kwargs['name'] if 'name' in kwargs else None
         self.email = kwargs['email'] if 'email' in kwargs else None
         self.type = kwargs['type'] if 'type' in kwargs else None
+        self.total_credits = kwargs['total_credits'] if 'total_credits' in kwargs else 0
 
     def to_json(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)

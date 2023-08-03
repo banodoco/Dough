@@ -13,6 +13,7 @@ from shared.file_upload.s3 import upload_file
 
 from ui_components.common_methods import add_image_variant, create_or_update_mask, execute_image_edit, extract_frame, promote_image_variant
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
+from utils.common_utils import save_or_host_file
 from utils.data_repo.data_repo import DataRepo
 
 
@@ -285,12 +286,19 @@ def frame_editing_page(project_uuid: str):
                                 canny_image, canvas_image)
                             new_canny_image = new_canny_image.convert("RGB")
                             file_path = f"videos/{project_uuid}/assets/resources/masks/{st.session_state['current_frame_uuid']}.png"
-                            new_canny_image.save(file_path)
+                            hosted_url = save_or_host_file(new_canny_image, file_path)
+                            
                             file_data = {
                                 "name": str(uuid.uuid4()) + ".png",
                                 "type": InternalFileType.IMAGE.value,
-                                "local_path": file_path
+                                "project_id": project_uuid
                             }
+
+                            if hosted_url:
+                                file_data.update({'hosted_url': hosted_url})
+                            else:
+                                file_data.update({'local_path': file_path})
+                                
                             canny_image = data_repo.create_file(**file_data)
                             data_repo.update_specific_timing(
                                 st.session_state['current_frame_uuid'], canny_image_id=canny_image.uuid)

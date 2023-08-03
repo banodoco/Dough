@@ -9,7 +9,7 @@ replicate==0.4.0
 requests==2.28.2
 boto3==1.26.54
 ffmpeg-python==0.2.0
-streamlit-drawable-canvas==0.9.3
+streamlit-drawable-canvas==0.9.0
 numpy==1.24.1
 mesa
 streamlit-javascript==0.1.5
@@ -30,3 +30,7 @@ htbuilder==0.6.1
 streamlit-extras==0.2.7
 cryptography==41.0.1
 watchdog==3.0.0
+httpx-oauth==0.13.0
+extra-streamlit-components==0.1.56
+wrapt==1.15.0
+pydantic==1.10.9

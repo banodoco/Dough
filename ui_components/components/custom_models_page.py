@@ -8,7 +8,7 @@ from shared.constants import AIModelType
 from ui_components.common_methods import train_model
 
 from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject
-from utils.common_methods import get_current_user_uuid
+from utils.common_utils import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
 
 
@@ -17,16 +17,17 @@ def custom_models_page(project_uuid):
     project: InternalProjectObject = data_repo.get_project_from_uuid(
         project_uuid)
     
-    # TODO: common user_id
     app_setting: InternalAppSettingObject = data_repo.get_app_setting_from_uuid()
 
     with st.expander("Existing models"):
 
         st.subheader("Existing Models:")
 
-        # TODO: common user_id
+        # TODO: the list should only show models trained by the user (not the default ones)
         current_user_uuid = get_current_user_uuid()
-        model_list: List[InternalAIModelObject] = data_repo.get_all_ai_model_list(current_user_uuid)
+        model_list: List[InternalAIModelObject] = data_repo.get_all_ai_model_list(\
+            model_type_list=[AIModelType.DREAMBOOTH.value, AIModelType.LORA.value], \
+                user_id=current_user_uuid, custom_trained=True)
         if model_list == []:
             st.info("You don't have any models yet. Train a new model below.")
         else:
@@ -37,7 +38,7 @@ def custom_models_page(project_uuid):
             with header2:
                 st.markdown("###### Trigger Word")
             with header3:
-                st.markdown("###### Model ID")
+                st.markdown("###### Model Type")
             with header4:
                 st.markdown("###### Example Image #1")
             with header5:
@@ -53,21 +54,23 @@ def custom_models_page(project_uuid):
                     if model.keyword != "":
                         st.text(model.keyword)
                 with col3:
-                    if model.keyword != "":
-                        st.text(model.replicate_model_id)
+                    if model.category != "":
+                        st.text(model.category)
                 with col4:
-                    model.training_image_list[0].location
+                    if len(model.training_image_list) > 0:
+                        st.image(model.training_image_list[0].location)
                 with col5:
-                    model.training_image_list[1].location
+                    if len(model.training_image_list) > 1:
+                        st.image(model.training_image_list[1].location)
                 with col6:
-                    model.training_image_list[2].location
+                    if len(model.training_image_list) > 2:
+                        st.image(model.training_image_list[2].location)
                 st.markdown("***")
 
     with st.expander("Train a new model"):
         st.subheader("Train a new model:")
 
-        type_of_model = st.selectbox("Type of model:", AIModelType.value_list(
-        ), help="If you'd like to use other methods for model training, let us know - or implement it yourself :)")
+        type_of_model = st.selectbox("Type of model:", [AIModelType.DREAMBOOTH.value, AIModelType.LORA.value], help="If you'd like to use other methods for model training, let us know - or implement it yourself :)")
         model_name = st.text_input(
             "Model name:", value="", help="No spaces or special characters please")
 
@@ -120,57 +123,57 @@ def custom_models_page(project_uuid):
         else:
             if st.button("Train Model", disabled=False):
                 st.info("Loading...")
-                images_for_model = []
 
-                directory = "videos/training_data"
-                if not os.path.exists(directory):
-                    os.makedirs(directory)
+                # TODO: check the local storage
+                # directory = "videos/training_data"
+                # if not os.path.exists(directory):
+                #     os.makedirs(directory)
 
-                for image in uploaded_files:
-                    with open(os.path.join(f"videos/training_data", image.name), "wb") as f:
-                        f.write(image.getbuffer())
-                        images_for_model.append(image.name)
-                model_status = train_model(images_for_model, instance_prompt, class_prompt, max_train_steps,
-                                           model_name, type_of_model, type_of_task, resolution)
+                # for image in uploaded_files:
+                #     with open(os.path.join(f"videos/training_data", image.name), "wb") as f:
+                #         f.write(image.getbuffer())
+                #         images_for_model.append(image.name)
+                model_status = train_model(uploaded_files, instance_prompt, class_prompt, max_train_steps,
+                                           model_name, type_of_model, type_of_task, resolution, controller_type)
                 st.success(model_status)
 
-    with st.expander("Add model from internet"):
-        st.subheader("Add a model the internet:")
-        uploaded_type_of_model = st.selectbox("Type of model:", [
-                                              "LoRA", "Dreambooth"], key="uploaded_type_of_model", disabled=True, help="You can currently only upload LoRA models - this will change soon.")
-        uploaded_model_name = st.text_input(
-            "Model name:", value="", help="No spaces or special characters please", key="uploaded_model_name")
-        uploaded_model_images = st.file_uploader("Please add at least 2 sample images from this model:", type=[
-                                                 'png', 'jpg', 'jpeg'], key="uploaded_prompt_file", accept_multiple_files=True)
-        uploaded_link_to_model = st.text_input(
-            "Link to model:", value="", key="uploaded_link_to_model")
-        st.info("The model should be a direct link to a .safetensors files. You can find models on websites like: https://civitai.com/")
-        if uploaded_model_name == "" or uploaded_link_to_model == "" or uploaded_model_images is None:
-            st.write("Fill in all the fields to add a model from the internet.")
-            st.button("Upload Model", disabled=True)
-        else:
-            if st.button("Upload Model", disabled=False):
-                images_for_model = []
-                directory = "videos/training_data"
-                if not os.path.exists(directory):
-                    os.makedirs(directory)
+    # with st.expander("Add model from internet"):
+    #     st.subheader("Add a model the internet:")
+    #     uploaded_type_of_model = st.selectbox("Type of model:", [
+    #                                           "LoRA", "Dreambooth"], key="uploaded_type_of_model", disabled=True, help="You can currently only upload LoRA models - this will change soon.")
+    #     uploaded_model_name = st.text_input(
+    #         "Model name:", value="", help="No spaces or special characters please", key="uploaded_model_name")
+    #     uploaded_model_images = st.file_uploader("Please add at least 2 sample images from this model:", type=[
+    #                                              'png', 'jpg', 'jpeg'], key="uploaded_prompt_file", accept_multiple_files=True)
+    #     uploaded_link_to_model = st.text_input(
+    #         "Link to model:", value="", key="uploaded_link_to_model")
+    #     st.info("The model should be a direct link to a .safetensors files. You can find models on websites like: https://civitai.com/")
+    #     if uploaded_model_name == "" or uploaded_link_to_model == "" or uploaded_model_images is None:
+    #         st.write("Fill in all the fields to add a model from the internet.")
+    #         st.button("Upload Model", disabled=True)
+    #     else:
+    #         if st.button("Upload Model", disabled=False):
+    #             images_for_model = []
+    #             directory = "videos/training_data"
+    #             if not os.path.exists(directory):
+    #                 os.makedirs(directory)
 
-                for image in uploaded_model_images:
-                    with open(os.path.join(f"videos/training_data", image.name), "wb") as f:
-                        f.write(image.getbuffer())
-                        images_for_model.append(image.name)
-                for i in range(len(images_for_model)):
-                    images_for_model[i] = 'videos/training_data/' + \
-                        images_for_model[i]
-                df = pd.read_csv("models.csv")
-                df = df.append({}, ignore_index=True)
-                new_row_index = df.index[-1]
-                df.iloc[new_row_index, 0] = uploaded_model_name
-                df.iloc[new_row_index, 4] = str(images_for_model)
-                df.iloc[new_row_index, 5] = uploaded_type_of_model
-                df.iloc[new_row_index, 6] = uploaded_link_to_model
-                df.to_csv("models.csv", index=False)
-                st.success(
-                    f"Successfully uploaded - the model '{model_name}' is now available for use!")
-                time.sleep(1.5)
-                st.experimental_rerun()
+    #             for image in uploaded_model_images:
+    #                 with open(os.path.join(f"videos/training_data", image.name), "wb") as f:
+    #                     f.write(image.getbuffer())
+    #                     images_for_model.append(image.name)
+    #             for i in range(len(images_for_model)):
+    #                 images_for_model[i] = 'videos/training_data/' + \
+    #                     images_for_model[i]
+    #             df = pd.read_csv("models.csv")
+    #             df = df.append({}, ignore_index=True)
+    #             new_row_index = df.index[-1]
+    #             df.iloc[new_row_index, 0] = uploaded_model_name
+    #             df.iloc[new_row_index, 4] = str(images_for_model)
+    #             df.iloc[new_row_index, 5] = uploaded_type_of_model
+    #             df.iloc[new_row_index, 6] = uploaded_link_to_model
+    #             df.to_csv("models.csv", index=False)
+    #             st.success(
+    #                 f"Successfully uploaded - the model '{model_name}' is now available for use!")
+    #             time.sleep(1.5)
+    #             st.experimental_rerun()

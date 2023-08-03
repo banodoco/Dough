@@ -1,10 +1,18 @@
+from io import BytesIO
 from pathlib import Path
 import os
 import csv
+import tempfile
+from typing import Union
+import uuid
+import requests
 import streamlit as st
 import json
+from shared.constants import SERVER, InternalFileType, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
+from PIL import Image
+import numpy as np
 
 from utils.constants import LOGGED_USER
 from utils.data_repo.data_repo import DataRepo
@@ -109,6 +117,9 @@ def copy_sample_assets(project_name):
     shutil.copyfile(source, dest)
 
 def create_working_assets(project_name):
+    if SERVER != ServerType.DEVELOPMENT.value:
+        return
+
     new_project = True
     if os.path.exists("videos/"+project_name):
         new_project = False
@@ -172,3 +183,122 @@ def get_current_user_uuid():
         return current_user['uuid']
     else: 
         return None
+
+# depending on the environment it will either save or host the PIL image object
+def save_or_host_file(file, path, mime_type='image/png'):
+    uploaded_url = None
+    if SERVER != ServerType.DEVELOPMENT.value:
+        image_bytes = BytesIO()
+        file.save(image_bytes, format=mime_type.split('/')[1])
+        image_bytes.seek(0)
+
+        data_repo = DataRepo()
+        uploaded_url = data_repo.upload_file(image_bytes, '.png')
+    else:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        file.save(path)
+
+    return uploaded_url
+
+def save_or_host_file_bytes(video_bytes, path, ext=".mp4"):
+    uploaded_url = None
+    if SERVER != ServerType.DEVELOPMENT.value:
+        data_repo = DataRepo()
+        uploaded_url = data_repo.upload_file(video_bytes, ext)
+    else:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'wb') as f:
+            f.write(video_bytes)
+    
+    return uploaded_url
+
+def add_temp_file_to_project(project_uuid, key, hosted_url):
+    data_repo = DataRepo()
+
+    file_data = {
+        "name": str(uuid.uuid4()) + ".png",
+        "type": InternalFileType.IMAGE.value,
+        "project_id": project_uuid,
+        'hosted_url': hosted_url
+    }
+
+    temp_file = data_repo.create_file(**file_data)
+    project = data_repo.get_project_from_uuid(project_uuid)
+    temp_file_list = project.project_temp_file_list
+    temp_file_list.update({key: temp_file.uuid})
+    temp_file_list = json.dumps(temp_file_list)
+    project_data = {
+        'uuid': project_uuid,
+        'temp_file_list': temp_file_list
+    }
+    data_repo.update_project(**project_data)
+
+
+def generate_temp_file(url, ext=".mp4"):
+    response = requests.get(url)
+    if not response.ok:
+        raise ValueError(f"Could not download video from URL: {url}")
+
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=ext, mode='wb')
+    temp_file.write(response.content)
+    temp_file.close()
+
+    return temp_file
+
+def generate_temp_file_from_uploaded_file(uploaded_file):
+    if uploaded_file is not None:
+        with tempfile.NamedTemporaryFile(delete=False) as temp_file:
+            temp_file.write(uploaded_file.read())
+            return temp_file
+
+def reset_project_state():
+    keys_to_delete = [
+        "page",
+        "current_frame_uuid",
+        "rotated_image",
+        "current_frame_index",
+        "zoom_level_input",
+        "rotation_angle_input",
+        "x_shift",
+        "y_shift",
+        "working_image",
+        "degrees_rotated_to",
+        "degree",
+        "edited_image",
+        "index_of_type_of_mask_selection",
+        "type_of_mask_replacement",
+        "which_layer",
+        "which_layer_index",
+        "drawing_input",
+        "image_created",
+        "precision_cropping_inpainted_image_uuid",
+        "frame_styling_view_type",
+        "transformation_stage",
+        "custom_pipeline",
+        "index_of_last_custom_pipeline",
+        "index_of_controlnet_adapter_type",
+        "lora_model_1",
+        "lora_model_2",
+        "lora_model_3",
+        "index_of_lora_model_1",
+        "index_of_lora_model_2",
+        "index_of_lora_model_3",
+        "custom_models",
+        "adapter_type",
+        "low_threshold",
+        "high_threshold",
+        "model",
+        "prompt",
+        "strength",
+        "guidance_scale",
+        "seed",
+        "num_inference_steps"
+        "dreambooth_model_uuid",
+        "seed",
+        "promote_new_generation",
+        "use_new_settings",
+    ]
+
+    for k in keys_to_delete:
+        if k in st.session_state:
+            del st.session_state[k]

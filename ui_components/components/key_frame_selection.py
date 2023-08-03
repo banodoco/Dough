@@ -103,6 +103,7 @@ def key_frame_selection_page(mainheader2, project_uuid):
         resize_this_video = st.checkbox(
             "Resize video to match project settings: " + str(width) + "px x " + str(height) + "px", value=True)
 
+        # TODO: file handling is not done for key frame extraction as it is not being used currently
         if st.button("Upload new video"):
             video_path = f'videos/{project_settings.project.uuid}/assets/resources/input_videos/{uploaded_file.name}'
             with open(video_path, 'wb') as f:
@@ -110,9 +111,8 @@ def key_frame_selection_page(mainheader2, project_uuid):
 
             width = int(project_settings.width)
             height = int(project_settings.height)
-            if resize_this_video == True:
-                resize_video(input_path=video_path,
-                             output_path=video_path, width=width, height=height)
+            # if resize_this_video == True:
+            #     resize_video(input_video=None, width=width, height=height)
             st.success("Video uploaded successfully")
             if keep_audio == True:
                 clip = VideoFileClip(

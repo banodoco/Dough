@@ -1,6 +1,6 @@
 # this repo serves as a middlerware between API backend and the frontend
 import threading
-from shared.constants import InternalFileType
+from shared.constants import InternalFileType, InternalResponse
 from backend.db_repo import DBRepo
 from shared.constants import SERVER, ServerType
 from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalUserObject
@@ -13,17 +13,26 @@ from utils.data_repo.api_repo import APIRepo
 # @cache_data
 class DataRepo:
     def __init__(self):
-        if SERVER != ServerType.PRODUCTION.value:
+        if SERVER == ServerType.DEVELOPMENT.value:
             self.db_repo = DBRepo()
         else:
             self.db_repo = APIRepo()
     
+    # TODO: make a dummy user login in the local db repo
+    def google_user_login(self, **kwargs):
+        data = self.db_repo.google_user_login(**kwargs).data['data']
+        user = InternalUserObject(**data['user']) if data and data['user'] else None
+        token = data['token'] if data and data['token'] else None
+        refresh_token = data['refresh_token'] if data and data['refresh_token'] else None
+        return user, token, refresh_token
+
     def create_user(self, **kwargs):
         user = self.db_repo.create_user(**kwargs).data['data']
         return InternalUserObject(**user) if user else None
     
     def get_first_active_user(self):
-        user = self.db_repo.get_first_active_user().data['data']
+        res: InternalResponse = self.db_repo.get_first_active_user()
+        user = res.data['data'] if res.status else None
         return InternalUserObject(**user) if user else None
     
     def get_user_by_email(self, email):
@@ -37,6 +46,11 @@ class DataRepo:
         user_list = self.db_repo.get_all_user_list().data['data']
         return [InternalUserObject(**user) for user in user_list] if user_list else None
     
+    def update_user(self, user_id, **kwargs):
+        res = self.db_repo.update_user(user_id, **kwargs)
+        user = res.data['data'] if res.status else None
+        return InternalUserObject(**user) if user else None 
+
     def delete_user_by_email(self, email):
         res = self.db_repo.delete_user_by_email(email)
         return res.status
@@ -57,7 +71,8 @@ class DataRepo:
         if project_id:
             filter_data['project_id'] = project_id
 
-        file_list = self.db_repo.get_all_file_list(**filter_data).data['data']
+        res = self.db_repo.get_all_file_list(**filter_data)
+        file_list = res.data['data'] if res.status else None
         
         return [InternalFileObject(**file) for file in file_list] if file_list else []
     
@@ -65,8 +80,19 @@ class DataRepo:
         file = self.db_repo.create_or_update_file(uuid, type, **kwargs).data['data']
         return InternalFileObject(**file) if file else None
     
+    def upload_file(self, file_content, ext):
+        res = self.db_repo.upload_file(file_content, ext)
+        file_url = res.data['data'] if res.status else None
+        return file_url
+
     def create_file(self, **kwargs):
-        file = self.db_repo.create_file(**kwargs).data['data']
+        if 'hosted_url' not in kwargs and SERVER != ServerType.DEVELOPMENT.value:
+            file_content = ('file', open(kwargs['local_path'], 'rb'))
+            uploaded_file_url = self.upload_file(file_content)
+            kwargs.update({'hosted_url':uploaded_file_url})
+
+        res = self.db_repo.create_file(**kwargs)
+        file = res.data['data'] if res.status else None
         return InternalFileObject(**file) if file else None
     
     def delete_file_from_uuid(self, uuid):
@@ -80,6 +106,13 @@ class DataRepo:
         return [InternalFileObject(**image) for image in image_list] if image_list else []
     
     def update_file(self, file_uuid, **kwargs):
+        # TODO: we are updating hosted_url whenever local_path is updated but we 
+        # are not checking if the local_path is a different one - handle this correctly
+        if 'local_path' in kwargs and SERVER != ServerType.DEVELOPMENT.value:
+            file_content = ('file', open(kwargs['local_path'], 'rb'))
+            uploaded_file_url = self.upload_file(file_content)
+            kwargs.update({'hosted_url':uploaded_file_url})
+
         file = self.db_repo.update_file(uuid=file_uuid, **kwargs).data['data']
         return InternalFileObject(**file) if file else None
     
@@ -100,21 +133,26 @@ class DataRepo:
         res = self.db_repo.delete_project_from_uuid(uuid)
         return res.status
     
+    def update_project(self, **kwargs):
+        project = self.db_repo.update_project(**kwargs).data['data']
+        return InternalProjectObject(**project) if project else None
+    
     # ai model (custom ai model)
     def get_ai_model_from_uuid(self, uuid):
-        model = self.db_repo.get_ai_model_from_uuid(uuid).data['data']
+        res = self.db_repo.get_ai_model_from_uuid(uuid)
+        model = res.data['data'] if res.status else None
         return InternalAIModelObject(**model) if model else None
     
     def get_ai_model_from_name(self, name):
         model = self.db_repo.get_ai_model_from_name(name).data['data']
         return InternalAIModelObject(**model) if model else None
     
-    def get_all_ai_model_list(self, model_type=None, user_id=None):
-        from utils.common_methods import get_current_user_uuid
+    def get_all_ai_model_list(self, model_type_list=None, user_id=None, custom_trained=None):
+        from utils.common_utils import get_current_user_uuid
         if not user_id:
             user_id = get_current_user_uuid()
 
-        model_list = self.db_repo.get_all_ai_model_list(model_type, user_id).data['data']
+        model_list = self.db_repo.get_all_ai_model_list(model_type_list, user_id, custom_trained).data['data']
         return [InternalAIModelObject(**model) for model in model_list] if model_list else []
     
     def create_ai_model(self, **kwargs):
@@ -169,7 +207,8 @@ class DataRepo:
         return InternalFrameTimingObject(**timing) if timing else None
     
     def get_timing_from_frame_number(self, project_uuid, frame_number):
-        timing = self.db_repo.get_timing_from_frame_number(project_uuid, frame_number).data['data']
+        res = self.db_repo.get_timing_from_frame_number(project_uuid, frame_number)
+        timing = res.data['data'] if res.status else None
         return InternalFrameTimingObject(**timing) if timing else None
     
     
@@ -183,11 +222,13 @@ class DataRepo:
         return InternalFrameTimingObject(**prev_timing) if prev_timing else None
     
     def get_timing_list_from_project(self, project_uuid=None):
-        timing_list = self.db_repo.get_timing_list_from_project(project_uuid).data['data']
+        res = self.db_repo.get_timing_list_from_project(project_uuid)
+        timing_list = res.data['data'] if res.status else None
         return [InternalFrameTimingObject(**timing) for timing in timing_list] if timing_list else []
     
     def create_timing(self, **kwargs):
-        timing = self.db_repo.create_timing(**kwargs).data['data']
+        res = self.db_repo.create_timing(**kwargs)
+        timing = res.data['data'] if res.status else None
         return InternalFrameTimingObject(**timing) if timing else None
     
     def update_specific_timing(self, uuid, **kwargs):
@@ -218,11 +259,12 @@ class DataRepo:
 
     # app setting
     def get_app_setting_from_uuid(self, uuid=None):
-        app_setting = self.db_repo.get_app_setting_from_uuid(uuid).data['data']
+        res = self.db_repo.get_app_setting_from_uuid(uuid)
+        app_setting = res.data['data'] if res.status else None
         return InternalAppSettingObject(**app_setting) if app_setting else None
     
     def get_app_secrets_from_user_uuid(self, uuid=None):
-        from utils.common_methods import get_current_user_uuid
+        from utils.common_utils import get_current_user_uuid
         # if user is not defined then take the current user
         if not uuid:
             uuid = get_current_user_uuid()
@@ -249,16 +291,19 @@ class DataRepo:
 
     # setting
     def get_project_setting(self, project_id):
-        project_setting = self.db_repo.get_project_setting(project_id).data['data']
+        res = self.db_repo.get_project_setting(project_id)
+        project_setting = res.data['data'] if res.status else None
         return InternalSettingObject(**project_setting) if project_setting else None
     
     # TODO: add valid model_id check throughout dp_repo
     def create_project_setting(self, **kwargs):
-        project_setting = self.db_repo.create_project_setting(**kwargs).data['data']
+        res = self.db_repo.create_project_setting(**kwargs)
+        project_setting = res.data['data'] if res.status else None
         return InternalSettingObject(**project_setting) if project_setting else None
     
+    # TODO: remove db calls for updating guidance_type
     def update_project_setting(self, project_uuid, **kwargs):
-        kwargs['uuid'] = project_uuid
+        kwargs['project_id'] = project_uuid
         project_setting = self.db_repo.update_project_setting(**kwargs).data['data']
         return InternalSettingObject(**project_setting) if project_setting else None
 
@@ -287,3 +332,8 @@ class DataRepo:
     def restore_backup(self, uuid):
         res = self.db_repo.restore_backup(uuid)
         return res.status
+    
+    # update user credits - updates the credit of the user calling the API
+    def update_usage_credits(self, credits_to_add):
+        user = self.update_user(user_id=None, credits_to_add=credits_to_add)
+        return True if user else None

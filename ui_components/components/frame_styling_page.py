@@ -28,6 +28,7 @@ import math
 from ui_components.constants import WorkflowStageType
 from ui_components.models import InternalAppSettingObject, InternalFileObject, InternalFrameTimingObject
 from streamlit_extras.annotated_text import annotated_text
+from utils.common_utils import save_or_host_file
 
 from utils.data_repo.data_repo import DataRepo
 
@@ -63,10 +64,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
             st.session_state['current_frame_uuid'] = timing.uuid
 
         if 'frame_styling_view_type' not in st.session_state:
-            st.session_state['frame_styling_view_type'] = "List View"
+            st.session_state['frame_styling_view_type'] = "Individual View"
             st.session_state['frame_styling_view_type_index'] = 0
-
-            sections = ["Guidance", "Styling", "Motion"]
 
             # TODO: CORRECT-CODE
             view_types = ["Individual View", "List View"]
@@ -91,94 +90,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     st.session_state['index_of_current_page'] = math.floor(
                         st.session_state['current_frame_index'] / 10)
 
-            # Option menu
-            st.session_state['frame_styling_view_type'] = option_menu(
-                None,
-                view_types,
-                icons=['aspect-ratio', 'bookshelf', "hourglass", 'stopwatch'],
-                menu_icon="cast",
-                orientation="horizontal",
-                key="section-selecto1r",
-                styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"},
-                        "nav-link-selected": {"background-color": "green"}},
-                manual_select=st.session_state['frame_styling_view_type_index'],
-                on_change=on_change_view_type
-            )
-
-            if st.session_state['change_view_type'] == True:
-                st.session_state['change_view_type'] = False
-                # round down st.session_state['current_frame_uuid']to nearest 10
-
-            if st.session_state['frame_styling_view_type'] == "Individual View":
-
-                if len(timing_details) > 1:
-                    percentage = round(
-                        (float(st.session_state['current_frame_index']) / float(len(timing_details)-1)) * 100.00)
-
-                    st.progress(percentage)
-                else:
-                    st.progress(100)
-
-                time1, time2 = st.columns([1, 1])
-
-                with time1:
-
-                    frame_number = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(
-                        timing_details)-1, value=st.session_state['current_frame_index'], step=1, key="which_image_selector")
-                    
-                    st.session_state['current_frame_uuid'] = timing_details[frame_number].uuid
-                    frame_index = next((i for i, t in enumerate(timing_details) if t.uuid == st.session_state['current_frame_uuid']), None)
-
-                    if st.session_state['current_frame_index'] != frame_index:
-                        st.session_state['current_frame_index'] = frame_index
-                        st.session_state['reset_canvas'] = True
-                        st.session_state['frame_styling_view_type_index'] = 0
-                        st.session_state['frame_styling_view_type'] = "Individual View"
-
-                        st.experimental_rerun()
-
-                with time2:
-                    single_frame_time_changer(st.session_state['current_frame_uuid'])
-
-                with st.expander("Notes:"):
-
-                    notes = st.text_area(
-                        "Frame Notes:", value=timing_details[st.session_state['current_frame_index']].notes, height=100, key="notes")
-
-                if notes != timing_details[st.session_state['current_frame_index']].notes:
-                    data_repo.update_specific_timing(
-                        st.session_state['current_frame_uuid'], notes=notes)
-                    st.experimental_rerun()
-
-                if st.session_state['page'] == "Guidance":
-                    image_1_size = 2
-                    image_2_size = 1.5
-                elif st.session_state['page'] == "Styling":
-                    image_1_size = 1.5
-                    image_2_size = 2
-                elif st.session_state['page'] == "Motion":
-                    image_1_size = 1.5
-                    image_2_size = 1.5
-
-                image_1, image_2 = st.columns([image_1_size, image_2_size])
-                with image_1:
-                    st.caption(
-                        f"Guidance Image for Frame #{st.session_state['current_frame_index']}:")
-                    display_image(
-                        timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
-                with image_2:
-                    st.caption(
-                        f"Main Styled Image for Frame #{st.session_state['current_frame_index']}:")
-                    display_image(
-                        timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
-                st.markdown("***")
-
-                if st.button("Delete key frame"):
-                    delete_frame(st.session_state['current_frame_uuid'])
-                    timing_details = data_repo.get_timing_list_from_project(
-                        project_uuid)
-                    st.experimental_rerun()
-
         if timing_details == []:
             st.info(
                 "You need to select and load key frames first in the Key Frame Selection section.")
@@ -201,7 +112,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     carousal_of_images_element(project_uuid, stage=WorkflowStageType.SOURCE.value)
 
                     guidance_types = GuidanceType.value_list()
-                    if 'how to guide_index' not in st.session_state:
+                    if 'how_to_guide_index' not in st.session_state:
                         if not project_settings.guidance_type:
                             st.session_state['how_to_guide_index'] = 0
                         else:
@@ -303,7 +214,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 st.session_state['reset_canvas'] = False
 
                             if st.session_state['reset_canvas'] != True:
-
                                 canvas_result = st_canvas(
                                     fill_color=fill_color,
                                     stroke_width=stroke_width,
@@ -370,12 +280,17 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                                 unique_file_name = str(uuid.uuid4()) + ".png"
                                 file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{unique_file_name}"
-                                new_canny_image.save(file_location)
+                                hosted_url = save_or_host_file(new_canny_image, file_location)
                                 file_data = {
                                     "name": str(uuid.uuid4()) + ".png",
                                     "type": InternalFileType.IMAGE.value,
-                                    "local_path": file_location
+                                    "project_id": project_uuid
                                 }
+
+                                if hosted_url:
+                                    file_data.update({'hosted_url': hosted_url})
+                                else:
+                                    file_data.update({'local_path': file_location})
 
                                 canny_image = data_repo.create_file(
                                     **file_data)
@@ -403,7 +318,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             canny_timing = timing_details[canny_frame_number]
 
                             if st.button("Use Guidance Image From Other Frame"):
-                                if timing_details[canny_frame_number]["source_image"] != "":
+                                if timing_details[canny_frame_number].source_image and timing_details[canny_frame_number].source_image.location:
                                     data_repo.update_specific_timing(
                                         st.session_state['current_frame_uuid'], source_image_id=timing_details[canny_frame_number].source_image.uuid)
                                     st.experimental_rerun()
@@ -418,17 +333,25 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 "This will upload a canny image from your computer. This will take a few seconds.")
                             uploaded_file = st.file_uploader("Choose a file")
                             if st.button("Upload Guidance Image"):
-                                with open(os.path.join(f"videos/{timing.project.uuid}/assets/resources/masks", uploaded_file.name), "wb") as f:
-                                    f.write(uploaded_file.getbuffer())
-                                    st.success("Your file is uploaded")
+                                if uploaded_image is not None:
+                                    guidance_img = Image.open(uploaded_file)
+                                    file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{uploaded_file.name}"
+                                    hosted_url = save_or_host_file(guidance_img, file_location)
+
                                     file_data = {
                                         "name": str(uuid.uuid4()) + ".png",
-                                        "type": InternalFileType.IMAGE.value,
-                                        "local_path": f"videos/{timing.project.uuid}/assets/resources/masks/{uploaded_file.name}"
+                                        "type": InternalFileType.IMAGE.value
                                     }
+
+                                    if hosted_url:
+                                        file_data.update({"hosted_url": hosted_url})
+                                    else:
+                                        file_data.update({"local_path": file_location})
+
                                     image = data_repo.create_file(**file_data)
                                     data_repo.update_specific_timing(
                                         st.session_state['current_frame_uuid'], source_image_id=image.uuid)
+                                    st.success("Your file is uploaded")
                                     time.sleep(1.5)
                                     st.experimental_rerun()
                         with canny3:
@@ -443,8 +366,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                                 existing_frame_timing = data_repo.get_timing_from_frame_number(
                                     project_uuid, which_frame)
-                                if existing_frame_timing and existing_frame_timing.primary_image_location:
-                                    image_path = existing_frame_timing.primary_image_location
+                                if existing_frame_timing and existing_frame_timing.primary_image.location:
+                                    image_path = existing_frame_timing.primary_image.location
                                     st.image(image_path)
                                 else:
                                     st.error("No Image Found")
@@ -453,12 +376,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 uploaded_image = st.file_uploader(
                                     "Choose a file", key="uploaded_image")
                                 if uploaded_image is not None:
-                                    # download image as temp.png
-                                    with open("temp.png", "wb") as f:
-                                        f.write(uploaded_image.getbuffer())
-                                        st.success("Your file is uploaded")
-                                        uploaded_image = "videos/temp/assets/videos/0_raw/" + \
-                                            str(uuid.uuid4()) + ".png"
+                                    uploaded_pil_img = Image.open(uploaded_image)
+                                    uploaded_image_location = "videos/temp/assets/videos/0_raw/" + \
+                                        str(uuid.uuid4()) + ".png"
+                                    
+                                    hosted_url = save_or_host_file(uploaded_pil_img, uploaded_image_location)
+                                    uploaded_image_location = hosted_url or uploaded_image_location
+
+                                    st.success("Your file is uploaded")
 
                             threshold1, threshold2 = st.columns([1, 1])
                             with threshold1:
@@ -497,7 +422,16 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         st.session_state['canny_image'] = None
                                         st.experimental_rerun()
 
-                # if current item is 0
+                        user = data_repo.get_first_active_user()
+                        st.write("user credits: ", user.total_credits)
+                        if st.button("add 10 points"):
+                            data_repo.update_usage_credits(10)
+                            st.experimental_rerun()
+
+                        if st.button("subtract 10 points"):
+                            data_repo.update_usage_credits(-10)
+                            st.experimental_rerun()
+
                     elif how_to_guide == GuidanceType.IMAGE.value:
                         with crop2:
                             how_to_crop = st_memory.radio("How to crop:", options=[
@@ -523,18 +457,23 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 uploaded_file = st.file_uploader(
                                     "Choose a file")
                                 if st.button("Upload Source Image"):
-                                    base_location = f"videos/{timing.project.uuid}/assets/resources/masks"
-                                    if not os.path.exists(base_location):
-                                        os.makedirs(base_location)
+                                    if uploaded_file:
+                                        timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
+                                        file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{uploaded_file.name}"
+                                        uploaded_source_pil_img = Image.open(uploaded_file)
+                                        hosted_url = save_or_host_file(uploaded_source_pil_img, file_location)
 
-                                    with open(os.path.join(base_location, uploaded_file.name), "wb") as f:
-                                        f.write(uploaded_file.getbuffer())
-                                        st.success("Your file is uploaded")
                                         file_data = {
                                             "name": str(uuid.uuid4()) + ".png",
                                             "type": InternalFileType.IMAGE.value,
-                                            "local_path": f"videos/{timing.project.uuid}/assets/resources/masks/{uploaded_file.name}"
+                                            "project_id": project_uuid
                                         }
+
+                                        if hosted_url:
+                                            file_data.update({"hosted_url": hosted_url})
+                                        else:
+                                            file_data.update({"local_path": file_location})
+                                    
                                         source_image = data_repo.create_file(
                                             **file_data)
                                         data_repo.update_specific_timing(
@@ -559,13 +498,13 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 current_timing = data_repo.get_timing_from_frame_number(project_uuid,
                                     which_number_image)
                                 if which_stage == "Source Image":
-                                    if current_timing.source_image_location != "":
-                                        selected_image = current_timing.source_image_location
+                                    if current_timing.source_image.location != "":
+                                        selected_image = current_timing.source_image.location
                                         st.image(selected_image)
                                     else:
                                         st.error("No Source Image Found")
                                 elif which_stage == "Styled Image":
-                                    selected_image = current_timing.primary_image_location
+                                    selected_image = current_timing.primary_image.location
                                     if selected_image != "":
                                         st.image(selected_image)
                                     else:
@@ -575,7 +514,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                     file_data = {
                                         "name": str(uuid.uuid4()) + ".png",
                                         "type": InternalFileType.IMAGE.value,
-                                        "hosted_url": current_timing.primary_image_location
+                                        "hosted_url": current_timing.primary_image.location
                                     }
                                     source_image = data_repo.create_file(
                                         **file_data)
@@ -618,9 +557,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             frame1, frame2, frame3 = st.columns([1, 1, 2])
 
                             with frame1:
-                                if timing_details[i].primary_image_location:
+                                if timing_details[i].primary_image.location:
                                     st.image(
-                                        timing_details[i].primary_image_location)
+                                        timing_details[i].primary_image.location)
                             with frame2:
                                 if st.session_state['page'] != "Motion":
                                     single_frame_time_changer(timing_details[i].uuid)
@@ -817,7 +756,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                     if variants != [] and variants != None and variants != "":
 
-                        primary_variant_location = timing_details[st.session_state['current_frame_index']].primary_image_location
+                        primary_variant_location = timing_details[st.session_state['current_frame_index']].primary_image.location
 
                     if st.session_state['show_comparison'] == "Other Variants":
 
@@ -855,7 +794,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             project_settings = data_repo.get_project_setting(project_uuid)
                             st.success("Main variant")
                             if len(timing_details[st.session_state['current_frame_index']].alternative_images_list):
-                                st.image(timing_details[st.session_state['current_frame_index']].primary_image_location,
+                                st.image(timing_details[st.session_state['current_frame_index']].primary_image.location,
                                          use_column_width=True)
                             else:
                                 st.error("No variants found for this frame")
@@ -945,6 +884,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 st.write("")
                                 st.write("")
 
+                                # TODO: add custom model validation such for sd img2img the value of strength can only be 1
                                 if st.button(f"Generate variants", key=f"new_variations_{st.session_state['current_frame_index']}", help="This will generate new variants based on the settings to the left."):
                                     for i in range(0, st.session_state['individual_number_of_variants']):
                                         trigger_restyling_process(st.session_state['current_frame_uuid'], st.session_state['model'], st.session_state['prompt'], st.session_state['strength'], st.session_state['custom_pipeline'], st.session_state['negative_prompt'], st.session_state['guidance_scale'], st.session_state['seed'], st.session_state[
@@ -1190,8 +1130,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
         selected_image = ""
         with add1:
+            # removed "Frame From Video" for now
             source_of_starting_image = st.radio("Where would you like to get the starting image from?", [
-                                                "Previous frame", "Uploaded image", "Frame From Video"], key="source_of_starting_image")
+                                                "Previous frame", "Uploaded image"], key="source_of_starting_image")
             if source_of_starting_image == "Previous frame":
                 which_stage_for_starting_image = st.radio("Which stage would you like to use?", [
                                                           "Styled Image", "Source Image"], key="which_stage_for_starting_image")
@@ -1203,16 +1144,19 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     else:
                         selected_image = ""
                 elif which_stage_for_starting_image == "Styled Image":
-                    selected_image = timing_details[which_number_for_starting_image].primary_image_location
+                    selected_image = timing_details[which_number_for_starting_image].primary_image.location
             elif source_of_starting_image == "Uploaded image":
                 uploaded_image = st.file_uploader(
                     "Upload an image", type=["png", "jpg", "jpeg"])
+                # FILE UPLOAD HANDLE--
                 if uploaded_image is not None:
                     # write uploaded_image to location videos/{project_name}/assets/frames/1_selected
+                    image = Image.open(uploaded_image)
                     file_location = f"videos/{project_uuid}/assets/frames/1_selected/{uploaded_image.name}"
-                    with open(os.path.join(file_location), "wb") as f:
-                        f.write(uploaded_image.getbuffer())
-                    selected_image = file_location
+                    # with open(os.path.join(file_location), "wb") as f:
+                    #     f.write(uploaded_image.getbuffer())
+                    selected_image = save_or_host_file(image, file_location)
+                    selected_image = selected_image or file_location
                 else:
                     selected_image = ""
                 which_number_for_starting_image = st.session_state['current_frame_index']
@@ -1293,21 +1237,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
             
             timing_details = data_repo.get_timing_list_from_project(project_uuid)
             if selected_image != "":
-                selected_image = save_new_image(selected_image)
-                file_data = {
-                    "name": str(uuid.uuid4()) + ".png",
-                    "type": InternalFileType.IMAGE.value,
-                    "local_path": selected_image,
-                    "project_id": project_uuid
-                }
-
-                new_source_image = data_repo.create_file(**file_data)
+                new_source_image = save_new_image(selected_image, project_uuid)
                 data_repo.update_specific_timing(
                     timing_details[index_of_current_item + 1].uuid, source_image_id=new_source_image.uuid)
                 
-            if also_make_this_the_primary_image == "Yes":
                 add_image_variant(
                     new_source_image.uuid, timing_details[index_of_current_item + 1].uuid)
+                
+            if also_make_this_the_primary_image == "Yes":
                 promote_image_variant(timing_details[index_of_current_item + 1].uuid, 0)
             if inherit_styling_settings == "Yes":
                 clone_styling_settings(which_number_for_starting_image, timing_details[index_of_current_item + 1].uuid)
@@ -1325,3 +1262,4 @@ def frame_styling_page(mainheader2, project_uuid: str):
             st.session_state['page'] = "Guidance"
             st.session_state['section_index'] = 0
             st.experimental_rerun()
+

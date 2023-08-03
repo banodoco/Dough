@@ -1,7 +1,7 @@
 import pandas as pd
 import csv
 
-from utils.common_methods import create_file_path
+from utils.common_utils import create_file_path
 
 class CSVProcessor:
     def __init__(self, file_path):

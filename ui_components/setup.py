@@ -1,7 +1,7 @@
+import time
 import streamlit as st
 import os
 from moviepy.editor import *
-from ui_components.common_methods import create_working_assets
 
 from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.batch_action_page import batch_action_page
@@ -17,7 +17,7 @@ from ui_components.components.welcome_page import welcome_page
 # from ui_components.components.motion_page import motion_page
 from streamlit_option_menu import option_menu
 from ui_components.models import InternalAppSettingObject
-from utils.common_methods import get_current_user_uuid
+from utils.common_utils import create_working_assets, get_current_user_uuid, reset_project_state
 import utils.local_storage.local_storage as local_storage
 
 from utils.data_repo.data_repo import DataRepo
@@ -68,6 +68,9 @@ def setup_app_ui():
         if st.session_state['change_section'] == True:
             st.session_state['change_section'] = False
 
+    if "welcome_state" not in st.session_state:
+        st.session_state["welcome_state"] = 0
+
     if int(st.session_state["welcome_state"]) in [0, 1, 2, 3, 4] and st.session_state["online"] == False:
         welcome_page()
     else:
@@ -93,7 +96,13 @@ def setup_app_ui():
                                                                 p.name for p in project_list], index=st.session_state["index_of_project_name"])
         
             selected_index = next(i for i, p in enumerate(project_list) if p.name == selected_project_name)
+            project_changed = False
+            if 'project_uuid' in st.session_state and st.session_state['project_uuid'] != project_list[selected_index].uuid:
+                project_changed = True
             st.session_state["project_uuid"] = project_list[selected_index].uuid
+            
+            if project_changed:
+                reset_project_state()
 
             if "current_frame_index" not in st.session_state:
                 st.session_state['current_frame_index'] = 0
@@ -118,8 +127,6 @@ def setup_app_ui():
                     st.session_state["index_of_section"] = 0
                     st.session_state["index_of_page"] = 0
 
-                timing_details = data_repo.get_timing_list_from_project(st.session_state['project_uuid'])
-
                 with st.sidebar:
                     main_view_types = ["Creative Process", "Tools & Settings", "Video Rendering"]
                     st.session_state['main_view_type'] = option_menu(None, main_view_types, icons=['magic', 'tools', "play-circle", 'stopwatch'], menu_icon="cast", default_index=0, key="main_view_type_name", orientation="horizontal", styles={
@@ -128,6 +135,7 @@ def setup_app_ui():
                 mainheader1, mainheader2 = st.columns([3, 2])
                 # with mainheader1:
                 # st.header(st.session_state["page"])
+
 
                 if st.session_state["main_view_type"] == "Creative Process":
 
@@ -141,7 +149,7 @@ def setup_app_ui():
 
                         if st.session_state["page"] not in pages:
                             st.session_state["page"] = pages[0]
-                            st.session_state["manual_select"] = 0
+                            st.session_state["manual_select"] = None
 
                         st.session_state['page'] = option_menu(None, pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
                                                                "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
@@ -152,15 +160,14 @@ def setup_app_ui():
                 elif st.session_state["main_view_type"] == "Tools & Settings":
 
                     with st.sidebar:
-
-                        pages = ["Custom Models",
+                        tool_pages = ["Custom Models",
                                  "Batch Actions", "Project Settings"]
 
-                        if st.session_state["page"] not in pages:
-                            st.session_state["page"] = pages[0]
-                            st.session_state["manual_select"] = 0
+                        if st.session_state["page"] not in tool_pages:
+                            st.session_state["page"] = tool_pages[0]
+                            st.session_state["manual_select"] = None
 
-                        st.session_state['page'] = option_menu(None, pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
+                        st.session_state['page'] = option_menu(None, tool_pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
                                                                "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
 
                     if st.session_state["page"] == "Custom Models":

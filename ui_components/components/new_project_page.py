@@ -1,10 +1,15 @@
+from io import BytesIO
+import io
+import tempfile
 import uuid
+import requests
 import streamlit as st
-from shared.constants import InternalFileType
+from banodoco_settings import create_new_project
+from shared.constants import SERVER, InternalFileType, ServerType
+from ui_components.constants import AUDIO_FILE
 from ui_components.models import InternalFileObject
-from utils.common_methods import create_working_assets, get_current_user_uuid
+from utils.common_utils import create_working_assets, get_current_user, get_current_user_uuid, save_or_host_file, save_or_host_file_bytes
 from utils.data_repo.data_repo import DataRepo
-from ui_components.common_methods import create_working_assets
 from utils.media_processor.video import resize_video
 from moviepy.video.io.VideoFileClip import VideoFileClip
 import time
@@ -32,8 +37,11 @@ def new_project_page():
     with b3:
         st.info("We recommend a small size + then scaling up afterwards.")
 
+    # NOTE: removing 'video' option for now, will update it later
     guidance_type = st.radio("Select guidance type:", options=[
-                             "Drawing", "Images", "Video"], help="You can always change this later.", key="guidance_type", horizontal=True)
+                             "Drawing", "Images"], help="You can always change this later.", key="guidance_type", horizontal=True)
+    
+
     audio_options = ["No audio", "Attach new audio"]
     if guidance_type == "Video":
         c1, c2 = st.columns(2)
@@ -71,70 +79,123 @@ def new_project_page():
 
     st.write("")
     if st.button("Create New Project"):
-        new_project_name = new_project_name.replace(" ", "_")
-        create_working_assets(new_project_name)
+        if not new_project_name:
+            st.error("Please enter a project name")
+        else:
+            new_project_name = new_project_name.replace(" ", "_")
 
-        current_user_uuid = get_current_user_uuid()
-        new_project = data_repo.create_project(name=new_project_name, user_id=current_user_uuid)
-        
-        data_repo.update_project_setting(new_project.uuid, width=width)
-        data_repo.update_project_setting(new_project.uuid, height=height)
-        data_repo.update_project_setting(new_project.uuid, guidance_type=guidance_type)
-        data_repo.update_project_setting(new_project.uuid, default_animation_style=default_animation_style)
-
-        if uploaded_video is not None:
-            video_path = f'videos/{new_project_name}/assets/resources/input_videos/{uploaded_video.name}'
-            with open(video_path, 'wb') as f:
-                f.write(uploaded_video.getbuffer())
+            current_user = data_repo.get_first_active_user()
+            # new_project = data_repo.create_project(name=new_project_name, user_id=current_user_uuid)
             
-            file_data = {
-                "name": str(uuid.uuid4()) + ".png",
-                "type": InternalFileType.VIDEO.value,
-                "local_path": f'videos/{new_project_name}/assets/resources/input_videos/{uploaded_video.name}'
-            }
-            video_file: InternalFileObject = data_repo.create_file(**file_data)
-            data_repo.update_project_setting(new_project.uuid, input_video_uuid=video_file.uuid)
+            # data_repo.update_project_setting(new_project.uuid, width=width)
+            # data_repo.update_project_setting(new_project.uuid, height=height)
+            # data_repo.update_project_setting(new_project.uuid, guidance_type=guidance_type)
+            # data_repo.update_project_setting(new_project.uuid, default_animation_style=default_animation_style)
 
-            if resize_this_video == True:
-                resize_video(input_path=video_path, output_path=video_path, width=width, height=height)
-            if audio == "Keep audio from original video":
-                clip = VideoFileClip(video_path)
-                clip.audio.write_audiofile(
-                    f'videos/{new_project_name}/assets/resources/audio/extracted_audio.mp3')
+            new_project = create_new_project(current_user, new_project_name, width, height, guidance_type, default_animation_style)
+
+            if uploaded_video is not None:
+                video_path = f'videos/{new_project_name}/assets/resources/input_videos/{uploaded_video.name}'
+                hosted_url = save_or_host_file(uploaded_video, video_path)
+                
                 file_data = {
                     "name": str(uuid.uuid4()) + ".png",
-                    "type": InternalFileType.AUDIO.value,
-                    "local_path": f'videos/{new_project_name}/assets/resources/audio/extracted_audio.mp3'
+                    "type": InternalFileType.VIDEO.value,
+                    "project_id": new_project.uuid
                 }
-                audio_file: InternalFileObject = data_repo.create_file(**file_data)
-                data_repo.update_project_setting(new_project.uuid, audio_uuid=audio_file.uuid)
 
-        if audio == "Attach new audio":
-            if uploaded_audio is not None:
-                with open(os.path.join(f"videos/{new_project_name}/assets/resources/audio", uploaded_audio.name), "wb") as f:
-                    f.write(uploaded_audio.getbuffer())
-                file_data = {
-                    "name": str(uuid.uuid4()) + ".png",
-                    "type": InternalFileType.AUDIO.value,
-                    "local_path": f"videos/{new_project_name}/assets/resources/audio/{uploaded_audio.name}"
-                }
-                audio_file: InternalFileObject = data_repo.create_file(**file_data)
-                data_repo.update_project_setting(new_project.uuid, audio_uuid=audio_file.uuid)
+                if hosted_url:
+                    file_data.update({"hosted_url": hosted_url})
+                else:
+                    file_data.update({"local_path": video_path})
 
-        st.session_state["project_uuid"] = new_project_name
-        st.session_state["project_uuid"] = new_project.uuid
+                video_file: InternalFileObject = data_repo.create_file(**file_data)
+                data_repo.update_project_setting(new_project.uuid, input_video_uuid=video_file.uuid)
 
-        video_list = data_repo.get_all_file_list(file_type=InternalFileType.VIDEO.value)  #[f for f in os.listdir("videos") if not f.startswith('.')]
-        
-        index = -1
-        for video in video_list:
-            if video.name == new_project_name:
-                index = video_list.index(video)
-                break
+                if resize_this_video == True:
+                    resize_video(input_video_uuid=video_file.uuid, width=width, height=height)
 
-        st.session_state["index_of_project_name"] = index
-        st.session_state["section"] = "Open Project"   
-        st.session_state['change_section'] = True      
-        st.success("Project created successfully!")
-        time.sleep(1)   
-        st.experimental_rerun()
+                if audio == "Keep audio from original video":
+                    audio_file_path = f'videos/{new_project_name}/assets/resources/audio/extracted_audio.mp3'
+
+                    video_path = video_file.location
+                    temp_file = None
+                    if video_path.contains('http'):
+                        response = requests.get(video_path)
+                        if not response.ok:
+                            raise ValueError(f"Could not download video from URL: {video_path}")
+
+                        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
+                        temp_file.write(response.content)
+                        temp_file.close()
+                        video_path = temp_file.name
+
+                    clip = VideoFileClip(video_path)
+                    uploaded_url = None
+                    if SERVER != ServerType.DEVELOPMENT.value:
+                        temp_audio_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3", mode='wb')
+                        clip.audio.write_audiofile(temp_audio_file)
+                        file_bytes = BytesIO()
+
+                        with open(temp_file.name, 'rb') as f:
+                            file_bytes.write(f.read())
+                        file_bytes.seek(0)
+                        uploaded_url = data_repo.upload_file(file_bytes)
+                        os.remove(temp_audio_file.name)
+                        if temp_file:
+                            os.remove(temp_file.name)
+                    else:
+                        clip.audio.write_audiofile(audio_file_path)
+
+                    file_data = {
+                        "name": str(uuid.uuid4()) + ".png",
+                        "type": InternalFileType.AUDIO.value,
+                        "project_id": new_project.uuid
+                    }
+
+                    if uploaded_url:
+                        file_data.update({"hosted_url": uploaded_url})
+                    else:
+                        file_data.update({"local_path": audio_file_path})
+
+                    audio_file: InternalFileObject = data_repo.create_file(**file_data)
+                    data_repo.update_project_setting(new_project.uuid, audio_uuid=audio_file.uuid)
+
+            if audio == "Attach new audio":
+                if uploaded_audio is not None:
+                    uploaded_file_path = f"videos/{new_project_name}/assets/resources/audio/{uploaded_audio.name}"
+                    
+                    audio_bytes = io.BytesIO(uploaded_audio.read())
+                    hosted_url = save_or_host_file_bytes(audio_bytes, uploaded_file_path, ".mp3")
+                    
+                    file_data = {
+                        "name": str(uuid.uuid4()) + ".png",
+                        "type": InternalFileType.AUDIO.value,
+                        "project_id": new_project.uuid 
+                    }
+
+                    if hosted_url:
+                        file_data.update({"hosted_url": hosted_url})
+                    else:
+                        file_data.update({"local_path": uploaded_file_path})
+
+                    audio_file: InternalFileObject = data_repo.create_file(**file_data)
+                    data_repo.update_project_setting(new_project.uuid, audio_uuid=audio_file.uuid)
+
+            st.session_state["project_uuid"] = new_project.uuid
+
+            video_list = data_repo.get_all_file_list(file_type=InternalFileType.VIDEO.value)  #[f for f in os.listdir("videos") if not f.startswith('.')]
+            
+            # index = -1
+            # for video in video_list:
+            #     if video.name == new_project_name:
+            #         index = video_list.index(video)
+            #         break
+
+            # TODO: update the index to the latest value
+            st.session_state["index_of_project_name"] = 0
+            st.session_state["section"] = "Open Project"   
+            st.session_state['change_section'] = True      
+            st.success("Project created successfully!")
+            time.sleep(1)   
+            st.experimental_rerun()
