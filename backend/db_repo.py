@@ -97,7 +97,8 @@ class DBRepo:
             return InternalResponse({}, 'invalid user id', False)
         
         if 'credits_to_add' in kwargs:
-            kwargs['total_credits'] = max(user.total_credits + kwargs['credits_to_add'], 0)
+            # credits won't change in the local environment
+            kwargs['total_credits'] = 1000     # max(user.total_credits + kwargs['credits_to_add'], 0)
 
         for k,v in kwargs.items():
             setattr(user, k, v)
@@ -1079,9 +1080,12 @@ class DBRepo:
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
         
-        project: Project = Project.objects.filter(uuid=kwargs['uuid'], is_disabled=False).first()
+        project: Project = Project.objects.filter(uuid=kwargs['project_id'], is_disabled=False).first()
         if not project:
             return InternalResponse({}, 'invalid project', False)
+        
+        print(attributes.data)
+        attributes._data['project_id'] = project.id
         
         setting = Setting.objects.filter(project_id=project.id, is_disabled=False).first()
         if not setting:

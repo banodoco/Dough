@@ -1443,8 +1443,8 @@ def create_full_preview_video(timing_uuid, speed=1) -> InternalFileObject:
         
         clips.append(preview_video)
 
-        if preview_video.local_path:
-            os.remove(preview_video.local_path)
+        # if preview_video.local_path:
+        #     os.remove(preview_video.local_path)
 
     print(clips)
     video_clips = []
@@ -3323,32 +3323,39 @@ def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_locat
         updated_clip = concatenate_videoclips(
             [clip.subclip(i/clip.fps, (i+1)/clip.fps) for i in frames_to_keep])
 
-        if save_to_new_location:
-            file_name = ''.join(random.choices(
+        file_name = ''.join(random.choices(
                 string.ascii_lowercase + string.digits, k=16)) + ".mp4"
-            location_of_video = "videos/" + \
-                str(timing.project.uuid) + \
-                "/assets/videos/1_final/" + str(file_name)
+        location_of_video = "videos/" + \
+            str(timing.project.uuid) + \
+            "/assets/videos/1_final/" + str(file_name)
+        
+        temp_output_file = generate_temp_file(timing.interpolated_clip.hosted_url, '.mp4')
+
+        output_clip.write_videofile(
+            filename=temp_output_file.name, codec="libx265")
+        
+        video_bytes = None
+        with open(temp_output_file.name, 'rb') as f:
+            video_bytes = f.read()
+        
+        hosted_url = save_or_host_file_bytes(video_bytes, new_file_location)
+        
+        if save_to_new_location:
+            if hosted_url:
+                video_file: InternalFileObject = data_repo.create_file(
+                    name=new_file_name, type=InternalFileType.VIDEO.value, hosted_url=hosted_url)
+            else:
+                video_file: InternalFileObject = data_repo.create_file(
+                    name=new_file_name, type=InternalFileType.VIDEO.value, local_path=new_file_location)
         else:
             os.remove(location_of_video)
-
-        # TODO: add this in save override of the model
-        updated_clip.write_videofile(location_of_video, codec='libx265')
-        if save_to_new_location:
-            file_name = str(uuid.uuid4()) + ".mp4"
-            file_data = {
-                "name": file_name,
-                "type": InternalFileType.VIDEO.value,
-                "tag": InternalFileTag.GENERATED_VIDEO.value,
-                "local_path": location_of_video
-            }
-            video_file: InternalFileObject = data_repo.create_file(**file_data)
-        else:
-            data_repo.create_or_update_file(
-                video_file.uuid, type=InternalFileType.VIDEO.value, local_path=location_of_video)
-
-        clip.close()
-        updated_clip.close()
+            location_of_video = new_file_location
+            if hosted_url:
+                video_file: InternalFileObject = data_repo.create_file(
+                    name=new_file_name, type=InternalFileType.VIDEO.value, hosted_url=hosted_url)
+            else:
+                data_repo.create_or_update_file(
+                    video_file.uuid, type=InternalFileType.VIDEO.value, local_path=location_of_video)
 
     elif animation_style == AnimationStyleType.INTERPOLATION.value:
 

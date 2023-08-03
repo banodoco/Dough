@@ -143,7 +143,7 @@ class CreateSettingDao(serializers.Serializer):
 
 
 class UpdateSettingDao(serializers.Serializer):
-    uuid = serializers.CharField(max_length=255)
+    project_id = serializers.CharField(max_length=255)
     default_model_id = serializers.CharField(max_length=255, required=False)
     audio_id = serializers.CharField(max_length=255, required=False)
     input_video_id = serializers.CharField(max_length=255, required=False)
