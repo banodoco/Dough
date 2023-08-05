@@ -111,8 +111,9 @@ def new_project_page():
                     st.error(f"Failed to save the uploaded audio due to {str(e)}")
 
             st.session_state["project_uuid"] = new_project.uuid
-            video_list = data_repo.get_all_file_list(file_type=InternalFileType.VIDEO.value)
-            st.session_state["index_of_project_name"] = len(video_list) - 1
+            project_list = data_repo.get_all_project_list(user_id=get_current_user_uuid())
+            st.write(project_list)
+            st.session_state["index_of_project_name"] = len(project_list) - 1
             st.session_state["section"] = "Open Project"
             st.session_state['change_section'] = True 
             st.success("Project created successfully!")
