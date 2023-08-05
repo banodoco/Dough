@@ -22,80 +22,99 @@ import utils.local_storage.local_storage as local_storage
 
 def new_project_page():
 
+    # Initialize data repository
     data_repo = DataRepo()
-
-    a1, a2 = st.columns(2)
-    with a1:
+    
+    # Define multicolumn layout
+    project_column, filler_column = st.columns(2)
+    
+    # Prompt user for project naming within project_column
+    with project_column:
         new_project_name = st.text_input("Project name:", value="")
-    with a2:
-        st.write("")
-    
-    img1, img2, img3 = st.columns([3, 1.5, 1])
 
-    with img1:    
+    # Define multicolumn layout for images
+    image_column, image_display_column, img_info_column = st.columns([3, 1.5, 1])
+
+    # Prompt user for starting image within image_column
+    with image_column:    
         starting_image = st.file_uploader("Choose a starting image:", key="starting_image", accept_multiple_files=False, type=["png", "jpg", "jpeg"])
-
-    with img2:
-        if starting_image is not None:
-            image = Image.open(starting_image)
-            st.image(image, caption='Uploaded Image.', use_column_width=True)            
-            width, height = image.size    
-            st.write("")
-            
-    with img3:  
-        if starting_image is not None:
-            st.success(f"The dimensions of the image are {width} x {height}")      
     
-    b1, b2, b3 = st.columns(3)
+    # Display starting image within image_display_column if available
+    with image_display_column:
+        if starting_image is not None: 
+            try:
+                image = Image.open(starting_image)
+                st.image(image, caption='Uploaded Image.', use_column_width=True)            
+                img_width, img_height = image.size      
+            except Exception as e:
+                st.error(f"Failed to open the image due to {str(e)}")
+    # Display image information within img_info_column if starting image exists            
+    with img_info_column:  
+        if starting_image is not None:
+            st.success(f"The dimensions of the image are {img_width} x {img_height}")
+
+    # Prompt user for video dimension specifications
+    video_width_column, video_height_column, video_info_column = st.columns(3)
 
     frame_sizes = ["512", "704", "768", "896", "1024"]
-    
-    with b1:
+    with video_width_column:
         width = int(st.selectbox("Select video width:", options=frame_sizes, key="video_width"))
-    with b2:
+    with video_height_column:
         height = int(st.selectbox("Select video height:", options=frame_sizes, key="video_height"))
-    with b3:
+    with video_info_column:
         st.info("Uploaded images will be resized to the selected dimensions.")
-
-    audio_options = ["No audio", "Attach new audio"]
     
-    audio = st.radio("Audio:", audio_options, key="audio", horizontal=True)
+    # Prompt user for audio preferences
+    audio = st.radio("Audio:", ["No audio", "Attach new audio"], key="audio", horizontal=True)
 
+    # Display audio upload option if user selects "Attach new audio"
     if audio == "Attach new audio":
-        d1, d2 = st.columns([4, 5])
-        with d1:
-            uploaded_audio = st.file_uploader("Choose a audio file:")
-        with d2:
+        audio_upload_column, audio_info_column = st.columns([4, 5])
+        with audio_upload_column:
+            uploaded_audio = st.file_uploader("Choose an audio file:")
+        with audio_info_column:
             st.write("")
             st.write("")
-            st.info(
-                "Make sure that this audio is around the same length as your video.")
+            st.info("Make sure that this audio is around the same length as your video.")
     else:
         uploaded_audio = None
 
     st.write("")
 
     if st.button("Create New Project"):
+        # Add checks for project name existence and format
         if not new_project_name:
-            st.error("Please enter a project name")
+            st.error("Please enter a project name.")
         else:
             new_project_name = new_project_name.replace(" ", "_")
-            current_user = data_repo.get_first_active_user()            
-            new_project = create_new_project(current_user, new_project_name, width, height, "Images", "Interpolation")
-            new_timing = create_timings_row_at_frame_number(new_project.uuid, 0)
+            current_user = data_repo.get_first_active_user()
+            try:
+                new_project = create_new_project(current_user, new_project_name, width, height, "Images", "Interpolation")
+                new_timing = create_timings_row_at_frame_number(new_project.uuid, 0)
+            except Exception as e:
+                st.error(f"Failed to create the new project due to {str(e)}")
+
             if starting_image:
-                save_uploaded_image(data_repo, starting_image, new_project.uuid, new_timing.uuid, "source")
-                save_uploaded_image(data_repo, starting_image, new_project.uuid, new_timing.uuid, "styled")
+                try:
+                    save_uploaded_image(data_repo, starting_image, new_project.uuid, new_timing.uuid, "source")
+                    save_uploaded_image(data_repo, starting_image, new_project.uuid, new_timing.uuid, "styled")
+                except Exception as e:
+                    st.error(f"Failed to save the uploaded image due to {str(e)}")
+            
             if uploaded_audio:
-                if save_audio_file(data_repo, uploaded_audio, new_project.uuid):
-                    st.success("Audio file saved and attached successfully.")
-                else:
-                    st.error("Failed to save and attach the audio file.")            
+                try:
+                    if save_audio_file(data_repo, uploaded_audio, new_project.uuid):
+                        st.success("Audio file saved and attached successfully.")
+                    else:
+                        st.error("Failed to save and attach the audio file.")  
+                except Exception as e:
+                    st.error(f"Failed to save the uploaded audio due to {str(e)}")
+
             st.session_state["project_uuid"] = new_project.uuid
-            video_list = data_repo.get_all_file_list(file_type=InternalFileType.VIDEO.value)  #[f for f in os.listdir("videos") if not f.startswith('.')]                        
+            video_list = data_repo.get_all_file_list(file_type=InternalFileType.VIDEO.value)
             st.session_state["index_of_project_name"] = len(video_list) - 1
-            st.session_state["section"] = "Open Project"   
-            st.session_state['change_section'] = True      
+            st.session_state["section"] = "Open Project"
+            st.session_state['change_section'] = True 
             st.success("Project created successfully!")
-            time.sleep(1)   
+            time.sleep(1)     
             st.experimental_rerun()
