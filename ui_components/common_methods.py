@@ -157,7 +157,7 @@ def prompt_finder_element(project_uuid):
 
 
 # TODO: image format is assumed to be PNG, change this later
-def save_new_image(img: Union[Image.Image, str, np.ndarray], project_uuid) -> InternalFileObject:
+def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project_uuid) -> InternalFileObject:
     # Check if img is a PIL image
     if isinstance(img, Image.Image):
         pass
@@ -174,6 +174,10 @@ def save_new_image(img: Union[Image.Image, str, np.ndarray], project_uuid) -> In
     # Check if img is a numpy ndarray
     elif isinstance(img, np.ndarray):
         img = Image.fromarray(img)
+
+    # Check if img is a BytesIO stream
+    elif isinstance(img, io.BytesIO):
+        img = Image.open(img)
 
     else:
         raise ValueError(
@@ -198,6 +202,29 @@ def save_new_image(img: Union[Image.Image, str, np.ndarray], project_uuid) -> In
     data_repo = DataRepo()
     new_image = data_repo.create_file(**file_data)
     return new_image
+
+
+
+def save_uploaded_image(data_repo, uploaded_file, project_uuid, frame_uuid, save_type):
+    try:
+        # Save new image
+        saved_image = save_new_image(Image.open(uploaded_file), project_uuid)
+
+        # Update records based on save_type
+        if save_type == "source":
+            data_repo.update_specific_timing(frame_uuid, source_image_id=saved_image.uuid)
+        elif save_type == "styled":
+            number_of_image_variants = add_image_variant(saved_image.uuid, frame_uuid)
+            promote_image_variant(frame_uuid, number_of_image_variants - 1)
+
+        return True
+    except Exception as e:
+        print(f"Failed to save image file due to: {str(e)}")
+        return False
+
+
+
+
 
 
 def resize_and_rotate_element(stage, project_uuid):
@@ -1636,6 +1663,7 @@ def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.valu
 
 # TODO: CORRECT-CODE
 def styling_element(timing_uuid, view_type="Single"):
+    
 
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
@@ -1761,7 +1789,7 @@ def styling_element(timing_uuid, view_type="Single"):
             model_list) if getattr(obj, 'name') == selected_model_name), None)
         if st.session_state['index_of_default_model'] != selected_model_index:
             st.session_state['index_of_default_model'] = selected_model_index
-            st.experimental_rerun()
+            # st.experimental_rerun()
 
     current_model_name = data_repo.get_ai_model_from_uuid(
         st.session_state['model']).name
@@ -4321,6 +4349,35 @@ def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> Int
     #     return file
 
 
+
+
+
+
+
+def save_audio_file(data_repo, uploaded_file, project_uuid):
+    local_file_location = os.path.join(
+        f"videos/{project_uuid}/assets/resources/audio", uploaded_file.name)
+
+    audio_bytes = uploaded_file.read()
+    hosted_url = save_or_host_file_bytes(audio_bytes, local_file_location, ".mp3")
+
+    file_data = {
+        "name": str(uuid.uuid4()) + ".mp3",
+        "type": InternalFileType.AUDIO.value,
+        "project_id": project_uuid
+    }
+
+    if hosted_url:
+        file_data.update({"hosted_url": hosted_url})
+    else:
+        file_data.update({"local_path": local_file_location})
+
+    audio_file: InternalFileObject = data_repo.create_file(
+        **file_data)
+    data_repo.update_project_setting(
+        project_uuid, audio_id=audio_file.uuid)
+    
+
 def attach_audio_element(project_uuid, expanded):
     data_repo = DataRepo()
     project: InternalProjectObject = data_repo.get_project_from_uuid(
@@ -4333,32 +4390,7 @@ def attach_audio_element(project_uuid, expanded):
                                          "mp3"], help="This will attach this audio when you render a video")
         if st.button("Upload and attach new audio"):
             if uploaded_file:
-                local_file_location = os.path.join(
-                    f"videos/{project.uuid}/assets/resources/audio", uploaded_file.name)
-                
-                # if not os.path.exists(f"videos/{project.uuid}/assets/resources/audio"):
-                #     os.makedirs(
-                #         f"videos/{project.uuid}/assets/resources/audio")
-
-                # audio_bytes = io.BytesIO(uploaded_file.read())
-                audio_bytes = uploaded_file.read()
-                hosted_url = save_or_host_file_bytes(audio_bytes, local_file_location, ".mp3")
-
-                file_data = {
-                    "name": str(uuid.uuid4()) + ".mp3",
-                    "type": InternalFileType.AUDIO.value,
-                    "project_id": project_uuid
-                }
-
-                if hosted_url:
-                    file_data.update({"hosted_url": hosted_url})
-                else:
-                    file_data.update({"local_path": local_file_location})
-
-                audio_file: InternalFileObject = data_repo.create_file(
-                    **file_data)
-                data_repo.update_project_setting(
-                    project_uuid, audio_id=audio_file.uuid)
+                save_audio_file(data_repo, uploaded_file, project_uuid)
                 st.experimental_rerun()
             else:
                 st.warning('No file selected')
@@ -4370,6 +4402,7 @@ def attach_audio_element(project_uuid, expanded):
 
             if project_setting.audio.location:
                 st.audio(project_setting.audio.location)
+
 
 
 def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,

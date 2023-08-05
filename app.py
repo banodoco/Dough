@@ -1,7 +1,6 @@
 import webbrowser
 import streamlit as st
 from moviepy.editor import *
-from streamlit_javascript import st_javascript
 import time
 import os
 import django
@@ -55,24 +54,6 @@ def main():
         app_settings: InternalAppSettingObject = data_repo.get_app_setting_from_uuid()
         app_secret = data_repo.get_app_secrets_from_user_uuid()
         
-        # set online status of user
-        if "online" not in st.session_state:
-            current_url = st_javascript("await fetch('').then(r => window.parent.location.href)")
-            time.sleep(1.5)
-            # if current_url contains streamlit.app
-            if current_url and "streamlit.app" in current_url:
-                st.session_state["online"] = True
-            else:
-                st.session_state["online"] = False
-                            
-            st.session_state["welcome_state"] = app_settings.welcome_state
-
-        if 'online' in st.session_state and st.session_state["online"] == True:
-            st.error("**PLEASE READ:** This is a demo app. While you can click around, *buttons & queries won't work* and some things won't display properly. To use the proper version, follow the instructions [here](https://github.com/peter942/banodoco) to run it locally.")
-        else:
-            if app_secret["replicate_key"] == "":
-                st.error("**To run restyling and other functions, you need to set your Replicate.com API key by going to Settings -> App Settings.**")
-    
         from ui_components.setup import setup_app_ui
         setup_app_ui()
                                                     

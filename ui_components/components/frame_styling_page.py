@@ -10,7 +10,7 @@ from shared.constants import GuidanceType, InternalFileType
 from shared.file_upload.s3 import upload_file
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
-from ui_components.common_methods import delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, create_timings_row_at_frame_number, extract_canny_lines, convert_to_minutes_and_seconds, styling_element, create_full_preview_video, back_and_forward_buttons, resize_and_rotate_element, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, single_frame_time_changer
+from ui_components.common_methods import delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, create_timings_row_at_frame_number, extract_canny_lines, convert_to_minutes_and_seconds, styling_element, create_full_preview_video, back_and_forward_buttons, resize_and_rotate_element, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, single_frame_time_changer,save_uploaded_image
 from ui_components.common_methods import create_gif_preview, delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, prompt_interpolation_model, update_speed_of_video_clip, create_timings_row_at_frame_number, extract_canny_lines, get_duration_from_video, get_audio_bytes_for_slice, add_audio_to_video_slice, convert_to_minutes_and_seconds, styling_element, get_primary_variant_location, create_full_preview_video, back_and_forward_buttons, resize_and_rotate_element, manual_cropping_element, precision_cropping_element, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, single_frame_time_changer, apply_image_transformations, get_pillow_image, save_new_image, prompt_finder_element, preview_frame, carousal_of_images_element, display_image, ai_frame_editing_element, clone_styling_settings
 from utils import st_memory
 import uuid
@@ -329,31 +329,15 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 st.error("No Guidance Image Found")
                         with canny2:
                             st.markdown("#### Upload Guidance Image")
-                            st.markdown(
-                                "This will upload a canny image from your computer. This will take a few seconds.")
+                            st.markdown("This will upload a canny image from your computer. This will take a few seconds.")
                             uploaded_file = st.file_uploader("Choose a file")
                             if st.button("Upload Guidance Image"):
-                                if uploaded_image is not None:
-                                    guidance_img = Image.open(uploaded_file)
-                                    file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{uploaded_file.name}"
-                                    hosted_url = save_or_host_file(guidance_img, file_location)
+                                if uploaded_file is not None:
+                                    if save_uploaded_image(data_repo, uploaded_file, timing.project.uuid, st.session_state['current_frame_uuid'], "source"):
+                                        st.success("Your file is uploaded")
+                                        time.sleep(1.5)
+                                        st.experimental_rerun()
 
-                                    file_data = {
-                                        "name": str(uuid.uuid4()) + ".png",
-                                        "type": InternalFileType.IMAGE.value
-                                    }
-
-                                    if hosted_url:
-                                        file_data.update({"hosted_url": hosted_url})
-                                    else:
-                                        file_data.update({"local_path": file_location})
-
-                                    image = data_repo.create_file(**file_data)
-                                    data_repo.update_specific_timing(
-                                        st.session_state['current_frame_uuid'], source_image_id=image.uuid)
-                                    st.success("Your file is uploaded")
-                                    time.sleep(1.5)
-                                    st.experimental_rerun()
                         with canny3:
                             st.markdown("#### Extract Canny From image")
                             st.markdown(
@@ -373,17 +357,11 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                     st.error("No Image Found")
 
                             elif source_of_image == "Uploaded Image":
-                                uploaded_image = st.file_uploader(
-                                    "Choose a file", key="uploaded_image")
+                                uploaded_image = st.file_uploader("Choose a file", key="uploaded_image")
                                 if uploaded_image is not None:
-                                    uploaded_pil_img = Image.open(uploaded_image)
-                                    uploaded_image_location = "videos/temp/assets/videos/0_raw/" + \
-                                        str(uuid.uuid4()) + ".png"
-                                    
-                                    hosted_url = save_or_host_file(uploaded_pil_img, uploaded_image_location)
-                                    uploaded_image_location = hosted_url or uploaded_image_location
+                                    if save_uploaded_image(data_repo, uploaded_image, "temp", None, "styled"):
+                                        st.success("Your file is uploaded")
 
-                                    st.success("Your file is uploaded")
 
                             threshold1, threshold2 = st.columns([1, 1])
                             with threshold1:
@@ -454,32 +432,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 st.markdown("#### Upload Source Image")
                                 st.markdown(
                                     "This will upload a canny image from your computer. This will take a few seconds.")
-                                uploaded_file = st.file_uploader(
-                                    "Choose a file")
+                                uploaded_file = st.file_uploader("Choose a file")
                                 if st.button("Upload Source Image"):
                                     if uploaded_file:
                                         timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
-                                        file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{uploaded_file.name}"
-                                        uploaded_source_pil_img = Image.open(uploaded_file)
-                                        hosted_url = save_or_host_file(uploaded_source_pil_img, file_location)
+                                        if save_uploaded_image(data_repo, uploaded_file, timing.project.uuid, st.session_state['current_frame_uuid'], "source"):
+                                            time.sleep(1.5)
+                                            st.experimental_rerun()
 
-                                        file_data = {
-                                            "name": str(uuid.uuid4()) + ".png",
-                                            "type": InternalFileType.IMAGE.value,
-                                            "project_id": project_uuid
-                                        }
-
-                                        if hosted_url:
-                                            file_data.update({"hosted_url": hosted_url})
-                                        else:
-                                            file_data.update({"local_path": file_location})
-                                    
-                                        source_image = data_repo.create_file(
-                                            **file_data)
-                                        data_repo.update_specific_timing(
-                                            st.session_state['current_frame_uuid'], source_image_id=source_image.uuid)
-                                        time.sleep(1.5)
-                                        st.experimental_rerun()
 
                             with canny2:
                                 st.markdown("#### Use Image From Other Frame")
@@ -955,11 +915,10 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                     st.experimental_rerun()
                             with replace2:
                                 st.image(selected_image.location, width=300)
-
                         elif replace_with == "Uploaded Frame":
                             with replace1:
                                 replacement_frame = st.file_uploader("Upload a replacement frame here", type=[
-                                                                     "png", "jpeg"], accept_multiple_files=False, key="replacement_frame_upload")
+                                                                    "png", "jpeg"], accept_multiple_files=False, key="replacement_frame_upload")
                             with replace2:
                                 st.write("")
                                 st.write("")
@@ -970,29 +929,21 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 st.write("")
                                 if st.button("Replace frame", disabled=False):
                                     images_for_model = []
-                                    with open(os.path.join(f"videos/{timing.project.uuid}/", replacement_frame.name), "wb") as f:
-                                        f.write(replacement_frame.getbuffer())
+                                    timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
 
-                                    app_setting: InternalAppSettingObject = data_repo.get_app_setting_from_uuid()
-                                    
-                                    file_data = {
-                                        "name": str(uuid.uuid4()) + ".png",
-                                        "type": InternalFileType.IMAGE.value,
-                                        "local_path": f"videos/{timing.project.uuid}/{replacement_frame.name}"
-                                    }
-                                    
-                                    replacement_image = data_repo.create_file(
-                                        **file_data)
+                                    if replacement_frame and save_uploaded_image(data_repo, replacement_frame, timing.project.uuid, st.session_state['current_frame_uuid'], "styled"):
+                                        number_of_image_variants = add_image_variant(
+                                            st.session_state['current_frame_uuid'], st.session_state['current_frame_uuid'])
+                                        promote_image_variant(
+                                            st.session_state['current_frame_uuid'], number_of_image_variants - 1)
 
-                                    number_of_image_variants = add_image_variant(
-                                        replacement_image.uuid, st.session_state['current_frame_uuid'])
-                                    promote_image_variant(
-                                        st.session_state['current_frame_uuid'], number_of_image_variants - 1)
+                                        # delete the uploaded file
+                                        st.success("Replaced")
+                                        time.sleep(1)
+                                        st.experimental_rerun()
 
-                                    # delete the uploaded file
-                                    st.success("Replaced")
-                                    time.sleep(1)
-                                    st.experimental_rerun()
+
+
 
                 st.markdown("***")
                 extra_settings_1, extra_settings_2 = st.columns([1, 1])
@@ -1237,20 +1188,17 @@ def frame_styling_page(mainheader2, project_uuid: str):
             
             timing_details = data_repo.get_timing_list_from_project(project_uuid)
             if selected_image != "":
-                new_source_image = save_new_image(selected_image, project_uuid)
-                data_repo.update_specific_timing(
-                    timing_details[index_of_current_item + 1].uuid, source_image_id=new_source_image.uuid)
-                
-                add_image_variant(
-                    new_source_image.uuid, timing_details[index_of_current_item + 1].uuid)
-                
+                save_uploaded_image(data_repo, selected_image, project_uuid, timing_details[index_of_current_item + 1].uuid, "source")
+                save_uploaded_image(data_repo, selected_image, project_uuid, timing_details[index_of_current_item + 1].uuid, "styled")
+                    
             if also_make_this_the_primary_image == "Yes":
                 promote_image_variant(timing_details[index_of_current_item + 1].uuid, 0)
             if inherit_styling_settings == "Yes":
                 clone_styling_settings(which_number_for_starting_image, timing_details[index_of_current_item + 1].uuid)
 
             data_repo.update_specific_timing(timing_details[index_of_current_item + 1].uuid, \
-                                             animation_style=project_settings.default_animation_style)
+                                                animation_style=project_settings.default_animation_style)
+
             
             if len(timing_details) == 1:
                 st.session_state['current_frame_index'] = 0
