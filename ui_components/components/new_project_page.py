@@ -21,6 +21,7 @@ import utils.local_storage.local_storage as local_storage
 
 
 def new_project_page():
+
     data_repo = DataRepo()
 
     a1, a2 = st.columns(2)
@@ -31,8 +32,7 @@ def new_project_page():
     
     img1, img2, img3 = st.columns([3, 1.5, 1])
 
-    with img1:
-    
+    with img1:    
         starting_image = st.file_uploader("Choose a starting image:", key="starting_image", accept_multiple_files=False, type=["png", "jpg", "jpeg"])
 
     with img2:
@@ -43,13 +43,13 @@ def new_project_page():
             st.write("")
             
     with img3:  
-
         if starting_image is not None:
             st.success(f"The dimensions of the image are {width} x {height}")      
     
     b1, b2, b3 = st.columns(3)
 
     frame_sizes = ["512", "704", "768", "896", "1024"]
+    
     with b1:
         width = int(st.selectbox("Select video width:", options=frame_sizes, key="video_width"))
     with b2:
@@ -74,36 +74,26 @@ def new_project_page():
         uploaded_audio = None
 
     st.write("")
+
     if st.button("Create New Project"):
         if not new_project_name:
             st.error("Please enter a project name")
         else:
             new_project_name = new_project_name.replace(" ", "_")
-
-            current_user = data_repo.get_first_active_user()
-
-            # hardcoding guidnace type for now
+            current_user = data_repo.get_first_active_user()            
             new_project = create_new_project(current_user, new_project_name, width, height, "Images", "Interpolation")
-
             new_timing = create_timings_row_at_frame_number(new_project.uuid, 0)
-
             if starting_image:
                 save_uploaded_image(data_repo, starting_image, new_project.uuid, new_timing.uuid, "source")
                 save_uploaded_image(data_repo, starting_image, new_project.uuid, new_timing.uuid, "styled")
-
             if uploaded_audio:
                 if save_audio_file(data_repo, uploaded_audio, new_project.uuid):
                     st.success("Audio file saved and attached successfully.")
                 else:
-                    st.error("Failed to save and attach the audio file.")
-            
+                    st.error("Failed to save and attach the audio file.")            
             st.session_state["project_uuid"] = new_project.uuid
-
-            video_list = data_repo.get_all_file_list(file_type=InternalFileType.VIDEO.value)  #[f for f in os.listdir("videos") if not f.startswith('.')]
-            
-
-            # TODO: update the index to the latest value
-            st.session_state["index_of_project_name"] = 0
+            video_list = data_repo.get_all_file_list(file_type=InternalFileType.VIDEO.value)  #[f for f in os.listdir("videos") if not f.startswith('.')]                        
+            st.session_state["index_of_project_name"] = len(video_list) - 1
             st.session_state["section"] = "Open Project"   
             st.session_state['change_section'] = True      
             st.success("Project created successfully!")
