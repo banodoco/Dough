@@ -7,7 +7,6 @@ from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.batch_action_page import batch_action_page
 from ui_components.components.custom_models_page import custom_models_page
 from ui_components.components.frame_styling_page import frame_styling_page
-from ui_components.components.key_frame_selection import key_frame_selection_page
 from ui_components.components.new_project_page import new_project_page
 from ui_components.components.project_settings_page import project_settings_page
 from ui_components.components.video_rendering_page import video_rendering_page

@@ -205,7 +205,9 @@ def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project
 
 
 
-def save_uploaded_image(data_repo, uploaded_file, project_uuid, frame_uuid, save_type):
+def save_uploaded_image(uploaded_file, project_uuid, frame_uuid, save_type):
+    data_repo = DataRepo()
+
     try:
         # Save new image
         saved_image = save_new_image(Image.open(uploaded_file), project_uuid)
@@ -217,10 +219,10 @@ def save_uploaded_image(data_repo, uploaded_file, project_uuid, frame_uuid, save
             number_of_image_variants = add_image_variant(saved_image.uuid, frame_uuid)
             promote_image_variant(frame_uuid, number_of_image_variants - 1)
 
-        return True
+        return saved_image
     except Exception as e:
         print(f"Failed to save image file due to: {str(e)}")
-        return False
+        return None
 
 
 
@@ -3783,7 +3785,7 @@ def create_timings_row_at_frame_number(project_uuid, index_of_frame):
     data_repo = DataRepo()
     project: InternalProjectObject = data_repo.get_timing_list_from_project(
         project_uuid)
-
+    
     # remove the interpolated video from the current row and the row before and after - unless it is the first or last row
     timing_data = {
         "project_id": project_uuid,
@@ -4354,7 +4356,9 @@ def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> Int
 
 
 
-def save_audio_file(data_repo, uploaded_file, project_uuid):
+def save_audio_file(uploaded_file, project_uuid):
+    data_repo = DataRepo()
+
     local_file_location = os.path.join(
         f"videos/{project_uuid}/assets/resources/audio", uploaded_file.name)
 
@@ -4377,6 +4381,8 @@ def save_audio_file(data_repo, uploaded_file, project_uuid):
     data_repo.update_project_setting(
         project_uuid, audio_id=audio_file.uuid)
     
+    return audio_file
+    
 
 def attach_audio_element(project_uuid, expanded):
     data_repo = DataRepo()
@@ -4390,7 +4396,7 @@ def attach_audio_element(project_uuid, expanded):
                                          "mp3"], help="This will attach this audio when you render a video")
         if st.button("Upload and attach new audio"):
             if uploaded_file:
-                save_audio_file(data_repo, uploaded_file, project_uuid)
+                save_audio_file(uploaded_file, project_uuid)
                 st.experimental_rerun()
             else:
                 st.warning('No file selected')

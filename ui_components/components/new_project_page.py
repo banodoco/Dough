@@ -9,7 +9,7 @@ from shared.constants import SERVER, InternalFileType, ServerType
 from ui_components.constants import AUDIO_FILE
 from ui_components.models import InternalFileObject
 from ui_components.common_methods import save_audio_file,create_timings_row_at_frame_number, save_uploaded_image
-from utils.common_utils import create_working_assets, get_current_user, get_current_user_uuid, save_or_host_file, save_or_host_file_bytes
+from utils.common_utils import create_working_assets, get_current_user, get_current_user_uuid, reset_project_state, save_or_host_file, save_or_host_file_bytes
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.video import resize_video
 from moviepy.video.io.VideoFileClip import VideoFileClip
@@ -88,6 +88,7 @@ def new_project_page():
         else:
             new_project_name = new_project_name.replace(" ", "_")
             current_user = data_repo.get_first_active_user()
+
             try:
                 new_project = create_new_project(current_user, new_project_name, width, height, "Images", "Interpolation")
                 new_timing = create_timings_row_at_frame_number(new_project.uuid, 0)
@@ -96,19 +97,25 @@ def new_project_page():
 
             if starting_image:
                 try:
-                    save_uploaded_image(data_repo, starting_image, new_project.uuid, new_timing.uuid, "source")
-                    save_uploaded_image(data_repo, starting_image, new_project.uuid, new_timing.uuid, "styled")
+                    save_uploaded_image(starting_image, new_project.uuid, new_timing.uuid, "source")
+                    save_uploaded_image(starting_image, new_project.uuid, new_timing.uuid, "styled")
                 except Exception as e:
                     st.error(f"Failed to save the uploaded image due to {str(e)}")
+
+            # remvoing the initial frame which moved to the 1st position
+            initial_frame = data_repo.get_timing_from_frame_number(new_project.uuid, 1)
+            data_repo.delete_timing_from_uuid(initial_frame.uuid)
             
             if uploaded_audio:
                 try:
-                    if save_audio_file(data_repo, uploaded_audio, new_project.uuid):
+                    if save_audio_file(uploaded_audio, new_project.uuid):
                         st.success("Audio file saved and attached successfully.")
                     else:
                         st.error("Failed to save and attach the audio file.")  
                 except Exception as e:
                     st.error(f"Failed to save the uploaded audio due to {str(e)}")
+
+            reset_project_state()
 
             st.session_state["project_uuid"] = new_project.uuid
             project_list = data_repo.get_all_project_list(user_id=get_current_user_uuid())

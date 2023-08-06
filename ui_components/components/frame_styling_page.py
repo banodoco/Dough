@@ -333,7 +333,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             uploaded_file = st.file_uploader("Choose a file")
                             if st.button("Upload Guidance Image"):
                                 if uploaded_file is not None:
-                                    if save_uploaded_image(data_repo, uploaded_file, timing.project.uuid, st.session_state['current_frame_uuid'], "source"):
+                                    if save_uploaded_image(uploaded_file, timing.project.uuid, st.session_state['current_frame_uuid'], "source"):
                                         st.success("Your file is uploaded")
                                         time.sleep(1.5)
                                         st.experimental_rerun()
@@ -359,7 +359,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             elif source_of_image == "Uploaded Image":
                                 uploaded_image = st.file_uploader("Choose a file", key="uploaded_image")
                                 if uploaded_image is not None:
-                                    if save_uploaded_image(data_repo, uploaded_image, "temp", None, "styled"):
+                                    if save_uploaded_image(uploaded_image, "temp", None, "styled"):
                                         st.success("Your file is uploaded")
 
 
@@ -436,7 +436,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 if st.button("Upload Source Image"):
                                     if uploaded_file:
                                         timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
-                                        if save_uploaded_image(data_repo, uploaded_file, timing.project.uuid, st.session_state['current_frame_uuid'], "source"):
+                                        if save_uploaded_image(uploaded_file, timing.project.uuid, st.session_state['current_frame_uuid'], "source"):
                                             time.sleep(1.5)
                                             st.experimental_rerun()
 
@@ -931,16 +931,17 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                     images_for_model = []
                                     timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
 
-                                    if replacement_frame and save_uploaded_image(data_repo, replacement_frame, timing.project.uuid, st.session_state['current_frame_uuid'], "styled"):
-                                        number_of_image_variants = add_image_variant(
-                                            st.session_state['current_frame_uuid'], st.session_state['current_frame_uuid'])
-                                        promote_image_variant(
-                                            st.session_state['current_frame_uuid'], number_of_image_variants - 1)
+                                    if replacement_frame:
+                                        saved_file = save_uploaded_image(replacement_frame, timing.project.uuid, st.session_state['current_frame_uuid'], "styled")
+                                        if saved_file:
+                                            number_of_image_variants = add_image_variant(saved_file.uuid, st.session_state['current_frame_uuid'])
+                                            promote_image_variant(
+                                                st.session_state['current_frame_uuid'], number_of_image_variants - 1)
 
-                                        # delete the uploaded file
-                                        st.success("Replaced")
-                                        time.sleep(1)
-                                        st.experimental_rerun()
+                                            # delete the uploaded file
+                                            st.success("Replaced")
+                                            time.sleep(1)
+                                            st.experimental_rerun()
 
 
 
@@ -1188,8 +1189,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
             
             timing_details = data_repo.get_timing_list_from_project(project_uuid)
             if selected_image != "":
-                save_uploaded_image(data_repo, selected_image, project_uuid, timing_details[index_of_current_item + 1].uuid, "source")
-                save_uploaded_image(data_repo, selected_image, project_uuid, timing_details[index_of_current_item + 1].uuid, "styled")
+                save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item + 1].uuid, "source")
+                save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item + 1].uuid, "styled")
                     
             if also_make_this_the_primary_image == "Yes":
                 promote_image_variant(timing_details[index_of_current_item + 1].uuid, 0)

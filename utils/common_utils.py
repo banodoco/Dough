@@ -255,6 +255,7 @@ def reset_project_state():
     keys_to_delete = [
         "page",
         "current_frame_uuid",
+        "which_number_for_starting_image",
         "rotated_image",
         "current_frame_index",
         "zoom_level_input",
