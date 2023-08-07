@@ -3329,7 +3329,7 @@ def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_locat
     if video_file.hosted_url:
         temp_video_file = generate_temp_file(video_file.hosted_url, '.mp4')
 
-    file_path = temp_video_file.name if temp_video_file else video_file.local_path
+    location_of_video = temp_video_file.name if temp_video_file else video_file.local_path
     
 
     if animation_style == AnimationStyleType.DIRECT_MORPHING.value:
@@ -3355,7 +3355,7 @@ def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_locat
 
         file_name = ''.join(random.choices(
                 string.ascii_lowercase + string.digits, k=16)) + ".mp4"
-        location_of_video = "videos/" + \
+        new_file_location = "videos/" + \
             str(timing.project.uuid) + \
             "/assets/videos/1_final/" + str(file_name)
         
@@ -3389,7 +3389,7 @@ def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_locat
 
     elif animation_style == AnimationStyleType.INTERPOLATION.value:
 
-        clip = VideoFileClip(file_path)
+        clip = VideoFileClip(location_of_video)
         input_video_duration = clip.duration
         desired_duration = timing.clip_duration
         desired_speed_change = float(
