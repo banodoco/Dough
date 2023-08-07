@@ -190,22 +190,47 @@ class Timing(BaseModel):
 
         # if this is a newly created frame or assigned a new aux_frame_index (and not disabled)
         if (not self.id or self.old_aux_frame_index != self.aux_frame_index) and not self.is_disabled:
-            timing_list = Timing.objects.filter(project_id=self.project_id, \
-                                            aux_frame_index__gte=self.aux_frame_index, is_disabled=False).order_by('frame_number')
-            
             if not self.id:
                 # shifting aux_frame_index of all frames after this frame one forward
                 if Timing.objects.filter(project_id=self.project_id, aux_frame_index=self.aux_frame_index, is_disabled=False).exists():
+                    timing_list = Timing.objects.filter(project_id=self.project_id, \
+                                            aux_frame_index__gte=self.aux_frame_index, is_disabled=False)
                     timing_list.update(aux_frame_index=F('aux_frame_index') + 1)
             elif self.old_aux_frame_index != self.aux_frame_index:
-                # moving frames after the new index one forward
-                timing_list.filter(project_id=self.project_id, aux_frame_index__gte=self.aux_frame_index)\
-                    .update(aux_frame_index=F('aux_frame_index') + 1)
-                
-                # moving the frames between old and new index one step backwards
-                timing_list.filter(project_id=self.project_id, aux_frame_index__gt=self.old_aux_frame_index, \
-                                   aux_frame_index__lt=self.aux_frame_index, is_disabled=False)\
-                    .update(aux_frame_index=F('aux_frame_index') - 1)
+                if self.aux_frame_index >= self.old_aux_frame_index:
+                    timings_to_move = Timing.objects.filter(project_id=self.project_id, aux_frame_index__gt=self.old_aux_frame_index, \
+                                    aux_frame_index__lte=self.aux_frame_index, is_disabled=False)
+                    frame_time_list = [self.frame_time]
+                    for t in timings_to_move:
+                        frame_time_list.append(t.frame_time)
+                    # updating frame time
+                    for idx, t in enumerate(timings_to_move):
+                        Timing.objects.filter(uuid=t.uuid, is_disabled=False).update(frame_time=frame_time_list[idx])
+                    self.frame_time = frame_time_list[-1]
+
+                    # moving the frames between old and new index one step backwards
+                    timings_to_move.update(aux_frame_index=F('aux_frame_index') - 1)
+                else:
+                    timings_to_move = Timing.objects.filter(project_id=self.project_id, aux_frame_index__gte=self.aux_frame_index, \
+                                       aux_frame_index__lt=self.old_aux_frame_index, is_disabled=False)
+                    
+                    frame_time_list = [self.frame_time]
+                    for t in reversed(timings_to_move):
+                        frame_time_list.append(t.frame_time)
+                    # updating frame time
+                    frame_time_list.reverse()
+                    idx = 0
+                    self.frame_time = frame_time_list[idx]
+                    idx += 1
+                    for t in timings_to_move:
+                        Timing.objects.filter(uuid=t.uuid, is_disabled=False).update(frame_time=frame_time_list[idx])
+                        idx += 1
+                    # moving frames
+                    timings_to_move.update(aux_frame_index=F('aux_frame_index') + 1)
+                    
+                    
+                self.interpolated_video_id = None
+                self.timed_clip_id = None
                 
         super().save(*args, **kwargs)
 

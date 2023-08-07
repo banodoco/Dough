@@ -2237,61 +2237,63 @@ def move_frame(direction, timing_uuid):
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
 
-    current_primary_image = timing.primary_image
-    current_alternative_images = timing.alternative_images
-    current_source_image = timing.source_image
-
     if direction == "Up":
-        prev_timing = data_repo.get_prev_timing(timing.uuid)
-        previous_primary_image = prev_timing['primary_image']
-        previous_alternative_images = prev_timing['alternative_images']
-        previous_source_image = prev_timing['source_image']
+        if timing.aux_frame_index == 0:
+            return
+        
+        data_repo.update_specific_timing(timing.uuid, aux_frame_index=timing.aux_frame_index - 1)
+        # prev_timing = data_repo.get_prev_timing(timing.uuid)
+        # previous_primary_image = prev_timing.primary_image
+        # previous_alternative_images = prev_timing.alternative_images
+        # previous_source_image = prev_timing.source_image
 
-        data_repo.update_specific_timing(
-            prev_timing.uuid, primary_image_id=current_primary_image.uuid)
-        print("current_alternative_images= ", current_alternative_images)
-        data_repo.update_specific_timing(
-            prev_timing.uuid, alternative_images=str(current_alternative_images))
-        data_repo.update_specific_timing(
-            prev_timing.uuid, source_image_id=current_source_image.uuid)
-        data_repo.update_specific_timing(
-            prev_timing.uuid, interpolated_video=None)
-        data_repo.update_specific_timing(prev_timing.uuid, timed_clip_id=None)
+        # data_repo.update_specific_timing(
+        #     prev_timing.uuid, primary_image_id=current_primary_image.uuid)
+        # print("current_alternative_images= ", current_alternative_images)
+        # data_repo.update_specific_timing(
+        #     prev_timing.uuid, alternative_images=str(current_alternative_images))
+        # data_repo.update_specific_timing(
+        #     prev_timing.uuid, source_image_id=current_source_image.uuid)
+        # data_repo.update_specific_timing(
+        #     prev_timing.uuid, interpolated_video=None)
+        # data_repo.update_specific_timing(prev_timing.uuid, timed_clip_id=None)
 
-        data_repo.update_specific_timing(
-            timing.uuid, primary_image_id=previous_primary_image.uuid)
-        data_repo.update_specific_timing(
-            timing.uuid, alternative_images=str(previous_alternative_images))
-        data_repo.update_specific_timing(
-            timing.uuid, source_image_id=previous_source_image.uuid)
+        # data_repo.update_specific_timing(
+        #     timing.uuid, primary_image_id=previous_primary_image.uuid)
+        # data_repo.update_specific_timing(
+        #     timing.uuid, alternative_images=str(previous_alternative_images))
+        # data_repo.update_specific_timing(
+        #     timing.uuid, source_image_id=previous_source_image.uuid)
 
     elif direction == "Down":
-        next_primary_image = data_repo.get_next_timing(
-            timing.uuid).primary_image
-        next_alternative_images = data_repo.get_next_timing(
-            timing.uuid).alternative_images
-        next_source_image = data_repo.get_next_timing(timing.uuid).source_image
+        timing_list = data_repo.get_timing_list_from_project(project_uuid=timing.project.uuid)
+        if timing.aux_frame_index == len(timing_list) - 1:
+            return
+        
+        data_repo.update_specific_timing(timing.uuid, aux_frame_index=timing.aux_frame_index + 1)
+        # next_primary_image = data_repo.get_next_timing(
+        #     timing.uuid).primary_image
+        # next_alternative_images = data_repo.get_next_timing(
+        #     timing.uuid).alternative_images
+        # next_source_image = data_repo.get_next_timing(timing.uuid).source_image
 
-        data_repo.update_specific_timing(
-            data_repo.get_next_timing(timing.uuid).uuid, primary_image_id=current_primary_image.uuid)
-        data_repo.update_specific_timing(
-            data_repo.get_next_timing(timing.uuid).uuid, alternative_images=str(current_alternative_images))
-        data_repo.update_specific_timing(
-            data_repo.get_next_timing(timing.uuid).uuid, source_image_id=current_source_image.uuid)
-        data_repo.update_specific_timing(
-            data_repo.get_next_timing(timing.uuid).uuid, interpolated_video=None)
-        data_repo.update_specific_timing(
-            data_repo.get_next_timing(timing.uuid).uuid, timed_clip_id=None)
+        # data_repo.update_specific_timing(
+        #     data_repo.get_next_timing(timing.uuid).uuid, primary_image_id=current_primary_image.uuid)
+        # data_repo.update_specific_timing(
+        #     data_repo.get_next_timing(timing.uuid).uuid, alternative_images=str(current_alternative_images))
+        # data_repo.update_specific_timing(
+        #     data_repo.get_next_timing(timing.uuid).uuid, source_image_id=current_source_image.uuid)
+        # data_repo.update_specific_timing(
+        #     data_repo.get_next_timing(timing.uuid).uuid, interpolated_video=None)
+        # data_repo.update_specific_timing(
+        #     data_repo.get_next_timing(timing.uuid).uuid, timed_clip_id=None)
 
-        data_repo.update_specific_timing(
-            timing.uuid, primary_image_id=next_primary_image.uuid)
-        data_repo.update_specific_timing(
-            timing.uuid, alternative_images=str(next_alternative_images))
-        data_repo.update_specific_timing(
-            timing.uuid, source_image_id=next_source_image.uuid)
-
-    data_repo.update_specific_timing(timing.uuid, interpolated_video=None)
-    data_repo.update_specific_timing(timing.uuid, timed_clip_id=None)
+        # data_repo.update_specific_timing(
+        #     timing.uuid, primary_image_id=next_primary_image.uuid)
+        # data_repo.update_specific_timing(
+        #     timing.uuid, alternative_images=str(next_alternative_images))
+        # data_repo.update_specific_timing(
+        #     timing.uuid, source_image_id=next_source_image.uuid)
 
 
 # def get_timing_details(video_name):
@@ -2328,23 +2330,19 @@ def delete_frame(timing_uuid):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
-
-    index_of_current_item = timing.aux_frame_index
     next_timing = data_repo.get_next_timing(timing_uuid)
+    timing_details = data_repo.get_timing_list_from_project(project_uuid=timing.project.uuid)
 
     if next_timing:
         data_repo.update_specific_timing(
-            next_timing.uuid, interpolated_video_id=None)
-        if index_of_current_item < len(timing_details) - 1:
-            data_repo.update_specific_timing(
                 next_timing.uuid, interpolated_video_id=None)
 
-        data_repo.update_specific_timing(next_timing.uuid, timed_clip_id=None)
-        if index_of_current_item < len(timing_details) - 1:
-            data_repo.update_specific_timing(
+        data_repo.update_specific_timing(
                 next_timing.uuid, timed_clip_id=None)
+
+    if timing.aux_frame_index == len(timing_details) - 1:
+        st.session_state['current_frame_index'] = max(0, st.session_state['current_frame_index'] - 1)
+        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
 
     data_repo.delete_timing_from_uuid(timing.uuid)
 

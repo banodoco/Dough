@@ -1,6 +1,7 @@
 import time
 import streamlit as st
 import os
+import math
 from moviepy.editor import *
 
 from ui_components.components.app_settings_page import app_settings_page
@@ -145,6 +146,43 @@ def setup_app_ui():
 
                     st.session_state['page'] = option_menu(None, pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
                                                             "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
+
+                    # TODO: CORRECT-CODE
+                    view_types = ["Individual View", "List View"]
+
+                    if 'frame_styling_view_type_index' not in st.session_state:
+                        st.session_state['frame_styling_view_type_index'] = 0
+                        st.session_state['frame_styling_view_type'] = "Individual View"
+                        st.session_state['change_view_type'] = False
+
+                    if 'change_view_type' not in st.session_state:
+                        st.session_state['change_view_type'] = False
+
+                    if st.session_state['change_view_type'] == True:
+                        st.session_state['frame_styling_view_type_index'] = view_types.index(
+                            st.session_state['frame_styling_view_type'])
+                    else:
+                        st.session_state['frame_styling_view_type_index'] = None
+
+                    def on_change_view_type(key):
+                        selection = st.session_state[key]
+                        if selection == "List View":
+                            st.session_state['index_of_current_page'] = math.floor(
+                                st.session_state['current_frame_index'] / 10)
+                            
+                    # Option menu
+                    st.session_state['frame_styling_view_type'] = option_menu(
+                        None,
+                        view_types,
+                        icons=['aspect-ratio', 'bookshelf', "hourglass", 'stopwatch'],
+                        menu_icon="cast",
+                        orientation="horizontal",
+                        key="section-selecto1r",
+                        styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#eee"},
+                                "nav-link-selected": {"background-color": "green"}},
+                        manual_select=st.session_state['frame_styling_view_type_index'],
+                        on_change=on_change_view_type 
+                    )
 
                 frame_styling_page(
                     mainheader2, st.session_state["project_uuid"])

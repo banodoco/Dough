@@ -67,28 +67,10 @@ def frame_styling_page(mainheader2, project_uuid: str):
             st.session_state['frame_styling_view_type'] = "Individual View"
             st.session_state['frame_styling_view_type_index'] = 0
 
-            # TODO: CORRECT-CODE
-            view_types = ["Individual View", "List View"]
 
-            if 'frame_styling_view_type_index' not in st.session_state:
-                st.session_state['frame_styling_view_type_index'] = 0
-                st.session_state['frame_styling_view_type'] = "Individual View"
-                st.session_state['change_view_type'] = False
-
-            if 'change_view_type' not in st.session_state:
-                st.session_state['change_view_type'] = False
-
-            if st.session_state['change_view_type'] == True:
-                st.session_state['frame_styling_view_type_index'] = view_types.index(
-                    st.session_state['frame_styling_view_type'])
-            else:
-                st.session_state['frame_styling_view_type_index'] = None
-
-            def on_change_view_type(key):
-                selection = st.session_state[key]
-                if selection == "List View":
-                    st.session_state['index_of_current_page'] = math.floor(
-                        st.session_state['current_frame_index'] / 10)
+        if st.session_state['change_view_type'] == True:  
+            st.session_state['change_view_type'] = False
+            # round down st.session_state['which_image']to nearest 10
 
         if timing_details == []:
             st.info(
@@ -1007,11 +989,11 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     with image1:
 
                         display_image(
-                            idx=i, stage=WorkflowStageType.SOURCE.value, clickable=False, timing_details=timing_details)
+                            timing_uuid=timing_details[i].uuid, stage=WorkflowStageType.SOURCE.value, clickable=False)
 
                     with image2:
                         display_image(
-                            idx=i, stage=WorkflowStageType.STYLED.value, clickable=False, timing_details=timing_details)
+                            timing_uuid=timing_details[i].uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
 
                     with image3:
                         time1, time2 = st.columns([1, 1])
@@ -1046,6 +1028,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                         if st.button(f"Jump to single frame view for #{index_of_current_item}"):
                             st.session_state['current_frame_index'] = index_of_current_item
+                            st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
                             st.session_state['frame_styling_view_type'] = "Individual View"
                             st.session_state['change_view_type'] = True
                             st.experimental_rerun()
@@ -1161,7 +1144,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
             if len(timing_details) == 0:
                 index_of_current_item = 0
             else:
-                index_of_current_item = st.session_state['current_frame_index']
+                index_of_current_item = min( len(timing_details) - 1, st.session_state['current_frame_index'])
 
             timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
@@ -1195,7 +1178,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
             if also_make_this_the_primary_image == "Yes":
                 promote_image_variant(timing_details[index_of_current_item + 1].uuid, 0)
             if inherit_styling_settings == "Yes":
-                clone_styling_settings(which_number_for_starting_image, timing_details[index_of_current_item + 1].uuid)
+                clone_styling_settings(index_of_current_item, timing_details[index_of_current_item + 1].uuid)
 
             data_repo.update_specific_timing(timing_details[index_of_current_item + 1].uuid, \
                                                 animation_style=project_settings.default_animation_style)
@@ -1205,7 +1188,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 st.session_state['current_frame_index'] = 0
                 st.session_state['current_frame_uuid'] = timing_details[0].uuid
             else:
-                st.session_state['current_frame_index'] = st.session_state['current_frame_index'] + 1
+                st.session_state['current_frame_index'] = min( len(timing_details) - 1, st.session_state['current_frame_index'] + 1)
                 st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
 
             st.session_state['page'] = "Guidance"
