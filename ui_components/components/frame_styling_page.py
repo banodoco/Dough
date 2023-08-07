@@ -948,7 +948,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 st.markdown("---")
 
                 st.session_state['current_page'] = st.radio("Select Page:", options=range(
-                    0, num_pages+1), horizontal=True, index=st.session_state['index_of_current_page'], key="page_selection_radio")
+                    0, num_pages), horizontal=True, index=st.session_state['index_of_current_page'], key="page_selection_radio")
 
                 if st.session_state['current_page'] != st.session_state['index_of_current_page']:
                     st.session_state['index_of_current_page'] = st.session_state['current_page']
