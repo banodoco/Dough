@@ -1111,7 +1111,7 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
                                     background_image = timing_details[which_image_to_use].source_image.location
 
                                 elif which_stage_to_use == WorkflowStageType.STYLED.value:
-                                    background_image = timing_details[which_image_to_use].primary_image.location
+                                    background_image = timing_details[which_image_to_use].primary_image_location
                             with btn2:
                                 st.image(background_image,
                                          use_column_width=True)
@@ -4081,7 +4081,7 @@ def create_gif_preview(project_uuid):
     for i in timing_details:
         # make index_of_current_item the index of the current item
         index_of_current_item = timing_details.index(i)
-        source_image = timing_details[index_of_current_item].primary_image.location
+        source_image = timing_details[index_of_current_item].primary_image_location
         list_of_images.append(source_image)
 
     frames = []

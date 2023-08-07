@@ -350,8 +350,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                                 existing_frame_timing = data_repo.get_timing_from_frame_number(
                                     project_uuid, which_frame)
-                                if existing_frame_timing and existing_frame_timing.primary_image.location:
-                                    image_path = existing_frame_timing.primary_image.location
+                                if existing_frame_timing and existing_frame_timing.primary_image_location:
+                                    image_path = existing_frame_timing.primary_image_location
                                     st.image(image_path)
                                 else:
                                     st.error("No Image Found")
@@ -464,7 +464,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                     else:
                                         st.error("No Source Image Found")
                                 elif which_stage == "Styled Image":
-                                    selected_image = current_timing.primary_image.location
+                                    selected_image = current_timing.primary_image_location
                                     if selected_image != "":
                                         st.image(selected_image)
                                     else:
@@ -474,7 +474,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                     file_data = {
                                         "name": str(uuid.uuid4()) + ".png",
                                         "type": InternalFileType.IMAGE.value,
-                                        "hosted_url": current_timing.primary_image.location
+                                        "hosted_url": current_timing.primary_image_location
                                     }
                                     source_image = data_repo.create_file(
                                         **file_data)
@@ -517,9 +517,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             frame1, frame2, frame3 = st.columns([1, 1, 2])
 
                             with frame1:
-                                if timing_details[i].primary_image.location:
+                                if timing_details[i].primary_image_location:
                                     st.image(
-                                        timing_details[i].primary_image.location)
+                                        timing_details[i].primary_image_location)
                             with frame2:
                                 if st.session_state['page'] != "Motion":
                                     single_frame_time_changer(timing_details[i].uuid)
@@ -716,7 +716,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                     if variants != [] and variants != None and variants != "":
 
-                        primary_variant_location = timing_details[st.session_state['current_frame_index']].primary_image.location
+                        primary_variant_location = timing_details[st.session_state['current_frame_index']].primary_image_location
 
                     if st.session_state['show_comparison'] == "Other Variants":
 
@@ -754,7 +754,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             project_settings = data_repo.get_project_setting(project_uuid)
                             st.success("Main variant")
                             if len(timing_details[st.session_state['current_frame_index']].alternative_images_list):
-                                st.image(timing_details[st.session_state['current_frame_index']].primary_image.location,
+                                st.image(timing_details[st.session_state['current_frame_index']].primary_image_location,
                                          use_column_width=True)
                             else:
                                 st.error("No variants found for this frame")
@@ -781,7 +781,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                     elif st.session_state['show_comparison'] == "Source Frame":
                         if timing_details[st.session_state['current_frame_index']].primary_image:
-                            img2 = timing_details[st.session_state['current_frame_index']].primary_image.location
+                            img2 = timing_details[st.session_state['current_frame_index']].primary_image_location
                         else:
                             img2 = 'https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'
                         
@@ -1096,7 +1096,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     else:
                         selected_image = ""
                 elif which_stage_for_starting_image == "Styled Image":
-                    selected_image = timing_details[which_number_for_starting_image].primary_image.location
+                    selected_image = timing_details[which_number_for_starting_image].primary_image_location
             elif source_of_starting_image == "Uploaded image":
                 uploaded_image = st.file_uploader(
                     "Upload an image", type=["png", "jpg", "jpeg"])
