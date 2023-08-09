@@ -3,6 +3,7 @@ import streamlit as st
 import os
 import math
 from moviepy.editor import *
+from ui_components.common_methods import delete_frame, display_image, single_frame_time_changer
 
 from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.batch_action_page import batch_action_page
@@ -11,11 +12,10 @@ from ui_components.components.frame_styling_page import frame_styling_page
 from ui_components.components.new_project_page import new_project_page
 from ui_components.components.project_settings_page import project_settings_page
 from ui_components.components.video_rendering_page import video_rendering_page
-# from ui_components.components.motion_page import guidance_page
-# from ui_components.components.motion_page import styling_page
-# from ui_components.components.motion_page import motion_page
 from streamlit_option_menu import option_menu
+from ui_components.constants import WorkflowStageType
 from ui_components.models import InternalAppSettingObject
+from ui_components.widgets.frame_selector import frame_selector_widget
 from utils.common_utils import create_working_assets, get_current_user_uuid, reset_project_state
 import utils.local_storage.local_storage as local_storage
 
@@ -183,6 +183,9 @@ def setup_app_ui():
                         manual_select=st.session_state['frame_styling_view_type_index'],
                         on_change=on_change_view_type 
                     )
+
+                    frame_selector_widget()
+            
 
                 frame_styling_page(
                     mainheader2, st.session_state["project_uuid"])
