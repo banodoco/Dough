@@ -118,8 +118,7 @@ def new_project_page():
             reset_project_state()
 
             st.session_state["project_uuid"] = new_project.uuid
-            project_list = data_repo.get_all_project_list(user_id=get_current_user_uuid())
-            st.write(project_list)
+            project_list = data_repo.get_all_project_list(user_id=get_current_user_uuid())            
             st.session_state["index_of_project_name"] = len(project_list) - 1
             st.session_state["section"] = "Open Project"
             st.session_state['change_section'] = True 

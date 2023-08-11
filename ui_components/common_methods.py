@@ -788,36 +788,15 @@ def manual_cropping_element(stage, timing_uuid):
                     st.experimental_rerun()
 
             with sub_options_2:
+                st.write("")
+                st.write("")
                 if st.button("Reset image"):
                     st.session_state['degree'] = 0
                     get_working_image()
                     st.session_state['degrees_rotated_to'] = 0
                     st.experimental_rerun()
 
-        with options2:
-            if st.button("Flip horizontally", key="cropbtn1"):
-                st.session_state['working_image'] = st.session_state['working_image'].transpose(
-                    Image.FLIP_LEFT_RIGHT)
-
-                # save
-            if st.button("Flip vertically", key="cropbtn2"):
-                st.session_state['working_image'] = st.session_state['working_image'].transpose(
-                    Image.FLIP_TOP_BOTTOM)
-
-        with option3:
-            brightness_factor = st.slider("Brightness", 0.0, 2.0, 1.0)
-            if brightness_factor != 1.0:
-                enhancer = ImageEnhance.Brightness(
-                    st.session_state['working_image'])
-                st.session_state['working_image'] = enhancer.enhance(
-                    brightness_factor)
-        with option4:
-            contrast_factor = st.slider("Contrast", 0.0, 2.0, 1.0)
-            if contrast_factor != 1.0:
-                enhancer = ImageEnhance.Contrast(
-                    st.session_state['working_image'])
-                st.session_state['working_image'] = enhancer.enhance(
-                    contrast_factor)
+        
 
         project_settings: InternalProjectObject = data_repo.get_project_setting(
             timing.project.uuid)

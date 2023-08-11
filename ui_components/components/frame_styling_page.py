@@ -104,6 +104,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     with crop1:
                         how_to_guide = st.radio("How to guide:", guidance_types, key="how_to_guide",
                                                 horizontal=True, index=st.session_state['how_to_guide_index'])
+                    
                     if guidance_types.index(how_to_guide) != st.session_state['how_to_guide_index']:
                         st.session_state['how_to_guide_index'] = guidance_types.index(
                             how_to_guide)
@@ -393,8 +394,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             st.experimental_rerun()
 
                     elif how_to_guide == GuidanceType.IMAGE.value:
-                        with crop2:
-                            how_to_crop = st_memory.radio("How to crop:", options=[
+                        
+                        how_to_crop = st_memory.radio("How to crop:", options=[
                                                           "Manual Cropping", "Precision Cropping"], project_settings=project_settings, key="how_to_crop")
 
                         if how_to_crop == "Manual Cropping":
@@ -863,7 +864,24 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                             timing_details[which_frame_to_copy_from].model.name)
 
                     with st.expander("Crop, Move & Rotate Image", expanded=False):
-                        precision_cropping_element(WorkflowStageType.STYLED.value, project_uuid)
+                        
+                        selector1, selector2, selector3 = st.columns([1, 1, 1])
+                        with selector1:
+                            which_stage = st.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], key="which_stage", horizontal=True)
+                        with selector2:
+                            how_to_crop = st_memory.radio("How to crop:", options=["Precision Cropping","Manual Cropping"], project_settings=project_settings, key="how_to_crop",horizontal=True)
+                                                
+                        if which_stage == "Styled Key Frame":
+                            stage_name = WorkflowStageType.STYLED.value
+                        elif which_stage == "Unedited Key Frame":
+                            stage_name = WorkflowStageType.SOURCE.value
+                                                
+                        if how_to_crop == "Manual Cropping":
+                            manual_cropping_element(WorkflowStageType.SOURCE.value, st.session_state['current_frame_uuid'])
+                        elif how_to_crop == "Precision Cropping":
+                            precision_cropping_element(WorkflowStageType.SOURCE.value, project_uuid)
+                        
+                        
 
                     with st.expander("Inpainting, Background Removal & More", expanded=False):
                         ai_frame_editing_element(st.session_state['current_frame_uuid'], WorkflowStageType.STYLED.value)
@@ -871,7 +889,12 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     with st.expander("Prompt Finder"):
                         prompt_finder_element(project_uuid)
 
+
+
                     with st.expander("Replace Frame"):
+
+                        which_frame_to_replace = st.radio("Which stage to replace?", options=[
+                                                                "Styled Key Frame", "Unedited Key Frame"], key="which_stage_to_replace", horizontal=True)
 
                         replace_with = st.radio("Replace with:", [
                                                 "Uploaded Frame", "Previous Frame"], horizontal=True, key="replace_with_what")
@@ -898,32 +921,25 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             with replace2:
                                 st.image(selected_image.location, width=300)
                         elif replace_with == "Uploaded Frame":
-                            with replace1:
-                                replacement_frame = st.file_uploader("Upload a replacement frame here", type=[
+                            
+                            replacement_frame = st.file_uploader("Upload a replacement frame here", type=[
                                                                     "png", "jpeg"], accept_multiple_files=False, key="replacement_frame_upload")
-                            with replace2:
-                                st.write("")
-                                st.write("")
-                                st.write("")
-                                st.write("")
-                                st.write("")
-                                st.write("")
-                                st.write("")
-                                if st.button("Replace frame", disabled=False):
-                                    images_for_model = []
-                                    timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
+                                                        
+                            if st.button("Replace frame", disabled=False):
+                                images_for_model = []
+                                timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
 
-                                    if replacement_frame:
-                                        saved_file = save_uploaded_image(replacement_frame, timing.project.uuid, st.session_state['current_frame_uuid'], "styled")
-                                        if saved_file:
-                                            number_of_image_variants = add_image_variant(saved_file.uuid, st.session_state['current_frame_uuid'])
-                                            promote_image_variant(
-                                                st.session_state['current_frame_uuid'], number_of_image_variants - 1)
+                                if replacement_frame:
+                                    saved_file = save_uploaded_image(replacement_frame, timing.project.uuid, st.session_state['current_frame_uuid'], "styled")
+                                    if saved_file:
+                                        number_of_image_variants = add_image_variant(saved_file.uuid, st.session_state['current_frame_uuid'])
+                                        promote_image_variant(
+                                            st.session_state['current_frame_uuid'], number_of_image_variants - 1)
 
-                                            # delete the uploaded file
-                                            st.success("Replaced")
-                                            time.sleep(1)
-                                            st.experimental_rerun()
+                                        # delete the uploaded file
+                                        st.success("Replaced")
+                                        time.sleep(1)
+                                        st.experimental_rerun()
 
 
 
