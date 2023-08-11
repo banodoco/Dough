@@ -504,7 +504,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         timing_details[i].primary_image_location)
                             with frame2:
                                 if st.session_state['page'] != "Motion":
-                                    single_frame_time_changer(timing_details[i].uuid)
+                                    single_frame_time_changer(timing_details[i].uuid, 'motion')
                                 st.caption(
                                     f"Duration: {calculate_desired_duration_of_individual_clip(timing_details[i].uuid):.2f} secs")
 
@@ -938,6 +938,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
             elif st.session_state['frame_styling_view_type'] == "List View":
                 if 'current_page' not in st.session_state:
                     st.session_state['current_page'] = 1
+                
+                if 'index_of_current_page' not in st.session_state:
                     st.session_state['index_of_current_page'] = 1
 
                 # Calculate number of pages
@@ -999,7 +1001,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         time1, time2 = st.columns([1, 1])
                         with time1:
 
-                            single_frame_time_changer(timing_details[i].uuid)
+                            single_frame_time_changer(timing_details[i].uuid, 'sidebar')
 
                             st.info(
                                 f"Duration: {calculate_desired_duration_of_individual_clip(timing_details[i].uuid):.2f} secs")
