@@ -15,6 +15,7 @@ def frame_selector_widget():
             st.session_state['prev_frame_index'] = 0
 
         st.session_state['current_frame_index'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(timing_details)-1, value=st.session_state['prev_frame_index'], step=1, key="which_image_selector")
+        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
         if st.session_state['prev_frame_index'] != st.session_state['current_frame_index']:
             st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
             st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
@@ -25,7 +26,7 @@ def frame_selector_widget():
             st.experimental_rerun()       
 
     with time2:
-        single_frame_time_changer(st.session_state['current_frame_uuid'])
+        single_frame_time_changer(st.session_state['current_frame_uuid'], 'navbar')
 
     with st.expander("Notes:"):
             

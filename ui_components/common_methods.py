@@ -1351,7 +1351,7 @@ def create_or_get_single_preview_video(timing_uuid):
     return timing.timed_clip
 
 
-def single_frame_time_changer(timing_uuid):
+def single_frame_time_changer(timing_uuid, src):
     data_repo = DataRepo()
 
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
@@ -1360,7 +1360,7 @@ def single_frame_time_changer(timing_uuid):
         timing.project.uuid)
 
     frame_time = st.number_input("Frame time (secs):", min_value=0.0, max_value=100.0,
-                                 value=timing.frame_time, step=0.1, key=f"frame_time_{timing.aux_frame_index}")
+                                 value=timing.frame_time, step=0.1, key=f"frame_time_{timing.aux_frame_index}_{src}")
 
     if frame_time != timing.frame_time:
         data_repo.update_specific_timing(timing_uuid, frame_time=frame_time)
