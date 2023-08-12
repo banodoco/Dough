@@ -134,7 +134,7 @@ def setup_app_ui():
 
                 with st.sidebar:
 
-                    pages = ["Guidance", "Styling", "Motion"]
+                    pages = ["Styling", "Motion"]
 
                     if 'page' not in st.session_state:
                         st.session_state["page"] = pages[0]

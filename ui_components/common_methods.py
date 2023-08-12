@@ -96,7 +96,9 @@ def clone_styling_settings(source_frame_number, target_frame_uuid):
 
 
 def prompt_finder_element(project_uuid):
-    uploaded_file = st.file_uploader("What image would you like to find the prompt for?", type=[
+    col1, col2 = st.columns(2)
+    with col1:
+        uploaded_file = st.file_uploader("What image would you like to find the prompt for?", type=[
                                      'png', 'jpg', 'jpeg'], key="prompt_file")
     which_model = st.radio("Which model would you like to get a prompt for?", ["Stable Diffusion 1.5", "Stable Diffusion 2"], key="which_model",
                            help="This is to know which model we should optimize the prompt for. 1.5 is usually best if you're in doubt", horizontal=True)
@@ -158,6 +160,8 @@ def prompt_finder_element(project_uuid):
 
 # TODO: image format is assumed to be PNG, change this later
 def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project_uuid) -> InternalFileObject:
+
+    
     # Check if img is a PIL image
     if isinstance(img, Image.Image):
         pass
@@ -208,9 +212,21 @@ def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project
 def save_uploaded_image(uploaded_file, project_uuid, frame_uuid, save_type):
     data_repo = DataRepo()
 
+    print(uploaded_file)
+    
+    # Check if uploaded_file is already an opened PIL Image
+    if isinstance(uploaded_file, Image.Image):
+        image_to_save = uploaded_file
+    else:
+        try:
+            image_to_save = Image.open(uploaded_file)
+        except Exception as e:
+            print(f"Failed to open image due to: {str(e)}")
+            return None
+
     try:
         # Save new image
-        saved_image = save_new_image(Image.open(uploaded_file), project_uuid)
+        saved_image = save_new_image(image_to_save, project_uuid)
 
         # Update records based on save_type
         if save_type == "source":
@@ -227,127 +243,6 @@ def save_uploaded_image(uploaded_file, project_uuid, frame_uuid, save_type):
 
 
 
-
-
-def resize_and_rotate_element(stage, project_uuid):
-    data_repo = DataRepo()
-    project: InternalProjectObject = data_repo.get_project_from_uuid(
-        project_uuid)
-    timing_details: InternalFrameTimingObject = data_repo.get_timing_list_from_project(
-        project.uuid)
-
-    if "rotated_image" not in st.session_state:
-        st.session_state['rotated_image'] = ""
-
-    with st.expander("Zoom Image"):
-        select1, select2 = st.columns([2, 1])
-        with select1:
-            rotation_angle = st.number_input(
-                "Rotate image by: ", 0.0, 360.0, 0.0)
-            zoom_value = st.number_input("Zoom image by: ", 0.1, 5.0, 1.0)
-        with select2:
-            fill_with = st.radio("Fill blank space with: ", ["Blur", None])
-        if st.button("Rotate Image"):
-            if stage == WorkflowStageType.SOURCE.value:
-                res = data_repo.get_timing_from_uuid(
-                    st.session_state['current_frame_uuid'])
-                input_image = res.source_image
-            elif stage == WorkflowStageType.STYLED.value:
-                current_frame = data_repo.get_timing_from_uuid(
-                    st.session_state['current_frame_uuid'])
-                input_image = current_frame.primary_image
-
-            if input_image:
-                # unique_filename = str(uuid.uuid4())
-                # temp_local_location = f'videos/temp/{unique_filename}.png'
-                # if rotation_angle != 0:
-                st.session_state['rotated_image'] = rotate_image(
-                    input_image.location, rotation_angle)
-                # st.session_state['rotated_image'].save(temp_local_location)
-
-                if zoom_value != 1.0:
-                    st.session_state['rotated_image'] = zoom_image(st.session_state['rotated_image'], zoom_value, fill_with)
-
-        if st.session_state['rotated_image'] != "":
-            st.image(st.session_state['rotated_image'],
-                     caption="Rotated image", width=300)
-
-            btn1, btn2 = st.columns(2)
-            with btn1:
-                if st.button("Save image", type="primary"):
-                    file_name = str(uuid.uuid4()) + ".png"
-
-                    if stage == WorkflowStageType.SOURCE.value:
-                        time.sleep(1)
-                        save_location = f"videos/{project.uuid}/assets/frames/1_selected/{file_name}"
-                        hosted_url = save_or_host_file(st.session_state['rotated_image'], save_location)
-
-                        current_frame = data_repo.get_timing_from_uuid(
-                            st.session_state['current_frame_uuid'])
-                        source_image = current_frame.source_image
-
-                        # if source image is already present then updating it
-                        if source_image:
-                            image_data = {
-                                "file_uuid" : source_image.uuid,
-                            }
-
-                            if hosted_url:
-                                image_data.update({'hosted_url': hosted_url})
-                            else:
-                                image_data.update({'local_path': save_location})
-                                
-                            data_repo.update_file(**image_data)
-                        # or else creating a new image
-                        else:
-                            file_data = {
-                                "name": str(uuid.uuid4()) + ".png",
-                                "type": InternalFileType.IMAGE.value,
-                                "project_id": project_uuid
-                            }
-
-                            if hosted_url:
-                                image_data.update({'hosted_url': hosted_url})
-                            else:
-                                image_data.update({'local_path': save_location})
-
-                            file: InternalFileObject = data_repo.create_file(
-                                **file_data)
-                            data_repo.update_specific_timing(
-                                st.session_state['current_frame_uuid'], source_image_id=file.uuid)
-
-                        st.session_state['rotated_image'] = ""
-                        st.experimental_rerun()
-
-                    elif stage == WorkflowStageType.STYLED.value:
-                        save_location = f"videos/{project.uuid}/assets/frames/2_character_pipeline_completed/{file_name}"
-                        hosted_url = save_or_host_file(st.session_state['rotated_image'], save_location)
-
-                        file_data = {
-                            "name": str(uuid.uuid4()) + ".png",
-                            "type": InternalFileType.IMAGE.value,
-                            "project_id": project_uuid
-                        }
-
-                        if hosted_url:
-                            image_data.update({'hosted_url': hosted_url})
-                        else:
-                            image_data.update({'local_path': save_location})
-                        
-                        file: InternalFileObject = data_repo.create_file(
-                            **file_data)
-
-                        number_of_image_variants = add_image_variant(
-                            file.uuid, st.session_state['current_frame_uuid'])
-                        promote_image_variant(
-                            st.session_state['current_frame_uuid'], number_of_image_variants - 1)
-                        st.session_state['rotated_image'] = ""
-                        st.experimental_rerun()
-
-            with btn2:
-                if st.button("Clear Current Image"):
-                    st.session_state['rotated_image'] = ""
-                    st.experimental_rerun()
 
 
 def create_individual_clip(timing_uuid):
@@ -621,6 +516,38 @@ def fetch_image_by_stage(project_uuid, stage):
         return None
 
 
+def zoom_inputs(project_settings, position='in-frame', horizontal=False):
+    
+    if horizontal:
+        col1, col2, col3, col4 = st.columns(4)
+    else:
+        col1 = col2 = col3 = col4 = st
+
+    zoom_level_input = col1.number_input(
+        "Zoom Level (%)", min_value=10, max_value=1000, step=10, key=f"zoom_level_input_key_{position}", value=st.session_state.get('zoom_level_input', 100))
+    
+    rotation_angle_input = col2.number_input(
+        "Rotation Angle", min_value=-360, max_value=360, step=5, key=f"rotation_angle_input_key_{position}", value=st.session_state.get('rotation_angle_input', 0))
+    
+    x_shift = col3.number_input(
+        "Shift Left/Right", min_value=-1000, max_value=1000, step=5, key=f"x_shift_key_{position}", value=st.session_state.get('x_shift', 0))
+    
+    y_shift = col4.number_input(
+        "Shift Up/Down", min_value=-1000, max_value=1000, step=5, key=f"y_shift_key_{position}", value=st.session_state.get('y_shift', 0))
+
+    # Assign values to st.session_state
+    st.session_state['zoom_level_input'] = zoom_level_input
+    st.session_state['rotation_angle_input'] = rotation_angle_input
+    st.session_state['x_shift'] = x_shift
+    st.session_state['y_shift'] = y_shift
+
+
+
+
+
+
+
+
 def save_zoomed_image(image, timing_uuid, stage, promote=False):
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
@@ -682,23 +609,25 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
     }
     data_repo.update_specific_timing(timing_uuid, **timing_update_data)
 
+def reset_zoom_element():
+    st.session_state['zoom_level_input_key'] = 100
+    st.session_state['rotation_angle_input_key'] = 0
+    st.session_state['x_shift_key'] = 0
+    st.session_state['y_shift_key'] = 0
+    st.session_state['zoom_level_input'] = 100
+    st.session_state['rotation_angle_input'] = 0
+    st.session_state['x_shift'] = 0
+    st.session_state['y_shift'] = 0
+    st.experimental_rerun()
+
+
 
 def precision_cropping_element(stage, project_uuid):
     data_repo = DataRepo()
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         project_uuid)
 
-    def reset_zoom_element():
-        st.session_state['zoom_level_input_key'] = 100
-        st.session_state['rotation_angle_input_key'] = 0
-        st.session_state['x_shift_key'] = 0
-        st.session_state['y_shift_key'] = 0
-        st.session_state['zoom_level_input'] = 100
-        st.session_state['rotation_angle_input'] = 0
-        st.session_state['x_shift'] = 0
-        st.session_state['y_shift'] = 0
-        st.experimental_rerun()
-
+    
     input_image = fetch_image_by_stage(project_uuid, stage)
 
     # TODO: CORRECT-CODE check if this code works
@@ -716,16 +645,9 @@ def precision_cropping_element(stage, project_uuid):
 
         if st.button("Reset Cropping"):
             reset_zoom_element()
-
-        st.session_state['zoom_level_input'] = st_memory.number_input(
-            "Zoom Level (%)", min_value=10, max_value=1000, step=10, key="zoom_level_input_key", default_value=100, project_settings=project_settings)
-        st.session_state['rotation_angle_input'] = st_memory.number_input(
-            "Rotation Angle", min_value=-360, max_value=360, step=5, key="rotation_angle_input_key", default_value=0, project_settings=project_settings)
-        st.session_state['x_shift'] = st_memory.number_input("Shift Left/Right", min_value=-1000, max_value=1000,
-                                                             step=5, key="x_shift_key", default_value=0, project_settings=project_settings)
-        st.session_state['y_shift'] = st_memory.number_input(
-            "Shift Up/Down", min_value=-1000, max_value=1000, step=5, key="y_shift_key", default_value=0, project_settings=project_settings)
-
+        
+        
+        zoom_inputs(project_settings)
         st.caption("Input Image:")
         st.image(input_image, caption="Input Image", width=300)
 
@@ -1597,6 +1519,7 @@ def display_image(timing_uuid, stage=None, clickable=False):
 
 
 def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.value):
+    
     data_repo = DataRepo()
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
@@ -1612,6 +1535,7 @@ def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.valu
 
             if prev_2_timing:
                 display_image(prev_2_timing.uuid, stage=stage, clickable=True)
+                st.info(f"#{current_timing.aux_frame_index}")
 
     with header2:
         if current_timing.aux_frame_index - 1 >= 0:
@@ -1619,18 +1543,21 @@ def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.valu
                 current_timing.aux_frame_index - 1)
             if prev_timing:
                 display_image(prev_timing.uuid, stage=stage, clickable=True)
+                st.info(f"#{current_timing.aux_frame_index}")
 
     with header3:
+        
         timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
         display_image(timing.uuid,
                       stage=stage, clickable=True)
-
+        st.success(f"#{current_timing.aux_frame_index}")
     with header4:
         if current_timing.aux_frame_index + 1 <= len(timing_details):
             next_timing = data_repo.get_timing_from_frame_number(project_uuid,
                 current_timing.aux_frame_index + 1)
             if next_timing:
                 display_image(next_timing.uuid, stage=stage, clickable=True)
+                st.info(f"#{current_timing.aux_frame_index}")
 
     with header5:
         if current_timing.aux_frame_index + 2 <= len(timing_details):
@@ -1638,8 +1565,8 @@ def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.valu
                 current_timing.aux_frame_index + 2)
             if next_2_timing:
                 display_image(next_2_timing.uuid, stage=stage, clickable=True)
-
-    st.markdown("***")
+                st.info(f"#{current_timing.aux_frame_index}")
+    # st.markdown("***")
 
 
 # TODO: CORRECT-CODE
@@ -2722,6 +2649,217 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, invert_ma
     return image_file
 
 # adds the image file in variant (alternative images) list
+
+def drawing_mode(timing_details,project_settings,project_uuid,stage=WorkflowStageType.STYLED.value):
+
+    data_repo = DataRepo()
+
+    canvas1, canvas2 = st.columns([1, 1.5])
+    timing = data_repo.get_timing_from_uuid(
+        st.session_state['current_frame_uuid'])
+
+    with canvas1:
+        width = int(project_settings.width)
+        height = int(project_settings.height)
+
+        if timing.source_image and timing.source_image.location != "":
+            if timing.source_image.location.startswith("http"):
+                canvas_image = r.get(
+                    timing.source_image.location)
+                canvas_image = Image.open(
+                    BytesIO(canvas_image.content))
+            else:
+                canvas_image = Image.open(
+                    timing.source_image.location)
+        else:
+            canvas_image = Image.new(
+                "RGB", (width, height), "white")
+        if 'drawing_input' not in st.session_state:
+            st.session_state['drawing_input'] = 'Magic shapes 🪄'
+        col1, col2 = st.columns([6, 5])
+
+        with col1:
+            st.session_state['drawing_input'] = st.radio(
+                "Drawing tool:",
+                ("Draw lines ✏️", "Erase Lines ❌", "Make shapes 🪄", "Move shapes 🏋🏾‍♂️", "Make Lines ║", "Make squares □"), horizontal=True,
+            )
+
+            if st.session_state['drawing_input'] == "Move shapes 🏋🏾‍♂️":
+                drawing_mode = "transform"
+
+            elif st.session_state['drawing_input'] == "Make shapes 🪄":
+                drawing_mode = "polygon"
+
+            elif st.session_state['drawing_input'] == "Draw lines ✏️":
+                drawing_mode = "freedraw"
+
+            elif st.session_state['drawing_input'] == "Erase Lines ❌":
+                drawing_mode = "freedraw"
+
+            elif st.session_state['drawing_input'] == "Make Lines ║":
+                drawing_mode = "line"
+
+            elif st.session_state['drawing_input'] == "Make squares □":
+                drawing_mode = "rect"
+
+        
+        with col2:
+
+            stroke_width = st.slider(
+                "Stroke width: ", 1, 100, 2)
+            if st.session_state['drawing_input'] == "Erase Lines ❌":
+                stroke_colour = "#ffffff"
+            else:
+                stroke_colour = st.color_picker(
+                    "Stroke color hex: ", value="#000000")
+            fill = st.checkbox("Fill shapes", value=False)
+            if fill == True:
+                fill_color = st.color_picker(
+                    "Fill color hex: ")
+            else:
+                fill_color = ""
+        
+
+        st.markdown("***")
+        
+                                            
+        threshold1, threshold2 = st.columns([1, 1])
+        with threshold1:
+            low_threshold = st.number_input(
+                "Low Threshold", min_value=0, max_value=255, value=100, step=1)
+        with threshold2:
+            high_threshold = st.number_input(
+                "High Threshold", min_value=0, max_value=255, value=200, step=1)
+
+        if 'canny_image' not in st.session_state:
+            st.session_state['canny_image'] = None
+
+        if st.button("Extract Canny From image"):
+            if stage == "source":
+                image_path = timing_details[st.session_state['current_frame_index']].source_image.location 
+        
+            elif stage == "styled":
+                image_path = timing_details[st.session_state['current_frame_index']].primary_image_location
+            
+            
+            canny_image = extract_canny_lines(
+                    image_path, project_uuid, low_threshold, high_threshold)
+            
+            st.session_state['canny_image'] = canny_image.uuid
+
+        if st.session_state['canny_image']:
+            canny_image = data_repo.get_file_from_uuid(st.session_state['canny_image'])
+            
+            canny_action_1, canny_action_2 = st.columns([2, 1])
+            with canny_action_1:
+                st.image(canny_image.location)
+                                                                            
+                if st.button(f"Make Into Image"):
+                    data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=st.session_state['canny_image'])
+                    st.session_state['reset_canvas'] = True
+                    st.session_state['canny_image'] = None
+                    st.experimental_rerun()
+
+    with canvas2:
+        realtime_update = True
+
+        if "reset_canvas" not in st.session_state:
+            st.session_state['reset_canvas'] = False
+
+        if st.session_state['reset_canvas'] != True:
+            canvas_result = st_canvas(
+                fill_color=fill_color,
+                stroke_width=stroke_width,
+                stroke_color=stroke_colour,
+                background_color="rgb(255, 255, 255)",
+                background_image=canvas_image,
+                update_streamlit=realtime_update,
+                height=height,
+                width=width,
+                drawing_mode=drawing_mode,
+                display_toolbar=True,
+                key="full_app_draw",
+            )
+
+            if 'image_created' not in st.session_state:
+                st.session_state['image_created'] = 'no'
+
+            if canvas_result.image_data is not None:
+                img_data = canvas_result.image_data
+                im = Image.fromarray(
+                    img_data.astype("uint8"), mode="RGBA")
+        else:
+            st.session_state['reset_canvas'] = False
+            canvas_result = st_canvas()
+            time.sleep(0.1)
+            st.experimental_rerun()
+        if canvas_result is not None:
+            st.write("You can save the image below")
+            if canvas_result.json_data is not None and not canvas_result.json_data.get('objects'):
+                st.button("Save New Image", key="save_canvas", disabled=True, help="Draw something first")
+            else:                
+                if st.button("Save New Image", key="save_canvas_active",type="primary"):
+                    if canvas_result.image_data is not None:
+                        # overlay the canvas image on top of the canny image and save the result
+                        # if canny image is from a url, then we need to download it first
+                        if timing.source_image and timing.source_image.location:
+                            if timing.source_image.location.startswith("http"):
+                                canny_image = r.get(
+                                    timing.source_image.location)
+                                canny_image = Image.open(
+                                    BytesIO(canny_image.content))
+                            else:
+                                canny_image = Image.open(
+                                    timing.source_image.location)
+                        else:
+                            canny_image = Image.new(
+                                "RGB", (width, height), "white")
+
+                        canny_image = canny_image.convert("RGBA")
+                        # canvas_image = canvas_image.convert("RGBA")
+                        canvas_image = im
+                        canvas_image = canvas_image.convert("RGBA")
+
+                        # converting the images to the same size and mode
+                        if canny_image.size != canvas_image.size:
+                            canny_image = canny_image.resize(
+                                canvas_image.size)
+
+                        if canny_image.mode != canvas_image.mode:
+                            canny_image = canny_image.convert(
+                                canvas_image.mode)
+
+                        new_canny_image = Image.alpha_composite(
+                            canny_image, canvas_image)
+                        if new_canny_image.mode != "RGB":
+                            new_canny_image = new_canny_image.convert(
+                                "RGB")
+
+                        unique_file_name = str(uuid.uuid4()) + ".png"
+                        file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{unique_file_name}"
+                        hosted_url = save_or_host_file(new_canny_image, file_location)
+                        file_data = {
+                            "name": str(uuid.uuid4()) + ".png",
+                            "type": InternalFileType.IMAGE.value,
+                            "project_id": project_uuid
+                        }
+
+                        if hosted_url:
+                            file_data.update({'hosted_url': hosted_url})
+                        else:
+                            file_data.update({'local_path': file_location})
+
+                        canny_image = data_repo.create_file(
+                            **file_data)
+                        data_repo.update_specific_timing(
+                            st.session_state['current_frame_uuid'], source_image_id=canny_image.uuid)
+                        st.success("New Canny Image Saved")
+                        st.session_state['reset_canvas'] = True
+                        time.sleep(1)
+                        st.experimental_rerun()
+
+
+
 
 
 def add_image_variant(image_file_uuid: str, timing_uuid: str):
