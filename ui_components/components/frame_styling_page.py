@@ -1,33 +1,19 @@
 import streamlit as st
 from streamlit_image_comparison import image_comparison
 import time
-import pandas as pd
-import os
 from PIL import Image
-import requests as r
-from streamlit_drawable_canvas import st_canvas
-from shared.constants import InternalFileType
-from shared.file_upload.s3 import upload_file
-from shared.logging.constants import LoggingType
-from shared.logging.logging import AppLogger
-from ui_components.common_methods import delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, create_timings_row_at_frame_number, extract_canny_lines, convert_to_minutes_and_seconds, styling_element, create_full_preview_video, back_and_forward_buttons, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip,save_uploaded_image,drawing_mode,zoom_inputs,reset_zoom_element
-from ui_components.common_methods import create_gif_preview, delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, prompt_interpolation_model, update_speed_of_video_clip, create_timings_row_at_frame_number, extract_canny_lines, get_duration_from_video, get_audio_bytes_for_slice, add_audio_to_video_slice, convert_to_minutes_and_seconds, styling_element, get_primary_variant_location, create_full_preview_video, back_and_forward_buttons, manual_cropping_element, precision_cropping_element, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, apply_image_transformations, get_pillow_image, save_new_image, prompt_finder_element, preview_frame, carousal_of_images_element, display_image, ai_frame_editing_element, clone_styling_settings
+from ui_components.common_methods import delete_frame, drawing_mode, promote_image_variant, save_uploaded_image, trigger_restyling_process, create_timings_row_at_frame_number, convert_to_minutes_and_seconds, create_full_preview_video, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, apply_image_transformations, get_pillow_image, ai_frame_editing_element, clone_styling_settings, zoom_inputs
+from ui_components.widgets.cropping_element import manual_cropping_element, precision_cropping_element
+from ui_components.widgets.frame_switch_btn import back_and_forward_buttons
 from ui_components.widgets.frame_time_selector import single_frame_time_selector
+from ui_components.widgets.image_carousal import carousal_of_images_element, display_image
+from ui_components.widgets.prompt_finder import prompt_finder_element
+from ui_components.widgets.styling_element import styling_element
 from utils import st_memory
-import uuid
 
-import cv2
-import uuid
-import datetime
-from pydub import AudioSegment
-from io import BytesIO
-import shutil
-from streamlit_option_menu import option_menu
-from moviepy.editor import concatenate_videoclips
-import moviepy.editor
+
 import math
 from ui_components.constants import WorkflowStageType
-from ui_components.models import InternalAppSettingObject, InternalFileObject, InternalFrameTimingObject
 from streamlit_extras.annotated_text import annotated_text
 from utils.common_utils import save_or_host_file
 

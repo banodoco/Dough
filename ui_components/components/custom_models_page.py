@@ -1,23 +1,15 @@
-import ast
-import os
-import time
 from typing import List
-import pandas as pd
 import streamlit as st
 from shared.constants import AIModelType
 from ui_components.common_methods import train_model
 
-from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject
+from ui_components.models import InternalAIModelObject
 from utils.common_utils import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
 
 
 def custom_models_page(project_uuid):
     data_repo = DataRepo()
-    project: InternalProjectObject = data_repo.get_project_from_uuid(
-        project_uuid)
-    
-    app_setting: InternalAppSettingObject = data_repo.get_app_setting_from_uuid()
 
     with st.expander("Existing models"):
 

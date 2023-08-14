@@ -2,8 +2,8 @@ import shutil
 import streamlit as st
 import os
 import time
+from ui_components.widgets.attach_audio_element import attach_audio_element
 
-from ui_components.common_methods import attach_audio_element
 from utils.data_repo.data_repo import DataRepo
 
 

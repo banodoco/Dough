@@ -2,8 +2,7 @@ from typing import List
 import streamlit as st
 import time
 
-from ui_components.common_methods import add_image_variant, promote_image_variant
-from ui_components.models import InternalFrameTimingObject, InternalProjectObject
+from ui_components.models import InternalFrameTimingObject
 from utils.data_repo.data_repo import DataRepo
 
 

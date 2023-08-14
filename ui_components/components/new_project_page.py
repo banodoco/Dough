@@ -1,20 +1,9 @@
-from io import BytesIO
-import io
-import tempfile
-import uuid
-import requests
 import streamlit as st
 from banodoco_settings import create_new_project
-from shared.constants import SERVER, InternalFileType, ServerType
-from ui_components.constants import AUDIO_FILE
-from ui_components.models import InternalFileObject
 from ui_components.common_methods import save_audio_file,create_timings_row_at_frame_number, save_uploaded_image
-from utils.common_utils import create_working_assets, get_current_user, get_current_user_uuid, reset_project_state, save_or_host_file, save_or_host_file_bytes
+from utils.common_utils import get_current_user_uuid, reset_project_state
 from utils.data_repo.data_repo import DataRepo
-from utils.media_processor.video import resize_video
-from moviepy.video.io.VideoFileClip import VideoFileClip
 import time
-import os
 from PIL import Image
 
 import utils.local_storage.local_storage as local_storage
