@@ -293,7 +293,7 @@ def reset_project_state():
         "strength",
         "guidance_scale",
         "seed",
-        "num_inference_steps"
+        "num_inference_steps",
         "dreambooth_model_uuid",
         "seed",
         "promote_new_generation",

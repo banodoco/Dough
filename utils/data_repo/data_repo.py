@@ -12,13 +12,23 @@ from utils.data_repo.api_repo import APIRepo
 
 # @cache_data
 class DataRepo:
-    def __init__(self):
-        if SERVER == ServerType.DEVELOPMENT.value:
-            self.db_repo = DBRepo()
-        else:
-            self.db_repo = APIRepo()
+    _instance = None
     
-    # TODO: make a dummy user login in the local db repo
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+    
+    def __init__(self):
+        if not self._initialized:
+            if SERVER == ServerType.DEVELOPMENT.value:
+                self.db_repo = DBRepo()
+            else:
+                self.db_repo = APIRepo()
+            
+            self._initialized = True
+    
     def google_user_login(self, **kwargs):
         data = self.db_repo.google_user_login(**kwargs).data['data']
         user = InternalUserObject(**data['user']) if data and data['user'] else None

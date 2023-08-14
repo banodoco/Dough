@@ -241,10 +241,6 @@ def save_uploaded_image(uploaded_file, project_uuid, frame_uuid, save_type):
         return None
 
 
-
-
-
-
 def create_individual_clip(timing_uuid):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
@@ -509,9 +505,9 @@ def fetch_image_by_stage(project_uuid, stage):
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
     if stage == WorkflowStageType.SOURCE.value:
-        return timing_details[st.session_state['current_frame_index']].source_image
+        return timing_details[st.session_state['current_frame_index'] - 1].source_image
     elif stage == WorkflowStageType.STYLED.value:
-        return timing_details[st.session_state['current_frame_index']].primary_image
+        return timing_details[st.session_state['current_frame_index'] - 1].primary_image
     else:
         return None
 
@@ -918,7 +914,7 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
                 elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection" or type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
                     with main_col_1:
                         if type_of_mask_selection in ["Re-Use Previous Mask", "Invert Previous Mask"]:
-                            if not timing_details[st.session_state['current_frame_index']].mask:
+                            if not timing_details[st.session_state['current_frame_index'] - 1].mask:
                                 st.info(
                                     "You don't have a previous mask to re-use.")
                             else:
@@ -931,7 +927,7 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
                                         st.info(
                                             "This will update the **white pixels** in the mask with the pixels from the image you are editing.")
                                     st.image(
-                                        timing_details[st.session_state['current_frame_index']].mask.location, use_column_width=True)
+                                        timing_details[st.session_state['current_frame_index'] - 1].mask.location, use_column_width=True)
 
                     with main_col_2:
                         if st.session_state['edited_image'] == "":
@@ -1273,45 +1269,6 @@ def create_or_get_single_preview_video(timing_uuid):
     return timing.timed_clip
 
 
-def single_frame_time_changer(timing_uuid, src):
-    data_repo = DataRepo()
-
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
-
-    frame_time = st.number_input("Frame time (secs):", min_value=0.0, max_value=100.0,
-                                 value=timing.frame_time, step=0.1, key=f"frame_time_{timing.aux_frame_index}_{src}")
-
-    if frame_time != timing.frame_time:
-        data_repo.update_specific_timing(timing_uuid, frame_time=frame_time)
-        if timing.aux_frame_index != 0:
-            prev_timing = data_repo.get_prev_timing(timing_uuid)
-            data_repo.update_specific_timing(
-                prev_timing.uuid, timed_clip_id=None)
-
-        data_repo.update_specific_timing(timing_uuid, timed_clip_id=None)
-
-        # if the frame time of this frame is more than the frame time of the next frame,
-        # then we need to update the next frame's frame time, and all the frames after that
-        # - shift them by the difference between the new frame time and the old frame time
-
-        next_timing = data_repo.get_next_timing(timing_uuid)
-        if next_timing and frame_time > next_timing.frame_time:
-            for a in range(timing.aux_frame_index, len(timing_details)):
-                frame = timing_details[a]
-                this_frame_time = frame.frame_time
-                # shift them by the difference between the new frame time and the old frame time
-                new_frame_time = this_frame_time + \
-                    (frame_time - timing.frame_time)
-                data_repo.update_specific_timing(
-                    frame.uuid, frame_time=new_frame_time)
-                data_repo.update_specific_timing(
-                    frame.uuid, timed_clip_id=None)
-        st.experimental_rerun()
-
-
 '''
 preview_clips have frame numbers on them. Preview clip is generated from index-2 to index+2 frames
 '''
@@ -1441,14 +1398,14 @@ def back_and_forward_buttons():
         if timing.aux_frame_index > 1:
             if st.button(f"{timing.aux_frame_index-2} ⏮️", key=f"Previous Previous Image for {timing.aux_frame_index}"):
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] - 2
-                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
+                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
                 st.experimental_rerun()
     with smallbutton1:
         # if it's not the first image
         if timing.aux_frame_index != 0:
             if st.button(f"{timing.aux_frame_index-1} ⏪", key=f"Previous Image for {timing.aux_frame_index}"):
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] - 1
-                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
+                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
                 st.experimental_rerun()
 
     with smallbutton2:
@@ -1458,13 +1415,13 @@ def back_and_forward_buttons():
         if timing.aux_frame_index != len(timing_details)-1:
             if st.button(f"{timing.aux_frame_index+1} ⏩", key=f"Next Image for {timing.aux_frame_index}"):
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] + 1
-                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
+                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
                 st.experimental_rerun()
     with smallbutton4:
         if timing.aux_frame_index < len(timing_details)-2:
             if st.button(f"{timing.aux_frame_index+2} ⏭️", key=f"Next Next Image for {timing.aux_frame_index}"):
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] + 2
-                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
+                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
                 st.experimental_rerun()
 
 # TODO: CORRECT-CODE
@@ -1624,11 +1581,10 @@ def styling_element(timing_uuid, view_type="Single"):
                                                              index=st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'], help="Extracted frames means the original frames from the video.")
     with stages2:
         if st.session_state['transformation_stage'] == "Source Image":
-            source_img = timing_details[st.session_state['current_frame_index']
-                                   ].source_image
+            source_img = timing_details[st.session_state['current_frame_index'] - 1].source_image
             image = source_img.location if source_img else ""
         elif st.session_state['transformation_stage'] == "Main Variant":
-            image = timing_details[st.session_state['current_frame_index']].primary_image_location
+            image = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
         if image != "":
             st.image(image, use_column_width=True,
                      caption=f"Image {st.session_state['current_frame_index']}")
@@ -2247,8 +2203,8 @@ def delete_frame(timing_uuid):
                 next_timing.uuid, timed_clip_id=None)
 
     if timing.aux_frame_index == len(timing_details) - 1:
-        st.session_state['current_frame_index'] = max(0, st.session_state['current_frame_index'] - 1)
-        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
+        st.session_state['current_frame_index'] = max(1, st.session_state['current_frame_index'] - 1)
+        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
 
     data_repo.delete_timing_from_uuid(timing.uuid)
 
@@ -2736,10 +2692,10 @@ def drawing_mode(timing_details,project_settings,project_uuid,stage=WorkflowStag
 
         if st.button("Extract Canny From image"):
             if stage == "source":
-                image_path = timing_details[st.session_state['current_frame_index']].source_image.location 
+                image_path = timing_details[st.session_state['current_frame_index'] - 1].source_image.location 
         
             elif stage == "styled":
-                image_path = timing_details[st.session_state['current_frame_index']].primary_image_location
+                image_path = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
             
             
             canny_image = extract_canny_lines(

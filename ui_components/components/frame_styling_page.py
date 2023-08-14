@@ -10,8 +10,9 @@ from shared.constants import InternalFileType
 from shared.file_upload.s3 import upload_file
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
-from ui_components.common_methods import delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, create_timings_row_at_frame_number, extract_canny_lines, convert_to_minutes_and_seconds, styling_element, create_full_preview_video, back_and_forward_buttons, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, single_frame_time_changer,save_uploaded_image,drawing_mode,zoom_inputs,reset_zoom_element
-from ui_components.common_methods import create_gif_preview, delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, prompt_interpolation_model, update_speed_of_video_clip, create_timings_row_at_frame_number, extract_canny_lines, get_duration_from_video, get_audio_bytes_for_slice, add_audio_to_video_slice, convert_to_minutes_and_seconds, styling_element, get_primary_variant_location, create_full_preview_video, back_and_forward_buttons, manual_cropping_element, precision_cropping_element, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, single_frame_time_changer, apply_image_transformations, get_pillow_image, save_new_image, prompt_finder_element, preview_frame, carousal_of_images_element, display_image, ai_frame_editing_element, clone_styling_settings
+from ui_components.common_methods import delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, create_timings_row_at_frame_number, extract_canny_lines, convert_to_minutes_and_seconds, styling_element, create_full_preview_video, back_and_forward_buttons, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip,save_uploaded_image,drawing_mode,zoom_inputs,reset_zoom_element
+from ui_components.common_methods import create_gif_preview, delete_frame, promote_image_variant, trigger_restyling_process, add_image_variant, prompt_interpolation_model, update_speed_of_video_clip, create_timings_row_at_frame_number, extract_canny_lines, get_duration_from_video, get_audio_bytes_for_slice, add_audio_to_video_slice, convert_to_minutes_and_seconds, styling_element, get_primary_variant_location, create_full_preview_video, back_and_forward_buttons, manual_cropping_element, precision_cropping_element, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, apply_image_transformations, get_pillow_image, save_new_image, prompt_finder_element, preview_frame, carousal_of_images_element, display_image, ai_frame_editing_element, clone_styling_settings
+from ui_components.widgets.frame_time_selector import single_frame_time_selector
 from utils import st_memory
 import uuid
 
@@ -104,7 +105,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             shift_frames = st.checkbox(
                                 "Shift Frames", help="This will shift the after your adjustment forward or backwards.")
 
-                        for i in range(max(0, st.session_state['current_frame_index'] - 2), min(num_timing_details, st.session_state['current_frame_index'] + 3)):
+                        for i in range(max(1, st.session_state['current_frame_index'] - 2), min(num_timing_details, st.session_state['current_frame_index'] + 3)):
                             # calculate minimum and maximum values for slider
                             if i == 0:
                                 min_frame_time = 0.0  # make sure the value is a float
@@ -127,7 +128,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         timing_details[i].primary_image_location)
                             with frame2:
                                 if st.session_state['page'] != "Motion":
-                                    single_frame_time_changer(timing_details[i].uuid, 'motion')
+                                    single_frame_time_selector(timing_details[i].uuid, 'motion')
                                 st.caption(
                                     f"Duration: {calculate_desired_duration_of_individual_clip(timing_details[i].uuid):.2f} secs")
 
@@ -208,7 +209,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             animation_style = st.radio("Which animation style would you like to use for this frame?",
                                                        animation_styles, index=st.session_state['index_of_animation_style'])
 
-                            if timing_details[st.session_state['current_frame_index']].animation_style == "":
+                            if timing_details[st.session_state['current_frame_index'] - 1].animation_style == "":
                                 data_repo.update_specific_timing(
                                     st.session_state['current_frame_uuid'], animation_style=project_settings.default_animation_style)
                                 st.session_state['index_of_animation_style'] = animation_styles.index(
@@ -216,9 +217,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                                 st.experimental_rerun()
 
-                            if animation_styles.index(timing_details[st.session_state['current_frame_index']].animation_style) != st.session_state['index_of_animation_style']:
+                            if animation_styles.index(timing_details[st.session_state['current_frame_index']- 1].animation_style) != st.session_state['index_of_animation_style']:
                                 st.session_state['index_of_animation_style'] = animation_styles.index(
-                                    timing_details[st.session_state['current_frame_index']].animation_style)
+                                    timing_details[st.session_state['current_frame_index'] - 1].animation_style)
                                 st.experimental_rerun()
 
                             animationbutton1, animationbutton2 = st.columns([
@@ -226,7 +227,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                             with animationbutton1:
 
-                                if animation_style != timing_details[st.session_state['current_frame_index']].animation_style:
+                                if animation_style != timing_details[st.session_state['current_frame_index'] - 1].animation_style:
 
                                     if st.button("Update this slides animation style"):
                                         data_repo.update_specific_timing(
@@ -321,7 +322,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                     if variants != [] and variants != None and variants != "":
 
-                        primary_variant_location = timing_details[st.session_state['current_frame_index']].primary_image_location
+                        primary_variant_location = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
 
                     if st.session_state['show_comparison'] == "Other Variants":
 
@@ -332,7 +333,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                         with aboveimage1:
                             st.info(
-                                f"Current variant = {timing_details[st.session_state['current_frame_index']].primary_variant_index}")
+                                f"Current variant = {timing_details[st.session_state['current_frame_index'] - 1].primary_variant_index}")
 
                         with aboveimage2:
                             show_more_than_10_variants = st.checkbox(
@@ -343,14 +344,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                             if show_more_than_10_variants is True:
                                 current_variant = int(
-                                    timing_details[st.session_state['current_frame_index']].primary_variant_index)
+                                    timing_details[st.session_state['current_frame_index'] - 1].primary_variant_index)
                                 which_variant = st.radio(f'Main variant = {current_variant}', range(
                                     number_of_variants), index=number_of_variants-1, horizontal=True, key=f"Main variant for {st.session_state['current_frame_index']}")
                             else:
                                 last_ten_variants = range(
                                     max(0, number_of_variants - 10), number_of_variants)
                                 current_variant = int(
-                                    timing_details[st.session_state['current_frame_index']].primary_variant_index)
+                                    timing_details[st.session_state['current_frame_index'] - 1].primary_variant_index)
                                 which_variant = st.radio(f'Main variant = {current_variant}', last_ten_variants, index=len(
                                     last_ten_variants)-1, horizontal=True, key=f"Main variant for {st.session_state['current_frame_index']}")
 
@@ -358,15 +359,15 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                             project_settings = data_repo.get_project_setting(project_uuid)
                             st.success("**Main variant**")
-                            if len(timing_details[st.session_state['current_frame_index']].alternative_images_list):
-                                st.image(timing_details[st.session_state['current_frame_index']].primary_image_location,
+                            if len(timing_details[st.session_state['current_frame_index'] - 1].alternative_images_list):
+                                st.image(timing_details[st.session_state['current_frame_index'] - 1].primary_image_location,
                                          use_column_width=True)
                             else:
                                 st.error("No variants found for this frame")
 
                         with mainimages2:
 
-                            if len(timing_details[st.session_state['current_frame_index']].alternative_images_list):
+                            if len(timing_details[st.session_state['current_frame_index'] - 1].alternative_images_list):
                                 if which_variant == current_variant:
                                     st.success("**Main variant**")
 
@@ -385,14 +386,13 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         st.experimental_rerun()
 
                     elif st.session_state['show_comparison'] == "Source Frame":
-                        if timing_details[st.session_state['current_frame_index']].primary_image:
-                            img2 = timing_details[st.session_state['current_frame_index']].primary_image_location
+                        if timing_details[st.session_state['current_frame_index']- 1].primary_image:
+                            img2 = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
                         else:
                             img2 = 'https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'
                         
                         image_comparison(starting_position=50,
-                                         img1=timing_details[st.session_state['current_frame_index']
-                                                             ].source_image.location,
+                                         img1=timing_details[st.session_state['current_frame_index'] - 1].source_image.location,
                                          img2=img2, make_responsive=False, label1=WorkflowStageType.SOURCE.value, label2=WorkflowStageType.STYLED.value)
                     elif st.session_state['show_comparison'] == "Previous & Next Frame":
 
@@ -400,7 +400,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                                                            1, 1, 1])
 
                         with mainimages1:
-                            if st.session_state['current_frame_index']-1 >= 0:
+                            if st.session_state['current_frame_index']-1 >= 1:
                                 previous_image = data_repo.get_timing_from_frame_number(st.session_state['current_frame_index'] - 1)
                                 st.info(f"Previous image")
                                 display_image(
@@ -418,7 +418,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
 
                         with mainimages3:
-                            if st.session_state['current_frame_index']+1 < len(timing_details):
+                            if st.session_state['current_frame_index']+1 <= len(timing_details):
                                 next_image = data_repo.get_timing_from_frame_number(st.session_state['current_frame_index'] + 1)
                                 st.info(f"Next image")
                                 display_image(timing_uuid=next_image.uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
@@ -468,8 +468,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             if open_copier is True:
                                 copy1, copy2 = st.columns([1, 1])
                                 with copy1:
-                                    which_frame_to_copy_from = st.number_input("Which frame would you like to copy styling settings from?", min_value=0, max_value=len(
-                                        timing_details)-1, value=st.session_state['current_frame_index']-1, step=1)
+                                    which_frame_to_copy_from = st.number_input("Which frame would you like to copy styling settings from?", min_value=1, max_value=len(
+                                        timing_details), value=st.session_state['current_frame_index']-1, step=1)
                                     if st.button("Copy styling settings from this frame"):
                                         clone_styling_settings(which_frame_to_copy_from, st.session_state['current_frame_uuid'])
                                         st.experimental_rerun()
@@ -592,7 +592,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         time1, time2 = st.columns([1, 1])
                         with time1:
 
-                            single_frame_time_changer(timing_details[i].uuid, 'sidebar')
+                            single_frame_time_selector(timing_details[i].uuid, 'sidebar')
 
                             st.info(
                                 f"Duration: {calculate_desired_duration_of_individual_clip(timing_details[i].uuid):.2f} secs")
@@ -621,7 +621,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                         if st.button(f"Jump to single frame view for #{index_of_current_item}"):
                             st.session_state['current_frame_index'] = index_of_current_item
-                            st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
+                            st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
                             st.session_state['frame_styling_view_type'] = "Individual View"
                             st.session_state['change_view_type'] = True
                             st.experimental_rerun()
@@ -670,14 +670,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     which_stage_for_starting_image = st.radio("Which stage would you like to use?", [
                                                           "Styled Image", "Source Image"], key="which_stage_for_starting_image", horizontal=True)
                     which_number_for_starting_image = st.number_input("Which frame would you like to use?", min_value=0, max_value=
-                                                                  max(0, len(timing_details)-1), value=st.session_state['current_frame_index'], step=1, key="which_number_for_starting_image")
+                                                                  max(1, len(timing_details)), value=st.session_state['current_frame_index'], step=1, key="which_number_for_starting_image")
                 if which_stage_for_starting_image == "Source Image":
-                    if timing_details[which_number_for_starting_image].source_image != "":
-                        selected_image = timing_details[which_number_for_starting_image].source_image.location
+                    if timing_details[which_number_for_starting_image - 1].source_image != "":
+                        selected_image = timing_details[which_number_for_starting_image - 1].source_image.location
                     else:
                         selected_image = ""
                 elif which_stage_for_starting_image == "Styled Image":
-                    selected_image = timing_details[which_number_for_starting_image].primary_image_location
+                    selected_image = timing_details[which_number_for_starting_image - 1].primary_image_location
             elif source_of_starting_image == "Uploaded image":
                 with image2:
                     uploaded_image = st.file_uploader(
@@ -730,7 +730,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
             if len(timing_details) == 0:
                 index_of_current_item = 0
             else:
-                index_of_current_item = min( len(timing_details) - 1, st.session_state['current_frame_index'])
+                index_of_current_item = min( len(timing_details) , st.session_state['current_frame_index'])
 
             timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
@@ -768,11 +768,11 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             
             if len(timing_details) == 1:
-                st.session_state['current_frame_index'] = 0
+                st.session_state['current_frame_index'] = 1
                 st.session_state['current_frame_uuid'] = timing_details[0].uuid
             else:
-                st.session_state['current_frame_index'] = min( len(timing_details) - 1, st.session_state['current_frame_index'] + 1)
-                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
+                st.session_state['current_frame_index'] = min( len(timing_details) , st.session_state['current_frame_index'] + 1)
+                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
 
             st.session_state['page'] = "Styling"
             st.session_state['section_index'] = 0

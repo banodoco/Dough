@@ -3,10 +3,11 @@
 import streamlit as st
 import time
 from shared.constants import InternalFileType
+from ui_components.widgets.frame_time_selector import single_frame_time_selector
 from utils.data_repo.data_repo import DataRepo
 from ui_components.constants import WorkflowStageType
 from shared.file_upload.s3 import upload_file
-from ui_components.common_methods import delete_frame, add_image_variant, promote_image_variant, save_uploaded_image,display_image, single_frame_time_changer
+from ui_components.common_methods import delete_frame, add_image_variant, promote_image_variant, save_uploaded_image,display_image
 
 
 def frame_selector_widget():
@@ -17,15 +18,15 @@ def frame_selector_widget():
     timing_details = data_repo.get_timing_list_from_project(project_uuid=st.session_state["project_uuid"])
     with time1:
         if 'prev_frame_index' not in st.session_state:
-            st.session_state['prev_frame_index'] = 0
+            st.session_state['prev_frame_index'] = 1
 
         st.write(st.session_state['prev_frame_index'])
         st.write(st.session_state['current_frame_index'])
-        st.session_state['current_frame_index'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 0, len(timing_details)-1, value=st.session_state['prev_frame_index'], step=1, key="which_image_selector")
-        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
+        st.session_state['current_frame_index'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 1, len(timing_details), value=st.session_state['prev_frame_index'], step=1, key="which_image_selector")
+        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
         if st.session_state['prev_frame_index'] != st.session_state['current_frame_index']:
             st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
-            st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
+            st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
             st.session_state['reset_canvas'] = True
             st.session_state['frame_styling_view_type_index'] = 0
             st.session_state['frame_styling_view_type'] = "Individual View"
@@ -33,15 +34,7 @@ def frame_selector_widget():
             st.experimental_rerun()       
 
     with time2:
-        single_frame_time_changer(st.session_state['current_frame_uuid'], 'navbar')
-
-    # with st.expander("Notes:"):
-            
-    #    notes = st.text_area("Frame Notes:", value=timing_details[st.session_state['current_frame_index']].notes, height=100, key="notes")
-        
-    # if notes != timing_details[st.session_state['current_frame_index']].notes:
-    #    data_repo.update_specific_timing(st.session_state['current_frame_uuid'], notes=notes)
-    #    st.experimental_rerun()
+        single_frame_time_selector(st.session_state['current_frame_uuid'], 'navbar')
     
 
     def replace_image_widget(stage=WorkflowStageType.STYLED.value):
@@ -124,11 +117,6 @@ def frame_selector_widget():
         display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
         with st.expander("Replace styled image"):
             replace_image_widget(stage=WorkflowStageType.STYLED.value)
-
-    
-
-
-
     
     st.markdown("***")
     

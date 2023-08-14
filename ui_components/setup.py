@@ -3,7 +3,7 @@ import streamlit as st
 import os
 import math
 from moviepy.editor import *
-from ui_components.common_methods import delete_frame, display_image, single_frame_time_changer
+from ui_components.common_methods import delete_frame, display_image
 
 from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.batch_action_page import batch_action_page
@@ -98,7 +98,7 @@ def setup_app_ui():
             reset_project_state()
 
         if "current_frame_index" not in st.session_state:
-            st.session_state['current_frame_index'] = 0
+            st.session_state['current_frame_index'] = 1
 
         if st.session_state["index_of_project_name"] != next((i for i, p in enumerate(
                 project_list) if p.uuid == st.session_state["project_uuid"]), None):
