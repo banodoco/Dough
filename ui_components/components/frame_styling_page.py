@@ -105,64 +105,65 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             shift_frames = st.checkbox(
                                 "Shift Frames", help="This will shift the after your adjustment forward or backwards.")
 
-                        for i in range(max(1, st.session_state['current_frame_index'] - 2), min(num_timing_details, st.session_state['current_frame_index'] + 3)):
+                        for i in range(max(1, st.session_state['current_frame_index'] - 2), min(num_timing_details + 1, st.session_state['current_frame_index'] + 3)):
+                            idx = i - 1
                             # calculate minimum and maximum values for slider
-                            if i == 0:
+                            if idx == 0:
                                 min_frame_time = 0.0  # make sure the value is a float
                             else:
-                                min_frame_time = timing_details[i].frame_time
+                                min_frame_time = timing_details[idx].frame_time
 
-                            if i == num_timing_details - 1:
-                                max_frame_time = timing_details[i].frame_time + 10.0
-                            elif i < num_timing_details - 1:
-                                max_frame_time = timing_details[i+1].frame_time
+                            if idx == num_timing_details - 1:
+                                max_frame_time = timing_details[idx].frame_time + 10.0
+                            elif idx < num_timing_details - 1:
+                                max_frame_time = timing_details[idx+1].frame_time
 
                             # disable slider only if it's the first frame
-                            slider_disabled = i == 0
+                            slider_disabled = idx == 0
 
                             frame1, frame2, frame3 = st.columns([1, 1, 2])
 
                             with frame1:
-                                if timing_details[i].primary_image_location:
+                                if timing_details[idx].primary_image_location:
                                     st.image(
-                                        timing_details[i].primary_image_location)
+                                        timing_details[idx].primary_image_location)
                             with frame2:
                                 if st.session_state['page'] != "Motion":
-                                    single_frame_time_selector(timing_details[i].uuid, 'motion')
+                                    single_frame_time_selector(timing_details[idx].uuid, 'motion')
                                 st.caption(
-                                    f"Duration: {calculate_desired_duration_of_individual_clip(timing_details[i].uuid):.2f} secs")
+                                    f"Duration: {calculate_desired_duration_of_individual_clip(timing_details[idx].uuid):.2f} secs")
 
                             with frame3:
                                 frame_time = st.slider(
-                                    f"#{i} Frame Time = {round(timing_details[i].frame_time, 3)}",
+                                    f"#{i} Frame Time = {round(timing_details[idx].frame_time, 3)}",
                                     min_value=min_frame_time,
                                     max_value=max_frame_time,
-                                    value=timing_details[i].frame_time,
+                                    value=timing_details[idx].frame_time,
                                     step=0.01,
                                     disabled=slider_disabled,
                                 )
 
                             # update timing details
-                            if timing_details[i].frame_time != frame_time:
-                                previous_frame_time = timing_details[i].frame_time
+                            if timing_details[idx].frame_time != frame_time:
+                                previous_frame_time = timing_details[idx].frame_time
                                 data_repo.update_specific_timing(
-                                    timing_details[i].uuid, frame_time=frame_time)
-                                for a in range(i - 1, i + 2):
+                                    timing_details[idx].uuid, frame_time=frame_time)
+                                for a in range(i - 2, i + 2):
                                     if a >= 0 and a < num_timing_details:
                                         data_repo.update_specific_timing(timing_details[a].uuid, timing_video_id=None)
-                                data_repo.update_specific_timing(timing_details[i], preview_video_id=None)
+                                data_repo.update_specific_timing(timing_details[idx], preview_video_id=None)
 
                                 if shift_frames is True:
                                     diff_frame_time = frame_time - previous_frame_time
-                                    for j in range(i+1, num_timing_details):
-                                        new_frame_time = timing_details[j].frame_time + \
+                                    for j in range(i+1, num_timing_details+1):
+                                        new_frame_time = timing_details[j-1].frame_time + \
                                             diff_frame_time
                                         data_repo.update_specific_timing(
-                                            timing_details[j].uuid, frame_time=new_frame_time)
+                                            timing_details[j-1].uuid, frame_time=new_frame_time)
                                         data_repo.update_specific_timing(
-                                            timing_details[j].uuid, timed_clip_id=None)
+                                            timing_details[j-1].uuid, timed_clip_id=None)
                                         data_repo.update_specific_timing(
-                                            timing_details[j].uuid, preview_video_id=None)
+                                            timing_details[j-1].uuid, preview_video_id=None)
                                 st.experimental_rerun()
 
                     with timing2:
@@ -401,7 +402,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                         with mainimages1:
                             if st.session_state['current_frame_index']-1 >= 1:
-                                previous_image = data_repo.get_timing_from_frame_number(st.session_state['current_frame_index'] - 1)
+                                previous_image = data_repo.get_timing_from_frame_number(project_uuid, frame_number=st.session_state['current_frame_index'] - 1)
                                 st.info(f"Previous image")
                                 display_image(
                                     timing_uuid=previous_image.uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
@@ -418,8 +419,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
 
                         with mainimages3:
-                            if st.session_state['current_frame_index']+1 <= len(timing_details):
-                                next_image = data_repo.get_timing_from_frame_number(st.session_state['current_frame_index'] + 1)
+                            if st.session_state['current_frame_index'] + 1 <= len(timing_details):
+                                next_image = data_repo.get_timing_from_frame_number(project_uuid, frame_number=st.session_state['current_frame_index'])
                                 st.info(f"Next image")
                                 display_image(timing_uuid=next_image.uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
 
@@ -669,7 +670,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 with image2:
                     which_stage_for_starting_image = st.radio("Which stage would you like to use?", [
                                                           "Styled Image", "Source Image"], key="which_stage_for_starting_image", horizontal=True)
-                    which_number_for_starting_image = st.number_input("Which frame would you like to use?", min_value=0, max_value=
+                    which_number_for_starting_image = st.number_input("Which frame would you like to use?", min_value=1, max_value=
                                                                   max(1, len(timing_details)), value=st.session_state['current_frame_index'], step=1, key="which_number_for_starting_image")
                 if which_stage_for_starting_image == "Source Image":
                     if timing_details[which_number_for_starting_image - 1].source_image != "":
@@ -728,7 +729,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
         if st.button(f"Add key frame",type="primary",use_container_width=True):
             if len(timing_details) == 0:
-                index_of_current_item = 0
+                index_of_current_item = 1
             else:
                 index_of_current_item = min( len(timing_details) , st.session_state['current_frame_index'])
 
@@ -736,13 +737,11 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             if len(timing_details) == 0:
                 key_frame_time = 0.0
-            elif index_of_current_item == len(timing_details) - 1:
-                key_frame_time = float(
-                    timing_details[index_of_current_item].frame_time) + how_long_after
+            elif index_of_current_item == len(timing_details):
+                key_frame_time = float(timing_details[index_of_current_item].frame_time) + how_long_after
             else:
-                
-                key_frame_time = (float(timing_details[index_of_current_item].frame_time) + float(
-                    timing_details[index_of_current_item + 1].frame_time)) / 2.0
+                key_frame_time = (float(timing_details[index_of_current_item - 1].frame_time) + float(
+                    timing_details[index_of_current_item].frame_time)) / 2.0
 
             if len(timing_details) == 0:
                 new_timing = create_timings_row_at_frame_number(
@@ -751,19 +750,19 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     new_timing.uuid, frame_time=0.0)
             else:
                 new_timing = create_timings_row_at_frame_number(
-                    project_uuid, index_of_current_item + 1)
+                    project_uuid, index_of_current_item)
                 data_repo.update_specific_timing(
                     new_timing.uuid, frame_time=key_frame_time)
             
             timing_details = data_repo.get_timing_list_from_project(project_uuid)
             if selected_image != "":
-                save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item + 1].uuid, "source")
-                save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item + 1].uuid, "styled")
+                save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "source")
+                save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "styled")
                                 
             if inherit_styling_settings == "Yes":
-                clone_styling_settings(index_of_current_item, timing_details[index_of_current_item + 1].uuid)
+                clone_styling_settings(index_of_current_item, timing_details[index_of_current_item].uuid)
 
-            data_repo.update_specific_timing(timing_details[index_of_current_item + 1].uuid, \
+            data_repo.update_specific_timing(timing_details[index_of_current_item].uuid, \
                                                 animation_style=project_settings.default_animation_style)
 
             
@@ -771,7 +770,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 st.session_state['current_frame_index'] = 1
                 st.session_state['current_frame_uuid'] = timing_details[0].uuid
             else:
-                st.session_state['current_frame_index'] = min( len(timing_details) , st.session_state['current_frame_index'] + 1)
+                st.session_state['current_frame_index'] = min(len(timing_details) , st.session_state['current_frame_index'] + 1)
                 st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
 
             st.session_state['page'] = "Styling"

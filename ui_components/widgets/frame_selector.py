@@ -20,8 +20,8 @@ def frame_selector_widget():
         if 'prev_frame_index' not in st.session_state:
             st.session_state['prev_frame_index'] = 1
 
-        st.write(st.session_state['prev_frame_index'])
-        st.write(st.session_state['current_frame_index'])
+        # st.write(st.session_state['prev_frame_index'])
+        # st.write(st.session_state['current_frame_index'])
         st.session_state['current_frame_index'] = st.number_input(f"Key frame # (out of {len(timing_details)-1})", 1, len(timing_details), value=st.session_state['prev_frame_index'], step=1, key="which_image_selector")
         st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
         if st.session_state['prev_frame_index'] != st.session_state['current_frame_index']:

@@ -1394,33 +1394,39 @@ def back_and_forward_buttons():
 
     smallbutton0, smallbutton1, smallbutton2, smallbutton3, smallbutton4 = st.columns([
                                                                                       2, 2, 2, 2, 2])
+
+    display_idx = st.session_state['current_frame_index']
     with smallbutton0:
-        if timing.aux_frame_index > 1:
-            if st.button(f"{timing.aux_frame_index-2} ⏮️", key=f"Previous Previous Image for {timing.aux_frame_index}"):
+        if display_idx > 2:
+            if st.button(f"{display_idx-2} ⏮️", key=f"Previous Previous Image for {display_idx}"):
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] - 2
+                st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
                 st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
                 st.experimental_rerun()
     with smallbutton1:
         # if it's not the first image
-        if timing.aux_frame_index != 0:
-            if st.button(f"{timing.aux_frame_index-1} ⏪", key=f"Previous Image for {timing.aux_frame_index}"):
+        if display_idx != 1:
+            if st.button(f"{display_idx-1} ⏪", key=f"Previous Image for {display_idx}"):
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] - 1
+                st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
                 st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
                 st.experimental_rerun()
 
     with smallbutton2:
-        st.button(f"{timing.aux_frame_index} 📍", disabled=True)
+        st.button(f"{display_idx} 📍", disabled=True)
     with smallbutton3:
         # if it's not the last image
-        if timing.aux_frame_index != len(timing_details)-1:
-            if st.button(f"{timing.aux_frame_index+1} ⏩", key=f"Next Image for {timing.aux_frame_index}"):
+        if display_idx != len(timing_details):
+            if st.button(f"{display_idx+1} ⏩", key=f"Next Image for {display_idx}"):
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] + 1
+                st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
                 st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
                 st.experimental_rerun()
     with smallbutton4:
-        if timing.aux_frame_index < len(timing_details)-2:
-            if st.button(f"{timing.aux_frame_index+2} ⏭️", key=f"Next Next Image for {timing.aux_frame_index}"):
+        if display_idx <= len(timing_details)-2:
+            if st.button(f"{display_idx+2} ⏭️", key=f"Next Next Image for {display_idx}"):
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] + 2
+                st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
                 st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
                 st.experimental_rerun()
 
@@ -1430,7 +1436,7 @@ def back_and_forward_buttons():
 def display_image(timing_uuid, stage=None, clickable=False):
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
-    timing_idx = timing.aux_frame_index
+    timing_idx = timing.aux_frame_index + 1
 
     # if it's less than 0 or greater than the number in timing_details, show nothing
     if not timing:
@@ -1458,12 +1464,13 @@ def display_image(timing_uuid, stage=None, clickable=False):
                         image = (f"data:image/jpeg;base64,{encoded}")
 
                 st.session_state[f'{timing_idx}_{stage}_clicked'] = clickable_images([image], div_style={"display": "flex", "justify-content": "center", "flex-wrap": "wrap"}, img_style={
-                    "max-width": "100%", "height": "auto"}, key=f"{timing_idx}_{stage}_image_{st.session_state['counter']}")
+                    "max-width": "100%", "height": "auto", "cursor": "pointer"}, key=f"{timing_idx}_{stage}_image_{st.session_state['counter']}")
 
                 if st.session_state[f'{timing_idx}_{stage}_clicked'] == 0:
                     timing_details = data_repo.get_timing_list_from_project(timing.project.uuid)
                     st.session_state['current_frame_uuid'] = timing_details[timing_idx].uuid
                     st.session_state['current_frame_index'] = timing_idx
+                    st.session_state['prev_frame_index'] = timing_idx
                     # st.session_state['frame_styling_view_type_index'] = 0
                     st.session_state['frame_styling_view_type'] = "Individual View"
                     st.session_state['counter'] += 1
@@ -1492,7 +1499,7 @@ def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.valu
 
             if prev_2_timing:
                 display_image(prev_2_timing.uuid, stage=stage, clickable=True)
-                st.info(f"#{current_timing.aux_frame_index}")
+                st.info(f"#{prev_2_timing.aux_frame_index + 1}")
 
     with header2:
         if current_timing.aux_frame_index - 1 >= 0:
@@ -1500,21 +1507,21 @@ def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.valu
                 current_timing.aux_frame_index - 1)
             if prev_timing:
                 display_image(prev_timing.uuid, stage=stage, clickable=True)
-                st.info(f"#{current_timing.aux_frame_index}")
+                st.info(f"#{prev_timing.aux_frame_index + 1}")
 
     with header3:
         
         timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
         display_image(timing.uuid,
                       stage=stage, clickable=True)
-        st.success(f"#{current_timing.aux_frame_index}")
+        st.success(f"#{current_timing.aux_frame_index + 1}")
     with header4:
         if current_timing.aux_frame_index + 1 <= len(timing_details):
             next_timing = data_repo.get_timing_from_frame_number(project_uuid,
                 current_timing.aux_frame_index + 1)
             if next_timing:
                 display_image(next_timing.uuid, stage=stage, clickable=True)
-                st.info(f"#{current_timing.aux_frame_index}")
+                st.info(f"#{next_timing.aux_frame_index + 1}")
 
     with header5:
         if current_timing.aux_frame_index + 2 <= len(timing_details):
@@ -1522,7 +1529,7 @@ def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.valu
                 current_timing.aux_frame_index + 2)
             if next_2_timing:
                 display_image(next_2_timing.uuid, stage=stage, clickable=True)
-                st.info(f"#{current_timing.aux_frame_index}")
+                st.info(f"#{next_2_timing.aux_frame_index + 1}")
     # st.markdown("***")
 
 
@@ -1929,7 +1936,7 @@ def styling_element(timing_uuid, view_type="Single"):
             f"Inference steps", value=int(st.session_state['num_inference_steps']))
 
     st.session_state["promote_new_generation"] = st.checkbox(
-        "Promote new generation to main variant", key="promote_new_generation_to_main_variant")
+        "Promote new generation to main variant", key="promote_new_generation_to_main_variant_1")
     st.session_state["use_new_settings"] = True
 
     if view_type == "List":
@@ -2202,11 +2209,13 @@ def delete_frame(timing_uuid):
         data_repo.update_specific_timing(
                 next_timing.uuid, timed_clip_id=None)
 
+    data_repo.delete_timing_from_uuid(timing.uuid)
+    
     if timing.aux_frame_index == len(timing_details) - 1:
         st.session_state['current_frame_index'] = max(1, st.session_state['current_frame_index'] - 1)
         st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
 
-    data_repo.delete_timing_from_uuid(timing.uuid)
+    
 
 
 # def batch_update_timing_values(timing_uuid, prompt, strength, model, custom_pipeline, negative_prompt, guidance_scale, seed, num_inference_steps, source_image, custom_models, adapter_type, low_threshold, high_threshold):
