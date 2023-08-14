@@ -1187,76 +1187,76 @@ def preview_frame(project_uuid, video, frame_num):
 # extract_frame_number is extracted from the input_video and added as source_image at frame_number
 # (timing_uuid) in the timings table
 
+# NOTE: code not is use
+# def extract_frame(timing_uuid, input_video: InternalFileObject, extract_frame_number):
+#     data_repo = DataRepo()
+#     timing = data_repo.get_timing_from_uuid(timing_uuid)
+#     project_uuid = timing.project.uuid
 
-def extract_frame(timing_uuid, input_video: InternalFileObject, extract_frame_number):
-    data_repo = DataRepo()
-    timing = data_repo.get_timing_from_uuid(timing_uuid)
-    project_uuid = timing.project.uuid
+#     # TODO: standardize the input video path
+#     # input_video = "videos/" + \
+#     #     str(timing.project.name) + \
+#     #     "/assets/resources/input_videos/" + str(input_video)
+#     cv_video = cv2.VideoCapture(input_video.local_path)
+#     total_frames = cv_video.get(cv2.CAP_PROP_FRAME_COUNT)
+#     if extract_frame_number == total_frames:
+#         extract_frame_number = int(total_frames - 1)
+#     cv_video.set(cv2.CAP_PROP_POS_FRAMES, extract_frame_number)
+#     ret, frame = cv_video.read()
 
-    # TODO: standardize the input video path
-    # input_video = "videos/" + \
-    #     str(timing.project.name) + \
-    #     "/assets/resources/input_videos/" + str(input_video)
-    cv_video = cv2.VideoCapture(input_video.local_path)
-    total_frames = cv_video.get(cv2.CAP_PROP_FRAME_COUNT)
-    if extract_frame_number == total_frames:
-        extract_frame_number = int(total_frames - 1)
-    cv_video.set(cv2.CAP_PROP_POS_FRAMES, extract_frame_number)
-    ret, frame = cv_video.read()
+#     frame_time = calculate_time_at_frame_number(
+#         input_video, float(extract_frame_number))
 
-    frame_time = calculate_time_at_frame_number(
-        input_video, float(extract_frame_number))
+#     data_repo.update_specific_timing(
+#         timing_uuid, frame_number=extract_frame_number)
+#     data_repo.update_specific_timing(timing_uuid, frame_time=frame_time)
 
-    data_repo.update_specific_timing(
-        timing_uuid, frame_number=extract_frame_number)
-    data_repo.update_specific_timing(timing_uuid, frame_time=frame_time)
-
-    file_name = ''.join(random.choices(
-        string.ascii_lowercase + string.digits, k=16)) + ".png"
-    file_location = "videos/" + timing.project.uuid + \
-        "/assets/frames/1_selected/" + str(file_name)
+#     file_name = ''.join(random.choices(
+#         string.ascii_lowercase + string.digits, k=16)) + ".png"
+#     file_location = "videos/" + timing.project.uuid + \
+#         "/assets/frames/1_selected/" + str(file_name)
     
-    # cv2.imwrite(file_location, frame)
-    # img = Image.open("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
-    # img.save("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
+#     # cv2.imwrite(file_location, frame)
+#     # img = Image.open("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
+#     # img.save("videos/" + video_name + "/assets/frames/1_selected/" + str(frame_number) + ".png")
 
-    pil_img = Image.fromarray(frame)
-    hosted_url = save_or_host_file(pil_img, file_location)
+#     pil_img = Image.fromarray(frame)
+#     hosted_url = save_or_host_file(pil_img, file_location)
 
-    file_data = {
-        "name": file_name,
-        "type": InternalFileType.IMAGE.value,
-        "project_id": project_uuid
-    }
+#     file_data = {
+#         "name": file_name,
+#         "type": InternalFileType.IMAGE.value,
+#         "project_id": project_uuid
+#     }
 
-    if hosted_url:
-        file_data.update({'hosted_url': hosted_url})
-    else:
-        file_data.update({'local_path': file_location})
+#     if hosted_url:
+#         file_data.update({'hosted_url': hosted_url})
+#     else:
+#         file_data.update({'local_path': file_location})
 
-    final_image = data_repo.create_file(**file_data)
-    data_repo.update_specific_timing(
-        timing_uuid, source_image_id=final_image.uuid)
+#     final_image = data_repo.create_file(**file_data)
+#     data_repo.update_specific_timing(
+#         timing_uuid, source_image_id=final_image.uuid)
 
-    return final_image
+#     return final_image
 
+# NOTE: code not is  use
+# def calculate_frame_number_at_time(input_video, time_of_frame, project_uuid):
+#     data_repo = DataRepo()
+#     project = data_repo.get_project_from_uuid(project_uuid)
 
-def calculate_frame_number_at_time(input_video, time_of_frame, project_uuid):
-    data_repo = DataRepo()
-    project = data_repo.get_project_from_uuid(project_uuid)
-
-    time_of_frame = float(time_of_frame)
-    input_video = "videos/" + \
-        str(project.uuid) + "/assets/resources/input_videos/" + str(input_video)
-    video = cv2.VideoCapture(input_video)
-    frame_count = float(video.get(cv2.CAP_PROP_FRAME_COUNT))
-    fps = int(video.get(cv2.CAP_PROP_FPS))
-    length_of_video = float(frame_count / fps)
-    percentage_of_video = float(time_of_frame / length_of_video)
-    frame_number = int(percentage_of_video * frame_count)
-    if frame_number == 0:
-        frame_number = 1
-    return frame_number
+#     time_of_frame = float(time_of_frame)
+#     input_video = "videos/" + \
+#         str(project.uuid) + "/assets/resources/input_videos/" + str(input_video)
+#     video = cv2.VideoCapture(input_video)
+#     frame_count = float(video.get(cv2.CAP_PROP_FRAME_COUNT))
+#     fps = int(video.get(cv2.CAP_PROP_FPS))
+#     length_of_video = float(frame_count / fps)
+#     percentage_of_video = float(time_of_frame / length_of_video)
+#     frame_number = int(percentage_of_video * frame_count)
+#     if frame_number == 0:
+#         frame_number = 1
+#     return frame_number
 
 
 def move_frame(direction, timing_uuid):
@@ -1321,7 +1321,6 @@ def move_frame(direction, timing_uuid):
         #     timing.uuid, alternative_images=str(next_alternative_images))
         # data_repo.update_specific_timing(
         #     timing.uuid, source_image_id=next_source_image.uuid)
-
 
 
 def delete_frame(timing_uuid):
@@ -2684,35 +2683,35 @@ def calculate_desired_duration_of_each_clip(project_uuid):
         data_repo.update_specific_timing(
             timing_item.uuid, clip_duration=total_duration_of_frame)
 
+# NOTE: code not is use
+# def hair_swap(source_image, timing_uuid):
+#     data_repo = DataRepo()
+#     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+#         timing_uuid)
+#     app_secret = data_repo.get_app_secrets_from_user_uuid(
+#         timing.project.user_uuid)
 
-def hair_swap(source_image, timing_uuid):
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-    app_secret = data_repo.get_app_secrets_from_user_uuid(
-        timing.project.user_uuid)
+#     # DOUBT: what's the video name here?
+#     video_name = ""
+#     source_hair = upload_file("videos/" + str(video_name) + "/face.png", app_secret['aws_access_key'],
+#                               app_secret['aws_secret_key'])
 
-    # DOUBT: what's the video name here?
-    video_name = ""
-    source_hair = upload_file("videos/" + str(video_name) + "/face.png", app_secret['aws_access_key'],
-                              app_secret['aws_secret_key'])
+#     target_hair = upload_file("videos/" + str(video_name) +
+#                               "/assets/frames/2_character_pipeline_completed/" +
+#                               str(timing.aux_frame_index) + ".png",
+#                               app_secret['aws_access_key'], app_secret['aws_secret_key'])
 
-    target_hair = upload_file("videos/" + str(video_name) +
-                              "/assets/frames/2_character_pipeline_completed/" +
-                              str(timing.aux_frame_index) + ".png",
-                              app_secret['aws_access_key'], app_secret['aws_secret_key'])
+#     if not source_hair.startswith("http"):
+#         source_hair = open(source_hair, "rb")
 
-    if not source_hair.startswith("http"):
-        source_hair = open(source_hair, "rb")
+#     if not target_hair.startswith("http"):
+#         target_hair = open(target_hair, "rb")
 
-    if not target_hair.startswith("http"):
-        target_hair = open(target_hair, "rb")
+#     ml_client = get_ml_client()
+#     output = ml_client.predict_model_output(
+#         REPLICATE_MODEL.cjwbw_style_hair, source_image=source_hair, target_image=target_hair)
 
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
-        REPLICATE_MODEL.cjwbw_style_hair, source_image=source_hair, target_image=target_hair)
-
-    return output
+#     return output
 
 
 def prompt_model_depth2img(strength, timing_uuid, source_image) -> InternalFileObject:
