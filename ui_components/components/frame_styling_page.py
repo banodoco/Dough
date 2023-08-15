@@ -652,7 +652,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
             image1,image2 = st.columns(2)
             with image1:
                 source_of_starting_image = st.radio("Where would you like to get the starting image from?", [
-                                                "Previous frame", "Uploaded image", "None"], key="source_of_starting_image")
+                                                "Previous frame", "Uploaded image"], key="source_of_starting_image")
             if source_of_starting_image == "Previous frame":                
                 with image2:
                     which_stage_for_starting_image = st.radio("Which stage would you like to use?", [
@@ -725,7 +725,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
             if len(timing_details) == 0:
                 key_frame_time = 0.0
             elif index_of_current_item == len(timing_details):
-                key_frame_time = float(timing_details[index_of_current_item].frame_time) + how_long_after
+                key_frame_time = float(timing_details[index_of_current_item - 1].frame_time) + how_long_after
             else:
                 key_frame_time = (float(timing_details[index_of_current_item - 1].frame_time) + float(
                     timing_details[index_of_current_item].frame_time)) / 2.0

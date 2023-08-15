@@ -184,15 +184,38 @@ def get_current_user_uuid():
     else: 
         return None
 
+def zoom_and_crop(file, width, height):
+    # scaling
+    s_x = width / file.width
+    s_y = height / file.height
+    scale = max(s_x, s_y)
+    new_width = int(file.width * scale)
+    new_height = int(file.height * scale)
+    file = file.resize((new_width, new_height))
+
+    # cropping
+    left = (file.width - width) // 2
+    top = (file.height - height) // 2
+    right = (file.width + width) // 2
+    bottom = (file.height + height) // 2
+    file = file.crop((left, top, right, bottom))
+
+    return file
+
+
 # depending on the environment it will either save or host the PIL image object
 def save_or_host_file(file, path, mime_type='image/png'):
+    data_repo = DataRepo()
+    # TODO: fix session state management, remove direct access out side the main code
+    project_setting = data_repo.get_project_setting(st.session_state['project_uuid'])
+    file = zoom_and_crop(file, project_setting.width, project_setting.height)
+
     uploaded_url = None
     if SERVER != ServerType.DEVELOPMENT.value:
         image_bytes = BytesIO()
         file.save(image_bytes, format=mime_type.split('/')[1])
         image_bytes.seek(0)
 
-        data_repo = DataRepo()
         uploaded_url = data_repo.upload_file(image_bytes, '.png')
     else:
         os.makedirs(os.path.dirname(path), exist_ok=True)
