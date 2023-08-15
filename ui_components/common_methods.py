@@ -1894,7 +1894,7 @@ def convert_image_list_to_file_list(image_list):
     file_list = []
     for image in image_list:
         img = Image.open(image)
-        filename = str(uuid.uuid4())
+        filename = str(uuid.uuid4()) + ".png"
         file_path = "videos/training_data/" + filename
         hosted_url = save_or_host_file(img, file_path)
         data = {
@@ -1905,7 +1905,7 @@ def convert_image_list_to_file_list(image_list):
         if hosted_url:
             data['hosted_url'] = hosted_url
         else:
-            data['local_url'] = file_path
+            data['local_path'] = file_path
 
         image_file = data_repo.create_file(**data)
         file_list.append(image_file)
@@ -1913,7 +1913,7 @@ def convert_image_list_to_file_list(image_list):
 
 
 # INFO: images_list passed here are converted to internal files after they are used for training
-def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max_train_steps, model_name, images_list: List[str], controller_type):
+def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max_train_steps, model_name, images_list: List[str], controller_type, model_type_list):
     ml_client = get_ml_client()
     response = ml_client.dreambooth_training(
         training_file_url, instance_prompt, class_prompt, max_train_steps, model_name, controller_type, len(images_list))
@@ -1934,7 +1934,8 @@ def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max
             "category": AIModelCategory.DREAMBOOTH.value,
             "training_image_list": file_uuid_list,
             "keyword": instance_prompt,
-            "custom_trained": True
+            "custom_trained": True,
+            "model_type": model_type_list
         }
 
         data_repo = DataRepo()
@@ -1945,7 +1946,7 @@ def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max
         return "Failed"
 
 # INFO: images_list passed here are converted to internal files after they are used for training
-def train_lora_model(training_file_url, type_of_task, resolution, model_name, images_list):
+def train_lora_model(training_file_url, type_of_task, resolution, model_name, images_list, model_type_list):
     data_repo = DataRepo()
     ml_client = get_ml_client()
     output = ml_client.predict_model_output(REPLICATE_MODEL.clones_lora_training, instance_data=training_file_url,
@@ -1961,7 +1962,8 @@ def train_lora_model(training_file_url, type_of_task, resolution, model_name, im
         "diffusers_url": "",
         "category": AIModelCategory.LORA.value,
         "training_image_list": file_uuid_list,
-        "custom_trained": True
+        "custom_trained": True,
+        "model_type": model_type_list
     }
 
     data_repo.create_ai_model(**model_data)
@@ -1970,7 +1972,7 @@ def train_lora_model(training_file_url, type_of_task, resolution, model_name, im
 # TODO: making an exception for this, passing just the image urls instead of
 # image files
 def train_model(images_list, instance_prompt, class_prompt, max_train_steps,
-                model_name, type_of_model, type_of_task, resolution, controller_type):
+                model_name, type_of_model, type_of_task, resolution, controller_type, model_type_list):
     # prepare and upload the training data (images.zip)
     ml_client = get_ml_client()
     try:
@@ -1982,9 +1984,9 @@ def train_model(images_list, instance_prompt, class_prompt, max_train_steps,
     model_name = model_name.replace(" ", "-").lower()
     if type_of_model == "Dreambooth":
         return train_dreambooth_model(instance_prompt, class_prompt, training_file_url,
-                                      max_train_steps, model_name, images_list, controller_type)
+                                      max_train_steps, model_name, images_list, controller_type, model_type_list)
     elif type_of_model == "LoRA":
-        return train_lora_model(training_file_url, type_of_task, resolution, model_name, images_list)
+        return train_lora_model(training_file_url, type_of_task, resolution, model_name, images_list, model_type_list)
 
 
 def remove_background(input_image):

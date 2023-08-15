@@ -1,6 +1,7 @@
+import json
 from typing import List
 import streamlit as st
-from shared.constants import AIModelCategory
+from shared.constants import AIModelCategory, AIModelType
 from ui_components.common_methods import train_model
 
 from ui_components.models import InternalAIModelObject
@@ -77,6 +78,7 @@ def custom_models_page(project_uuid):
             resolution = ""
             controller_type = st.selectbox("What ControlNet controller would you like to use?", [
                                            "normal", "canny", "hed", "scribble", "seg", "openpose", "depth", "mlsd"])
+            model_type_list = json.dumps([AIModelType.TXT2IMG.value])
 
         elif type_of_model == AIModelCategory.LORA.value:
             type_of_task = st.selectbox(
@@ -87,6 +89,8 @@ def custom_models_page(project_uuid):
             class_prompt = ""
             max_train_steps = ""
             controller_type = ""
+            model_type_list = json.dumps([AIModelType.TXT2IMG.value])
+
         uploaded_files = st.file_uploader("Images you'd like to train the model based on:", type=[
                                           'png', 'jpg', 'jpeg'], key="prompt_file", accept_multiple_files=True)
         if uploaded_files is not None:
@@ -126,7 +130,7 @@ def custom_models_page(project_uuid):
                 #         f.write(image.getbuffer())
                 #         images_for_model.append(image.name)
                 model_status = train_model(uploaded_files, instance_prompt, class_prompt, max_train_steps,
-                                           model_name, type_of_model, type_of_task, resolution, controller_type)
+                                           model_name, type_of_model, type_of_task, resolution, controller_type, model_type_list)
                 st.success(model_status)
 
     # with st.expander("Add model from internet"):
