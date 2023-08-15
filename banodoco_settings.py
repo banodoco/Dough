@@ -1,16 +1,13 @@
-import os
-import shutil
-import time
+import json
 import uuid
-from dotenv import dotenv_values
 
 from PIL import Image
-from shared.constants import SERVER, AIModelType, GuidanceType, InternalFileType, ServerType
+from shared.constants import SERVER, AIModelCategory, AIModelType, GuidanceType, InternalFileType, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from shared.constants import AnimationStyleType
 from ui_components.common_methods import add_image_variant
-from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalUserObject
+from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalUserObject
 from utils.common_utils import copy_sample_assets, create_working_assets, save_or_host_file
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
@@ -86,11 +83,12 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
         'width': width,
         'height': height
     }
-    project = data_repo.create_project(**project_data)
+    project: InternalProjectObject = data_repo.create_project(**project_data)
 
     # create a sample timing frame
-    sample_file_location = "sample_assets/frames/selected_sample/3vlb4mr7d95c42i4.png"
+    sample_file_location = "sample_assets/sample_images/v.jpeg"
     img = Image.open(sample_file_location)
+    img = img.resize((width, height))
     hosted_url = save_or_host_file(img, sample_file_location)
     file_data = {
         "name": str(uuid.uuid4()),
@@ -159,80 +157,90 @@ def create_predefined_models(user):
             "user_id" : user.uuid,
             "version": REPLICATE_MODEL.img2img_sd_2_1.version,
             "replicate_url" : REPLICATE_MODEL.img2img_sd_2_1.name,
-            "category" : AIModelType.BASE_SD.value,
-            "keyword" : ""
+            "category" : AIModelCategory.BASE_SD.value,
+            "keyword" : "",
+            "model_type": json.dumps([AIModelType.IMG2IMG.value])
         },
         {
             "name" : 'depth2img',
             "user_id" : user.uuid,
             "version": REPLICATE_MODEL.jagilley_controlnet_depth2img.version,
             "replicate_url" : REPLICATE_MODEL.jagilley_controlnet_depth2img.name,
-            "category" : AIModelType.BASE_SD.value,
-            "keyword" : ""
+            "category" : AIModelCategory.BASE_SD.value,
+            "keyword" : "",
+            "model_type": json.dumps([AIModelType.IMG2IMG.value])
         },
         {
             "name" : 'pix2pix',
             "user_id" : user.uuid,
             "version": REPLICATE_MODEL.arielreplicate.version,
             "replicate_url" : REPLICATE_MODEL.arielreplicate.name,
-            "category" : AIModelType.BASE_SD.value,
-            "keyword" : ""
+            "category" : AIModelCategory.BASE_SD.value,
+            "keyword" : "",
+            "model_type": json.dumps([AIModelType.IMG2IMG.value])
         },
         {
             "name" : 'controlnet',
             "user_id" : user.uuid,
-            "category" : AIModelType.CONTROLNET.value,
-            "keyword" : ""
+            "category" : AIModelCategory.CONTROLNET.value,
+            "keyword" : "",
+            "model_type": json.dumps([AIModelType.IMG2IMG.value])
         },
         {
             "name" : 'Dreambooth',
             "user_id" : user.uuid,
-            "category" : AIModelType.DREAMBOOTH.value,
-            "keyword" : ""
+            "category" : AIModelCategory.DREAMBOOTH.value,
+            "keyword" : "",
+            "model_type": json.dumps([AIModelType.IMG2IMG.value])
         },
         {
             "name" : 'LoRA',
             "user_id" : user.uuid,
-            "category" : AIModelType.LORA.value,
-            "keyword" : ""
+            "category" : AIModelCategory.LORA.value,
+            "keyword" : "",
+            "model_type": json.dumps([AIModelType.IMG2IMG.value])
         },
         {
             "name" : 'StyleGAN-NADA',
             "user_id" : user.uuid,
             "version": REPLICATE_MODEL.stylegan_nada.version,
             "replicate_url" : REPLICATE_MODEL.stylegan_nada.name,
-            "category" : AIModelType.BASE_SD.value,
-            "keyword" : ""
+            "category" : AIModelCategory.BASE_SD.value,
+            "keyword" : "",
+            "model_type": json.dumps([AIModelType.IMG2IMG.value])
         },
         {
             "name" : 'real-esrgan-upscaling',
             "user_id" : user.uuid,
             "version": REPLICATE_MODEL.real_esrgan_upscale.version,
             "replicate_url" : REPLICATE_MODEL.real_esrgan_upscale.name,
-            "category" : AIModelType.BASE_SD.value,
-            "keyword" : ""
+            "category" : AIModelCategory.BASE_SD.value,
+            "keyword" : "",
+            "model_type": json.dumps([AIModelType.IMG2IMG.value])
         },
         {
             "name" : 'controlnet_1_1_x_realistic_vision_v2_0',
             "user_id" : user.uuid,
             "version": REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0.version,
             "replicate_url" : REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0.name,
-            "category" : AIModelType.BASE_SD.value,
-            "keyword" : ""
+            "category" : AIModelCategory.BASE_SD.value,
+            "keyword" : "",
+            "model_type": json.dumps([AIModelType.IMG2IMG.value])
         },
         {
             "name" : 'urpm-v1.3',
             "user_id" : user.uuid,
             "version": REPLICATE_MODEL.urpm.version,
             "replicate_url" : REPLICATE_MODEL.urpm.name,
-            "category" : AIModelType.BASE_SD.value,
-            "keyword" : ""
+            "category" : AIModelCategory.BASE_SD.value,
+            "keyword" : "",
+            "model_type": json.dumps([AIModelType.IMG2IMG.value])
         },
     ]
 
     # only creating pre-defined models for the first time
     available_models = data_repo.get_all_ai_model_list(\
-        model_type_list=[AIModelType.BASE_SD.value], user_id=user.uuid, custom_trained=None)
+        model_category_list=[AIModelCategory.BASE_SD.value], user_id=user.uuid, custom_trained=None)
     
     if available_models and len(available_models):
         return available_models

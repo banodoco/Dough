@@ -390,7 +390,7 @@ class DBRepo:
 
         return InternalResponse(payload, 'ai_model fetched', True)
     
-    def get_all_ai_model_list(self, model_type_list=None, user_id=None, custom_trained=False):
+    def get_all_ai_model_list(self, model_category_list=None, user_id=None, custom_trained=False):
         query = {'custom_trained': "all" if custom_trained == None else ("user" if custom_trained else "predefined"), 'is_disabled': False}
         if user_id:
             user = User.objects.filter(uuid=user_id, is_disabled=False).first()
@@ -399,8 +399,8 @@ class DBRepo:
             
             query['user_id'] = user.id
 
-        if model_type_list:
-            query['category__in'] = model_type_list
+        if model_category_list:
+            query['category__in'] = model_category_list
         query['custom_trained'] = custom_trained
             
         ai_model_list = AIModel.objects.filter(**query).all()

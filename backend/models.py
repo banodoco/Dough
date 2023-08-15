@@ -91,6 +91,7 @@ class AIModel(BaseModel):
     replicate_url = models.TextField(default="", blank=True)
     diffusers_url = models.TextField(default="", blank=True)    # for downloading and running models offline
     category = models.CharField(max_length=255,default="", blank=True)     # Lora, Dreambooth..
+    model_type = models.TextField(default="", blank=True)   # [txt2img, img2img..] array of types
     training_image_list = models.TextField(default="", blank=True)      # contains an array of uuid of file objects
     keyword = models.CharField(max_length=255,default="", blank=True)
 

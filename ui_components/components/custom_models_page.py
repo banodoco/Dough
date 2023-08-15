@@ -1,6 +1,6 @@
 from typing import List
 import streamlit as st
-from shared.constants import AIModelType
+from shared.constants import AIModelCategory
 from ui_components.common_methods import train_model
 
 from ui_components.models import InternalAIModelObject
@@ -18,7 +18,7 @@ def custom_models_page(project_uuid):
         # TODO: the list should only show models trained by the user (not the default ones)
         current_user_uuid = get_current_user_uuid()
         model_list: List[InternalAIModelObject] = data_repo.get_all_ai_model_list(\
-            model_type_list=[AIModelType.DREAMBOOTH.value, AIModelType.LORA.value], \
+            model_category_list=[AIModelCategory.DREAMBOOTH.value, AIModelCategory.LORA.value], \
                 user_id=current_user_uuid, custom_trained=True)
         if model_list == []:
             st.info("You don't have any models yet. Train a new model below.")
@@ -62,11 +62,11 @@ def custom_models_page(project_uuid):
     with st.expander("Train a new model"):
         st.subheader("Train a new model:")
 
-        type_of_model = st.selectbox("Type of model:", [AIModelType.DREAMBOOTH.value, AIModelType.LORA.value], help="If you'd like to use other methods for model training, let us know - or implement it yourself :)")
+        type_of_model = st.selectbox("Type of model:", [AIModelCategory.DREAMBOOTH.value, AIModelCategory.LORA.value], help="If you'd like to use other methods for model training, let us know - or implement it yourself :)")
         model_name = st.text_input(
             "Model name:", value="", help="No spaces or special characters please")
 
-        if type_of_model == AIModelType.DREAMBOOTH.value:
+        if type_of_model == AIModelCategory.DREAMBOOTH.value:
             instance_prompt = st.text_input(
                 "Trigger word:", value="", help="This is the word that will trigger the model")
             class_prompt = st.text_input("Describe what your prompts depict generally:",
@@ -78,7 +78,7 @@ def custom_models_page(project_uuid):
             controller_type = st.selectbox("What ControlNet controller would you like to use?", [
                                            "normal", "canny", "hed", "scribble", "seg", "openpose", "depth", "mlsd"])
 
-        elif type_of_model == AIModelType.LORA.value:
+        elif type_of_model == AIModelCategory.LORA.value:
             type_of_task = st.selectbox(
                 "Type of task:", ["Face", "Object", "Style"]).lower()
             resolution = st.selectbox("Resolution:", [

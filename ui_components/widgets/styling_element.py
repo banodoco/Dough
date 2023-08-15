@@ -3,7 +3,7 @@ import streamlit as st
 import uuid
 
 from typing import List
-from shared.constants import AIModelType
+from shared.constants import AIModelCategory
 from ui_components.common_methods import trigger_restyling_process
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
 from utils.data_repo.data_repo import DataRepo
@@ -36,7 +36,7 @@ def styling_element(timing_uuid, view_type="Single"):
         append_to_item_name = "bulk"
         st.markdown("## Batch queries")
 
-    stages = ["Source Image", "Main Variant"]
+    stages = ["Source Image", "Main Variant", "Empty Canvas"]
 
     # TODO: CORRECT-CODE transformation_stage add this in db
     if view_type == "Single":
@@ -67,6 +67,7 @@ def styling_element(timing_uuid, view_type="Single"):
             image = source_img.location if source_img else ""
         elif st.session_state['transformation_stage'] == "Main Variant":
             image = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
+        
         if image != "":
             st.image(image, use_column_width=True,
                      caption=f"Image {st.session_state['current_frame_index']}")
@@ -141,7 +142,7 @@ def styling_element(timing_uuid, view_type="Single"):
         st.session_state['model']).name
 
     # NOTE: there is a check when creating custom models that no two model can have the same name
-    if current_model_name == AIModelType.CONTROLNET.value:
+    if current_model_name == AIModelCategory.CONTROLNET.value:
         controlnet_adapter_types = [
             "scribble", "normal", "canny", "hed", "seg", "hough", "depth2img", "pose"]
         if 'index_of_controlnet_adapter_type' not in st.session_state:
@@ -155,7 +156,7 @@ def styling_element(timing_uuid, view_type="Single"):
             st.experimental_rerun()
         st.session_state['custom_models'] = []
 
-    elif current_model_name == AIModelType.LORA.value:
+    elif current_model_name == AIModelCategory.LORA.value:
         if not ('index_of_lora_model_1' in st.session_state and st.session_state['index_of_lora_model_1']):
             st.session_state['index_of_lora_model_1'] = 0
             st.session_state['index_of_lora_model_2'] = 0
@@ -165,7 +166,7 @@ def styling_element(timing_uuid, view_type="Single"):
         # filtered_df = df[df.iloc[:, 5] == 'LoRA']
         # lora_model_list = filtered_df.iloc[:, 0].tolist()
         lora_model_list = data_repo.get_all_ai_model_list(
-            model_type_list=[AIModelType.LORA.value], custom_trained=True)
+            model_category_list=[AIModelCategory.LORA.value], custom_trained=True)
         null_model = InternalAIModelObject(
             None, "", None, None, None, None, None, None, None, None, None, None)
         lora_model_list.insert(0, null_model)
@@ -233,13 +234,13 @@ def styling_element(timing_uuid, view_type="Single"):
             st.session_state['index_of_lora_adapter_type'] = lora_adapter_types.index(
                 st.session_state['adapter_type'])
 
-    elif current_model_name == AIModelType.DREAMBOOTH.value:
+    elif current_model_name == AIModelCategory.DREAMBOOTH.value:
         # df = pd.read_csv('models.csv')
         # filtered_df = df[df.iloc[:, 5] == 'Dreambooth']
         # dreambooth_model_list = filtered_df.iloc[:, 0].tolist()
 
         dreambooth_model_list = data_repo.get_all_ai_model_list(
-            model_type_list=[AIModelType.DREAMBOOTH.value], custom_trained=True)
+            model_category_list=[AIModelCategory.DREAMBOOTH.value], custom_trained=True)
         dreambooth_model_name_list = [m.name for m in dreambooth_model_list]
 
         if not ('index_of_dreambooth_model' in st.session_state and st.session_state['index_of_dreambooth_model']):
@@ -330,7 +331,7 @@ def styling_element(timing_uuid, view_type="Single"):
         if view_type == "List":
             st.info(
                 "You can include the following tags in the prompt to vary the prompt dynamically: [expression], [location], [mouth], and [looking]")
-        if st.session_state['model'] == AIModelType.DREAMBOOTH.value:
+        if st.session_state['model'] == AIModelCategory.DREAMBOOTH.value:
             model_details: InternalAIModelObject = data_repo.get_ai_model_from_uuid(
                 st.session_state['dreambooth_model_uuid'])
             st.info(
@@ -343,7 +344,7 @@ def styling_element(timing_uuid, view_type="Single"):
                 st.session_state['adapter_type'] = "No"
 
         else:
-            if st.session_state['model'] == AIModelType.PIX_2_PIX.value:
+            if st.session_state['model'] == AIModelCategory.PIX_2_PIX.value:
                 st.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")
 
         if view_type == "List":

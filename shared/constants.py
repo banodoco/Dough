@@ -24,13 +24,20 @@ class Colors:
     CYAN = "\033[36m"
     WHITE = "\033[37m"
 
-class AIModelType(ExtendedEnum):
+class AIModelCategory(ExtendedEnum):
     LORA = 'LoRA'
     DREAMBOOTH = 'Dreambooth'
     BASE_SD = 'Base_SD'
     CONTROLNET = 'controlnet'
     STYLEGAN_NADA = "StyleGAN-NADA"
     PIX_2_PIX = 'pix2pix'
+
+class AIModelType(ExtendedEnum):
+    TXT2IMG = 'txt2img'
+    IMG2IMG = 'img2img'
+    TXT2VID = 'txt2vid'
+    IMG2VID = 'img2vid'
+    VID2VID = 'vid2vid'
 
 class GuidanceType(ExtendedEnum):
     DRAWING = 'drawing'

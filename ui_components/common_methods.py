@@ -28,7 +28,7 @@ import random
 import uuid
 from io import BytesIO
 import numpy as np
-from shared.constants import REPLICATE_USER, SERVER, AIModelType, InternalFileTag, InternalFileType, ServerType
+from shared.constants import REPLICATE_USER, SERVER, AIModelCategory, InternalFileTag, InternalFileType, ServerType
 from pydub import AudioSegment
 import shutil
 from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, vfx
@@ -1931,7 +1931,7 @@ def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max
             "replicate_model_id": model_id,
             "replicate_url": response["model"],
             "diffusers_url": "",
-            "category": AIModelType.DREAMBOOTH.value,
+            "category": AIModelCategory.DREAMBOOTH.value,
             "training_image_list": file_uuid_list,
             "keyword": instance_prompt,
             "custom_trained": True
@@ -1959,7 +1959,7 @@ def train_lora_model(training_file_url, type_of_task, resolution, model_name, im
         "user_id": get_current_user_uuid(),
         "replicate_url": output,
         "diffusers_url": "",
-        "category": AIModelType.LORA.value,
+        "category": AIModelCategory.LORA.value,
         "training_image_list": file_uuid_list,
         "custom_trained": True
     }
@@ -2855,10 +2855,10 @@ def custom_pipeline_mystique(timing_uuid, source_image) -> InternalFileObject:
     output_image_file = resize_image(
         timing.project.name, project_settings.width, project_settings.height, output_image_file)
 
-    if timing.model.category == AIModelType.DREAMBOOTH.value:
+    if timing.model.category == AIModelCategory.DREAMBOOTH.value:
         output_image_file = prompt_model_dreambooth(
             timing_uuid, output_image_file)
-    elif timing.model.category == AIModelType.LORA.value:
+    elif timing.model.category == AIModelCategory.LORA.value:
         output_image_file = prompt_model_lora(timing_uuid, output_image_file)
 
     return output_image_file

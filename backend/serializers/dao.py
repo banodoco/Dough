@@ -1,7 +1,7 @@
 from argparse import FileType
 from rest_framework import serializers
 
-from shared.constants import AIModelType, AnimationStyleType, GuidanceType, InternalFileType
+from shared.constants import AIModelCategory, AnimationStyleType, GuidanceType, InternalFileType
 
 class CreateUserDao(serializers.Serializer):
     name = serializers.CharField(max_length=100)
@@ -39,8 +39,9 @@ class CreateAIModelDao(serializers.Serializer):
     version = serializers.CharField(max_length=100, allow_null=True, required=False)
     replicate_url = serializers.CharField(max_length=512, default="", required=False)
     diffusers_url = serializers.CharField(max_length=512, default="", required=False)
-    category = serializers.ChoiceField(choices=AIModelType.value_list())
+    category = serializers.ChoiceField(choices=AIModelCategory.value_list())
     keyword = serializers.CharField(max_length=255, default="", allow_blank=True, required=False)
+    model_type = serializers.CharField(max_length=None)
 
 class UpdateAIModelDao(serializers.Serializer):
     uuid = serializers.CharField(max_length=100)
@@ -50,8 +51,9 @@ class UpdateAIModelDao(serializers.Serializer):
     version = serializers.CharField(max_length=100, required=False)
     replicate_url = serializers.CharField(max_length=512, default="", required=False)
     diffusers_url = serializers.CharField(max_length=512, default="", required=False)
-    category = serializers.ChoiceField(choices=AIModelType.value_list(), required=False)
+    category = serializers.ChoiceField(choices=AIModelCategory.value_list(), required=False)
     keyword = serializers.CharField(max_length=255, required=False)
+    model_type = serializers.CharField(max_length=None, required=False)
 
 
 class CreateInferenceLogDao(serializers.Serializer):

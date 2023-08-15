@@ -93,28 +93,28 @@ def copy_sample_assets(project_name):
     import shutil
 
     # copy sample video
-    source = "sample_assets/input_videos/sample.mp4"
+    source = "sample_assets/sample_videos/sample.mp4"
     dest = "videos/" + project_name + "/assets/resources/input_videos/sample.mp4"
     shutil.copyfile(source, dest)
 
     # copy selected frames
-    select_samples_path = 'sample_assets/frames/selected_sample'
-    file_list = os.listdir(select_samples_path)
-    file_paths = []
-    for item in file_list:
-        item_path = os.path.join(select_samples_path, item)
-        if os.path.isfile(item_path):
-            file_paths.append(item_path)
+    # select_samples_path = 'sample_assets/sample_images'
+    # file_list = os.listdir(select_samples_path)
+    # file_paths = []
+    # for item in file_list:
+    #     item_path = os.path.join(select_samples_path, item)
+    #     if os.path.isfile(item_path):
+    #         file_paths.append(item_path)
     
-    for idx in range(len(file_list)):
-        source = file_paths[idx]
-        dest = f"videos/{project_name}/assets/frames/1_selected/{file_list[idx]}"
-        shutil.copyfile(source, dest)
+    # for idx in range(len(file_list)):
+    #     source = file_paths[idx]
+    #     dest = f"videos/{project_name}/assets/frames/1_selected/{file_list[idx]}"
+    #     shutil.copyfile(source, dest)
     
     # copy timings file
-    source = "sample_assets/frames/meta_data/timings.csv"
-    dest = f"videos/{project_name}/timings.csv"
-    shutil.copyfile(source, dest)
+    # source = "sample_assets/frames/meta_data/timings.csv"
+    # dest = f"videos/{project_name}/timings.csv"
+    # shutil.copyfile(source, dest)
 
 def create_working_assets(project_name):
     if SERVER != ServerType.DEVELOPMENT.value:
