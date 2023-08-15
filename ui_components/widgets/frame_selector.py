@@ -5,6 +5,7 @@ import time
 from shared.constants import InternalFileType
 from ui_components.widgets.frame_time_selector import single_frame_time_selector
 from ui_components.widgets.image_carousal import display_image
+from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
 from ui_components.constants import WorkflowStageType
 from shared.file_upload.s3 import upload_file
@@ -47,15 +48,15 @@ def frame_selector_widget():
         if replace_with == "Other Frame":
                         
             which_stage_to_use_for_replacement = st.radio("Select stage to use:", [
-                "Styled Image", "Guidance Image"], key=f"which_stage_to_use_for_replacement_{stage}", horizontal=True)
+                ImageStage.MAIN_VARIANT.value, ImageStage.SOURCE_IMAGE.value], key=f"which_stage_to_use_for_replacement_{stage}", horizontal=True)
             which_image_to_use_for_replacement = st.number_input("Select image to use:", min_value=0, max_value=len(
                 timing_details)-1, value=0, key=f"which_image_to_use_for_replacement_{stage}")
             
-            if which_stage_to_use_for_replacement == "Guidance Image":                                    
+            if which_stage_to_use_for_replacement == ImageStage.SOURCE_IMAGE.value:                                    
                 selected_image = timing_details[which_image_to_use_for_replacement].source_image
                 
             
-            elif which_stage_to_use_for_replacement == "Styled Image":
+            elif which_stage_to_use_for_replacement == ImageStage.MAIN_VARIANT.value:
                 selected_image = timing_details[which_image_to_use_for_replacement].primary_image
                 
             

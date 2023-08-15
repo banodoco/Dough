@@ -16,6 +16,7 @@ import math
 from ui_components.constants import WorkflowStageType
 from streamlit_extras.annotated_text import annotated_text
 from utils.common_utils import save_or_host_file
+from utils.constants import ImageStage
 
 from utils.data_repo.data_repo import DataRepo
 
@@ -655,15 +656,15 @@ def frame_styling_page(mainheader2, project_uuid: str):
             if source_of_starting_image == "Previous frame":                
                 with image2:
                     which_stage_for_starting_image = st.radio("Which stage would you like to use?", [
-                                                          "Styled Image", "Source Image"], key="which_stage_for_starting_image", horizontal=True)
+                                                          ImageStage.MAIN_VARIANT.value, ImageStage.SOURCE_IMAGE.value], key="which_stage_for_starting_image", horizontal=True)
                     which_number_for_starting_image = st.number_input("Which frame would you like to use?", min_value=1, max_value=
                                                                   max(1, len(timing_details)), value=st.session_state['current_frame_index'], step=1, key="which_number_for_starting_image")
-                if which_stage_for_starting_image == "Source Image":
+                if which_stage_for_starting_image == ImageStage.SOURCE_IMAGE.value:
                     if timing_details[which_number_for_starting_image - 1].source_image != "":
                         selected_image = timing_details[which_number_for_starting_image - 1].source_image.location
                     else:
                         selected_image = ""
-                elif which_stage_for_starting_image == "Styled Image":
+                elif which_stage_for_starting_image == ImageStage.MAIN_VARIANT.value:
                     selected_image = timing_details[which_number_for_starting_image - 1].primary_image_location
             elif source_of_starting_image == "Uploaded image":
                 with image2:

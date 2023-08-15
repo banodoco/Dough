@@ -38,6 +38,7 @@ from shared.file_upload.s3 import upload_file
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, VideoQuality, WorkflowStageType
 from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
 from utils.common_utils import add_temp_file_to_project, generate_temp_file, get_current_user_uuid, save_or_host_file, save_or_host_file_bytes
+from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
 from utils.ml_processor.ml_interface import get_ml_client
@@ -1488,7 +1489,7 @@ def trigger_restyling_process(
         dynamic_prompting(prompt, source_image, timing_uuid)
 
     timing = data_repo.get_timing_from_uuid(timing_uuid)
-    if transformation_stage == "Source Image":
+    if transformation_stage == ImageStage.SOURCE_IMAGE.value:
         source_image = timing.source_image
     else:
         variants: List[InternalFileObject] = timing.alternative_images_list
@@ -2089,9 +2090,11 @@ def touch_up_image(image: InternalFileObject):
 
 # TODO: don't save or upload image where just passing the PIL object can work
 def resize_image(video_name, new_width, new_height, image_file: InternalFileObject) -> InternalFileObject:
-    image = image_file.location
-    response = r.get(image)
-    image = Image.open(BytesIO(response.content))
+    if 'http' in image_file.location:
+        response = r.get(image_file.location)
+        image = Image.open(BytesIO(response.content))
+    else:
+        image = Image.open(image_file.location)
     resized_image = image.resize((new_width, new_height))
 
     time.sleep(0.1)
@@ -2165,88 +2168,108 @@ def face_swap(timing_uuid, source_image) -> InternalFileObject:
     return image_file
 
 
+# TODO: fix the options input, only certain words can be input in this
 def prompt_model_stylegan_nada(timing_uuid, input_image):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
 
-    if not input_image.startswith("http"):
-        input_image = open(input_image, "rb")
+    input_file = input_image.location
+    if 'http' in input_image.location:
+        input_file = open(input_image.location, 'rb')
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.stylegan_nada, input=input_image,
+    output = ml_client.predict_model_output(REPLICATE_MODEL.stylegan_nada, input=input_file,
                                             output_style=timing.prompt)
-    output = resize_image(timing.project.name, 512, 512, output)
+    filename = str(uuid.uuid4()) + ".png"
+    image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+                                       hosted_url=output[0])
+    output_file = resize_image(timing.project.name, 512, 512, image_file)
 
-    return output
+    return output_file
 
 
-def prompt_model_stable_diffusion_xl(timing_uuid, source_image) -> InternalFileObject:
+def prompt_model_stable_diffusion_xl(timing_uuid):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
 
-    engine_id = "stable-diffusion-xl-beta-v2-2-2"
-    api_host = os.getenv('API_HOST', 'https://api.stability.ai')
-    app_setting: InternalSettingObject = data_repo.get_app_setting_from_uuid()
-    api_key = app_setting.stability_key_decrypted
+    ml_client = get_ml_client()
+    output = ml_client.predict_model_output(REPLICATE_MODEL.sdxl, prompt=timing.prompt)
+    filename = str(uuid.uuid4()) + ".png"
+    image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+                                       hosted_url=output[0])
+    output_file = resize_image(timing.project.name, 512, 512, image_file)
 
-    # if the image starts with http, it's a URL, otherwise it's a file path
-    if source_image.startswith("http"):
-        response = r.get(source_image)
-        source_image = Image.open(BytesIO(response.content))
-    else:
-        source_image = Image.open(source_image)
+    return output_file
 
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    source_image.save(temp_file, "PNG")
-    temp_file.close()
+# NOTE: old code not is use
+# def prompt_model_stable_diffusion_xl(timing_uuid, source_image) -> InternalFileObject:
+#     data_repo = DataRepo()
+#     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
+#         timing_uuid)
+#     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
+#         timing.project.uuid)
 
-    source_image.seek(0)
+#     engine_id = "stable-diffusion-xl-beta-v2-2-2"
+#     api_host = os.getenv('API_HOST', 'https://api.stability.ai')
+#     app_setting: InternalSettingObject = data_repo.get_app_setting_from_uuid()
+#     api_key = app_setting.stability_key_decrypted
 
-    multipart_data = MultipartEncoder(
-        fields={
-            "text_prompts[0][text]": timing.prompt,
-            "init_image": (os.path.basename(temp_file.name), open(temp_file.name, "rb"), "image/png"),
-            "init_image_mode": "IMAGE_STRENGTH",
-            "image_strength": timing.strength,
-            "cfg_scale": timing.guidance_scale,
-            "clip_guidance_preset": "FAST_BLUE",
-            "samples": "1",
-            "steps": timing.num_inteference_steps,
-        }
-    )
+#     # if the image starts with http, it's a URL, otherwise it's a file path
+#     if source_image.startswith("http"):
+#         response = r.get(source_image)
+#         source_image = Image.open(BytesIO(response.content))
+#     else:
+#         source_image = Image.open(source_image)
 
-    print(multipart_data)
+#     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+#     source_image.save(temp_file, "PNG")
+#     temp_file.close()
 
-    response = r.post(
-        f"{api_host}/v1/generation/{engine_id}/image-to-image",
-        headers={
-            "Content-Type": multipart_data.content_type,
-            "Accept": "application/json",
-            "Authorization": f"Bearer {api_key}"
-        },
-        data=multipart_data,
-    )
-    os.unlink(temp_file.name)
+#     source_image.seek(0)
 
-    print(response)
+#     multipart_data = MultipartEncoder(
+#         fields={
+#             "text_prompts[0][text]": timing.prompt,
+#             "init_image": (os.path.basename(temp_file.name), open(temp_file.name, "rb"), "image/png"),
+#             "init_image_mode": "IMAGE_STRENGTH",
+#             "image_strength": timing.strength,
+#             "cfg_scale": timing.guidance_scale,
+#             "clip_guidance_preset": "FAST_BLUE",
+#             "samples": "1",
+#             "steps": timing.num_inteference_steps,
+#         }
+#     )
 
-    if response.status_code != 200:
-        st.error("An error occurred: " + str(response.text))
-        time.sleep(5)
-        return None
-    else:
-        data = response.json()
-        generated_image = base64.b64decode(data["artifacts"][0]["base64"])
-        # generate a random file name with uuid at the location
-        filename = str(uuid.uuid4()) + ".png"
-        image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                               local_path="videos/" + str(timing.project.name) + "/assets/frames/2_character_pipeline_completed/")
+#     print(multipart_data)
 
-    return image_file
+#     response = r.post(
+#         f"{api_host}/v1/generation/{engine_id}/image-to-image",
+#         headers={
+#             "Content-Type": multipart_data.content_type,
+#             "Accept": "application/json",
+#             "Authorization": f"Bearer {api_key}"
+#         },
+#         data=multipart_data,
+#     )
+#     os.unlink(temp_file.name)
+
+#     print(response)
+
+#     if response.status_code != 200:
+#         st.error("An error occurred: " + str(response.text))
+#         time.sleep(5)
+#         return None
+#     else:
+#         data = response.json()
+#         generated_image = base64.b64decode(data["artifacts"][0]["base64"])
+#         # generate a random file name with uuid at the location
+#         filename = str(uuid.uuid4()) + ".png"
+#         image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+#                                                                local_path="videos/" + str(timing.project.name) + "/assets/frames/2_character_pipeline_completed/")
+
+#     return image_file
 
 
 def prompt_model_stability(timing_uuid, input_image_file: InternalFileObject):
@@ -2830,8 +2853,7 @@ def restyle_images(timing_uuid, source_image) -> InternalFileObject:
     elif model_name == 'StyleGAN-NADA':
         output_file = prompt_model_stylegan_nada(timing_uuid, source_image)
     elif model_name == "stable_diffusion_xl":
-        output_file = prompt_model_stable_diffusion_xl(
-            timing_uuid, source_image)
+        output_file = prompt_model_stable_diffusion_xl(timing_uuid)
     elif model_name == "real-esrgan-upscaling":
         output_file = prompt_model_real_esrgan_upscaling(source_image)
     elif model_name == 'controlnet_1_1_x_realistic_vision_v2_0':

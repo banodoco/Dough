@@ -3,15 +3,14 @@ import streamlit as st
 import uuid
 
 from typing import List
-from shared.constants import AIModelCategory
+from shared.constants import AIModelCategory, AIModelType
 from ui_components.common_methods import trigger_restyling_process
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
+from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
 
 
 def styling_element(timing_uuid, view_type="Single"):
-    
-
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
@@ -20,7 +19,7 @@ def styling_element(timing_uuid, view_type="Single"):
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         timing.project.uuid)
 
-    stages = ["Source Image", "Main Variant"]
+    stages = ImageStage.value_list()
 
     if project_settings.default_stage != "":
         if 'index_of_which_stage_to_run_on' not in st.session_state:
@@ -36,9 +35,6 @@ def styling_element(timing_uuid, view_type="Single"):
         append_to_item_name = "bulk"
         st.markdown("## Batch queries")
 
-    stages = ["Source Image", "Main Variant", "Empty Canvas"]
-
-    # TODO: CORRECT-CODE transformation_stage add this in db
     if view_type == "Single":
         if timing.transformation_stage:
             if f'index_of_which_stage_to_run_on_{append_to_item_name}' not in st.session_state:
@@ -59,19 +55,20 @@ def styling_element(timing_uuid, view_type="Single"):
 
     stages1, stages2 = st.columns([1, 1])
     with stages1:
-        st.session_state['transformation_stage'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True, key=str(uuid.uuid4()),
+        st.session_state['transformation_stage'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True, key="image_stage_selector",
                                                              index=st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'], help="Extracted frames means the original frames from the video.")
     with stages2:
-        if st.session_state['transformation_stage'] == "Source Image":
+        image = None
+        if st.session_state['transformation_stage'] == ImageStage.SOURCE_IMAGE.value:
             source_img = timing_details[st.session_state['current_frame_index'] - 1].source_image
             image = source_img.location if source_img else ""
-        elif st.session_state['transformation_stage'] == "Main Variant":
+        elif st.session_state['transformation_stage'] == ImageStage.MAIN_VARIANT.value:
             image = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
         
-        if image != "":
+        if image:
             st.image(image, use_column_width=True,
                      caption=f"Image {st.session_state['current_frame_index']}")
-        else:
+        elif not image and st.session_state['transformation_stage'] in [ImageStage.SOURCE_IMAGE.value, ImageStage.MAIN_VARIANT.value]:
             st.error(
                 f"No {st.session_state['transformation_stage']} image found for this variant")
 
@@ -111,7 +108,11 @@ def styling_element(timing_uuid, view_type="Single"):
             st.experimental_rerun()
     else:
 
-        model_list = data_repo.get_all_ai_model_list(custom_trained=False)
+        if st.session_state['transformation_stage'] != ImageStage.NONE.value:
+            model_list = data_repo.get_all_ai_model_list(custom_trained=False)
+        else:
+            model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)
+
         model_name_list = [m.name for m in model_list]
 
         # user_model_list = data_repo.get_all_ai_model_list(custom_trained=True)
@@ -126,6 +127,10 @@ def styling_element(timing_uuid, view_type="Single"):
                     f"Index of last model: {st.session_state['index_of_default_model']}")
             else:
                 st.session_state['index_of_default_model'] = 0
+
+        # resetting index on list change
+        if st.session_state['index_of_default_model'] >= len(model_list):
+            st.session_state['index_of_default_model'] = 0
 
         selected_model_name = st.selectbox(
             f"Which model would you like to use?", model_name_list, index=st.session_state['index_of_default_model'])

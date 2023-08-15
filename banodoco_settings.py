@@ -9,6 +9,7 @@ from shared.constants import AnimationStyleType
 from ui_components.common_methods import add_image_variant
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalUserObject
 from utils.common_utils import copy_sample_assets, create_working_assets, save_or_host_file
+from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
@@ -131,7 +132,7 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
         "default_guidance_scale" : 7.5,
         "default_seed" : 1234,
         "default_num_inference_steps" : 30,
-        "default_stage" : "Source Image",
+        "default_stage" : ImageStage.SOURCE_IMAGE.value,
         "default_custom_model_id_list" : "[]",
         "default_adapter_type" : "N",
         "guidance_type" : guidance_type,
@@ -236,6 +237,15 @@ def create_predefined_models(user):
             "keyword" : "",
             "model_type": json.dumps([AIModelType.IMG2IMG.value])
         },
+        {
+            "name": "stable_diffusion_xl",
+            "user_id": user.uuid,
+            "version": REPLICATE_MODEL.sdxl.version,
+            "replicate_url": REPLICATE_MODEL.sdxl.name,
+            "category": AIModelCategory.BASE_SD.value,
+            "keyword": "",
+            "model_type": json.dumps([AIModelType.TXT2IMG.value])
+        }
     ]
 
     # only creating pre-defined models for the first time
