@@ -208,7 +208,11 @@ def save_or_host_file(file, path, mime_type='image/png'):
     data_repo = DataRepo()
     # TODO: fix session state management, remove direct access out side the main code
     project_setting = data_repo.get_project_setting(st.session_state['project_uuid'])
-    file = zoom_and_crop(file, project_setting.width, project_setting.height)
+    if project_setting:
+        file = zoom_and_crop(file, project_setting.width, project_setting.height)
+    else:
+        # new project
+        file = zoom_and_crop(file, 512, 512)
 
     uploaded_url = None
     if SERVER != ServerType.DEVELOPMENT.value:
