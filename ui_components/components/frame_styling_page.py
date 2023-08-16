@@ -138,7 +138,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 for a in range(i - 2, i + 2):
                                     if a >= 0 and a < num_timing_details:
                                         data_repo.update_specific_timing(timing_details[a].uuid, timing_video_id=None)
-                                data_repo.update_specific_timing(timing_details[idx], preview_video_id=None)
+                                data_repo.update_specific_timing(timing_details[idx].uuid, preview_video_id=None)
 
                                 if shift_frames is True:
                                     diff_frame_time = frame_time - previous_frame_time
