@@ -1,40 +1,5 @@
 import streamlit as st
-import threading
-from functools import wraps
 
-
-def synchronized(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        lock = threading.Lock()
-        with lock:
-            return func(*args, **kwargs)
-    return wrapper
-
-def synchronized_class(cls):
-    class SynchronizedClass:
-        def __init__(self, *args, **kwargs):
-            self._lock = threading.Lock()
-            self._instance = cls(*args, **kwargs)
-
-        def __getattr__(self, name):
-            with self._lock:
-                print("____________ fetching: ", name)
-                attribute = getattr(self._instance, name)
-            return attribute
-
-        def __setattr__(self, name, value):
-            if name in ("_lock", "_instance"):
-                super().__setattr__(name, value)
-            else:
-                with self._lock:
-                    setattr(self._instance, name, value)
-
-        def __delattr__(self, name):
-            with self._lock:
-                delattr(self._instance, name)
-
-    return SynchronizedClass
 
 class StCache:
     @staticmethod
@@ -49,11 +14,12 @@ class StCache:
     @staticmethod
     def update(data, data_type) -> bool:
         object_found = False
+        uuid = data['uuid'] if type(data) is dict else data.uuid
 
         if data_type in st.session_state:
             object_list = st.session_state[data_type]
             for ele in object_list:
-                if ele.uuid == data.uuid:
+                if ele.uuid == uuid:
                     ele = data
                     object_found = True
                     break
@@ -64,7 +30,8 @@ class StCache:
     
     @staticmethod
     def add(data, data_type) -> bool:
-        obj = StCache.get(data.uuid, data_type)
+        uuid = data['uuid'] if type(data) is dict else data.uuid
+        obj = StCache.get(uuid, data_type)
         if obj:
             StCache.update(data, data_type)
         else:
@@ -76,12 +43,6 @@ class StCache:
             object_list.append(data)
 
             st.session_state[data_type] = object_list
-            current_thread = threading.current_thread()
-            print("Current thread before:", current_thread.ident)
-            print("Current thread before name:", current_thread.name)
-            current_thread = threading.current_thread()
-            print("Current thread after:", current_thread.ident)
-            print("session state key length: ", len(st.session_state.keys()))
 
 
     @staticmethod
@@ -109,13 +70,8 @@ class StCache:
     
     @staticmethod
     def add_all(data_list, data_type) -> bool:
-        object_list = []
-        if data_type in st.session_state:
-            object_list = st.session_state[data_type]
-        
-        object_list.extend(data_list)
-        st.session_state[data_type] = object_list
-
+        for data in data_list:
+            StCache.add(data, data_type)
         
         return True
         

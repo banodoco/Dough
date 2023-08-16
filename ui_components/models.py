@@ -158,6 +158,7 @@ class InternalFrameTimingObject:
 
 class InternalAppSettingObject:
     def __init__(self, **kwargs):
+        self.uuid = kwargs['uuid'] if 'uuid' in kwargs else None
         self.user = InternalUserObject(
             **kwargs["user"]) if 'user' in kwargs else None
         self.previous_project = InternalProjectObject(

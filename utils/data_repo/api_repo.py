@@ -319,7 +319,7 @@ class APIRepo:
         res = self.http_delete(self.PROJECT_TIMING_URL, params={'uuid': project_uuid})
         return InternalResponse(res['payload'], 'success', res['status']).status
     
-    def remove_primay_frame(self, timing_uuid):
+    def remove_primary_frame(self, timing_uuid):
         update_data = {
             'uuid': timing_uuid,
             'primary_image_id': None

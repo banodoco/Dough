@@ -884,7 +884,7 @@ class DBRepo:
         timing.save()
         return InternalResponse({}, 'timing deleted successfully', True)
 
-    def remove_primay_frame(self, uuid):
+    def remove_primary_frame(self, uuid):
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)

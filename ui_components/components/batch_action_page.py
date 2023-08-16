@@ -58,7 +58,7 @@ def batch_action_page(project_uuid):
     if st.button("Remove all variants"):
         for timing_frame in timing_details:
             data_repo.update_specific_timing(timing_frame.uuid, alternative_images=None)
-            data_repo.remove_primay_frame(timing_frame.uuid)
+            data_repo.remove_primary_frame(timing_frame.uuid)
 
         st.success("All variants removed successfully!")
         time.sleep(1)

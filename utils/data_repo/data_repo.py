@@ -4,20 +4,22 @@ from shared.constants import InternalFileType, InternalResponse
 from backend.db_repo import DBRepo
 from shared.constants import SERVER, ServerType
 from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalUserObject
+from utils.cache.cache_methods import cache_data
 from utils.common_decorators import count_calls
 import streamlit as st
 import wrapt
 
 from utils.data_repo.api_repo import APIRepo
 
-# @cache_data
+@cache_data
 class DataRepo:
     _instance = None
     
     def __new__(cls):
-        if cls._instance is None:
+        if not cls._instance:
             cls._instance = super().__new__(cls)
             cls._instance._initialized = False
+
         return cls._instance
     
     def __init__(self):
@@ -254,8 +256,8 @@ class DataRepo:
         res = self.db_repo.remove_existing_timing(project_uuid)
         return res.status
     
-    def remove_primay_frame(self, timing_uuid):
-        res = self.db_repo.remove_primay_frame(timing_uuid)
+    def remove_primary_frame(self, timing_uuid):
+        res = self.db_repo.remove_primary_frame(timing_uuid)
         return res.status
     
     def remove_source_image(self, timing_uuid):
