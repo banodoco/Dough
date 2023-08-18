@@ -1,5 +1,6 @@
 import json
 import uuid
+import streamlit as st
 
 from PIL import Image
 from shared.constants import SERVER, AIModelCategory, AIModelType, GuidanceType, InternalFileType, ServerType
@@ -87,6 +88,7 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     project: InternalProjectObject = data_repo.create_project(**project_data)
 
     # create a sample timing frame
+    st.session_state["project_uuid"] = project.uuid
     sample_file_location = "sample_assets/sample_images/v.jpeg"
     img = Image.open(sample_file_location)
     img = img.resize((width, height))
