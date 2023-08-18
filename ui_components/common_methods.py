@@ -1516,6 +1516,71 @@ def trigger_restyling_process(
     else:
         print("No new generation to promote")
 
+def replace_image_widget(stage, timing_details):
+                                        
+    replace_with = st.radio("Replace with:", [
+        "Uploaded Frame", "Other Frame"], horizontal=True, key=f"replace_with_what_{stage}")
+    
+
+    if replace_with == "Other Frame":
+                    
+        which_stage_to_use_for_replacement = st.radio("Select stage to use:", [
+            ImageStage.MAIN_VARIANT.value, ImageStage.SOURCE_IMAGE.value], key=f"which_stage_to_use_for_replacement_{stage}", horizontal=True)
+        which_image_to_use_for_replacement = st.number_input("Select image to use:", min_value=0, max_value=len(
+            timing_details)-1, value=0, key=f"which_image_to_use_for_replacement_{stage}")
+        
+        if which_stage_to_use_for_replacement == ImageStage.SOURCE_IMAGE.value:                                    
+            selected_image = timing_details[which_image_to_use_for_replacement].source_image
+            
+        
+        elif which_stage_to_use_for_replacement == ImageStage.MAIN_VARIANT.value:
+            selected_image = timing_details[which_image_to_use_for_replacement].primary_image
+            
+        
+        st.image(selected_image.local_path, use_column_width=True)
+
+        if st.button("Replace with selected frame", disabled=False,key=f"replace_with_selected_frame_{stage}"):
+            if stage == "source":
+                                            
+                data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=selected_image.uuid)                                        
+                st.success("Replaced")
+                time.sleep(1)
+                st.experimental_rerun()
+                
+            else:
+                number_of_image_variants = add_image_variant(
+                    selected_image.uuid, st.session_state['current_frame_uuid'])
+                promote_image_variant(
+                    st.session_state['current_frame_uuid'], number_of_image_variants - 1)
+                st.success("Replaced")
+                time.sleep(1)
+                st.experimental_rerun()
+                                            
+    elif replace_with == "Uploaded Frame":
+        if stage == "source":
+            uploaded_file = st.file_uploader("Upload Source Image", type=[
+                "png", "jpeg"], accept_multiple_files=False)
+            if st.button("Upload Source Image"):
+                if uploaded_file:
+                    timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
+                    if save_uploaded_image(uploaded_file, timing.project.uuid, st.session_state['current_frame_uuid'], "source"):
+                        time.sleep(1.5)
+                        st.experimental_rerun()
+        else:
+            replacement_frame = st.file_uploader("Upload a replacement frame here", type=[
+                "png", "jpeg"], accept_multiple_files=False, key=f"replacement_frame_upload_{stage}")
+            if st.button("Replace frame", disabled=False):
+                images_for_model = []
+                timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
+                if replacement_frame:
+                    saved_file = save_uploaded_image(replacement_frame, timing.project.uuid, st.session_state['current_frame_uuid'], "styled")
+                    if saved_file:
+                        number_of_image_variants = add_image_variant(saved_file.uuid, st.session_state['current_frame_uuid'])
+                        promote_image_variant(
+                            st.session_state['current_frame_uuid'], number_of_image_variants - 1)
+                        st.success("Replaced")
+                        time.sleep(1)
+                        st.experimental_rerun()
 
 def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
     data_repo = DataRepo()
@@ -2401,6 +2466,89 @@ def get_duration_from_video(input_video_file: InternalFileObject):
 get audio_bytes of correct duration for a given frame
 '''
 
+
+
+def current_individual_clip_element(timing_uuid, idx, timing_details):
+    def generate_individual_clip(timing_uuid, quality):
+        if quality == 'full':
+            interpolation_steps = calculate_dynamic_interpolations_steps(timing_details[idx].clip_duration)
+        elif quality == 'preview':
+            interpolation_steps = 3
+        data_repo.update_specific_timing(timing_uuid, interpolation_steps=interpolation_steps, interpolated_clip_id=None)
+        video_location = create_individual_clip(timing_uuid)
+        data_repo.update_specific_timing(timing_uuid, interpolated_clip_id=video_location.uuid)
+        location_of_input_video_file = timing_details[idx].interpolated_clip
+        output_video = update_speed_of_video_clip(location_of_input_video_file, True, timing_uuid)
+        data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
+        return output_video
+    
+    st.info(f"Individual Clip for #{idx+1}")
+    if timing_details[idx].timed_clip:
+        st.video(timing_details[idx].timed_clip.location)
+                        
+        if timing_details[idx].interpolation_steps is not None:
+
+            if calculate_dynamic_interpolations_steps(timing_details[idx].clip_duration) > timing_details[idx].interpolation_steps:
+                st.error("Preview Resolution")
+                if st.button("Generate Full Resolution Video", key=f"generate_full_resolution_video_{idx}"):                                    
+                    generate_individual_clip(timing_details[idx].uuid, 'full')
+                    st.experimental_rerun()
+            else:
+                st.success("Full Resolution")
+    else:
+        st.error("No Video Created Yet")
+        gen1, gen2 = st.columns([1, 1])
+        with gen1:
+            if st.button("Generate Preview Video", key=f"generate_preview_video_{idx}"):
+                generate_individual_clip(timing_details[idx].uuid, 'preview')
+                st.experimental_rerun()
+        with gen2:
+            if st.button("Generate Full Resolution Video", key=f"generate_full_resolution_video_{idx}"):
+                generate_individual_clip(timing_details[idx].uuid, 'full')
+                st.experimental_rerun()
+
+
+def update_animation_style_element(idx, timing_details):
+    animation_styles = ["Interpolation", "Direct Morphing"]
+
+    if f"animation_style_index_{idx}" not in st.session_state:
+        st.session_state[f"animation_style_index_{idx}"] = animation_styles.index(
+            timing_details[idx].animation_style)
+        st.session_state[f"animation_style_{idx}"] = timing_details[idx].animation_style
+
+    st.session_state[f"animation_style_{idx}"] = st.radio(
+        "Animation style:", animation_styles, index=st.session_state[f"animation_style_index_{idx}"], key=f"animation_style_radio_{idx}", help="This is for the morph from the current frame to the next one.", horizontal=True)
+
+    if st.session_state[f"animation_style_{idx}"] != timing_details[idx].animation_style:
+        st.session_state[f"animation_style_index_{idx}"] = animation_styles.index(
+            st.session_state[f"animation_style_{idx}"])
+        data_repo.update_specific_timing(timing_details[idx].uuid, animation_style=st.session_state[f"animation_style_{idx}"])
+        st.experimental_rerun()
+
+
+def current_preview_video_element(timing, idx,timing_details):
+    st.info("Preview Video in Context:")
+
+    preview_video_1, preview_video_2 = st.columns([2.5, 1])
+
+    
+
+    with preview_video_1:
+        if timing.preview_video:
+            st.video(timing.preview_video.location)
+        else:
+            st.error(
+                "No preview video available for this frame")
+    
+    with preview_video_2:
+
+        
+        if st.button("Generate New Preview Video", key=f"generate_preview_{idx}"):
+            preview_video = create_full_preview_video(
+                timing.uuid, 1.0)
+            data_repo.update_specific_timing(
+                timing.uuid, preview_video_id=preview_video.uuid)
+            st.experimental_rerun()
 
 def get_audio_bytes_for_slice(timing_uuid):
     data_repo = DataRepo()

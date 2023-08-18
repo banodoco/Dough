@@ -55,7 +55,7 @@ def styling_element(timing_uuid, view_type="Single"):
 
     stages1, stages2 = st.columns([1, 1])
     with stages1:
-        st.session_state['transformation_stage'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True, key="image_stage_selector",
+        st.session_state['transformation_stage'] = st.radio("What stage of images would you like to run styling on?", options=stages, horizontal=True, key=f"image_stage_selector_{append_to_item_name}",
                                                              index=st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'], help="Extracted frames means the original frames from the video.")
     with stages2:
         image = None

@@ -13,7 +13,6 @@ from ui_components.components.project_settings_page import project_settings_page
 from ui_components.components.video_rendering_page import video_rendering_page
 from streamlit_option_menu import option_menu
 from ui_components.models import InternalAppSettingObject
-from ui_components.widgets.frame_selector import frame_selector_widget
 from utils.common_utils import create_working_assets, get_current_user_uuid, reset_project_state
 
 from utils.data_repo.data_repo import DataRepo
@@ -181,7 +180,7 @@ def setup_app_ui():
                         on_change=on_change_view_type 
                     )
 
-                    frame_selector_widget()
+                    
             
 
                 frame_styling_page(
