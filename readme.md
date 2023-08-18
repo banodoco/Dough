@@ -30,7 +30,7 @@ If you're a developer, you'll probably want to install these in a virtual enviro
 
 To run the app, you can run the following command in your terminal window:
 
-`streamlit run app.py`
+`streamlit run app.py --runner.fastReruns false`
 
 This should open a new tab in your browser with the app running. If it doesn't, you can copy and paste the link that is printed in your terminal window.
 
