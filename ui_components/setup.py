@@ -164,7 +164,7 @@ def setup_app_ui():
                     def on_change_view_type(key):
                         selection = st.session_state[key]
                         if selection == "List View":
-                            st.session_state['index_of_current_page'] = math.floor(
+                            st.session_state['index_of_current_page'] = math.ceil(
                                 st.session_state['current_frame_index'] / 10)
                             
                     # Option menu

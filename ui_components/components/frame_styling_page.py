@@ -321,7 +321,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                         with aboveimage1:
                             st.info(
-                                f"Current variant = {timing_details[st.session_state['current_frame_index'] - 1].primary_variant_index}")
+                                f"Current variant = {timing_details[st.session_state['current_frame_index'] - 1].primary_variant_index + 1}")
 
                         with aboveimage2:
                             show_more_than_10_variants = st.checkbox(
@@ -333,14 +333,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             if show_more_than_10_variants is True:
                                 current_variant = int(
                                     timing_details[st.session_state['current_frame_index'] - 1].primary_variant_index)
-                                which_variant = st.radio(f'Main variant = {current_variant}', range(
-                                    number_of_variants), index=number_of_variants-1, horizontal=True, key=f"Main variant for {st.session_state['current_frame_index']}")
+                                which_variant = st.radio(f'Main variant = {current_variant + 1}', range(1, 
+                                    number_of_variants + 1), index=number_of_variants-1, horizontal=True, key=f"Main variant for {st.session_state['current_frame_index']}")
                             else:
                                 last_ten_variants = range(
-                                    max(0, number_of_variants - 10), number_of_variants)
+                                    max(1, number_of_variants - 10), number_of_variants + 1)
                                 current_variant = int(
                                     timing_details[st.session_state['current_frame_index'] - 1].primary_variant_index)
-                                which_variant = st.radio(f'Main variant = {current_variant}', last_ten_variants, index=len(
+                                which_variant = st.radio(f'Main variant = {current_variant + 1}', last_ten_variants, index=len(
                                     last_ten_variants)-1, horizontal=True, key=f"Main variant for {st.session_state['current_frame_index']}")
 
                         with mainimages1:
@@ -356,20 +356,20 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         with mainimages2:
 
                             if len(timing_details[st.session_state['current_frame_index'] - 1].alternative_images_list):
-                                if which_variant == current_variant:
+                                if which_variant - 1 == current_variant:
                                     st.success("**Main variant**")
 
                                 else:
                                     st.info(f"**Variant #{which_variant}**")
                                 
-                                st.image(variants[which_variant].location,
+                                st.image(variants[which_variant- 1].location,
                                          use_column_width=True)
 
-                                if which_variant != current_variant:
+                                if which_variant- 1 != current_variant:
 
                                     if st.button(f"Promote Variant #{which_variant}", key=f"Promote Variant #{which_variant} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image"):
                                         promote_image_variant(
-                                            st.session_state['current_frame_uuid'], which_variant)
+                                            st.session_state['current_frame_uuid'], which_variant - 1)
                                         time.sleep(0.5)
                                         st.experimental_rerun()
 
@@ -521,18 +521,18 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 if 'current_page' not in st.session_state:
                     st.session_state['current_page'] = 1
                 
-                if 'index_of_current_page' not in st.session_state:
+                if not('index_of_current_page' in st.session_state and st.session_state['index_of_current_page']):
                     st.session_state['index_of_current_page'] = 1
 
                 # Calculate number of pages
                 items_per_page = 10
-                num_pages = math.ceil(len(timing_details) / items_per_page)
+                num_pages = math.ceil(len(timing_details) / items_per_page) + 1
 
                 # Display radio buttons for pagination at the top
                 st.markdown("---")
-
+                
                 st.session_state['current_page'] = st.radio("Select Page:", options=range(
-                    0, num_pages), horizontal=True, index=st.session_state['index_of_current_page'], key="page_selection_radio")
+                    1, num_pages), horizontal=True, index=st.session_state['index_of_current_page'] - 1, key="page_selection_radio")
 
                 if st.session_state['current_page'] != st.session_state['index_of_current_page']:
                     st.session_state['index_of_current_page'] = st.session_state['current_page']
@@ -543,7 +543,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 # Update the current page in session state
 
                 # Display items for the current page only
-                start_index = st.session_state['current_page'] * items_per_page
+                start_index = (st.session_state['current_page'] - 1) * items_per_page
                 end_index = min(start_index + items_per_page,
                                 len(timing_details))
 
@@ -552,7 +552,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
                     timing_details = data_repo.get_timing_list_from_project(
                         project_uuid)
-                    st.subheader(f"Frame {i}")
+                    st.subheader(f"Frame {i+1}")
 
                     if st.session_state['page'] == "Styling":
                         image1_size = 1

@@ -109,7 +109,7 @@ def styling_element(timing_uuid, view_type="Single"):
     else:
 
         if st.session_state['transformation_stage'] != ImageStage.NONE.value:
-            model_list = data_repo.get_all_ai_model_list(custom_trained=False)
+            model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.IMG2IMG.value], custom_trained=False)
         else:
             model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)
 
@@ -422,9 +422,9 @@ def styling_element(timing_uuid, view_type="Single"):
 
     if view_type == "List":
         batch_run_range = st.slider(
-            "Select range:", 1, 0, (0, len(timing_details)-1))
-        first_batch_run_value = batch_run_range[0]
-        last_batch_run_value = batch_run_range[1]
+            "Select range:", 1, 1, (1, len(timing_details)))
+        first_batch_run_value = batch_run_range[0] - 1
+        last_batch_run_value = batch_run_range[1] - 1
 
         st.write(batch_run_range)
 
