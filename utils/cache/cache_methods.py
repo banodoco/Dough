@@ -155,6 +155,24 @@ def cache_data(cls):
     setattr(cls, '_original_update_specific_timing', cls.update_specific_timing)
     setattr(cls, "update_specific_timing", _cache_update_specific_timing)
 
+    def _cache_get_timing_from_uuid(self, *args, **kwargs):
+        timing_list = StCache.get_all(CacheKey.TIMING_DETAILS.value)
+        if timing_list and len(timing_list) and len(args) > 0:
+            for timing in timing_list:
+                if timing.uuid == args[0]:
+                    return timing
+        
+        original_func = getattr(cls, '_original_get_timing_from_uuid')
+        timing = original_func(self, *args, **kwargs)
+
+        if timing:
+            StCache.add(timing, CacheKey.TIMING_DETAILS.value)
+
+        return timing
+    
+    setattr(cls, '_original_get_timing_from_uuid', cls.get_timing_from_uuid)
+    setattr(cls, "get_timing_from_uuid", _cache_get_timing_from_uuid)
+
     def _cache_delete_timing_from_uuid(self, *args, **kwargs):
         original_func = getattr(cls, '_original_delete_timing_from_uuid')
         status = original_func(self, *args, **kwargs)
@@ -328,5 +346,5 @@ def cache_data(cls):
     
     setattr(cls, '_original_bulk_update_project_setting', cls.bulk_update_project_setting)
     setattr(cls, "bulk_update_project_setting", _cache_bulk_update_project_setting)
-
+    
     return cls
