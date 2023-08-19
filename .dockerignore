@@ -8,3 +8,4 @@ __pycache__/
 
 banodoco_local.db
 doc.py
+.env
