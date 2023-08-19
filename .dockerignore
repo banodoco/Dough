@@ -1,0 +1,10 @@
+# system
+__pycache__/
+/.vscode
+
+# user
+/venv
+/videos
+
+banodoco_local.db
+doc.py
