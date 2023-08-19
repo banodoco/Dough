@@ -5,7 +5,6 @@ import math
 from moviepy.editor import *
 
 from ui_components.components.app_settings_page import app_settings_page
-from ui_components.components.batch_action_page import batch_action_page
 from ui_components.components.custom_models_page import custom_models_page
 from ui_components.components.frame_styling_page import frame_styling_page
 from ui_components.components.new_project_page import new_project_page
@@ -118,7 +117,7 @@ def setup_app_ui():
 
             with st.sidebar:
                 main_view_types = ["Creative Process", "Tools & Settings", "Video Rendering"]
-                st.session_state['main_view_type'] = option_menu(None, main_view_types, icons=['magic', 'tools', "play-circle", 'stopwatch'], menu_icon="cast", default_index=0, key="main_view_type_name", orientation="horizontal", styles={
+                st.session_state['main_view_type'] = option_menu(None, main_view_types, icons=['search-heart', 'tools', "play-circle", 'stopwatch'], menu_icon="cast", default_index=0, key="main_view_type_name", orientation="horizontal", styles={
                                                                     "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "red"}})
 
             mainheader1, mainheader2 = st.columns([3, 2])
@@ -140,7 +139,7 @@ def setup_app_ui():
                         st.session_state["page"] = pages[0]
                         st.session_state["manual_select"] = None
 
-                    st.session_state['page'] = option_menu(None, pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
+                    st.session_state['page'] = option_menu(None, pages, icons=['palette', 'camera-reels', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
                                                             "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
 
                     # TODO: CORRECT-CODE
@@ -189,8 +188,7 @@ def setup_app_ui():
             elif st.session_state["main_view_type"] == "Tools & Settings":
 
                 with st.sidebar:
-                    tool_pages = ["Custom Models",
-                                "Batch Actions", "Project Settings"]
+                    tool_pages = ["Custom Models", "Project Settings"]
 
                     if st.session_state["page"] not in tool_pages:
                         st.session_state["page"] = tool_pages[0]
@@ -200,9 +198,7 @@ def setup_app_ui():
                                                             "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
 
                 if st.session_state["page"] == "Custom Models":
-                    custom_models_page(st.session_state["project_uuid"])
-                elif st.session_state["page"] == "Batch Actions":
-                    batch_action_page(st.session_state["project_uuid"])
+                    custom_models_page(st.session_state["project_uuid"])                
                 elif st.session_state["page"] == "Project Settings":
                     project_settings_page(st.session_state["project_uuid"])
 

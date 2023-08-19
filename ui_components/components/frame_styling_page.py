@@ -10,6 +10,7 @@ from ui_components.widgets.frame_selector import frame_selector_widget
 from ui_components.widgets.image_carousal import carousal_of_images_element, display_image
 from ui_components.widgets.prompt_finder import prompt_finder_element
 from ui_components.widgets.styling_element import styling_element
+from streamlit_option_menu import option_menu
 from utils import st_memory
 
 
@@ -40,11 +41,13 @@ def frame_styling_page(mainheader2, project_uuid: str):
         st.session_state['num_inference_steps'] = project_settings.default_num_inference_steps
         st.session_state['transformation_stage'] = project_settings.default_stage
         st.session_state['show_comparison'] = "Don't show"
-
+    
+    '''
     if "current_frame_uuid" not in st.session_state:
         timing = data_repo.get_timing_list_from_project(project_uuid)[0]
         st.session_state['current_frame_uuid'] = timing.uuid
-
+    '''
+    
     if 'frame_styling_view_type' not in st.session_state:
         st.session_state['frame_styling_view_type'] = "Individual View"
         st.session_state['frame_styling_view_type_index'] = 0
@@ -79,66 +82,22 @@ def frame_styling_page(mainheader2, project_uuid: str):
             timing1, timing2, timing3 = st.columns([0.5, 1,1])
 
             with timing1:
-                update_animation_style_element(idx, timing_details)
+                update_animation_style_element(idx, timing_details, horizontal=False)
 
             with timing2:
                 num_timing_details = len(timing_details)
 
                 
-                current_individual_clip_element(st.session_state['current_frame_uuid'], idx, timing_details)
+                current_individual_clip_element(st.session_state['current_frame_uuid'], idx)
 
                 
                     
 
             with timing3:
-                current_preview_video_element(timing_details[idx], idx,timing_details)
+                current_preview_video_element(st.session_state['current_frame_uuid'], idx)
                 
 
-            with st.expander("Clip speed adjustment"):
-
-                clip_data = []
-                start_pct = 0.0
-                total_duration = 0.0
-                st.subheader("Speed Adjustment")
-
-                while start_pct < 1.0:
-                    st.info(f"##### Section {len(clip_data) + 1}")
-                    end_pct = st.slider(
-                        f"What percentage of the original clip should section {len(clip_data) + 1} go until?", min_value=start_pct, max_value=1.0, value=1.0, step=0.01)
-
-                    if end_pct == 1.0:
-                        remaining_duration = 1.0 - total_duration
-                        remaining_pct = 1.0 - start_pct
-                        speed_change = remaining_pct / remaining_duration
-                        st.write(
-                            f"Speed change for the last section will be set to **{speed_change:.2f}x** to maintain the original video length.")
-                    else:
-                        speed_change = st.slider(
-                            f"What speed change should be applied to section {len(clip_data) + 1}?", min_value=0.1, max_value=10.0, value=1.0, step=0.1)
-
-                    clip_data.append({
-                        "start_pct": start_pct,
-                        "end_pct": end_pct,
-                        "speed_change": speed_change
-                    })
-
-                    original_duration = end_pct - start_pct
-                    final_duration = original_duration / \
-                        (speed_change + 1e-6)
-                    total_duration += final_duration
-
-                    if speed_change > 1:
-                        st.info(f"This will make the section from **{start_pct * 100:.0f}% to {end_pct * 100:.0f}%** of the video "
-                                f"**{speed_change:.2f}x** faster, so it lasts **{convert_to_minutes_and_seconds(final_duration)}**.")
-                    else:
-                        st.info(f"This will make the section from **{start_pct * 100:.0f}% to {end_pct * 100:.0f}%** of the video "
-                                f"**{1 / speed_change:.2f}x** slower, so it lasts **{convert_to_minutes_and_seconds(final_duration)}**.")
-
-                    # Update the start_pct for the next section
-                    start_pct = float(end_pct)
-
-                    st.markdown("***")
-                st.write(clip_data)
+            
 
         elif st.session_state['page'] == "Styling":
 
@@ -225,8 +184,10 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 else:
                     img2 = 'https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'
                 
+                img1 = timing_details[st.session_state['current_frame_index'] - 1].source_image.location if timing_details[st.session_state['current_frame_index'] - 1].source_image else 'https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'
+                
                 image_comparison(starting_position=50,
-                                    img1=timing_details[st.session_state['current_frame_index'] - 1].source_image.location,
+                                    img1=img1,
                                     img2=img2, make_responsive=False, label1=WorkflowStageType.SOURCE.value, label2=WorkflowStageType.STYLED.value)
             elif st.session_state['show_comparison'] == "Previous & Next Frame":
 
@@ -269,98 +230,108 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             st.markdown("***")
 
-            with st.expander("🛠️ Generate Variants + Prompt Settings", expanded=True):
-                col1, col2 = st.columns([1, 1])
-                with col1:
-                    styling_element(st.session_state['current_frame_uuid'], view_type="Single")
-                with col2:
-                    detail1, detail2 = st.columns([1, 1])
-                    with detail1:
-                        st.session_state['individual_number_of_variants'] = st.number_input(
-                            f"How many variants?", min_value=1, max_value=100, key=f"number_of_variants_{st.session_state['current_frame_index']}")
 
-                    with detail2:
-                        st.write("")
-                        st.write("")
+            styling_views = ["Generate Variants", "Crop, Move & Rotate Image", "Inpainting & Background Removal","Draw On Image"]
+            
+            st.session_state['styling_view'] = option_menu(None, styling_views, icons=['magic', 'crop', "paint-bucket", 'pencil'], menu_icon="cast", default_index=0, key="styling_view_selector", orientation="horizontal", styles={
+                                                                    "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "#66A9BE"}})
 
-                        # TODO: add custom model validation such for sd img2img the value of strength can only be 1
-                        if st.button(f"Generate variants", key=f"new_variations_{st.session_state['current_frame_index']}", help="This will generate new variants based on the settings to the left."):
-                            for i in range(0, st.session_state['individual_number_of_variants']):
-                                trigger_restyling_process(st.session_state['current_frame_uuid'], st.session_state['model'], st.session_state['prompt'], st.session_state['strength'], st.session_state['custom_pipeline'], st.session_state['negative_prompt'], st.session_state['guidance_scale'], st.session_state['seed'], st.session_state[
-                                                            'num_inference_steps'], st.session_state['transformation_stage'], st.session_state["promote_new_generation"], st.session_state['custom_models'], st.session_state['adapter_type'], True, st.session_state['low_threshold'], st.session_state['high_threshold'])
-                            st.experimental_rerun()
 
-                    st.markdown("***")
+            if st.session_state['styling_view'] == "Generate Variants":
 
-                    st.info(
-                        "You can restyle multiple frames at once in the List view.")
+                with st.expander("🛠️ Generate Variants + Prompt Settings", expanded=True):
+                    col1, col2 = st.columns([1, 1])
+                    with col1:
+                        styling_element(st.session_state['current_frame_uuid'], view_type="Single")
+                    with col2:
+                        detail1, detail2 = st.columns([1, 1])
+                        with detail1:
+                            st.session_state['individual_number_of_variants'] = st.number_input(
+                                f"How many variants?", min_value=1, max_value=100, key=f"number_of_variants_{st.session_state['current_frame_index']}")
 
-                    st.markdown("***")
+                        with detail2:
+                            st.write("")
+                            st.write("")
 
-                    open_copier = st.checkbox(
-                        "Copy styling settings from another frame")
-                    if open_copier is True:
-                        copy1, copy2 = st.columns([1, 1])
-                        with copy1:
-                            which_frame_to_copy_from = st.number_input("Which frame would you like to copy styling settings from?", min_value=1, max_value=len(
-                                timing_details), value=st.session_state['current_frame_index']-1, step=1)
-                            if st.button("Copy styling settings from this frame"):
-                                clone_styling_settings(which_frame_to_copy_from, st.session_state['current_frame_uuid'])
+                            # TODO: add custom model validation such for sd img2img the value of strength can only be 1
+                            if st.button(f"Generate variants", key=f"new_variations_{st.session_state['current_frame_index']}", help="This will generate new variants based on the settings to the left."):
+                                for i in range(0, st.session_state['individual_number_of_variants']):
+                                    trigger_restyling_process(st.session_state['current_frame_uuid'], st.session_state['model'], st.session_state['prompt'], st.session_state['strength'], st.session_state['custom_pipeline'], st.session_state['negative_prompt'], st.session_state['guidance_scale'], st.session_state['seed'], st.session_state[
+                                                                'num_inference_steps'], st.session_state['transformation_stage'], st.session_state["promote_new_generation"], st.session_state['custom_models'], st.session_state['adapter_type'], True, st.session_state['low_threshold'], st.session_state['high_threshold'])
                                 st.experimental_rerun()
 
-                        with copy2:
-                            display_image(
-                                idx=which_frame_to_copy_from, stage=WorkflowStageType.STYLED.value, clickable=False, timing_details=timing_details)
-                            st.caption("Prompt:")
-                            st.caption(
-                                timing_details[which_frame_to_copy_from].prompt)
-                            if timing_details[which_frame_to_copy_from].model is not None:
-                                st.caption("Model:")
+                        st.markdown("***")
+
+                        st.info(
+                            "You can restyle multiple frames at once in the List view.")
+
+                        st.markdown("***")
+
+                        open_copier = st.checkbox(
+                            "Copy styling settings from another frame")
+                        if open_copier is True:
+                            copy1, copy2 = st.columns([1, 1])
+                            with copy1:
+                                which_frame_to_copy_from = st.number_input("Which frame would you like to copy styling settings from?", min_value=1, max_value=len(
+                                    timing_details), value=st.session_state['current_frame_index']-1, step=1)
+                                if st.button("Copy styling settings from this frame"):
+                                    clone_styling_settings(which_frame_to_copy_from, st.session_state['current_frame_uuid'])
+                                    st.experimental_rerun()
+
+                            with copy2:
+                                display_image(
+                                    idx=which_frame_to_copy_from, stage=WorkflowStageType.STYLED.value, clickable=False, timing_details=timing_details)
+                                st.caption("Prompt:")
                                 st.caption(
-                                    timing_details[which_frame_to_copy_from].model.name)
+                                    timing_details[which_frame_to_copy_from].prompt)
+                                if timing_details[which_frame_to_copy_from].model is not None:
+                                    st.caption("Model:")
+                                    st.caption(
+                                        timing_details[which_frame_to_copy_from].model.name)
+                                    
+                with st.expander("🔍 Prompt Finder"):
+                    prompt_finder_element(project_uuid)
+            
+            elif st.session_state['styling_view'] == "Crop, Move & Rotate Image":
+                with st.expander("🤏 Crop, Move & Rotate Image", expanded=True):
+                    
+                    selector1, selector2, selector3 = st.columns([1, 1, 1])
+                    with selector1:
+                        which_stage = st.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], key="which_stage", horizontal=True)
+                    with selector2:
+                        how_to_crop = st_memory.radio("How to crop:", options=["Precision Cropping","Manual Cropping"], project_settings=project_settings, key="how_to_crop",horizontal=True)
+                                            
+                    if which_stage == "Styled Key Frame":
+                        stage_name = WorkflowStageType.STYLED.value
+                    elif which_stage == "Unedited Key Frame":
+                        stage_name = WorkflowStageType.SOURCE.value
+                                            
+                    if how_to_crop == "Manual Cropping":
+                        manual_cropping_element(stage_name, st.session_state['current_frame_uuid'])
+                    elif how_to_crop == "Precision Cropping":
+                        precision_cropping_element(stage_name, project_uuid)
+                                
+            elif st.session_state['styling_view'] == "Inpainting & Background Removal":
 
-            with st.expander("🤏 Crop, Move & Rotate Image", expanded=False):
-                
-                selector1, selector2, selector3 = st.columns([1, 1, 1])
-                with selector1:
-                    which_stage = st.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], key="which_stage", horizontal=True)
-                with selector2:
-                    how_to_crop = st_memory.radio("How to crop:", options=["Precision Cropping","Manual Cropping"], project_settings=project_settings, key="how_to_crop",horizontal=True)
-                                        
-                if which_stage == "Styled Key Frame":
-                    stage_name = WorkflowStageType.STYLED.value
-                elif which_stage == "Unedited Key Frame":
-                    stage_name = WorkflowStageType.SOURCE.value
-                                        
-                if how_to_crop == "Manual Cropping":
-                    manual_cropping_element(stage_name, st.session_state['current_frame_uuid'])
-                elif how_to_crop == "Precision Cropping":
-                    precision_cropping_element(stage_name, project_uuid)
-                
-                
+                with st.expander("🌌 Inpainting, Background Removal & More", expanded=True):
+                    
+                    which_stage_to_inpaint = st.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], horizontal=True, key="which_stage_inpainting")
+                    if which_stage_to_inpaint == "Styled Key Frame":
+                        inpainting_stage = WorkflowStageType.STYLED.value
+                    elif which_stage_to_inpaint == "Unedited Key Frame":
+                        inpainting_stage = WorkflowStageType.SOURCE.value
+                    
+                    ai_frame_editing_element(st.session_state['current_frame_uuid'], inpainting_stage)
 
-            with st.expander("🌌 Inpainting, Background Removal & More", expanded=False):
-                
-                which_stage_to_inpaint = st.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], horizontal=True, key="which_stage_inpainting")
-                if which_stage_to_inpaint == "Styled Key Frame":
-                    inpainting_stage = WorkflowStageType.STYLED.value
-                elif which_stage_to_inpaint == "Unedited Key Frame":
-                    inpainting_stage = WorkflowStageType.SOURCE.value
-                
-                ai_frame_editing_element(st.session_state['current_frame_uuid'], inpainting_stage)
+            elif st.session_state['styling_view'] == "Draw On Image":
+                with st.expander("📝 Draw On Image", expanded=True):
 
-            with st.expander("📝 Draw On Image", expanded=False):
-
-                which_stage_to_draw_on = st.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], horizontal=True, key="which_stage_drawing")
-                if which_stage_to_draw_on == "Styled Key Frame":
-                    drawing_mode(timing_details,project_settings,project_uuid, stage=WorkflowStageType.STYLED.value)
-                elif which_stage_to_draw_on == "Unedited Key Frame":
-                    drawing_mode(timing_details,project_settings,project_uuid, stage=WorkflowStageType.SOURCE.value)
-
-            with st.expander("🔍 Prompt Finder"):
-                prompt_finder_element(project_uuid)
-
-        
+                    which_stage_to_draw_on = st.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], horizontal=True, key="which_stage_drawing")
+                    if which_stage_to_draw_on == "Styled Key Frame":
+                        drawing_mode(timing_details,project_settings,project_uuid, stage=WorkflowStageType.STYLED.value)
+                    elif which_stage_to_draw_on == "Unedited Key Frame":
+                        drawing_mode(timing_details,project_settings,project_uuid, stage=WorkflowStageType.SOURCE.value)
+                        
 
     elif st.session_state['frame_styling_view_type'] == "List View":
 
@@ -566,15 +537,15 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 with timing2:
                                         
 
-                    current_individual_clip_element(timing_details[idx].uuid, idx,timing_details)
+                    current_individual_clip_element(timing_details[idx].uuid, idx)
                 
                 with timing3:
 
                     
 
-                    current_preview_video_element(timing_details[idx], idx,timing_details)
+                    current_preview_video_element(timing_details[idx].uuid, idx)
                 
-                st.markdown("***")
+    st.markdown("***")
         
 
     
@@ -652,52 +623,61 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 st.error("No Starting Image Found")
 
         if st.button(f"Add key frame",type="primary",use_container_width=True):
-            if len(timing_details) == 0:
-                index_of_current_item = 1
-            else:
-                index_of_current_item = min( len(timing_details) , st.session_state['current_frame_index'])
+            def add_key_frame(selected_image, inherit_styling_settings, how_long_after):
 
-            timing_details = data_repo.get_timing_list_from_project(project_uuid)
+                data_repo = DataRepo()
+                project_uuid = st.session_state['project_uuid']
+                timing_details = data_repo.get_timing_list_from_project(project_uuid)
+                project_settings = data_repo.get_project_setting(project_uuid)
+                
 
-            if len(timing_details) == 0:
-                key_frame_time = 0.0
-            elif index_of_current_item == len(timing_details):
-                key_frame_time = float(timing_details[index_of_current_item - 1].frame_time) + how_long_after
-            else:
-                key_frame_time = (float(timing_details[index_of_current_item - 1].frame_time) + float(
-                    timing_details[index_of_current_item].frame_time)) / 2.0
+                if len(timing_details) == 0:
+                    index_of_current_item = 1
+                else:
+                    index_of_current_item = min(len(timing_details), st.session_state['current_frame_index'])
 
-            if len(timing_details) == 0:
-                new_timing = create_timings_row_at_frame_number(
-                    project_uuid, 0)
-                data_repo.update_specific_timing(
-                    new_timing.uuid, frame_time=0.0)
-            else:
-                new_timing = create_timings_row_at_frame_number(
-                    project_uuid, index_of_current_item)
-                data_repo.update_specific_timing(
-                    new_timing.uuid, frame_time=key_frame_time)
-            
-            timing_details = data_repo.get_timing_list_from_project(project_uuid)
-            if selected_image != "":
-                save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "source")
-                save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "styled")
-                                
-            if inherit_styling_settings == "Yes":
-                clone_styling_settings(index_of_current_item, timing_details[index_of_current_item].uuid)
+                timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
-            data_repo.update_specific_timing(timing_details[index_of_current_item].uuid, \
-                                                animation_style=project_settings.default_animation_style)
+                if len(timing_details) == 0:
+                    key_frame_time = 0.0
+                elif index_of_current_item == len(timing_details):
+                    key_frame_time = float(timing_details[index_of_current_item - 1].frame_time) + how_long_after
+                else:
+                    key_frame_time = (float(timing_details[index_of_current_item - 1].frame_time) + float(
+                        timing_details[index_of_current_item].frame_time)) / 2.0
 
-            
-            if len(timing_details) == 1:
-                st.session_state['current_frame_index'] = 1
-                st.session_state['current_frame_uuid'] = timing_details[0].uuid
-            else:
-                st.session_state['current_frame_index'] = min(len(timing_details) , st.session_state['current_frame_index'] + 1)
-                st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
+                if len(timing_details) == 0:
+                    new_timing = create_timings_row_at_frame_number(
+                        project_uuid, 0)
+                    data_repo.update_specific_timing(
+                        new_timing.uuid, frame_time=0.0)
+                else:
+                    new_timing = create_timings_row_at_frame_number(
+                        project_uuid, index_of_current_item)
+                    data_repo.update_specific_timing(
+                        new_timing.uuid, frame_time=key_frame_time)
 
-            st.session_state['page'] = "Styling"
-            st.session_state['section_index'] = 0
+                timing_details = data_repo.get_timing_list_from_project(project_uuid)
+                if selected_image != "":
+                    save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "source")
+                    save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "styled")
+
+                if inherit_styling_settings == "Yes":
+                    clone_styling_settings(index_of_current_item, timing_details[index_of_current_item].uuid)
+
+                data_repo.update_specific_timing(timing_details[index_of_current_item].uuid, \
+                                                    animation_style=project_settings.default_animation_style)
+
+                if len(timing_details) == 1:
+                    st.session_state['current_frame_index'] = 1
+                    st.session_state['current_frame_uuid'] = timing_details[0].uuid
+                else:
+                    st.session_state['current_frame_index'] = min(len(timing_details), st.session_state['current_frame_index'] + 1)
+                    st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
+
+                st.session_state['page'] = "Styling"
+                st.session_state['section_index'] = 0
+                st.experimental_rerun()
+            add_key_frame(selected_image, inherit_styling_settings, how_long_after)
             st.experimental_rerun()
 

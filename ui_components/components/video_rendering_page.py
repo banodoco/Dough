@@ -18,10 +18,7 @@ def video_rendering_page(mainheader2, project_uuid):
     project = data_repo.get_project_from_uuid(project_uuid)
     project_name = project.name
 
-    with mainheader2:
-        with st.expander("💡 How video rendering works"):
-            st.info("This is simply pulling together the interpolated frames to deliver the final video. You can edit the timing if need be in in Tools > Timing Adjustment")
-
+    
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         project_uuid)
     project_settings = data_repo.get_project_setting(project_uuid)

@@ -1828,7 +1828,7 @@ def drawing_mode(timing_details,project_settings,project_uuid,stage=WorkflowStag
             with canny_action_1:
                 st.image(canny_image.location)
                                                                             
-                if st.button(f"Make Into Image"):
+                if st.button(f"Make Into Guidance Image"):
                     data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=st.session_state['canny_image'])
                     st.session_state['reset_canvas'] = True
                     st.session_state['canny_image'] = None
@@ -2468,8 +2468,12 @@ get audio_bytes of correct duration for a given frame
 
 
 
-def current_individual_clip_element(timing_uuid, idx, timing_details):
+def current_individual_clip_element(timing_uuid, idx):
+
     def generate_individual_clip(timing_uuid, quality):
+        data_repo = DataRepo()
+        timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+        timing_details = data_repo.get_timing_list_from_project(timing.project.uuid)
         if quality == 'full':
             interpolation_steps = calculate_dynamic_interpolations_steps(timing_details[idx].clip_duration)
         elif quality == 'preview':
@@ -2477,38 +2481,61 @@ def current_individual_clip_element(timing_uuid, idx, timing_details):
         data_repo.update_specific_timing(timing_uuid, interpolation_steps=interpolation_steps, interpolated_clip_id=None)
         video_location = create_individual_clip(timing_uuid)
         data_repo.update_specific_timing(timing_uuid, interpolated_clip_id=video_location.uuid)
+        timing_details = data_repo.get_timing_list_from_project(timing.project.uuid)
         location_of_input_video_file = timing_details[idx].interpolated_clip
         output_video = update_speed_of_video_clip(location_of_input_video_file, True, timing_uuid)
         data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
         return output_video
     
-    st.info(f"Individual Clip for #{idx+1}")
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details = data_repo.get_timing_list_from_project(
+        timing.project.uuid)
+        
+    st.info(f"Individual Clip for #{idx+1}:")
     if timing_details[idx].timed_clip:
         st.video(timing_details[idx].timed_clip.location)
                         
         if timing_details[idx].interpolation_steps is not None:
 
             if calculate_dynamic_interpolations_steps(timing_details[idx].clip_duration) > timing_details[idx].interpolation_steps:
-                st.error("Preview Resolution")
-                if st.button("Generate Full Resolution Video", key=f"generate_full_resolution_video_{idx}"):                                    
+                st.error("Low Resolution")
+                if st.button("Generate Full Resolution Clip", key=f"generate_full_resolution_video_{idx}"):                                    
                     generate_individual_clip(timing_details[idx].uuid, 'full')
                     st.experimental_rerun()
             else:
                 st.success("Full Resolution")
     else:
-        st.error("No Video Created Yet")
+        st.error('''
+        **----------------------------------------**
+        
+        ---------
+        
+        ==================
+
+        **No Individual Clip Created Yet**
+        
+        ==================
+
+        ---------
+
+        **----------------------------------------**
+
+
+        ''')
         gen1, gen2 = st.columns([1, 1])
         with gen1:
-            if st.button("Generate Preview Video", key=f"generate_preview_video_{idx}"):
+            if st.button("Generate Low-Resolution Clip", key=f"generate_preview_video_{idx}"):
                 generate_individual_clip(timing_details[idx].uuid, 'preview')
                 st.experimental_rerun()
         with gen2:
-            if st.button("Generate Full Resolution Video", key=f"generate_full_resolution_video_{idx}"):
+            if st.button("Generate Full Resolution Clip", key=f"generate_full_resolution_video_{idx}"):
                 generate_individual_clip(timing_details[idx].uuid, 'full')
                 st.experimental_rerun()
 
 
-def update_animation_style_element(idx, timing_details):
+def update_animation_style_element(idx, timing_details, horizontal=True):
+    data_repo = DataRepo()
     animation_styles = ["Interpolation", "Direct Morphing"]
 
     if f"animation_style_index_{idx}" not in st.session_state:
@@ -2517,31 +2544,44 @@ def update_animation_style_element(idx, timing_details):
         st.session_state[f"animation_style_{idx}"] = timing_details[idx].animation_style
 
     st.session_state[f"animation_style_{idx}"] = st.radio(
-        "Animation style:", animation_styles, index=st.session_state[f"animation_style_index_{idx}"], key=f"animation_style_radio_{idx}", help="This is for the morph from the current frame to the next one.", horizontal=True)
+        "Animation style:", animation_styles, index=st.session_state[f"animation_style_index_{idx}"], key=f"animation_style_radio_{idx}", help="This is for the morph from the current frame to the next one.", horizontal=horizontal)
 
     if st.session_state[f"animation_style_{idx}"] != timing_details[idx].animation_style:
-        st.session_state[f"animation_style_index_{idx}"] = animation_styles.index(
-            st.session_state[f"animation_style_{idx}"])
+        st.session_state[f"animation_style_index_{idx}"] = animation_styles.index(st.session_state[f"animation_style_{idx}"])
         data_repo.update_specific_timing(timing_details[idx].uuid, animation_style=st.session_state[f"animation_style_{idx}"])
         st.experimental_rerun()
 
 
-def current_preview_video_element(timing, idx,timing_details):
+def current_preview_video_element(timing_uuid, idx):
+
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details = data_repo.get_timing_list_from_project(timing.project.uuid)
     st.info("Preview Video in Context:")
 
     preview_video_1, preview_video_2 = st.columns([2.5, 1])
-
     
-
     with preview_video_1:
         if timing.preview_video:
             st.video(timing.preview_video.location)
         else:
-            st.error(
-                "No preview video available for this frame")
+            st.error('''
+            **----------------------------------------**
+            
+            ---------
+            
+            ==================
+
+            **No Preview Video Created Yet**
+            
+            ==================
+
+            ---------
+
+            **----------------------------------------**
+            ''')
     
     with preview_video_2:
-
         
         if st.button("Generate New Preview Video", key=f"generate_preview_{idx}"):
             preview_video = create_full_preview_video(
@@ -2856,35 +2896,7 @@ def calculate_desired_duration_of_each_clip(project_uuid):
         data_repo.update_specific_timing(
             timing_item.uuid, clip_duration=total_duration_of_frame)
 
-# NOTE: code not is use
-# def hair_swap(source_image, timing_uuid):
-#     data_repo = DataRepo()
-#     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-#         timing_uuid)
-#     app_secret = data_repo.get_app_secrets_from_user_uuid(
-#         timing.project.user_uuid)
 
-#     # DOUBT: what's the video name here?
-#     video_name = ""
-#     source_hair = upload_file("videos/" + str(video_name) + "/face.png", app_secret['aws_access_key'],
-#                               app_secret['aws_secret_key'])
-
-#     target_hair = upload_file("videos/" + str(video_name) +
-#                               "/assets/frames/2_character_pipeline_completed/" +
-#                               str(timing.aux_frame_index) + ".png",
-#                               app_secret['aws_access_key'], app_secret['aws_secret_key'])
-
-#     if not source_hair.startswith("http"):
-#         source_hair = open(source_hair, "rb")
-
-#     if not target_hair.startswith("http"):
-#         target_hair = open(target_hair, "rb")
-
-#     ml_client = get_ml_client()
-#     output = ml_client.predict_model_output(
-#         REPLICATE_MODEL.cjwbw_style_hair, source_image=source_hair, target_image=target_hair)
-
-#     return output
 
 
 def prompt_model_depth2img(strength, timing_uuid, source_image) -> InternalFileObject:

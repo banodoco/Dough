@@ -21,12 +21,7 @@ def app_settings_page():
                 # data_repo.update_app_setting("aws_secret_access_key=aws_secret_access_key)
                 st.experimental_rerun()
 
-    with st.expander("Reset Welcome Sequence"):
-        st.write("This will reset the welcome sequence so you can see it again.")
-        if st.button("Reset Welcome Sequence"):
-            st.session_state["welcome_state"] = 0
-            data_repo.update_app_setting(welcome_state=0)
-            st.experimental_rerun()
+    
 
     # locally_or_hosted = st.radio("Do you want to store your files locally or on AWS?", ("Locally", "AWS"),disabled=True, help="Only local storage is available at the moment, let me know if you need AWS storage - it should be pretty easy.")
     
