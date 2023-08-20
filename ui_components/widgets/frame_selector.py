@@ -46,12 +46,12 @@ def frame_selector_widget():
         st.warning(f"Guidance Image:")
         display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
         with st.expander("Replace guidance image"):
-            replace_image_widget(stage=WorkflowStageType.SOURCE.value,timing_details=timing_details)
+            replace_image_widget(st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value)
     with image_2:
         st.success(f"Main Styled Image:")
         display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
         with st.expander("Replace styled image"):
-            replace_image_widget(stage=WorkflowStageType.STYLED.value,timing_details=timing_details)
+            replace_image_widget(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value)
     
     st.markdown("***")
     

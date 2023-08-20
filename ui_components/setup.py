@@ -87,10 +87,11 @@ def setup_app_ui():
         project_changed = False
         if 'project_uuid' in st.session_state and st.session_state['project_uuid'] != project_list[selected_index].uuid:
             project_changed = True
-        st.session_state["project_uuid"] = project_list[selected_index].uuid
         
         if project_changed:
             reset_project_state()
+        
+        st.session_state["project_uuid"] = project_list[selected_index].uuid
 
         if "current_frame_index" not in st.session_state:
             st.session_state['current_frame_index'] = 1
