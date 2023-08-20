@@ -330,3 +330,16 @@ def reset_project_state():
     for k in keys_to_delete:
         if k in st.session_state:
             del st.session_state[k]
+
+    # numbered keys
+    numbered_keys_to_delete = [
+        'animation_style_index_',
+        'animation_style_'
+    ]
+
+    # TODO: remove hardcoded 20, find a better way to clear numbered state
+    for i in range(20):
+        for k in numbered_keys_to_delete:
+            key = k + str(i)
+            if key in st.session_state:
+                del st.session_state[key]

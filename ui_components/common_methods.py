@@ -1516,7 +1516,10 @@ def trigger_restyling_process(
     else:
         print("No new generation to promote")
 
-def replace_image_widget(stage, timing_details):
+def replace_image_widget(timing_uuid, stage):
+    data_repo = DataRepo()
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details = data_repo.get_timing_list_from_project(timing.project.uuid)
                                         
     replace_with = st.radio("Replace with:", [
         "Uploaded Frame", "Other Frame"], horizontal=True, key=f"replace_with_what_{stage}")
@@ -1542,16 +1545,16 @@ def replace_image_widget(stage, timing_details):
         if st.button("Replace with selected frame", disabled=False,key=f"replace_with_selected_frame_{stage}"):
             if stage == "source":
                                             
-                data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=selected_image.uuid)                                        
+                data_repo.update_specific_timing(timing.uuid, source_image_id=selected_image.uuid)                                        
                 st.success("Replaced")
                 time.sleep(1)
                 st.experimental_rerun()
                 
             else:
                 number_of_image_variants = add_image_variant(
-                    selected_image.uuid, st.session_state['current_frame_uuid'])
+                    selected_image.uuid, timing.uuid)
                 promote_image_variant(
-                    st.session_state['current_frame_uuid'], number_of_image_variants - 1)
+                    timing.uuid, number_of_image_variants - 1)
                 st.success("Replaced")
                 time.sleep(1)
                 st.experimental_rerun()
@@ -1562,8 +1565,8 @@ def replace_image_widget(stage, timing_details):
                 "png", "jpeg"], accept_multiple_files=False)
             if st.button("Upload Source Image"):
                 if uploaded_file:
-                    timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
-                    if save_uploaded_image(uploaded_file, timing.project.uuid, st.session_state['current_frame_uuid'], "source"):
+                    timing = data_repo.get_timing_from_uuid(timing.uuid)
+                    if save_uploaded_image(uploaded_file, timing.project.uuid, timing.uuid, "source"):
                         time.sleep(1.5)
                         st.experimental_rerun()
         else:
@@ -1571,13 +1574,13 @@ def replace_image_widget(stage, timing_details):
                 "png", "jpeg"], accept_multiple_files=False, key=f"replacement_frame_upload_{stage}")
             if st.button("Replace frame", disabled=False):
                 images_for_model = []
-                timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
+                timing = data_repo.get_timing_from_uuid(timing.uuid)
                 if replacement_frame:
-                    saved_file = save_uploaded_image(replacement_frame, timing.project.uuid, st.session_state['current_frame_uuid'], "styled")
+                    saved_file = save_uploaded_image(replacement_frame, timing.project.uuid, timing.uuid, "styled")
                     if saved_file:
-                        number_of_image_variants = add_image_variant(saved_file.uuid, st.session_state['current_frame_uuid'])
+                        number_of_image_variants = add_image_variant(saved_file.uuid, timing.uuid)
                         promote_image_variant(
-                            st.session_state['current_frame_uuid'], number_of_image_variants - 1)
+                            timing.uuid, number_of_image_variants - 1)
                         st.success("Replaced")
                         time.sleep(1)
                         st.experimental_rerun()
@@ -2462,46 +2465,39 @@ def get_duration_from_video(input_video_file: InternalFileObject):
     return total_duration
 
 
-'''
-get audio_bytes of correct duration for a given frame
-'''
-
-
-
-def current_individual_clip_element(timing_uuid, idx):
+# get audio_bytes of correct duration for a given frame
+def current_individual_clip_element(timing_uuid):
 
     def generate_individual_clip(timing_uuid, quality):
         data_repo = DataRepo()
         timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-        timing_details = data_repo.get_timing_list_from_project(timing.project.uuid)
+
         if quality == 'full':
-            interpolation_steps = calculate_dynamic_interpolations_steps(timing_details[idx].clip_duration)
+            interpolation_steps = calculate_dynamic_interpolations_steps(timing.clip_duration)
         elif quality == 'preview':
             interpolation_steps = 3
         data_repo.update_specific_timing(timing_uuid, interpolation_steps=interpolation_steps, interpolated_clip_id=None)
         video_location = create_individual_clip(timing_uuid)
         data_repo.update_specific_timing(timing_uuid, interpolated_clip_id=video_location.uuid)
-        timing_details = data_repo.get_timing_list_from_project(timing.project.uuid)
-        location_of_input_video_file = timing_details[idx].interpolated_clip
+        location_of_input_video_file = timing.interpolated_clip
         output_video = update_speed_of_video_clip(location_of_input_video_file, True, timing_uuid)
         data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
         return output_video
     
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-    timing_details = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
-        
-    st.info(f"Individual Clip for #{idx+1}:")
-    if timing_details[idx].timed_clip:
-        st.video(timing_details[idx].timed_clip.location)
-                        
-        if timing_details[idx].interpolation_steps is not None:
+    idx = timing.aux_frame_index
 
-            if calculate_dynamic_interpolations_steps(timing_details[idx].clip_duration) > timing_details[idx].interpolation_steps:
+    st.info(f"Individual Clip for #{idx+1}:")
+    if timing.timed_clip:
+        st.video(timing.timed_clip.location)
+                        
+        if timing.interpolation_steps is not None:
+
+            if calculate_dynamic_interpolations_steps(timing.clip_duration) > timing.interpolation_steps:
                 st.error("Low Resolution")
                 if st.button("Generate Full Resolution Clip", key=f"generate_full_resolution_video_{idx}"):                                    
-                    generate_individual_clip(timing_details[idx].uuid, 'full')
+                    generate_individual_clip(timing.uuid, 'full')
                     st.experimental_rerun()
             else:
                 st.success("Full Resolution")
@@ -2526,37 +2522,39 @@ def current_individual_clip_element(timing_uuid, idx):
         gen1, gen2 = st.columns([1, 1])
         with gen1:
             if st.button("Generate Low-Resolution Clip", key=f"generate_preview_video_{idx}"):
-                generate_individual_clip(timing_details[idx].uuid, 'preview')
+                generate_individual_clip(timing.uuid, 'preview')
                 st.experimental_rerun()
         with gen2:
             if st.button("Generate Full Resolution Clip", key=f"generate_full_resolution_video_{idx}"):
-                generate_individual_clip(timing_details[idx].uuid, 'full')
+                generate_individual_clip(timing.uuid, 'full')
                 st.experimental_rerun()
 
 
-def update_animation_style_element(idx, timing_details, horizontal=True):
+def update_animation_style_element(timing_uuid, horizontal=True):
     data_repo = DataRepo()
-    animation_styles = ["Interpolation", "Direct Morphing"]
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
+    idx = timing.aux_frame_index
+
+    animation_styles = AnimationStyleType.value_list()
 
     if f"animation_style_index_{idx}" not in st.session_state:
         st.session_state[f"animation_style_index_{idx}"] = animation_styles.index(
-            timing_details[idx].animation_style)
-        st.session_state[f"animation_style_{idx}"] = timing_details[idx].animation_style
+            timing.animation_style)
+        st.session_state[f"animation_style_{idx}"] = timing.animation_style
 
     st.session_state[f"animation_style_{idx}"] = st.radio(
         "Animation style:", animation_styles, index=st.session_state[f"animation_style_index_{idx}"], key=f"animation_style_radio_{idx}", help="This is for the morph from the current frame to the next one.", horizontal=horizontal)
 
-    if st.session_state[f"animation_style_{idx}"] != timing_details[idx].animation_style:
+    if st.session_state[f"animation_style_{idx}"] != timing.animation_style:
         st.session_state[f"animation_style_index_{idx}"] = animation_styles.index(st.session_state[f"animation_style_{idx}"])
-        data_repo.update_specific_timing(timing_details[idx].uuid, animation_style=st.session_state[f"animation_style_{idx}"])
+        data_repo.update_specific_timing(timing.uuid, animation_style=st.session_state[f"animation_style_{idx}"])
         st.experimental_rerun()
 
 
-def current_preview_video_element(timing_uuid, idx):
-
+def current_preview_video_element(timing_uuid):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-    timing_details = data_repo.get_timing_list_from_project(timing.project.uuid)
+    idx = timing.aux_frame_index
     st.info("Preview Video in Context:")
 
     preview_video_1, preview_video_2 = st.columns([2.5, 1])

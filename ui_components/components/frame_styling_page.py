@@ -82,27 +82,17 @@ def frame_styling_page(mainheader2, project_uuid: str):
             timing1, timing2, timing3 = st.columns([0.5, 1,1])
 
             with timing1:
-                update_animation_style_element(idx, timing_details, horizontal=False)
+                update_animation_style_element(st.session_state['current_frame_uuid'], horizontal=False)
 
             with timing2:
                 num_timing_details = len(timing_details)
-
-                
-                current_individual_clip_element(st.session_state['current_frame_uuid'], idx)
-
-                
-                    
+                current_individual_clip_element(st.session_state['current_frame_uuid'])
 
             with timing3:
-                current_preview_video_element(st.session_state['current_frame_uuid'], idx)
-                
-
-            
+                current_preview_video_element(st.session_state['current_frame_uuid'])
 
         elif st.session_state['page'] == "Styling":
-
             # carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.value)
-
             comparison_values = [
                 "Other Variants", "Source Frame", "Previous & Next Frame", "None"]
 
@@ -273,9 +263,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             copy1, copy2 = st.columns([1, 1])
                             with copy1:
                                 which_frame_to_copy_from = st.number_input("Which frame would you like to copy styling settings from?", min_value=1, max_value=len(
-                                    timing_details), value=st.session_state['current_frame_index']-1, step=1)
+                                    timing_details), value=st.session_state['current_frame_index'], step=1)
                                 if st.button("Copy styling settings from this frame"):
-                                    clone_styling_settings(which_frame_to_copy_from, st.session_state['current_frame_uuid'])
+                                    clone_styling_settings(which_frame_to_copy_from - 1, st.session_state['current_frame_uuid'])
                                     st.experimental_rerun()
 
                             with copy2:
@@ -508,7 +498,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         key=f"frame_time_slider_{idx}"
                     )
                     
-                    update_animation_style_element(idx, timing_details)
+                    update_animation_style_element(st.session_state['current_frame_uuid'])
 
                 # update timing details
                 if timing_details[idx].frame_time != frame_time:
@@ -533,22 +523,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                     timing_details[j-1].uuid, preview_video_id=None)
                         st.experimental_rerun()
 
-                
                 with timing2:
-                                        
-
-                    current_individual_clip_element(timing_details[idx].uuid, idx)
+                    current_individual_clip_element(timing_details[idx].uuid)
                 
                 with timing3:
-
-                    
-
-                    current_preview_video_element(timing_details[idx].uuid, idx)
+                    current_preview_video_element(timing_details[idx].uuid)
                 
     st.markdown("***")
         
-
-    
 
     with st.expander("➕ Add Key Frame", expanded=True):
 
@@ -623,8 +605,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 st.error("No Starting Image Found")
 
         if st.button(f"Add key frame",type="primary",use_container_width=True):
+            
             def add_key_frame(selected_image, inherit_styling_settings, how_long_after):
-
                 data_repo = DataRepo()
                 project_uuid = st.session_state['project_uuid']
                 timing_details = data_repo.get_timing_list_from_project(project_uuid)
@@ -663,7 +645,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "styled")
 
                 if inherit_styling_settings == "Yes":
-                    clone_styling_settings(index_of_current_item, timing_details[index_of_current_item].uuid)
+                    clone_styling_settings(index_of_current_item - 1, timing_details[index_of_current_item].uuid)
 
                 data_repo.update_specific_timing(timing_details[index_of_current_item].uuid, \
                                                     animation_style=project_settings.default_animation_style)
