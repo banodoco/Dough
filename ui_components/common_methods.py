@@ -1414,7 +1414,6 @@ def trigger_restyling_process(
     model_uuid,
     prompt,
     strength,
-    custom_pipeline,
     negative_prompt,
     guidance_scale,
     seed,
@@ -1430,10 +1429,7 @@ def trigger_restyling_process(
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
-    # timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-    #     timing.project.uuid)
-    # project_setting: InternalSettingObject = data_repo.get_project_setting(
-    #     timing.project.uuid)
+    custom_pipeline = ""
 
     # TODO: add proper form validations throughout the code
     if not prompt:
@@ -1497,10 +1493,10 @@ def trigger_restyling_process(
         primary_image = timing.primary_image
         source_image = primary_image.location
 
-    if st.session_state['custom_pipeline'] == "Mystique":
-        output_file = custom_pipeline_mystique(timing_uuid, source_image)
-    else:
-        output_file = restyle_images(timing_uuid, source_image)
+    # if st.session_state['custom_pipeline'] == "Mystique":
+    #     output_file = custom_pipeline_mystique(timing_uuid, source_image)
+    # else:
+    output_file = restyle_images(timing_uuid, source_image)
 
     if output_file != None:
         add_image_variant(output_file.uuid, timing_uuid)

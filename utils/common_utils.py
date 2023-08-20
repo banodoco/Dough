@@ -285,6 +285,7 @@ def reset_project_state():
         "which_number_for_starting_image",
         "rotated_image",
         "current_frame_index",
+        "prev_frame_index",
         "zoom_level_input",
         "rotation_angle_input",
         "x_shift",

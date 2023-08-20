@@ -103,10 +103,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     st.session_state['current_frame_uuid'])
             variants = timing.alternative_images_list
 
-            if variants != [] and variants != None and variants != "":
-
-                primary_variant_location = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
-
             if st.session_state['show_comparison'] == "Other Variants":
 
                 mainimages1, mainimages2 = st.columns([1, 1])
@@ -246,7 +242,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             # TODO: add custom model validation such for sd img2img the value of strength can only be 1
                             if st.button(f"Generate variants", key=f"new_variations_{st.session_state['current_frame_index']}", help="This will generate new variants based on the settings to the left."):
                                 for i in range(0, st.session_state['individual_number_of_variants']):
-                                    trigger_restyling_process(st.session_state['current_frame_uuid'], st.session_state['model'], st.session_state['prompt'], st.session_state['strength'], st.session_state['custom_pipeline'], st.session_state['negative_prompt'], st.session_state['guidance_scale'], st.session_state['seed'], st.session_state[
+                                    trigger_restyling_process(st.session_state['current_frame_uuid'], st.session_state['model'], st.session_state['prompt'], st.session_state['strength'], st.session_state['negative_prompt'], st.session_state['guidance_scale'], st.session_state['seed'], st.session_state[
                                                                 'num_inference_steps'], st.session_state['transformation_stage'], st.session_state["promote_new_generation"], st.session_state['custom_models'], st.session_state['adapter_type'], True, st.session_state['low_threshold'], st.session_state['high_threshold'])
                                 st.experimental_rerun()
 
