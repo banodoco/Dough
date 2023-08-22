@@ -1,5 +1,4 @@
 from utils.enum import ExtendedEnum
-from dataclasses import dataclass
 
 
 ##################### enums #####################

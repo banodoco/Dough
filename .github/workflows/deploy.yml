@@ -3,7 +3,7 @@ name: Deploy to ECR
 on:
  
   push:
-    branches: [ main, piyush-dev ]
+    branches: [ main ]
 
 jobs:
   
