@@ -414,33 +414,21 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
         # Update the current page in session state
         elif st.session_state['page'] == "Motion":
-
-            
-
-            
             num_timing_details = len(timing_details)
-
             shift1, shift2 = st.columns([2, 1.2])
 
             with shift2:
                 shift_frames = st.checkbox(
                     "Shift Frames", help="This will shift the after your adjustment forward or backwards.")
-            
 
             timing_details = data_repo.get_timing_list_from_project(project_uuid)       
 
-
-            for idx in range(start_index, end_index):
-                                                                                                 
+            for idx in range(start_index, end_index):                      
                 st.header(f"Frame {idx+1}")                        
-
-                timing1, timing2, timing3 = st.columns([1, 1,1])
+                timing1, timing2, timing3 = st.columns([1, 1, 1])
 
                 with timing1:
-                    
-
                     frame1, frame2,frame3 = st.columns([2,1,2])
-
                     with frame1:
                         if timing_details[idx].primary_image_location:
                             st.image(
@@ -461,16 +449,10 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             st.write("")
                             st.write("")                            
                             st.markdown("<h1 style='text-align: center; color: black; font-family: Arial; font-size: 50px; font-weight: bold;'>FIN</h1>", unsafe_allow_html=True)
-                        
-                    
-                    
-                        
-                    single_frame_time_selector(timing_details[idx].uuid, 'motion')
-                    
-                    st.caption(
-                        f"Duration: {calculate_desired_duration_of_individual_clip(timing_details[idx].uuid):.2f} secs")
 
-                    
+                    single_frame_time_selector(timing_details[idx].uuid, 'motion')
+                    st.caption(f"Duration: {calculate_desired_duration_of_individual_clip(timing_details[idx].uuid):.2f} secs")
+
                     # calculate minimum and maximum values for slider
                     if idx == 0:
                         min_frame_time = 0.0  # make sure the value is a float
@@ -494,7 +476,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         key=f"frame_time_slider_{idx}"
                     )
                     
-                    update_animation_style_element(st.session_state['current_frame_uuid'])
+                    update_animation_style_element(timing_details[idx].uuid)
 
                 # update timing details
                 if timing_details[idx].frame_time != frame_time:

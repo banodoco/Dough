@@ -12,7 +12,7 @@ def display_image(timing_uuid, stage=None, clickable=False):
 
     # if it's less than 0 or greater than the number in timing_details, show nothing
     if not timing:
-        st.write("")
+        st.write("no images")
 
     else:
         if stage == WorkflowStageType.STYLED.value:
@@ -51,7 +51,7 @@ def display_image(timing_uuid, stage=None, clickable=False):
             elif clickable is False:
                 st.image(image, use_column_width=True)
         else:
-            st.error(f"No {stage} image found for #{timing_idx}")
+            st.error(f"No {stage} image found for #{timing_idx + 1}")
 
 
 def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.value):
