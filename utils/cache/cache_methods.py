@@ -138,7 +138,7 @@ def cache_data(cls):
         original_func = getattr(cls, '_original_create_timing')
         timing = original_func(self, *args, **kwargs)
         if timing:
-            StCache.add(timing, CacheKey.TIMING_DETAILS.value)
+            StCache.delete_all(CacheKey.TIMING_DETAILS.value)
         
         return timing
     
@@ -164,9 +164,6 @@ def cache_data(cls):
         
         original_func = getattr(cls, '_original_get_timing_from_uuid')
         timing = original_func(self, *args, **kwargs)
-
-        if timing:
-            StCache.add(timing, CacheKey.TIMING_DETAILS.value)
 
         return timing
     

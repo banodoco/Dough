@@ -24,7 +24,7 @@ Django==4.2.1
 djangorestframework==3.14.0
 python-dotenv==0.19.2
 scikit-image==0.21.0
-
+sentry-sdk==1.29.2
 st-clickable-images==0.0.3
 htbuilder==0.6.1
 streamlit-extras==0.2.7

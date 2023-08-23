@@ -5,6 +5,7 @@ import time
 import os
 import django
 from shared.constants import SERVER, ServerType
+import sentry_sdk
 
 from utils.constants import AUTH_TOKEN, LOGGED_USER
 from utils.local_storage.url_storage import delete_url_param, get_url_param, set_url_param
@@ -18,6 +19,23 @@ django.setup()
 from banodoco_settings import project_init
 from ui_components.models import InternalAppSettingObject
 from utils.data_repo.data_repo import DataRepo
+
+
+if SERVER == ServerType.DEVELOPMENT.value:
+    SENTRY_DSN = os.getenv('SENTRY_DSN', '')
+    SENTRY_ENV = os.getenv('SENTRY_ENV', '')
+else:
+    import boto3
+    ssm = boto3.client("ssm", region_name="ap-south-1")
+
+    SENTRY_ENV = ssm.get_parameter(Name='/banodoco-fe/sentry/environment')['Parameter']['Value']
+    SENTRY_DSN = ssm.get_parameter(Name='/banodoco-fe/sentry/dsn')['Parameter']['Value']
+
+sentry_sdk.init(
+    environment=SENTRY_ENV,
+    dsn=SENTRY_DSN,
+    traces_sample_rate=1.0
+)
 
 def main():
     st.set_page_config(page_title="Banodoco", page_icon="🎨", layout="wide")
@@ -58,5 +76,9 @@ def main():
         setup_app_ui()
                                                     
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
+        raise e
 
