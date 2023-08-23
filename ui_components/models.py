@@ -111,7 +111,7 @@ class InternalFrameTimingObject:
         self.strength = kwargs['strength'] if 'strength' in kwargs else None
         self.notes = kwargs['notes'] if 'notes' in kwargs and kwargs["notes"] else ""
         self.adapter_type = kwargs['adapter_type'] if 'adapter_type' in kwargs and kwargs["adapter_type"] else None
-        self.clip_duration = kwargs['clip_duration'] if 'clip_duration' in kwargs and kwargs["clip_duration"] else None
+        self.clip_duration = kwargs['clip_duration'] if 'clip_duration' in kwargs and kwargs["clip_duration"] else 0
         self.animation_style = kwargs['animation_style'] if 'animation_style' in kwargs and kwargs["animation_style"] else None
         self.interpolation_steps = kwargs['interpolation_steps'] if 'interpolation_steps' in kwargs and kwargs["interpolation_steps"] else 0
         self.low_threshold = kwargs['low_threshold'] if 'low_threshold' in kwargs and kwargs["low_threshold"] else 0
