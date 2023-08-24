@@ -2597,7 +2597,7 @@ def calculate_dynamic_interpolations_steps(clip_duration):
     return interpolation_steps
 
 
-def render_video(final_video_name, project_uuid, quality):
+def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileTag.GENERATED_VIDEO.value):
     data_repo = DataRepo()
 
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
@@ -2727,7 +2727,7 @@ def render_video(final_video_name, project_uuid, quality):
     file_data = {
         "name": final_video_name,
         "type": InternalFileType.VIDEO.value,
-        "tag": InternalFileTag.GENERATED_VIDEO.value,
+        "tag": file_tag,
         "project_id": project_uuid
     }
 
