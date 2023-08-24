@@ -52,6 +52,7 @@ class InternalFileType(ExtendedEnum):
 class InternalFileTag(ExtendedEnum):
     BACKGROUND_IMAGE = 'background_image'
     GENERATED_VIDEO = 'generated_video'
+    COMPLETE_GENERATED_VIDEO = 'complete_generated_video'
     INPUT_VIDEO = 'input_video'
     TEMP_IMAGE = 'temp'
 

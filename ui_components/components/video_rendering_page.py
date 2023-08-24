@@ -53,25 +53,16 @@ def video_rendering_page(mainheader2, project_uuid):
                 data_repo.update_specific_timing(timing_details[i].uuid, timed_clip_id=None)
             timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
-        render_video(final_video_name, project_uuid, quality_of_video)
+        render_video(final_video_name, project_uuid, quality_of_video, InternalFileTag.COMPLETE_GENERATED_VIDEO.value)
         st.success("Video rendered!")
         time.sleep(1.5)
         st.experimental_rerun()
 
     st.markdown("***")
 
-    # video_list = [list_of_files for list_of_files in os.listdir(
-    #     "videos/" + project_name + "/assets/videos/2_completed") if list_of_files.endswith('.mp4')]
-
     # TODO: only show completed videos
-    video_list: List[InternalFileObject] = data_repo.get_all_file_list(InternalFileType.VIDEO.value, tag=InternalFileTag.GENERATED_VIDEO.value, project_id=project_uuid)
+    video_list: List[InternalFileObject] = data_repo.get_all_file_list(InternalFileType.VIDEO.value, tag=InternalFileTag.COMPLETE_GENERATED_VIDEO.value, project_id=project_uuid)
     video_list = sorted(video_list, key=lambda x: x.created_on, reverse=True)
-    # video_dir = "videos/" + project_name + "/assets/videos/2_completed"
-
-    # video_list.sort(key=lambda f: int(re.sub('\D', '', f)))
-
-    # video_list = sorted(video_list, key=lambda x: os.path.getmtime(
-    #     os.path.join(video_dir, x)), reverse=True)
     
     for video in video_list:
         st.subheader(video.name)

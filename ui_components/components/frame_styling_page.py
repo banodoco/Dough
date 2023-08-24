@@ -2,12 +2,16 @@ import streamlit as st
 from streamlit_image_comparison import image_comparison
 import time
 from PIL import Image
-from ui_components.common_methods import delete_frame, drawing_mode, promote_image_variant, save_uploaded_image, trigger_restyling_process, create_timings_row_at_frame_number, convert_to_minutes_and_seconds, create_full_preview_video, move_frame, calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, calculate_desired_duration_of_individual_clip, apply_image_transformations, get_pillow_image, ai_frame_editing_element, clone_styling_settings, zoom_inputs,calculate_dynamic_interpolations_steps,create_individual_clip,update_speed_of_video_clip,current_individual_clip_element,current_preview_video_element,update_animation_style_element
+from ui_components.common_methods import delete_frame, drawing_mode, promote_image_variant, save_uploaded_image, \
+    trigger_restyling_process, create_timings_row_at_frame_number, move_frame, \
+        calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, \
+            calculate_desired_duration_of_individual_clip, apply_image_transformations, get_pillow_image, \
+                ai_frame_editing_element, clone_styling_settings, zoom_inputs,\
+                    current_individual_clip_element,current_preview_video_element,update_animation_style_element
 from ui_components.widgets.cropping_element import manual_cropping_element, precision_cropping_element
-from ui_components.widgets.frame_switch_btn import back_and_forward_buttons
-from ui_components.widgets.frame_time_selector import single_frame_time_selector
+from ui_components.widgets.frame_time_selector import single_frame_time_selector, update_frame_time
 from ui_components.widgets.frame_selector import frame_selector_widget
-from ui_components.widgets.image_carousal import carousal_of_images_element, display_image
+from ui_components.widgets.image_carousal import display_image
 from ui_components.widgets.prompt_finder import prompt_finder_element
 from ui_components.widgets.styling_element import styling_element
 from streamlit_option_menu import option_menu
@@ -16,7 +20,6 @@ from utils import st_memory
 
 import math
 from ui_components.constants import WorkflowStageType
-from streamlit_extras.annotated_text import annotated_text
 from utils.common_utils import save_or_host_file
 from utils.constants import ImageStage
 
@@ -319,8 +322,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         
 
     elif st.session_state['frame_styling_view_type'] == "List View":
-
-                                                
         if 'current_page' not in st.session_state:
             st.session_state['current_page'] = 1
         
@@ -462,31 +463,11 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         disabled=slider_disabled,
                         key=f"frame_time_slider_{idx}"
                     )
-                    
                     update_animation_style_element(timing_details[idx].uuid)
 
                 # update timing details
                 if timing_details[idx].frame_time != frame_time:
-                        previous_frame_time = timing_details[idx].frame_time
-                        data_repo.update_specific_timing(
-                            timing_details[idx].uuid, frame_time=frame_time)
-                        for a in range(i - 2, i + 2):
-                            if a >= 0 and a < num_timing_details:
-                                data_repo.update_specific_timing(timing_details[a].uuid, timing_video_id=None)
-                        data_repo.update_specific_timing(timing_details[idx].uuid, preview_video_id=None)
-
-                        if shift_frames is True:
-                            diff_frame_time = frame_time - previous_frame_time
-                            for j in range(i+1, num_timing_details+1):
-                                new_frame_time = timing_details[j-1].frame_time + \
-                                    diff_frame_time
-                                data_repo.update_specific_timing(
-                                    timing_details[j-1].uuid, frame_time=new_frame_time)
-                                data_repo.update_specific_timing(
-                                    timing_details[j-1].uuid, timed_clip_id=None)
-                                data_repo.update_specific_timing(
-                                    timing_details[j-1].uuid, preview_video_id=None)
-                        st.experimental_rerun()
+                        update_frame_time(timing_details[idx].uuid, frame_time)
 
                 with timing2:
                     current_individual_clip_element(timing_details[idx].uuid)
