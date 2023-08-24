@@ -1139,6 +1139,9 @@ def move_frame(direction, timing_uuid):
         
         data_repo.update_specific_timing(timing.uuid, aux_frame_index=timing.aux_frame_index + 1)
 
+    # updating clip_duration
+    calculate_desired_duration_of_each_clip(timing.project.uuid)
+
 def delete_frame(timing_uuid):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
@@ -2115,10 +2118,9 @@ def current_individual_clip_element(timing_uuid):
         elif quality == 'preview':
             interpolation_steps = 3
         data_repo.update_specific_timing(timing_uuid, interpolation_steps=interpolation_steps, interpolated_clip_id=None)
-        video_location = create_individual_clip(timing_uuid)
-        data_repo.update_specific_timing(timing_uuid, interpolated_clip_id=video_location.uuid)
-        location_of_input_video_file = timing.interpolated_clip
-        output_video = update_speed_of_video_clip(location_of_input_video_file, True, timing_uuid)
+        video = create_individual_clip(timing_uuid)
+        data_repo.update_specific_timing(timing_uuid, interpolated_clip_id=video.uuid)
+        output_video = update_speed_of_video_clip(timing.interpolated_clip, True, timing_uuid)
         data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
         return output_video
     
@@ -2329,8 +2331,6 @@ def update_speed_of_video_clip(video_file: InternalFileObject, save_to_new_locat
         video_file: InternalFileObject = data_repo.create_file(
                 name=new_file_name, type=InternalFileType.VIDEO.value, hosted_url=hosted_url)
     else:
-        if save_to_new_location:
-            os.remove(location_of_video)
         video_file: InternalFileObject = data_repo.create_file(
                 name=new_file_name, type=InternalFileType.VIDEO.value, local_path=new_file_location)
 
