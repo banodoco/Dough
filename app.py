@@ -4,7 +4,7 @@ from moviepy.editor import *
 import time
 import os
 import django
-from shared.constants import SERVER, ServerType
+from shared.constants import OFFLINE_MODE, SERVER, ServerType
 import sentry_sdk
 
 from utils.constants import AUTH_TOKEN, LOGGED_USER
@@ -21,7 +21,7 @@ from ui_components.models import InternalAppSettingObject
 from utils.data_repo.data_repo import DataRepo
 
 
-if SERVER == ServerType.DEVELOPMENT.value:
+if OFFLINE_MODE:
     SENTRY_DSN = os.getenv('SENTRY_DSN', '')
     SENTRY_ENV = os.getenv('SENTRY_ENV', '')
 else:

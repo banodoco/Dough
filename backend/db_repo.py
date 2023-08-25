@@ -1569,3 +1569,7 @@ class DBRepo:
                     high_threshold=backup_timing['high_threshold'],
                     aux_frame_index=backup_timing['aux_frame_index']
                 )
+
+    # payment
+    def generate_payment_link(self, amount):
+        return InternalResponse({'data': 'https://buy.stripe.com/test_8wMbJib8g3HK7vi5ko'}, 'success', True)     # temp link

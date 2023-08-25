@@ -1,5 +1,7 @@
 import streamlit as st
+import webbrowser
 from shared.constants import SERVER, ServerType
+from utils.common_utils import get_current_user
 
 from utils.data_repo.data_repo import DataRepo
 
@@ -17,10 +19,25 @@ def app_settings_page():
             if st.button("Save Settings"):
                 data_repo.update_app_setting(replicate_username=replicate_username)
                 data_repo.update_app_setting(replicate_key=replicate_key)
-                # data_repo.update_app_setting("aws_access_key_id=aws_access_key_id)
-                # data_repo.update_app_setting("aws_secret_access_key=aws_secret_access_key)
                 st.experimental_rerun()
 
+    if SERVER != ServerType.DEVELOPMENT.value:
+        with st.expander("Purchase Credits"):
+            user_credits = get_current_user()['total_credits']
+            st.write(f"Total Credits: {user_credits}")
+            c1, c2 = st.columns([1,1])
+            with c1:
+                if 'input_credits' not in st.session_state:
+                    st.session_state['input_credits'] = 10
+
+                credits = st.number_input("Credits (1 credit = $1)", value = st.session_state['input_credits'], step = 10)
+                if credits != st.session_state['input_credits']:
+                    st.session_state['input_credits'] = credits
+                    st.experimental_rerun()
+
+                if st.button("Buy credits"):
+                    payment_link = data_repo.generate_payment_link(credits)
+                    webbrowser.open_new_tab(payment_link)
     
 
     # locally_or_hosted = st.radio("Do you want to store your files locally or on AWS?", ("Locally", "AWS"),disabled=True, help="Only local storage is available at the moment, let me know if you need AWS storage - it should be pretty easy.")
