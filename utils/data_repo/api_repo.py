@@ -66,6 +66,9 @@ class APIRepo:
         self.MODEL_URL = '/v1/data/model'
         self.MODEL_LIST_URL = '/v1/data/model/list'
 
+        # payment
+        self.STRIPE_PAYMENT_URL = '/v1/payment/stripe-link'
+
     def logout(self):
         delete_url_param(AUTH_TOKEN)
         st.experimental_rerun()
@@ -414,3 +417,9 @@ class APIRepo:
         # res = self.db_repo.restore_backup(uuid)
         # return InternalResponse(res['payload'], 'success', res['status']).status
         return True
+
+    
+    # payment link
+    def generate_payment_link(self, amount):
+        res = self.http_get(self.STRIPE_PAYMENT_URL, params={'total_amount': amount})
+        return InternalResponse(res['payload'], 'success', res['status'])
