@@ -218,12 +218,17 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             st.markdown("***")
 
-
-            styling_views = ["Generate Variants", "Crop, Move & Rotate Image", "Inpainting & Background Removal","Draw On Image"]
-            
-            st.session_state['styling_view'] = option_menu(None, styling_views, icons=['magic', 'crop', "paint-bucket", 'pencil'], menu_icon="cast", default_index=0, key="styling_view_selector", orientation="horizontal", styles={
+            if 'styling_view_index' not in st.session_state:
+                st.session_state['styling_view_index'] = 0
+                st.session_state['change_styling_view_type'] = False
+                
+            styling_views = ["Generate Variants", "Crop, Move & Rotate Image", "Inpainting & BG Removal","Draw On Image"]
+                                                                                                    
+            st.session_state['styling_view'] = option_menu(None, styling_views, icons=['magic', 'crop', "paint-bucket", 'pencil'], menu_icon="cast", default_index=st.session_state['styling_view_index'], key="styling_view_selector", orientation="horizontal", styles={
                                                                     "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "#66A9BE"}})
-
+                                    
+            if st.session_state['styling_view_index'] != styling_views.index(st.session_state['styling_view']):
+                st.session_state['styling_view_index'] = styling_views.index(st.session_state['styling_view'])                                                       
 
             if st.session_state['styling_view'] == "Generate Variants":
 
@@ -299,7 +304,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     elif how_to_crop == "Precision Cropping":
                         precision_cropping_element(stage_name, project_uuid)
                                 
-            elif st.session_state['styling_view'] == "Inpainting & Background Removal":
+            elif st.session_state['styling_view'] == "Inpainting & BG Removal":
 
                 with st.expander("🌌 Inpainting, Background Removal & More", expanded=True):
                     
@@ -354,8 +359,11 @@ def frame_styling_page(mainheader2, project_uuid: str):
             timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
             for i in range(start_index, end_index):
-                index_of_current_item = i                              
-                st.subheader(f"Frame {i+1}")
+
+                
+                display_number = i + 1
+                                       
+                st.subheader(f"Frame {display_number}")
                 image1, image2, image3 = st.columns([2, 3, 2])
 
                 with image1:
@@ -376,26 +384,29 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     with time2:
                         st.write("") 
 
-                    if st.button(f"Jump to single frame view for #{index_of_current_item}"):
-                        st.session_state['current_frame_index'] = index_of_current_item
+                    if st.button(f"Jump to single frame view for #{display_number}"):
+                        st.session_state['prev_frame_index'] = display_number
                         st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
                         st.session_state['frame_styling_view_type'] = "Individual View"
                         st.session_state['change_view_type'] = True
                         st.experimental_rerun()
+                    
                     st.markdown("---")
                     btn1, btn2, btn3 = st.columns([2, 1, 1])
                     with btn1:
-                        if st.button("Delete this keyframe", key=f'{index_of_current_item}'):
+                        if st.button("Delete this keyframe", key=f'{i}'):
                             delete_frame(timing_details[i].uuid)
                             st.experimental_rerun()
                     with btn2:
-                        if st.button("⬆️", key=f"Promote {index_of_current_item}"):
+                        if st.button("⬆️", key=f"Promote {display_number}"):
                             move_frame("Up", timing_details[i].uuid)
                             st.experimental_rerun()
                     with btn3:
-                        if st.button("⬇️", key=f"Demote {index_of_current_item}"):
+                        if st.button("⬇️", key=f"Demote {display_number}"):
                             move_frame("Down", timing_details[i].uuid)
                             st.experimental_rerun()
+
+                st.markdown("***")
             
             # Display radio buttons for pagination at the bottom
             st.markdown("***")
@@ -475,6 +486,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 with timing3:
                     current_preview_video_element(timing_details[idx].uuid)
                 
+                st.markdown("***")
+    
     st.markdown("***")
         
 
