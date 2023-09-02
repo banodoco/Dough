@@ -538,13 +538,13 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 if apply_zoom_effects == "Yes":
                     image_preview = generate_pil_image(selected_image_location)
                     selected_image = apply_image_transformations(image_preview, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'])
-                    project_update_data = {
-                        "zoom_level": st.session_state['zoom_level_input'],
-                        "rotation_angle_value": st.session_state['rotation_angle_input'],
-                        "x_shift": st.session_state['x_shift'],
-                        "y_shift": st.session_state['y_shift']
-                    }
-                    data_repo.update_project_setting(project_uuid, **project_update_data)
+                    # project_update_data = {
+                    #     "zoom_level": st.session_state['zoom_level_input'],
+                    #     "rotation_angle_value": st.session_state['rotation_angle_input'],
+                    #     "x_shift": st.session_state['x_shift'],
+                    #     "y_shift": st.session_state['y_shift']
+                    # }
+                    # data_repo.update_project_setting(project_uuid, **project_update_data)
                 else:
                     selected_image = generate_pil_image(selected_image_location)
                 st.info("Starting Image:")                
@@ -600,7 +600,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     st.session_state['current_frame_index'] = 1
                     st.session_state['current_frame_uuid'] = timing_details[0].uuid
                 else:
-                    st.session_state['current_frame_index'] = min(len(timing_details), st.session_state['current_frame_index'] + 1)
+                    st.session_state['current_frame_index'] = min(len(timing_details), st.session_state['current_frame_index'])
                     st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
 
                 st.session_state['page'] = "Styling"
