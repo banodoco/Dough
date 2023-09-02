@@ -37,7 +37,7 @@ from backend.models import InternalFileObject
 from shared.file_upload.s3 import is_s3_image_url, upload_file
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, VideoQuality, WorkflowStageType
 from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
-from utils.common_utils import add_temp_file_to_project, generate_temp_file, get_current_user_uuid, save_or_host_file, save_or_host_file_bytes
+from utils.common_utils import add_temp_file_to_project, generate_pil_image, generate_temp_file, get_current_user_uuid, save_or_host_file, save_or_host_file_bytes
 from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
@@ -88,32 +88,7 @@ def clone_styling_settings(source_frame_number, target_frame_uuid):
 
 # TODO: image format is assumed to be PNG, change this later
 def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project_uuid) -> InternalFileObject:
-
-    
-    # Check if img is a PIL image
-    if isinstance(img, Image.Image):
-        pass
-
-    # Check if img is a URL
-    elif isinstance(img, str) and bool(urlparse(img).netloc):
-        response = r.get(img)
-        img = Image.open(BytesIO(response.content))
-
-    # Check if img is a local file
-    elif isinstance(img, str):
-        img = Image.open(img)
-
-    # Check if img is a numpy ndarray
-    elif isinstance(img, np.ndarray):
-        img = Image.fromarray(img)
-
-    # Check if img is a BytesIO stream
-    elif isinstance(img, io.BytesIO):
-        img = Image.open(img)
-
-    else:
-        raise ValueError(
-            "Invalid image input. Must be a PIL image, a URL string, a local file path string or a numpy ndarray.")
+    img = generate_pil_image(img)
     
     file_name = str(uuid.uuid4()) + ".png"
     file_path = os.path.join("videos/temp", file_name)
@@ -135,24 +110,11 @@ def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project
     new_image = data_repo.create_file(**file_data)
     return new_image
 
-def save_uploaded_image(uploaded_file, project_uuid, frame_uuid, save_type):
+def save_uploaded_image(image, project_uuid, frame_uuid, save_type):
     data_repo = DataRepo()
 
-    print(uploaded_file)
-    
-    # Check if uploaded_file is already an opened PIL Image
-    if isinstance(uploaded_file, Image.Image):
-        image_to_save = uploaded_file
-    else:
-        try:
-            image_to_save = Image.open(uploaded_file)
-        except Exception as e:
-            print(f"Failed to open image due to: {str(e)}")
-            return None
-
     try:
-        # Save new image
-        saved_image = save_new_image(image_to_save, project_uuid)
+        saved_image = save_new_image(image, project_uuid)
 
         # Update records based on save_type
         if save_type == "source":
@@ -281,14 +243,6 @@ def create_video_without_interpolation(timing_uuid):
 
     return video_file
 
-def get_pillow_image(image_location):
-    if image_location.startswith("http://") or image_location.startswith("https://"):
-        response = r.get(image_location)
-        image = Image.open(BytesIO(response.content))
-    else:
-        image = Image.open(image_location)
-
-    return image
 
 def create_alpha_mask(size, edge_blur_radius):
     mask = Image.new('L', size, 0)

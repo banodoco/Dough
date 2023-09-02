@@ -1,9 +1,11 @@
 from io import BytesIO
+import io
 from pathlib import Path
 import os
 import csv
 import tempfile
 from typing import Union
+from urllib.parse import urlparse
 import uuid
 import requests
 import streamlit as st
@@ -271,6 +273,34 @@ def generate_temp_file(url, ext=".mp4"):
     temp_file.close()
 
     return temp_file
+
+def generate_pil_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO]):
+    # Check if img is a PIL image
+    if isinstance(img, Image.Image):
+        pass
+
+    # Check if img is a URL
+    elif isinstance(img, str) and bool(urlparse(img).netloc):
+        response = requests.get(img)
+        img = Image.open(BytesIO(response.content))
+
+    # Check if img is a local file
+    elif isinstance(img, str):
+        img = Image.open(img)
+
+    # Check if img is a numpy ndarray
+    elif isinstance(img, np.ndarray):
+        img = Image.fromarray(img)
+
+    # Check if img is a BytesIO stream
+    elif isinstance(img, io.BytesIO):
+        img = Image.open(img)
+
+    else:
+        raise ValueError(
+            "Invalid image input. Must be a PIL image, a URL string, a local file path string or a numpy ndarray.")
+
+    return img
 
 def generate_temp_file_from_uploaded_file(uploaded_file):
     if uploaded_file is not None:

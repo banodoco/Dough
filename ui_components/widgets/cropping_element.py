@@ -8,10 +8,10 @@ from streamlit_cropper import st_cropper
 from backend.models import InternalFileObject
 from shared.constants import InternalFileType
 
-from ui_components.common_methods import apply_image_transformations, fetch_image_by_stage, get_pillow_image, inpaint_in_black_space_element, reset_zoom_element, save_zoomed_image, zoom_inputs
+from ui_components.common_methods import apply_image_transformations, fetch_image_by_stage, inpaint_in_black_space_element, reset_zoom_element, save_zoomed_image, zoom_inputs
 from ui_components.constants import WorkflowStageType
 from ui_components.models import InternalProjectObject, InternalSettingObject
-from utils.common_utils import save_or_host_file
+from utils.common_utils import generate_pil_image, save_or_host_file
 from utils.data_repo.data_repo import DataRepo
 
 
@@ -28,7 +28,7 @@ def precision_cropping_element(stage, project_uuid):
         st.error("Please select a source image before cropping")
         return
     else:
-        input_image = get_pillow_image(input_image.location)
+        input_image = generate_pil_image(input_image.location)
 
     col1, col2 = st.columns(2)
 
@@ -79,7 +79,7 @@ def manual_cropping_element(stage, timing_uuid):
             st.session_state['current_working_image_number'] = st.session_state['current_frame_index']
 
         def get_working_image():
-            st.session_state['working_image'] = get_pillow_image(input_image)
+            st.session_state['working_image'] = generate_pil_image(input_image)
             st.session_state['working_image'] = ImageOps.expand(
                 st.session_state['working_image'], border=200, fill="black")
             st.session_state['current_working_image_number'] = st.session_state['current_frame_index']

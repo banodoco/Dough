@@ -5,7 +5,7 @@ from PIL import Image
 from ui_components.common_methods import delete_frame, drawing_mode, promote_image_variant, save_uploaded_image, \
     trigger_restyling_process, create_timings_row_at_frame_number, move_frame, \
         calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, \
-            calculate_desired_duration_of_individual_clip, apply_image_transformations, get_pillow_image, \
+            calculate_desired_duration_of_individual_clip, apply_image_transformations, \
                 ai_frame_editing_element, clone_styling_settings, zoom_inputs,\
                     current_individual_clip_element,current_preview_video_element,update_animation_style_element
 from ui_components.widgets.cropping_element import manual_cropping_element, precision_cropping_element
@@ -20,7 +20,7 @@ from utils import st_memory
 
 import math
 from ui_components.constants import WorkflowStageType
-from utils.common_utils import save_or_host_file
+from utils.common_utils import generate_pil_image, generate_temp_file, save_or_host_file
 from utils.constants import ImageStage
 
 from utils.data_repo.data_repo import DataRepo
@@ -482,13 +482,15 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
         add1, add2 = st.columns(2)
 
-        selected_image = ""
+        selected_image_location = ""
         with add1:
             # removed "Frame From Video" for now
             image1,image2 = st.columns(2)
             with image1:
                 source_of_starting_image = st.radio("Where would you like to get the starting image from?", [
                                                 "Previous frame", "Uploaded image"], key="source_of_starting_image")
+            
+            which_stage_for_starting_image = None
             if source_of_starting_image == "Previous frame":                
                 with image2:
                     which_stage_for_starting_image = st.radio("Which stage would you like to use?", [
@@ -497,46 +499,45 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                                                   max(1, len(timing_details)), value=st.session_state['current_frame_index'], step=1, key="which_number_for_starting_image")
                 if which_stage_for_starting_image == ImageStage.SOURCE_IMAGE.value:
                     if timing_details[which_number_for_starting_image - 1].source_image != "":
-                        selected_image = timing_details[which_number_for_starting_image - 1].source_image.location
+                        selected_image_location = timing_details[which_number_for_starting_image - 1].source_image.location
                     else:
-                        selected_image = ""
+                        selected_image_location = ""
                 elif which_stage_for_starting_image == ImageStage.MAIN_VARIANT.value:
-                    selected_image = timing_details[which_number_for_starting_image - 1].primary_image_location
+                    selected_image_location = timing_details[which_number_for_starting_image - 1].primary_image_location
             elif source_of_starting_image == "Uploaded image":
                 with image2:
                     uploaded_image = st.file_uploader(
                         "Upload an image", type=["png", "jpg", "jpeg"])
                     # FILE UPLOAD HANDLE--
                     if uploaded_image is not None:
-                        # write uploaded_image to location videos/{project_name}/assets/frames/1_selected
                         image = Image.open(uploaded_image)
                         file_location = f"videos/{project_uuid}/assets/frames/1_selected/{uploaded_image.name}"
-                        # with open(os.path.join(file_location), "wb") as f:
-                        #     f.write(uploaded_image.getbuffer())
-                        selected_image = save_or_host_file(image, file_location)
-                        selected_image = selected_image or file_location
+                        selected_image_location = save_or_host_file(image, file_location)
+                        selected_image_location = selected_image_location or file_location
                     else:
-                        selected_image = ""
+                        selected_image_location = ""
                     which_number_for_starting_image = st.session_state['current_frame_index']
 
             
             how_long_after = st.slider(
                 "How long after the current frame?", min_value=0.0, max_value=10.0, value=2.5, step=0.1)
-                        
-            inherit_styling_settings = st_memory.radio("Inherit styling settings from the selected frame?", [
-                                                       "Yes", "No"], key="inherit_styling_settings", horizontal=True, project_settings=project_settings)
+            
+            radio_text = "Inherit styling settings from the " + ("current frame?" if source_of_starting_image == "Uploaded image" else "selected frame")
+            inherit_styling_settings = st_memory.radio(radio_text, ["Yes", "No"], \
+                                                       key="inherit_styling_settings", horizontal=True, project_settings=project_settings)
             
             apply_zoom_effects = st_memory.radio("Apply zoom effects to inputted image?", [
                                                         "No","Yes"], key="apply_zoom_effects", horizontal=True, project_settings=project_settings)
             
             if apply_zoom_effects == "Yes":
                 zoom_inputs(project_settings, position='new', horizontal=True)
-                                            
+        
+        selected_image = None
         with add2:
-            if selected_image:
+            if selected_image_location:
                 if apply_zoom_effects == "Yes":
-                    selected_image = get_pillow_image(selected_image)
-                    selected_image = apply_image_transformations(selected_image, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'])
+                    image_preview = generate_pil_image(selected_image_location)
+                    selected_image = apply_image_transformations(image_preview, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'])
                     project_update_data = {
                         "zoom_level": st.session_state['zoom_level_input'],
                         "rotation_angle_value": st.session_state['rotation_angle_input'],
@@ -544,7 +545,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         "y_shift": st.session_state['y_shift']
                     }
                     data_repo.update_project_setting(project_uuid, **project_update_data)
-
+                else:
+                    selected_image = generate_pil_image(selected_image_location)
                 st.info("Starting Image:")                
                 st.image(selected_image)
             else:
@@ -583,12 +585,13 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     data_repo.update_specific_timing(new_timing.uuid, clip_duration=clip_duration)
 
                 timing_details = data_repo.get_timing_list_from_project(project_uuid)
-                if selected_image != "":
+                if selected_image:
                     save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "source")
                     save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "styled")
 
                 if inherit_styling_settings == "Yes":
-                    clone_styling_settings(index_of_current_item - 1, timing_details[index_of_current_item].uuid)
+                    index = which_stage_for_starting_image or index_of_current_item
+                    clone_styling_settings(index - 1, timing_details[index_of_current_item].uuid)
 
                 data_repo.update_specific_timing(timing_details[index_of_current_item].uuid, \
                                                     animation_style=project_settings.default_animation_style)
@@ -603,6 +606,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 st.session_state['page'] = "Styling"
                 st.session_state['section_index'] = 0
                 st.experimental_rerun()
+
             add_key_frame(selected_image, inherit_styling_settings, how_long_after)
             st.experimental_rerun()
 
