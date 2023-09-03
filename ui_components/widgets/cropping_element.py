@@ -40,7 +40,7 @@ def precision_cropping_element(stage, project_uuid):
             reset_zoom_element()
         
         
-        zoom_inputs(project_settings)
+        zoom_inputs()
         st.caption("Input Image:")
         st.image(input_image, caption="Input Image", width=300)
 

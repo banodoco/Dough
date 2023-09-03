@@ -15,6 +15,7 @@ from PIL import Image
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
 from repository.data_logger import log_model_inference
 import utils.local_storage.local_storage as local_storage
+from utils.ml_processor.replicate.utils import check_user_credits
 
 
 class ReplicateProcessor(MachineLearningProcessor):
@@ -50,6 +51,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         model_version = model.versions.get(model_version) if model_version else model
         return model_version
     
+    @check_user_credits
     def predict_model_output(self, model: ReplicateModel, **kwargs):
         model_version = self.get_model(model)
         start_time = time.time()
@@ -60,6 +62,7 @@ class ReplicateProcessor(MachineLearningProcessor):
 
         return output
 
+    @check_user_credits
     def inpainting(self, video_name, input_image, prompt, negative_prompt):
         model = self.get_model(REPLICATE_MODEL.andreas_sd_inpainting)
         
@@ -78,6 +81,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         return output[0]
     
     # TODO: separate image compression from this function
+    @check_user_credits
     def upload_training_data(self, images_list):
         # compressing images in zip file
         for i in range(len(images_list)):
@@ -103,6 +107,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         return serving_url
     
     # for uploading temp files
+    @check_user_credits
     def upload_training_data(self, images_list):
         with zipfile.ZipFile('images.zip', 'w') as zip_file:
             for i, image in enumerate(images_list):
@@ -131,6 +136,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         return serving_url
     
     # TODO: figure how to resolve model location setting, right now it's hardcoded to peter942/modnet
+    @check_user_credits
     def dreambooth_training(self, training_file_url, instance_prompt, \
                             class_prompt, max_train_steps, model_name, controller_type, image_len):
         if controller_type == "normal":
@@ -176,6 +182,7 @@ class ReplicateProcessor(MachineLearningProcessor):
 
         return response
     
+    @check_user_credits
     def remove_background(self, project_name, input_image):
         if not input_image.startswith("http"):        
             input_image = open(input_image, "rb")

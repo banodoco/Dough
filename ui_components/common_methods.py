@@ -382,7 +382,7 @@ def fetch_image_by_stage(project_uuid, stage):
     else:
         return None
 
-def zoom_inputs(project_settings, position='in-frame', horizontal=False):
+def zoom_inputs(position='in-frame', horizontal=False):
     if horizontal:
         col1, col2, col3, col4 = st.columns(4)
     else:

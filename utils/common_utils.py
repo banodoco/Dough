@@ -15,6 +15,7 @@ from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from PIL import Image
 import numpy as np
+from ui_components.models import InternalUserObject
 
 from utils.constants import LOGGED_USER
 from utils.data_repo.data_repo import DataRepo
@@ -169,8 +170,8 @@ def create_working_assets(project_name):
     for csv_file in csv_file_list:
         create_file_path(csv_file)
 
-def get_current_user():
-    logger = AppLogger()
+# fresh_fetch - bypasses the cache
+def get_current_user() -> InternalUserObject:
     # changing the code to operate on streamlit state rather than local file
     if not LOGGED_USER in st.session_state:
         data_repo = DataRepo()
@@ -178,6 +179,10 @@ def get_current_user():
         st.session_state[LOGGED_USER] = user.to_json() if user else None
     
     return json.loads(st.session_state[LOGGED_USER]) if LOGGED_USER in st.session_state else None
+
+def user_credits_available():
+    current_user = get_current_user()
+    return True if (current_user and current_user['total_credits'] > 0) else False
 
 def get_current_user_uuid():
     current_user = get_current_user()

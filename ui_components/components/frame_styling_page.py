@@ -244,8 +244,23 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             # TODO: add custom model validation such for sd img2img the value of strength can only be 1
                             if st.button(f"Generate variants", key=f"new_variations_{st.session_state['current_frame_index']}", help="This will generate new variants based on the settings to the left."):
                                 for i in range(0, st.session_state['individual_number_of_variants']):
-                                    trigger_restyling_process(st.session_state['current_frame_uuid'], st.session_state['model'], st.session_state['prompt'], st.session_state['strength'], st.session_state['negative_prompt'], st.session_state['guidance_scale'], st.session_state['seed'], st.session_state[
-                                                                'num_inference_steps'], st.session_state['transformation_stage'], st.session_state["promote_new_generation"], st.session_state['custom_models'], st.session_state['adapter_type'], True, st.session_state['low_threshold'], st.session_state['high_threshold'])
+                                    trigger_restyling_process(
+                                    st.session_state['current_frame_uuid'], 
+                                    st.session_state['model'], 
+                                    st.session_state['prompt'], 
+                                    st.session_state['strength'], 
+                                    st.session_state['negative_prompt'], 
+                                    st.session_state['guidance_scale'], 
+                                    st.session_state['seed'], 
+                                    st.session_state['num_inference_steps'], 
+                                    st.session_state['transformation_stage'], 
+                                    st.session_state["promote_new_generation"], 
+                                    st.session_state['custom_models'], 
+                                    st.session_state['adapter_type'], 
+                                    True, 
+                                    st.session_state['low_threshold'], 
+                                    st.session_state['high_threshold']
+                                )
                                 st.experimental_rerun()
 
                         st.markdown("***")
@@ -530,7 +545,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                                         "No","Yes"], key="apply_zoom_effects", horizontal=True, project_settings=project_settings)
             
             if apply_zoom_effects == "Yes":
-                zoom_inputs(project_settings, position='new', horizontal=True)
+                zoom_inputs(position='new', horizontal=True)
         
         selected_image = None
         with add2:
