@@ -1543,10 +1543,10 @@ def drawing_mode(timing_details,project_settings,project_uuid,stage=WorkflowStag
             st.session_state['canny_image'] = None
 
         if st.button("Extract Canny From image"):
-            if stage == "source":
+            if stage == WorkflowStageType.SOURCE.value:
                 image_path = timing_details[st.session_state['current_frame_index'] - 1].source_image.location 
         
-            elif stage == "styled":
+            elif stage == WorkflowStageType.STYLED.value:
                 image_path = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
             
             

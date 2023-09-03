@@ -171,9 +171,9 @@ def create_working_assets(project_name):
         create_file_path(csv_file)
 
 # fresh_fetch - bypasses the cache
-def get_current_user() -> InternalUserObject:
+def get_current_user(fresh_fetch=False) -> InternalUserObject:
     # changing the code to operate on streamlit state rather than local file
-    if not LOGGED_USER in st.session_state:
+    if not LOGGED_USER in st.session_state or fresh_fetch:
         data_repo = DataRepo()
         user = data_repo.get_first_active_user()
         st.session_state[LOGGED_USER] = user.to_json() if user else None
@@ -181,7 +181,7 @@ def get_current_user() -> InternalUserObject:
     return json.loads(st.session_state[LOGGED_USER]) if LOGGED_USER in st.session_state else None
 
 def user_credits_available():
-    current_user = get_current_user()
+    current_user = get_current_user(fresh_fetch=True)
     return True if (current_user and current_user['total_credits'] > 0) else False
 
 def get_current_user_uuid():
