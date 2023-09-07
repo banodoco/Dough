@@ -2075,6 +2075,8 @@ def current_individual_clip_element(timing_uuid):
         video = create_individual_clip(timing_uuid)
         data_repo.update_specific_timing(timing_uuid, interpolated_clip_id=video.uuid)
         output_video = update_speed_of_video_clip(timing.interpolated_clip, True, timing_uuid)
+
+        timing = data_repo.get_timing_from_uuid(timing_uuid)
         data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
         return output_video
     
@@ -2114,6 +2116,7 @@ def current_individual_clip_element(timing_uuid):
 
         ''')
         gen1, gen2 = st.columns([1, 1])
+
         with gen1:
             if st.button("Generate Low-Resolution Clip", key=f"generate_preview_video_{idx}"):
                 generate_individual_clip(timing.uuid, 'preview')

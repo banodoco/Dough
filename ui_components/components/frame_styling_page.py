@@ -64,7 +64,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
     if st.session_state['frame_styling_view_type'] == "List View":
         st.markdown(
             f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{st.session_state['page']}]")
-
     else:
         st.markdown(
             f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{st.session_state['page']}] > :blue[Frame #{st.session_state['current_frame_index']}]")
@@ -72,23 +71,17 @@ def frame_styling_page(mainheader2, project_uuid: str):
     project_settings = data_repo.get_project_setting(project_uuid)
 
     if st.session_state['frame_styling_view_type'] == "Individual View":
-        
         with st.sidebar:
             frame_selector_widget()
-                                                    
                 
         if st.session_state['page'] == "Motion":
-
             idx = st.session_state['current_frame_index'] - 1
-
-
             timing1, timing2, timing3 = st.columns([0.5, 1,1])
 
             with timing1:
                 update_animation_style_element(st.session_state['current_frame_uuid'], horizontal=False)
-
+            
             with timing2:
-                num_timing_details = len(timing_details)
                 current_individual_clip_element(st.session_state['current_frame_uuid'])
 
             with timing3:
@@ -107,11 +100,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
             variants = timing.alternative_images_list
 
             if st.session_state['show_comparison'] == "Other Variants":
-
                 mainimages1, mainimages2 = st.columns([1, 1])
-
-                aboveimage1, aboveimage2, aboveimage3 = st.columns(
-                    [1, 0.25, 0.75])
+                aboveimage1, aboveimage2, aboveimage3 = st.columns([1, 0.25, 0.75])
 
                 with aboveimage1:
                     st.info(
@@ -138,7 +128,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             last_ten_variants)-1, horizontal=True, key=f"Main variant for {st.session_state['current_frame_index']}")
 
                 with mainimages1:
-
                     project_settings = data_repo.get_project_setting(project_uuid)
                     st.success("**Main variant**")
                     if len(timing_details[st.session_state['current_frame_index'] - 1].alternative_images_list):
@@ -148,11 +137,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         st.error("No variants found for this frame")
 
                 with mainimages2:
-
                     if len(timing_details[st.session_state['current_frame_index'] - 1].alternative_images_list):
                         if which_variant - 1 == current_variant:
                             st.success("**Main variant**")
-
                         else:
                             st.info(f"**Variant #{which_variant}**")
                         
@@ -160,7 +147,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                     use_column_width=True)
 
                         if which_variant- 1 != current_variant:
-
                             if st.button(f"Promote Variant #{which_variant}", key=f"Promote Variant #{which_variant} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image"):
                                 promote_image_variant(
                                     st.session_state['current_frame_uuid'], which_variant - 1)
@@ -484,11 +470,11 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 if timing_details[idx].frame_time != frame_time:
                         update_frame_time(timing_details[idx].uuid, frame_time)
 
-                with timing2:
-                    current_individual_clip_element(timing_details[idx].uuid)
-                
-                with timing3:
-                    current_preview_video_element(timing_details[idx].uuid)
+                if timing_details[idx].aux_frame_index != len(timing_details) - 1:
+                    with timing2:
+                        current_individual_clip_element(timing_details[idx].uuid)
+                    with timing3:
+                        current_preview_video_element(timing_details[idx].uuid)
                 
     st.markdown("***")
         

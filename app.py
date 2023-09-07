@@ -34,7 +34,7 @@ else:
 sentry_sdk.init(
     environment=SENTRY_ENV,
     dsn=SENTRY_DSN,
-    traces_sample_rate=1.0
+    traces_sample_rate=0
 )
 
 def main():

@@ -5,6 +5,7 @@ import os
 import requests
 import streamlit as st
 from shared.constants import SERVER, InternalFileType, InternalResponse, ServerType
+from utils.common_decorators import log_time
 
 from utils.constants import AUTH_TOKEN, AUTH_TOKEN, LOGGED_USER
 from utils.local_storage.url_storage import delete_url_param, get_url_param
@@ -56,7 +57,7 @@ class APIRepo:
         self.FILE_URL = '/v1/data/file'
         self.FILE_LIST_URL = '/v1/data/file/list'
         self.FILE_UUID_LIST_URL = '/v1/data/file/uuid-list'
-        self.FILE_UPLOAD_URL = 'v1/data/file/upload'
+        self.FILE_UPLOAD_URL = '/v1/data/file/upload'
         
         # app setting
         self.APP_SETTING_URL = '/v1/data/app-setting'
@@ -86,10 +87,12 @@ class APIRepo:
 
         return headers
 
+    @log_time
     def http_get(self, url, params = None):
         res = requests.get(self.base_url + url, params = params, headers=self._get_headers())
         return res.json()
 
+    @log_time
     def http_post(self, url, data = {}, file_content = None):
         if file_content:
             files = {'file': file_content}
@@ -99,10 +102,12 @@ class APIRepo:
 
         return res.json()
     
+    @log_time
     def http_put(self, url, data = None):
         res = requests.put(self.base_url + url, json=data, headers=self._get_headers())
         return res.json()
     
+    @log_time
     def http_delete(self, url, params=None):
         res = requests.delete(self.base_url + url, params=params, headers=self._get_headers())
         return res.json()

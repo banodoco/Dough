@@ -1,4 +1,8 @@
+import os
 from utils.enum import ExtendedEnum
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 ##################### enums #####################
@@ -62,7 +66,7 @@ class AnimationStyleType(ExtendedEnum):
 
 
 ##################### global constants #####################
-SERVER = ServerType.PRODUCTION.value
+SERVER = os.getenv('SERVER', ServerType.PRODUCTION.value)
 
 AUTOMATIC_FILE_HOSTING = SERVER != ServerType.DEVELOPMENT.value  # automatically upload project files to s3 (images, videos, gifs)
 AWS_S3_BUCKET = 'banodoco'
