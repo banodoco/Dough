@@ -1,6 +1,7 @@
 
 import json
 import os
+import socket
 
 import requests
 import streamlit as st
@@ -17,7 +18,11 @@ class APIRepo:
         dotenv.load_dotenv()
 
         SERVER_URL = os.getenv('SERVER_URL', '')
-        self.base_url = SERVER_URL
+        if SERVER_URL.startswith("http"):
+            # connecting through service discovery
+            self.base_url = "http://" + socket.gethostbyname(SERVER_URL) + ":8080"
+        else:
+            self.base_url = SERVER_URL
 
         self._setup_urls()
 
