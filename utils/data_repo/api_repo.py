@@ -14,6 +14,10 @@ from utils.local_storage.url_storage import delete_url_param, get_url_param
 
 class APIRepo:
     def __init__(self):
+        self._load_base_url()
+        self._setup_urls()
+
+    def _load_base_url(self):
         import dotenv
         dotenv.load_dotenv()
 
@@ -23,8 +27,6 @@ class APIRepo:
             self.base_url = "http://" + socket.gethostbyname(SERVER_URL) + ":8080"
         else:
             self.base_url = SERVER_URL
-
-        self._setup_urls()
 
     def _setup_urls(self):
         # user
@@ -94,11 +96,13 @@ class APIRepo:
 
     @log_time
     def http_get(self, url, params = None):
+        self._load_base_url()
         res = requests.get(self.base_url + url, params = params, headers=self._get_headers())
         return res.json()
 
     @log_time
     def http_post(self, url, data = {}, file_content = None):
+        self._load_base_url()
         if file_content:
             files = {'file': file_content}
             res = requests.post(self.base_url + url, data=data, files=files, headers=self._get_headers(None))
@@ -109,11 +113,13 @@ class APIRepo:
     
     @log_time
     def http_put(self, url, data = None):
+        self._load_base_url()
         res = requests.put(self.base_url + url, json=data, headers=self._get_headers())
         return res.json()
     
     @log_time
     def http_delete(self, url, params=None):
+        self._load_base_url()
         res = requests.delete(self.base_url + url, params=params, headers=self._get_headers())
         return res.json()
 
