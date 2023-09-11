@@ -35,9 +35,9 @@ def app_settings_page():
                     st.session_state['input_credits'] = credits
                     st.experimental_rerun()
 
-                if st.button("Buy credits"):
+                if st.button("Generate payment link"):
                     payment_link = data_repo.generate_payment_link(credits)
-                    payment_link = f"""<a target='_self' href='{payment_link}'> Buy Credits </a>"""
+                    payment_link = f"""<a target='_self' href='{payment_link}'> PAYMENT LINK </a>"""
                     st.markdown(payment_link, unsafe_allow_html=True)
     
 
