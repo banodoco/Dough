@@ -38,6 +38,9 @@ def app_settings_page():
                 if st.button("Buy credits"):
                     payment_link = data_repo.generate_payment_link(credits)
                     webbrowser.open_new_tab(payment_link)
+
+                if st.button("test new page"):
+                    webbrowser.open_new_tab("https://www.google.com")
     
 
     # locally_or_hosted = st.radio("Do you want to store your files locally or on AWS?", ("Locally", "AWS"),disabled=True, help="Only local storage is available at the moment, let me know if you need AWS storage - it should be pretty easy.")
