@@ -1,9 +1,11 @@
 from io import BytesIO
+import io
 from pathlib import Path
 import os
 import csv
 import tempfile
 from typing import Union
+from urllib.parse import urlparse
 import uuid
 import requests
 import streamlit as st
@@ -13,6 +15,7 @@ from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from PIL import Image
 import numpy as np
+from ui_components.models import InternalUserObject
 
 from utils.constants import LOGGED_USER
 from utils.data_repo.data_repo import DataRepo
@@ -167,15 +170,19 @@ def create_working_assets(project_name):
     for csv_file in csv_file_list:
         create_file_path(csv_file)
 
-def get_current_user():
-    logger = AppLogger()
+# fresh_fetch - bypasses the cache
+def get_current_user(fresh_fetch=False) -> InternalUserObject:
     # changing the code to operate on streamlit state rather than local file
-    if not LOGGED_USER in st.session_state:
+    if not LOGGED_USER in st.session_state or fresh_fetch:
         data_repo = DataRepo()
         user = data_repo.get_first_active_user()
         st.session_state[LOGGED_USER] = user.to_json() if user else None
     
     return json.loads(st.session_state[LOGGED_USER]) if LOGGED_USER in st.session_state else None
+
+def user_credits_available():
+    current_user = get_current_user(fresh_fetch=True)
+    return True if (current_user and current_user['total_credits'] > 0) else False
 
 def get_current_user_uuid():
     current_user = get_current_user()
@@ -271,6 +278,34 @@ def generate_temp_file(url, ext=".mp4"):
     temp_file.close()
 
     return temp_file
+
+def generate_pil_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO]):
+    # Check if img is a PIL image
+    if isinstance(img, Image.Image):
+        pass
+
+    # Check if img is a URL
+    elif isinstance(img, str) and bool(urlparse(img).netloc):
+        response = requests.get(img)
+        img = Image.open(BytesIO(response.content))
+
+    # Check if img is a local file
+    elif isinstance(img, str):
+        img = Image.open(img)
+
+    # Check if img is a numpy ndarray
+    elif isinstance(img, np.ndarray):
+        img = Image.fromarray(img)
+
+    # Check if img is a BytesIO stream
+    elif isinstance(img, io.BytesIO):
+        img = Image.open(img)
+
+    else:
+        raise ValueError(
+            "Invalid image input. Must be a PIL image, a URL string, a local file path string or a numpy ndarray.")
+
+    return img
 
 def generate_temp_file_from_uploaded_file(uploaded_file):
     if uploaded_file is not None:

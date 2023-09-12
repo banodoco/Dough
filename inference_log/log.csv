@@ -1,9 +1,0 @@
-model_name,model_version,total_inference_time,input_params,created_on
-arielreplicate/instruct-pix2pix,10e63b0e6361eb23a0374f4d9ee145824d9d09f7a31dcd70803193ebc7121430,15.046226024627686,"{""instruction_text"": ""photo of the most beautiful artwork in the world featuring a modern female girl. sexy. big eyes. urban tokyo futuristic look. neon lights. night. slow motion. reflections. orange raincoat. intricate detail. nostalgia. heart professional majestic oil painting by Ed Blinkey. Atey Ghailan. Studio Ghibli. by Jeremy Mann. Greg Manchess. Antonio Moro. trending on ArtStation. trending on CGSociety. Intricate. High Detail. Sharp focus. dramatic. photorealistic painting art by midjourney and greg rutkowski"", ""seed"": 0, ""resolution"": 704}",1681136779
-rinongal/stylegan-nada,6b2af4ac56fa2384f8f86fc7620943d5fc7689dcbb6183733743a215296d0e30,70.12440013885498,"{""output_style"": ""thanos""}",1681139994
-rinongal/stylegan-nada,6b2af4ac56fa2384f8f86fc7620943d5fc7689dcbb6183733743a215296d0e30,93.12135696411131,"{""output_style"": ""thanos""}",1681140286
-rinongal/stylegan-nada,6b2af4ac56fa2384f8f86fc7620943d5fc7689dcbb6183733743a215296d0e30,6.507719993591309,"{""output_style"": ""base""}",1681140473
-rinongal/stylegan-nada,6b2af4ac56fa2384f8f86fc7620943d5fc7689dcbb6183733743a215296d0e30,5.543805837631226,"{""output_style"": ""base""}",1681141391
-rinongal/stylegan-nada,6b2af4ac56fa2384f8f86fc7620943d5fc7689dcbb6183733743a215296d0e30,5.270354986190796,"{""output_style"": ""base""}",1681142022
-rinongal/stylegan-nada,6b2af4ac56fa2384f8f86fc7620943d5fc7689dcbb6183733743a215296d0e30,5.562770843505859,"{""output_style"": ""thanos""}",1681142689
-rinongal/stylegan-nada,6b2af4ac56fa2384f8f86fc7620943d5fc7689dcbb6183733743a215296d0e30,6.317604064941406,"{""output_style"": ""simpson""}",1681219718

@@ -23,7 +23,7 @@ def app_settings_page():
 
     if SERVER != ServerType.DEVELOPMENT.value:
         with st.expander("Purchase Credits"):
-            user_credits = get_current_user()['total_credits']
+            user_credits = get_current_user(fresh_fetch=True)['total_credits']
             st.write(f"Total Credits: {user_credits}")
             c1, c2 = st.columns([1,1])
             with c1:
@@ -35,9 +35,10 @@ def app_settings_page():
                     st.session_state['input_credits'] = credits
                     st.experimental_rerun()
 
-                if st.button("Buy credits"):
+                if st.button("Generate payment link"):
                     payment_link = data_repo.generate_payment_link(credits)
-                    webbrowser.open_new_tab(payment_link)
+                    payment_link = f"""<a target='_self' href='{payment_link}'> PAYMENT LINK </a>"""
+                    st.markdown(payment_link, unsafe_allow_html=True)
     
 
     # locally_or_hosted = st.radio("Do you want to store your files locally or on AWS?", ("Locally", "AWS"),disabled=True, help="Only local storage is available at the moment, let me know if you need AWS storage - it should be pretty easy.")

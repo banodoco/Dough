@@ -222,6 +222,9 @@ def cache_data(cls):
 
     def _cache_get_app_setting_from_uuid(self, *args, **kwargs):
         app_setting_list = StCache.get_all(CacheKey.APP_SETTING.value)
+        if not len(kwargs) and len(app_setting_list):
+            return app_setting_list[0]
+        
         if app_setting_list and len(app_setting_list) and len(kwargs.keys()):
             for app_setting in app_setting_list:
                 if app_setting.uuid == kwargs['uuid']:

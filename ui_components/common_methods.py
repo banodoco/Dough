@@ -37,7 +37,7 @@ from backend.models import InternalFileObject
 from shared.file_upload.s3 import is_s3_image_url, upload_file
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, VideoQuality, WorkflowStageType
 from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
-from utils.common_utils import add_temp_file_to_project, generate_temp_file, get_current_user_uuid, save_or_host_file, save_or_host_file_bytes
+from utils.common_utils import add_temp_file_to_project, generate_pil_image, generate_temp_file, get_current_user_uuid, save_or_host_file, save_or_host_file_bytes
 from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
@@ -88,32 +88,7 @@ def clone_styling_settings(source_frame_number, target_frame_uuid):
 
 # TODO: image format is assumed to be PNG, change this later
 def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project_uuid) -> InternalFileObject:
-
-    
-    # Check if img is a PIL image
-    if isinstance(img, Image.Image):
-        pass
-
-    # Check if img is a URL
-    elif isinstance(img, str) and bool(urlparse(img).netloc):
-        response = r.get(img)
-        img = Image.open(BytesIO(response.content))
-
-    # Check if img is a local file
-    elif isinstance(img, str):
-        img = Image.open(img)
-
-    # Check if img is a numpy ndarray
-    elif isinstance(img, np.ndarray):
-        img = Image.fromarray(img)
-
-    # Check if img is a BytesIO stream
-    elif isinstance(img, io.BytesIO):
-        img = Image.open(img)
-
-    else:
-        raise ValueError(
-            "Invalid image input. Must be a PIL image, a URL string, a local file path string or a numpy ndarray.")
+    img = generate_pil_image(img)
     
     file_name = str(uuid.uuid4()) + ".png"
     file_path = os.path.join("videos/temp", file_name)
@@ -135,24 +110,11 @@ def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project
     new_image = data_repo.create_file(**file_data)
     return new_image
 
-def save_uploaded_image(uploaded_file, project_uuid, frame_uuid, save_type):
+def save_uploaded_image(image, project_uuid, frame_uuid, save_type):
     data_repo = DataRepo()
 
-    print(uploaded_file)
-    
-    # Check if uploaded_file is already an opened PIL Image
-    if isinstance(uploaded_file, Image.Image):
-        image_to_save = uploaded_file
-    else:
-        try:
-            image_to_save = Image.open(uploaded_file)
-        except Exception as e:
-            print(f"Failed to open image due to: {str(e)}")
-            return None
-
     try:
-        # Save new image
-        saved_image = save_new_image(image_to_save, project_uuid)
+        saved_image = save_new_image(image, project_uuid)
 
         # Update records based on save_type
         if save_type == "source":
@@ -281,14 +243,6 @@ def create_video_without_interpolation(timing_uuid):
 
     return video_file
 
-def get_pillow_image(image_location):
-    if image_location.startswith("http://") or image_location.startswith("https://"):
-        response = r.get(image_location)
-        image = Image.open(BytesIO(response.content))
-    else:
-        image = Image.open(image_location)
-
-    return image
 
 def create_alpha_mask(size, edge_blur_radius):
     mask = Image.new('L', size, 0)
@@ -428,7 +382,7 @@ def fetch_image_by_stage(project_uuid, stage):
     else:
         return None
 
-def zoom_inputs(project_settings, position='in-frame', horizontal=False):
+def zoom_inputs(position='in-frame', horizontal=False):
     if horizontal:
         col1, col2, col3, col4 = st.columns(4)
     else:
@@ -1589,10 +1543,10 @@ def drawing_mode(timing_details,project_settings,project_uuid,stage=WorkflowStag
             st.session_state['canny_image'] = None
 
         if st.button("Extract Canny From image"):
-            if stage == "source":
+            if stage == WorkflowStageType.SOURCE.value:
                 image_path = timing_details[st.session_state['current_frame_index'] - 1].source_image.location 
         
-            elif stage == "styled":
+            elif stage == WorkflowStageType.STYLED.value:
                 image_path = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
             
             
@@ -2121,6 +2075,8 @@ def current_individual_clip_element(timing_uuid):
         video = create_individual_clip(timing_uuid)
         data_repo.update_specific_timing(timing_uuid, interpolated_clip_id=video.uuid)
         output_video = update_speed_of_video_clip(timing.interpolated_clip, True, timing_uuid)
+
+        timing = data_repo.get_timing_from_uuid(timing_uuid)
         data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
         return output_video
     
@@ -2160,6 +2116,7 @@ def current_individual_clip_element(timing_uuid):
 
         ''')
         gen1, gen2 = st.columns([1, 1])
+
         with gen1:
             if st.button("Generate Low-Resolution Clip", key=f"generate_preview_video_{idx}"):
                 generate_individual_clip(timing.uuid, 'preview')

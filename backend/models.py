@@ -155,7 +155,7 @@ class Timing(BaseModel):
     guidance_scale = models.FloatField(default=7.5)
     seed = models.IntegerField(default=0)
     num_inteference_steps = models.IntegerField(default=50)
-    strength = models.FloatField(default=4)
+    strength = models.FloatField(default=1)
     notes = models.TextField(default="", blank=True)
     adapter_type = models.CharField(max_length=255, default=None, null=True, blank=True)
     clip_duration = models.FloatField(default=None, null=True)     # clip duration of the timed_clip
