@@ -2,7 +2,7 @@ from typing import List
 import datetime
 import streamlit as st
 from shared.constants import InternalFileTag, InternalFileType
-from ui_components.common_methods import render_video
+from ui_components.methods.common_methods import render_video
 import random
 import time
 import os

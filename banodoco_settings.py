@@ -7,7 +7,7 @@ from shared.constants import SERVER, AIModelCategory, AIModelType, GuidanceType,
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from shared.constants import AnimationStyleType
-from ui_components.common_methods import add_image_variant
+from ui_components.methods.common_methods import add_image_variant
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalUserObject
 from utils.common_utils import copy_sample_assets, create_working_assets, save_or_host_file
 from utils.constants import ImageStage

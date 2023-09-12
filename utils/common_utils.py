@@ -379,3 +379,23 @@ def reset_project_state():
             key = k + str(i)
             if key in st.session_state:
                 del st.session_state[key]
+
+
+def convert_bytes_to_file(file_location_to_save, mime_type, file_bytes, project_uuid):
+    data_repo = DataRepo()
+
+    hosted_url = save_or_host_file_bytes(file_bytes, file_location_to_save, mime_type=mime_type)
+    file_data = {
+        "name": str(uuid.uuid4()),
+        "type": InternalFileType.IMAGE.value,
+        "project_id": project_uuid.uuid
+    }
+
+    if hosted_url:
+        file_data.update({'hosted_url': hosted_url})
+    else:
+        file_data.update({'local_path': file_location_to_save})
+
+    file = data_repo.create_file(**file_data)
+
+    return file

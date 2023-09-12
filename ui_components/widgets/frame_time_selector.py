@@ -1,5 +1,5 @@
 from typing import List
-from ui_components.common_methods import calculate_desired_duration_of_each_clip
+from ui_components.methods.common_methods import update_clip_duration_of_all_timing_frames
 from ui_components.models import InternalFrameTimingObject
 from utils.data_repo.data_repo import DataRepo
 import streamlit as st
@@ -38,6 +38,6 @@ def update_frame_time(timing_uuid, frame_time):
             data_repo.update_specific_timing(frame.uuid, frame_time=new_frame_time, timed_clip_id=None)
     
     # updating clip_duration
-    calculate_desired_duration_of_each_clip(timing.project.uuid)
+    update_clip_duration_of_all_timing_frames(timing.project.uuid)
 
     st.experimental_rerun()

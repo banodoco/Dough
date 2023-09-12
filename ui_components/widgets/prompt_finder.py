@@ -2,7 +2,7 @@ import time
 from PIL import Image
 import streamlit as st
 
-from ui_components.common_methods import prompt_clip_interrogator
+from ui_components.methods.common_methods import prompt_clip_interrogator
 from utils.common_utils import save_or_host_file
 
 

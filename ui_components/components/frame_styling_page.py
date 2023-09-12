@@ -2,12 +2,11 @@ import streamlit as st
 from streamlit_image_comparison import image_comparison
 import time
 from PIL import Image
-from ui_components.common_methods import delete_frame, drawing_mode, promote_image_variant, save_uploaded_image, \
+from ui_components.methods.common_methods import delete_frame, drawing_mode, promote_image_variant, save_uploaded_image, \
     trigger_restyling_process, create_timings_row_at_frame_number, move_frame, \
         calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, \
             calculate_desired_duration_of_individual_clip, apply_image_transformations, \
-                ai_frame_editing_element, clone_styling_settings, zoom_inputs,\
-                    current_individual_clip_element,current_preview_video_element,update_animation_style_element
+                ai_frame_editing_element, clone_styling_settings, zoom_inputs
 from ui_components.widgets.cropping_element import manual_cropping_element, precision_cropping_element
 from ui_components.widgets.frame_time_selector import single_frame_time_selector, update_frame_time
 from ui_components.widgets.frame_selector import frame_selector_widget

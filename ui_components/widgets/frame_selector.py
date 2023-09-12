@@ -9,7 +9,7 @@ from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
 from ui_components.constants import WorkflowStageType
 from shared.file_upload.s3 import upload_file
-from ui_components.common_methods import delete_frame, add_image_variant, promote_image_variant, save_uploaded_image, replace_image_widget
+from ui_components.methods.common_methods import delete_frame, add_image_variant, promote_image_variant, save_uploaded_image, replace_image_widget
 
 
 def frame_selector_widget():

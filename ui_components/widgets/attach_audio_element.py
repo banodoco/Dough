@@ -1,5 +1,5 @@
 import streamlit as st
-from ui_components.common_methods import save_audio_file
+from ui_components.methods.common_methods import save_audio_file
 from ui_components.models import InternalProjectObject, InternalSettingObject
 from utils.data_repo.data_repo import DataRepo
 
