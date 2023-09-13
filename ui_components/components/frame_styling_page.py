@@ -2,13 +2,15 @@ import streamlit as st
 from streamlit_image_comparison import image_comparison
 import time
 from PIL import Image
-from ui_components.common_methods import delete_frame, drawing_mode, promote_image_variant, save_uploaded_image, \
-    trigger_restyling_process, create_timings_row_at_frame_number, move_frame, \
-        calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, \
+from ui_components.methods.common_methods import delete_frame, drawing_mode, promote_image_variant, save_uploaded_image, \
+    create_timings_row_at_frame_number, move_frame, calculate_desired_duration_of_individual_clip, \
             calculate_desired_duration_of_individual_clip, apply_image_transformations, \
-                ai_frame_editing_element, clone_styling_settings, zoom_inputs,\
-                    current_individual_clip_element,current_preview_video_element,update_animation_style_element
+                ai_frame_editing_element, clone_styling_settings, zoom_inputs
+from ui_components.methods.file_methods import generate_pil_image, save_or_host_file
+from ui_components.methods.ml_methods import trigger_restyling_process
+from ui_components.methods.video_methods import create_or_get_single_preview_video
 from ui_components.widgets.cropping_element import manual_cropping_element, precision_cropping_element
+from ui_components.widgets.frame_clip_generation_elements import current_individual_clip_element, current_preview_video_element, update_animation_style_element
 from ui_components.widgets.frame_time_selector import single_frame_time_selector, update_frame_time
 from ui_components.widgets.frame_selector import frame_selector_widget
 from ui_components.widgets.image_carousal import display_image
@@ -20,7 +22,6 @@ from utils import st_memory
 
 import math
 from ui_components.constants import WorkflowStageType
-from utils.common_utils import generate_pil_image, generate_temp_file, save_or_host_file
 from utils.constants import ImageStage
 
 from utils.data_repo.data_repo import DataRepo
@@ -236,22 +237,22 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             if st.button(f"Generate variants", key=f"new_variations_{st.session_state['current_frame_index']}", help="This will generate new variants based on the settings to the left."):
                                 for i in range(0, st.session_state['individual_number_of_variants']):
                                     trigger_restyling_process(
-                                    st.session_state['current_frame_uuid'], 
-                                    st.session_state['model'], 
-                                    st.session_state['prompt'], 
-                                    st.session_state['strength'], 
-                                    st.session_state['negative_prompt'], 
-                                    st.session_state['guidance_scale'], 
-                                    st.session_state['seed'], 
-                                    st.session_state['num_inference_steps'], 
-                                    st.session_state['transformation_stage'], 
-                                    st.session_state["promote_new_generation"], 
-                                    st.session_state['custom_models'], 
-                                    st.session_state['adapter_type'], 
-                                    True, 
-                                    st.session_state['low_threshold'], 
-                                    st.session_state['high_threshold']
-                                )
+                                        st.session_state['current_frame_uuid'], 
+                                        st.session_state['model'], 
+                                        st.session_state['prompt'], 
+                                        st.session_state['strength'], 
+                                        st.session_state['negative_prompt'], 
+                                        st.session_state['guidance_scale'], 
+                                        st.session_state['seed'], 
+                                        st.session_state['num_inference_steps'], 
+                                        st.session_state['transformation_stage'], 
+                                        st.session_state["promote_new_generation"], 
+                                        st.session_state['custom_models'], 
+                                        st.session_state['adapter_type'], 
+                                        True, 
+                                        st.session_state['low_threshold'], 
+                                        st.session_state['high_threshold']
+                                    )
                                 st.experimental_rerun()
 
                         st.markdown("***")

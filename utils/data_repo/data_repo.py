@@ -247,6 +247,9 @@ class DataRepo:
         res = self.db_repo.update_specific_timing(uuid, **kwargs)
         return res.status
     
+    def add_interpolated_clip(self, timing_uuid, **kwargs):
+        pass
+    
     def delete_timing_from_uuid(self, uuid):
         res = self.db_repo.delete_timing_from_uuid(uuid)
         return res.status

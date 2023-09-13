@@ -2,11 +2,11 @@ from typing import List
 import datetime
 import streamlit as st
 from shared.constants import InternalFileTag, InternalFileType
-from ui_components.common_methods import render_video
 import random
 import time
 import os
 import re
+from ui_components.methods.video_methods import render_video
 from ui_components.models import InternalFileObject, InternalFrameTimingObject
 from ui_components.widgets.attach_audio_element import attach_audio_element
 

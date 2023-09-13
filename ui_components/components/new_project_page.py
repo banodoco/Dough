@@ -1,6 +1,6 @@
 import streamlit as st
 from banodoco_settings import create_new_project
-from ui_components.common_methods import save_audio_file,create_timings_row_at_frame_number, save_uploaded_image
+from ui_components.methods.common_methods import save_audio_file,create_timings_row_at_frame_number, save_uploaded_image
 from utils.common_utils import get_current_user_uuid, reset_project_state
 from utils.data_repo.data_repo import DataRepo
 import time

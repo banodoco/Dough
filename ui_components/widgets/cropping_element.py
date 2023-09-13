@@ -8,10 +8,10 @@ from streamlit_cropper import st_cropper
 from backend.models import InternalFileObject
 from shared.constants import InternalFileType
 
-from ui_components.common_methods import apply_image_transformations, fetch_image_by_stage, inpaint_in_black_space_element, reset_zoom_element, save_zoomed_image, zoom_inputs
+from ui_components.methods.common_methods import apply_image_transformations, fetch_image_by_stage, inpaint_in_black_space_element, reset_zoom_element, save_zoomed_image, zoom_inputs
 from ui_components.constants import WorkflowStageType
+from ui_components.methods.file_methods import generate_pil_image, save_or_host_file
 from ui_components.models import InternalProjectObject, InternalSettingObject
-from utils.common_utils import generate_pil_image, save_or_host_file
 from utils.data_repo.data_repo import DataRepo
 
 
