@@ -463,7 +463,7 @@ class DBRepo:
         # DBRepo._count += 1
         # cls_name = inspect.currentframe().f_code.co_name
         # print("db call: ", DBRepo._count, " class name: ", cls_name)
-        ai_model = AIModel.objects.filter(name=name, is_disabled=False).first()
+        ai_model = AIModel.objects.filter(replicate_url=name, is_disabled=False).first()
         if not ai_model:
             return InternalResponse({}, 'invalid ai model name', False)
 

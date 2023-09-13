@@ -156,7 +156,8 @@ class DataRepo:
         return InternalAIModelObject(**model) if model else None
     
     def get_ai_model_from_name(self, name):
-        model = self.db_repo.get_ai_model_from_name(name).data['data']
+        res = self.db_repo.get_ai_model_from_name(name)
+        model = res.data['data'] if res.status else None
         return InternalAIModelObject(**model) if model else None
     
     def get_all_ai_model_list(self, model_category_list=None, user_id=None, custom_trained=None, model_type_list=None):

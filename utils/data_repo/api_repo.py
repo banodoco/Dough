@@ -242,7 +242,7 @@ class APIRepo:
     
     # TODO: remove this method from everywhere
     def get_ai_model_from_name(self, name):
-        res = self.http_get(self.MODEL_URL, params={'name': name})
+        res = self.http_get(self.MODEL_URL, params={'replicate_url': name})
         return InternalResponse(res['payload'], 'success', res['status'])
 
     

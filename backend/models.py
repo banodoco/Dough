@@ -105,7 +105,7 @@ class InferenceLog(BaseModel):
     model = models.ForeignKey(AIModel, on_delete=models.DO_NOTHING, null=True)
     input_params = models.TextField(default="", blank=True)
     output_details = models.TextField(default="", blank=True)
-    total_inference_time = models.IntegerField(default=0)
+    total_inference_time = models.FloatField(default=0)
 
     class Meta:
         app_label = 'backend'
