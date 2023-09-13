@@ -4,7 +4,7 @@ import uuid
 
 from typing import List
 from shared.constants import AIModelCategory, AIModelType
-from ui_components.methods.common_methods import trigger_restyling_process
+from ui_components.methods.ml_methods import trigger_restyling_process
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
 from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo

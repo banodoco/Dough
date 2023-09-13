@@ -1,15 +1,9 @@
-
-
 import streamlit as st
-import time
-from shared.constants import InternalFileType
 from ui_components.widgets.frame_time_selector import single_frame_time_selector
 from ui_components.widgets.image_carousal import display_image
-from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
 from ui_components.constants import WorkflowStageType
-from shared.file_upload.s3 import upload_file
-from ui_components.methods.common_methods import delete_frame, add_image_variant, promote_image_variant, save_uploaded_image, replace_image_widget
+from ui_components.methods.common_methods import delete_frame, replace_image_widget
 
 
 def frame_selector_widget():

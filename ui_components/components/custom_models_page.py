@@ -2,7 +2,7 @@ import json
 from typing import List
 import streamlit as st
 from shared.constants import AIModelCategory, AIModelType
-from ui_components.methods.common_methods import train_model
+from ui_components.methods.training_methods import train_model
 
 from ui_components.models import InternalAIModelObject
 from utils.common_utils import get_current_user_uuid

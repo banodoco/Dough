@@ -8,8 +8,9 @@ from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from shared.constants import AnimationStyleType
 from ui_components.methods.common_methods import add_image_variant
+from ui_components.methods.file_methods import save_or_host_file
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalUserObject
-from utils.common_utils import copy_sample_assets, create_working_assets, save_or_host_file
+from utils.common_utils import create_working_assets
 from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL

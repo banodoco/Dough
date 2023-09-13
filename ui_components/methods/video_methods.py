@@ -13,8 +13,6 @@ from backend.models import InternalFileObject
 from shared.constants import InternalFileTag
 from shared.file_upload.s3 import is_s3_image_url
 from ui_components.constants import VideoQuality
-from ui_components.methods.common_methods import get_audio_bytes_for_slice, update_clip_duration_of_all_timing_frames
-from ui_components.methods.file_methods import convert_bytes_to_file, generate_temp_file, save_or_host_file_bytes
 from ui_components.models import InternalFrameTimingObject, InternalSettingObject
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.interpolator import VideoInterpolator
@@ -23,6 +21,9 @@ from utils.media_processor.video import VideoProcessor
 
 # returns the timed_clip, which is the interpolated video with correct length
 def create_or_get_single_preview_video(timing_uuid):
+    from ui_components.methods.file_methods import generate_temp_file, save_or_host_file_bytes
+    from ui_components.methods.common_methods import get_audio_bytes_for_slice
+
     data_repo = DataRepo()
 
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
@@ -90,6 +91,8 @@ def create_or_get_single_preview_video(timing_uuid):
 
 # preview_clips have frame numbers on them. Preview clip is generated from index-2 to index+2 frames
 def create_full_preview_video(timing_uuid, speed=1) -> InternalFileObject:
+    from ui_components.methods.file_methods import save_or_host_file_bytes, convert_bytes_to_file, generate_temp_file
+
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
@@ -179,6 +182,8 @@ def create_full_preview_video(timing_uuid, speed=1) -> InternalFileObject:
     return video_file
 
 def update_speed_of_video_clip(video_file: InternalFileObject, timing_uuid) -> InternalFileObject:
+    from ui_components.methods.file_methods import generate_temp_file, convert_bytes_to_file
+
     data_repo = DataRepo()
 
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
@@ -267,6 +272,9 @@ def add_audio_to_video_slice(video_file, audio_bytes):
 
 
 def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileTag.GENERATED_VIDEO.value):
+    from ui_components.methods.common_methods import update_clip_duration_of_all_timing_frames
+    from ui_components.methods.file_methods import convert_bytes_to_file, generate_temp_file
+
     data_repo = DataRepo()
 
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(

@@ -2,8 +2,8 @@ import time
 from PIL import Image
 import streamlit as st
 
-from ui_components.methods.common_methods import prompt_clip_interrogator
-from utils.common_utils import save_or_host_file
+from ui_components.methods.file_methods import save_or_host_file
+from ui_components.methods.ml_methods import prompt_clip_interrogator
 
 
 def prompt_finder_element(project_uuid):

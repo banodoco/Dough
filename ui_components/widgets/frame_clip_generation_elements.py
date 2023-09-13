@@ -1,8 +1,8 @@
 import streamlit as st
 from shared.constants import AnimationStyleType
-from ui_components.methods.common_methods import create_full_preview_video, create_interpolated_clip, update_speed_of_video_clip
+from ui_components.methods.file_methods import convert_bytes_to_file
+from ui_components.methods.video_methods import create_full_preview_video, update_speed_of_video_clip
 from ui_components.models import InternalFrameTimingObject
-from utils.common_utils import convert_bytes_to_file
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.interpolator import VideoInterpolator
 

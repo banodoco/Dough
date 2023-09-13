@@ -3,11 +3,14 @@ from streamlit_image_comparison import image_comparison
 import time
 from PIL import Image
 from ui_components.methods.common_methods import delete_frame, drawing_mode, promote_image_variant, save_uploaded_image, \
-    trigger_restyling_process, create_timings_row_at_frame_number, move_frame, \
-        calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, \
+    create_timings_row_at_frame_number, move_frame, calculate_desired_duration_of_individual_clip, \
             calculate_desired_duration_of_individual_clip, apply_image_transformations, \
                 ai_frame_editing_element, clone_styling_settings, zoom_inputs
+from ui_components.methods.file_methods import generate_pil_image, save_or_host_file
+from ui_components.methods.ml_methods import trigger_restyling_process
+from ui_components.methods.video_methods import create_or_get_single_preview_video
 from ui_components.widgets.cropping_element import manual_cropping_element, precision_cropping_element
+from ui_components.widgets.frame_clip_generation_elements import current_individual_clip_element, current_preview_video_element, update_animation_style_element
 from ui_components.widgets.frame_time_selector import single_frame_time_selector, update_frame_time
 from ui_components.widgets.frame_selector import frame_selector_widget
 from ui_components.widgets.image_carousal import display_image
@@ -19,7 +22,6 @@ from utils import st_memory
 
 import math
 from ui_components.constants import WorkflowStageType
-from utils.common_utils import generate_pil_image, generate_temp_file, save_or_host_file
 from utils.constants import ImageStage
 
 from utils.data_repo.data_repo import DataRepo

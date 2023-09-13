@@ -4,7 +4,7 @@ import streamlit as st
 import requests as r
 import numpy as np
 from shared.constants import AnimationStyleType
-from utils.common_utils import generate_temp_file
+from ui_components.methods.file_methods import generate_temp_file
 
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import get_ml_client

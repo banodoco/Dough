@@ -8,7 +8,6 @@ import urllib
 from backend.models import InternalFileObject
 from shared.constants import REPLICATE_USER, SERVER, InternalFileTag, InternalFileType, ServerType
 from ui_components.constants import MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE
-from ui_components.methods.common_methods import add_image_variant, create_or_update_mask, promote_image_variant, resize_image
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
 from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
@@ -33,6 +32,8 @@ def trigger_restyling_process(
     low_threshold,
     high_threshold
 ):
+    from ui_components.methods.common_methods import add_image_variant, promote_image_variant
+
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
@@ -187,6 +188,8 @@ def prompt_model_real_esrgan_upscaling(input_image):
 
 # TODO: fix the options input, only certain words can be input in this
 def prompt_model_stylegan_nada(timing_uuid, input_image):
+    from ui_components.methods.common_methods import resize_image
+
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
@@ -206,6 +209,8 @@ def prompt_model_stylegan_nada(timing_uuid, input_image):
     return output_file
 
 def prompt_model_stable_diffusion_xl(timing_uuid):
+    from ui_components.methods.common_methods import resize_image
+
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
@@ -634,6 +639,8 @@ def remove_background(input_image):
 
 
 def create_depth_mask_image(input_image, layer, timing_uuid):
+    from ui_components.methods.common_methods import create_or_update_mask
+    
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
 

@@ -1,6 +1,6 @@
 import json
+from typing import List
 from shared.constants import AIModelCategory
-from ui_components.methods.common_methods import convert_image_list_to_file_list
 from utils.common_utils import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import get_ml_client
@@ -28,6 +28,8 @@ def train_model(images_list, instance_prompt, class_prompt, max_train_steps,
 
 # INFO: images_list passed here are converted to internal files after they are used for training
 def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max_train_steps, model_name, images_list: List[str], controller_type, model_type_list):
+    from ui_components.methods.common_methods import convert_image_list_to_file_list
+    
     ml_client = get_ml_client()
     response = ml_client.dreambooth_training(
         training_file_url, instance_prompt, class_prompt, max_train_steps, model_name, controller_type, len(images_list))
@@ -61,6 +63,8 @@ def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max
 
 # INFO: images_list passed here are converted to internal files after they are used for training
 def train_lora_model(training_file_url, type_of_task, resolution, model_name, images_list, model_type_list):
+    from ui_components.methods.common_methods import convert_image_list_to_file_list
+
     data_repo = DataRepo()
     ml_client = get_ml_client()
     output = ml_client.predict_model_output(REPLICATE_MODEL.clones_lora_training, instance_data=training_file_url,
