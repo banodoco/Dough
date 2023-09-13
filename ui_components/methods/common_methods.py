@@ -38,32 +38,24 @@ def clone_styling_settings(source_frame_number, target_frame_uuid):
         target_timing.project.uuid)
 
     data_repo.update_specific_timing(
-        target_frame_uuid, custom_pipeline=timing_details[source_frame_number].custom_pipeline)
-    data_repo.update_specific_timing(
-        target_frame_uuid, negative_prompt=timing_details[source_frame_number].negative_prompt)
-    data_repo.update_specific_timing(
-        target_frame_uuid, guidance_scale=timing_details[source_frame_number].guidance_scale)
-    data_repo.update_specific_timing(
-        target_frame_uuid, seed=timing_details[source_frame_number].seed)
-    data_repo.update_specific_timing(
-        target_frame_uuid, num_inteference_steps=timing_details[source_frame_number].num_inteference_steps)
-    data_repo.update_specific_timing(
-        target_frame_uuid, transformation_stage=timing_details[source_frame_number].transformation_stage)
+        target_frame_uuid, 
+        custom_pipeline=timing_details[source_frame_number].custom_pipeline,
+        negative_prompt=timing_details[source_frame_number].negative_prompt,
+        guidance_scale=timing_details[source_frame_number].guidance_scale,
+        seed=timing_details[source_frame_number].seed,
+        num_inteference_steps=timing_details[source_frame_number].num_inteference_steps,
+        transformation_stage=timing_details[source_frame_number].transformation_stage,
+        strength=timing_details[source_frame_number].strength,
+        custom_models=timing_details[source_frame_number].custom_model_id_list,
+        adapter_type=timing_details[source_frame_number].adapter_type,
+        low_threshold=timing_details[source_frame_number].low_threshold,
+        high_threshold=timing_details[source_frame_number].high_threshold,
+        prompt=timing_details[source_frame_number].prompt
+    )
+    
     if timing_details[source_frame_number].model:
         data_repo.update_specific_timing(
             target_frame_uuid, model_id=timing_details[source_frame_number].model.uuid)
-    data_repo.update_specific_timing(
-        target_frame_uuid, strength=timing_details[source_frame_number].strength)
-    data_repo.update_specific_timing(
-        target_frame_uuid, custom_models=timing_details[source_frame_number].custom_model_id_list)
-    data_repo.update_specific_timing(
-        target_frame_uuid, adapter_type=timing_details[source_frame_number].adapter_type)
-    data_repo.update_specific_timing(
-        target_frame_uuid, low_threshold=timing_details[source_frame_number].low_threshold)
-    data_repo.update_specific_timing(
-        target_frame_uuid, high_threshold=timing_details[source_frame_number].high_threshold)
-    data_repo.update_specific_timing(
-        target_frame_uuid, prompt=timing_details[source_frame_number].prompt)
 
 # TODO: image format is assumed to be PNG, change this later
 def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project_uuid) -> InternalFileObject:

@@ -1,3 +1,4 @@
+import uuid
 import streamlit as st
 from shared.constants import AnimationStyleType
 from ui_components.methods.file_methods import convert_bytes_to_file
@@ -28,7 +29,7 @@ def current_individual_clip_element(timing_uuid):
             settings
         )
 
-        video_location = ""
+        video_location = "videos/" + timing.project.name + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
         video = convert_bytes_to_file(
             video_location,
             "video/mp4",
@@ -36,7 +37,7 @@ def current_individual_clip_element(timing_uuid):
             timing.project.uuid
         )
 
-        data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video.uuid)
+        data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video.uuid, clip_settings=settings)
         output_video = update_speed_of_video_clip(timing.interpolated_clip, timing_uuid)
         data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
         return output_video
