@@ -1,16 +1,24 @@
 import os
+import random
+import string
 import tempfile
 from typing import List
+import ffmpeg
+import streamlit as st
 import uuid
-from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, vfx
+from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, vfx, AudioFileClip
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 
 from backend.models import InternalFileObject
-from ui_components.methods.common_methods import add_audio_to_video_slice, calculate_desired_duration_of_individual_clip, get_audio_bytes_for_slice, update_speed_of_video_clip
+from shared.constants import InternalFileTag
+from shared.file_upload.s3 import is_s3_image_url
+from ui_components.constants import VideoQuality
+from ui_components.methods.common_methods import get_audio_bytes_for_slice, update_clip_duration_of_all_timing_frames
+from ui_components.methods.file_methods import convert_bytes_to_file, generate_temp_file, save_or_host_file_bytes
 from ui_components.models import InternalFrameTimingObject, InternalSettingObject
-from utils.common_utils import convert_bytes_to_file, generate_temp_file, save_or_host_file_bytes
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.interpolator import VideoInterpolator
+from utils.media_processor.video import VideoProcessor
 
 
 # returns the timed_clip, which is the interpolated video with correct length
@@ -177,7 +185,7 @@ def update_speed_of_video_clip(video_file: InternalFileObject, timing_uuid) -> I
         timing_uuid)
 
     desired_duration = timing.clip_duration
-    animation_style = st.session_state[f"{timing_uuid}_animation_style"]
+    animation_style = timing.animation_style
 
     temp_video_file = None
     if video_file.hosted_url and is_s3_image_url(video_file.hosted_url):
@@ -193,15 +201,13 @@ def update_speed_of_video_clip(video_file: InternalFileObject, timing_uuid) -> I
         animation_style,
         desired_duration
     )
-    
-    hosted_url = save_or_host_file_bytes(video_bytes, new_file_location)
 
-    if hosted_url:
-        video_file: InternalFileObject = data_repo.create_file(
-                name=new_file_name, type=InternalFileType.VIDEO.value, hosted_url=hosted_url)
-    else:
-        video_file: InternalFileObject = data_repo.create_file(
-                name=new_file_name, type=InternalFileType.VIDEO.value, local_path=new_file_location)
+    video_file = convert_bytes_to_file(
+        new_file_location,
+        "video/mp4",
+        video_bytes,
+        timing.project.uuid
+    )
 
     if temp_video_file:
         os.remove(temp_video_file.name)
@@ -279,7 +285,7 @@ def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileT
         if quality == VideoQuality.HIGH.value:
             data_repo.update_specific_timing(
                 current_timing.uuid, timed_clip_id=None)
-            interpolation_steps = calculate_dynamic_interpolations_steps(
+            interpolation_steps = VideoInterpolator.calculate_dynamic_interpolations_steps(
                 timing_details[index_of_current_item].clip_duration)
             if not timing.interpolation_steps or timing.interpolation_steps < interpolation_steps:
                 data_repo.update_specific_timing(
@@ -290,9 +296,22 @@ def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileT
                     current_timing.uuid, interpolation_steps=3)
 
         if not timing.interpolated_clip:
-            video_location = create_interpolated_clip(current_timing.uuid)
+            next_timing = data_repo.get_next_timing(current_timing.uuid)
+            video_bytes = VideoInterpolator.create_interpolated_clip(
+                img_location_list=[current_timing.source_image.location, next_timing.source_image.location],
+                interpolation_steps=current_timing.interpolation_steps
+            )
+
+            file_location = "videos/" + current_timing.project.name + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
+            video_file = convert_bytes_to_file(
+                file_location,
+                "video/mp4",
+                video_bytes,
+                current_timing.project.uuid
+            )
+
             data_repo.update_specific_timing(
-                current_timing.uuid, interpolated_clip_id=video_location.uuid)
+                current_timing.uuid, interpolated_clip_id=video_file.uuid)
 
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         timing.project.uuid)
@@ -384,22 +403,15 @@ def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileT
     video_bytes = None
     with open(temp_video_file.name, "rb") as f:
         video_bytes = f.read()
-    
-    hosted_url = save_or_host_file_bytes(video_bytes, output_video_file)
 
-    file_data = {
-        "name": final_video_name,
-        "type": InternalFileType.VIDEO.value,
-        "tag": file_tag,
-        "project_id": project_uuid
-    }
-
-    if hosted_url:
-        file_data.update({"hosted_url": hosted_url})
-    else:
-        file_data.update({"local_path": output_video_file})
-
-    data_repo.create_file(**file_data)
+    _ = convert_bytes_to_file(
+        output_video_file,
+        "video/mp4",
+        video_bytes,
+        project_uuid,
+        filename=final_video_name,
+        tag=file_tag
+    )
 
     for file in temp_file_list:
         os.remove(file.name)

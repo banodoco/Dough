@@ -3,50 +3,29 @@ from typing import List
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 import os
-import base64
-from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageEnhance, ImageFilter, ImageChops
+from PIL import Image, ImageDraw, ImageOps, ImageFilter
 from moviepy.editor import *
-from requests_toolbelt.multipart.encoder import MultipartEncoder
 import cv2
-from moviepy.video.io.VideoFileClip import VideoFileClip
-import csv
-import pandas as pd
-import replicate
-import urllib
 import requests as r
-import imageio
-import ffmpeg
-import string
 import math
 import json
-import tempfile
-import boto3
 import time
-import zipfile
-from math import gcd
-import random
 import uuid
 from io import BytesIO
 import numpy as np
-from shared.constants import REPLICATE_USER, SERVER, AIModelCategory, InternalFileTag, InternalFileType, ServerType
+from shared.constants import SERVER, InternalFileType, ServerType
 from pydub import AudioSegment
-import shutil
-from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, vfx
 from backend.models import InternalFileObject
-from shared.file_upload.s3 import is_s3_image_url, upload_file
-from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, VideoQuality, WorkflowStageType
-from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
-from utils.common_utils import add_temp_file_to_project, convert_bytes_to_file, generate_pil_image, generate_temp_file, get_current_user_uuid, save_or_host_file, save_or_host_file_bytes
+from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, WorkflowStageType
+from ui_components.methods.file_methods import add_temp_file_to_project, generate_pil_image, save_or_host_file, save_or_host_file_bytes
+from ui_components.methods.ml_methods import create_depth_mask_image, inpainting, remove_background
+from ui_components.methods.video_methods import calculate_desired_duration_of_individual_clip
+from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
 from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
-from utils.media_processor.video import VideoProcessor
-from utils.ml_processor.ml_interface import get_ml_client
-from utils.ml_processor.replicate.constants import REPLICATE_MODEL
+
 from ui_components.models import InternalFileObject
-
-
-from urllib.parse import urlparse
 
 from typing import Union
 from streamlit_image_comparison import image_comparison
@@ -127,7 +106,6 @@ def save_uploaded_image(image, project_uuid, frame_uuid, save_type):
     except Exception as e:
         print(f"Failed to save image file due to: {str(e)}")
         return None
-
 
 def create_alpha_mask(size, edge_blur_radius):
     mask = Image.new('L', size, 0)
@@ -383,8 +361,6 @@ def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
         if "current_frame_uuid" not in st.session_state:
             st.session_state['current_frame_uuid'] = timing_details[0].uuid
 
-        def reset_new_image():
-            st.session_state['edited_image'] = ""
 
         if "edited_image" not in st.session_state:
             st.session_state.edited_image = ""
@@ -775,7 +751,6 @@ def rotate_image(location, degree):
 
     return rotated_image
 
-
 def move_frame(direction, timing_uuid):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
@@ -816,137 +791,6 @@ def delete_frame(timing_uuid):
     if timing.aux_frame_index == len(timing_details) - 1:
         st.session_state['current_frame_index'] = max(1, st.session_state['current_frame_index'] - 1)
         st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
-
-
-def dynamic_prompting(prompt, source_image, timing_uuid):
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-
-    if "[expression]" in prompt:
-        prompt_expression = facial_expression_recognition(source_image)
-        prompt = prompt.replace("[expression]", prompt_expression)
-
-    if "[location]" in prompt:
-        prompt_location = prompt_model_blip2(
-            source_image, "What's surrounding the character?")
-        prompt = prompt.replace("[location]", prompt_location)
-
-    if "[mouth]" in prompt:
-        prompt_mouth = prompt_model_blip2(
-            source_image, "is their mouth open or closed?")
-        prompt = prompt.replace("[mouth]", "mouth is " + str(prompt_mouth))
-
-    if "[looking]" in prompt:
-        prompt_looking = prompt_model_blip2(
-            source_image, "the person is looking")
-        prompt = prompt.replace("[looking]", "looking " + str(prompt_looking))
-
-    data_repo.update_specific_timing(timing_uuid, prompt=prompt)
-
-
-def trigger_restyling_process(
-    timing_uuid,
-    model_uuid,
-    prompt,
-    strength,
-    negative_prompt,
-    guidance_scale,
-    seed,
-    num_inference_steps,
-    transformation_stage,
-    promote_new_generation,
-    custom_models,
-    adapter_type,
-    update_inference_settings,
-    low_threshold,
-    high_threshold
-):
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-    custom_pipeline = ""
-
-    # TODO: add proper form validations throughout the code
-    if not prompt:
-        st.error("Please enter a prompt")
-        return
-
-    if update_inference_settings is True:
-        prompt = prompt.replace(",", ".")
-        prompt = prompt.replace("\n", "")
-        data_repo.update_project_setting(
-            timing.project.uuid,
-            default_prompt=prompt,
-            default_strength=strength,
-            default_model_id=model_uuid,
-            default_custom_pipeline=custom_pipeline,
-            default_negative_prompt=negative_prompt,
-            default_guidance_scale=guidance_scale,
-            default_seed=seed,
-            default_num_inference_steps=num_inference_steps,
-            default_which_stage_to_run_on=transformation_stage,
-            default_custom_models=custom_models,
-            default_adapter_type=adapter_type
-        )
-
-        if low_threshold != "":
-            data_repo.update_project_setting(
-                timing.project.uuid, default_low_threshold=low_threshold)
-        if high_threshold != "":
-            data_repo.update_project_setting(
-                timing.project.uuid, default_high_threshold=high_threshold)
-
-        if timing.source_image == "":
-            source_image = ""
-        else:
-            source_image = timing.source_image
-
-        data_repo.update_specific_timing(
-            uuid=timing_uuid,
-            model_id=model_uuid,
-            source_image_id=timing.source_image.uuid,
-            prompt=prompt,
-            strength=strength,
-            custom_pipeline=custom_pipeline,
-            negative_prompt=negative_prompt,
-            guidance_scale=guidance_scale,
-            seed=seed,
-            num_inference_steps=num_inference_steps,
-            custom_models=custom_models,
-            adapter_type=adapter_type,
-            low_threshold=low_threshold,
-            high_threshold=high_threshold
-        )
-        dynamic_prompting(prompt, source_image, timing_uuid)
-
-    timing = data_repo.get_timing_from_uuid(timing_uuid)
-    if transformation_stage == ImageStage.SOURCE_IMAGE.value:
-        source_image = timing.source_image
-    else:
-        variants: List[InternalFileObject] = timing.alternative_images_list
-        number_of_variants = len(variants)
-        primary_image = timing.primary_image
-        source_image = primary_image.location
-
-    # if st.session_state['custom_pipeline'] == "Mystique":
-    #     output_file = custom_pipeline_mystique(timing_uuid, source_image)
-    # else:
-    output_file = restyle_images(timing_uuid, source_image)
-
-    if output_file != None:
-        add_image_variant(output_file.uuid, timing_uuid)
-
-        if promote_new_generation == True:
-            timing = data_repo.get_timing_from_uuid(timing_uuid)
-            variants = timing.alternative_images_list
-            number_of_variants = len(variants)
-            if number_of_variants == 1:
-                print("No new generation to promote")
-            else:
-                promote_image_variant(timing_uuid, number_of_variants - 1)
-    else:
-        print("No new generation to promote")
 
 def replace_image_widget(timing_uuid, stage):
     data_repo = DataRepo()
@@ -1050,7 +894,6 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
     if frame_idx < len(timing_details):
         data_repo.update_specific_timing(timing.uuid, timed_clip_id=None)
 
-
 def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_threshold=150) -> InternalFileObject:
     data_repo = DataRepo()
 
@@ -1126,37 +969,6 @@ def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
 
     timing = data_repo.get_timing_from_uuid(timing_uuid)
     return timing.mask
-
-
-def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, invert_mask, pass_mask=False) -> InternalFileObject:
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-
-    if pass_mask == False:
-        mask = timing.mask.location
-    else:
-        # TODO: store the local temp files in the db too
-        if SERVER != ServerType.DEVELOPMENT.value:
-            mask = timing.project.get_temp_mask_file(TEMP_MASK_FILE).location
-        else:
-            mask = MASK_IMG_LOCAL_PATH
-
-    if not mask.startswith("http"):
-        mask = open(mask, "rb")
-
-    if not input_image.startswith("http"):
-        input_image = open(input_image, "rb")
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.andreas_sd_inpainting, mask=mask, image=input_image, prompt=prompt,
-                                            invert_mask=invert_mask, negative_prompt=negative_prompt, num_inference_steps=25)
-
-    file_name = str(uuid.uuid4()) + ".png"
-    image_file = data_repo.create_file(
-        name=file_name, type=InternalFileType.IMAGE.value, hosted_url=output[0])
-
-    return image_file
 
 # adds the image file in variant (alternative images) list
 def drawing_mode(timing_details,project_settings,project_uuid,stage=WorkflowStageType.STYLED.value):
@@ -1367,7 +1179,6 @@ def drawing_mode(timing_details,project_settings,project_uuid,stage=WorkflowStag
                         time.sleep(1)
                         st.experimental_rerun()
 
-
 def add_image_variant(image_file_uuid: str, timing_uuid: str):
     data_repo = DataRepo()
     image_file: InternalFileObject = data_repo.get_file_from_uuid(
@@ -1412,92 +1223,6 @@ def convert_image_list_to_file_list(image_list):
         file_list.append(image_file)
     return file_list
 
-
-# INFO: images_list passed here are converted to internal files after they are used for training
-def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max_train_steps, model_name, images_list: List[str], controller_type, model_type_list):
-    ml_client = get_ml_client()
-    response = ml_client.dreambooth_training(
-        training_file_url, instance_prompt, class_prompt, max_train_steps, model_name, controller_type, len(images_list))
-    training_status = response["status"]
-    
-    model_id = response["id"]
-    if training_status == "queued":
-        file_list = convert_image_list_to_file_list(images_list)
-        file_uuid_list = [file.uuid for file in file_list]
-        file_uuid_list = json.dumps(file_uuid_list)
-
-        model_data = {
-            "name": model_name,
-            "user_id": get_current_user_uuid(),
-            "replicate_model_id": model_id,
-            "replicate_url": response["model"],
-            "diffusers_url": "",
-            "category": AIModelCategory.DREAMBOOTH.value,
-            "training_image_list": file_uuid_list,
-            "keyword": instance_prompt,
-            "custom_trained": True,
-            "model_type": model_type_list
-        }
-
-        data_repo = DataRepo()
-        data_repo.create_ai_model(**model_data)
-
-        return "Success - Training Started. Please wait 10-15 minutes for the model to be trained."
-    else:
-        return "Failed"
-
-# INFO: images_list passed here are converted to internal files after they are used for training
-def train_lora_model(training_file_url, type_of_task, resolution, model_name, images_list, model_type_list):
-    data_repo = DataRepo()
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.clones_lora_training, instance_data=training_file_url,
-                                            task=type_of_task, resolution=int(resolution))
-
-    file_list = convert_image_list_to_file_list(images_list)
-    file_uuid_list = [file.uuid for file in file_list]
-    file_uuid_list = json.dumps(file_uuid_list)
-    model_data = {
-        "name": model_name,
-        "user_id": get_current_user_uuid(),
-        "replicate_url": output,
-        "diffusers_url": "",
-        "category": AIModelCategory.LORA.value,
-        "training_image_list": file_uuid_list,
-        "custom_trained": True,
-        "model_type": model_type_list
-    }
-
-    data_repo.create_ai_model(**model_data)
-    return f"Successfully trained - the model '{model_name}' is now available for use!"
-
-# TODO: making an exception for this, passing just the image urls instead of
-# image files
-def train_model(images_list, instance_prompt, class_prompt, max_train_steps,
-                model_name, type_of_model, type_of_task, resolution, controller_type, model_type_list):
-    # prepare and upload the training data (images.zip)
-    ml_client = get_ml_client()
-    try:
-        training_file_url = ml_client.upload_training_data(images_list)
-    except Exception as e:
-        raise e
-
-    # training the model
-    model_name = model_name.replace(" ", "-").lower()
-    if type_of_model == "Dreambooth":
-        return train_dreambooth_model(instance_prompt, class_prompt, training_file_url,
-                                      max_train_steps, model_name, images_list, controller_type, model_type_list)
-    elif type_of_model == "LoRA":
-        return train_lora_model(training_file_url, type_of_task, resolution, model_name, images_list, model_type_list)
-
-def remove_background(input_image):
-    if not input_image.startswith("http"):
-        input_image = open(input_image, "rb")
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
-        REPLICATE_MODEL.pollination_modnet, image=input_image)
-    return output
-
 def replace_background(project_uuid, background_image) -> InternalFileObject:
     data_repo = DataRepo()
     project = data_repo.get_project_from_uuid(project_uuid)
@@ -1533,38 +1258,6 @@ def replace_background(project_uuid, background_image) -> InternalFileObject:
     image_file = data_repo.create_file(**file_data)
 
     return image_file
-
-def prompt_clip_interrogator(input_image, which_model, best_or_fast):
-    if which_model == "Stable Diffusion 1.5":
-        which_model = "ViT-L-14/openai"
-    elif which_model == "Stable Diffusion 2":
-        which_model = "ViT-H-14/laion2b_s32b_b79k"
-
-    if not input_image.startswith("http"):
-        input_image = open(input_image, "rb")
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
-        REPLICATE_MODEL.clip_interrogator, image=input_image, clip_model_name=which_model, mode=best_or_fast)
-
-    return output
-
-def prompt_model_real_esrgan_upscaling(input_image):
-    data_repo = DataRepo()
-    app_settings = data_repo.get_app_setting_from_uuid()
-
-    if not input_image.startswith("http"):
-        input_image = open(input_image, "rb")
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
-        REPLICATE_MODEL.real_esrgan_upscale, image=input_image, upscale=2
-    )
-
-    filename = str(uuid.uuid4()) + ".png"
-    image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                       hosted_url=output)
-    return output
 
 # TODO: don't save or upload image where just passing the PIL object can work
 def resize_image(video_name, new_width, new_height, image_file: InternalFileObject) -> InternalFileObject:
@@ -1603,155 +1296,6 @@ def resize_image(video_name, new_width, new_height, image_file: InternalFileObje
 
     return image_file
 
-# TODO: fix the options input, only certain words can be input in this
-def prompt_model_stylegan_nada(timing_uuid, input_image):
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-
-    input_file = input_image.location
-    if 'http' in input_image.location:
-        input_file = open(input_image.location, 'rb')
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.stylegan_nada, input=input_file,
-                                            output_style=timing.prompt)
-    filename = str(uuid.uuid4()) + ".png"
-    image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                       hosted_url=output[0])
-    output_file = resize_image(timing.project.name, 512, 512, image_file)
-
-    return output_file
-
-def prompt_model_stable_diffusion_xl(timing_uuid):
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.sdxl, prompt=timing.prompt)
-    filename = str(uuid.uuid4()) + ".png"
-    image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                       hosted_url=output[0])
-    output_file = resize_image(timing.project.name, 512, 512, image_file)
-
-    return output_file
-
-def prompt_model_stability(timing_uuid, input_image_file: InternalFileObject):
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-    project_settings: InternalSettingObject = data_repo.get_project_setting(
-        timing.project.uuid)
-
-    index_of_current_item = timing.aux_frame_index
-    input_image = input_image_file.location
-    prompt = timing.prompt
-    strength = timing.strength
-    if not input_image.startswith("http"):
-        input_image = open(input_image, "rb")
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
-        REPLICATE_MODEL.img2img_sd_2_1,
-        image=input_image,
-        prompt_strength=float(strength),
-        prompt=prompt,
-        negative_prompt=timing.negative_prompt,
-        width=project_settings.width,
-        height=project_settings.height,
-        guidance_scale=timing.guidance_scale,
-        seed=timing.seed,
-        num_inference_steps=timing.num_inteference_steps
-    )
-
-    filename = str(uuid.uuid4()) + ".png"
-    image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                           hosted_url=output[0], tag=InternalFileTag.GENERATED_VIDEO.value)
-
-    return image_file
-
-
-def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
-    data_repo = DataRepo()
-
-    if not ('dreambooth_model_uuid' in st.session_state and st.session_state['dreambooth_model_uuid']):
-        st.error('No dreambooth model selected')
-        return
-
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
-
-    project_settings: InternalSettingObject = data_repo.get_project_setting(
-        timing.project.uuid)
-    
-    dreambooth_model: InternalAIModelObject = data_repo.get_ai_model_from_uuid(st.session_state['dreambooth_model_uuid'])
-    
-    model_name = dreambooth_model.name
-    image_number = timing.aux_frame_index
-    prompt = timing.prompt
-    strength = timing.strength
-    negative_prompt = timing.negative_prompt
-    guidance_scale = timing.guidance_scale
-    seed = timing.seed
-    num_inference_steps = timing.num_inteference_steps
-
-    model_id = dreambooth_model.replicate_url
-
-    ml_client = get_ml_client()
-
-    source_image = source_image_file.location
-    if timing_details[image_number].adapter_type == "Yes":
-        if source_image.startswith("http"):
-            control_image = source_image
-        else:
-            control_image = open(source_image, "rb")
-    else:
-        control_image = None
-
-    # version of models that were custom created has to be fetched
-    if not dreambooth_model.version:
-        version = ml_client.get_model_version_from_id(model_id)
-        data_repo.update_ai_model(uuid=dreambooth_model.uuid, version=version)
-    else:
-        version = dreambooth_model.version
-
-    model_version = ml_client.get_model_by_name(
-        f"{REPLICATE_USER}/{model_name}", version)
-
-    if source_image.startswith("http"):
-        input_image = source_image
-    else:
-        input_image = open(source_image, "rb")
-
-    input_data = {
-        "image": input_image,
-        "prompt": prompt,
-        "prompt_strength": float(strength),
-        "height": int(project_settings.height),
-        "width": int(project_settings.width),
-        "disable_safety_check": True,
-        "negative_prompt": negative_prompt,
-        "guidance_scale": float(guidance_scale),
-        "seed": int(seed),
-        "num_inference_steps": int(num_inference_steps)
-    }
-
-    if control_image != None:
-        input_data['control_image'] = control_image
-
-    output = model_version.predict(**input_data)
-
-    for i in output:
-        filename = str(uuid.uuid4()) + ".png"
-        image_file = data_repo.create_file(
-            name=filename, type=InternalFileType.IMAGE.value, hosted_url=i, tag=InternalFileTag.GENERATED_VIDEO.value)
-        return image_file
-
-    return None
-
 def get_audio_bytes_for_slice(timing_uuid):
     data_repo = DataRepo()
 
@@ -1770,7 +1314,6 @@ def get_audio_bytes_for_slice(timing_uuid):
     audio.export(audio_bytes, format='wav')
     audio_bytes.seek(0)
     return audio_bytes
-
 
 # calculates and updates clip duration of all the timings
 def update_clip_duration_of_all_timing_frames(project_uuid):
@@ -1806,129 +1349,6 @@ def update_clip_duration_of_all_timing_frames(project_uuid):
         data_repo.update_specific_timing(
             timing_item.uuid, clip_duration=total_duration_of_frame)
 
-def prompt_model_depth2img(strength, timing_uuid, source_image) -> InternalFileObject:
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-
-    prompt = timing.prompt
-    num_inference_steps = timing.num_inteference_steps
-    guidance_scale = timing.guidance_scale
-    negative_prompt = timing.negative_prompt
-    if not source_image.startswith("http"):
-        source_image = open(source_image, "rb")
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.jagilley_controlnet_depth2img, input_image=source_image,
-                                            prompt_strength=float(strength), prompt=prompt, negative_prompt=negative_prompt,
-                                            num_inference_steps=num_inference_steps, guidance_scale=guidance_scale)
-
-    filename = str(uuid.uuid4()) + ".png"
-    image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                           hosted_url=output[0])
-    return image_file
-
-
-def prompt_model_blip2(input_image, query):
-    if not input_image.startswith("http"):
-        input_image = open(input_image, "rb")
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
-        REPLICATE_MODEL.salesforce_blip_2, image=input_image, question=query)
-
-    return output
-
-
-def facial_expression_recognition(input_image):
-    if not input_image.startswith("http"):
-        input_image = open(input_image, "rb")
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
-        REPLICATE_MODEL.phamquiluan_face_recognition, input_path=input_image)
-
-    emo_label = output[0]["emo_label"]
-    if emo_label == "disgust":
-        emo_label = "disgusted"
-    elif emo_label == "fear":
-        emo_label = "fearful"
-    elif emo_label == "surprised":
-        emo_label = "surprised"
-    emo_proba = output[0]["emo_proba"]
-    if emo_proba > 0.95:
-        emotion = (f"very {emo_label} expression")
-    elif emo_proba > 0.85:
-        emotion = (f"{emo_label} expression")
-    elif emo_proba > 0.75:
-        emotion = (f"somewhat {emo_label} expression")
-    elif emo_proba > 0.65:
-        emotion = (f"slightly {emo_label} expression")
-    elif emo_proba > 0.55:
-        emotion = (f"{emo_label} expression")
-    else:
-        emotion = (f"neutral expression")
-    return emotion
-
-
-def prompt_model_pix2pix(timing_uuid, input_image_file: InternalFileObject):
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-
-    prompt = timing.prompt
-    guidance_scale = timing.guidance_scale
-    seed = timing.seed
-    input_image = input_image_file.location
-    if not input_image.startswith("http"):
-        input_image = open(input_image, "rb")
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.arielreplicate, input_image=input_image, instruction_text=prompt,
-                                            seed=seed, cfg_image=1.2, cfg_text=guidance_scale, resolution=704)
-
-    filename = str(uuid.uuid4()) + ".png"
-    image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                           hosted_url=output)
-    return image_file
-
-
-def restyle_images(timing_uuid, source_image) -> InternalFileObject:
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-
-    model_name = timing.model.name
-    strength = timing.strength
-
-    if model_name == "stable-diffusion-img2img-v2.1":
-        output_file = prompt_model_stability(timing_uuid, source_image)
-    elif model_name == "depth2img":
-        output_file = prompt_model_depth2img(
-            strength, timing_uuid, source_image)
-    elif model_name == "pix2pix":
-        output_file = prompt_model_pix2pix(timing_uuid, source_image)
-    elif model_name == "LoRA":
-        output_file = prompt_model_lora(timing_uuid, source_image)
-    elif model_name == "controlnet":
-        output_file = prompt_model_controlnet(timing_uuid, source_image)
-    elif model_name == "Dreambooth":
-        output_file = prompt_model_dreambooth(timing_uuid, source_image)
-    elif model_name == 'StyleGAN-NADA':
-        output_file = prompt_model_stylegan_nada(timing_uuid, source_image)
-    elif model_name == "stable_diffusion_xl":
-        output_file = prompt_model_stable_diffusion_xl(timing_uuid)
-    elif model_name == "real-esrgan-upscaling":
-        output_file = prompt_model_real_esrgan_upscaling(source_image)
-    elif model_name == 'controlnet_1_1_x_realistic_vision_v2_0':
-        output_file = prompt_model_controlnet_1_1_x_realistic_vision_v2_0(
-            source_image)
-    elif model_name == 'urpm-v1.3':
-        output_file = prompt_model_urpm_v1_3(source_image)
-
-    return output_file
-
-
 def create_timings_row_at_frame_number(project_uuid, index_of_frame, frame_time=0.0):
     data_repo = DataRepo()
     
@@ -1954,255 +1374,6 @@ def create_timings_row_at_frame_number(project_uuid, index_of_frame, frame_time=
             next_timing.uuid, interpolated_clip_id=None)
 
     return timing
-
-
-def create_depth_mask_image(input_image, layer, timing_uuid):
-    if not input_image.startswith("http"):
-        input_image = open(input_image, "rb")
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
-        REPLICATE_MODEL.cjwbw_midas, image=input_image, model_type="dpt_beit_large_512")
-    try:
-        urllib.request.urlretrieve(output, "videos/temp/depth.png")
-    except Exception as e:
-        print(e)
-
-    depth_map = Image.open("videos/temp/depth.png")
-    depth_map = depth_map.convert("L")  # Convert to grayscale image
-    pixels = depth_map.load()
-    mask = Image.new("L", depth_map.size)
-    mask_pixels = mask.load()
-
-    fg_mask = Image.new("L", depth_map.size) if "Foreground" in layer else None
-    mg_mask = Image.new(
-        "L", depth_map.size) if "Middleground" in layer else None
-    bg_mask = Image.new("L", depth_map.size) if "Background" in layer else None
-
-    fg_pixels = fg_mask.load() if fg_mask else None
-    mg_pixels = mg_mask.load() if mg_mask else None
-    bg_pixels = bg_mask.load() if bg_mask else None
-
-    for i in range(depth_map.size[0]):
-        for j in range(depth_map.size[1]):
-            depth_value = pixels[i, j]
-
-            if fg_pixels:
-                fg_pixels[i, j] = 0 if depth_value > 200 else 255
-            if mg_pixels:
-                mg_pixels[i, j] = 0 if depth_value <= 200 and depth_value > 50 else 255
-            if bg_pixels:
-                bg_pixels[i, j] = 0 if depth_value <= 50 else 255
-
-            mask_pixels[i, j] = 255
-            if fg_pixels:
-                mask_pixels[i, j] &= fg_pixels[i, j]
-            if mg_pixels:
-                mask_pixels[i, j] &= mg_pixels[i, j]
-            if bg_pixels:
-                mask_pixels[i, j] &= bg_pixels[i, j]
-
-    return create_or_update_mask(timing_uuid, mask)
-
-
-def prompt_model_controlnet(timing_uuid, input_image):
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-
-    if timing.adapter_type == "normal":
-        model = REPLICATE_MODEL.jagilley_controlnet_normal
-    elif timing.adapter_type == "canny":
-        model = REPLICATE_MODEL.jagilley_controlnet_canny
-    elif timing.adapter_type == "hed":
-        model = REPLICATE_MODEL.jagilley_controlnet_hed
-    elif timing.adapter_type == "scribble":
-        model = REPLICATE_MODEL.jagilley_controlnet_scribble
-        if timing.canny_image != "":
-            input_image = timing.canny_image
-    elif timing.adapter_type == "seg":
-        model = REPLICATE_MODEL.jagilley_controlnet_seg
-    elif timing.adapter_type == "hough":
-        model = REPLICATE_MODEL.jagilley_controlnet_hough
-    elif timing.adapter_type == "depth2img":
-        model = REPLICATE_MODEL.jagilley_controlnet_depth2img
-    elif timing.adapter_type == "pose":
-        model = REPLICATE_MODEL.jagilley_controlnet_pose
-
-    if not input_image.startswith("http"):
-        input_image = open(input_image, "rb")
-
-    inputs = {
-        'image': input_image,
-        'prompt': timing.prompt,
-        'num_samples': "1",
-        'image_resolution': "512",
-        'ddim_steps': timing.num_inteference_steps,
-        'scale': timing.guidance_scale,
-        'eta': 0,
-        'seed': timing.seed,
-        'a_prompt': "best quality, extremely detailed",
-        'n_prompt': timing.negative_prompt + ", longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
-        'detect_resolution': 512,
-        'bg_threshold': 0,
-        'low_threshold': timing.low_threshold,
-        'high_threshold': timing.high_threshold,
-    }
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(model, **inputs)
-
-    return output[1]
-
-
-def prompt_model_urpm_v1_3(timing_uuid, source_image):
-    data_repo = DataRepo()
-    timing = data_repo.get_timing_from_uuid(timing_uuid)
-
-    if not source_image.startswith("http"):
-        source_image = open(source_image, "rb")
-
-    inputs = {
-        'image': source_image,
-        'prompt': timing.prompt,
-        'negative_prompt': timing.negative_prompt,
-        'strength': timing.strength,
-        'guidance_scale': timing.guidance_scale,
-        'num_inference_steps': timing.num_inference_steps,
-        'upscale': 1,
-        'seed': timing.seed,
-    }
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.urpm, **inputs)
-
-    return output[0]
-
-
-def prompt_model_controlnet_1_1_x_realistic_vision_v2_0(timing_uuid, input_image):
-    data_repo = DataRepo()
-    timing = data_repo.get_timing_from_uuid(timing_uuid)
-
-    if not input_image.startswith("http"):
-        input_image = open(input_image, "rb")
-
-    inputs = {
-        'image': input_image,
-        'prompt': timing.prompt,
-        'ddim_steps': timing.num_inference_steps,
-        'strength': timing.strength,
-        'scale': timing.guidance_scale,
-        'seed': timing.seed,
-    }
-
-    ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
-        REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0, **inputs)
-
-    return output[1]
-
-
-def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> InternalFileObject:
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-    project_settings: InternalSettingObject = data_repo.get_project_setting(
-        timing.project.uuid)
-
-    # lora_models = timing.custom_model_id_list
-    # default_model_url = DEFAULT_LORA_MODEL_URL
-
-    # lora_model_urls = []
-
-    # for lora_model_uuid in lora_models:
-    #     if lora_model_uuid != "":
-    #         lora_model: InternalAIModelObject = data_repo.get_ai_model_from_uuid(
-    #             lora_model_uuid)
-    #         print(lora_model)
-    #         if lora_model.replicate_url != "":
-    #             lora_model_url = lora_model.replicate_url
-    #         else:
-    #             lora_model_url = default_model_url
-    #     else:
-    #         lora_model_url = default_model_url
-
-    #     lora_model_urls.append(lora_model_url)
-
-    lora_urls = ""
-    lora_scales = ""
-    if "lora_model_1_url" in st.session_state and st.session_state["lora_model_1_url"]:
-        lora_urls += st.session_state["lora_model_1_url"]
-        lora_scales += "0.5"
-    if "lora_model_2_url" in st.session_state and st.session_state["lora_model_2_url"]:
-        ctn = "" if not len(lora_urls) else " | "
-        lora_urls += ctn + st.session_state["lora_model_2_url"]
-        lora_scales += ctn + "0.5"
-    if st.session_state["lora_model_3_url"]:
-        ctn = "" if not len(lora_urls) else " | "
-        lora_urls += ctn + st.session_state["lora_model_3_url"]
-        lora_scales += ctn + "0.5"
-
-    source_image = source_image_file.location
-    if source_image[:4] == "http":
-        input_image = source_image
-    else:
-        input_image = open(source_image, "rb")
-
-    if timing.adapter_type != "None":
-        if source_image[:4] == "http":
-            adapter_condition_image = source_image
-        else:
-            adapter_condition_image = open(source_image, "rb")
-    else:
-        adapter_condition_image = ""
-
-    inputs = {
-        'prompt': timing.prompt,
-        'negative_prompt': timing.negative_prompt,
-        'width': project_settings.width,
-        'height': project_settings.height,
-        'num_outputs': 1,
-        'image': input_image,
-        'num_inference_steps': timing.num_inteference_steps,
-        'guidance_scale': timing.guidance_scale,
-        'prompt_strength': timing.strength,
-        'scheduler': "DPMSolverMultistep",
-        'lora_urls': lora_urls,
-        'lora_scales': lora_scales,
-        'adapter_type': timing.adapter_type,
-        'adapter_condition_image': adapter_condition_image,
-    }
-
-    ml_client = get_ml_client()
-    max_attempts = 3
-    attempts = 0
-    while attempts < max_attempts:
-        try:
-            output = ml_client.predict_model_output(
-                REPLICATE_MODEL.clones_lora_training_2, **inputs)
-            print(output)
-            filename = str(uuid.uuid4()) + ".png"
-            file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                             hosted_url=output[0])
-            return file
-        except replicate.exceptions.ModelError as e:
-            if "NSFW content detected" in str(e):
-                print("NSFW content detected. Attempting to rerun code...")
-                attempts += 1
-                continue
-            else:
-                raise e
-        except Exception as e:
-            raise e
-
-    # filename = "default_3x_failed-656a7e5f-eca9-4f92-a06b-e1c6ff4a5f5e.png"     # const filename
-    # file = data_repo.get_file_from_name(filename)
-    # if file:
-    #     return file
-    # else:
-    #     file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-    #                                                      hosted_url="https://i.ibb.co/ZG0hxzj/Failed-3x-In-A-Row.png")
-    #     return file
 
 
 def save_audio_file(uploaded_file, project_uuid):
