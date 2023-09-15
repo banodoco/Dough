@@ -16,6 +16,8 @@ from ui_components.widgets.frame_selector import frame_selector_widget
 from ui_components.widgets.image_carousal import display_image
 from ui_components.widgets.prompt_finder import prompt_finder_element
 from ui_components.widgets.styling_element import styling_element
+from ui_components.widgets.compare_to_other_variants import compare_to_other_variants
+from ui_components.widgets.animation_style_element import animation_style_element
 from streamlit_option_menu import option_menu
 from utils import st_memory
 
@@ -77,83 +79,43 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 
         if st.session_state['page'] == "Motion":
             idx = st.session_state['current_frame_index'] - 1
-            timing1, timing2, timing3 = st.columns([0.5, 1,1])
-
-            with timing1:
-                update_animation_style_element(st.session_state['current_frame_uuid'], horizontal=False)
             
-            with timing2:
-                current_individual_clip_element(st.session_state['current_frame_uuid'])
+            motion_sections = ["Other Variants", "Preview Video in Context"]
+            
+            st.session_state['show_comparison'] = st_memory.radio("Show:", options=motion_sections, horizontal=True, project_settings=project_settings, key="show_comparison_radio_motion")
 
-            with timing3:
+            if st.session_state['show_comparison'] == "Other Variants":
+                compare_to_other_variants(timing_details, project_uuid, data_repo,stage="Motion")
+
+            elif st.session_state['show_comparison'] == "Preview Video in Context":
                 current_preview_video_element(st.session_state['current_frame_uuid'])
+            
+            update_animation_style_element(st.session_state['current_frame_uuid'], horizontal=False)
+
+            st.markdown("***")
+
+            with st.expander("🎬 Choose Animation Style & Create Variants", expanded=True):
+
+                animation_style_element(st.session_state['current_frame_uuid'], project_settings)
+
+                
+
+                        
+
+                
 
         elif st.session_state['page'] == "Styling":
             # carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.value)
             comparison_values = [
                 "Other Variants", "Source Frame", "Previous & Next Frame", "None"]
+            
+            st.session_state['show_comparison'] = st_memory.radio("Show comparison to:", options=comparison_values, horizontal=True, project_settings=project_settings, key="show_comparison_radio")
 
-            st.session_state['show_comparison'] = st_memory.radio(
-                "Show comparison to:", options=comparison_values, horizontal=True, project_settings=project_settings, key="show_comparison_radio")
-
-            timing = data_repo.get_timing_from_uuid(
-                    st.session_state['current_frame_uuid'])
-            variants = timing.alternative_images_list
+            
 
             if st.session_state['show_comparison'] == "Other Variants":
-                mainimages1, mainimages2 = st.columns([1, 1])
-                aboveimage1, aboveimage2, aboveimage3 = st.columns([1, 0.25, 0.75])
-
-                with aboveimage1:
-                    st.info(
-                        f"Current variant = {timing_details[st.session_state['current_frame_index'] - 1].primary_variant_index + 1}")
-
-                with aboveimage2:
-                    show_more_than_10_variants = st.checkbox(
-                        "Show >10 variants", key="show_more_than_10_variants")
-
-                with aboveimage3:
-                    number_of_variants = len(variants)
-
-                    if show_more_than_10_variants is True:
-                        current_variant = int(
-                            timing_details[st.session_state['current_frame_index'] - 1].primary_variant_index)
-                        which_variant = st.radio(f'Main variant = {current_variant + 1}', range(1, 
-                            number_of_variants + 1), index=number_of_variants-1, horizontal=True, key=f"Main variant for {st.session_state['current_frame_index']}")
-                    else:
-                        last_ten_variants = range(
-                            max(1, number_of_variants - 10), number_of_variants + 1)
-                        current_variant = int(
-                            timing_details[st.session_state['current_frame_index'] - 1].primary_variant_index)
-                        which_variant = st.radio(f'Main variant = {current_variant + 1}', last_ten_variants, index=len(
-                            last_ten_variants)-1, horizontal=True, key=f"Main variant for {st.session_state['current_frame_index']}")
-
-                with mainimages1:
-                    project_settings = data_repo.get_project_setting(project_uuid)
-                    st.success("**Main variant**")
-                    if len(timing_details[st.session_state['current_frame_index'] - 1].alternative_images_list):
-                        st.image(timing_details[st.session_state['current_frame_index'] - 1].primary_image_location,
-                                    use_column_width=True)
-                    else:
-                        st.error("No variants found for this frame")
-
-                with mainimages2:
-                    if len(timing_details[st.session_state['current_frame_index'] - 1].alternative_images_list):
-                        if which_variant - 1 == current_variant:
-                            st.success("**Main variant**")
-                        else:
-                            st.info(f"**Variant #{which_variant}**")
-                        
-                        st.image(variants[which_variant- 1].location,
-                                    use_column_width=True)
-
-                        if which_variant- 1 != current_variant:
-                            if st.button(f"Promote Variant #{which_variant}", key=f"Promote Variant #{which_variant} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image"):
-                                promote_image_variant(
-                                    st.session_state['current_frame_uuid'], which_variant - 1)
-                                time.sleep(0.5)
-                                st.experimental_rerun()
-
+                compare_to_other_variants(timing_details, project_uuid, data_repo,stage="Styling")
+                
             elif st.session_state['show_comparison'] == "Source Frame":
                 if timing_details[st.session_state['current_frame_index']- 1].primary_image:
                     img2 = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
@@ -553,13 +515,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 if apply_zoom_effects == "Yes":
                     image_preview = generate_pil_image(selected_image_location)
                     selected_image = apply_image_transformations(image_preview, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'])
-                    # project_update_data = {
-                    #     "zoom_level": st.session_state['zoom_level_input'],
-                    #     "rotation_angle_value": st.session_state['rotation_angle_input'],
-                    #     "x_shift": st.session_state['x_shift'],
-                    #     "y_shift": st.session_state['y_shift']
-                    # }
-                    # data_repo.update_project_setting(project_uuid, **project_update_data)
+
                 else:
                     selected_image = generate_pil_image(selected_image_location)
                 st.info("Starting Image:")                

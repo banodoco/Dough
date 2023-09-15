@@ -63,6 +63,7 @@ class InternalFileTag(ExtendedEnum):
 class AnimationStyleType(ExtendedEnum):
     INTERPOLATION = "Interpolation"
     DIRECT_MORPHING = "Direct Morphing"
+    IMAGE_TO_VIDEO = "Image to Video"
 
 
 ##################### global constants #####################
