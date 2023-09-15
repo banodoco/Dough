@@ -1,9 +1,6 @@
-import json
 import streamlit as st
-import uuid
 from typing import List
 from utils.data_repo.data_repo import DataRepo
-
 
 def animation_style_element(current_frame_uuid, project_settings):
     motion_modules = ["mm-v15-v2", "AD_Stabilized_Motion","TemporalDiff"]
@@ -32,7 +29,7 @@ def animation_style_element(current_frame_uuid, project_settings):
             normalise_speed = st.checkbox("Normalise Speed", value=True, key="normalise_speed")
     
         if st.button("Generate Animation Clip", key="generate_animation_clip"):
-            for i in range(0, how_many_variants=0):
+            for _ in range(how_many_variants):
                 st.write("Generating animation clip...")
                 time.sleep(2)
                 st.write("Lol, jk, this isn't done yet")
@@ -81,7 +78,7 @@ def animation_style_element(current_frame_uuid, project_settings):
             how_many_variants = st.number_input("How many variants?", min_value=1, max_value=100, value=1, step=1, key="how_many_variants")
 
         if st.button("Generate Animation Clip", key="generate_animation_clip"):
-            for i in range(0, how_many_variants=0):
+            for _ in range(how_many_variants):
                 st.write("Generating animation clip...")
                 time.sleep(2)
                 st.write("Lol, jk, this isn't done yet")

@@ -31,6 +31,59 @@ from typing import Union
 from streamlit_image_comparison import image_comparison
 
 
+def add_key_frame(selected_image, inherit_styling_settings, how_long_after):
+    data_repo = DataRepo()
+    project_uuid = st.session_state['project_uuid']
+    timing_details = data_repo.get_timing_list_from_project(project_uuid)
+    project_settings = data_repo.get_project_setting(project_uuid)
+    
+
+    if len(timing_details) == 0:
+        index_of_current_item = 1
+    else:
+        index_of_current_item = min(len(timing_details), st.session_state['current_frame_index'])
+
+    timing_details = data_repo.get_timing_list_from_project(project_uuid)
+
+    if len(timing_details) == 0:
+        key_frame_time = 0.0
+    elif index_of_current_item == len(timing_details):
+        key_frame_time = float(timing_details[index_of_current_item - 1].frame_time) + how_long_after
+    else:
+        key_frame_time = (float(timing_details[index_of_current_item - 1].frame_time) + float(
+            timing_details[index_of_current_item].frame_time)) / 2.0
+
+    if len(timing_details) == 0:
+        new_timing = create_timings_row_at_frame_number(project_uuid, 0)
+    else:
+        new_timing = create_timings_row_at_frame_number(project_uuid, index_of_current_item, frame_time=key_frame_time)
+        
+        clip_duration = calculate_desired_duration_of_individual_clip(new_timing.uuid)
+        data_repo.update_specific_timing(new_timing.uuid, clip_duration=clip_duration)
+
+    timing_details = data_repo.get_timing_list_from_project(project_uuid)
+    if selected_image:
+        save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "source")
+        save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "styled")
+
+    if inherit_styling_settings == "Yes":
+        index = which_stage_for_starting_image or index_of_current_item
+        clone_styling_settings(index - 1, timing_details[index_of_current_item].uuid)
+
+    data_repo.update_specific_timing(timing_details[index_of_current_item].uuid, \
+                                        animation_style=project_settings.default_animation_style)
+
+    if len(timing_details) == 1:
+        st.session_state['current_frame_index'] = 1
+        st.session_state['current_frame_uuid'] = timing_details[0].uuid
+    else:
+        st.session_state['current_frame_index'] = min(len(timing_details), st.session_state['current_frame_index'])
+        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
+
+    st.session_state['page'] = "Styling"
+    st.session_state['section_index'] = 0
+    st.experimental_rerun()
+
 def clone_styling_settings(source_frame_number, target_frame_uuid):
     data_repo = DataRepo()
     target_timing = data_repo.get_timing_from_uuid(target_frame_uuid)
