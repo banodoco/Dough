@@ -264,6 +264,7 @@ class DBRepo:
         if not data.is_valid():
             return InternalResponse({}, data.errors, False)
 
+        print(data.data)
         # hosting the file if only local path is provided and it's a production environment
         if 'hosted_url' not in kwargs and AUTOMATIC_FILE_HOSTING:
             # this is the user who is uploading the file
@@ -279,7 +280,6 @@ class DBRepo:
             hosted_url = upload_file(filename, app_setting.aws_access_key_decrypted, \
                                      app_setting.aws_secret_access_key_decrypted)
             
-            print(data.data)
             data._data['hosted_url'] = hosted_url
 
         if 'project_id' in kwargs and kwargs['project_id']:
@@ -287,8 +287,14 @@ class DBRepo:
             if not project:
                 return InternalResponse({}, 'invalid project', False)
             
-            print(data.data)
             data._data['project_id'] = project.id
+
+        if 'inference_log_id' in kwargs and kwargs['inference_log_id']:
+            inference_log = InferenceLog.objects.filter(uuid=kwargs['inference_log_id'], is_disabled=False).first()
+            if not inference_log:
+                return InternalResponse({}, 'invalid log id', False)
+            
+            data._data['inference_log_id'] = inference_log.id
         
 
         if not data.is_valid():
@@ -346,6 +352,13 @@ class DBRepo:
                 return InternalResponse({}, 'invalid project', False)
             
             kwargs['project_id'] = project.id
+
+        if 'inference_log_id' in kwargs and kwargs['inference_log_id']:
+            inference_log = InferenceLog.objects.filter(uuid=kwargs['inference_log_id'], is_disabled=False).first()
+            if not inference_log:
+                return InternalResponse({}, 'invalid log id', False)
+            
+            kwargs['inference_log_id'] = inference_log.id
         
         for k,v in kwargs.items():
             setattr(file, k, v)

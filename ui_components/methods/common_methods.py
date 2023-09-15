@@ -960,7 +960,7 @@ def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
             data_repo.update_file(timing.mask.uuid, local_path=file_location)
 
     timing = data_repo.get_timing_from_uuid(timing_uuid)
-    return timing.mask
+    return timing.mask.location
 
 # adds the image file in variant (alternative images) list
 def drawing_mode(timing_details,project_settings,project_uuid,stage=WorkflowStageType.STYLED.value):

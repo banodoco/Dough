@@ -13,6 +13,7 @@ from backend.models import InternalFileObject
 from shared.constants import InternalFileTag
 from shared.file_upload.s3 import is_s3_image_url
 from ui_components.constants import VideoQuality
+from ui_components.methods.file_methods import convert_bytes_to_file
 from ui_components.models import InternalFrameTimingObject, InternalSettingObject
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.interpolator import VideoInterpolator
@@ -32,11 +33,21 @@ def create_or_get_single_preview_video(timing_uuid):
         timing.project.uuid)
 
     if not timing.interpolated_clip:
-        data_repo.update_specific_timing(timing_uuid, interpolation_steps=3)
-        interpolated_video: InternalFileObject = VideoInterpolator.video_through_frame_interpolation(
-            timing_uuid)
+        timing.interpolation_steps = 3
+        next_timing = data_repo.get_next_timing(timing.uuid)
+        img_list = [timing.source_image.location, next_timing.source_image.location]
+        video_bytes, log = VideoInterpolator.video_through_frame_interpolation(img_list, {"interpolation_steps": timing.interpolation_steps})
+        file_data = {
+            "file_location_to_save": "videos/" + timing.project.uuid + "/assets/videos" + (str(uuid.uuid4())) + ".mp4",
+            "mime_type": "video/mp4",
+            "file_bytes": video_bytes,
+            "project_uuid": timing.project.uuid,
+            "inference_log_id": log.uuid
+        }
+        
+        video_fie = convert_bytes_to_file(**file_data)
         data_repo.update_specific_timing(
-            timing_uuid, interpolated_clip_id=interpolated_video.uuid)
+            timing_uuid, interpolated_clip_id=video_fie.uuid)
 
     if not timing.timed_clip:
         timing = data_repo.get_timing_from_uuid(timing_uuid)
@@ -305,17 +316,18 @@ def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileT
 
         if not timing.interpolated_clip:
             next_timing = data_repo.get_next_timing(current_timing.uuid)
-            video_bytes = VideoInterpolator.create_interpolated_clip(
+            video_bytes, log = VideoInterpolator.create_interpolated_clip(
                 img_location_list=[current_timing.source_image.location, next_timing.source_image.location],
                 interpolation_steps=current_timing.interpolation_steps
             )
 
             file_location = "videos/" + current_timing.project.name + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
             video_file = convert_bytes_to_file(
-                file_location,
-                "video/mp4",
-                video_bytes,
-                current_timing.project.uuid
+                file_location_to_save=file_location,
+                mime_type="video/mp4",
+                file_bytes=video_bytes,
+                project_uuid=current_timing.project.uuid,
+                inference_log_id=log.uuid
             )
 
             data_repo.update_specific_timing(
@@ -413,10 +425,11 @@ def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileT
         video_bytes = f.read()
 
     _ = convert_bytes_to_file(
-        output_video_file,
-        "video/mp4",
-        video_bytes,
-        project_uuid,
+        file_location_to_save=output_video_file,
+        mime_type="video/mp4",
+        file_bytes=video_bytes,
+        project_uuid=project_uuid,
+        inference_log_id=None,
         filename=final_video_name,
         tag=file_tag
     )

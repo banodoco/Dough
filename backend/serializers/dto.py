@@ -2,10 +2,6 @@ from rest_framework import serializers
 
 from backend.models import AIModel, AppSetting, BackupTiming, InferenceLog, InternalFileObject, Project, Setting, Timing, User
 
-class InternalFileDto(serializers.ModelSerializer):
-    class Meta:
-        model = InternalFileObject
-        fields = ('uuid', 'name', 'local_path', 'type',  'hosted_url', 'created_on')
 
 class UserDto(serializers.ModelSerializer):
     class Meta:
@@ -50,6 +46,28 @@ class AIModelDto(serializers.ModelSerializer):
     def get_user_uuid(self, obj):
         return obj.user.uuid
     
+class InferenceLogDto(serializers.ModelSerializer):
+    project = ProjectDto()
+    model = AIModelDto()
+
+    class Meta:
+        model = InferenceLog
+        fields = (
+            "project", 
+            "model", 
+            "input_params", 
+            "output_details", 
+            "total_inference_time",
+            "created_on"
+        )
+
+
+class InternalFileDto(serializers.ModelSerializer):
+    inference_log = InferenceLogDto()
+    class Meta:
+        model = InternalFileObject
+        fields = ('uuid', 'name', 'local_path', 'type',  'hosted_url', 'created_on', 'inference_log')
+
 
 class TimingDto(serializers.ModelSerializer):
     project = ProjectDto()
@@ -152,21 +170,6 @@ class SettingDto(serializers.ModelSerializer):
             "rotation_angle_value"
         )
 
-
-class InferenceLogDto(serializers.ModelSerializer):
-    project = ProjectDto()
-    model = AIModelDto()
-
-    class Meta:
-        model = InferenceLog
-        fields = (
-            "project", 
-            "model", 
-            "input_params", 
-            "output_details", 
-            "total_inference_time",
-            "created_on"
-        )
 
 class BackupDto(serializers.ModelSerializer):
     project = ProjectDto()

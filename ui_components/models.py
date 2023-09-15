@@ -280,6 +280,7 @@ class InternalUserObject:
 
 class InferenceLogObject:
     def __init__(self, **kwargs):
+        self.uuid = kwargs['uuid'] if 'uuid' in kwargs else None
         self.project = InternalProjectObject(
             **kwargs["project"]) if 'project' in kwargs else None
         self.model = InternalAIModelObject(

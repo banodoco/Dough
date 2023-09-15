@@ -57,10 +57,10 @@ class ReplicateProcessor(MachineLearningProcessor):
         start_time = time.time()
         output = model_version.predict(**kwargs)
         end_time = time.time()
-        log_model_inference(model, end_time - start_time, **kwargs)
+        log = log_model_inference(model, end_time - start_time, **kwargs)
         self._update_usage_credits(end_time - start_time)
 
-        return output
+        return output, log
 
     @check_user_credits
     def inpainting(self, video_name, input_image, prompt, negative_prompt):
@@ -75,10 +75,10 @@ class ReplicateProcessor(MachineLearningProcessor):
         start_time = time.time()
         output = model.predict(mask=mask, image=input_image,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)    
         end_time = time.time()
-        log_model_inference(model, end_time - start_time, prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)
+        log = log_model_inference(model, end_time - start_time, prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)
         self._update_usage_credits(end_time - start_time)
 
-        return output[0]
+        return output[0], log
     
     # TODO: separate image compression from this function
     @check_user_credits
@@ -181,20 +181,6 @@ class ReplicateProcessor(MachineLearningProcessor):
         self._update_usage_credits(time_taken)
 
         return response
-    
-    @check_user_credits
-    def remove_background(self, project_name, input_image):
-        if not input_image.startswith("http"):        
-            input_image = open(input_image, "rb")
-
-        model = self.get_model(REPLICATE_MODEL.pollination_modnet)
-        start_time = time.time()
-        output = model.predict(image=input_image)
-        end_time = time.time()
-        log_model_inference(model, end_time - start_time, image=input_image)
-        self._update_usage_credits(end_time - start_time)
-
-        return output
     
     def get_model_version_from_id(self, model_id):
         api_key = os.environ.get("REPLICATE_API_TOKEN")

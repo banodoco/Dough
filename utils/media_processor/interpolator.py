@@ -5,6 +5,7 @@ import requests as r
 import numpy as np
 from shared.constants import AnimationStyleType
 from ui_components.methods.file_methods import generate_temp_file
+from ui_components.models import InferenceLogObject
 
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import get_ml_client
@@ -39,18 +40,17 @@ class VideoInterpolator:
             animation_style = project_setting.default_animation_style
 
         if animation_style == AnimationStyleType.INTERPOLATION.value:
-            output_video_bytes = VideoInterpolator.video_through_frame_interpolation(
+            return VideoInterpolator.video_through_frame_interpolation(
                 img_location_list,
                 settings
             )
 
         elif animation_style == AnimationStyleType.DIRECT_MORPHING.value:
-            output_video_bytes = VideoInterpolator.video_through_direct_morphing(
+            return VideoInterpolator.video_through_direct_morphing(
                 img_location_list,
                 settings
                 )
-
-        return output_video_bytes
+        
 
     # returns a video bytes generated through interpolating frames between the given list of frames
     @staticmethod
@@ -66,7 +66,7 @@ class VideoInterpolator:
             img2 = open(img2, "rb")
 
         ml_client = get_ml_client()
-        output = ml_client.predict_model_output(REPLICATE_MODEL.google_frame_interpolation, frame1=img1, frame2=img2,
+        output, log = ml_client.predict_model_output(REPLICATE_MODEL.google_frame_interpolation, frame1=img1, frame2=img2,
                                                     times_to_interpolate=settings['interpolation_steps'])
         
         temp_output_file = generate_temp_file(output, '.mp4')
@@ -76,7 +76,7 @@ class VideoInterpolator:
 
         os.remove(temp_output_file.name)
 
-        return video_bytes
+        return video_bytes, log
 
     @staticmethod
     def video_through_direct_morphing(img_location_list, settings):
@@ -112,5 +112,5 @@ class VideoInterpolator:
             video_bytes.append(frame_bytes.tobytes())
 
         video_data = b''.join(video_bytes)
-        return video_data
+        return video_data, InferenceLogObject({})    # returning None for inference log
         

@@ -45,4 +45,5 @@ def log_model_inference(model: ReplicateModel, time_taken, **kwargs):
         "total_inference_time" : time_taken,
     }
     
-    data_repo.create_inference_log(**log_data)
+    log = data_repo.create_inference_log(**log_data)
+    return log

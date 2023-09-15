@@ -23,7 +23,7 @@ def current_individual_clip_element(timing_uuid):
         timing.interpolated_steps = interpolation_steps
         img_list = [timing.source_image.location, next_timing.source_image.location]
         settings = {"interpolation_steps": timing.interpolation_steps}
-        video_bytes = VideoInterpolator.create_interpolated_clip(
+        video_bytes, log = VideoInterpolator.create_interpolated_clip(
             img_list,
             timing.animation_style,
             settings
@@ -31,10 +31,11 @@ def current_individual_clip_element(timing_uuid):
 
         video_location = "videos/" + timing.project.name + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
         video = convert_bytes_to_file(
-            video_location,
-            "video/mp4",
-            video_bytes,
-            timing.project.uuid
+            file_location_to_save=video_location,
+            mime_type="video/mp4",
+            file_bytes=video_bytes,
+            project_uuid=timing.project.uuid,
+            inference_log_id=log.uuid
         )
 
         data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video.uuid, clip_settings=settings)
