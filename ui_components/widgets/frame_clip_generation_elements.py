@@ -38,8 +38,8 @@ def current_individual_clip_element(timing_uuid):
             inference_log_id=log.uuid
         )
 
-        data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video.uuid, clip_settings=settings)
-        output_video = update_speed_of_video_clip(timing.interpolated_clip, timing_uuid)
+        data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video.uuid)
+        output_video = update_speed_of_video_clip(video, timing_uuid)
         data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
         return output_video
     

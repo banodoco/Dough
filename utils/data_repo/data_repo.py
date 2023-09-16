@@ -191,7 +191,8 @@ class DataRepo:
         return [InferenceLogObject(**log) for log in log_list] if log_list else None
     
     def create_inference_log(self, **kwargs):
-        log = self.db_repo.create_inference_log(**kwargs).data['data']
+        res = self.db_repo.create_inference_log(**kwargs)
+        log = res.data['data'] if res else None
         return InferenceLogObject(**log) if log else None
     
     def delete_inference_log_from_uuid(self, uuid):
@@ -249,7 +250,8 @@ class DataRepo:
         return res.status
     
     def add_interpolated_clip(self, timing_uuid, **kwargs):
-        pass
+        res = self.db_repo.add_interpolated_clip(timing_uuid, **kwargs)
+        return res.status
     
     def delete_timing_from_uuid(self, uuid):
         res = self.db_repo.delete_timing_from_uuid(uuid)

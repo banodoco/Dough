@@ -46,11 +46,10 @@ def frame_styling_page(mainheader2, project_uuid: str):
         st.session_state['transformation_stage'] = project_settings.default_stage
         st.session_state['show_comparison'] = "Don't show"
     
-    '''
     if "current_frame_uuid" not in st.session_state:
         timing = data_repo.get_timing_list_from_project(project_uuid)[0]
         st.session_state['current_frame_uuid'] = timing.uuid
-    '''
+    
     
     if 'frame_styling_view_type' not in st.session_state:
         st.session_state['frame_styling_view_type'] = "Individual View"

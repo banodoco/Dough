@@ -140,7 +140,7 @@ class Timing(BaseModel):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
     model = models.ForeignKey(AIModel, on_delete=models.DO_NOTHING, null=True)
     source_image = models.ForeignKey(InternalFileObject, related_name="source_image", on_delete=models.DO_NOTHING, null=True)
-    interpolated_clip = models.ForeignKey(InternalFileObject, related_name="interpolated_clip", on_delete=models.DO_NOTHING, null=True)
+    interpolated_clip_list = models.TextField(default=None, null=True)
     timed_clip = models.ForeignKey(InternalFileObject, related_name="timed_clip", on_delete=models.DO_NOTHING, null=True)
     mask = models.ForeignKey(InternalFileObject, related_name="mask", on_delete=models.DO_NOTHING, null=True)
     canny_image = models.ForeignKey(InternalFileObject, related_name="canny_image", on_delete=models.DO_NOTHING, null=True)
@@ -236,6 +236,11 @@ class Timing(BaseModel):
                 
         super().save(*args, **kwargs)
 
+    def add_interpolated_clip_list(self, clip_uuid_list):
+        cur_list = json.loads(self.interpolated_clip_list) if self.interpolated_clip_list else []
+        cur_list.extend(clip_uuid_list)
+        cur_list = list(set(cur_list))
+        self.interpolated_clip_list = json.dumps(cur_list)
 
     @property
     def alternative_images_list(self):

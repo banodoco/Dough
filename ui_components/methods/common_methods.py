@@ -864,9 +864,9 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
     prev_timing = data_repo.get_prev_timing(timing_uuid)
     if prev_timing:
         data_repo.update_specific_timing(
-            prev_timing.uuid, interpolated_clip_id=None)
+            prev_timing.uuid, interpolated_clip_list=None)
         data_repo.update_specific_timing(
-            timing_uuid, interpolated_clip_id=None)
+            timing_uuid, interpolated_clip_list=None)
 
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         timing.project.uuid)
@@ -875,7 +875,7 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
     # DOUBT: setting last interpolated_video to empty?
     if frame_idx < len(timing_details):
         data_repo.update_specific_timing(
-            timing.uuid, interpolated_clip_id=None)
+            timing.uuid, interpolated_clip_list=None)
 
     if frame_idx > 1:
         data_repo.update_specific_timing(
@@ -1358,12 +1358,12 @@ def create_timings_row_at_frame_number(project_uuid, index_of_frame, frame_time=
     if prev_timing:
         prev_clip_duration = calculate_desired_duration_of_individual_clip(prev_timing.uuid)
         data_repo.update_specific_timing(
-            prev_timing.uuid, interpolated_clip_id=None, clip_duration=prev_clip_duration)
+            prev_timing.uuid, interpolated_clip_list=None, clip_duration=prev_clip_duration)
 
     next_timing: InternalAIModelObject = data_repo.get_next_timing(timing.uuid)
     if next_timing:
         data_repo.update_specific_timing(
-            next_timing.uuid, interpolated_clip_id=None)
+            next_timing.uuid, interpolated_clip_list=None)
 
     return timing
 

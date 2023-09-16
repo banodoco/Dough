@@ -865,13 +865,13 @@ class DBRepo:
                 attributes._data['source_image_id'] = source_image.id
         
 
-        if 'interpolated_clip_id' in attributes.data:
-            if attributes.data['interpolated_clip_id'] != None:
-                interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['interpolated_clip_id'], is_disabled=False).first()
+        if 'interpolated_clip_list' in attributes.data and attributes.data['interpolated_clip_list'] != None:
+            for clip_uuid in attributes.data['interpolated_clip_list']:
+                interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=clip_uuid, is_disabled=False).first()
                 if not interpolated_clip:
                     return InternalResponse({}, 'invalid interpolated clip uuid', False)
                 
-                attributes._data['interpolated_clip_id'] = interpolated_clip.id
+                attributes._data['interpolated_clip_list'] = list(set(attributes._data['interpolated_clip_list']))
         
 
         if 'timed_clip_id' in attributes.data:
@@ -941,6 +941,21 @@ class DBRepo:
         
         return InternalResponse({}, 'timing removed successfully', True)
     
+    def add_interpolated_clip(self, uuid, **kwargs):
+        timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
+        if not timing:
+            return InternalResponse({}, 'invalid timing uuid', False)
+        
+        if 'interpolated_clip_id' in kwargs and kwargs['interpolated_clip_id'] != None:
+            interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['interpolated_clip_id'], is_disabled=False).first()
+            if not interpolated_clip:
+                return InternalResponse({}, 'invalid interpolated clip uuid', False)
+                
+            timing.add_interpolated_clip_list([interpolated_clip.uuid.hex])
+            timing.save()
+
+        return InternalResponse({}, 'success', True)
+    
     # TODO: add dao in this method
     def update_specific_timing(self, uuid, **kwargs):
         # DBRepo._count += 1
@@ -976,13 +991,15 @@ class DBRepo:
                 kwargs['source_image_id'] = source_image.id
         
 
-        if 'interpolated_clip_id' in kwargs:
-            if kwargs['interpolated_clip_id'] != None:
-                interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['interpolated_clip_id'], is_disabled=False).first()
+        if 'interpolated_clip_list' in kwargs and kwargs['interpolated_clip_list'] != None:
+            cur_list = []
+            for clip_uuid in kwargs['interpolated_clip_list']:
+                interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=clip_uuid, is_disabled=False).first()
                 if not interpolated_clip:
                     return InternalResponse({}, 'invalid interpolated clip uuid', False)
                 
-                kwargs['interpolated_clip_id'] = interpolated_clip.id
+                cur_list.append(interpolated_clip.uuid)
+            kwargs['interpolated_clip_list'] = list(set(kwargs['interpolated_clip_list']))
         
 
         if 'timed_clip_id' in kwargs:
@@ -1411,8 +1428,8 @@ class DBRepo:
             if timing.source_image:
                 file_uuid_list.add(timing.source_image.uuid)
 
-            if timing.interpolated_clip:
-                file_uuid_list.add(timing.interpolated_clip.uuid)
+            if timing.interpolated_clip_list:
+                file_uuid_list.extend(json.loads(timing.interpolated_clip_list))
             
             if timing.timed_clip:
                 file_uuid_list.add(timing.timed_clip.uuid)
@@ -1453,6 +1470,7 @@ class DBRepo:
             timing['source_image_uuid'] = str(id_file_dict[timing['source_image_id']].uuid) if timing['source_image_id'] else None
             del timing['source_image_id']
 
+            # TODO: fix this code using interpolated_clip_list
             timing['interpolated_clip_uuid'] = str(id_file_dict[timing['interpolated_clip_id']].uuid) if timing['interpolated_clip_id'] else None
             del timing['interpolated_clip_id']
 
@@ -1552,11 +1570,12 @@ class DBRepo:
             if len(matching_timing_list):
                 backup_timing = matching_timing_list[0]
 
+                # TODO: fix this code using interpolated_clip_list
                 self.update_specific_timing(
                     timing.uuid,
                     model_uuid=backup_timing['model_uuid'],
                     source_image_uuid=backup_timing['source_image_uuid'],
-                    interpolated_clip=backup_timing['interpolated_clip_uuid'],
+                    interpolated_clip_list=backup_timing['interpolated_clip_list'],
                     timed_clip=backup_timing['timed_clip_uuid'],
                     mask=backup_timing['mask_uuid'],
                     canny_image=backup_timing['canny_image_uuid'],

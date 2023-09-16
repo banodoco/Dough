@@ -7,14 +7,15 @@ from ui_components.constants import TEMP_MASK_FILE
 
 
 class InternalFileObject:
-    def __init__(self, uuid, name, type, local_path, hosted_url, created_on, tag=""):
-        self.uuid = uuid
-        self.name = name
-        self.type = type
-        self.local_path = local_path
-        self.hosted_url = hosted_url
-        self.tag = tag
-        self.created_on = created_on
+    def __init__(self, **kwargs):
+        self.uuid = kwargs['uuid'] if key_present('uuid', kwargs) else None
+        self.name = kwargs['name'] if key_present('name', kwargs) else None
+        self.type = kwargs['type'] if key_present('type', kwargs) else None
+        self.local_path = kwargs['local_path'] if key_present('local_path', kwargs) else None
+        self.hosted_url = kwargs['hosted_url'] if key_present('hosted_url', kwargs) else None
+        self.tag = kwargs['tag'] if key_present('tag', kwargs) else None
+        self.created_on = kwargs['created_on'] if key_present('created_on', kwargs) else None
+        self.inference_log = InferenceLogObject(kwargs['inference_log']) if key_present('inference_log', kwargs) else None
 
     @property
     def location(self):
@@ -86,8 +87,8 @@ class InternalFrameTimingObject:
             **kwargs["model"]) if 'model' in kwargs and kwargs["model"] else None
         self.source_image = InternalFileObject(
             **kwargs["source_image"]) if 'source_image' in kwargs and kwargs["source_image"] else None
-        self.interpolated_clip = InternalFileObject(
-            **kwargs["interpolated_clip"]) if 'interpolated_clip' in kwargs and kwargs["interpolated_clip"] else None
+        self.interpolated_clip_list = [InternalFileObject(**file) for file in kwargs["interpolated_clip_list"]] \
+                    if 'interpolated_clip_list' in kwargs and kwargs["interpolated_clip_list"] else []
         self.timed_clip = InternalFileObject(
             **kwargs["timed_clip"]) if 'timed_clip' in kwargs and kwargs["timed_clip"] else None
         self.mask = InternalFileObject(
@@ -280,14 +281,14 @@ class InternalUserObject:
 
 class InferenceLogObject:
     def __init__(self, **kwargs):
-        self.uuid = kwargs['uuid'] if 'uuid' in kwargs else None
+        self.uuid = kwargs['uuid'] if key_present('uuid', kwargs) else None
         self.project = InternalProjectObject(
-            **kwargs["project"]) if 'project' in kwargs else None
+            **kwargs["project"]) if key_present('project', kwargs) else None
         self.model = InternalAIModelObject(
-            **kwargs["model"]) if 'model' in kwargs else None
-        self.input_params = kwargs['input_params'] if 'input_params' in kwargs else None
-        self.output_details = kwargs['output_details'] if 'output_details' in kwargs else None
-        self.total_inference_time = kwargs['total_inference_time'] if 'total_inference_time' in kwargs else None
+            **kwargs["model"]) if key_present('model', kwargs) else None
+        self.input_params = kwargs['input_params'] if key_present('input_params', kwargs) else None
+        self.output_details = kwargs['output_details'] if key_present('output_details', kwargs) else None
+        self.total_inference_time = kwargs['total_inference_time'] if key_present('total_inference_time', kwargs) else None
 
 
 def key_present(key, dict):
