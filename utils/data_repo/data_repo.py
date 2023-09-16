@@ -156,7 +156,8 @@ class DataRepo:
         return InternalAIModelObject(**model) if model else None
     
     def get_ai_model_from_name(self, name):
-        model = self.db_repo.get_ai_model_from_name(name).data['data']
+        res = self.db_repo.get_ai_model_from_name(name)
+        model = res.data['data'] if res.status else None
         return InternalAIModelObject(**model) if model else None
     
     def get_all_ai_model_list(self, model_category_list=None, user_id=None, custom_trained=None, model_type_list=None):
@@ -190,7 +191,8 @@ class DataRepo:
         return [InferenceLogObject(**log) for log in log_list] if log_list else None
     
     def create_inference_log(self, **kwargs):
-        log = self.db_repo.create_inference_log(**kwargs).data['data']
+        res = self.db_repo.create_inference_log(**kwargs)
+        log = res.data['data'] if res else None
         return InferenceLogObject(**log) if log else None
     
     def delete_inference_log_from_uuid(self, uuid):
@@ -248,7 +250,8 @@ class DataRepo:
         return res.status
     
     def add_interpolated_clip(self, timing_uuid, **kwargs):
-        pass
+        res = self.db_repo.add_interpolated_clip(timing_uuid, **kwargs)
+        return res.status
     
     def delete_timing_from_uuid(self, uuid):
         res = self.db_repo.delete_timing_from_uuid(uuid)

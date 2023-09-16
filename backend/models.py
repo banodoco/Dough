@@ -46,6 +46,36 @@ class Project(BaseModel):
         db_table = 'project'
 
 
+class AIModel(BaseModel):
+    name = models.CharField(max_length=255, default="")
+    user = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True)
+    custom_trained = models.BooleanField(default=False)
+    version = models.CharField(max_length=255, default="", blank=True, null=True)
+    replicate_model_id = models.CharField(max_length=255, default="", blank=True)      # for models which were custom created
+    replicate_url = models.TextField(default="", blank=True)
+    diffusers_url = models.TextField(default="", blank=True)    # for downloading and running models offline
+    category = models.CharField(max_length=255,default="", blank=True)     # Lora, Dreambooth..
+    model_type = models.TextField(default="", blank=True)   # [txt2img, img2img..] array of types
+    training_image_list = models.TextField(default="", blank=True)      # contains an array of uuid of file objects
+    keyword = models.CharField(max_length=255,default="", blank=True)
+
+    class Meta:
+        app_label = 'backend'
+        db_table = 'ai_model'
+
+
+class InferenceLog(BaseModel):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
+    model = models.ForeignKey(AIModel, on_delete=models.DO_NOTHING, null=True)
+    input_params = models.TextField(default="", blank=True)
+    output_details = models.TextField(default="", blank=True)
+    total_inference_time = models.FloatField(default=0)
+
+    class Meta:
+        app_label = 'backend'
+        db_table = 'inference_log'
+
+
 class InternalFileObject(BaseModel):
     name = models.TextField(default="")
     type = models.CharField(max_length=255, default="")     # image, video, audio
@@ -53,6 +83,7 @@ class InternalFileObject(BaseModel):
     hosted_url = models.TextField(default="")
     tag = models.CharField(max_length=255,default="")  # background_image, mask_image, canny_image etc..
     project = models.ForeignKey(Project, on_delete=models.SET_NULL, default=None, null=True)
+    inference_log = models.ForeignKey(InferenceLog, on_delete=models.SET_NULL, default=None, null=True)
 
     class Meta:
         app_label = 'backend'
@@ -82,36 +113,6 @@ class InternalFileObject(BaseModel):
         return self.local_path if self.local_path else self.hosted_url
 
 
-class AIModel(BaseModel):
-    name = models.CharField(max_length=255, default="")
-    user = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True)
-    custom_trained = models.BooleanField(default=False)
-    version = models.CharField(max_length=255, default="", blank=True, null=True)
-    replicate_model_id = models.CharField(max_length=255, default="", blank=True)      # for models which were custom created
-    replicate_url = models.TextField(default="", blank=True)
-    diffusers_url = models.TextField(default="", blank=True)    # for downloading and running models offline
-    category = models.CharField(max_length=255,default="", blank=True)     # Lora, Dreambooth..
-    model_type = models.TextField(default="", blank=True)   # [txt2img, img2img..] array of types
-    training_image_list = models.TextField(default="", blank=True)      # contains an array of uuid of file objects
-    keyword = models.CharField(max_length=255,default="", blank=True)
-
-    class Meta:
-        app_label = 'backend'
-        db_table = 'ai_model'
-    
-
-class InferenceLog(BaseModel):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
-    model = models.ForeignKey(AIModel, on_delete=models.DO_NOTHING, null=True)
-    input_params = models.TextField(default="", blank=True)
-    output_details = models.TextField(default="", blank=True)
-    total_inference_time = models.IntegerField(default=0)
-
-    class Meta:
-        app_label = 'backend'
-        db_table = 'inference_log'
-
-
 class AIModelParamMap(BaseModel):
     model = models.ForeignKey(AIModel, on_delete=models.DO_NOTHING, null=True)
     standard_param_key = models.CharField(max_length=255, blank=True)
@@ -139,7 +140,7 @@ class Timing(BaseModel):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
     model = models.ForeignKey(AIModel, on_delete=models.DO_NOTHING, null=True)
     source_image = models.ForeignKey(InternalFileObject, related_name="source_image", on_delete=models.DO_NOTHING, null=True)
-    interpolated_clip = models.ForeignKey(InternalFileObject, related_name="interpolated_clip", on_delete=models.DO_NOTHING, null=True)
+    interpolated_clip_list = models.TextField(default=None, null=True)
     timed_clip = models.ForeignKey(InternalFileObject, related_name="timed_clip", on_delete=models.DO_NOTHING, null=True)
     mask = models.ForeignKey(InternalFileObject, related_name="mask", on_delete=models.DO_NOTHING, null=True)
     canny_image = models.ForeignKey(InternalFileObject, related_name="canny_image", on_delete=models.DO_NOTHING, null=True)
@@ -235,6 +236,11 @@ class Timing(BaseModel):
                 
         super().save(*args, **kwargs)
 
+    def add_interpolated_clip_list(self, clip_uuid_list):
+        cur_list = json.loads(self.interpolated_clip_list) if self.interpolated_clip_list else []
+        cur_list.extend(clip_uuid_list)
+        cur_list = list(set(cur_list))
+        self.interpolated_clip_list = json.dumps(cur_list)
 
     @property
     def alternative_images_list(self):

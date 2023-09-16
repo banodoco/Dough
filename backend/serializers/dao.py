@@ -15,8 +15,9 @@ class CreateFileDao(serializers.Serializer):
     type = serializers.ChoiceField(choices=InternalFileType.value_list())
     local_path = serializers.CharField(max_length=512, required=False)
     hosted_url = serializers.CharField(max_length=512, required=False)
-    tag = serializers.CharField(max_length=100, required=False)
+    tag = serializers.CharField(max_length=100, allow_blank=True, required=False)
     project_id = serializers.CharField(max_length=100, required=False)
+    inference_log_id = serializers.CharField(max_length=100, allow_null=True, required=False)
 
     def validate(self, data):
         local_path = data.get('local_path')
@@ -60,7 +61,7 @@ class UpdateAIModelDao(serializers.Serializer):
 
 class CreateInferenceLogDao(serializers.Serializer):
     project_id = serializers.CharField(max_length=100, required=False)
-    model_id = serializers.CharField(max_length=100, required=False)
+    model_id = serializers.CharField(max_length=100, allow_null=True, required=False)
     input_params = serializers.CharField(required=False)
     output_details = serializers.CharField(required=False)
     total_inference_time = serializers.CharField(required=False)
@@ -76,7 +77,7 @@ class CreateTimingDao(serializers.Serializer):
     project_id = serializers.CharField(max_length=100)
     model_id = serializers.CharField(max_length=100, required=False)
     source_image_id = serializers.CharField(max_length=100, required=False)
-    interpolated_clip_id = serializers.CharField(max_length=100, required=False)
+    interpolated_clip_list = serializers.CharField(max_length=None, required=False)
     timed_clip_id = serializers.CharField(max_length=100, required=False)
     mask_id = serializers.CharField(max_length=100, required=False)
     canny_image_id = serializers.CharField(max_length=100, required=False)

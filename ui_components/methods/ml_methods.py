@@ -1,4 +1,6 @@
 
+import os
+import tempfile
 import streamlit as st
 import replicate
 from typing import List
@@ -165,7 +167,7 @@ def prompt_clip_interrogator(input_image, which_model, best_or_fast):
         input_image = open(input_image, "rb")
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
+    output, _ = ml_client.predict_model_output(
         REPLICATE_MODEL.clip_interrogator, image=input_image, clip_model_name=which_model, mode=best_or_fast)
 
     return output
@@ -177,13 +179,13 @@ def prompt_model_real_esrgan_upscaling(input_image):
         input_image = open(input_image, "rb")
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
+    output, log = ml_client.predict_model_output(
         REPLICATE_MODEL.real_esrgan_upscale, image=input_image, upscale=2
     )
 
     filename = str(uuid.uuid4()) + ".png"
     output_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                       hosted_url=output)
+                                       hosted_url=output, inference_log_id=log.uuid)
     return output_file
 
 # TODO: fix the options input, only certain words can be input in this
@@ -199,11 +201,11 @@ def prompt_model_stylegan_nada(timing_uuid, input_image):
         input_file = open(input_image.location, 'rb')
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.stylegan_nada, input=input_file,
+    output, log = ml_client.predict_model_output(REPLICATE_MODEL.stylegan_nada, input=input_file,
                                             output_style=timing.prompt)
     filename = str(uuid.uuid4()) + ".png"
     image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                       hosted_url=output[0])
+                                       hosted_url=output[0], inference_log_id=log.uuid)
     output_file = resize_image(timing.project.name, 512, 512, image_file)
 
     return output_file
@@ -216,10 +218,10 @@ def prompt_model_stable_diffusion_xl(timing_uuid):
         timing_uuid)
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.sdxl, prompt=timing.prompt)
+    output, log = ml_client.predict_model_output(REPLICATE_MODEL.sdxl, prompt=timing.prompt)
     filename = str(uuid.uuid4()) + ".png"
     image_file = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                       hosted_url=output[0])
+                                       hosted_url=output[0], inference_log_id=log.uuid)
     output_file = resize_image(timing.project.name, 512, 512, image_file)
 
     return output_file
@@ -239,7 +241,7 @@ def prompt_model_stability(timing_uuid, input_image_file: InternalFileObject):
         input_image = open(input_image, "rb")
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
+    output, log = ml_client.predict_model_output(
         REPLICATE_MODEL.img2img_sd_2_1,
         image=input_image,
         prompt_strength=float(strength),
@@ -254,7 +256,7 @@ def prompt_model_stability(timing_uuid, input_image_file: InternalFileObject):
 
     filename = str(uuid.uuid4()) + ".png"
     image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                           hosted_url=output[0], tag=InternalFileTag.GENERATED_VIDEO.value)
+                                                           hosted_url=output[0], inference_log_id=log.uuid)
 
     return image_file
 
@@ -353,13 +355,13 @@ def prompt_model_depth2img(strength, timing_uuid, source_image) -> InternalFileO
         source_image = open(source_image, "rb")
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.jagilley_controlnet_depth2img, input_image=source_image,
+    output, log = ml_client.predict_model_output(REPLICATE_MODEL.jagilley_controlnet_depth2img, input_image=source_image,
                                             prompt_strength=float(strength), prompt=prompt, negative_prompt=negative_prompt,
                                             num_inference_steps=num_inference_steps, guidance_scale=guidance_scale)
 
     filename = str(uuid.uuid4()) + ".png"
     image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                           hosted_url=output[0])
+                                                           hosted_url=output[0], inference_log_id=log.uuid)
     return image_file
 
 
@@ -368,7 +370,7 @@ def prompt_model_blip2(input_image, query):
         input_image = open(input_image, "rb")
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
+    output, _ = ml_client.predict_model_output(
         REPLICATE_MODEL.salesforce_blip_2, image=input_image, question=query)
 
     return output
@@ -387,12 +389,12 @@ def prompt_model_pix2pix(timing_uuid, input_image_file: InternalFileObject):
         input_image = open(input_image, "rb")
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.arielreplicate, input_image=input_image, instruction_text=prompt,
+    output, log = ml_client.predict_model_output(REPLICATE_MODEL.arielreplicate, input_image=input_image, instruction_text=prompt,
                                             seed=seed, cfg_image=1.2, cfg_text=guidance_scale, resolution=704)
 
     filename = str(uuid.uuid4()) + ".png"
     image_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                           hosted_url=output)
+                                                           hosted_url=output[0], inference_log_id=log.uuid)
     return image_file
 
 
@@ -401,7 +403,7 @@ def facial_expression_recognition(input_image):
         input_image = open(input_image, "rb")
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
+    output, _ = ml_client.predict_model_output(
         REPLICATE_MODEL.phamquiluan_face_recognition, input_path=input_image)
 
     emo_label = output[0]["emo_label"]
@@ -472,9 +474,12 @@ def prompt_model_controlnet(timing_uuid, input_image):
     }
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(model, **inputs)
+    output, log = ml_client.predict_model_output(model, **inputs)
 
-    return output[1]
+    filename = str(uuid.uuid4()) + ".png"
+    output_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+                                                           hosted_url=output[0], inference_log_id=log.uuid)
+    return output_file
 
 
 def prompt_model_urpm_v1_3(timing_uuid, source_image):
@@ -496,9 +501,12 @@ def prompt_model_urpm_v1_3(timing_uuid, source_image):
     }
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.urpm, **inputs)
+    output, log = ml_client.predict_model_output(REPLICATE_MODEL.urpm, **inputs)
 
-    return output[0]
+    filename = str(uuid.uuid4()) + ".png"
+    output_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+                                                           hosted_url=output[0], inference_log_id=log.uuid)
+    return output_file
 
 
 def prompt_model_controlnet_1_1_x_realistic_vision_v2_0(timing_uuid, input_image):
@@ -518,10 +526,13 @@ def prompt_model_controlnet_1_1_x_realistic_vision_v2_0(timing_uuid, input_image
     }
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
+    output, log = ml_client.predict_model_output(
         REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0, **inputs)
 
-    return output[1]
+    filename = str(uuid.uuid4()) + ".png"
+    output_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
+                                                           hosted_url=output[1], inference_log_id=log.uuid)
+    return output_file
 
 
 def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> InternalFileObject:
@@ -581,12 +592,12 @@ def prompt_model_lora(timing_uuid, source_image_file: InternalFileObject) -> Int
     attempts = 0
     while attempts < max_attempts:
         try:
-            output = ml_client.predict_model_output(
+            output, log = ml_client.predict_model_output(
                 REPLICATE_MODEL.clones_lora_training_2, **inputs)
             print(output)
             filename = str(uuid.uuid4()) + ".png"
             file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                             hosted_url=output[0])
+                                                             hosted_url=output[0], inference_log_id=log.uuid)
             return file
         except replicate.exceptions.ModelError as e:
             if "NSFW content detected" in str(e):
@@ -619,12 +630,12 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, invert_ma
         input_image = open(input_image, "rb")
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.andreas_sd_inpainting, mask=mask, image=input_image, prompt=prompt,
+    output, log = ml_client.predict_model_output(REPLICATE_MODEL.andreas_sd_inpainting, mask=mask, image=input_image, prompt=prompt,
                                             invert_mask=invert_mask, negative_prompt=negative_prompt, num_inference_steps=25)
 
     file_name = str(uuid.uuid4()) + ".png"
     image_file = data_repo.create_file(
-        name=file_name, type=InternalFileType.IMAGE.value, hosted_url=output[0])
+        name=file_name, type=InternalFileType.IMAGE.value, hosted_url=output[0], inference_log_id=log.uuid)
 
     return image_file
 
@@ -633,7 +644,7 @@ def remove_background(input_image):
         input_image = open(input_image, "rb")
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
+    output, _ = ml_client.predict_model_output(
         REPLICATE_MODEL.pollination_modnet, image=input_image)
     return output
 
@@ -645,14 +656,18 @@ def create_depth_mask_image(input_image, layer, timing_uuid):
         input_image = open(input_image, "rb")
 
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(
+    output, log = ml_client.predict_model_output(
         REPLICATE_MODEL.cjwbw_midas, image=input_image, model_type="dpt_beit_large_512")
     try:
-        urllib.request.urlretrieve(output, "videos/temp/depth.png")
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png", mode='wb')
+        # urllib.request.urlretrieve(output, "videos/temp/depth.png")
+        with urllib.request.urlopen(output) as response, open(temp_file.name, 'wb') as out_file:
+            out_file.write(response.read())
     except Exception as e:
         print(e)
 
-    depth_map = Image.open("videos/temp/depth.png")
+    depth_map = Image.open(temp_file.name)
+    os.remove(temp_file.name)
     depth_map = depth_map.convert("L")  # Convert to grayscale image
     pixels = depth_map.load()
     mask = Image.new("L", depth_map.size)

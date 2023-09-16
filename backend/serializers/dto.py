@@ -1,11 +1,8 @@
+import json
 from rest_framework import serializers
 
 from backend.models import AIModel, AppSetting, BackupTiming, InferenceLog, InternalFileObject, Project, Setting, Timing, User
 
-class InternalFileDto(serializers.ModelSerializer):
-    class Meta:
-        model = InternalFileObject
-        fields = ('uuid', 'name', 'local_path', 'type',  'hosted_url', 'created_on')
 
 class UserDto(serializers.ModelSerializer):
     class Meta:
@@ -50,12 +47,34 @@ class AIModelDto(serializers.ModelSerializer):
     def get_user_uuid(self, obj):
         return obj.user.uuid
     
+class InferenceLogDto(serializers.ModelSerializer):
+    project = ProjectDto()
+    model = AIModelDto()
+
+    class Meta:
+        model = InferenceLog
+        fields = (
+            "project", 
+            "model", 
+            "input_params", 
+            "output_details", 
+            "total_inference_time",
+            "created_on"
+        )
+
+
+class InternalFileDto(serializers.ModelSerializer):
+    inference_log = InferenceLogDto()
+    class Meta:
+        model = InternalFileObject
+        fields = ('uuid', 'name', 'local_path', 'type',  'hosted_url', 'created_on', 'inference_log')
+
 
 class TimingDto(serializers.ModelSerializer):
     project = ProjectDto()
     model = AIModelDto()
     source_image = InternalFileDto()
-    interpolated_clip = InternalFileDto()
+    interpolated_clip_list = serializers.SerializerMethodField()
     timed_clip = InternalFileDto()
     mask = InternalFileDto()
     canny_image = InternalFileDto()
@@ -69,7 +88,7 @@ class TimingDto(serializers.ModelSerializer):
             "project",
             "model",
             "source_image",
-            "interpolated_clip",
+            "interpolated_clip_list",
             "timed_clip",
             "mask",
             "canny_image",
@@ -97,6 +116,13 @@ class TimingDto(serializers.ModelSerializer):
             "created_on",
             "transformation_stage"
         )
+
+    def get_interpolated_clip_list(self, obj):
+        res = []
+        id_list = json.loads(obj.interpolated_clip_list) if obj.interpolated_clip_list else []
+        file_list = InternalFileObject.objects.filter(uuid__in=id_list, is_disabled=False).all()
+        return [InternalFileDto(file).data for file in file_list]
+
 
 
 class AppSettingDto(serializers.ModelSerializer):
@@ -152,21 +178,6 @@ class SettingDto(serializers.ModelSerializer):
             "rotation_angle_value"
         )
 
-
-class InferenceLogDto(serializers.ModelSerializer):
-    project = ProjectDto()
-    model = AIModelDto()
-
-    class Meta:
-        model = InferenceLog
-        fields = (
-            "project", 
-            "model", 
-            "input_params", 
-            "output_details", 
-            "total_inference_time",
-            "created_on"
-        )
 
 class BackupDto(serializers.ModelSerializer):
     project = ProjectDto()
