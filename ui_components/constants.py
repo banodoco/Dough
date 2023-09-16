@@ -11,6 +11,10 @@ class VideoQuality(ExtendedEnum):
     PREVIEW = "Preview"
     LOW = "Low"
 
+class CreativeProcessType(ExtendedEnum):
+    STYLING = "Styling"
+    MOTION = "Motion"
+
 
 # TODO: make proper paths for every file
 CROPPED_IMG_LOCAL_PATH = "videos/temp/cropped.png"

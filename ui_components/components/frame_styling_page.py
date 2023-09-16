@@ -16,14 +16,14 @@ from ui_components.widgets.frame_selector import frame_selector_widget
 from ui_components.widgets.image_carousal import display_image
 from ui_components.widgets.prompt_finder import prompt_finder_element
 from ui_components.widgets.styling_element import styling_element
-from ui_components.widgets.compare_to_other_variants import compare_to_other_variants
+from ui_components.widgets.variant_comparison_element import variant_comparison_element
 from ui_components.widgets.animation_style_element import animation_style_element
 from streamlit_option_menu import option_menu
 from utils import st_memory
 
 
 import math
-from ui_components.constants import WorkflowStageType
+from ui_components.constants import CreativeProcessType, WorkflowStageType
 from utils.constants import ImageStage
 
 from utils.data_repo.data_repo import DataRepo
@@ -76,14 +76,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
         with st.sidebar:
             frame_selector_widget()
                 
-        if st.session_state['page'] == "Motion":
+        if st.session_state['page'] == CreativeProcessType.MOTION.value:
 
             idx = st.session_state['current_frame_index'] - 1
                                     
             st.session_state['show_comparison'] = st_memory.radio("Show:", options=["Other Variants", "Preview Video in Context"], horizontal=True, project_settings=project_settings, key="show_comparison_radio_motion")
 
             if st.session_state['show_comparison'] == "Other Variants":
-                compare_to_other_variants(timing_details, project_uuid, data_repo,stage="Motion")
+                variant_comparison_element(st.session_state['current_frame_uuid'])
 
             elif st.session_state['show_comparison'] == "Preview Video in Context":
                 current_preview_video_element(st.session_state['current_frame_uuid'])
@@ -94,10 +94,10 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             with st.expander("🎬 Choose Animation Style & Create Variants", expanded=True):
 
-                animation_style_element(st.session_state['current_frame_uuid'], project_settings)
+                animation_style_element(st.session_state['current_frame_uuid'], project_uuid)
 
 
-        elif st.session_state['page'] == "Styling":
+        elif st.session_state['page'] == CreativeProcessType.STYLING.value:
             # carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.value)
             comparison_values = [
                 "Other Variants", "Source Frame", "Previous & Next Frame", "None"]
@@ -106,7 +106,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
             
 
             if st.session_state['show_comparison'] == "Other Variants":
-                compare_to_other_variants(timing_details, project_uuid, data_repo,stage="Styling")
+                variant_comparison_element(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
                 
             elif st.session_state['show_comparison'] == "Source Frame":
                 if timing_details[st.session_state['current_frame_index']- 1].primary_image:
@@ -309,7 +309,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         len(timing_details))
 
                                                                                 
-        if st.session_state['page'] == "Styling":
+        if st.session_state['page'] == CreativeProcessType.STYLING.value:
             with st.sidebar:                            
                 styling_element(st.session_state['current_frame_uuid'], view_type="List")
 
@@ -369,7 +369,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
             st.markdown("***")
 
         # Update the current page in session state
-        elif st.session_state['page'] == "Motion":
+        elif st.session_state['page'] == CreativeProcessType.MOTION.value:
             num_timing_details = len(timing_details)
             shift1, shift2 = st.columns([2, 1.2])
 

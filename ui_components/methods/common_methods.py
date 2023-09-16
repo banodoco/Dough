@@ -13,10 +13,11 @@ import time
 import uuid
 from io import BytesIO
 import numpy as np
+import urllib3
 from shared.constants import SERVER, InternalFileType, ServerType
 from pydub import AudioSegment
 from backend.models import InternalFileObject
-from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, WorkflowStageType
+from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, CreativeProcessType, WorkflowStageType
 from ui_components.methods.file_methods import add_temp_file_to_project, generate_pil_image, save_or_host_file, save_or_host_file_bytes
 from ui_components.methods.ml_methods import create_depth_mask_image, inpainting, remove_background
 from ui_components.methods.video_methods import calculate_desired_duration_of_individual_clip
@@ -29,6 +30,8 @@ from ui_components.models import InternalFileObject
 
 from typing import Union
 from streamlit_image_comparison import image_comparison
+
+from utils.media_processor.video import VideoProcessor
 
 
 def add_key_frame(selected_image, inherit_styling_settings, how_long_after):
@@ -80,7 +83,7 @@ def add_key_frame(selected_image, inherit_styling_settings, how_long_after):
         st.session_state['current_frame_index'] = min(len(timing_details), st.session_state['current_frame_index'])
         st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
 
-    st.session_state['page'] = "Styling"
+    st.session_state['page'] = CreativeProcessType.STYLING.value
     st.session_state['section_index'] = 0
     st.experimental_rerun()
 
@@ -938,6 +941,33 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
 
     if frame_idx < len(timing_details):
         data_repo.update_specific_timing(timing.uuid, timed_clip_id=None)
+
+def promote_video_variant(timing_uuid, variant_to_promote_frame_number: str):
+    data_repo = DataRepo()
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
+
+    variant_to_promote = timing.interpolated_clip_list[variant_to_promote_frame_number]
+
+    if variant_to_promote.location.startswith(('http://', 'https://')):
+        temp_video_path, _ = urllib3.request.urlretrieve(variant_to_promote.location)
+        video = VideoFileClip(temp_video_path)
+    else:
+        video = VideoFileClip(variant_to_promote.location)
+
+    if video.duration != timing.clip_duration:
+        video_bytes = VideoProcessor.update_video_speed(
+            variant_to_promote.location,
+            timing.animation_style,
+            timing.clip_duration
+        )
+
+        hosted_url = save_or_host_file_bytes(video_bytes, variant_to_promote.local_path)
+        if hosted_url:
+            data_repo.update_file(video.uuid, hosted_url=hosted_url)
+
+    data_repo.update_specific_timing(timing.uuid, timed_clip_id=variant_to_promote.uuid)
+
+
 
 def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_threshold=150) -> InternalFileObject:
     data_repo = DataRepo()

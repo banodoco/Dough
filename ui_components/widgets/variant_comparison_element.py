@@ -1,68 +1,69 @@
+import time
 import json
 import streamlit as st
 import uuid
 from typing import List
+from ui_components.constants import CreativeProcessType
+from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
 from utils.data_repo.data_repo import DataRepo
 
 
-def compare_to_other_variants(timing_details, project_uuid, data_repo, stage="Motion"):
+def variant_comparison_element(timing_uuid, stage=CreativeProcessType.MOTION.value):
+    data_repo = DataRepo()
 
-    main_video = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
-    alternative_videos = ['https://www.youtube.com/watch?v=kib6uXQsxBA','https://www.youtube.com/watch?v=ehWD5kG4xws','https://www.youtube.com/watch?v=zkTf0LmDqKI']
-    primary_video_variant_index = 0
-
-    timing = data_repo.get_timing_from_uuid(
-                    st.session_state['current_frame_uuid'])
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
     variants = timing.alternative_images_list
     mainimages1, mainimages2 = st.columns([1, 1])
     aboveimage1, aboveimage2, aboveimage3 = st.columns([1, 0.25, 0.75])
     
-    which_variant = None
+    which_variant = 1
 
     with aboveimage1:
-        st.info(f"Current variant = {timing_details[st.session_state['current_frame_index'] - 1].primary_variant_index + 1}")
+        st.info(f"Current variant = {timing.primary_variant_index + 1}")
 
     with aboveimage2:
         show_more_than_10_variants = st.checkbox("Show >10 variants", key="show_more_than_10_variants")
 
     with aboveimage3:
-        number_of_variants = len(alternative_videos) if stage == "Motion" else len(variants)
+        number_of_variants = len(timing.interpolated_clip_list) if stage == CreativeProcessType.MOTION.value else len(variants)
 
         if show_more_than_10_variants is True:
-            current_variant = primary_video_variant_index if stage == "Motion" else int(
-                timing_details[st.session_state['current_frame_index'] - 1].primary_variant_index)
+            current_variant = timing.primary_interpolated_video_index if stage == CreativeProcessType.MOTION.value else int(
+                timing.primary_variant_index)
             which_variant = st.radio(f'Main variant = {current_variant + 1}', range(1, 
                 number_of_variants + 1), index=number_of_variants-1, horizontal=True, key=f"Main variant for {st.session_state['current_frame_index']}")
         else:
             last_ten_variants = range(
                 max(1, number_of_variants - 10), number_of_variants + 1)
-            current_variant = primary_video_variant_index if stage == "Motion" else int(
-                timing_details[st.session_state['current_frame_index'] - 1].primary_variant_index)
+            current_variant = timing.primary_interpolated_video_index if stage == CreativeProcessType.MOTION.value else int(
+                timing.primary_variant_index)
             which_variant = st.radio(f'Main variant = {current_variant + 1}', last_ten_variants, index=len(
                 last_ten_variants)-1, horizontal=True, key=f"Main variant for {st.session_state['current_frame_index']}")
 
     with mainimages1:
-        project_settings = data_repo.get_project_setting(project_uuid)
         st.success("**Main variant**")
-        if stage == "Motion":
-            st.video(main_video, format='mp4', start_time=0)
+        if stage == CreativeProcessType.MOTION.value:
+            st.video(timing.timed_clip.location, format='mp4', start_time=0) if timing.timed_clip else st.error("No video present")
         else:
-            if len(timing_details[st.session_state['current_frame_index'] - 1].alternative_images_list):
-                st.image(timing_details[st.session_state['current_frame_index'] - 1].primary_image_location,
-                            use_column_width=True)
+            if len(timing.alternative_images_list):
+                st.image(timing.primary_image_location, use_column_width=True)
             else:
                 st.error("No variants found for this frame")
 
     with mainimages2:
-        if stage == "Motion":
+        if stage == CreativeProcessType.MOTION.value:
+            if not (timing.interpolated_clip_list and len(timing.interpolated_clip_list)):
+                st.error("No variant for this frame")
+                
             if which_variant - 1 == current_variant:
                 st.success("**Main variant**")
             else:
                 st.info(f"**Variant #{which_variant}**")
             
-            st.video(alternative_videos[which_variant- 1], format='mp4', start_time=0)
+            st.video(timing.interpolated_clip_list[which_variant - 1].location, format='mp4', start_time=0) if \
+                (timing.interpolated_clip_list and len(timing.interpolated_clip_list)) else st.error("No video present")
         else:
-            if len(timing_details[st.session_state['current_frame_index'] - 1].alternative_images_list):
+            if len(timing.alternative_images_list):
                 if which_variant - 1 == current_variant:
                     st.success("**Main variant**")
                 else:
@@ -73,7 +74,9 @@ def compare_to_other_variants(timing_details, project_uuid, data_repo, stage="Mo
 
         if which_variant- 1 != current_variant:
             if st.button(f"Promote Variant #{which_variant}", key=f"Promote Variant #{which_variant} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image"):
-                promote_image_variant(
-                    st.session_state['current_frame_uuid'], which_variant - 1)
+                if stage == CreativeProcessType.MOTION.value:
+                    promote_video_variant(timing.uuid, which_variant - 1)
+                else:
+                    promote_image_variant(timing.uuid, which_variant - 1)
                 time.sleep(0.5)
                 st.experimental_rerun()

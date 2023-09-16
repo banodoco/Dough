@@ -30,7 +30,8 @@ class VideoProcessor:
 
             output_clip.write_videofile(filename=temp_output_file.name, codec="libx265")
 
-        elif animation_style == AnimationStyleType.INTERPOLATION.value:
+        # modifying speed for any other animation method
+        else:
             clip = VideoFileClip(video_location)
             input_video_duration = clip.duration
             desired_speed_change = float(

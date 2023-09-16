@@ -159,6 +159,17 @@ class InternalFrameTimingObject:
         return -1
     
     @property
+    def primary_interpolated_video_index(self):
+        if not (self.interpolated_clip_list and len(self.interpolated_clip_list)) or not self.timed_clip:
+            return -1
+        
+        for idx, img in enumerate(self.interpolated_clip_list):
+            if img.uuid == self.timed_clip.uuid:
+                return idx
+        
+        return -1
+    
+    @property
     def animation_style(self):
         key = f"{self.uuid}_animation_style"
         if not (key in st.session_state and st.session_state[key]):

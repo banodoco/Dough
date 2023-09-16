@@ -1,10 +1,12 @@
+import time
 import streamlit as st
 from typing import List
 from utils.data_repo.data_repo import DataRepo
 
-def animation_style_element(current_frame_uuid, project_settings):
+def animation_style_element(current_frame_uuid, project_uuid):
     motion_modules = ["mm-v15-v2", "AD_Stabilized_Motion","TemporalDiff"]
     data_repo = DataRepo()
+    project_settings = data_repo.get_project_setting(project_uuid)
     current_animation_style = data_repo.get_timing_from_uuid(current_frame_uuid).animation_style
 
     if current_animation_style == "Interpolation":

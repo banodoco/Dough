@@ -80,7 +80,8 @@ def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None)
                 video_bytes = f.read()
 
             hosted_url = save_or_host_file_bytes(video_bytes, interpolated_clip.local_path)
-            data_repo.update_file(interpolated_clip.uuid, hosted_url=hosted_url)
+            if hosted_url:
+                data_repo.update_file(interpolated_clip.uuid, hosted_url=hosted_url)
 
             os.remove(temp_video_file.name)
 
