@@ -1,6 +1,4 @@
-import asyncio
 import os
-from asgiref.sync import async_to_sync
 import cv2
 import streamlit as st
 import requests as r
@@ -74,7 +72,7 @@ class VideoInterpolator:
         # if animation_tool == AnimationToolType.G_FILM.value: 
         if True:
             res = ml_client.predict_model_output_async(REPLICATE_MODEL.google_frame_interpolation, frame1=img1, frame2=img2,
-                                                        times_to_interpolate=settings['interpolation_steps'], variant_count=3)
+                                                        times_to_interpolate=settings['interpolation_steps'], variant_count=variant_count)
         # else:
         #     # TODO: integrate the AD interpolation API here
         #     output, log = ml_client.predict_model_output(REPLICATE_MODEL.google_frame_interpolation, frame1=img1, frame2=img2,
@@ -128,11 +126,3 @@ class VideoInterpolator:
 
         video_data = b''.join(video_bytes)
         return [(video_data, InferenceLogObject({}))]    # returning None for inference log
-        
-@async_to_sync
-async def google_interpolate_async(img1, img2, settings, variant_count=1):
-    ml_client = get_ml_client()
-    res = await asyncio.gather(*[ml_client.predict_model_output_async(REPLICATE_MODEL.google_frame_interpolation, frame1=img1, frame2=img2,
-                                                        times_to_interpolate=settings['interpolation_steps']) for _ in range(variant_count)])
-    
-    return res

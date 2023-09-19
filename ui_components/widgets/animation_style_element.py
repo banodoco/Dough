@@ -10,7 +10,8 @@ def animation_style_element(timing_uuid, project_uuid):
     motion_modules = AnimateDiffCheckpoint.get_name_list()
     data_repo = DataRepo()
     project_settings = data_repo.get_project_setting(project_uuid)
-    current_animation_style = data_repo.get_timing_from_uuid(timing_uuid).animation_style
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
+    current_animation_style = timing.animation_style
     variant_count = 1
 
     if current_animation_style == "Interpolation":
@@ -20,6 +21,7 @@ def animation_style_element(timing_uuid, project_uuid):
         settings = {
             "animation_tool": animation_tool
         }
+        timing.animation_tool = animation_tool
         if animation_tool == AnimationToolType.ANIMATEDIFF.value:
             motion_module = st.selectbox("Which motion module would you like to use?", options=motion_modules, key="motion_module")
             prompt_column_1, prompt_column_2 = st.columns([1, 1])

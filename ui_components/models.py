@@ -177,6 +177,11 @@ class InternalFrameTimingObject:
 
         return st.session_state[key]
     
+    @animation_tool.setter
+    def animation_tool(self, val):
+        key = f"{self.uuid}_animation_tool"
+        st.session_state[key] = val
+    
     @property
     def animation_style(self):
         key = f"{self.uuid}_animation_style"
