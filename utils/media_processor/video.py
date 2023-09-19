@@ -1,3 +1,4 @@
+from io import BytesIO
 import os
 import tempfile
 from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, vfx
@@ -7,11 +8,22 @@ from shared.constants import AnimationStyleType
 class VideoProcessor:
     @staticmethod
     def update_video_speed(video_location, animation_style, desired_duration):
-        temp_output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
-        if animation_style == AnimationStyleType.DIRECT_MORPHING.value:
-            # Load the video clip
-            clip = VideoFileClip(video_location)
+        clip = VideoFileClip(video_location)
 
+        return VideoProcessor.update_clip_speed(clip, animation_style, desired_duration)
+
+    @staticmethod
+    def update_video_bytes_speed(video_bytes, animation_style, desired_duration):
+        video_io = BytesIO(video_bytes)
+        clip = VideoFileClip(video_io)
+
+        return VideoProcessor.update_clip_speed(clip, animation_style, desired_duration)
+
+    @staticmethod
+    def update_clip_speed(clip: VideoFileClip, animation_style, desired_duration):
+        temp_output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
+
+        if animation_style == AnimationStyleType.DIRECT_MORPHING.value:
             clip = clip.set_fps(120)
 
             # Calculate the number of frames to keep
@@ -32,7 +44,6 @@ class VideoProcessor:
 
         # modifying speed for any other animation method
         else:
-            clip = VideoFileClip(video_location)
             input_video_duration = clip.duration
             desired_speed_change = float(
                 input_video_duration) / float(desired_duration)

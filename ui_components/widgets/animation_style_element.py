@@ -1,20 +1,27 @@
 import time
 import streamlit as st
 from typing import List
+from shared.constants import AnimationToolType
+from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils.data_repo.data_repo import DataRepo
+from utils.ml_processor.motion_module import AnimateDiffCheckpoint
 
-def animation_style_element(current_frame_uuid, project_uuid):
-    motion_modules = ["mm-v15-v2", "AD_Stabilized_Motion","TemporalDiff"]
+def animation_style_element(timing_uuid, project_uuid):
+    motion_modules = AnimateDiffCheckpoint.get_name_list()
     data_repo = DataRepo()
     project_settings = data_repo.get_project_setting(project_uuid)
-    current_animation_style = data_repo.get_timing_from_uuid(current_frame_uuid).animation_style
+    current_animation_style = data_repo.get_timing_from_uuid(timing_uuid).animation_style
+    variant_count = 1
 
     if current_animation_style == "Interpolation":
-        animation_tool = st.radio("Animation Tool:", options=['Animatediff', 'Google FiLM'], key="animation_tool", horizontal=True)
+        animation_tool = st.radio("Animation Tool:", options=AnimationToolType.value_list(), key="animation_tool", horizontal=True)
         video_resolution = st.radio("Video Resolution:", options=["Preview Resolution", "Full Resolution"], key="video_resolution", horizontal=True)
 
-        if animation_tool == "Animatediff":
-            which_motion_module = st.selectbox("Which motion module would you like to use?", options=motion_modules, key="which_motion_module")
+        settings = {
+            "animation_tool": animation_tool
+        }
+        if animation_tool == AnimationToolType.ANIMATEDIFF.value:
+            motion_module = st.selectbox("Which motion module would you like to use?", options=motion_modules, key="motion_module")
             prompt_column_1, prompt_column_2 = st.columns([1, 1])
 
             with prompt_column_1:
@@ -26,17 +33,16 @@ def animation_style_element(current_frame_uuid, project_uuid):
             animate_col_1, animate_col_2 = st.columns([1, 3])
 
             with animate_col_1:
-                how_many_variants = st.number_input("How many variants?", min_value=1, max_value=100, value=1, step=1, key="how_many_variants")
+                variant_count = st.number_input("How many variants?", min_value=1, max_value=100, value=1, step=1, key="variant_count")
             
             normalise_speed = st.checkbox("Normalise Speed", value=True, key="normalise_speed")
-    
-        if st.button("Generate Animation Clip", key="generate_animation_clip"):
-            for _ in range(how_many_variants):
-                st.write("Generating animation clip...")
-                time.sleep(2)
-                st.write("Lol, jk, this isn't done yet")
-                time.sleep(2)
-                st.experimental_rerun()
+
+            settings.update(
+                motion_module=AnimateDiffCheckpoint.get_model_from_name(motion_module),
+                starting_prompt=starting_prompt,
+                ending_prompt=ending_prompt,
+                normalise_speed=normalise_speed
+            )
 
     elif current_animation_style == "Image to Video":
         st.info("For image to video, you can select one or more prompts, and how many frames you want to generate for each prompt - it'll attempt to travel from one prompt to the next.")
@@ -77,14 +83,16 @@ def animation_style_element(current_frame_uuid, project_uuid):
         animate_col_1, animate_col_2 = st.columns([1, 3])
 
         with animate_col_1:
-            how_many_variants = st.number_input("How many variants?", min_value=1, max_value=100, value=1, step=1, key="how_many_variants")
+            variant_count = st.number_input("How many variants?", min_value=1, max_value=100, value=1, step=1, key="variant_count")
 
-        if st.button("Generate Animation Clip", key="generate_animation_clip"):
-            for _ in range(how_many_variants):
-                st.write("Generating animation clip...")
-                time.sleep(2)
-                st.write("Lol, jk, this isn't done yet")
-                time.sleep(2)
-                st.experimental_rerun()
-    else:
-        st.error("No animation style selected")
+    if st.button("Generate Animation Clip", key="generate_animation_clip"):
+        vid_quality = "full" if video_resolution == "Full Resolution" else "preview"
+        st.write("Generating animation clip...")
+        create_single_interpolated_clip(
+            timing_uuid,
+            vid_quality,
+            settings,
+            variant_count
+        )
+        st.experimental_rerun()
+    

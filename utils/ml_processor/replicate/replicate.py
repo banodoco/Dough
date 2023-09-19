@@ -1,3 +1,4 @@
+import asyncio
 import io
 import time
 from shared.constants import REPLICATE_USER
@@ -15,7 +16,7 @@ from PIL import Image
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
 from repository.data_logger import log_model_inference
 import utils.local_storage.local_storage as local_storage
-from utils.ml_processor.replicate.utils import check_user_credits
+from utils.ml_processor.replicate.utils import check_user_credits, check_user_credits_async
 
 
 class ReplicateProcessor(MachineLearningProcessor):
@@ -61,6 +62,31 @@ class ReplicateProcessor(MachineLearningProcessor):
         self._update_usage_credits(end_time - start_time)
 
         return output, log
+    
+    @check_user_credits
+    def predict_model_output_async(self, model: ReplicateModel, **kwargs):
+        res = asyncio.run(self._multi_async_prediction(model, **kwargs))
+
+        output_list = []
+        for (output, time_taken) in  res:
+            log = log_model_inference(model, time_taken, **kwargs)
+            self._update_usage_credits(time_taken)
+            output_list.append((output, log))
+
+        return output_list
+    
+    async def _multi_async_prediction(self, model: ReplicateModel, **kwargs):
+        variant_count = kwargs['variant_count'] if ('variant_count' in kwargs and kwargs['variant_count']) else 1
+        res = await asyncio.gather(*[self._async_model_prediction(model, **kwargs) for _ in range(variant_count)])
+        return res
+    
+    async def _async_model_prediction(self, model: ReplicateModel, **kwargs):
+        model_version = self.get_model(model)
+        start_time = time.time()
+        output = await asyncio.to_thread(model_version.predict, **kwargs)
+        end_time = time.time()
+        time_taken = end_time - start_time
+        return output, time_taken
 
     @check_user_credits
     def inpainting(self, video_name, input_image, prompt, negative_prompt):

@@ -65,6 +65,10 @@ class AnimationStyleType(ExtendedEnum):
     DIRECT_MORPHING = "Direct Morphing"
     IMAGE_TO_VIDEO = "Image to Video"
 
+class AnimationToolType(ExtendedEnum):
+    ANIMATEDIFF = 'Animatediff'
+    G_FILM = "Google FiLM"
+
 
 ##################### global constants #####################
 SERVER = os.getenv('SERVER', ServerType.PRODUCTION.value)

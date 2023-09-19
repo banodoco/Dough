@@ -2,7 +2,7 @@ import uuid
 import streamlit as st
 from shared.constants import AnimationStyleType
 from ui_components.methods.file_methods import convert_bytes_to_file
-from ui_components.methods.video_methods import create_full_preview_video, update_speed_of_video_clip
+from ui_components.methods.video_methods import create_full_preview_video, create_single_interpolated_clip, update_speed_of_video_clip
 from ui_components.models import InternalFrameTimingObject
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.interpolator import VideoInterpolator
@@ -10,39 +10,6 @@ from utils.media_processor.interpolator import VideoInterpolator
 
 # get audio_bytes of correct duration for a given frame
 def current_individual_clip_element(timing_uuid):
-    def generate_individual_clip(timing_uuid, quality):
-        data_repo = DataRepo()
-        timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-        next_timing: InternalFrameTimingObject = data_repo.get_next_timing(timing_uuid)
-
-        if quality == 'full':
-            interpolation_steps = VideoInterpolator.calculate_dynamic_interpolations_steps(timing.clip_duration)
-        elif quality == 'preview':
-            interpolation_steps = 3
-
-        timing.interpolated_steps = interpolation_steps
-        img_list = [timing.source_image.location, next_timing.source_image.location]
-        settings = {"interpolation_steps": timing.interpolation_steps}
-        video_bytes, log = VideoInterpolator.create_interpolated_clip(
-            img_list,
-            timing.animation_style,
-            settings
-        )
-
-        video_location = "videos/" + timing.project.name + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
-        video = convert_bytes_to_file(
-            file_location_to_save=video_location,
-            mime_type="video/mp4",
-            file_bytes=video_bytes,
-            project_uuid=timing.project.uuid,
-            inference_log_id=log.uuid
-        )
-
-        data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video.uuid)
-        output_video = update_speed_of_video_clip(video, timing_uuid)
-        data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
-        return output_video
-    
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
     idx = timing.aux_frame_index
@@ -55,7 +22,7 @@ def current_individual_clip_element(timing_uuid):
             if VideoInterpolator.calculate_dynamic_interpolations_steps(timing.clip_duration) > timing.interpolation_steps:
                 st.error("Low Resolution")
                 if st.button("Generate Full Resolution Clip", key=f"generate_full_resolution_video_{idx}"):                                    
-                    generate_individual_clip(timing.uuid, 'full')
+                    create_single_interpolated_clip(timing.uuid, 'full')
                     st.experimental_rerun()
             else:
                 st.success("Full Resolution")
@@ -81,11 +48,11 @@ def current_individual_clip_element(timing_uuid):
 
         with gen1:
             if st.button("Generate Low-Resolution Clip", key=f"generate_preview_video_{idx}"):
-                generate_individual_clip(timing.uuid, 'preview')
+                create_single_interpolated_clip(timing.uuid, 'preview')
                 st.experimental_rerun()
         with gen2:
             if st.button("Generate Full Resolution Clip", key=f"generate_full_resolution_video_{idx}"):
-                generate_individual_clip(timing.uuid, 'full')
+                create_single_interpolated_clip(timing.uuid, 'full')
                 st.experimental_rerun()
 
 

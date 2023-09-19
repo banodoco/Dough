@@ -1,9 +1,11 @@
+import asyncio
 import os
+from asgiref.sync import async_to_sync
 import cv2
 import streamlit as st
 import requests as r
 import numpy as np
-from shared.constants import AnimationStyleType
+from shared.constants import AnimationStyleType, AnimationToolType
 from ui_components.methods.file_methods import generate_temp_file
 from ui_components.models import InferenceLogObject
 
@@ -33,7 +35,7 @@ class VideoInterpolator:
         return interpolation_steps
     
     @staticmethod
-    def create_interpolated_clip(img_location_list, animation_style, settings):
+    def create_interpolated_clip(img_location_list, animation_style, settings, variant_count=1):
         data_repo = DataRepo()
         if not animation_style:
             project_setting = data_repo.get_project_setting(st.session_state["project_uuid"])
@@ -42,7 +44,8 @@ class VideoInterpolator:
         if animation_style == AnimationStyleType.INTERPOLATION.value:
             return VideoInterpolator.video_through_frame_interpolation(
                 img_location_list,
-                settings
+                settings,
+                variant_count
             )
 
         elif animation_style == AnimationStyleType.DIRECT_MORPHING.value:
@@ -54,7 +57,7 @@ class VideoInterpolator:
 
     # returns a video bytes generated through interpolating frames between the given list of frames
     @staticmethod
-    def video_through_frame_interpolation(img_location_list, settings):
+    def video_through_frame_interpolation(img_location_list, settings, variant_count):
         # TODO: extend this for more than two images
         img1 = img_location_list[0]
         img2 = img_location_list[1]
@@ -66,17 +69,29 @@ class VideoInterpolator:
             img2 = open(img2, "rb")
 
         ml_client = get_ml_client()
-        output, log = ml_client.predict_model_output(REPLICATE_MODEL.google_frame_interpolation, frame1=img1, frame2=img2,
-                                                    times_to_interpolate=settings['interpolation_steps'])
+        animation_tool = settings['animation_tool'] if 'animation_tool' in settings else AnimationToolType.G_FILM.value
+
+        # if animation_tool == AnimationToolType.G_FILM.value: 
+        if True:
+            res = ml_client.predict_model_output_async(REPLICATE_MODEL.google_frame_interpolation, frame1=img1, frame2=img2,
+                                                        times_to_interpolate=settings['interpolation_steps'], variant_count=3)
+        # else:
+        #     # TODO: integrate the AD interpolation API here
+        #     output, log = ml_client.predict_model_output(REPLICATE_MODEL.google_frame_interpolation, frame1=img1, frame2=img2,
+        #                                                 times_to_interpolate=settings['interpolation_steps'])
         
-        temp_output_file = generate_temp_file(output, '.mp4')
-        video_bytes = None
-        with open(temp_output_file.name, 'rb') as f:
-            video_bytes = f.read()
+        final_res = []
+        for (output, log) in res: 
+            temp_output_file = generate_temp_file(output, '.mp4')
+            video_bytes = None
+            with open(temp_output_file.name, 'rb') as f:
+                video_bytes = f.read()
 
-        os.remove(temp_output_file.name)
+            os.remove(temp_output_file.name)
+            final_res.append((video_bytes, log))
 
-        return video_bytes, log
+        return final_res
+    
 
     @staticmethod
     def video_through_direct_morphing(img_location_list, settings):
@@ -112,5 +127,12 @@ class VideoInterpolator:
             video_bytes.append(frame_bytes.tobytes())
 
         video_data = b''.join(video_bytes)
-        return video_data, InferenceLogObject({})    # returning None for inference log
+        return [(video_data, InferenceLogObject({}))]    # returning None for inference log
         
+@async_to_sync
+async def google_interpolate_async(img1, img2, settings, variant_count=1):
+    ml_client = get_ml_client()
+    res = await asyncio.gather(*[ml_client.predict_model_output_async(REPLICATE_MODEL.google_frame_interpolation, frame1=img1, frame2=img2,
+                                                        times_to_interpolate=settings['interpolation_steps']) for _ in range(variant_count)])
+    
+    return res

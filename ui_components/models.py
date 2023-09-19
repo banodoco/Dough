@@ -1,7 +1,7 @@
 import datetime
 import streamlit as st
 import json
-from shared.constants import AnimationStyleType
+from shared.constants import AnimationStyleType, AnimationToolType
 
 from ui_components.constants import TEMP_MASK_FILE
 
@@ -168,6 +168,14 @@ class InternalFrameTimingObject:
                 return idx
         
         return -1
+    
+    @property
+    def animation_tool(self):
+        key = f"{self.uuid}_animation_tool"
+        if not (key in st.session_state and st.session_state[key]):
+            st.session_state[key] = AnimationToolType.G_FILM.value
+
+        return st.session_state[key]
     
     @property
     def animation_style(self):

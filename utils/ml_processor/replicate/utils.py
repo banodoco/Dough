@@ -10,3 +10,13 @@ def check_user_credits(method):
             raise RuntimeError("Insufficient credits. Please recharge")
     
     return wrapper
+
+def check_user_credits_async(method):
+    async def wrapper(self, *args, **kwargs):
+        if user_credits_available():
+            res = await method(self, *args, **kwargs)
+            return res
+        else:
+            raise RuntimeError("Insufficient credits. Please recharge")
+    
+    return wrapper
