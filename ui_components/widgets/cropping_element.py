@@ -61,7 +61,71 @@ def precision_cropping_element(stage, project_uuid):
             output_image, project_settings.project.uuid, stage)
 
 
+from math import gcd
+import os
+import time
+import uuid
+import streamlit as st
+from PIL import ImageOps, Image
+from streamlit_cropper import st_cropper
+from backend.models import InternalFileObject
+from shared.constants import InternalFileType
+
+from ui_components.methods.common_methods import apply_image_transformations, fetch_image_by_stage, inpaint_in_black_space_element, reset_zoom_element, save_zoomed_image, zoom_inputs
+from ui_components.constants import WorkflowStageType
+from ui_components.methods.file_methods import generate_pil_image, save_or_host_file
+from ui_components.models import InternalProjectObject, InternalSettingObject
+from utils.data_repo.data_repo import DataRepo
+
+
+def precision_cropping_element(stage, project_uuid):
+    data_repo = DataRepo()
+    project_settings: InternalSettingObject = data_repo.get_project_setting(
+        project_uuid)
+
+    
+    input_image = fetch_image_by_stage(project_uuid, stage)
+
+    # TODO: CORRECT-CODE check if this code works
+    if not input_image:
+        st.error("Please select a source image before cropping")
+        return
+    else:
+        input_image = generate_pil_image(input_image.location)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+
+        st.subheader("Precision Cropping:")
+
+        if st.button("Reset Cropping"):
+            reset_zoom_element()
+        
+        
+        zoom_inputs()
+        st.caption("Input Image:")
+        st.image(input_image, caption="Input Image", width=300)
+
+    with col2:
+
+        st.caption("Output Image:")
+        output_image = apply_image_transformations(
+            input_image, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'])
+        st.image(output_image, use_column_width=True)
+
+        if st.button("Save Image"):
+            save_zoomed_image(output_image, st.session_state['current_frame_uuid'], stage, promote=True)
+            st.success("Image saved successfully!")
+            time.sleep(1)
+            st.experimental_rerun()
+
+        inpaint_in_black_space_element(
+            output_image, project_settings.project.uuid, stage)
+
+
 def manual_cropping_element(stage, timing_uuid):
+    
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
     project_uuid = timing.project.uuid
@@ -78,13 +142,18 @@ def manual_cropping_element(stage, timing_uuid):
         if 'current_working_image_number' not in st.session_state:
             st.session_state['current_working_image_number'] = st.session_state['current_frame_index']
 
+        if 'current_stage' not in st.session_state:
+            st.session_state['current_stage'] = stage
+
         def get_working_image():
             st.session_state['working_image'] = generate_pil_image(input_image)
+            st.session_state['working_image'] = st.session_state['working_image'].convert('RGB')
             st.session_state['working_image'] = ImageOps.expand(
                 st.session_state['working_image'], border=200, fill="black")
             st.session_state['current_working_image_number'] = st.session_state['current_frame_index']
+            st.session_state['current_stage'] = stage
 
-        if 'working_image' not in st.session_state or st.session_state['current_working_image_number'] != st.session_state['current_frame_index']:
+        if 'working_image' not in st.session_state or st.session_state['current_working_image_number'] != st.session_state['current_frame_index'] or st.session_state['current_stage'] != stage:
             get_working_image()
 
         options1, options2, option3, option4 = st.columns([3, 1, 1, 1])
@@ -110,9 +179,7 @@ def manual_cropping_element(stage, timing_uuid):
                     get_working_image()
                     st.session_state['degrees_rotated_to'] = 0
                     st.experimental_rerun()
-
         
-
         project_settings: InternalProjectObject = data_repo.get_project_setting(
             timing.project.uuid)
 
