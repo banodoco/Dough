@@ -2,6 +2,7 @@ import streamlit as st
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from utils.data_repo.data_repo import DataRepo
+from streamlit_option_menu import option_menu
 
 logger = AppLogger()
 
@@ -69,4 +70,18 @@ def toggle(label, key=None, help=None, on_change=None, disabled=False, label_vis
         st.session_state[key] = selection
         st.experimental_rerun()
 
+    return selection
+
+
+def menu(menu_title,options, icons=None, menu_icon=None, default_index=0, key=None, help=None, on_change=None, disabled=False, orientation="horizontal", default_value=0, styles=None):    
+    
+    if key not in st.session_state:        
+        st.session_state[key] = default_value                
+
+    selection = option_menu(menu_title,options=options, icons=icons, menu_icon=menu_icon, orientation=orientation, default_index=st.session_state[key], styles=styles)
+
+    if options.index(selection) != st.session_state[key]:
+        st.session_state[key] = options.index(selection)
+        st.experimental_rerun()
+        
     return selection

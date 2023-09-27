@@ -13,7 +13,7 @@ from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
-from ui_components.methods.common_methods import execute_image_edit
+from ui_components.methods.common_methods import execute_image_edit, create_or_update_mask
 from ui_components.models import InternalFrameTimingObject, InternalSettingObject
 from streamlit_image_comparison import image_comparison
 

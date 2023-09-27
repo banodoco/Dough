@@ -13,6 +13,7 @@ from ui_components.components.video_rendering_page import video_rendering_page
 from streamlit_option_menu import option_menu
 from ui_components.models import InternalAppSettingObject
 from utils.common_utils import create_working_assets, get_current_user_uuid, reset_project_state
+from utils import st_memory
 
 from utils.data_repo.data_repo import DataRepo
 
@@ -33,34 +34,21 @@ def setup_app_ui():
 
         sections = ["Open Project", "App Settings", "New Project"]
 
-        if "section" not in st.session_state:
-            st.session_state["section"] = sections[0]
-            st.session_state['change_section'] = False
-
-        if st.session_state['change_section'] == True:
-            st.session_state['section_index'] = sections.index(
-                st.session_state["section"])
-        else:
-            st.session_state['section_index'] = None
-
         with h2:
             st.write("")
-            st.session_state["section"] = option_menu(
+            st.session_state["section"] = st_memory.menu(
                 "",
                 sections,
                 icons=['cog', 'cog', 'cog'],
                 menu_icon="ellipsis-v",
-                orientation="horizontal",
+                default_index=st.session_state.get('section_index', 0),
                 key="app_settings",
+                orientation="horizontal",
                 styles={
                     "nav-link": {"font-size": "12px", "margin": "0px", "--hover-color": "#eee"},
                     "nav-link-selected": {"background-color": "grey"}
-                },
-                manual_select=st.session_state['section_index']
+                }
             )
-
-        if st.session_state['change_section'] == True:
-            st.session_state['change_section'] = False
     
     project_list = data_repo.get_all_project_list(
         user_id=get_current_user_uuid())
@@ -118,7 +106,7 @@ def setup_app_ui():
 
             with st.sidebar:
                 main_view_types = ["Creative Process", "Tools & Settings", "Video Rendering"]
-                st.session_state['main_view_type'] = option_menu(None, main_view_types, icons=['search-heart', 'tools', "play-circle", 'stopwatch'], menu_icon="cast", default_index=0, key="main_view_type_name", orientation="horizontal", styles={
+                st.session_state['main_view_type'] = st_memory.menu(None, main_view_types, icons=['search-heart', 'tools', "play-circle", 'stopwatch'], menu_icon="cast", default_index=0, key="main_view_type_name", orientation="horizontal", styles={
                                                                     "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "red"}})
 
             mainheader1, mainheader2 = st.columns([3, 2])
