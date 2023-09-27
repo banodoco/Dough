@@ -31,7 +31,7 @@ from typing import Union
 from streamlit_image_comparison import image_comparison
 
 
-def add_key_frame(selected_image, inherit_styling_settings, how_long_after):
+def add_key_frame(selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image):
     data_repo = DataRepo()
     project_uuid = st.session_state['project_uuid']
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
@@ -66,9 +66,8 @@ def add_key_frame(selected_image, inherit_styling_settings, how_long_after):
         save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "source")
         save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "styled")
 
-    if inherit_styling_settings == "Yes":
-        index = which_stage_for_starting_image or index_of_current_item
-        clone_styling_settings(index - 1, timing_details[index_of_current_item].uuid)
+    if inherit_styling_settings == "Yes":    
+        clone_styling_settings(index_of_current_item - 1, timing_details[index_of_current_item].uuid)
 
     data_repo.update_specific_timing(timing_details[index_of_current_item].uuid, \
                                         animation_style=project_settings.default_animation_style)

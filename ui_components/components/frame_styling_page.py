@@ -11,10 +11,11 @@ from ui_components.methods.ml_methods import trigger_restyling_process
 from ui_components.methods.video_methods import create_or_get_single_preview_video
 from ui_components.widgets.cropping_element import manual_cropping_element, precision_cropping_element
 from ui_components.widgets.frame_clip_generation_elements import current_individual_clip_element, current_preview_video_element, update_animation_style_element
-from ui_components.widgets.frame_time_selector import single_frame_time_selector, update_frame_time
+from ui_components.widgets.frame_time_selector import single_frame_time_selector, update_frame_time, single_frame_time_duration_setter
 from ui_components.widgets.frame_selector import frame_selector_widget
 from ui_components.widgets.image_carousal import display_image
 from ui_components.widgets.prompt_finder import prompt_finder_element
+from ui_components.widgets.add_key_frame_element import add_key_frame_element
 from ui_components.widgets.styling_element import styling_element
 from ui_components.widgets.compare_to_other_variants import compare_to_other_variants
 from ui_components.widgets.animation_style_element import animation_style_element
@@ -78,6 +79,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 
         if st.session_state['page'] == "Motion":
 
+
+
+
             idx = st.session_state['current_frame_index'] - 1
                                     
             st.session_state['show_comparison'] = st_memory.radio("Show:", options=["Other Variants", "Preview Video in Context"], horizontal=True, project_settings=project_settings, key="show_comparison_radio_motion")
@@ -88,11 +92,13 @@ def frame_styling_page(mainheader2, project_uuid: str):
             elif st.session_state['show_comparison'] == "Preview Video in Context":
                 current_preview_video_element(st.session_state['current_frame_uuid'])
             
-            update_animation_style_element(st.session_state['current_frame_uuid'], horizontal=False)
+            
 
             st.markdown("***")
 
             with st.expander("🎬 Choose Animation Style & Create Variants", expanded=True):
+
+                update_animation_style_element(st.session_state['current_frame_uuid'], horizontal=True)
 
                 animation_style_element(st.session_state['current_frame_uuid'], project_settings)
 
@@ -294,10 +300,13 @@ def frame_styling_page(mainheader2, project_uuid: str):
         num_pages = math.ceil(len(timing_details) / items_per_page) + 1
         
         st.markdown("---")
-        
-        st.session_state['current_page'] = st.radio("Select Page:", options=range(
-            1, num_pages), horizontal=True, index=st.session_state['index_of_current_page'] - 1, key="page_selection_radio")
 
+        header_col_1, header_col_2, header_col_3 = st.columns([1, 5, 1])
+        with header_col_1:
+            st.session_state['current_page'] = st.radio("Select Page:", options=range(
+                1, num_pages), horizontal=True, index=st.session_state['index_of_current_page'] - 1, key="page_selection_radio")
+        with header_col_3:
+            shift_frames_setting = st.toggle("Shift Frames", help="If set to True, this will shift the frames after your adjustment forward or backwards.")
         if st.session_state['current_page'] != st.session_state['index_of_current_page']:
             st.session_state['index_of_current_page'] = st.session_state['current_page']
             st.experimental_rerun()
@@ -308,6 +317,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
         end_index = min(start_index + items_per_page,
                         len(timing_details))
 
+        
                                                                                 
         if st.session_state['page'] == "Styling":
             with st.sidebar:                            
@@ -334,9 +344,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 with image3:
                     time1, time2 = st.columns([1, 1])
                     with time1:
-                        single_frame_time_selector(timing_details[i].uuid, 'sidebar')
-                        st.info(
-                            f"Duration: {timing_details[i].clip_duration:.2f} secs")
+                        single_frame_time_selector(timing_details[i].uuid, 'sidebar', shift_frames=shift_frames_setting)
+                        single_frame_time_duration_setter(timing_details[i].uuid,'sidebar',shift_frames=shift_frames_setting)
 
                     with time2:
                         st.write("") 
@@ -370,12 +379,11 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
         # Update the current page in session state
         elif st.session_state['page'] == "Motion":
-            num_timing_details = len(timing_details)
-            shift1, shift2 = st.columns([2, 1.2])
 
-            with shift2:
-                shift_frames = st.checkbox(
-                    "Shift Frames", help="This will shift the after your adjustment forward or backwards.")
+            
+            
+                                
+            num_timing_details = len(timing_details)
 
             timing_details = data_repo.get_timing_list_from_project(project_uuid)       
 
@@ -406,36 +414,12 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             st.write("")                            
                             st.markdown("<h1 style='text-align: center; color: black; font-family: Arial; font-size: 50px; font-weight: bold;'>FIN</h1>", unsafe_allow_html=True)
 
-                    single_frame_time_selector(timing_details[idx].uuid, 'motion')
-                    st.caption(f"Duration: {timing_details[idx].clip_duration:.2f} secs")
+                    single_frame_time_selector(timing_details[idx].uuid, 'motion', shift_frames=shift_frames_setting)
 
-                    # calculate minimum and maximum values for slider
-                    if idx == 0:
-                        min_frame_time = 0.0  # make sure the value is a float
-                    else:
-                        min_frame_time = timing_details[idx].frame_time
+                    single_frame_time_duration_setter(timing_details[idx].uuid,'motion',shift_frames=shift_frames_setting)
 
-                    if idx == num_timing_details - 1:
-                        max_frame_time = timing_details[idx].frame_time + 10.0
-                    elif idx < num_timing_details - 1:
-                        max_frame_time = timing_details[idx+1].frame_time
-
-                    # disable slider only if it's the first frame
-                    slider_disabled = idx == 0
-                    frame_time = st.slider(
-                        f"#{idx+1} Frame Time = {round(timing_details[idx].frame_time, 3)}",
-                        min_value=min_frame_time,
-                        max_value=max_frame_time,
-                        value=timing_details[idx].frame_time,
-                        step=0.01,
-                        disabled=slider_disabled,
-                        key=f"frame_time_slider_{idx}"
-                    )
                     update_animation_style_element(timing_details[idx].uuid)
 
-                # update timing details
-                if timing_details[idx].frame_time != frame_time:
-                        update_frame_time(timing_details[idx].uuid, frame_time)
 
                 if timing_details[idx].aux_frame_index != len(timing_details) - 1:
                     with timing2:
@@ -446,78 +430,13 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 st.markdown("***")
     
     st.markdown("***")
-        
 
     with st.expander("➕ Add Key Frame", expanded=True):
 
-        add1, add2 = st.columns(2)
-
-        selected_image_location = ""
-        with add1:
-            # removed "Frame From Video" for now
-            image1,image2 = st.columns(2)
-            with image1:
-                source_of_starting_image = st.radio("Where would you like to get the starting image from?", [
-                                                "Previous frame", "Uploaded image"], key="source_of_starting_image")
-            
-            which_stage_for_starting_image = None
-            if source_of_starting_image == "Previous frame":                
-                with image2:
-                    which_stage_for_starting_image = st.radio("Which stage would you like to use?", [
-                                                          ImageStage.MAIN_VARIANT.value, ImageStage.SOURCE_IMAGE.value], key="which_stage_for_starting_image", horizontal=True)
-                    which_number_for_starting_image = st.number_input("Which frame would you like to use?", min_value=1, max_value=
-                                                                  max(1, len(timing_details)), value=st.session_state['current_frame_index'], step=1, key="which_number_for_starting_image")
-                if which_stage_for_starting_image == ImageStage.SOURCE_IMAGE.value:
-                    if timing_details[which_number_for_starting_image - 1].source_image != "":
-                        selected_image_location = timing_details[which_number_for_starting_image - 1].source_image.location
-                    else:
-                        selected_image_location = ""
-                elif which_stage_for_starting_image == ImageStage.MAIN_VARIANT.value:
-                    selected_image_location = timing_details[which_number_for_starting_image - 1].primary_image_location
-            elif source_of_starting_image == "Uploaded image":
-                with image2:
-                    uploaded_image = st.file_uploader(
-                        "Upload an image", type=["png", "jpg", "jpeg"])
-                    # FILE UPLOAD HANDLE--
-                    if uploaded_image is not None:
-                        image = Image.open(uploaded_image)
-                        file_location = f"videos/{project_uuid}/assets/frames/1_selected/{uploaded_image.name}"
-                        selected_image_location = save_or_host_file(image, file_location)
-                        selected_image_location = selected_image_location or file_location
-                    else:
-                        selected_image_location = ""
-                    which_number_for_starting_image = st.session_state['current_frame_index']
-
-            
-            how_long_after = st.slider(
-                "How long after the current frame?", min_value=0.0, max_value=10.0, value=2.5, step=0.1)
-            
-            radio_text = "Inherit styling settings from the " + ("current frame?" if source_of_starting_image == "Uploaded image" else "selected frame")
-            inherit_styling_settings = st_memory.radio(radio_text, ["Yes", "No"], \
-                                                       key="inherit_styling_settings", horizontal=True, project_settings=project_settings)
-            
-            apply_zoom_effects = st_memory.radio("Apply zoom effects to inputted image?", [
-                                                        "No","Yes"], key="apply_zoom_effects", horizontal=True, project_settings=project_settings)
-            
-            if apply_zoom_effects == "Yes":
-                zoom_inputs(position='new', horizontal=True)
-        
-        selected_image = None
-        with add2:
-            if selected_image_location:
-                if apply_zoom_effects == "Yes":
-                    image_preview = generate_pil_image(selected_image_location)
-                    selected_image = apply_image_transformations(image_preview, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'])
-
-                else:
-                    selected_image = generate_pil_image(selected_image_location)
-                st.info("Starting Image:")                
-                st.image(selected_image)
-            else:
-                st.error("No Starting Image Found")
+        selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image = add_key_frame_element(timing_details, project_uuid)
 
         if st.button(f"Add key frame",type="primary",use_container_width=True):
             
-            add_key_frame(selected_image, inherit_styling_settings, how_long_after)
+            add_key_frame(selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image)
             st.experimental_rerun()
 

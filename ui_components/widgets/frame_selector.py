@@ -32,7 +32,7 @@ def frame_selector_widget():
             st.experimental_rerun()       
 
     with time2:
-        single_frame_time_selector(st.session_state['current_frame_uuid'], 'navbar')
+        single_frame_time_selector(st.session_state['current_frame_uuid'], 'navbar', shift_frames=False)
     
 
 
