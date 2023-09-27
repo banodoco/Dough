@@ -14,6 +14,25 @@ from ui_components.methods.file_methods import generate_pil_image, save_or_host_
 from ui_components.models import InternalProjectObject, InternalSettingObject
 from utils.data_repo.data_repo import DataRepo
 
+from utils import st_memory
+
+
+def cropping_selector_element(project_uuid):
+    selector1, selector2, selector3 = st.columns([1, 1, 1])
+    with selector1:
+        which_stage = st_memory.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], key="which_stage", horizontal=True)
+    with selector2:
+        how_to_crop = st_memory.radio("How to crop:", options=["Precision Cropping","Manual Cropping"], key="how_to_crop",horizontal=True)
+                                        
+    if which_stage == "Styled Key Frame":
+        stage_name = WorkflowStageType.STYLED.value
+    elif which_stage == "Unedited Key Frame":
+        stage_name = WorkflowStageType.SOURCE.value
+                                        
+    if how_to_crop == "Manual Cropping":
+        manual_cropping_element(stage_name, st.session_state['current_frame_uuid'])
+    elif how_to_crop == "Precision Cropping":
+        precision_cropping_element(stage_name, project_uuid)
 
 def precision_cropping_element(stage, project_uuid):
     data_repo = DataRepo()
@@ -92,6 +111,7 @@ def manual_cropping_element(stage, timing_uuid):
 
         if 'working_image' not in st.session_state or st.session_state['current_working_image_number'] != st.session_state['current_frame_index'] or st.session_state['current_stage'] != stage:
             get_working_image()
+            st.experimental_rerun()
 
         options1, options2, option3, option4 = st.columns([3, 1, 1, 1])
         with options1:

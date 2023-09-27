@@ -31,6 +31,15 @@ from typing import Union
 from streamlit_image_comparison import image_comparison
 
 
+def jump_to_single_frame_view_button(display_number, timing_details):
+    if st.button(f"Jump to #{display_number}"):
+        st.session_state['prev_frame_index'] = display_number
+        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
+        st.session_state['frame_styling_view_type'] = "Individual View"
+        st.session_state['change_view_type'] = True
+        st.experimental_rerun()
+
+
 def add_key_frame(selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image):
     data_repo = DataRepo()
     project_uuid = st.session_state['project_uuid']

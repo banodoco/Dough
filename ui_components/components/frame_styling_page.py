@@ -2,23 +2,22 @@ import streamlit as st
 from streamlit_image_comparison import image_comparison
 import time
 from PIL import Image
-from ui_components.methods.common_methods import delete_frame, drawing_mode, promote_image_variant, save_uploaded_image, \
-    create_timings_row_at_frame_number, move_frame, calculate_desired_duration_of_individual_clip, \
-            calculate_desired_duration_of_individual_clip, apply_image_transformations, \
-                ai_frame_editing_element, clone_styling_settings, zoom_inputs,add_key_frame
-from ui_components.methods.file_methods import generate_pil_image, save_or_host_file
+from ui_components.methods.common_methods import delete_frame, drawing_mode, ai_frame_editing_element, clone_styling_settings,add_key_frame,jump_to_single_frame_view_button
 from ui_components.methods.ml_methods import trigger_restyling_process
 from ui_components.methods.video_methods import create_or_get_single_preview_video
-from ui_components.widgets.cropping_element import manual_cropping_element, precision_cropping_element
+from ui_components.widgets.cropping_element import manual_cropping_element, precision_cropping_element, cropping_selector_element
 from ui_components.widgets.frame_clip_generation_elements import current_individual_clip_element, current_preview_video_element, update_animation_style_element
-from ui_components.widgets.frame_time_selector import single_frame_time_selector, update_frame_time, single_frame_time_duration_setter
+from ui_components.widgets.frame_time_selector import single_frame_time_selector, single_frame_time_duration_setter
 from ui_components.widgets.frame_selector import frame_selector_widget
 from ui_components.widgets.image_carousal import display_image
 from ui_components.widgets.prompt_finder import prompt_finder_element
 from ui_components.widgets.add_key_frame_element import add_key_frame_element
 from ui_components.widgets.styling_element import styling_element
+from ui_components.widgets.timeline_view import timeline_view
 from ui_components.widgets.compare_to_other_variants import compare_to_other_variants
 from ui_components.widgets.animation_style_element import animation_style_element
+from ui_components.widgets.inpainting_element import inpainting_element
+from ui_components.widgets.list_view import list_view_set_up, page_toggle, styling_list_view,motion_list_view
 from streamlit_option_menu import option_menu
 from utils import st_memory
 
@@ -78,22 +77,15 @@ def frame_styling_page(mainheader2, project_uuid: str):
             frame_selector_widget()
                 
         if st.session_state['page'] == "Motion":
-
-
-
-
-            idx = st.session_state['current_frame_index'] - 1
-                                    
-            st.session_state['show_comparison'] = st_memory.radio("Show:", options=["Other Variants", "Preview Video in Context"], horizontal=True, project_settings=project_settings, key="show_comparison_radio_motion")
+                                                
+            st.session_state['show_comparison'] = st_memory.radio("Show:", options=["Other Variants", "Preview Video in Context"], horizontal=True, key="show_comparison_radio_motion")
 
             if st.session_state['show_comparison'] == "Other Variants":
                 compare_to_other_variants(timing_details, project_uuid, data_repo,stage="Motion")
 
             elif st.session_state['show_comparison'] == "Preview Video in Context":
                 current_preview_video_element(st.session_state['current_frame_uuid'])
-            
-            
-
+                        
             st.markdown("***")
 
             with st.expander("🎬 Choose Animation Style & Create Variants", expanded=True):
@@ -105,11 +97,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
         elif st.session_state['page'] == "Styling":
             # carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.value)
-            comparison_values = [
-                "Other Variants", "Source Frame", "Previous & Next Frame", "None"]
+            comparison_values = ["Other Variants", "Source Frame", "Previous & Next Frame", "None"]
             
-            st.session_state['show_comparison'] = st_memory.radio("Show comparison to:", options=comparison_values, horizontal=True, project_settings=project_settings, key="show_comparison_radio")
-            
+            st.session_state['show_comparison'] = st_memory.radio("Show comparison to:", options=comparison_values, horizontal=True, key="show_comparison_radio")            
 
             if st.session_state['show_comparison'] == "Other Variants":
                 compare_to_other_variants(timing_details, project_uuid, data_repo,stage="Styling")
@@ -249,194 +239,80 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     prompt_finder_element(project_uuid)
             
             elif st.session_state['styling_view'] == "Crop, Move & Rotate Image":
-                with st.expander("🤏 Crop, Move & Rotate Image", expanded=True):
-                    
-                    selector1, selector2, selector3 = st.columns([1, 1, 1])
-                    with selector1:
-                        which_stage = st.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], key="which_stage", horizontal=True)
-                    with selector2:
-                        how_to_crop = st_memory.radio("How to crop:", options=["Precision Cropping","Manual Cropping"], project_settings=project_settings, key="how_to_crop",horizontal=True)
-                                            
-                    if which_stage == "Styled Key Frame":
-                        stage_name = WorkflowStageType.STYLED.value
-                    elif which_stage == "Unedited Key Frame":
-                        stage_name = WorkflowStageType.SOURCE.value
-                                            
-                    if how_to_crop == "Manual Cropping":
-                        manual_cropping_element(stage_name, st.session_state['current_frame_uuid'])
-                    elif how_to_crop == "Precision Cropping":
-                        precision_cropping_element(stage_name, project_uuid)
-                                
+                with st.expander("🤏 Crop, Move & Rotate Image", expanded=True):                    
+                    cropping_selector_element(project_uuid)
+
             elif st.session_state['styling_view'] == "Inpainting & BG Removal":
 
                 with st.expander("🌌 Inpainting, Background Removal & More", expanded=True):
                     
-                    which_stage_to_inpaint = st.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], horizontal=True, key="which_stage_inpainting")
-                    if which_stage_to_inpaint == "Styled Key Frame":
-                        inpainting_stage = WorkflowStageType.STYLED.value
-                    elif which_stage_to_inpaint == "Unedited Key Frame":
-                        inpainting_stage = WorkflowStageType.SOURCE.value
-                    
-                    ai_frame_editing_element(st.session_state['current_frame_uuid'], inpainting_stage)
+                    inpainting_element(st.session_state['current_frame_uuid'])
 
             elif st.session_state['styling_view'] == "Draw On Image":
                 with st.expander("📝 Draw On Image", expanded=True):
 
-                    which_stage_to_draw_on = st.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], horizontal=True, key="which_stage_drawing")
+                    which_stage_to_draw_on = st_memory.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], horizontal=True, key="which_stage_drawing")
                     if which_stage_to_draw_on == "Styled Key Frame":
                         drawing_mode(timing_details,project_settings,project_uuid, stage=WorkflowStageType.STYLED.value)
                     elif which_stage_to_draw_on == "Unedited Key Frame":
                         drawing_mode(timing_details,project_settings,project_uuid, stage=WorkflowStageType.SOURCE.value)
+
+            with st.expander("➕ Add Key Frame", expanded=True):
+
+                selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image = add_key_frame_element(timing_details, project_uuid)
+
+                if st.button(f"Add key frame",type="primary",use_container_width=True):
+                                
+                    add_key_frame(selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image)
+                    st.experimental_rerun()
+
                         
 
     elif st.session_state['frame_styling_view_type'] == "List View":
-        if 'current_page' not in st.session_state:
-            st.session_state['current_page'] = 1
-        
-        if not('index_of_current_page' in st.session_state and st.session_state['index_of_current_page']):
-            st.session_state['index_of_current_page'] = 1
-
-        items_per_page = 10
-        num_pages = math.ceil(len(timing_details) / items_per_page) + 1
         
         st.markdown("---")
 
         header_col_1, header_col_2, header_col_3 = st.columns([1, 5, 1])
-        with header_col_1:
-            st.session_state['current_page'] = st.radio("Select Page:", options=range(
-                1, num_pages), horizontal=True, index=st.session_state['index_of_current_page'] - 1, key="page_selection_radio")
-        with header_col_3:
-            shift_frames_setting = st.toggle("Shift Frames", help="If set to True, this will shift the frames after your adjustment forward or backwards.")
-        if st.session_state['current_page'] != st.session_state['index_of_current_page']:
-            st.session_state['index_of_current_page'] = st.session_state['current_page']
-            st.experimental_rerun()
-
-        st.markdown("---")
-
-        start_index = (st.session_state['current_page'] - 1) * items_per_page         
-        end_index = min(start_index + items_per_page,
-                        len(timing_details))
-
+        with header_col_1:                    
+            st.session_state['list_view_type'] = st_memory.radio("View type:", options=["Timeline View","Detailed View"], key="list_view_type_slider")
         
-                                                                                
-        if st.session_state['page'] == "Styling":
-            with st.sidebar:                            
-                styling_element(st.session_state['current_frame_uuid'], view_type="List")
+        with header_col_3:
+            shift_frames_setting = st.toggle("Shift Frames", help="If set to True, it will shift the frames after your adjustment forward by the amount of time you move.")
 
-            timing_details = data_repo.get_timing_list_from_project(project_uuid)
-
-            for i in range(start_index, end_index):
-
-                
-                display_number = i + 1
-                                       
-                st.subheader(f"Frame {display_number}")
-                image1, image2, image3 = st.columns([2, 3, 2])
-
-                with image1:
-                    display_image(
-                        timing_uuid=timing_details[i].uuid, stage=WorkflowStageType.SOURCE.value, clickable=False)
-
-                with image2:
-                    display_image(
-                        timing_uuid=timing_details[i].uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
-
-                with image3:
-                    time1, time2 = st.columns([1, 1])
-                    with time1:
-                        single_frame_time_selector(timing_details[i].uuid, 'sidebar', shift_frames=shift_frames_setting)
-                        single_frame_time_duration_setter(timing_details[i].uuid,'sidebar',shift_frames=shift_frames_setting)
-
-                    with time2:
-                        st.write("") 
-
-                    if st.button(f"Jump to single frame view for #{display_number}"):
-                        st.session_state['prev_frame_index'] = display_number
-                        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
-                        st.session_state['frame_styling_view_type'] = "Individual View"
-                        st.session_state['change_view_type'] = True
-                        st.experimental_rerun()
-                    
-                    st.markdown("---")
-                    btn1, btn2, btn3 = st.columns([2, 1, 1])
-                    with btn1:
-                        if st.button("Delete this keyframe", key=f'{i}'):
-                            delete_frame(timing_details[i].uuid)
-                            st.experimental_rerun()
-                    with btn2:
-                        if st.button("⬆️", key=f"Promote {display_number}"):
-                            move_frame("Up", timing_details[i].uuid)
-                            st.experimental_rerun()
-                    with btn3:
-                        if st.button("⬇️", key=f"Demote {display_number}"):
-                            move_frame("Down", timing_details[i].uuid)
-                            st.experimental_rerun()
-
-                st.markdown("***")
+        if st.session_state['list_view_type'] == "Detailed View":
             
-            # Display radio buttons for pagination at the bottom
+            with header_col_2:                
+                num_pages, items_per_page = list_view_set_up(timing_details, project_uuid)
+                start_index, end_index = page_toggle(num_pages, items_per_page,project_uuid)
+            
             st.markdown("***")
+                                                                                    
+            if st.session_state['page'] == "Styling":
 
-        # Update the current page in session state
-        elif st.session_state['page'] == "Motion":
-
-            
-            
-                                
-            num_timing_details = len(timing_details)
-
-            timing_details = data_repo.get_timing_list_from_project(project_uuid)       
-
-            for idx in range(start_index, end_index):                      
-                st.header(f"Frame {idx+1}")                        
-                timing1, timing2, timing3 = st.columns([1, 1, 1])
-
-                with timing1:
-                    frame1, frame2,frame3 = st.columns([2,1,2])
-                    with frame1:
-                        if timing_details[idx].primary_image_location:
-                            st.image(
-                                timing_details[idx].primary_image_location)
-                    with frame2:
-                        st.write("")
-                        st.write("")
-                        st.write("")
-                        st.write("")
-                        st.write("")
-                        st.info("     ➜")
-                    with frame3:                                                
-                        if idx+1 < num_timing_details and timing_details[idx+1].primary_image_location:
-                            st.image(timing_details[idx+1].primary_image_location)
-                        elif idx+1 == num_timing_details:
-                            st.write("")
-                            st.write("")
-                            st.write("")
-                            st.write("")                            
-                            st.markdown("<h1 style='text-align: center; color: black; font-family: Arial; font-size: 50px; font-weight: bold;'>FIN</h1>", unsafe_allow_html=True)
-
-                    single_frame_time_selector(timing_details[idx].uuid, 'motion', shift_frames=shift_frames_setting)
-
-                    single_frame_time_duration_setter(timing_details[idx].uuid,'motion',shift_frames=shift_frames_setting)
-
-                    update_animation_style_element(timing_details[idx].uuid)
-
-
-                if timing_details[idx].aux_frame_index != len(timing_details) - 1:
-                    with timing2:
-                        current_individual_clip_element(timing_details[idx].uuid)
-                    with timing3:
-                        current_preview_video_element(timing_details[idx].uuid)
+                with st.sidebar:                            
+                    styling_element(st.session_state['current_frame_uuid'], view_type="List")
                 
+                styling_list_view(start_index, end_index, shift_frames_setting, project_uuid)
+                                
                 st.markdown("***")
-    
-    st.markdown("***")
 
-    with st.expander("➕ Add Key Frame", expanded=True):
+            # Update the current page in session state
+            elif st.session_state['page'] == "Motion":
+                                                            
+                motion_list_view(start_index, end_index, shift_frames_setting, project_uuid)
 
-        selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image = add_key_frame_element(timing_details, project_uuid)
+        elif st.session_state['list_view_type'] == "Timeline View":
 
-        if st.button(f"Add key frame",type="primary",use_container_width=True):
-            
-            add_key_frame(selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image)
-            st.experimental_rerun()
+            with header_col_2:  
+                items_per_row = st.slider("How many frames per row?", min_value=1, max_value=10, value=5, step=1, key="items_per_row")
+            with header_col_3:
+                expand_all = st_memory.toggle("Expand All", key="expand_all")
+
+            if st.session_state['page'] == "Styling":
+                timeline_view(shift_frames_setting, project_uuid, items_per_row,expand_all,"Styling")
+            elif st.session_state['page'] == "Motion":
+                timeline_view(shift_frames_setting, project_uuid, items_per_row,expand_all,"Motion")
+
+                
+
 

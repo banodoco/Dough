@@ -21,6 +21,7 @@ from ui_components.models import InternalAppSettingObject
 from utils.data_repo.data_repo import DataRepo
 
 
+
 if OFFLINE_MODE:
     SENTRY_DSN = os.getenv('SENTRY_DSN', '')
     SENTRY_ENV = os.getenv('SENTRY_ENV', '')
@@ -28,8 +29,8 @@ else:
     import boto3
     ssm = boto3.client("ssm", region_name="ap-south-1")
 
-    SENTRY_ENV = ssm.get_parameter(Name='/banodoco-fe/sentry/environment')['Parameter']['Value']
-    SENTRY_DSN = ssm.get_parameter(Name='/banodoco-fe/sentry/dsn')['Parameter']['Value']
+    # SENTRY_ENV = ssm.get_parameter(Name='/banodoco-fe/sentry/environment')['Parameter']['Value']
+    # SENTRY_DSN = ssm.get_parameter(Name='/banodoco-fe/sentry/dsn')['Parameter']['Value']
 
 sentry_sdk.init(
     environment=SENTRY_ENV,

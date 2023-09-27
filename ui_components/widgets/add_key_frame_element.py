@@ -61,10 +61,10 @@ def add_key_frame_element(timing_details, project_uuid):
         
         radio_text = "Inherit styling settings from the " + ("current frame?" if source_of_starting_image == "Uploaded image" else "selected frame")
         inherit_styling_settings = st_memory.radio(radio_text, ["Yes", "No"], \
-                                                key="inherit_styling_settings", horizontal=True, project_settings=project_settings)
+                                                key="inherit_styling_settings", horizontal=True)
         
         apply_zoom_effects = st_memory.radio("Apply zoom effects to inputted image?", [
-                                                        "No","Yes"], key="apply_zoom_effects", horizontal=True, project_settings=project_settings)
+                                                        "No","Yes"], key="apply_zoom_effects", horizontal=True)
         
         if apply_zoom_effects == "Yes":
             zoom_inputs(position='new', horizontal=True)

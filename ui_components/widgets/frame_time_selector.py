@@ -68,8 +68,8 @@ def single_frame_time_duration_setter(timing_uuid, src, shift_frames=True):
     max_value = 100.0 if shift_frames else clip_duration
     
     disable_duration_input = False if next_timing else True
-    help_text = None if shift_frames else "This will not shift subsequent frames - to do this, go to the motion section and set Shift Frames = True"
-    frame_duration = st.number_input("Frame duration (secs):", min_value=0.0, max_value=max_value,
+    help_text = None if shift_frames else "This will not shift subsequent frames - to do this, go to the Bulk View and set Shift Frames = True"
+    frame_duration = st.number_input("Duration:", min_value=0.0, max_value=max_value,
                                      value=clip_duration, step=0.1, key=f"frame_duration_{timing.aux_frame_index}_{src}", 
                                      disabled=disable_duration_input, help=help_text)
     
@@ -98,8 +98,8 @@ def single_frame_time_selector(timing_uuid, src, shift_frames=True):
 
     next_timing = data_repo.get_next_timing(timing_uuid)
     max_value = 100.0 if shift_frames else (next_timing.frame_time if next_timing else timing.frame_time)
-    help_text = None if shift_frames else "This will not shift subsequent frames - to do this, you do this in motion section - set Shift Frames = True"
-    frame_time = st.number_input("Frame time (secs):", min_value=min_value, max_value=max_value,
+    help_text = None if shift_frames else "This will not shift subsequent frames - to do this, go to the Bulk View and set Shift Frames = True"
+    frame_time = st.number_input("Time:", min_value=min_value, max_value=max_value,
                                      value=timing.frame_time, step=0.1, key=f"frame_time_{timing.aux_frame_index}_{src}",disabled=disabled_time_change, help=help_text)
     if frame_time != timing.frame_time:
         update_frame_time(timing_uuid, frame_time, shift_frames)
