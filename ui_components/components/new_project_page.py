@@ -109,8 +109,8 @@ def new_project_page():
             st.session_state["project_uuid"] = new_project.uuid
             project_list = data_repo.get_all_project_list(user_id=get_current_user_uuid())            
             st.session_state["index_of_project_name"] = len(project_list) - 1
-            st.session_state["section"] = "Open Project"
-            st.session_state['change_section'] = True 
+            st.session_state["main_view_type"] = "Creative Process"
+            st.session_state['app_settings'] = 0 
             st.success("Project created successfully!")
             time.sleep(1)     
             st.experimental_rerun()

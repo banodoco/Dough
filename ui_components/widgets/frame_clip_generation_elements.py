@@ -106,6 +106,8 @@ def current_preview_video_element(timing_uuid):
             ''')
     
     with preview_video_2:
+
+        st.info("This allows you to preview the video with the surrounding clips attached.")
         
         if st.button("Generate New Preview Video", key=f"generate_preview_{idx}"):
             preview_video = create_full_preview_video(

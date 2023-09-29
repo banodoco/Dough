@@ -30,10 +30,8 @@ def video_rendering_page(mainheader2, project_uuid):
     final_video_name = st.text_input(
         "What would you like to name this video?", value=random_name)
 
-    attach_audio_element(project_uuid, False)
+    attach_audio_element(project_uuid, True)
 
-    delete_existing_timed_clips = st.checkbox(
-        "Delete all the existing timing clips.", value=False)
 
     quality1, quality2 = st.columns([1, 2])
 
@@ -43,15 +41,11 @@ def video_rendering_page(mainheader2, project_uuid):
 
     with quality2:
         if quality_of_video == "Preview":
-            st.info("THIS MEANS")
+            st.info("This means it'll generate videos at lower resolutions and frame rates.")
         else:
-            st.info("THIS MEANS")
+            st.info("This means it'll generate videos at higher resolutions and frame rates.")
 
     if st.button("Render New Video"):
-        if delete_existing_timed_clips == True:
-            for i in timing_details:
-                data_repo.update_specific_timing(timing_details[i].uuid, timed_clip_id=None)
-            timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
         render_video(final_video_name, project_uuid, quality_of_video, InternalFileTag.COMPLETE_GENERATED_VIDEO.value)
         st.success("Video rendered!")

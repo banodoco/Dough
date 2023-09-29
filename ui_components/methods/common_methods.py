@@ -1,7 +1,6 @@
 import io
 from typing import List
 import streamlit as st
-from streamlit_drawable_canvas import st_canvas
 import os
 from PIL import Image, ImageDraw, ImageOps, ImageFilter
 from moviepy.editor import *
@@ -26,15 +25,97 @@ from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
 
+from ui_components.widgets.image_carousal import display_image
+from streamlit_image_comparison import image_comparison
+
 from ui_components.models import InternalFileObject
 
 from typing import Union
-from streamlit_image_comparison import image_comparison
+
+def compare_to_source_frame(timing_details):
+    if timing_details[st.session_state['current_frame_index']- 1].primary_image:
+        img2 = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
+    else:
+        img2 = 'https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'
+    
+    img1 = timing_details[st.session_state['current_frame_index'] - 1].source_image.location if timing_details[st.session_state['current_frame_index'] - 1].source_image else 'https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'
+    
+    image_comparison(starting_position=50,
+                        img1=img1,
+                        img2=img2, make_responsive=False, label1=WorkflowStageType.SOURCE.value, label2=WorkflowStageType.STYLED.value)
 
 from utils.media_processor.video import VideoProcessor
 
 
-def add_key_frame(selected_image, inherit_styling_settings, how_long_after):
+
+def compare_to_previous_and_next_frame(project_uuid, timing_details):
+    data_repo = DataRepo()
+    mainimages1, mainimages2, mainimages3 = st.columns([1, 1, 1])
+
+    with mainimages1:
+        if st.session_state['current_frame_index'] - 2 >= 0:
+            previous_image = data_repo.get_timing_from_frame_number(project_uuid, frame_number=st.session_state['current_frame_index'] - 2)
+            st.info(f"Previous image:")
+            display_image(
+                timing_uuid=previous_image.uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
+
+            if st.button(f"Preview Interpolation From #{st.session_state['current_frame_index']-1} to #{st.session_state['current_frame_index']}", key=f"Preview Interpolation From #{st.session_state['current_frame_index']-1} to #{st.session_state['current_frame_index']}", use_container_width=True):
+                prev_frame_timing = data_repo.get_prev_timing(st.session_state['current_frame_uuid'])
+                create_or_get_single_preview_video(prev_frame_timing.uuid)
+                prev_frame_timing = data_repo.get_timing_from_uuid(prev_frame_timing.uuid)
+                st.video(prev_frame_timing.timed_clip.location)
+
+    with mainimages2:
+        st.success(f"Current image:")
+        display_image(
+            timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
+
+    with mainimages3:
+        if st.session_state['current_frame_index'] + 1 <= len(timing_details):
+            next_image = data_repo.get_timing_from_frame_number(project_uuid, frame_number=st.session_state['current_frame_index'])
+            st.info(f"Next image")
+            display_image(timing_uuid=next_image.uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
+
+            if st.button(f"Preview Interpolation From #{st.session_state['current_frame_index']} to #{st.session_state['current_frame_index']+1}", key=f"Preview Interpolation From #{st.session_state['current_frame_index']} to #{st.session_state['current_frame_index']+1}", use_container_width=True):
+                create_or_get_single_preview_video(
+                    st.session_state['current_frame_uuid'])
+                current_frame = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
+                st.video(current_frame.timed_clip.location)
+
+
+
+def style_cloning_element(timing_details):
+    open_copier = st.checkbox("Copy styling settings from another frame")
+    if open_copier is True:
+        copy1, copy2 = st.columns([1, 1])
+        with copy1:
+            which_frame_to_copy_from = st.number_input("Which frame would you like to copy styling settings from?", min_value=1, max_value=len(
+                timing_details), value=st.session_state['current_frame_index'], step=1)
+            if st.button("Copy styling settings from this frame"):
+                clone_styling_settings(which_frame_to_copy_from - 1, st.session_state['current_frame_uuid'])
+                st.experimental_rerun()
+
+        with copy2:
+            display_image(
+                idx=which_frame_to_copy_from, stage=WorkflowStageType.STYLED.value, clickable=False, timing_details=timing_details)
+            st.caption("Prompt:")
+            st.caption(
+                timing_details[which_frame_to_copy_from].prompt)
+            if timing_details[which_frame_to_copy_from].model is not None:
+                st.caption("Model:")
+                st.caption(
+                    timing_details[which_frame_to_copy_from].model.name)
+
+def jump_to_single_frame_view_button(display_number, timing_details):
+    if st.button(f"Jump to #{display_number}"):
+        st.session_state['prev_frame_index'] = display_number
+        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
+        st.session_state['frame_styling_view_type'] = "Individual View"
+        st.session_state['change_view_type'] = True
+        st.experimental_rerun()
+
+
+def add_key_frame(selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image):
     data_repo = DataRepo()
     project_uuid = st.session_state['project_uuid']
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
@@ -69,9 +150,8 @@ def add_key_frame(selected_image, inherit_styling_settings, how_long_after):
         save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "source")
         save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "styled")
 
-    if inherit_styling_settings == "Yes":
-        index = which_stage_for_starting_image or index_of_current_item
-        clone_styling_settings(index - 1, timing_details[index_of_current_item].uuid)
+    if inherit_styling_settings == "Yes":    
+        clone_styling_settings(index_of_current_item - 1, timing_details[index_of_current_item].uuid)
 
     data_repo.update_specific_timing(timing_details[index_of_current_item].uuid, \
                                         animation_style=project_settings.default_animation_style)
@@ -79,9 +159,9 @@ def add_key_frame(selected_image, inherit_styling_settings, how_long_after):
     if len(timing_details) == 1:
         st.session_state['current_frame_index'] = 1
         st.session_state['current_frame_uuid'] = timing_details[0].uuid
-    else:
-        st.session_state['current_frame_index'] = min(len(timing_details), st.session_state['current_frame_index'])
-        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
+    else:        
+        st.session_state['prev_frame_index'] = min(len(timing_details), st.session_state['current_frame_index']+1)
+        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
 
     st.session_state['page'] = CreativeProcessType.STYLING.value
     st.session_state['section_index'] = 0
@@ -389,303 +469,7 @@ def reset_zoom_element():
     st.session_state['y_shift'] = 0
     st.experimental_rerun()
 
-def ai_frame_editing_element(timing_uuid, stage=WorkflowStageType.SOURCE.value):
-    data_repo = DataRepo()
-    timing = data_repo.get_timing_from_uuid(timing_uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
-    project_settings: InternalSettingObject = data_repo.get_project_setting(
-        timing.project.uuid)
 
-    if len(timing_details) == 0:
-        st.info("You need to add  key frames first in the Key Frame Selection section.")
-    else:
-        main_col_1, main_col_2 = st.columns([1, 2])
-
-        with main_col_1:
-            st.write("")
-
-        # initiative value
-        if "current_frame_uuid" not in st.session_state:
-            st.session_state['current_frame_uuid'] = timing_details[0].uuid
-
-
-        if "edited_image" not in st.session_state:
-            st.session_state.edited_image = ""
-
-        if stage == WorkflowStageType.STYLED.value and len(timing.alternative_images_list) == 0:
-            st.info("You need to add a style first in the Style Selection section.")
-        else:
-            if stage == WorkflowStageType.SOURCE.value:
-                editing_image = timing.source_image.location
-            elif stage == WorkflowStageType.STYLED.value:
-                variants = timing.alternative_images_list
-                editing_image = timing.primary_image_location
-
-            width = int(project_settings.width)
-            height = int(project_settings.height)
-
-            if editing_image == "":
-                st.error(
-                    f"You don't have a {stage} image yet so you can't edit it.")
-            else:
-                with main_col_1:
-                    if 'index_of_type_of_mask_selection' not in st.session_state:
-                        st.session_state['index_of_type_of_mask_selection'] = 0
-                    mask_selection_options = ["Manual Background Selection", "Automated Background Selection",
-                                              "Automated Layer Selection", "Re-Use Previous Mask", "Invert Previous Mask"]
-                    type_of_mask_selection = st.radio("How would you like to select what to edit?", mask_selection_options,
-                                                      horizontal=True, index=st.session_state['index_of_type_of_mask_selection'])
-                    if st.session_state['index_of_type_of_mask_selection'] != mask_selection_options.index(type_of_mask_selection):
-                        st.session_state['index_of_type_of_mask_selection'] = mask_selection_options.index(
-                            type_of_mask_selection)
-                        st.experimental_rerun()
-
-                    if "which_layer" not in st.session_state:
-                        st.session_state['which_layer'] = "Background"
-                        st.session_state['which_layer_index'] = 0
-
-                    if type_of_mask_selection == "Automated Layer Selection":
-                        layers = ["Background", "Middleground", "Foreground"]
-                        st.session_state['which_layer'] = st.multiselect(
-                            "Which layers would you like to replace?", layers)
-
-                if type_of_mask_selection == "Manual Background Selection":
-                    if st.session_state['edited_image'] == "":
-                        with main_col_1:
-                            if editing_image.startswith("http"):
-                                canvas_image = r.get(editing_image)
-                                canvas_image = Image.open(
-                                    BytesIO(canvas_image.content))
-                            else:
-                                canvas_image = Image.open(editing_image)
-                            if 'drawing_input' not in st.session_state:
-                                st.session_state['drawing_input'] = 'Magic shapes 🪄'
-                            col1, col2 = st.columns([6, 3])
-
-                            with col1:
-                                st.session_state['drawing_input'] = st.radio(
-                                    "Drawing tool:",
-                                    ("Make shapes 🪄", "Move shapes 🏋🏾‍♂️", "Make squares □", "Draw lines ✏️"), horizontal=True,
-                                )
-
-                            if st.session_state['drawing_input'] == "Move shapes 🏋🏾‍♂️":
-                                drawing_mode = "transform"
-                                st.info(
-                                    "To delete something, just move it outside of the image! 🥴")
-                            elif st.session_state['drawing_input'] == "Make shapes 🪄":
-                                drawing_mode = "polygon"
-                                st.info("To end a shape, right click!")
-                            elif st.session_state['drawing_input'] == "Draw lines ✏️":
-                                drawing_mode = "freedraw"
-                                st.info("To draw, draw! ")
-                            elif st.session_state['drawing_input'] == "Make squares □":
-                                drawing_mode = "rect"
-
-                            with col2:
-                                if drawing_mode == "freedraw":
-                                    stroke_width = st.slider(
-                                        "Stroke width: ", 1, 25, 12)
-                                else:
-                                    stroke_width = 3
-
-                        with main_col_2:
-
-                            realtime_update = True
-
-                            canvas_result = st_canvas(
-                                fill_color="rgba(0, 0, 0)",
-                                stroke_width=stroke_width,
-                                stroke_color="rgba(0, 0, 0)",
-                                background_color="rgb(255, 255, 255)",
-                                background_image=canvas_image,
-                                update_streamlit=realtime_update,
-                                height=height,
-                                width=width,
-                                drawing_mode=drawing_mode,
-                                display_toolbar=True,
-                                key="full_app",
-                            )
-
-                            if 'image_created' not in st.session_state:
-                                st.session_state['image_created'] = 'no'
-
-                            if canvas_result.image_data is not None:
-                                img_data = canvas_result.image_data
-                                im = Image.fromarray(
-                                    img_data.astype("uint8"), mode="RGBA")
-                                create_or_update_mask(
-                                    st.session_state['current_frame_uuid'], im)
-                    else:
-                        image_file = data_repo.get_file_from_uuid(st.session_state['edited_image'])
-                        image_comparison(
-                            img1=editing_image,
-                            img2=image_file.location, starting_position=5, label1="Original", label2="Edited")
-                        if st.button("Reset Canvas"):
-                            st.session_state['edited_image'] = ""
-                            st.experimental_rerun()
-
-                elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection" or type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
-                    with main_col_1:
-                        if type_of_mask_selection in ["Re-Use Previous Mask", "Invert Previous Mask"]:
-                            if not timing_details[st.session_state['current_frame_index'] - 1].mask:
-                                st.info(
-                                    "You don't have a previous mask to re-use.")
-                            else:
-                                mask1, mask2 = st.columns([2, 1])
-                                with mask1:
-                                    if type_of_mask_selection == "Re-Use Previous Mask":
-                                        st.info(
-                                            "This will update the **black pixels** in the mask with the pixels from the image you are editing.")
-                                    elif type_of_mask_selection == "Invert Previous Mask":
-                                        st.info(
-                                            "This will update the **white pixels** in the mask with the pixels from the image you are editing.")
-                                    st.image(
-                                        timing_details[st.session_state['current_frame_index'] - 1].mask.location, use_column_width=True)
-
-                    with main_col_2:
-                        if st.session_state['edited_image'] == "":
-                            st.image(editing_image, use_column_width=True)
-                        else:
-                            image_file = data_repo.get_file_from_uuid(st.session_state['edited_image'])
-                            image_comparison(
-                                img1=editing_image,
-                                img2=image_file.location, starting_position=5, label1="Original", label2="Edited")
-                            if st.button("Reset Canvas"):
-                                st.session_state['edited_image'] = ""
-                                st.experimental_rerun()
-
-                with main_col_1:
-
-                    if "type_of_mask_replacement" not in st.session_state:
-                        st.session_state["type_of_mask_replacement"] = "Replace With Image"
-                        st.session_state["index_of_type_of_mask_replacement"] = 0
-
-                    types_of_mask_replacement = [
-                        "Inpainting", "Replace With Image"]
-                    st.session_state["type_of_mask_replacement"] = st.radio(
-                        "Select type of edit", types_of_mask_replacement, horizontal=True, index=st.session_state["index_of_type_of_mask_replacement"])
-
-                    if st.session_state["index_of_type_of_mask_replacement"] != types_of_mask_replacement.index(st.session_state["type_of_mask_replacement"]):
-                        st.session_state["index_of_type_of_mask_replacement"] = types_of_mask_replacement.index(
-                            st.session_state["type_of_mask_replacement"])
-                        st.experimental_rerun()
-
-                    if st.session_state["type_of_mask_replacement"] == "Replace With Image":
-                        prompt = ""
-                        negative_prompt = ""
-                        background_list = [f for f in os.listdir(
-                            f'videos/{timing.project.uuid}/assets/resources/backgrounds') if f.endswith('.png')]
-                        background_list = [f for f in os.listdir(
-                            f'videos/{timing.project.uuid}/assets/resources/backgrounds') if f.endswith('.png')]
-                        sources_of_images = ["Uploaded", "From Other Frame"]
-                        if 'index_of_source_of_image' not in st.session_state:
-                            st.session_state['index_of_source_of_image'] = 0
-                        source_of_image = st.radio("Select type of image", sources_of_images,
-                                                   horizontal=True, index=st.session_state['index_of_source_of_image'])
-
-                        if st.session_state['index_of_source_of_image'] != sources_of_images.index(source_of_image):
-                            st.session_state['index_of_source_of_image'] = sources_of_images.index(
-                                source_of_image)
-                            st.experimental_rerun()
-
-                        if source_of_image == "Uploaded":
-                            btn1, btn2 = st.columns([1, 1])
-                            with btn1:
-                                uploaded_files = st.file_uploader(
-                                    "Add more background images here", accept_multiple_files=True)
-                                if st.button("Upload Backgrounds"):
-                                    for uploaded_file in uploaded_files:
-                                        with open(os.path.join(f"videos/{timing.project.uuid}/assets/resources/backgrounds", uploaded_file.name), "wb") as f:
-                                            f.write(uploaded_file.getbuffer())
-                                            st.success(
-                                                "Your backgrounds are uploaded file - they should appear in the dropdown.")
-                                            background_list.append(
-                                                uploaded_file.name)
-                                            time.sleep(1.5)
-                                            st.experimental_rerun()
-                            with btn2:
-                                background_selection = st.selectbox(
-                                    "Range background", background_list)
-                                background_image = f'videos/{timing.project.uuid}/assets/resources/backgrounds/{background_selection}'
-                                if background_list != []:
-                                    st.image(f"{background_image}",
-                                             use_column_width=True)
-                        elif source_of_image == "From Other Frame":
-                            btn1, btn2 = st.columns([1, 1])
-                            with btn1:
-                                which_stage_to_use = st.radio(
-                                    "Select stage to use:", WorkflowStageType.value_list())
-                                which_image_to_use = st.number_input(
-                                    "Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0)
-                                if which_stage_to_use == WorkflowStageType.SOURCE.value:
-                                    background_image = timing_details[which_image_to_use].source_image.location
-
-                                elif which_stage_to_use == WorkflowStageType.STYLED.value:
-                                    background_image = timing_details[which_image_to_use].primary_image_location
-                            with btn2:
-                                st.image(background_image,
-                                         use_column_width=True)
-
-                    elif st.session_state["type_of_mask_replacement"] == "Inpainting":
-                        btn1, btn2 = st.columns([1, 1])
-                        with btn1:
-                            prompt = st.text_area("Prompt:", help="Describe the whole image, but focus on the details you want changed!",
-                                                  value=project_settings.default_prompt)
-                        with btn2:
-                            negative_prompt = st.text_area(
-                                "Negative Prompt:", help="Enter any things you want to make the model avoid!", value=project_settings.default_negative_prompt)
-
-                    edit1, edit2 = st.columns(2)
-
-                    with edit1:
-                        if st.button(f'Run Edit On Current Image'):
-                            if st.session_state["type_of_mask_replacement"] == "Inpainting":
-                                edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
-                                                                  "", editing_image, prompt, negative_prompt, width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
-                                st.session_state['edited_image'] = edited_image.uuid
-                            elif st.session_state["type_of_mask_replacement"] == "Replace With Image":
-                                edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
-                                                                  background_image, editing_image, "", "", width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
-                                st.session_state['edited_image'] = edited_image.uuid
-                            st.experimental_rerun()
-
-                    with edit2:
-                        if st.session_state['edited_image'] != "":
-                            if st.button("Promote Last Edit", type="primary"):
-                                if stage == WorkflowStageType.SOURCE.value:
-                                    data_repo.update_specific_timing(
-                                        st.session_state['current_frame_uuid'], source_image_id=st.session_state['edited_image'])
-                                elif stage == WorkflowStageType.STYLED.value:
-                                    number_of_image_variants = add_image_variant(
-                                        st.session_state['edited_image'], st.session_state['current_frame_uuid'])
-                                    promote_image_variant(
-                                        st.session_state['current_frame_uuid'], number_of_image_variants - 1)
-                                st.session_state['edited_image'] = ""
-                                st.experimental_rerun()
-                        else:
-                            if st.button("Run Edit & Promote"):
-                                if st.session_state["type_of_mask_replacement"] == "Inpainting":
-                                    edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
-                                                                      "", editing_image, prompt, negative_prompt, width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
-                                    st.session_state['edited_image'] = edited_image.uuid
-                                elif st.session_state["type_of_mask_replacement"] == "Replace With Image":
-                                    edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
-                                                                      background_image, editing_image, "", "", width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
-                                    st.session_state['edited_image'] = edited_image.uuid
-
-                                if stage == WorkflowStageType.SOURCE.value:
-                                    data_repo.update_specific_timing(
-                                        st.session_state['current_frame_uuid'], source_image_id=st.session_state['edited_image'])
-                                elif stage == WorkflowStageType.STYLED.value:
-                                    number_of_image_variants = add_image_variant(
-                                        edited_image.uuid, st.session_state['current_frame_uuid'])
-                                    promote_image_variant(
-                                        st.session_state['current_frame_uuid'], number_of_image_variants - 1)
-
-                                st.session_state['edited_image'] = ""
-                                st.success("Image promoted!")
-                                st.experimental_rerun()
 
 # cropped_img here is a PIL image object
 def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStageType.SOURCE.value):
@@ -799,26 +583,139 @@ def rotate_image(location, degree):
 
     return rotated_image
 
+def change_frame_position(timing_uuid, new_position):
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)        
+
+    timing_list = data_repo.get_timing_list_from_project(project_uuid=timing.project.uuid)    
+
+    # Check if the new position is within the valid range
+    if new_position < 0 or new_position >= len(timing_list):    
+        print(f"Invalid position: {new_position}")
+        st.error("Invalid position")
+        time.sleep(1)
+        return
+    
+    print(f"Updating timing {timing.uuid} to new position {new_position}")
+    data_repo.update_specific_timing(timing.uuid, aux_frame_index=new_position)    
+
+    # Shift the other frames
+    if new_position > timing.aux_frame_index:        
+        for i in range(timing.aux_frame_index + 1, new_position + 1):        
+            print(f"Shifting timing {timing_list[i].uuid} to position {i-1}")
+            data_repo.update_specific_timing(timing_list[i].uuid, aux_frame_index=i-1)            
+    else:        
+        for i in range(new_position, timing.aux_frame_index):            
+            print(f"Shifting timing {timing_list[i].uuid} to position {i+1}")
+            data_repo.update_specific_timing(timing_list[i].uuid, aux_frame_index=i+1)            
+    
+    # Update the clip duration of all timing frames    
+    print("Updating timings in order")
+    update_timings_in_order(timing.project.uuid)
+    
+def update_timings_in_order(project_uuid):
+    data_repo = DataRepo()
+
+    timing_list: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(project_uuid)
+
+    # Iterate through the timing objects
+    for i, timing in enumerate(timing_list):
+        # Set the frame time to the index of the timing object
+        print(f"Updating timing {timing.uuid} frame time to {float(i)}")
+        data_repo.update_specific_timing(timing.uuid, frame_time=float(i))
+
+
+def change_frame_position_input(timing_uuid, src):
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_list = data_repo.get_timing_list_from_project(project_uuid=timing.project.uuid)
+
+    min_value = 1
+    max_value = len(timing_list)
+
+    new_position = st.number_input("Move to new position:", min_value=min_value, max_value=max_value,
+                                   value=timing.aux_frame_index + 1, step=1, key=f"new_position_{timing.aux_frame_index}_{src}")
+    if st.button('Update Position',key=f"change_frame_position_{timing.aux_frame_index}_{src}"):  
+        change_frame_position(timing_uuid, new_position - 1)
+        st.experimental_rerun()
+    # if new_position != timing.aux_frame_index:
+      #  print(f"Changing frame position from {timing.aux_frame_index + 1} to {new_position}")
+       # change_frame_position(timing_uuid, new_position - 1)
+        
+from datetime import datetime
+        
+
 def move_frame(direction, timing_uuid):
+    print(f"{datetime.now()} - Starting move_frame function")
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
 
+    print(f"{datetime.now()} - Retrieved timing object")
+
     if direction == "Up":
+        print(f"{datetime.now()} - Moving frame up")
         if timing.aux_frame_index == 0:
+            print(f"{datetime.now()} - This is the first frame")
+            st.error("This is the first frame")       
+            time.sleep(1)     
             return
         
         data_repo.update_specific_timing(timing.uuid, aux_frame_index=timing.aux_frame_index - 1)
+        print(f"{datetime.now()} - Updated timing object")
 
     elif direction == "Down":
+        print(f"{datetime.now()} - Moving frame down")
         timing_list = data_repo.get_timing_list_from_project(project_uuid=timing.project.uuid)
         if timing.aux_frame_index == len(timing_list) - 1:
+            print(f"{datetime.now()} - This is the last frame")
+            st.error("This is the last frame")
+            time.sleep(1)
             return
         
         data_repo.update_specific_timing(timing.uuid, aux_frame_index=timing.aux_frame_index + 1)
+        print(f"{datetime.now()} - Updated timing object")
 
-    # updating clip_duration
+    print(f"{datetime.now()} - Updating clip duration of all timing frames")
     update_clip_duration_of_all_timing_frames(timing.project.uuid)
+    print(f"{datetime.now()} - Finished move_frame function")
+
+def move_frame_back_button(timing_uuid, orientation):
+    if orientation == "side-to-side":
+        arrow = "⬅️"
+        direction = "Up"
+    else:  # up-down
+        arrow = "⬆️"
+        direction = "Up"
+
+    if st.button(arrow, key=f"move_frame_back_{timing_uuid}", help="Move frame back"):
+        move_frame(direction, timing_uuid)
+        st.experimental_rerun()
+
+
+
+
+
+        
+
+
+
+def move_frame_forward_button(timing_uuid, orientation):
+    direction = "Down"
+    if orientation == "side-to-side":
+        arrow = "➡️"        
+    else:  # up-down
+        direction = "Down"
+
+    if st.button(arrow, key=f"move_frame_forward_{timing_uuid}", help="Move frame forward"):
+        move_frame(direction, timing_uuid)
+        st.experimental_rerun()
+
+
+def delete_frame_button(timing_uuid):
+    if st.button("🗑️", key=f"delete_frame_{timing_uuid}", help="Delete frame"):
+        delete_frame(timing_uuid)
+        st.experimental_rerun()
 
 def delete_frame(timing_uuid):
     data_repo = DataRepo()
@@ -833,6 +730,11 @@ def delete_frame(timing_uuid):
 
         data_repo.update_specific_timing(
                 next_timing.uuid, timed_clip_id=None)
+
+    # If the deleted frame is the first one, set the time of the next frame to 0.00
+    if timing.aux_frame_index == 0 and next_timing:
+        data_repo.update_specific_timing(
+                next_timing.uuid, frame_time=0.00)
 
     data_repo.delete_timing_from_uuid(timing.uuid)
     
@@ -1046,213 +948,7 @@ def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
     return timing.mask.location
 
 # adds the image file in variant (alternative images) list
-def drawing_mode(timing_details,project_settings,project_uuid,stage=WorkflowStageType.STYLED.value):
 
-    data_repo = DataRepo()
-
-    canvas1, canvas2 = st.columns([1, 1.5])
-    timing = data_repo.get_timing_from_uuid(
-        st.session_state['current_frame_uuid'])
-
-    with canvas1:
-        width = int(project_settings.width)
-        height = int(project_settings.height)
-
-        if timing.source_image and timing.source_image.location != "":
-            if timing.source_image.location.startswith("http"):
-                canvas_image = r.get(
-                    timing.source_image.location)
-                canvas_image = Image.open(
-                    BytesIO(canvas_image.content))
-            else:
-                canvas_image = Image.open(
-                    timing.source_image.location)
-        else:
-            canvas_image = Image.new(
-                "RGB", (width, height), "white")
-        if 'drawing_input' not in st.session_state:
-            st.session_state['drawing_input'] = 'Magic shapes 🪄'
-        col1, col2 = st.columns([6, 5])
-
-        with col1:
-            st.session_state['drawing_input'] = st.radio(
-                "Drawing tool:",
-                ("Draw lines ✏️", "Erase Lines ❌", "Make shapes 🪄", "Move shapes 🏋🏾‍♂️", "Make Lines ║", "Make squares □"), horizontal=True,
-            )
-
-            if st.session_state['drawing_input'] == "Move shapes 🏋🏾‍♂️":
-                drawing_mode = "transform"
-
-            elif st.session_state['drawing_input'] == "Make shapes 🪄":
-                drawing_mode = "polygon"
-
-            elif st.session_state['drawing_input'] == "Draw lines ✏️":
-                drawing_mode = "freedraw"
-
-            elif st.session_state['drawing_input'] == "Erase Lines ❌":
-                drawing_mode = "freedraw"
-
-            elif st.session_state['drawing_input'] == "Make Lines ║":
-                drawing_mode = "line"
-
-            elif st.session_state['drawing_input'] == "Make squares □":
-                drawing_mode = "rect"
-
-        
-        with col2:
-
-            stroke_width = st.slider(
-                "Stroke width: ", 1, 100, 2)
-            if st.session_state['drawing_input'] == "Erase Lines ❌":
-                stroke_colour = "#ffffff"
-            else:
-                stroke_colour = st.color_picker(
-                    "Stroke color hex: ", value="#000000")
-            fill = st.checkbox("Fill shapes", value=False)
-            if fill == True:
-                fill_color = st.color_picker(
-                    "Fill color hex: ")
-            else:
-                fill_color = ""
-        
-
-        st.markdown("***")
-        
-                                            
-        threshold1, threshold2 = st.columns([1, 1])
-        with threshold1:
-            low_threshold = st.number_input(
-                "Low Threshold", min_value=0, max_value=255, value=100, step=1)
-        with threshold2:
-            high_threshold = st.number_input(
-                "High Threshold", min_value=0, max_value=255, value=200, step=1)
-
-        if 'canny_image' not in st.session_state:
-            st.session_state['canny_image'] = None
-
-        if st.button("Extract Canny From image"):
-            if stage == WorkflowStageType.SOURCE.value:
-                image_path = timing_details[st.session_state['current_frame_index'] - 1].source_image.location 
-        
-            elif stage == WorkflowStageType.STYLED.value:
-                image_path = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
-            
-            
-            canny_image = extract_canny_lines(
-                    image_path, project_uuid, low_threshold, high_threshold)
-            
-            st.session_state['canny_image'] = canny_image.uuid
-
-        if st.session_state['canny_image']:
-            canny_image = data_repo.get_file_from_uuid(st.session_state['canny_image'])
-            
-            canny_action_1, canny_action_2 = st.columns([2, 1])
-            with canny_action_1:
-                st.image(canny_image.location)
-                                                                            
-                if st.button(f"Make Into Guidance Image"):
-                    data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=st.session_state['canny_image'])
-                    st.session_state['reset_canvas'] = True
-                    st.session_state['canny_image'] = None
-                    st.experimental_rerun()
-
-    with canvas2:
-        realtime_update = True
-
-        if "reset_canvas" not in st.session_state:
-            st.session_state['reset_canvas'] = False
-
-        if st.session_state['reset_canvas'] != True:
-            canvas_result = st_canvas(
-                fill_color=fill_color,
-                stroke_width=stroke_width,
-                stroke_color=stroke_colour,
-                background_color="rgb(255, 255, 255)",
-                background_image=canvas_image,
-                update_streamlit=realtime_update,
-                height=height,
-                width=width,
-                drawing_mode=drawing_mode,
-                display_toolbar=True,
-                key="full_app_draw",
-            )
-
-            if 'image_created' not in st.session_state:
-                st.session_state['image_created'] = 'no'
-
-            if canvas_result.image_data is not None:
-                img_data = canvas_result.image_data
-                im = Image.fromarray(
-                    img_data.astype("uint8"), mode="RGBA")
-        else:
-            st.session_state['reset_canvas'] = False
-            canvas_result = st_canvas()
-            time.sleep(0.1)
-            st.experimental_rerun()
-        if canvas_result is not None:
-            st.write("You can save the image below")
-            if canvas_result.json_data is not None and not canvas_result.json_data.get('objects'):
-                st.button("Save New Image", key="save_canvas", disabled=True, help="Draw something first")
-            else:                
-                if st.button("Save New Image", key="save_canvas_active",type="primary"):
-                    if canvas_result.image_data is not None:
-                        # overlay the canvas image on top of the canny image and save the result
-                        # if canny image is from a url, then we need to download it first
-                        if timing.source_image and timing.source_image.location:
-                            if timing.source_image.location.startswith("http"):
-                                canny_image = r.get(
-                                    timing.source_image.location)
-                                canny_image = Image.open(
-                                    BytesIO(canny_image.content))
-                            else:
-                                canny_image = Image.open(
-                                    timing.source_image.location)
-                        else:
-                            canny_image = Image.new(
-                                "RGB", (width, height), "white")
-
-                        canny_image = canny_image.convert("RGBA")
-                        # canvas_image = canvas_image.convert("RGBA")
-                        canvas_image = im
-                        canvas_image = canvas_image.convert("RGBA")
-
-                        # converting the images to the same size and mode
-                        if canny_image.size != canvas_image.size:
-                            canny_image = canny_image.resize(
-                                canvas_image.size)
-
-                        if canny_image.mode != canvas_image.mode:
-                            canny_image = canny_image.convert(
-                                canvas_image.mode)
-
-                        new_canny_image = Image.alpha_composite(
-                            canny_image, canvas_image)
-                        if new_canny_image.mode != "RGB":
-                            new_canny_image = new_canny_image.convert(
-                                "RGB")
-
-                        unique_file_name = str(uuid.uuid4()) + ".png"
-                        file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{unique_file_name}"
-                        hosted_url = save_or_host_file(new_canny_image, file_location)
-                        file_data = {
-                            "name": str(uuid.uuid4()) + ".png",
-                            "type": InternalFileType.IMAGE.value,
-                            "project_id": project_uuid
-                        }
-
-                        if hosted_url:
-                            file_data.update({'hosted_url': hosted_url})
-                        else:
-                            file_data.update({'local_path': file_location})
-
-                        canny_image = data_repo.create_file(
-                            **file_data)
-                        data_repo.update_specific_timing(
-                            st.session_state['current_frame_uuid'], source_image_id=canny_image.uuid)
-                        st.success("New Canny Image Saved")
-                        st.session_state['reset_canvas'] = True
-                        time.sleep(1)
-                        st.experimental_rerun()
 
 def add_image_variant(image_file_uuid: str, timing_uuid: str):
     data_repo = DataRepo()
@@ -1420,6 +1116,8 @@ def update_clip_duration_of_all_timing_frames(project_uuid):
                 time_of_next_frame) - float(time_of_frame)
 
         duration_of_static_time = 0.0
+
+        
 
         data_repo.update_specific_timing(
             timing_item.uuid, clip_duration=total_duration_of_frame)

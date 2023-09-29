@@ -12,7 +12,7 @@ from utils.data_repo.data_repo import DataRepo
 def custom_models_page(project_uuid):
     data_repo = DataRepo()
 
-    with st.expander("Existing models"):
+    with st.expander("Existing models", expanded=True):
 
         st.subheader("Existing Models:")
 
@@ -60,7 +60,7 @@ def custom_models_page(project_uuid):
                         st.image(model.training_image_list[2].location)
                 st.markdown("***")
 
-    with st.expander("Train a new model"):
+    with st.expander("Train a new model", expanded=True):
         st.subheader("Train a new model:")
 
         type_of_model = st.selectbox("Type of model:", [AIModelCategory.DREAMBOOTH.value, AIModelCategory.LORA.value], help="If you'd like to use other methods for model training, let us know - or implement it yourself :)")

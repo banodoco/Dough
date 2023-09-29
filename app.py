@@ -21,6 +21,7 @@ from ui_components.models import InternalAppSettingObject
 from utils.data_repo.data_repo import DataRepo
 
 
+
 if OFFLINE_MODE:
     SENTRY_DSN = os.getenv('SENTRY_DSN', '')
     SENTRY_ENV = os.getenv('SENTRY_ENV', '')
@@ -28,8 +29,8 @@ else:
     import boto3
     ssm = boto3.client("ssm", region_name="ap-south-1")
 
-    SENTRY_ENV = ssm.get_parameter(Name='/banodoco-fe/sentry/environment')['Parameter']['Value']
-    SENTRY_DSN = ssm.get_parameter(Name='/banodoco-fe/sentry/dsn')['Parameter']['Value']
+    # SENTRY_ENV = ssm.get_parameter(Name='/banodoco-fe/sentry/environment')['Parameter']['Value']
+    # SENTRY_DSN = ssm.get_parameter(Name='/banodoco-fe/sentry/dsn')['Parameter']['Value']
 
 sentry_sdk.init(
     environment=SENTRY_ENV,
@@ -43,7 +44,8 @@ def main():
     auth_details = get_url_param(AUTH_TOKEN)
     if (not auth_details or auth_details == 'None')\
         and SERVER != ServerType.DEVELOPMENT.value:
-        st.subheader("Login with google to proceed")
+        st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
+        st.subheader("Login with Google to proceed")
 
         auth_url = get_google_auth_url()
         st.markdown(auth_url, unsafe_allow_html=True)
@@ -65,7 +67,7 @@ def main():
                 delete_url_param(AUTH_TOKEN)
                 st.error("please login again")
     else:
-        # initializing project constants
+        
         project_init()
         
         data_repo = DataRepo()
