@@ -113,6 +113,8 @@ def setup_app_ui():
             # with mainheader1:
             # st.header(st.session_state["page"])
 
+        
+
 
             if st.session_state["main_view_type"] == "Creative Process":
 
@@ -129,7 +131,7 @@ def setup_app_ui():
                         st.session_state["manual_select"] = None
 
                     st.session_state['page'] = option_menu(None, pages, icons=['palette', 'camera-reels', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
-                                                            "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
+                                                            "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "green"}}, manual_select=st.session_state["manual_select"])
 
                     # TODO: CORRECT-CODE
                     view_types = ["Individual View", "List View"]
@@ -163,7 +165,7 @@ def setup_app_ui():
                         orientation="horizontal",
                         key="section-selecto1r",
                         styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#eee"},
-                                "nav-link-selected": {"background-color": "green"}},
+                                "nav-link-selected": {"background-color": "orange"}},
                         manual_select=st.session_state['frame_styling_view_type_index'],
                         on_change=on_change_view_type 
                     )
@@ -184,7 +186,7 @@ def setup_app_ui():
                         st.session_state["manual_select"] = None
 
                     st.session_state['page'] = option_menu(None, tool_pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
-                                                            "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
+                                                            "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "green"}}, manual_select=st.session_state["manual_select"])
 
                 if st.session_state["page"] == "Custom Models":
                     custom_models_page(st.session_state["project_uuid"])                

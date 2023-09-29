@@ -15,7 +15,7 @@ def project_settings_page(project_uuid):
     # make a list of all the files in videos/{project_name}/assets/resources/music
 
     project_name = project.name
-    attach_audio_element(project_uuid, False)
+    attach_audio_element(project_uuid, True)
 
     # with st.expander("Version History"):
     #     version_name = st.text_input(
@@ -70,7 +70,7 @@ def project_settings_page(project_uuid):
     #                 st.success("backup deleted successfully!")
     #                 st.experimental_rerun()
 
-    with st.expander("Frame Size"):
+    with st.expander("Frame Size", expanded=True):
         st.write("Current Size = ",
                  project_settings.width, "x", project_settings.height)
         width = st.selectbox("Select video width", options=[

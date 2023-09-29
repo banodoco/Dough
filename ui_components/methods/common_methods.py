@@ -156,9 +156,9 @@ def add_key_frame(selected_image, inherit_styling_settings, how_long_after, whic
     if len(timing_details) == 1:
         st.session_state['current_frame_index'] = 1
         st.session_state['current_frame_uuid'] = timing_details[0].uuid
-    else:
-        st.session_state['current_frame_index'] = min(len(timing_details), st.session_state['current_frame_index'])
-        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
+    else:        
+        st.session_state['prev_frame_index'] = min(len(timing_details), st.session_state['current_frame_index']+1)
+        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
 
     st.session_state['page'] = "Styling"
     st.session_state['section_index'] = 0
@@ -580,6 +580,68 @@ def rotate_image(location, degree):
 
     return rotated_image
 
+def change_frame_position(timing_uuid, new_position):
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)        
+
+    timing_list = data_repo.get_timing_list_from_project(project_uuid=timing.project.uuid)    
+
+    # Check if the new position is within the valid range
+    if new_position < 0 or new_position >= len(timing_list):    
+        print(f"Invalid position: {new_position}")
+        st.error("Invalid position")
+        time.sleep(1)
+        return
+    
+    print(f"Updating timing {timing.uuid} to new position {new_position}")
+    data_repo.update_specific_timing(timing.uuid, aux_frame_index=new_position)    
+
+    # Shift the other frames
+    if new_position > timing.aux_frame_index:        
+        for i in range(timing.aux_frame_index + 1, new_position + 1):        
+            print(f"Shifting timing {timing_list[i].uuid} to position {i-1}")
+            data_repo.update_specific_timing(timing_list[i].uuid, aux_frame_index=i-1)            
+    else:        
+        for i in range(new_position, timing.aux_frame_index):            
+            print(f"Shifting timing {timing_list[i].uuid} to position {i+1}")
+            data_repo.update_specific_timing(timing_list[i].uuid, aux_frame_index=i+1)            
+    
+    # Update the clip duration of all timing frames    
+    print("Updating timings in order")
+    update_timings_in_order(timing.project.uuid)
+    
+def update_timings_in_order(project_uuid):
+    data_repo = DataRepo()
+
+    timing_list: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(project_uuid)
+
+    # Iterate through the timing objects
+    for i, timing in enumerate(timing_list):
+        # Set the frame time to the index of the timing object
+        print(f"Updating timing {timing.uuid} frame time to {float(i)}")
+        data_repo.update_specific_timing(timing.uuid, frame_time=float(i))
+
+
+def change_frame_position_input(timing_uuid, src):
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_list = data_repo.get_timing_list_from_project(project_uuid=timing.project.uuid)
+
+    min_value = 1
+    max_value = len(timing_list)
+
+    new_position = st.number_input("Move to new position:", min_value=min_value, max_value=max_value,
+                                   value=timing.aux_frame_index + 1, step=1, key=f"new_position_{timing.aux_frame_index}_{src}")
+    if st.button('Update Position',key=f"change_frame_position_{timing.aux_frame_index}_{src}"):  
+        change_frame_position(timing_uuid, new_position - 1)
+        st.experimental_rerun()
+    # if new_position != timing.aux_frame_index:
+      #  print(f"Changing frame position from {timing.aux_frame_index + 1} to {new_position}")
+       # change_frame_position(timing_uuid, new_position - 1)
+        
+        
+
+
 def move_frame(direction, timing_uuid):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
@@ -603,8 +665,45 @@ def move_frame(direction, timing_uuid):
         
         data_repo.update_specific_timing(timing.uuid, aux_frame_index=timing.aux_frame_index + 1)
 
-    # updating clip_duration
     update_clip_duration_of_all_timing_frames(timing.project.uuid)
+
+
+def move_frame_back_button(timing_uuid, orientation):
+    if orientation == "side-to-side":
+        arrow = "⬅️"
+        direction = "Up"
+    else:  # up-down
+        arrow = "⬆️"
+        direction = "Up"
+
+    if st.button(arrow, key=f"move_frame_back_{timing_uuid}", help="Move frame back"):
+        move_frame(direction, timing_uuid)
+        st.experimental_rerun()
+
+
+
+
+
+        
+
+
+
+def move_frame_forward_button(timing_uuid, orientation):
+    direction = "Down"
+    if orientation == "side-to-side":
+        arrow = "➡️"        
+    else:  # up-down
+        direction = "Down"
+
+    if st.button(arrow, key=f"move_frame_forward_{timing_uuid}", help="Move frame forward"):
+        move_frame(direction, timing_uuid)
+        st.experimental_rerun()
+
+
+def delete_frame_button(timing_uuid):
+    if st.button("🗑️", key=f"delete_frame_{timing_uuid}", help="Delete frame"):
+        delete_frame(timing_uuid)
+        st.experimental_rerun()
 
 def delete_frame(timing_uuid):
     data_repo = DataRepo()
@@ -978,6 +1077,8 @@ def update_clip_duration_of_all_timing_frames(project_uuid):
                 time_of_next_frame) - float(time_of_frame)
 
         duration_of_static_time = 0.0
+
+        
 
         data_repo.update_specific_timing(
             timing_item.uuid, clip_duration=total_duration_of_frame)

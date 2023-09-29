@@ -44,7 +44,8 @@ def main():
     auth_details = get_url_param(AUTH_TOKEN)
     if (not auth_details or auth_details == 'None')\
         and SERVER != ServerType.DEVELOPMENT.value:
-        st.subheader("Login with google to proceed")
+        st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
+        st.subheader("Login with Google to proceed")
 
         auth_url = get_google_auth_url()
         st.markdown(auth_url, unsafe_allow_html=True)
@@ -66,7 +67,7 @@ def main():
                 delete_url_param(AUTH_TOKEN)
                 st.error("please login again")
     else:
-        # initializing project constants
+        
         project_init()
         
         data_repo = DataRepo()

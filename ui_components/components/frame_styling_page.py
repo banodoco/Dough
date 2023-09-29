@@ -1,10 +1,8 @@
 import streamlit as st
 
-import time
-from PIL import Image
+
 from ui_components.methods.common_methods import add_key_frame,compare_to_previous_and_next_frame,compare_to_source_frame,style_cloning_element
 from ui_components.methods.ml_methods import trigger_restyling_process
-
 from ui_components.widgets.cropping_element import cropping_selector_element
 from ui_components.widgets.frame_clip_generation_elements import  current_preview_video_element, update_animation_style_element
 from ui_components.widgets.frame_selector import frame_selector_widget
@@ -18,20 +16,18 @@ from ui_components.widgets.animation_style_element import animation_style_elemen
 from ui_components.widgets.inpainting_element import inpainting_element
 from ui_components.widgets.drawing_element import drawing_element
 from ui_components.widgets.list_view import list_view_set_up, page_toggle, styling_list_view,motion_list_view
-from streamlit_option_menu import option_menu
 from utils import st_memory
 
 
 import math
 from ui_components.constants import WorkflowStageType
-from utils.constants import ImageStage
 
 from utils.data_repo.data_repo import DataRepo
 
 
 def frame_styling_page(mainheader2, project_uuid: str):
-    data_repo = DataRepo()
-
+    data_repo = DataRepo()    
+    
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
     
     project_settings = data_repo.get_project_setting(project_uuid)
@@ -47,10 +43,11 @@ def frame_styling_page(mainheader2, project_uuid: str):
         st.session_state['num_inference_steps'] = project_settings.default_num_inference_steps
         st.session_state['transformation_stage'] = project_settings.default_stage
         st.session_state['show_comparison'] = "Don't show"
-    
-    if "current_frame_uuid" not in st.session_state:
+        
+    if "current_frame_uuid" not in st.session_state:        
         timing = data_repo.get_timing_list_from_project(project_uuid)[0]
         st.session_state['current_frame_uuid'] = timing.uuid
+    
     
     
     if 'frame_styling_view_type' not in st.session_state:
@@ -114,10 +111,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 display_image(timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
 
             st.markdown("***")
-                        
-            styling_views = ["Generate Variants", "Crop, Move & Rotate Image", "Inpainting & BG Removal","Draw On Image"]
-            
-            st.session_state['styling_view'] = st_memory.menu('',styling_views, icons=['magic', 'crop', "paint-bucket", 'pencil'], menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), key="styling_view_selector", orientation="horizontal", styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "#66A9BE"}})
+                                                
+            st.session_state['styling_view'] = st_memory.menu('',["Generate Variants", "Crop, Move & Rotate Image", "Inpainting & BG Removal","Draw On Image"], icons=['magic', 'crop', "paint-bucket", 'pencil'], menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), key="styling_view_selector", orientation="horizontal", styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "#66A9BE"}})
                                                   
             if st.session_state['styling_view'] == "Generate Variants":
 
@@ -181,9 +176,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 with st.expander("📝 Draw On Image", expanded=True):
                                         
                     drawing_element(timing_details,project_settings,project_uuid)
-                    
-                    
-
+                                        
             with st.expander("➕ Add Key Frame", expanded=True):
 
                 selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image = add_key_frame_element(timing_details, project_uuid)
@@ -192,25 +185,23 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 
                     add_key_frame(selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image)
                     st.experimental_rerun()
-
                         
-
     elif st.session_state['frame_styling_view_type'] == "List View":
         
         st.markdown("---")
 
-        header_col_1, header_col_2, header_col_3 = st.columns([1, 5, 1])
+        header_col_1, header_col_2, header_col_3, header_col_4, header_col_5 = st.columns([1,0.5,5, 1, 1])
         with header_col_1:                    
             st.session_state['list_view_type'] = st_memory.radio("View type:", options=["Timeline View","Detailed View"], key="list_view_type_slider")
         
-        with header_col_3:
+        with header_col_5:
             shift_frames_setting = st.toggle("Shift Frames", help="If set to True, it will shift the frames after your adjustment forward by the amount of time you move.")
 
         if st.session_state['list_view_type'] == "Detailed View":
             
-            with header_col_2:                
+            with header_col_4:                
                 num_pages, items_per_page = list_view_set_up(timing_details, project_uuid)
-                start_index, end_index = page_toggle(num_pages, items_per_page,project_uuid)
+                start_index, end_index = page_toggle(num_pages, items_per_page,project_uuid, position='top')
             
             st.markdown("***")
                                                                                     
@@ -222,23 +213,24 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 styling_list_view(start_index, end_index, shift_frames_setting, project_uuid)
                                 
                 st.markdown("***")
-
+            
             # Update the current page in session state
             elif st.session_state['page'] == "Motion":
                                                             
                 motion_list_view(start_index, end_index, shift_frames_setting, project_uuid)
 
+            start_index, end_index = page_toggle(num_pages, items_per_page,project_uuid, position='bottom')
+
         elif st.session_state['list_view_type'] == "Timeline View":
 
-            with header_col_2:  
-                items_per_row = st.slider("How many frames per row?", min_value=1, max_value=10, value=5, step=1, key="items_per_row")
-            with header_col_3:
-                expand_all = st_memory.toggle("Expand All", key="expand_all")
+            with st.sidebar:                            
+                styling_element(st.session_state['current_frame_uuid'], view_type="List")
 
+            
             if st.session_state['page'] == "Styling":
-                timeline_view(shift_frames_setting, project_uuid, items_per_row,expand_all,"Styling")
+                timeline_view(shift_frames_setting, project_uuid,"Styling",header_col_3,header_col_4)
             elif st.session_state['page'] == "Motion":
-                timeline_view(shift_frames_setting, project_uuid, items_per_row,expand_all,"Motion")
+                timeline_view(shift_frames_setting, project_uuid,"Motion",header_col_3,header_col_4)
 
                 
 

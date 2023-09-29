@@ -12,6 +12,8 @@ def frame_selector_widget():
     time1, time2 = st.columns([1,1])
 
     timing_details = data_repo.get_timing_list_from_project(project_uuid=st.session_state["project_uuid"])
+    len_timing_details = len(timing_details) if len(timing_details) > 0 else 1.0
+    st.progress(st.session_state['current_frame_index'] / len_timing_details)
     with time1:
         if 'prev_frame_index' not in st.session_state:
             st.session_state['prev_frame_index'] = 1
@@ -34,7 +36,7 @@ def frame_selector_widget():
     with time2:
         single_frame_time_selector(st.session_state['current_frame_uuid'], 'navbar', shift_frames=False)
     
-
+    
 
 
     image_1, image_2 = st.columns([1,1])

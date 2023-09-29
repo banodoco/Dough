@@ -68,7 +68,7 @@ def single_frame_time_duration_setter(timing_uuid, src, shift_frames=True):
     max_value = 100.0 if shift_frames else clip_duration
     
     disable_duration_input = False if next_timing else True
-    help_text = None if shift_frames else "This will not shift subsequent frames - to do this, go to the Bulk View and set Shift Frames = True"
+    help_text = None if shift_frames else "You currently won't shift subsequent frames - to do this, go to the List View and turn on Shift Frames."
     frame_duration = st.number_input("Duration:", min_value=0.0, max_value=max_value,
                                      value=clip_duration, step=0.1, key=f"frame_duration_{timing.aux_frame_index}_{src}", 
                                      disabled=disable_duration_input, help=help_text)
@@ -84,22 +84,27 @@ def single_frame_time_selector(timing_uuid, src, shift_frames=True):
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
 
-    # Get the previous timing object
     timing_list: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
     prev_timing = None
     if timing.aux_frame_index > 0:
         prev_timing_uuid = timing_list[timing.aux_frame_index - 1].uuid
         prev_timing = data_repo.get_timing_from_uuid(prev_timing_uuid)
 
-    # If previous timing exists, use its frame time as min_value, else use 0.0
     min_value = prev_timing.frame_time if prev_timing else 0.0
 
     disabled_time_change = True if timing.aux_frame_index == 0 else False
 
     next_timing = data_repo.get_next_timing(timing_uuid)
-    max_value = 100.0 if shift_frames else (next_timing.frame_time if next_timing else timing.frame_time)
-    help_text = None if shift_frames else "This will not shift subsequent frames - to do this, go to the Bulk View and set Shift Frames = True"
+    if next_timing:
+        max_value = 100.0 if shift_frames else next_timing.frame_time
+    else:
+        max_value = timing.frame_time + 100  # Allow up to 100 seconds more if it's the last item
+
+    help_text = None if shift_frames else "You currently won't shift subsequent frames - to do this, go to the List View and turn on Shift Frames."
     frame_time = st.number_input("Time:", min_value=min_value, max_value=max_value,
                                      value=timing.frame_time, step=0.1, key=f"frame_time_{timing.aux_frame_index}_{src}",disabled=disabled_time_change, help=help_text)
     if frame_time != timing.frame_time:
         update_frame_time(timing_uuid, frame_time, shift_frames)
+
+
+

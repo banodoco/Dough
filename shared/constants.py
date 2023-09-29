@@ -61,9 +61,9 @@ class InternalFileTag(ExtendedEnum):
     TEMP_IMAGE = 'temp'
 
 class AnimationStyleType(ExtendedEnum):
-    INTERPOLATION = "Interpolation"
-    DIRECT_MORPHING = "Direct Morphing"
+    INTERPOLATION = "Interpolation"    
     IMAGE_TO_VIDEO = "Image to Video"
+    DIRECT_MORPHING = "None"
 
 
 ##################### global constants #####################

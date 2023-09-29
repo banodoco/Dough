@@ -28,12 +28,12 @@ def list_view_set_up(timing_details,project_uuid):
 
     return num_pages, items_per_page
 
-def page_toggle(num_pages, items_per_page, project_uuid):
+def page_toggle(num_pages, items_per_page, project_uuid, position):
     data_repo = DataRepo()
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
-    st.session_state['current_page'] = st.radio("Select Page:", options=range(
-        1, num_pages), horizontal=True, index=st.session_state['index_of_current_page'] - 1, key="page_selection_radio")
+    st.session_state['current_page'] = st.radio(f"Select page:", options=range(
+        1, num_pages), horizontal=True, index=st.session_state['index_of_current_page'] - 1, key=f"page_selection_radio_{position}")
     if st.session_state['current_page'] != st.session_state['index_of_current_page']:
         st.session_state['index_of_current_page'] = st.session_state['current_page']
         st.experimental_rerun()
