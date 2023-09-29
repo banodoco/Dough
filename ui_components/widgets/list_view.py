@@ -3,7 +3,7 @@ from ui_components.constants import WorkflowStageType
 from utils.data_repo.data_repo import DataRepo
 from ui_components.widgets.frame_time_selector import single_frame_time_selector, single_frame_time_duration_setter
 from ui_components.widgets.image_carousal import display_image
-from ui_components.methods.common_methods import delete_frame, move_frame,jump_to_single_frame_view_button
+from ui_components.methods.common_methods import delete_frame, move_frame,jump_to_single_frame_view_button,delete_frame_button,move_frame_back_button,move_frame_forward_button
 import math
 from utils.data_repo.data_repo import DataRepo
 from ui_components.methods.common_methods import delete_frame
@@ -72,17 +72,13 @@ def styling_list_view(start_index, end_index, shift_frames_setting, project_uuid
             st.markdown("---")
             btn1, btn2, btn3 = st.columns([2, 1, 1])
             with btn1:
-                if st.button("Delete this keyframe", key=f'{i}'):
-                    delete_frame(timing_details[i].uuid)
-                    st.experimental_rerun()
-            with btn2:
-                if st.button("⬆️", key=f"Promote {display_number}"):
-                    move_frame("Up", timing_details[i].uuid)
-                    st.experimental_rerun()
-            with btn3:
-                if st.button("⬇️", key=f"Demote {display_number}"):
-                    move_frame("Down", timing_details[i].uuid)
-                    st.experimental_rerun()
+                delete_frame_button(timing_details[i].uuid, show_label=False)
+            with btn2:                
+                move_frame_back_button(timing_details[i].uuid, orientation='up-down')
+
+            with btn3:                
+                move_frame_forward_button(timing_details[i].uuid, orientation='up-down')
+                    
 
         st.markdown("***")
 

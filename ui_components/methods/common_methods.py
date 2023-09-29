@@ -3,6 +3,7 @@ from typing import List
 import streamlit as st
 import os
 from PIL import Image, ImageDraw, ImageOps, ImageFilter
+from datetime import datetime
 from moviepy.editor import *
 import cv2
 import requests as r
@@ -617,9 +618,10 @@ def update_timings_in_order(project_uuid):
 
     # Iterate through the timing objects
     for i, timing in enumerate(timing_list):
-        # Set the frame time to the index of the timing object
-        print(f"Updating timing {timing.uuid} frame time to {float(i)}")
-        data_repo.update_specific_timing(timing.uuid, frame_time=float(i))
+        # Set the frame time to the index of the timing object only if it's different from the current one
+        if timing.frame_time != float(i):
+            print(f"Updating timing {timing.uuid} frame time to {float(i)}")
+            data_repo.update_specific_timing(timing.uuid, frame_time=float(i))
 
 
 def change_frame_position_input(timing_uuid, src):
@@ -635,25 +637,15 @@ def change_frame_position_input(timing_uuid, src):
     if st.button('Update Position',key=f"change_frame_position_{timing.aux_frame_index}_{src}"):  
         change_frame_position(timing_uuid, new_position - 1)
         st.experimental_rerun()
-    # if new_position != timing.aux_frame_index:
-      #  print(f"Changing frame position from {timing.aux_frame_index + 1} to {new_position}")
-       # change_frame_position(timing_uuid, new_position - 1)
-        
-from datetime import datetime
-        
+                
 
-def move_frame(direction, timing_uuid):
-    print(f"{datetime.now()} - Starting move_frame function")
+def move_frame(direction, timing_uuid):    
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
 
-    print(f"{datetime.now()} - Retrieved timing object")
-
-    if direction == "Up":
-        print(f"{datetime.now()} - Moving frame up")
-        if timing.aux_frame_index == 0:
-            print(f"{datetime.now()} - This is the first frame")
+    if direction == "Up":        
+        if timing.aux_frame_index == 0:            
             st.error("This is the first frame")       
             time.sleep(1)     
             return
@@ -665,52 +657,44 @@ def move_frame(direction, timing_uuid):
         print(f"{datetime.now()} - Moving frame down")
         timing_list = data_repo.get_timing_list_from_project(project_uuid=timing.project.uuid)
         if timing.aux_frame_index == len(timing_list) - 1:
-            print(f"{datetime.now()} - This is the last frame")
+            
             st.error("This is the last frame")
             time.sleep(1)
             return
         
-        data_repo.update_specific_timing(timing.uuid, aux_frame_index=timing.aux_frame_index + 1)
-        print(f"{datetime.now()} - Updated timing object")
+        data_repo.update_specific_timing(timing.uuid, aux_frame_index=timing.aux_frame_index + 1)        
 
-    print(f"{datetime.now()} - Updating clip duration of all timing frames")
-    update_clip_duration_of_all_timing_frames(timing.project.uuid)
-    print(f"{datetime.now()} - Finished move_frame function")
 
 def move_frame_back_button(timing_uuid, orientation):
+    direction = "Up"
     if orientation == "side-to-side":
-        arrow = "⬅️"
-        direction = "Up"
+        arrow = "⬅️"        
     else:  # up-down
-        arrow = "⬆️"
-        direction = "Up"
-
+        arrow = "⬆️"        
     if st.button(arrow, key=f"move_frame_back_{timing_uuid}", help="Move frame back"):
         move_frame(direction, timing_uuid)
         st.experimental_rerun()
-
-
-
-
-
-        
-
-
+    
 
 def move_frame_forward_button(timing_uuid, orientation):
     direction = "Down"
     if orientation == "side-to-side":
         arrow = "➡️"        
     else:  # up-down
-        direction = "Down"
+        arrow = "⬇️"
 
     if st.button(arrow, key=f"move_frame_forward_{timing_uuid}", help="Move frame forward"):
         move_frame(direction, timing_uuid)
         st.experimental_rerun()
 
 
-def delete_frame_button(timing_uuid):
-    if st.button("🗑️", key=f"delete_frame_{timing_uuid}", help="Delete frame"):
+def delete_frame_button(timing_uuid, show_label=False):
+    if show_label:
+        label = "Delete Frame 🗑️"
+    else:
+        label = "🗑️"
+
+    if st.button(label, key=f"delete_frame_{timing_uuid}", help="Delete frame"):
         delete_frame(timing_uuid)
         st.experimental_rerun()
 
