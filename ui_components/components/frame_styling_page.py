@@ -190,7 +190,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
         
         st.markdown("---")
 
-        header_col_1, header_col_2, header_col_3, header_col_4, header_col_5 = st.columns([1,0.5,5, 1, 1])
+        header_col_1, header_col_2, header_col_3, header_col_4, header_col_5 = st.columns([1.25,0.25,4, 1.5, 1.5])
         with header_col_1:                    
             st.session_state['list_view_type'] = st_memory.radio("View type:", options=["Timeline View","Detailed View"], key="list_view_type_slider")
         
@@ -224,7 +224,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
         elif st.session_state['list_view_type'] == "Timeline View":
 
             with st.sidebar:                            
-                styling_element(st.session_state['current_frame_uuid'], view_type="List")
+                    styling_element(st.session_state['current_frame_uuid'], view_type="List")
 
             
             if st.session_state['page'] == "Styling":
