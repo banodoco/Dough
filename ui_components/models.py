@@ -19,9 +19,9 @@ class InternalFileObject:
 
     @property
     def location(self):
-        if self.hosted_url:
-            return self.hosted_url
-        return self.local_path
+        if self.local_path:
+            return self.local_path
+        return self.hosted_url
 
 
 class InternalProjectObject:

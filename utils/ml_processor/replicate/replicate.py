@@ -4,6 +4,7 @@ import time
 from shared.constants import REPLICATE_USER
 from shared.file_upload.s3 import upload_file
 from utils.common_utils import get_current_user_uuid
+from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import MachineLearningProcessor
 import replicate
@@ -16,7 +17,7 @@ from PIL import Image
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
 from repository.data_logger import log_model_inference
 import utils.local_storage.local_storage as local_storage
-from utils.ml_processor.replicate.utils import check_user_credits, check_user_credits_async
+from utils.ml_processor.replicate.utils import check_user_credits, check_user_credits_async, get_model_params_from_query_obj
 
 
 class ReplicateProcessor(MachineLearningProcessor):
@@ -51,6 +52,11 @@ class ReplicateProcessor(MachineLearningProcessor):
         model = replicate.models.get(model_name)
         model_version = model.versions.get(model_version) if model_version else model
         return model_version
+    
+    # it converts the standardized query_obj into params required by replicate
+    def predict_model_output_standardized(self, model: ReplicateModel, query_obj: MLQueryObject):
+        params = get_model_params_from_query_obj(model, query_obj)
+        return self.predict_model_output(model, **params)
     
     @check_user_credits
     def predict_model_output(self, model: ReplicateModel, **kwargs):

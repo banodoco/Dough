@@ -11,7 +11,7 @@ from ui_components.methods.common_methods import add_image_variant
 from ui_components.methods.file_methods import save_or_host_file
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalUserObject
 from utils.common_utils import create_working_assets
-from utils.constants import ImageStage
+from utils.constants import ML_MODEL_LIST, ImageStage
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
@@ -156,101 +156,12 @@ def create_predefined_models(user):
     data_repo = DataRepo()
 
     # create predefined models
-    data = [
-        {
-            "name" : 'stable-diffusion-img2img-v2.1',
-            "user_id" : user.uuid,
-            "version": REPLICATE_MODEL.img2img_sd_2_1.version,
-            "replicate_url" : REPLICATE_MODEL.img2img_sd_2_1.name,
-            "category" : AIModelCategory.BASE_SD.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'depth2img',
-            "user_id" : user.uuid,
-            "version": REPLICATE_MODEL.jagilley_controlnet_depth2img.version,
-            "replicate_url" : REPLICATE_MODEL.jagilley_controlnet_depth2img.name,
-            "category" : AIModelCategory.BASE_SD.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'pix2pix',
-            "user_id" : user.uuid,
-            "version": REPLICATE_MODEL.arielreplicate.version,
-            "replicate_url" : REPLICATE_MODEL.arielreplicate.name,
-            "category" : AIModelCategory.BASE_SD.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'controlnet',
-            "user_id" : user.uuid,
-            "category" : AIModelCategory.CONTROLNET.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'Dreambooth',
-            "user_id" : user.uuid,
-            "category" : AIModelCategory.DREAMBOOTH.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'LoRA',
-            "user_id" : user.uuid,
-            "category" : AIModelCategory.LORA.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'StyleGAN-NADA',
-            "user_id" : user.uuid,
-            "version": REPLICATE_MODEL.stylegan_nada.version,
-            "replicate_url" : REPLICATE_MODEL.stylegan_nada.name,
-            "category" : AIModelCategory.BASE_SD.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'real-esrgan-upscaling',
-            "user_id" : user.uuid,
-            "version": REPLICATE_MODEL.real_esrgan_upscale.version,
-            "replicate_url" : REPLICATE_MODEL.real_esrgan_upscale.name,
-            "category" : AIModelCategory.BASE_SD.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'controlnet_1_1_x_realistic_vision_v2_0',
-            "user_id" : user.uuid,
-            "version": REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0.version,
-            "replicate_url" : REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0.name,
-            "category" : AIModelCategory.BASE_SD.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'urpm-v1.3',
-            "user_id" : user.uuid,
-            "version": REPLICATE_MODEL.urpm.version,
-            "replicate_url" : REPLICATE_MODEL.urpm.name,
-            "category" : AIModelCategory.BASE_SD.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name": "stable_diffusion_xl",
-            "user_id": user.uuid,
-            "version": REPLICATE_MODEL.sdxl.version,
-            "replicate_url": REPLICATE_MODEL.sdxl.name,
-            "category": AIModelCategory.BASE_SD.value,
-            "keyword": "",
-            "model_type": json.dumps([AIModelType.TXT2IMG.value])
-        }
-    ]
+    data = []
+    for model in ML_MODEL_LIST:
+        if model['enabled']:
+            del model['enabled']
+            model['user_id'] = user.uuid
+            data.append(model)
 
     # only creating pre-defined models for the first time
     available_models = data_repo.get_all_ai_model_list(\

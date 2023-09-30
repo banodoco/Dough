@@ -69,7 +69,7 @@ def variant_comparison_element(timing_uuid, stage=CreativeProcessType.MOTION.val
                 else:
                     st.info(f"**Variant #{which_variant}**")
                 
-                st.image(variants[which_variant- 1].location,
+                st.image(variants[which_variant - 1].location,
                             use_column_width=True)
 
         if which_variant - 1 != current_variant:

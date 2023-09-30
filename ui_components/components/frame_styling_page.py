@@ -137,21 +137,21 @@ def frame_styling_page(mainheader2, project_uuid: str):
                             if st.button(f"Generate variants", key=f"new_variations_{st.session_state['current_frame_index']}", help="This will generate new variants based on the settings to the left."):
                                 for i in range(0, st.session_state['individual_number_of_variants']):
                                     trigger_restyling_process(
-                                        st.session_state['current_frame_uuid'], 
-                                        st.session_state['model'], 
-                                        st.session_state['prompt'], 
-                                        st.session_state['strength'], 
-                                        st.session_state['negative_prompt'], 
-                                        st.session_state['guidance_scale'], 
-                                        st.session_state['seed'], 
-                                        st.session_state['num_inference_steps'], 
-                                        st.session_state['transformation_stage'], 
-                                        st.session_state["promote_new_generation"], 
-                                        st.session_state['custom_models'], 
-                                        st.session_state['adapter_type'], 
-                                        True, 
-                                        st.session_state['low_threshold'], 
-                                        st.session_state['high_threshold']
+                                        timing_uuid=st.session_state['current_frame_uuid'], 
+                                        model_name=st.session_state['model'], 
+                                        prompt=st.session_state['prompt'], 
+                                        strength=st.session_state['strength'], 
+                                        negative_prompt=st.session_state['negative_prompt'], 
+                                        guidance_scale=st.session_state['guidance_scale'], 
+                                        seed=st.session_state['seed'], 
+                                        num_inference_steps=st.session_state['num_inference_steps'], 
+                                        transformation_stage=st.session_state['transformation_stage'], 
+                                        promote_new_generation=st.session_state["promote_new_generation"], 
+                                        custom_models=st.session_state['custom_models'], 
+                                        adapter_type=st.session_state['adapter_type'], 
+                                        update_inference_settings=True, 
+                                        low_threshold=st.session_state['low_threshold'], 
+                                        high_threshold=st.session_state['high_threshold']
                                     )
                                 st.experimental_rerun()
 
