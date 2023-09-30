@@ -8,7 +8,7 @@ from PIL import Image
 import uuid
 import urllib
 from backend.models import InternalFileObject
-from shared.constants import REPLICATE_USER, SERVER, InternalFileTag, InternalFileType, ServerType
+from shared.constants import REPLICATE_USER, SERVER, AIModelCategory, InternalFileTag, InternalFileType, ServerType
 from ui_components.constants import MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
 from utils.constants import ImageStage, MLQueryObject
@@ -41,6 +41,7 @@ def trigger_restyling_process(timing_uuid, update_inference_settings, \
         **kwargs
     )
 
+    prompt = query_obj.prompt
     if update_inference_settings is True:
         prompt = prompt.replace(",", ".")
         prompt = prompt.replace("\n", "")
@@ -53,14 +54,14 @@ def trigger_restyling_process(timing_uuid, update_inference_settings, \
             default_guidance_scale=query_obj.guidance_scale,
             default_seed=query_obj.seed,
             default_num_inference_steps=query_obj.num_inference_steps,
-            default_which_stage_to_run_on=query_obj.transformation_stage,
-            default_custom_models=query_obj.custom_models,
+            default_which_stage_to_run_on=transformation_stage,
+            default_custom_models=query_obj.data.get('custom_models', []),
             default_adapter_type=query_obj.adapter_type,
             default_low_threshold=query_obj.low_threshold,
             default_high_threshold=query_obj.high_threshold
         )
 
-    dynamic_prompting(prompt, source_image, timing_uuid)
+    query_obj.prompt = dynamic_prompting(prompt, source_image)
 
     # TODO: reverse the log creation flow (create log first and then pass the uuid)
     output_file = restyle_images(query_obj)
@@ -80,15 +81,17 @@ def trigger_restyling_process(timing_uuid, update_inference_settings, \
         print("No new generation to promote")
 
 def restyle_images(query_obj: MLQueryObject) -> InternalFileObject:
-    model_name = query_obj.model_name
-    if model_name == "LoRA":
+    data_repo = DataRepo()
+    model  = data_repo.get_ai_model_from_uuid(query_obj.model_uuid)
+
+    if model.category == AIModelCategory.LORA.value:
         output_file = prompt_model_lora(query_obj)
-    elif model_name == "controlnet":
+    elif model.category == AIModelCategory.CONTROLNET.value:
         output_file = prompt_model_controlnet(query_obj)
-    elif model_name == "Dreambooth":
+    elif model.category == AIModelCategory.DREAMBOOTH.value:
         output_file = prompt_model_dreambooth(query_obj)
     else:
-        model = REPLICATE_MODEL.get_model_by_name(model_name)   # TODO: remove this dependency
+        model = REPLICATE_MODEL.get_model_by_db_obj(model)   # TODO: remove this dependency
         output_file = prompt_model(model, query_obj)
 
     return output_file
@@ -473,11 +476,7 @@ def create_depth_mask_image(input_image, layer, timing_uuid):
 
     return create_or_update_mask(timing_uuid, mask)
 
-def dynamic_prompting(prompt, source_image, timing_uuid):
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-
+def dynamic_prompting(prompt, source_image):
     if "[expression]" in prompt:
         prompt_expression = facial_expression_recognition(source_image)
         prompt = prompt.replace("[expression]", prompt_expression)
@@ -497,4 +496,4 @@ def dynamic_prompting(prompt, source_image, timing_uuid):
             source_image, "the person is looking")
         prompt = prompt.replace("[looking]", "looking " + str(prompt_looking))
 
-    data_repo.update_specific_timing(timing_uuid, prompt=prompt)
+    return prompt

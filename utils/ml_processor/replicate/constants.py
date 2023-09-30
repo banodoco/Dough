@@ -45,9 +45,9 @@ class REPLICATE_MODEL:
     realistic_vision_v5_img2img = ReplicateModel("lucataco/realistic-vision-v5-img2img", "82bbb4595458d6be142450fc6d8c4d79c936b92bd184dd2d6dd71d0796159819")
 
     @staticmethod
-    def get_model_by_name(name):
+    def get_model_by_db_obj(model_db_obj):
         for model in REPLICATE_MODEL.__dict__.values():
-            if isinstance(model, ReplicateModel) and model.name == name:
+            if isinstance(model, ReplicateModel) and model.name == model_db_obj.replicate_url and model.version == model_db_obj.version:
                 return model
         return None
 

@@ -138,7 +138,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 for i in range(0, st.session_state['individual_number_of_variants']):
                                     trigger_restyling_process(
                                         timing_uuid=st.session_state['current_frame_uuid'], 
-                                        model_name=st.session_state['model'], 
+                                        model_uuid=st.session_state['model'], 
                                         prompt=st.session_state['prompt'], 
                                         strength=st.session_state['strength'], 
                                         negative_prompt=st.session_state['negative_prompt'], 

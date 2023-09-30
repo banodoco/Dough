@@ -20,14 +20,14 @@ class MLQueryObject:
     def __init__(
             self,
             timing_uuid,
-            model_name,
-            prompt,
-            strength,
-            negative_prompt,
+            model_uuid,
             guidance_scale,
             seed,
             num_inference_steps,
             adapter_type,
+            strength,
+            prompt="",
+            negative_prompt="",
             height=512,
             width=512,
             low_threshold=100,  # update these default values
@@ -37,7 +37,7 @@ class MLQueryObject:
             **kwargs
         ):
         self.timing_uuid = timing_uuid
-        self.model_name = model_name
+        self.model_uuid = model_uuid
         self.prompt = prompt
         self.image_uuid = image_uuid
         self.mask_uuid = mask_uuid
