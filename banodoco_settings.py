@@ -112,8 +112,7 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
         "frame_time": 0.0,
         "animation_style": animation_style,
         "aux_frame_index": 0,
-        "source_image_id": source_image.uuid,
-        "alternative_images": json.dumps([source_image.uuid])
+        "source_image_id": source_image.uuid
     }
     timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
 

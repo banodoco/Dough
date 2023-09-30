@@ -960,7 +960,7 @@ def add_image_variant(image_file_uuid: str, timing_uuid: str):
     alternative_image_list = timing.alternative_images_list + [image_file]
     alternative_image_uuid_list = [img.uuid for img in alternative_image_list]
     primary_image_uuid = alternative_image_uuid_list[0]
-    alternative_image_uuid_list = json.dumps(alternative_image_uuid_list)
+    alternative_image_uuid_list = json.dumps(list(set(alternative_image_uuid_list)))
 
     data_repo.update_specific_timing(
         timing_uuid, alternative_images=alternative_image_uuid_list)
