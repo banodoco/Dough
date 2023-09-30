@@ -5,6 +5,7 @@ import streamlit as st
 import json
 from shared.constants import SERVER, ServerType
 from ui_components.models import InternalUserObject
+from utils.cache.cache import StCache
 from utils.constants import LOGGED_USER
 from utils.data_repo.data_repo import DataRepo
 
@@ -148,3 +149,6 @@ def reset_project_state():
             if key in st.session_state:
                 del st.session_state[key]
 
+
+    # reset cache
+    StCache.clear_entire_cache()

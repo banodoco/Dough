@@ -72,7 +72,7 @@ def variant_comparison_element(timing_uuid, stage=CreativeProcessType.MOTION.val
                 st.image(variants[which_variant- 1].location,
                             use_column_width=True)
 
-        if which_variant- 1 != current_variant:
+        if which_variant - 1 != current_variant:
             if st.button(f"Promote Variant #{which_variant}", key=f"Promote Variant #{which_variant} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image"):
                 if stage == CreativeProcessType.MOTION.value:
                     promote_video_variant(timing.uuid, which_variant - 1)

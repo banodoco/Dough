@@ -98,7 +98,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
             comparison_values = [
                 "Other Variants", "Source Frame", "Previous & Next Frame", "None"]
             
-            st.session_state['show_comparison'] = st_memory.radio("Show comparison to:", options=comparison_values, horizontal=True, project_settings=project_settings, key="show_comparison_radio")
+            st.session_state['show_comparison'] = st_memory.radio("Show comparison to:", options=comparison_values, horizontal=True, key="show_comparison_radio")
             
 
             if st.session_state['show_comparison'] == "Other Variants":

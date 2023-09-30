@@ -1,15 +1,10 @@
 from shared.logging.logging import AppLogger
-from utils.cache.cache import StCache
+from utils.cache.cache import CacheKey, StCache
 
 from utils.enum import ExtendedEnum
 
 logger = AppLogger()
 
-class CacheKey(ExtendedEnum):
-    TIMING_DETAILS = "timing_details"
-    APP_SETTING = "app_setting"
-    APP_SECRET = "app_secret"
-    PROJECT_SETTING = "project_setting"
 
 # NOTE: caching only timing_details, project settings and app settings. invalidating cache everytime a related data is updated
 def cache_data(cls):
