@@ -100,8 +100,7 @@ def trigger_restyling_process(
     else:
         variants: List[InternalFileObject] = timing.alternative_images_list
         number_of_variants = len(variants)
-        primary_image = timing.primary_image
-        source_image = primary_image.location
+        source_image = timing.primary_image
 
     output_file = restyle_images(timing_uuid, source_image)
 
@@ -120,7 +119,7 @@ def trigger_restyling_process(
         print("No new generation to promote")
 
 
-def restyle_images(timing_uuid, source_image) -> InternalFileObject:
+def restyle_images(timing_uuid, source_image: InternalFileObject) -> InternalFileObject:
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
@@ -131,8 +130,7 @@ def restyle_images(timing_uuid, source_image) -> InternalFileObject:
     if model_name == "stable-diffusion-img2img-v2.1":
         output_file = prompt_model_stability(timing_uuid, source_image)
     elif model_name == "depth2img":
-        output_file = prompt_model_depth2img(
-            strength, timing_uuid, source_image)
+        output_file = prompt_model_depth2img(strength, timing_uuid, source_image)
     elif model_name == "pix2pix":
         output_file = prompt_model_pix2pix(timing_uuid, source_image)
     elif model_name == "LoRA":
@@ -342,7 +340,7 @@ def prompt_model_dreambooth(timing_uuid, source_image_file: InternalFileObject):
     return None
 
 
-def prompt_model_depth2img(strength, timing_uuid, source_image) -> InternalFileObject:
+def prompt_model_depth2img(strength, timing_uuid, source_image_file: InternalFileObject) -> InternalFileObject:
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
@@ -351,6 +349,7 @@ def prompt_model_depth2img(strength, timing_uuid, source_image) -> InternalFileO
     num_inference_steps = timing.num_inteference_steps
     guidance_scale = timing.guidance_scale
     negative_prompt = timing.negative_prompt
+    source_image = source_image_file.location
     if not source_image.startswith("http"):
         source_image = open(source_image, "rb")
 
@@ -429,11 +428,13 @@ def facial_expression_recognition(input_image):
     return emotion
 
 
-def prompt_model_controlnet(timing_uuid, input_image):
+def prompt_model_controlnet(timing_uuid, intput_image_file: InternalFileObject):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
 
+    input_image = intput_image_file.location
+    
     if timing.adapter_type == "normal":
         model = REPLICATE_MODEL.jagilley_controlnet_normal
     elif timing.adapter_type == "canny":
@@ -482,10 +483,11 @@ def prompt_model_controlnet(timing_uuid, input_image):
     return output_file
 
 
-def prompt_model_urpm_v1_3(timing_uuid, source_image):
+def prompt_model_urpm_v1_3(timing_uuid, source_image_file: InternalFileObject):
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
 
+    source_image = source_image_file.location
     if not source_image.startswith("http"):
         source_image = open(source_image, "rb")
 
