@@ -251,11 +251,12 @@ def styling_element(timing_uuid, view_type="Single"):
         # st.session_state['custom_models'] = next((obj.uuid for i, obj in enumerate(
         #     dreambooth_model_list) if getattr(obj, 'name') == selected_dreambooth_model_name), "")
         selected_dreambooth_model_index = next((i for i, obj in enumerate(
-            dreambooth_model_list) if getattr(obj, 'name') == selected_dreambooth_model_name), "")
+            dreambooth_model_list) if getattr(obj, 'name') == selected_dreambooth_model_name), 0)
         if st.session_state['index_of_dreambooth_model'] != selected_dreambooth_model_index:
             st.session_state['index_of_dreambooth_model'] = selected_dreambooth_model_index
 
-        st.session_state['dreambooth_model_uuid'] = dreambooth_model_list[st.session_state['index_of_dreambooth_model']].uuid
+        if len(dreambooth_model_list):
+            st.session_state['dreambooth_model_uuid'] = dreambooth_model_list[st.session_state['index_of_dreambooth_model']].uuid
     else:
         st.session_state['custom_models'] = []
         st.session_state['adapter_type'] = "N"

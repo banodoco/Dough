@@ -151,7 +151,11 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         adapter_type=st.session_state['adapter_type'], 
                                         update_inference_settings=True, 
                                         low_threshold=st.session_state['low_threshold'], 
-                                        high_threshold=st.session_state['high_threshold']
+                                        high_threshold=st.session_state['high_threshold'],
+                                        canny_image=st.session_state['canny_image'],
+                                        lora_model_1_url=st.session_state['lora_model_1_url'] if st.session_state['lora_model_1_url'] else None,
+                                        lora_model_2_url=st.session_state['lora_model_2_url'] if st.session_state['lora_model_2_url'] else None,
+                                        lora_model_3_url=st.session_state['lora_model_3_url'] if st.session_state['lora_model_3_url'] else None,
                                     )
                                 st.experimental_rerun()
 

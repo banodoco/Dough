@@ -52,3 +52,14 @@ class REPLICATE_MODEL:
         return None
 
 DEFAULT_LORA_MODEL_URL = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
+
+CONTROLNET_MODELS = [
+    REPLICATE_MODEL.jagilley_controlnet_normal,
+    REPLICATE_MODEL.jagilley_controlnet_canny,
+    REPLICATE_MODEL.jagilley_controlnet_hed,
+    REPLICATE_MODEL.jagilley_controlnet_scribble,
+    REPLICATE_MODEL.jagilley_controlnet_seg,
+    REPLICATE_MODEL.jagilley_controlnet_hough,
+    REPLICATE_MODEL.jagilley_controlnet_depth2img,
+    REPLICATE_MODEL.jagilley_controlnet_pose,
+]

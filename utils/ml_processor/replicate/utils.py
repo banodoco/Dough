@@ -1,7 +1,7 @@
 from utils.common_utils import user_credits_available
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.replicate.constants import REPLICATE_MODEL
+from utils.ml_processor.replicate.constants import CONTROLNET_MODELS, REPLICATE_MODEL
 
 
 def check_user_credits(method):
@@ -182,6 +182,70 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
 
         if input_image:
             data['image'] = input_image
+
+    elif model in CONTROLNET_MODELS:
+        if model == REPLICATE_MODEL.jagilley_controlnet_scribble and query_obj.data.get('canny_image', None):
+            input_image = data_repo.get_file_from_uuid(query_obj.data['canny_image']).location
+            if not input_image.startswith('http'):
+                input_image = open(input_image, 'rb')
+
+        data = {
+            'image': input_image,
+            'prompt': query_obj.prompt,
+            'num_samples': "1",
+            'image_resolution': query_obj.width,
+            'ddim_steps': query_obj.num_inteference_steps,
+            'scale': query_obj.guidance_scale,
+            'eta': 0,
+            'seed': query_obj.seed,
+            'a_prompt': query_obj.data.get('a_prompt', "best quality, extremely detailed"),
+            'n_prompt': query_obj.negative_prompt + ", longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
+            'detect_resolution': query_obj.width,
+            'bg_threshold': 0,
+            'low_threshold': query_obj.low_threshold,
+            'high_threshold': query_obj.high_threshold,
+        }
+
+    elif model in [REPLICATE_MODEL.clones_lora_training_2]:
+        
+        if query_obj.adapter_type:
+            adapter_condition_image = input_image
+        else:
+            adapter_condition_image = ""
+
+        lora_urls = ""
+        lora_scales = ""
+        lora_model_1_url = query_obj.data.get("lora_model_1_url", None)
+        lora_model_2_url = query_obj.data.get("lora_model_2_url", None)
+        lora_model_3_url = query_obj.data.get("lora_model_3_url", None)
+        if lora_model_1_url:
+            lora_urls += lora_model_1_url
+            lora_scales += "0.5"
+        if lora_model_2_url:
+            ctn = "" if not len(lora_urls) else " | "
+            lora_urls += ctn + lora_model_2_url
+            lora_scales += ctn + "0.5"
+        if lora_model_3_url:
+            ctn = "" if not len(lora_urls) else " | "
+            lora_urls += ctn + lora_model_3_url
+            lora_scales += ctn + "0.5"
+
+        data = {
+            'prompt': query_obj.prompt,
+            'negative_prompt': query_obj.negative_prompt,
+            'width': query_obj.width,
+            'height': query_obj.height,
+            'num_outputs': 1,
+            'image': input_image,
+            'num_inference_steps': query_obj.num_inteference_steps,
+            'guidance_scale': query_obj.guidance_scale,
+            'prompt_strength': query_obj.strength,
+            'scheduler': "DPMSolverMultistep",
+            'lora_urls': lora_urls,
+            'lora_scales': lora_scales,
+            'adapter_type': query_obj.adapter_type,
+            'adapter_condition_image': adapter_condition_image,
+        } 
 
     else:
         data = query_obj.to_json()

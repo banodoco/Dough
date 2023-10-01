@@ -1,7 +1,6 @@
 import asyncio
 import io
 import time
-from shared.constants import REPLICATE_USER
 from shared.file_upload.s3 import upload_file
 from utils.common_utils import get_current_user_uuid
 from utils.constants import MLQueryObject
@@ -170,7 +169,7 @@ class ReplicateProcessor(MachineLearningProcessor):
     # TODO: figure how to resolve model location setting, right now it's hardcoded to peter942/modnet
     @check_user_credits
     def dreambooth_training(self, training_file_url, instance_prompt, \
-                            class_prompt, max_train_steps, model_name, controller_type, image_len):
+                            class_prompt, max_train_steps, model_name, controller_type, image_len, replicate_user):
         if controller_type == "normal":
             template_version = "b65d36e378a01ef81d81ba49be7deb127e9bb8b74a28af3aa0eaca16b9bcd0eb"
         elif controller_type == "canny":
@@ -199,7 +198,7 @@ class ReplicateProcessor(MachineLearningProcessor):
                 "instance_data": training_file_url,
                 "max_train_steps": max_train_steps
             },
-            "model": REPLICATE_USER + "/" + str(model_name),
+            "model": replicate_user + "/" + str(model_name),
             "trainer_version": "cd3f925f7ab21afaef7d45224790eedbb837eeac40d22e8fefe015489ab644aa",
             "template_version": template_version,
             "webhook_completed": "https://example.com/dreambooth-webhook"

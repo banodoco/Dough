@@ -8,7 +8,7 @@ from PIL import Image
 import uuid
 import urllib
 from backend.models import InternalFileObject
-from shared.constants import REPLICATE_USER, SERVER, AIModelCategory, InternalFileTag, InternalFileType, ServerType
+from shared.constants import SERVER, AIModelCategory, InternalFileTag, InternalFileType, ServerType
 from ui_components.constants import MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
 from utils.constants import ImageStage, MLQueryObject
@@ -82,26 +82,41 @@ def trigger_restyling_process(timing_uuid, update_inference_settings, \
 
 def restyle_images(query_obj: MLQueryObject) -> InternalFileObject:
     data_repo = DataRepo()
-    model  = data_repo.get_ai_model_from_uuid(query_obj.model_uuid)
+    ml_client = get_ml_client()
+    db_model  = data_repo.get_ai_model_from_uuid(query_obj.model_uuid)
 
-    if model.category == AIModelCategory.LORA.value:
-        output_file = prompt_model_lora(query_obj)
-    elif model.category == AIModelCategory.CONTROLNET.value:
-        output_file = prompt_model_controlnet(query_obj)
-    elif model.category == AIModelCategory.DREAMBOOTH.value:
-        output_file = prompt_model_dreambooth(query_obj)
+    if db_model.category == AIModelCategory.LORA.value:
+        model = REPLICATE_MODEL.clones_lora_training_2
+        output, log = ml_client.predict_model_output_standardized(model, query_obj)
+
+    elif db_model.category == AIModelCategory.CONTROLNET.value:
+        adapter_type = query_obj.adapter_type
+        if adapter_type == "normal":
+            model = REPLICATE_MODEL.jagilley_controlnet_normal
+        elif adapter_type == "canny":
+            model = REPLICATE_MODEL.jagilley_controlnet_canny
+        elif adapter_type == "hed":
+            model = REPLICATE_MODEL.jagilley_controlnet_hed
+        elif adapter_type == "scribble":
+            model = REPLICATE_MODEL.jagilley_controlnet_scribble 
+        elif adapter_type == "seg":
+            model = REPLICATE_MODEL.jagilley_controlnet_seg
+        elif adapter_type == "hough":
+            model = REPLICATE_MODEL.jagilley_controlnet_hough
+        elif adapter_type == "depth2img":
+            model = REPLICATE_MODEL.jagilley_controlnet_depth2img
+        elif adapter_type == "pose":
+            model = REPLICATE_MODEL.jagilley_controlnet_pose
+        output, log = ml_client.predict_model_output_standardized(model, query_obj)
+
+    elif db_model.category == AIModelCategory.DREAMBOOTH.value:
+        output, log = prompt_model_dreambooth(query_obj)
+
     else:
         model = REPLICATE_MODEL.get_model_by_db_obj(model)   # TODO: remove this dependency
-        output_file = prompt_model(model, query_obj)
-
-    return output_file
-
-def prompt_model(model, query_obj: MLQueryObject) -> InternalFileObject:
-    ml_client = get_ml_client()
-    data_repo = DataRepo()
-
-    output, log = ml_client.predict_model_output_standardized(model, query_obj)
+        output, log = ml_client.predict_model_output_standardized(model, query_obj)
     
+
     filename = str(uuid.uuid4()) + ".png"
     output_file = data_repo.create_file(
         name=filename, 
@@ -111,84 +126,6 @@ def prompt_model(model, query_obj: MLQueryObject) -> InternalFileObject:
     )
 
     return output_file
-
-def prompt_model_lora(query_obj: MLQueryObject) -> InternalFileObject:
-    data_repo = DataRepo()
-
-    timing_uuid = query_obj.timing_uuid
-    source_image_file: InternalFileObject = data_repo.get_file_from_uuid(query_obj.image_uuid)
-
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-    project_settings: InternalSettingObject = data_repo.get_project_setting(
-        timing.project.uuid)
-
-    lora_urls = ""
-    lora_scales = ""
-    if "lora_model_1_url" in st.session_state and st.session_state["lora_model_1_url"]:
-        lora_urls += st.session_state["lora_model_1_url"]
-        lora_scales += "0.5"
-    if "lora_model_2_url" in st.session_state and st.session_state["lora_model_2_url"]:
-        ctn = "" if not len(lora_urls) else " | "
-        lora_urls += ctn + st.session_state["lora_model_2_url"]
-        lora_scales += ctn + "0.5"
-    if st.session_state["lora_model_3_url"]:
-        ctn = "" if not len(lora_urls) else " | "
-        lora_urls += ctn + st.session_state["lora_model_3_url"]
-        lora_scales += ctn + "0.5"
-
-    source_image = source_image_file.location
-    if source_image[:4] == "http":
-        input_image = source_image
-    else:
-        input_image = open(source_image, "rb")
-
-    if timing.adapter_type != "None":
-        if source_image[:4] == "http":
-            adapter_condition_image = source_image
-        else:
-            adapter_condition_image = open(source_image, "rb")
-    else:
-        adapter_condition_image = ""
-
-    inputs = {
-        'prompt': timing.prompt,
-        'negative_prompt': timing.negative_prompt,
-        'width': project_settings.width,
-        'height': project_settings.height,
-        'num_outputs': 1,
-        'image': input_image,
-        'num_inference_steps': timing.num_inteference_steps,
-        'guidance_scale': timing.guidance_scale,
-        'prompt_strength': timing.strength,
-        'scheduler': "DPMSolverMultistep",
-        'lora_urls': lora_urls,
-        'lora_scales': lora_scales,
-        'adapter_type': timing.adapter_type,
-        'adapter_condition_image': adapter_condition_image,
-    }
-
-    ml_client = get_ml_client()
-    max_attempts = 3
-    attempts = 0
-    while attempts < max_attempts:
-        try:
-            output, log = ml_client.predict_model_output(
-                REPLICATE_MODEL.clones_lora_training_2, **inputs)
-            print(output)
-            filename = str(uuid.uuid4()) + ".png"
-            file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                             hosted_url=output[0], inference_log_id=log.uuid)
-            return file
-        except replicate.exceptions.ModelError as e:
-            if "NSFW content detected" in str(e):
-                print("NSFW content detected. Attempting to rerun code...")
-                attempts += 1
-                continue
-            else:
-                raise e
-        except Exception as e:
-            raise e
 
 def prompt_model_dreambooth(query_obj: MLQueryObject):
     data_repo = DataRepo()
@@ -238,8 +175,9 @@ def prompt_model_dreambooth(query_obj: MLQueryObject):
     else:
         version = dreambooth_model.version
 
+    app_setting = data_repo.get_app_setting_from_uuid()
     model_version = ml_client.get_model_by_name(
-        f"{REPLICATE_USER}/{model_name}", version)
+        f"{app_setting.replicate_username}/{model_name}", version)
 
     if source_image.startswith("http"):
         input_image = source_image
@@ -272,61 +210,7 @@ def prompt_model_dreambooth(query_obj: MLQueryObject):
 
     return None
 
-def prompt_model_controlnet(query_obj: MLQueryObject):
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
 
-    timing_uuid = query_obj.timing_uuid
-    intput_image_file: InternalFileObject = data_repo.get_file_from_uuid(query_obj.image_uuid)
-    input_image = intput_image_file.location
-    
-    if timing.adapter_type == "normal":
-        model = REPLICATE_MODEL.jagilley_controlnet_normal
-    elif timing.adapter_type == "canny":
-        model = REPLICATE_MODEL.jagilley_controlnet_canny
-    elif timing.adapter_type == "hed":
-        model = REPLICATE_MODEL.jagilley_controlnet_hed
-    elif timing.adapter_type == "scribble":
-        model = REPLICATE_MODEL.jagilley_controlnet_scribble
-        if timing.canny_image != "":
-            input_image = timing.canny_image
-    elif timing.adapter_type == "seg":
-        model = REPLICATE_MODEL.jagilley_controlnet_seg
-    elif timing.adapter_type == "hough":
-        model = REPLICATE_MODEL.jagilley_controlnet_hough
-    elif timing.adapter_type == "depth2img":
-        model = REPLICATE_MODEL.jagilley_controlnet_depth2img
-    elif timing.adapter_type == "pose":
-        model = REPLICATE_MODEL.jagilley_controlnet_pose
-
-    if not input_image.startswith("http"):
-        input_image = open(input_image, "rb")
-
-    inputs = {
-        'image': input_image,
-        'prompt': timing.prompt,
-        'num_samples': "1",
-        'image_resolution': "512",
-        'ddim_steps': timing.num_inteference_steps,
-        'scale': timing.guidance_scale,
-        'eta': 0,
-        'seed': timing.seed,
-        'a_prompt': "best quality, extremely detailed",
-        'n_prompt': timing.negative_prompt + ", longbody, lowres, bad anatomy, bad hands, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality",
-        'detect_resolution': 512,
-        'bg_threshold': 0,
-        'low_threshold': timing.low_threshold,
-        'high_threshold': timing.high_threshold,
-    }
-
-    ml_client = get_ml_client()
-    output, log = ml_client.predict_model_output(model, **inputs)
-
-    filename = str(uuid.uuid4()) + ".png"
-    output_file: InternalFileObject = data_repo.create_file(name=filename, type=InternalFileType.IMAGE.value,
-                                                           hosted_url=output[0], inference_log_id=log.uuid)
-    return output_file
 
 def prompt_clip_interrogator(input_image, which_model, best_or_fast):
     if which_model == "Stable Diffusion 1.5":

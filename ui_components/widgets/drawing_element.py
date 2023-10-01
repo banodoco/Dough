@@ -131,7 +131,7 @@ def drawing_element(timing_details,project_settings,project_uuid,stage=WorkflowS
                 st.image(canny_image.location)
                                                                             
                 if st.button(f"Make Into Guidance Image"):
-                    data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=st.session_state['canny_image'])
+                    # data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=st.session_state['canny_image'])
                     st.session_state['reset_canvas'] = True
                     st.session_state['canny_image'] = None
                     st.experimental_rerun()
