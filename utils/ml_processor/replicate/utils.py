@@ -79,18 +79,6 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
 
         if input_image:
             data['image'] = input_image
-            
-    elif model == REPLICATE_MODEL.jagilley_controlnet_depth2img:
-        data = {
-            "prompt_strength" : query_obj.strength,
-            "prompt" : query_obj.prompt,
-            "negative_prompt" : query_obj.negative_prompt,
-            "num_inference_steps" : query_obj.num_inference_steps,
-            "guidance_scale" : query_obj.guidance_scale
-        }
-
-        if input_image:
-            data['input_image'] = input_image
 
     elif model == REPLICATE_MODEL.arielreplicate:
         data = {
@@ -193,8 +181,8 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             'image': input_image,
             'prompt': query_obj.prompt,
             'num_samples': "1",
-            'image_resolution': query_obj.width,
-            'ddim_steps': query_obj.num_inteference_steps,
+            'image_resolution': str(query_obj.width),
+            'ddim_steps': query_obj.num_inference_steps,
             'scale': query_obj.guidance_scale,
             'eta': 0,
             'seed': query_obj.seed,

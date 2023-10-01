@@ -264,7 +264,7 @@ def styling_element(timing_uuid, view_type="Single"):
     if not ( 'adapter_type' in st.session_state and st.session_state['adapter_type']):
         st.session_state['adapter_type'] = 'N'
 
-    if st.session_state['adapter_type'] == "canny":
+    if st.session_state['adapter_type'] in ["canny", "pose"]:
 
         canny1, canny2 = st.columns(2)
 

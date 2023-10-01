@@ -132,10 +132,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 f"How many variants?", min_value=1, max_value=100, key=f"number_of_variants_{st.session_state['current_frame_index']}")
 
                         with detail2:
-
                             # TODO: add custom model validation such for sd img2img the value of strength can only be 1
                             if st.button(f"Generate variants", key=f"new_variations_{st.session_state['current_frame_index']}", help="This will generate new variants based on the settings to the left."):
-                                for i in range(0, st.session_state['individual_number_of_variants']):
+                                for i in range(0, max(st.session_state['individual_number_of_variants'], 1)):
                                     trigger_restyling_process(
                                         timing_uuid=st.session_state['current_frame_uuid'], 
                                         model_uuid=st.session_state['model'], 
@@ -152,10 +151,10 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         update_inference_settings=True, 
                                         low_threshold=st.session_state['low_threshold'], 
                                         high_threshold=st.session_state['high_threshold'],
-                                        canny_image=st.session_state['canny_image'],
-                                        lora_model_1_url=st.session_state['lora_model_1_url'] if st.session_state['lora_model_1_url'] else None,
-                                        lora_model_2_url=st.session_state['lora_model_2_url'] if st.session_state['lora_model_2_url'] else None,
-                                        lora_model_3_url=st.session_state['lora_model_3_url'] if st.session_state['lora_model_3_url'] else None,
+                                        canny_image=st.session_state['canny_image'] if 'canny_image' in st.session_state else None,
+                                        lora_model_1_url=st.session_state['lora_model_1_url'] if ('lora_model_1_url' in st.session_state and st.session_state['lora_model_1_url']) else None,
+                                        lora_model_2_url=st.session_state['lora_model_2_url'] if ('lora_model_2_url' in st.session_state and st.session_state['lora_model_2_url']) else None,
+                                        lora_model_3_url=st.session_state['lora_model_3_url'] if ('lora_model_3_url' in st.session_state and st.session_state['lora_model_3_url']) else None,
                                     )
                                 st.experimental_rerun()
 

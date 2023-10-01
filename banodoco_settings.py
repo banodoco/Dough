@@ -140,8 +140,8 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
         "default_adapter_type" : "N",
         "guidance_type" : guidance_type,
         "default_animation_style" : animation_style,
-        "default_low_threshold" : 0,
-        "default_high_threshold" : 0
+        "default_low_threshold" : 50,
+        "default_high_threshold" : 100
     }
 
     project_setting = data_repo.create_project_setting(**project_setting_data)
