@@ -134,7 +134,7 @@ def drawing_element(timing_details,project_settings,project_uuid,stage=WorkflowS
                     # data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=st.session_state['canny_image'])
                     st.session_state['reset_canvas'] = True
                     st.session_state['canny_image'] = None
-                    st.experimental_rerun()
+                    st.rerun()
 
     with canvas2:
         realtime_update = True
@@ -168,7 +168,7 @@ def drawing_element(timing_details,project_settings,project_uuid,stage=WorkflowS
             st.session_state['reset_canvas'] = False
             canvas_result = st_canvas()
             time.sleep(0.1)
-            st.experimental_rerun()
+            st.rerun()
         if canvas_result is not None:            
             if canvas_result.json_data is not None and not canvas_result.json_data.get('objects'):
                 st.button("Save New Image", key="save_canvas", disabled=True, help="Draw something first")
@@ -251,4 +251,4 @@ def drawing_element(timing_details,project_settings,project_uuid,stage=WorkflowS
                         st.success("New Canny Image Saved")
                         st.session_state['reset_canvas'] = True
                         time.sleep(1)
-                        st.experimental_rerun()
+                        st.rerun()

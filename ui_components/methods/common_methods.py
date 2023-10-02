@@ -95,7 +95,7 @@ def style_cloning_element(timing_details):
             if st.button("Copy styling settings from this frame"):
                 clone_styling_settings(frame_index - 1, st.session_state['current_frame_uuid'])
                 reset_styling_settings(st.session_state['current_frame_uuid'])
-                st.experimental_rerun()
+                st.rerun()
 
         with copy2:
             display_image(timing_details[frame_index  - 1].uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
@@ -123,7 +123,7 @@ def jump_to_single_frame_view_button(display_number, timing_details):
         st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
         st.session_state['frame_styling_view_type'] = "Individual View"
         st.session_state['change_view_type'] = True
-        st.experimental_rerun()
+        st.rerun()
 
 
 def add_key_frame(selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image):
@@ -175,7 +175,7 @@ def add_key_frame(selected_image, inherit_styling_settings, how_long_after, whic
 
     st.session_state['page'] = CreativeProcessType.STYLING.value
     st.session_state['section_index'] = 0
-    st.experimental_rerun()
+    st.rerun()
 
 
 # TODO: work with source_frame_uuid, instead of source_frame_number
@@ -476,7 +476,7 @@ def reset_zoom_element():
     st.session_state['rotation_angle_input'] = 0
     st.session_state['x_shift'] = 0
     st.session_state['y_shift'] = 0
-    st.experimental_rerun()
+    st.rerun()
 
 
 
@@ -564,7 +564,7 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
                 data_repo.update_specific_timing(
                     st.session_state['current_frame_uuid'], source_image_id=img_file.uuid)
                 st.session_state['precision_cropping_inpainted_image_uuid'] = ""
-                st.experimental_rerun()
+                st.rerun()
 
         elif stage == WorkflowStageType.STYLED.value:
             if st.button("Save + Promote Image"):
@@ -575,7 +575,7 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
                 promote_image_variant(
                     st.session_state['current_frame_uuid'], number_of_image_variants - 1)
                 st.session_state['precision_cropping_inpainted_image_uuid'] = ""
-                st.experimental_rerun()
+                st.rerun()
 
 # returns a PIL image object
 def rotate_image(location, degree):
@@ -646,7 +646,7 @@ def change_frame_position_input(timing_uuid, src):
                                    value=timing.aux_frame_index + 1, step=1, key=f"new_position_{timing.aux_frame_index}_{src}")
     if st.button('Update Position',key=f"change_frame_position_{timing.aux_frame_index}_{src}"):  
         change_frame_position(timing_uuid, new_position - 1)
-        st.experimental_rerun()
+        st.rerun()
     # if new_position != timing.aux_frame_index:
       #  print(f"Changing frame position from {timing.aux_frame_index + 1} to {new_position}")
        # change_frame_position(timing_uuid, new_position - 1)
@@ -699,7 +699,7 @@ def move_frame_back_button(timing_uuid, orientation):
 
     if st.button(arrow, key=f"move_frame_back_{timing_uuid}", help="Move frame back"):
         move_frame(direction, timing_uuid)
-        st.experimental_rerun()
+        st.rerun()
 
 
 
@@ -718,13 +718,13 @@ def move_frame_forward_button(timing_uuid, orientation):
 
     if st.button(arrow, key=f"move_frame_forward_{timing_uuid}", help="Move frame forward"):
         move_frame(direction, timing_uuid)
-        st.experimental_rerun()
+        st.rerun()
 
 
 def delete_frame_button(timing_uuid):
     if st.button("🗑️", key=f"delete_frame_{timing_uuid}", help="Delete frame"):
         delete_frame(timing_uuid)
-        st.experimental_rerun()
+        st.rerun()
 
 def delete_frame(timing_uuid):
     data_repo = DataRepo()
@@ -783,7 +783,7 @@ def replace_image_widget(timing_uuid, stage):
                 data_repo.update_specific_timing(timing.uuid, source_image_id=selected_image.uuid)                                        
                 st.success("Replaced")
                 time.sleep(1)
-                st.experimental_rerun()
+                st.rerun()
                 
             else:
                 number_of_image_variants = add_image_variant(
@@ -792,7 +792,7 @@ def replace_image_widget(timing_uuid, stage):
                     timing.uuid, number_of_image_variants - 1)
                 st.success("Replaced")
                 time.sleep(1)
-                st.experimental_rerun()
+                st.rerun()
                                             
     elif replace_with == "Uploaded Frame":
         if stage == "source":
@@ -803,7 +803,7 @@ def replace_image_widget(timing_uuid, stage):
                     timing = data_repo.get_timing_from_uuid(timing.uuid)
                     if save_uploaded_image(uploaded_file, timing.project.uuid, timing.uuid, "source"):
                         time.sleep(1.5)
-                        st.experimental_rerun()
+                        st.rerun()
         else:
             replacement_frame = st.file_uploader("Upload a replacement frame here", type=[
                 "png", "jpeg"], accept_multiple_files=False, key=f"replacement_frame_upload_{stage}")
@@ -818,7 +818,7 @@ def replace_image_widget(timing_uuid, stage):
                             timing.uuid, number_of_image_variants - 1)
                         st.success("Replaced")
                         time.sleep(1)
-                        st.experimental_rerun()
+                        st.rerun()
 
 def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
     data_repo = DataRepo()

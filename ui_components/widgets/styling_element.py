@@ -75,7 +75,7 @@ def styling_element(timing_uuid, view_type="Single"):
     if stages.index(st.session_state['transformation_stage']) != st.session_state['index_of_which_stage_to_run_on']:
         st.session_state['index_of_which_stage_to_run_on'] = stages.index(
             st.session_state['transformation_stage'])
-        st.experimental_rerun()
+        st.rerun()
 
     if st.session_state['transformation_stage'] != ImageStage.NONE.value:
         model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.IMG2IMG.value], custom_trained=False)
@@ -107,7 +107,7 @@ def styling_element(timing_uuid, view_type="Single"):
         model_list) if getattr(obj, 'name') == selected_model_name), None)
     if st.session_state['index_of_default_model'] != selected_model_index:
         st.session_state['index_of_default_model'] = selected_model_index
-        st.experimental_rerun()
+        st.rerun()
 
     current_model_name = data_repo.get_ai_model_from_uuid(
         st.session_state['model']).name
@@ -129,7 +129,7 @@ def styling_element(timing_uuid, view_type="Single"):
         if st.session_state['index_of_controlnet_adapter_type'] != controlnet_adapter_types.index(st.session_state['adapter_type']):
             st.session_state['index_of_controlnet_adapter_type'] = controlnet_adapter_types.index(
                 st.session_state['adapter_type'])
-            st.experimental_rerun()
+            st.rerun()
         st.session_state['custom_models'] = []
 
     elif current_model_name == AIModelCategory.LORA.value:
@@ -303,7 +303,7 @@ def styling_element(timing_uuid, view_type="Single"):
         
         if st.session_state['prompt'] != st.session_state[f'prompt_value_{append_to_item_name}']:
             st.session_state[f'prompt_value_{append_to_item_name}'] = st.session_state['prompt']
-            st.experimental_rerun()
+            st.rerun()
 
         if view_type == "List":
             st.info(
@@ -358,7 +358,7 @@ def styling_element(timing_uuid, view_type="Single"):
         
         if st.session_state['negative_prompt'] != st.session_state['negative_prompt_value']:
             st.session_state['negative_prompt_value'] = st.session_state['negative_prompt']
-            st.experimental_rerun()
+            st.rerun()
         
         st.session_state['guidance_scale'] = st.number_input(
             f"Guidance scale", value=float(st.session_state['guidance_scale']))
@@ -435,5 +435,5 @@ def styling_element(timing_uuid, view_type="Single"):
                     for _ in range(0, batch_number_of_variants):
                         trigger_restyling_process(timing_details[i].uuid, st.session_state['model'], st.session_state['prompt'], st.session_state['strength'], st.session_state['negative_prompt'], st.session_state['guidance_scale'], st.session_state['seed'], st.session_state[
                                                   'num_inference_steps'], st.session_state['transformation_stage'], st.session_state["promote_new_generation"], st.session_state['custom_models'], st.session_state['adapter_type'], st.session_state["use_new_settings"], st.session_state['low_threshold'], st.session_state['high_threshold'])
-                st.experimental_rerun()
+                st.rerun()
 

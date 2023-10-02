@@ -63,12 +63,12 @@ def project_settings_page(project_uuid):
     #                 st.success(
     #                     "Version restored successfully! Just in case, the previous version has been saved as last_timings.csv")
     #                 time.sleep(2)
-    #                 st.experimental_rerun()
+    #                 st.rerun()
     #         with col4:
     #             if st.button("Delete this version", key=f"delete_version_{backup.name}"):
     #                 data_repo.delete_backup(backup.uuid)
     #                 st.success("backup deleted successfully!")
-    #                 st.experimental_rerun()
+    #                 st.rerun()
 
     with st.expander("Frame Size", expanded=True):
         st.write("Current Size = ",
@@ -80,4 +80,4 @@ def project_settings_page(project_uuid):
         if st.button("Save"):
             data_repo.update_project_setting(project_uuid, width=width)
             data_repo.update_project_setting(project_uuid, height=height)
-            st.experimental_rerun()
+            st.rerun()

@@ -16,7 +16,7 @@ def radio(label, options, index=0, key=None, help=None, on_change=None, disabled
 
     if options.index(selection) != st.session_state[key]:
         st.session_state[key] = options.index(selection)
-        st.experimental_rerun()
+        st.rerun()
         
     return selection
 
@@ -29,7 +29,7 @@ def selectbox(label, options, index=0, key=None, help=None, on_change=None, disa
 
     if options.index(selection) != st.session_state[key]:
         st.session_state[key] = options.index(selection)
-        st.experimental_rerun()
+        st.rerun()
         
     return selection
 
@@ -43,7 +43,7 @@ def number_input(label, min_value=None, max_value=None, step=None, format=None, 
 
     if selection != st.session_state[key]:
         st.session_state[key] = selection
-        st.experimental_rerun()
+        st.rerun()
 
     return selection
 
@@ -56,7 +56,7 @@ def slider(label, min_value=None, max_value=None, value=None, step=None, format=
 
     if selection != st.session_state[key]:
         st.session_state[key] = selection
-        st.experimental_rerun()
+        st.rerun()
 
     return selection
 
@@ -74,7 +74,7 @@ def select_slider(label, options=(), value=None, format_func=None, key=None, hel
         if getattr(project_settings, key, default_value):
             data_repo = DataRepo()
             data_repo.update_project_setting(project_settings.project.uuid, key=value)
-        st.experimental_rerun()
+        st.rerun()
 
     return selection
 
@@ -88,7 +88,7 @@ def toggle(label, value=True,key=None, help=None, on_change=None, disabled=False
 
     if selection != st.session_state[key]:
         st.session_state[key] = selection
-        st.experimental_rerun()
+        st.rerun()
 
     return selection
 
@@ -102,6 +102,6 @@ def menu(menu_title,options, icons=None, menu_icon=None, default_index=0, key=No
 
     if options.index(selection) != st.session_state[key]:
         st.session_state[key] = options.index(selection)
-        st.experimental_rerun()
+        st.rerun()
         
     return selection

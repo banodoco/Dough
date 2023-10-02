@@ -39,7 +39,7 @@ def prompt_finder_element(project_uuid):
         st.success("Prompt added successfully!")
         time.sleep(0.3)
         uploaded_file = ""
-        st.experimental_rerun()
+        st.rerun()
     
     if 'last_generated_prompt' in st.session_state and st.session_state['last_generated_prompt']:
         st.write("Generated prompt - ", st.session_state['last_generated_prompt'])

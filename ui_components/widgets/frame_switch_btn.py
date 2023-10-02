@@ -22,7 +22,7 @@ def back_and_forward_buttons():
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] - 2
                 st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
                 st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
-                st.experimental_rerun()
+                st.rerun()
     with smallbutton1:
         # if it's not the first image
         if display_idx != 1:
@@ -30,7 +30,7 @@ def back_and_forward_buttons():
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] - 1
                 st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
                 st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
-                st.experimental_rerun()
+                st.rerun()
 
     with smallbutton2:
         st.button(f"{display_idx} 📍", disabled=True)
@@ -41,11 +41,11 @@ def back_and_forward_buttons():
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] + 1
                 st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
                 st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
-                st.experimental_rerun()
+                st.rerun()
     with smallbutton4:
         if display_idx <= len(timing_details)-2:
             if st.button(f"{display_idx+2} ⏭️", key=f"Next Next Image for {display_idx}"):
                 st.session_state['current_frame_index'] = st.session_state['current_frame_index'] + 2
                 st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
                 st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
-                st.experimental_rerun()
+                st.rerun()

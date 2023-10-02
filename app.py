@@ -11,16 +11,20 @@ from utils.constants import AUTH_TOKEN, LOGGED_USER
 from utils.local_storage.url_storage import delete_url_param, get_url_param, set_url_param
 from utils.third_party_auth.google.google_auth import get_google_auth_url
 
-# loading the django app
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
-# Initialize Django
-django.setup()
+
+if 'django_init' in st.session_state and st.session_state['django_init']:
+    print("************ django initialized ************")
+    # loading the django app
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
+    # Initialize Django
+    django.setup()
+    st.session_state['django_init'] = True
 
 from banodoco_settings import project_init
 from ui_components.models import InternalAppSettingObject
 from utils.data_repo.data_repo import DataRepo
 
-
+ 
 
 if OFFLINE_MODE:
     SENTRY_DSN = os.getenv('SENTRY_DSN', '')
@@ -46,7 +50,7 @@ def main():
         and SERVER != ServerType.DEVELOPMENT.value:
         st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
         st.subheader("Login with Google to proceed")
-
+ 
         auth_url = get_google_auth_url()
         st.markdown(auth_url, unsafe_allow_html=True)
         
@@ -62,7 +66,7 @@ def main():
                 st.session_state[LOGGED_USER] = user.to_json() if user else None
                 set_url_param(AUTH_TOKEN, str(token))
                 # st.experimental_set_query_params(test='testing')
-                st.experimental_rerun()
+                st.rerun()
             else:
                 delete_url_param(AUTH_TOKEN)
                 st.error("please login again")

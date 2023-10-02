@@ -31,7 +31,7 @@ def frame_selector_widget():
             st.session_state['frame_styling_view_type_index'] = 0
             st.session_state['frame_styling_view_type'] = "Individual View"
                                         
-            st.experimental_rerun()       
+            st.rerun()       
 
     with time2:
         single_frame_time_selector(st.session_state['current_frame_uuid'], 'navbar', shift_frames=False)
@@ -55,4 +55,4 @@ def frame_selector_widget():
     
     if st.button("Delete key frame"):
         delete_frame(st.session_state['current_frame_uuid'])
-        st.experimental_rerun()
+        st.rerun()

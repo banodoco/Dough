@@ -76,7 +76,7 @@ def animation_style_element(timing_uuid, project_uuid):
                 with bottom3:
                     if st.button(f"Delete Prompt {i+1}"):
                         del st.session_state['travel_list'][i]
-                        st.experimental_rerun()
+                        st.rerun()
                 # Update the item if it has been edited
                 if new_prompt != item['prompt'] or new_frame_count != item['frame_count']:
                     st.session_state['travel_list'][i] = {'prompt': new_prompt, 'frame_count': new_frame_count}
@@ -96,5 +96,5 @@ def animation_style_element(timing_uuid, project_uuid):
             settings,
             variant_count
         )
-        st.experimental_rerun()
+        st.rerun()
     

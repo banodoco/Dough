@@ -113,4 +113,4 @@ def new_project_page():
             st.session_state['app_settings'] = 0 
             st.success("Project created successfully!")
             time.sleep(1)     
-            st.experimental_rerun()
+            st.rerun()

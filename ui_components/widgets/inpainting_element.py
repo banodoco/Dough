@@ -75,7 +75,7 @@ def inpainting_element(timing_uuid):
                     if st.session_state['index_of_type_of_mask_selection'] != mask_selection_options.index(type_of_mask_selection):
                         st.session_state['index_of_type_of_mask_selection'] = mask_selection_options.index(
                             type_of_mask_selection)
-                        st.experimental_rerun()
+                        st.rerun()
 
                     if "which_layer" not in st.session_state:
                         st.session_state['which_layer'] = "Background"
@@ -159,7 +159,7 @@ def inpainting_element(timing_uuid):
                             img2=image_file.location, starting_position=5, label1="Original", label2="Edited")
                         if st.button("Reset Canvas"):
                             st.session_state['edited_image'] = ""
-                            st.experimental_rerun()
+                            st.rerun()
 
                 elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection" or type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
                     with main_col_1:
@@ -189,7 +189,7 @@ def inpainting_element(timing_uuid):
                                 img2=image_file.location, starting_position=5, label1="Original", label2="Edited")
                             if st.button("Reset Canvas"):
                                 st.session_state['edited_image'] = ""
-                                st.experimental_rerun()
+                                st.rerun()
 
                 with main_col_1:
 
@@ -205,7 +205,7 @@ def inpainting_element(timing_uuid):
                     if st.session_state["index_of_type_of_mask_replacement"] != types_of_mask_replacement.index(st.session_state["type_of_mask_replacement"]):
                         st.session_state["index_of_type_of_mask_replacement"] = types_of_mask_replacement.index(
                             st.session_state["type_of_mask_replacement"])
-                        st.experimental_rerun()
+                        st.rerun()
 
                     if st.session_state["type_of_mask_replacement"] == "Replace With Image":
                         prompt = ""
@@ -223,7 +223,7 @@ def inpainting_element(timing_uuid):
                         if st.session_state['index_of_source_of_image'] != sources_of_images.index(source_of_image):
                             st.session_state['index_of_source_of_image'] = sources_of_images.index(
                                 source_of_image)
-                            st.experimental_rerun()
+                            st.rerun()
 
                         if source_of_image == "Uploaded":
                             btn1, btn2 = st.columns([1, 1])
@@ -239,7 +239,7 @@ def inpainting_element(timing_uuid):
                                             background_list.append(
                                                 uploaded_file.name)
                                             time.sleep(1.5)
-                                            st.experimental_rerun()
+                                            st.rerun()
                             with btn2:
                                 background_selection = st.selectbox(
                                     "Range background", background_list)
@@ -284,7 +284,7 @@ def inpainting_element(timing_uuid):
                                 edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
                                                                   background_image, editing_image, "", "", width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
                                 st.session_state['edited_image'] = edited_image.uuid
-                            st.experimental_rerun()
+                            st.rerun()
 
                     with edit2:
                         if st.session_state['edited_image'] != "":
@@ -298,7 +298,7 @@ def inpainting_element(timing_uuid):
                                     promote_image_variant(
                                         st.session_state['current_frame_uuid'], number_of_image_variants - 1)
                                 st.session_state['edited_image'] = ""
-                                st.experimental_rerun()
+                                st.rerun()
                         else:
                             if st.button("Run Edit & Promote"):
                                 if st.session_state["type_of_mask_replacement"] == "Inpainting":
@@ -321,4 +321,4 @@ def inpainting_element(timing_uuid):
 
                                 st.session_state['edited_image'] = ""
                                 st.success("Image promoted!")
-                                st.experimental_rerun()
+                                st.rerun()

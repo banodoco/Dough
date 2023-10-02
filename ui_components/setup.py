@@ -91,7 +91,7 @@ def setup_app_ui():
             st.session_state["index_of_project_name"] = next((i for i, p in enumerate(
                 project_list) if p.uuid == st.session_state["project_uuid"]), None)
             data_repo.update_app_setting(previous_project=st.session_state["project_uuid"])
-            st.experimental_rerun()
+            st.rerun()
 
         if st.session_state["project_uuid"] == "":
             st.info(

@@ -46,7 +46,7 @@ def display_image(timing_uuid, stage=None, clickable=False):
                     # st.session_state['frame_styling_view_type_index'] = 0
                     st.session_state['frame_styling_view_type'] = "Individual View"
                     st.session_state['counter'] += 1
-                    st.experimental_rerun()
+                    st.rerun()
 
             elif clickable is False:
                 st.image(image, use_column_width=True)

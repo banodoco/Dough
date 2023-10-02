@@ -79,7 +79,7 @@ class APIRepo:
 
     def logout(self):
         delete_url_param(AUTH_TOKEN)
-        st.experimental_rerun()
+        st.rerun()
 
     ################### base http methods
     def _get_headers(self, content_type="application/json"):

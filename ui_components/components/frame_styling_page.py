@@ -156,7 +156,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         lora_model_2_url=st.session_state['lora_model_2_url'] if ('lora_model_2_url' in st.session_state and st.session_state['lora_model_2_url']) else None,
                                         lora_model_3_url=st.session_state['lora_model_3_url'] if ('lora_model_3_url' in st.session_state and st.session_state['lora_model_3_url']) else None,
                                     )
-                                st.experimental_rerun()
+                                st.rerun()
 
                         st.markdown("***")
 
@@ -192,7 +192,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 if st.button(f"Add key frame",type="primary",use_container_width=True):
                                 
                     add_key_frame(selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image)
-                    st.experimental_rerun()
+                    st.rerun()
                         
     elif st.session_state['frame_styling_view_type'] == "List View":
         

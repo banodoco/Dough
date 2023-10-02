@@ -23,7 +23,7 @@ def current_individual_clip_element(timing_uuid):
                 st.error("Low Resolution")
                 if st.button("Generate Full Resolution Clip", key=f"generate_full_resolution_video_{idx}"):                                    
                     create_single_interpolated_clip(timing.uuid, 'full')
-                    st.experimental_rerun()
+                    st.rerun()
             else:
                 st.success("Full Resolution")
     else:
@@ -49,11 +49,11 @@ def current_individual_clip_element(timing_uuid):
         with gen1:
             if st.button("Generate Low-Resolution Clip", key=f"generate_preview_video_{idx}"):
                 create_single_interpolated_clip(timing.uuid, 'preview')
-                st.experimental_rerun()
+                st.rerun()
         with gen2:
             if st.button("Generate Full Resolution Clip", key=f"generate_full_resolution_video_{idx}"):
                 create_single_interpolated_clip(timing.uuid, 'full')
-                st.experimental_rerun()
+                st.rerun()
 
 
 def update_animation_style_element(timing_uuid, horizontal=True):
@@ -74,7 +74,7 @@ def update_animation_style_element(timing_uuid, horizontal=True):
     if st.session_state[f"animation_style_{idx}"] != timing.animation_style:
         st.session_state[f"animation_style_index_{idx}"] = animation_styles.index(st.session_state[f"animation_style_{idx}"])
         timing.animation_style = st.session_state[f"animation_style_{idx}"]
-        st.experimental_rerun()
+        st.rerun()
 
 
 def current_preview_video_element(timing_uuid):
@@ -114,4 +114,4 @@ def current_preview_video_element(timing_uuid):
                 timing.uuid, 1.0)
             data_repo.update_specific_timing(
                 timing.uuid, preview_video_id=preview_video.uuid)
-            st.experimental_rerun()
+            st.rerun()

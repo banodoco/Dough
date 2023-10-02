@@ -79,4 +79,4 @@ def variant_comparison_element(timing_uuid, stage=CreativeProcessType.MOTION.val
                 else:
                     promote_image_variant(timing.uuid, which_variant - 1)
                 time.sleep(0.5)
-                st.experimental_rerun()
+                st.rerun()

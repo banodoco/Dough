@@ -33,7 +33,7 @@ def update_frame_duration(timing_uuid, frame_duration, next_timing, shift_frames
     # updating clip_duration
     update_clip_duration_of_all_timing_frames(timing.project.uuid)
 
-    st.experimental_rerun()
+    st.rerun()
 
 def update_frame_time(timing_uuid, frame_time, shift_frames):
     data_repo = DataRepo()
@@ -50,7 +50,7 @@ def update_frame_time(timing_uuid, frame_time, shift_frames):
     # updating clip_duration
     update_clip_duration_of_all_timing_frames(timing.project.uuid)
 
-    st.experimental_rerun()
+    st.rerun()
 
 
 def single_frame_time_duration_setter(timing_uuid, src, shift_frames=True):

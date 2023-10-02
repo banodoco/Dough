@@ -19,7 +19,7 @@ def app_settings_page():
             if st.button("Save Settings"):
                 data_repo.update_app_setting(replicate_username=replicate_username)
                 data_repo.update_app_setting(replicate_key=replicate_key)
-                st.experimental_rerun()
+                st.rerun()
 
     if SERVER != ServerType.DEVELOPMENT.value:
         with st.expander("Purchase Credits", expanded=True):
@@ -33,7 +33,7 @@ def app_settings_page():
                 credits = st.number_input("Credits (1 credit = $1)", value = st.session_state['input_credits'], step = 10)
                 if credits != st.session_state['input_credits']:
                     st.session_state['input_credits'] = credits
-                    st.experimental_rerun()
+                    st.rerun()
 
                 if st.button("Generate payment link"):
                     payment_link = data_repo.generate_payment_link(credits)

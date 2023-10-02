@@ -16,7 +16,7 @@ def attach_audio_element(project_uuid, expanded):
         if st.button("Upload and attach new audio"):
             if uploaded_file:
                 save_audio_file(uploaded_file, project_uuid)
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.warning('No file selected')
 
