@@ -153,7 +153,7 @@ def prompt_model_dreambooth(query_obj: MLQueryObject):
     negative_prompt = timing.negative_prompt
     guidance_scale = timing.guidance_scale
     seed = timing.seed
-    num_inference_steps = timing.num_inteference_steps
+    num_inference_steps = timing.num_inference_steps
 
     model_id = dreambooth_model.replicate_url
 

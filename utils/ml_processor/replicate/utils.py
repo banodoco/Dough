@@ -52,7 +52,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             "height" : query_obj.height,
             "guidance_scale" : query_obj.guidance_scale,
             "seed" : query_obj.seed,
-            "num_inference_steps" : query_obj.num_inteference_steps
+            "num_inference_steps" : query_obj.num_inference_steps
         }
 
         if input_image:
@@ -225,7 +225,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             'height': query_obj.height,
             'num_outputs': 1,
             'image': input_image,
-            'num_inference_steps': query_obj.num_inteference_steps,
+            'num_inference_steps': query_obj.num_inference_steps,
             'guidance_scale': query_obj.guidance_scale,
             'prompt_strength': query_obj.strength,
             'scheduler': "DPMSolverMultistep",

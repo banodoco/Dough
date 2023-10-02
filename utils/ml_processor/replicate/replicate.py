@@ -55,6 +55,7 @@ class ReplicateProcessor(MachineLearningProcessor):
     # it converts the standardized query_obj into params required by replicate
     def predict_model_output_standardized(self, model: ReplicateModel, query_obj: MLQueryObject):
         params = get_model_params_from_query_obj(model, query_obj)
+        params['query_dict'] = query_obj.to_json()
         return self.predict_model_output(model, **params)
     
     @check_user_credits

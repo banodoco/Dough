@@ -152,3 +152,18 @@ def reset_project_state():
 
     # reset cache
     StCache.clear_entire_cache()
+
+
+def reset_styling_settings(timing_uuid):
+    keys_to_delete = [
+        f"index_of_which_stage_to_run_on_{timing_uuid}",
+        "index_of_default_model",
+        "index_of_controlnet_adapter_type",
+        "index_of_dreambooth_model",
+        f'prompt_value_{timing_uuid}',
+        "negative_prompt_value",
+    ]
+
+    for k in keys_to_delete:
+        if k in st.session_state:
+            del st.session_state[k]

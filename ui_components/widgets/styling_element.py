@@ -30,7 +30,7 @@ def styling_element(timing_uuid, view_type="Single"):
         st.session_state['index_of_which_stage_to_run_on'] = 0
 
     if view_type == "Single":
-        append_to_item_name = f"{st.session_state['current_frame_index']}"
+        append_to_item_name = f"{st.session_state['current_frame_uuid']}"
     elif view_type == "List":
         append_to_item_name = "bulk"
         st.markdown("## Batch queries")
@@ -77,38 +77,6 @@ def styling_element(timing_uuid, view_type="Single"):
             st.session_state['transformation_stage'])
         st.experimental_rerun()
 
-    # NOTE: code not is use
-    # custom_pipelines = ["None", "Mystique"]
-    # if 'index_of_last_custom_pipeline' not in st.session_state:
-    #     st.session_state['index_of_last_custom_pipeline'] = 0
-    # st.session_state['custom_pipeline'] = st.selectbox(
-    #     f"Custom Pipeline:", custom_pipelines, index=st.session_state['index_of_last_custom_pipeline'])
-    # if custom_pipelines.index(st.session_state['custom_pipeline']) != st.session_state['index_of_last_custom_pipeline']:
-    #     st.session_state['index_of_last_custom_pipeline'] = custom_pipelines.index(
-    #         st.session_state['custom_pipeline'])
-    #     st.experimental_rerun()
-    
-    # if st.session_state['custom_pipeline'] == "Mystique":
-    #     if st.session_state['index_of_default_model'] > 1:
-    #         st.session_state['index_of_default_model'] = 0
-    #         st.experimental_rerun()
-    #     with st.expander("Mystique is a custom pipeline that uses a multiple models to generate a consistent character and style transformation."):
-    #         st.markdown("## How to use the Mystique pipeline")
-    #         st.markdown(
-    #             "1. Create a fine-tined model in the Custom Model section of the app - we recommend Dreambooth for character transformations.")
-    #         st.markdown(
-    #             "2. It's best to include a detailed prompt. We recommend taking an example input image and running it through the Prompt Finder")
-    #         st.markdown("3. Use [expression], [location], [mouth], and [looking] tags to vary the expression and location of the character dynamically if that changes throughout the clip. Varying this in the prompt will make the character look more natural - especially useful if the character is speaking.")
-    #         st.markdown("4. In our experience, the best strength for coherent character transformations is 0.25-0.3 - any more than this and details like eye position change.")
-    #     models = ["LoRA", "Dreambooth"]
-    #     st.session_state['model'] = st.selectbox(
-    #         f"Which type of model is trained on your character?", models, index=st.session_state['index_of_default_model'])
-    #     if st.session_state['index_of_default_model'] != models.index(st.session_state['model']):
-    #         st.session_state['index_of_default_model'] = models.index(
-    #             st.session_state['model'])
-    #         st.experimental_rerun()
-    # else:
-
     if st.session_state['transformation_stage'] != ImageStage.NONE.value:
         model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.IMG2IMG.value], custom_trained=False)
     else:
@@ -117,10 +85,10 @@ def styling_element(timing_uuid, view_type="Single"):
     model_name_list = [m.name for m in model_list]
 
     if not ('index_of_default_model' in st.session_state and st.session_state['index_of_default_model']):
-        if project_settings.default_model:
-            st.session_state['model'] = project_settings.default_model.uuid
+        if timing.model:
+            st.session_state['model'] = timing.model.uuid
             st.session_state['index_of_default_model'] = next((i for i, obj in enumerate(
-                model_list) if getattr(obj, 'uuid') == project_settings.default_model.uuid), 0)
+                model_list) if getattr(obj, 'uuid') == timing.model.uuid), 0)
             # st.write(
             #     f"Index of last model: {st.session_state['index_of_default_model']}")
         else:
@@ -139,7 +107,7 @@ def styling_element(timing_uuid, view_type="Single"):
         model_list) if getattr(obj, 'name') == selected_model_name), None)
     if st.session_state['index_of_default_model'] != selected_model_index:
         st.session_state['index_of_default_model'] = selected_model_index
-        # st.experimental_rerun()
+        st.experimental_rerun()
 
     current_model_name = data_repo.get_ai_model_from_uuid(
         st.session_state['model']).name
@@ -149,7 +117,12 @@ def styling_element(timing_uuid, view_type="Single"):
         controlnet_adapter_types = [
             "scribble", "normal", "canny", "hed", "seg", "hough", "depth2img", "pose"]
         if 'index_of_controlnet_adapter_type' not in st.session_state:
-            st.session_state['index_of_controlnet_adapter_type'] = 0
+            if timing.adapter_type:
+                st.session_state['index_of_controlnet_adapter_type'] = controlnet_adapter_types.index(
+                    timing.adapter_type)
+            else:
+                st.session_state['index_of_controlnet_adapter_type'] = 0
+
         st.session_state['adapter_type'] = st.selectbox(
             f"Adapter Type", controlnet_adapter_types, index=st.session_state['index_of_controlnet_adapter_type'])
 
@@ -313,22 +286,25 @@ def styling_element(timing_uuid, view_type="Single"):
 
     else:
         if view_type == "List":
-            if project_settings.default_prompt != "":
-                st.session_state[f'prompt_value_{append_to_item_name}'] = project_settings.default_prompt
-            else:
-                st.session_state[f'prompt_value_{append_to_item_name}'] = ""
-
-        elif view_type == "Single":
             if timing.prompt != "":
                 st.session_state[f'prompt_value_{append_to_item_name}'] = timing.prompt
             else:
                 st.session_state[f'prompt_value_{append_to_item_name}'] = ""
 
+        elif view_type == "Single":
+            if  not (f'prompt_value_{append_to_item_name}' in st.session_state and st.session_state[f'prompt_value_{append_to_item_name}']):
+                if timing.prompt != "":
+                    st.session_state[f'prompt_value_{append_to_item_name}'] = timing.prompt
+                else:
+                    st.session_state[f'prompt_value_{append_to_item_name}'] = ""
+
         st.session_state['prompt'] = st.text_area(
             f"Prompt", label_visibility="visible", value=st.session_state[f'prompt_value_{append_to_item_name}'], height=150)
-        if st.session_state['prompt'] != st.session_state['prompt_value']:
-            st.session_state['prompt_value'] = st.session_state['prompt']
+        
+        if st.session_state['prompt'] != st.session_state[f'prompt_value_{append_to_item_name}']:
+            st.session_state[f'prompt_value_{append_to_item_name}'] = st.session_state['prompt']
             st.experimental_rerun()
+
         if view_type == "List":
             st.info(
                 "You can include the following tags in the prompt to vary the prompt dynamically: [expression], [location], [mouth], and [looking]")
@@ -374,6 +350,9 @@ def styling_element(timing_uuid, view_type="Single"):
             else:
                 st.session_state['guidance_scale'] = 7.5
 
+        if not ('negative_prompt_value' in st.session_state and st.session_state['negative_prompt_value']) and timing.negative_prompt:
+            st.session_state['negative_prompt_value'] = timing.negative_prompt
+
         st.session_state['negative_prompt'] = st.text_area(
             f"Negative prompt", value=st.session_state['negative_prompt_value'], label_visibility="visible")
         
@@ -405,8 +384,8 @@ def styling_element(timing_uuid, view_type="Single"):
             else:
                 st.session_state['num_inference_steps'] = 50
         elif view_type == "Single":
-            if timing.num_inteference_steps:
-                st.session_state['num_inference_steps'] = timing.num_inteference_steps
+            if timing.num_inference_steps:
+                st.session_state['num_inference_steps'] = timing.num_inference_steps
             else:
                 st.session_state['num_inference_steps'] = 50
         st.session_state['num_inference_steps'] = st.number_input(
