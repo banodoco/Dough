@@ -6,7 +6,7 @@ from utils.enum import ExtendedEnum
 logger = AppLogger()
 
 
-# NOTE: caching only timing_details, project settings and app settings. invalidating cache everytime a related data is updated
+# NOTE: caching only timing_details, project settings, models and app settings. invalidating cache everytime a related data is updated
 def cache_data(cls):
     def _cache_create_or_update_file(self, *args, **kwargs):
         original_func = getattr(cls, '_original_create_or_update_file')
@@ -74,13 +74,44 @@ def cache_data(cls):
     
     setattr(cls, '_original_delete_project_from_uuid', cls.delete_project_from_uuid)
     setattr(cls, "delete_project_from_uuid", _cache_delete_project_from_uuid)
-  
+    
+    def _cache_get_ai_model_from_uuid(self, *args, **kwargs):
+        model_list = StCache.get_all(CacheKey.AI_MODEL.value)
+        if model_list and len(model_list) and len(args) > 0:
+            for model in model_list:
+                if model.uuid == args[0]:
+                    return model
+        
+        original_func = getattr(cls, '_original_get_ai_model_from_uuid')
+        model = original_func(self, *args, **kwargs)
+        StCache.add(model, CacheKey.AI_MODEL.value)
+
+        return model
+
+    setattr(cls, '_original_get_ai_model_from_uuid', cls.get_ai_model_from_uuid)
+    setattr(cls, "get_ai_model_from_uuid", _cache_get_ai_model_from_uuid)
+
+    def _cache_get_ai_model_from_name(self, *args, **kwargs):
+        model_list = StCache.get_all(CacheKey.AI_MODEL.value)
+        if model_list and len(model_list) and len(args) > 0:
+            for model in model_list:
+                if model.name == args[0]:
+                    return model
+        
+        original_func = getattr(cls, '_original_get_ai_model_from_name')
+        model = original_func(self, *args, **kwargs)
+        StCache.add(model, CacheKey.AI_MODEL.value)
+
+        return model
+
+    setattr(cls, '_original_get_ai_model_from_name', cls.get_ai_model_from_name)
+    setattr(cls, "get_ai_model_from_name", _cache_get_ai_model_from_name)
     
     def _cache_create_ai_model(self, *args, **kwargs):
         original_func = getattr(cls, '_original_create_ai_model')
         ai_model = original_func(self, *args, **kwargs)
         if ai_model:
-            StCache.delete_all(CacheKey.PROJECT_SETTING.value)
+            StCache.delete_all(CacheKey.AI_MODEL.value)
         
         return ai_model
     
@@ -91,7 +122,7 @@ def cache_data(cls):
         original_func = getattr(cls, '_original_update_ai_model')
         ai_model = original_func(self, *args, **kwargs)
         if ai_model:
-            StCache.delete_all(CacheKey.PROJECT_SETTING.value)
+            StCache.delete_all(CacheKey.AI_MODEL.value)
         
         return ai_model
     
@@ -103,13 +134,14 @@ def cache_data(cls):
         status = original_func(self, *args, **kwargs)
         
         if status:
-            StCache.delete_all(CacheKey.PROJECT_SETTING.value)
+            StCache.delete_all(CacheKey.AI_MODEL.value)
     
     setattr(cls, '_original_delete_ai_model_from_uuid', cls.delete_ai_model_from_uuid)
     setattr(cls, "delete_ai_model_from_uuid", _cache_delete_ai_model_from_uuid)
 
     
     def _cache_get_timing_list_from_project(self, *args, **kwargs):
+        # checking if it's already present in the cache
         timing_list = StCache.get_all(CacheKey.TIMING_DETAILS.value)
         if timing_list and len(timing_list) and len(args) > 0:
             project_specific_list = []
@@ -117,7 +149,9 @@ def cache_data(cls):
                 if timing.project.uuid == args[0]:
                     project_specific_list.append(timing)
 
-            return project_specific_list
+            # if there are any timings for the project, return them
+            if len(project_specific_list):
+                return project_specific_list
         
         original_func = getattr(cls, '_original_get_timing_list_from_project')
         timing_list = original_func(self, *args, **kwargs)
@@ -341,5 +375,5 @@ def cache_data(cls):
     
     setattr(cls, '_original_bulk_update_project_setting', cls.bulk_update_project_setting)
     setattr(cls, "bulk_update_project_setting", _cache_bulk_update_project_setting)
-    
+
     return cls
