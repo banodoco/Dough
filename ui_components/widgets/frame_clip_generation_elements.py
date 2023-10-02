@@ -110,8 +110,7 @@ def current_preview_video_element(timing_uuid):
         st.info("This allows you to preview the video with the surrounding clips attached.")
         
         if st.button("Generate New Preview Video", key=f"generate_preview_{idx}"):
-            preview_video = create_full_preview_video(
-                timing.uuid, 1.0)
+            preview_video = create_full_preview_video(timing.uuid, 1.0)
             data_repo.update_specific_timing(
                 timing.uuid, preview_video_id=preview_video.uuid)
             st.rerun()

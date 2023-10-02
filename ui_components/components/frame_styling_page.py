@@ -78,7 +78,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             idx = st.session_state['current_frame_index'] - 1
                                     
-            st.session_state['show_comparison'] = st_memory.radio("Show:", options=["Other Variants", "Preview Video in Context"], horizontal=True, project_settings=project_settings, key="show_comparison_radio_motion")
+            st.session_state['show_comparison'] = st_memory.radio("Show:", options=["Other Variants", "Preview Video in Context"], horizontal=True, key="show_comparison_radio_motion")
 
             if st.session_state['show_comparison'] == "Other Variants":
                 variant_comparison_element(st.session_state['current_frame_uuid'])

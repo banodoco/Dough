@@ -84,7 +84,8 @@ def cache_data(cls):
         
         original_func = getattr(cls, '_original_get_ai_model_from_uuid')
         model = original_func(self, *args, **kwargs)
-        StCache.add(model, CacheKey.AI_MODEL.value)
+        if model:
+            StCache.add(model, CacheKey.AI_MODEL.value)
 
         return model
 
@@ -100,7 +101,8 @@ def cache_data(cls):
         
         original_func = getattr(cls, '_original_get_ai_model_from_name')
         model = original_func(self, *args, **kwargs)
-        StCache.add(model, CacheKey.AI_MODEL.value)
+        if model:
+            StCache.add(model, CacheKey.AI_MODEL.value)
 
         return model
 

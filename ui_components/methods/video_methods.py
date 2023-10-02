@@ -20,8 +20,8 @@ from utils.media_processor.interpolator import VideoInterpolator
 from utils.media_processor.video import VideoProcessor
 
 
-# returns the timed_clip, which is the interpolated video with correct length
-# interpolated_clip_uuid signals which clip to promote to timed clip
+# NOTE: interpolated_clip_uuid signals which clip to promote to timed clip (this is the main variant)
+# this function returns the preview_clip, which is the interpolated video with correct length
 def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None):
     from ui_components.methods.file_methods import generate_temp_file, save_or_host_file_bytes
     from ui_components.methods.common_methods import get_audio_bytes_for_slice
@@ -50,18 +50,26 @@ def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None)
         data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video_fie.uuid)
 
     if not timing.timed_clip:
-        timing = data_repo.get_timing_from_uuid(timing_uuid)
-        
         interpolated_clip = data_repo.get_file_from_uuid(interpolated_clip_uuid) if interpolated_clip_uuid \
                                 else timing.interpolated_clip_list[0]
         
-        temp_video_file = None
-        if interpolated_clip.hosted_url:
-            temp_video_file = generate_temp_file(interpolated_clip.hosted_url, '.mp4')
+        output_video = update_speed_of_video_clip(interpolated_clip, timing_uuid)
+        data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
 
-        file_path = temp_video_file.name if temp_video_file else interpolated_clip.local_path
+    if not timing.preview:
+        timing = data_repo.get_timing_from_uuid(timing_uuid)
+        timed_clip = timing.timed_clip
+        
+        temp_video_file = None
+        if timed_clip.hosted_url and is_s3_image_url(timed_clip.hosted_url):
+            temp_video_file = generate_temp_file(timed_clip.hosted_url, '.mp4')
+
+        file_path = temp_video_file.name if temp_video_file else timed_clip.local_path
         clip = VideoFileClip(file_path)
-            
+        
+        if temp_video_file:
+            os.remove(temp_video_file.name)
+
         number_text = TextClip(str(timing.aux_frame_index),
                                fontsize=24, color='white')
         number_background = TextClip(" ", fontsize=24, color='black', bg_color='black', size=(
@@ -72,36 +80,38 @@ def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None)
             (number_background.w - number_text.w - 5, number_background.h - number_text.h - 5)).set_duration(clip.duration)
         clip_with_number = CompositeVideoClip([clip, number_background, number_text])
 
-        clip_with_number.write_videofile(filename=file_path, codec='libx264', audio_codec='aac')
+        temp_output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
+        clip_with_number.write_videofile(filename=temp_output_file.name, codec='libx264', audio_codec='aac')
 
-        if temp_video_file:
+        if temp_output_file:
             video_bytes = None
             with open(file_path, 'rb') as f:
                 video_bytes = f.read()
 
-            hosted_url = save_or_host_file_bytes(video_bytes, interpolated_clip.local_path)
-            if hosted_url:
-                data_repo.update_file(interpolated_clip.uuid, hosted_url=hosted_url)
+            preview_video = convert_bytes_to_file(
+                file_location_to_save="videos/" + str(timing.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".png",
+                mime_type="video/mp4",
+                file_bytes=video_bytes,
+                project_uuid=timing.project.uuid,
+                inference_log_id=None
+            )
 
-            os.remove(temp_video_file.name)
+            data_repo.update_specific_timing(timing_uuid, preview_id=preview_video.uuid)
+            os.remove(temp_output_file.name)
 
-        # timed_clip has the correct length (equal to the time difference between the current and the next frame)
+        # preview has the correct length (equal to the time difference between the current and the next frame)
         # which the interpolated video may or maynot have
-        clip_duration = calculate_desired_duration_of_individual_clip(timing_uuid)
-        data_repo.update_specific_timing(timing_uuid, clip_duration=clip_duration)
-
-        timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-        output_video = update_speed_of_video_clip(interpolated_clip, timing_uuid)
-        data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
+        # clip_duration = calculate_desired_duration_of_individual_clip(timing_uuid)
+        # data_repo.update_specific_timing(timing_uuid, clip_duration=clip_duration)
 
     # adding audio if the audio file is present
     if project_details.audio:
         audio_bytes = get_audio_bytes_for_slice(timing_uuid)
-        add_audio_to_video_slice(timing.timed_clip, audio_bytes)
+        add_audio_to_video_slice(timing.preview, audio_bytes)
 
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
-    return timing.timed_clip
+    return timing.preview
 
 # this includes all the animation styles [direct morphing, interpolation, image to video]
 def create_single_interpolated_clip(timing_uuid, quality, settings={}, variant_count=1):

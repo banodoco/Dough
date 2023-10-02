@@ -1,7 +1,7 @@
 import time
 import streamlit as st
 from typing import List
-from shared.constants import AnimationToolType
+from shared.constants import AnimationStyleType, AnimationToolType
 from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.motion_module import AnimateDiffCheckpoint
@@ -14,7 +14,7 @@ def animation_style_element(timing_uuid, project_uuid):
     current_animation_style = timing.animation_style
     variant_count = 1
 
-    if current_animation_style == "Interpolation":
+    if current_animation_style == AnimationStyleType.INTERPOLATION.value:
         animation_tool = st.radio("Animation Tool:", options=AnimationToolType.value_list(), key="animation_tool", horizontal=True)
         video_resolution = st.radio("Video Resolution:", options=["Preview Resolution", "Full Resolution"], key="video_resolution", horizontal=True)
 
@@ -46,7 +46,7 @@ def animation_style_element(timing_uuid, project_uuid):
                 normalise_speed=normalise_speed
             )
 
-    elif current_animation_style == "Image to Video":
+    elif current_animation_style == AnimationStyleType.IMAGE_TO_VIDEO.value:
         st.info("For image to video, you can select one or more prompts, and how many frames you want to generate for each prompt - it'll attempt to travel from one prompt to the next.")
         which_motion_module = st.selectbox("Which motion module would you like to use?", options=motion_modules, key="which_motion_module")
 

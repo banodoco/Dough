@@ -108,6 +108,7 @@ class InternalFrameTimingObject:
                     if 'interpolated_clip_list' in kwargs and kwargs["interpolated_clip_list"] else []
         self.timed_clip = InternalFileObject(
             **kwargs["timed_clip"]) if 'timed_clip' in kwargs and kwargs["timed_clip"] else None
+        self.preview_video = InternalFileObject(**kwargs['preview_video']) if 'preview_video' in kwargs and kwargs['preview_video'] else None
         self.mask = InternalFileObject(
             **kwargs["mask"]) if 'mask' in kwargs and kwargs["mask"] else None
         self.canny_image = InternalFileObject(
