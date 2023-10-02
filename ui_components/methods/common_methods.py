@@ -13,7 +13,7 @@ import uuid
 from io import BytesIO
 import numpy as np
 import urllib3
-from shared.constants import SERVER, InternalFileType, ServerType
+from shared.constants import SERVER, AIModelCategory, AIModelType, InternalFileType, ServerType
 from pydub import AudioSegment
 from backend.models import InternalFileObject
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, CreativeProcessType, WorkflowStageType
@@ -99,11 +99,23 @@ def style_cloning_element(timing_details):
 
         with copy2:
             display_image(timing_details[frame_index  - 1].uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
-            st.caption("Prompt:")
-            st.caption(timing_details[frame_index - 1].prompt)
-            if timing_details[frame_index - 1].model is not None:
-                st.caption("Model:")
-                st.caption(timing_details[frame_index - 1].model.name)
+            
+            if timing_details[frame_index - 1].primary_image.inference_params:
+                st.text("Prompt: ")
+                st.caption(timing_details[frame_index - 1].primary_image.inference_params.prompt)
+                st.text("Negative Prompt: ")
+                st.caption(timing_details[frame_index - 1].primary_image.inference_params.negative_prompt)
+                
+                if timing_details[frame_index - 1].primary_image.inference_params.model_uuid:
+                    data_repo = DataRepo()
+                    model: InternalAIModelObject = data_repo.get_ai_model_from_uuid(timing_details[frame_index - 1].primary_image.inference_params.model_uuid)
+                    
+                    st.text("Model:")
+                    st.caption(model.name)
+
+                    if model.category.lower() == AIModelCategory.CONTROLNET.value:
+                        st.text("Adapter Type:")
+                        st.caption(timing_details[frame_index - 1].primary_image.inference_params.adapter_type)
 
 def jump_to_single_frame_view_button(display_number, timing_details):
     if st.button(f"Jump to #{display_number}"):
@@ -174,24 +186,21 @@ def clone_styling_settings(source_frame_number, target_frame_uuid):
         target_timing.project.uuid)
     
     primary_image = data_repo.get_file_from_uuid(timing_details[source_frame_number].primary_image.uuid)
-    if primary_image and primary_image.inference_log and primary_image.inference_log.input_params:
-        params = json.loads(primary_image.inference_log.input_params)
+    params = primary_image.inference_params
 
-        if 'query_dict' in params:
-            params = MLQueryObject(**json.loads(params['query_dict']))
-            target_timing.prompt = params.prompt
-            target_timing.negative_prompt = params.negative_prompt
-            target_timing.guidance_scale = params.guidance_scale
-            target_timing.seed = params.seed
-            target_timing.num_inference_steps = params.num_inference_steps
-            target_timing.strength = params.strength
-            target_timing.adapter_type = params.adapter_type
-            target_timing.low_threshold = params.low_threshold
-            target_timing.high_threshold = params.high_threshold
-            
-            if params.model_uuid:
-                model = data_repo.get_ai_model_from_uuid(params.model_uuid)
-                target_timing.model = model
+    target_timing.prompt = params.prompt
+    target_timing.negative_prompt = params.negative_prompt
+    target_timing.guidance_scale = params.guidance_scale
+    target_timing.seed = params.seed
+    target_timing.num_inference_steps = params.num_inference_steps
+    target_timing.strength = params.strength
+    target_timing.adapter_type = params.adapter_type
+    target_timing.low_threshold = params.low_threshold
+    target_timing.high_threshold = params.high_threshold
+    
+    if params.model_uuid:
+        model = data_repo.get_ai_model_from_uuid(params.model_uuid)
+        target_timing.model = model
 
 # TODO: image format is assumed to be PNG, change this later
 def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project_uuid) -> InternalFileObject:

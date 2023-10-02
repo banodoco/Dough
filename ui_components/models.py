@@ -5,6 +5,7 @@ from shared.constants import AnimationStyleType, AnimationToolType
 
 from ui_components.constants import TEMP_MASK_FILE, DefaultTimingStyleParams
 from utils.common_decorators import session_state_attributes
+from utils.constants import MLQueryObject
 
 
 class InternalFileObject:
@@ -23,6 +24,23 @@ class InternalFileObject:
         if self.local_path:
             return self.local_path
         return self.hosted_url
+    
+    @property
+    def inference_params(self) -> MLQueryObject:
+        log = self.inference_log
+        if not log:
+            from utils.data_repo.data_repo import DataRepo
+
+            data_repo = DataRepo()
+            fresh_obj = data_repo.get_file_from_uuid(self.uuid)
+            log = fresh_obj.inference_log
+        
+        if log and log.input_params:
+            params = json.loads(log.input_params)
+            if 'query_dict' in params:
+                return MLQueryObject(**json.loads(params['query_dict']))
+        
+        return None
 
 
 class InternalProjectObject:
