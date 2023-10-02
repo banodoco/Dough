@@ -92,7 +92,7 @@ def new_project_page():
                     st.error(f"Failed to save the uploaded image due to {str(e)}")
 
             # remvoing the initial frame which moved to the 1st position
-            initial_frame = data_repo.get_timing_from_frame_number(new_project.uuid, 1)
+            initial_frame = data_repo.get_timing_from_frame_number(new_project.uuid, 0)
             data_repo.delete_timing_from_uuid(initial_frame.uuid)
             
             if uploaded_audio:

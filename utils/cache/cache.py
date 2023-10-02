@@ -1,5 +1,14 @@
 import streamlit as st
 
+from utils.enum import ExtendedEnum
+
+class CacheKey(ExtendedEnum):
+    TIMING_DETAILS = "timing_details"
+    APP_SETTING = "app_setting"
+    APP_SECRET = "app_secret"
+    PROJECT_SETTING = "project_setting"
+    AI_MODEL = "ai_model"
+
 
 class StCache:
     @staticmethod
@@ -81,3 +90,11 @@ class StCache:
             return st.session_state[data_type]
         
         return []
+    
+    # deletes all cached objects of every data type
+    @staticmethod
+    def clear_entire_cache() -> bool:
+        for c in CacheKey.value_list():
+            StCache.delete_all(c)
+        
+        return True

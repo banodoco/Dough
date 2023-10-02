@@ -1,8 +1,9 @@
+import asyncio
 import io
 import time
-from shared.constants import REPLICATE_USER
 from shared.file_upload.s3 import upload_file
 from utils.common_utils import get_current_user_uuid
+from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import MachineLearningProcessor
 import replicate
@@ -15,7 +16,7 @@ from PIL import Image
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
 from repository.data_logger import log_model_inference
 import utils.local_storage.local_storage as local_storage
-from utils.ml_processor.replicate.utils import check_user_credits
+from utils.ml_processor.replicate.utils import check_user_credits, check_user_credits_async, get_model_params_from_query_obj
 
 
 class ReplicateProcessor(MachineLearningProcessor):
@@ -51,6 +52,12 @@ class ReplicateProcessor(MachineLearningProcessor):
         model_version = model.versions.get(model_version) if model_version else model
         return model_version
     
+    # it converts the standardized query_obj into params required by replicate
+    def predict_model_output_standardized(self, model: ReplicateModel, query_obj: MLQueryObject):
+        params = get_model_params_from_query_obj(model, query_obj)
+        params['query_dict'] = query_obj.to_json()
+        return self.predict_model_output(model, **params)
+    
     @check_user_credits
     def predict_model_output(self, model: ReplicateModel, **kwargs):
         model_version = self.get_model(model)
@@ -60,7 +67,32 @@ class ReplicateProcessor(MachineLearningProcessor):
         log = log_model_inference(model, end_time - start_time, **kwargs)
         self._update_usage_credits(end_time - start_time)
 
-        return output, log
+        return [output[-1]], log
+    
+    @check_user_credits
+    def predict_model_output_async(self, model: ReplicateModel, **kwargs):
+        res = asyncio.run(self._multi_async_prediction(model, **kwargs))
+
+        output_list = []
+        for (output, time_taken) in  res:
+            log = log_model_inference(model, time_taken, **kwargs)
+            self._update_usage_credits(time_taken)
+            output_list.append((output, log))
+
+        return output_list
+    
+    async def _multi_async_prediction(self, model: ReplicateModel, **kwargs):
+        variant_count = kwargs['variant_count'] if ('variant_count' in kwargs and kwargs['variant_count']) else 1
+        res = await asyncio.gather(*[self._async_model_prediction(model, **kwargs) for _ in range(variant_count)])
+        return res
+    
+    async def _async_model_prediction(self, model: ReplicateModel, **kwargs):
+        model_version = self.get_model(model)
+        start_time = time.time()
+        output = await asyncio.to_thread(model_version.predict, **kwargs)
+        end_time = time.time()
+        time_taken = end_time - start_time
+        return output, time_taken
 
     @check_user_credits
     def inpainting(self, video_name, input_image, prompt, negative_prompt):
@@ -138,7 +170,7 @@ class ReplicateProcessor(MachineLearningProcessor):
     # TODO: figure how to resolve model location setting, right now it's hardcoded to peter942/modnet
     @check_user_credits
     def dreambooth_training(self, training_file_url, instance_prompt, \
-                            class_prompt, max_train_steps, model_name, controller_type, image_len):
+                            class_prompt, max_train_steps, model_name, controller_type, image_len, replicate_user):
         if controller_type == "normal":
             template_version = "b65d36e378a01ef81d81ba49be7deb127e9bb8b74a28af3aa0eaca16b9bcd0eb"
         elif controller_type == "canny":
@@ -167,7 +199,7 @@ class ReplicateProcessor(MachineLearningProcessor):
                 "instance_data": training_file_url,
                 "max_train_steps": max_train_steps
             },
-            "model": REPLICATE_USER + "/" + str(model_name),
+            "model": replicate_user + "/" + str(model_name),
             "trainer_version": "cd3f925f7ab21afaef7d45224790eedbb837eeac40d22e8fefe015489ab644aa",
             "template_version": template_version,
             "webhook_completed": "https://example.com/dreambooth-webhook"

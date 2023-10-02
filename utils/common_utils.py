@@ -5,6 +5,7 @@ import streamlit as st
 import json
 from shared.constants import SERVER, ServerType
 from ui_components.models import InternalUserObject
+from utils.cache.cache import StCache
 from utils.constants import LOGGED_USER
 from utils.data_repo.data_repo import DataRepo
 
@@ -148,3 +149,21 @@ def reset_project_state():
             if key in st.session_state:
                 del st.session_state[key]
 
+
+    # reset cache
+    StCache.clear_entire_cache()
+
+
+def reset_styling_settings(timing_uuid):
+    keys_to_delete = [
+        f"index_of_which_stage_to_run_on_{timing_uuid}",
+        "index_of_default_model",
+        "index_of_controlnet_adapter_type",
+        "index_of_dreambooth_model",
+        f'prompt_value_{timing_uuid}',
+        "negative_prompt_value",
+    ]
+
+    for k in keys_to_delete:
+        if k in st.session_state:
+            del st.session_state[k]

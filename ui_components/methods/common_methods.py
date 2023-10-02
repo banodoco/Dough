@@ -13,15 +13,17 @@ import time
 import uuid
 from io import BytesIO
 import numpy as np
-from shared.constants import SERVER, InternalFileType, ServerType
+import urllib3
+from shared.constants import SERVER, AIModelCategory, AIModelType, InternalFileType, ServerType
 from pydub import AudioSegment
 from backend.models import InternalFileObject
-from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, WorkflowStageType
+from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, CreativeProcessType, WorkflowStageType
 from ui_components.methods.file_methods import add_temp_file_to_project, generate_pil_image, save_or_host_file, save_or_host_file_bytes
 from ui_components.methods.ml_methods import create_depth_mask_image, inpainting, remove_background
-from ui_components.methods.video_methods import calculate_desired_duration_of_individual_clip
+from ui_components.methods.video_methods import calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
-from utils.constants import ImageStage
+from utils.common_utils import reset_styling_settings
+from utils.constants import ImageStage, MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
 
@@ -43,6 +45,8 @@ def compare_to_source_frame(timing_details):
     image_comparison(starting_position=50,
                         img1=img1,
                         img2=img2, make_responsive=False, label1=WorkflowStageType.SOURCE.value, label2=WorkflowStageType.STYLED.value)
+
+from utils.media_processor.video import VideoProcessor
 
 
 
@@ -87,22 +91,32 @@ def style_cloning_element(timing_details):
     if open_copier is True:
         copy1, copy2 = st.columns([1, 1])
         with copy1:
-            which_frame_to_copy_from = st.number_input("Which frame would you like to copy styling settings from?", min_value=1, max_value=len(
+            frame_index = st.number_input("Which frame would you like to copy styling settings from?", min_value=1, max_value=len(
                 timing_details), value=st.session_state['current_frame_index'], step=1)
             if st.button("Copy styling settings from this frame"):
-                clone_styling_settings(which_frame_to_copy_from - 1, st.session_state['current_frame_uuid'])
+                clone_styling_settings(frame_index - 1, st.session_state['current_frame_uuid'])
+                reset_styling_settings(st.session_state['current_frame_uuid'])
                 st.experimental_rerun()
 
         with copy2:
-            display_image(
-                idx=which_frame_to_copy_from, stage=WorkflowStageType.STYLED.value, clickable=False, timing_details=timing_details)
-            st.caption("Prompt:")
-            st.caption(
-                timing_details[which_frame_to_copy_from].prompt)
-            if timing_details[which_frame_to_copy_from].model is not None:
-                st.caption("Model:")
-                st.caption(
-                    timing_details[which_frame_to_copy_from].model.name)
+            display_image(timing_details[frame_index  - 1].uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
+            
+            if timing_details[frame_index - 1].primary_image.inference_params:
+                st.text("Prompt: ")
+                st.caption(timing_details[frame_index - 1].primary_image.inference_params.prompt)
+                st.text("Negative Prompt: ")
+                st.caption(timing_details[frame_index - 1].primary_image.inference_params.negative_prompt)
+                
+                if timing_details[frame_index - 1].primary_image.inference_params.model_uuid:
+                    data_repo = DataRepo()
+                    model: InternalAIModelObject = data_repo.get_ai_model_from_uuid(timing_details[frame_index - 1].primary_image.inference_params.model_uuid)
+                    
+                    st.text("Model:")
+                    st.caption(model.name)
+
+                    if model.category.lower() == AIModelCategory.CONTROLNET.value:
+                        st.text("Adapter Type:")
+                        st.caption(timing_details[frame_index - 1].primary_image.inference_params.adapter_type)
 
 def jump_to_single_frame_view_button(display_number, timing_details):
     if st.button(f"Jump to #{display_number}"):
@@ -151,8 +165,7 @@ def add_key_frame(selected_image, inherit_styling_settings, how_long_after, whic
     if inherit_styling_settings == "Yes":    
         clone_styling_settings(index_of_current_item - 1, timing_details[index_of_current_item].uuid)
 
-    data_repo.update_specific_timing(timing_details[index_of_current_item].uuid, \
-                                        animation_style=project_settings.default_animation_style)
+    timing_details[index_of_current_item].animation_style = project_settings.default_animation_style
 
     if len(timing_details) == 1:
         st.session_state['current_frame_index'] = 1
@@ -161,35 +174,34 @@ def add_key_frame(selected_image, inherit_styling_settings, how_long_after, whic
         st.session_state['prev_frame_index'] = min(len(timing_details), st.session_state['current_frame_index']+1)
         st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
 
-    st.session_state['page'] = "Styling"
+    st.session_state['page'] = CreativeProcessType.STYLING.value
     st.session_state['section_index'] = 0
     st.experimental_rerun()
 
+
+# TODO: work with source_frame_uuid, instead of source_frame_number
 def clone_styling_settings(source_frame_number, target_frame_uuid):
     data_repo = DataRepo()
     target_timing = data_repo.get_timing_from_uuid(target_frame_uuid)
     timing_details = data_repo.get_timing_list_from_project(
         target_timing.project.uuid)
-
-    data_repo.update_specific_timing(
-        target_frame_uuid, 
-        custom_pipeline=timing_details[source_frame_number].custom_pipeline,
-        negative_prompt=timing_details[source_frame_number].negative_prompt,
-        guidance_scale=timing_details[source_frame_number].guidance_scale,
-        seed=timing_details[source_frame_number].seed,
-        num_inteference_steps=timing_details[source_frame_number].num_inteference_steps,
-        transformation_stage=timing_details[source_frame_number].transformation_stage,
-        strength=timing_details[source_frame_number].strength,
-        custom_models=timing_details[source_frame_number].custom_model_id_list,
-        adapter_type=timing_details[source_frame_number].adapter_type,
-        low_threshold=timing_details[source_frame_number].low_threshold,
-        high_threshold=timing_details[source_frame_number].high_threshold,
-        prompt=timing_details[source_frame_number].prompt
-    )
     
-    if timing_details[source_frame_number].model:
-        data_repo.update_specific_timing(
-            target_frame_uuid, model_id=timing_details[source_frame_number].model.uuid)
+    primary_image = data_repo.get_file_from_uuid(timing_details[source_frame_number].primary_image.uuid)
+    params = primary_image.inference_params
+
+    target_timing.prompt = params.prompt
+    target_timing.negative_prompt = params.negative_prompt
+    target_timing.guidance_scale = params.guidance_scale
+    target_timing.seed = params.seed
+    target_timing.num_inference_steps = params.num_inference_steps
+    target_timing.strength = params.strength
+    target_timing.adapter_type = params.adapter_type
+    target_timing.low_threshold = params.low_threshold
+    target_timing.high_threshold = params.high_threshold
+    
+    if params.model_uuid:
+        model = data_repo.get_ai_model_from_uuid(params.model_uuid)
+        target_timing.model = model
 
 # TODO: image format is assumed to be PNG, change this later
 def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project_uuid) -> InternalFileObject:
@@ -449,7 +461,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
 
     data_repo.update_project_setting(project_uuid, **project_update_data)
 
-    # TODO: CORRECT-CODE - make a proper column for zoom details
+    # TODO: **CORRECT-CODE - make a proper column for zoom details
     timing_update_data = {
         "zoom_details": f"{st.session_state['zoom_level_input']},{st.session_state['rotation_angle_input']},{st.session_state['x_shift']},{st.session_state['y_shift']}",
 
@@ -824,6 +836,33 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
 
     if frame_idx < len(timing_details):
         data_repo.update_specific_timing(timing.uuid, timed_clip_id=None)
+
+def promote_video_variant(timing_uuid, variant_to_promote_frame_number: str):
+    data_repo = DataRepo()
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
+
+    variant_to_promote = timing.interpolated_clip_list[variant_to_promote_frame_number]
+
+    if variant_to_promote.location.startswith(('http://', 'https://')):
+        temp_video_path, _ = urllib3.request.urlretrieve(variant_to_promote.location)
+        video = VideoFileClip(temp_video_path)
+    else:
+        video = VideoFileClip(variant_to_promote.location)
+
+    if video.duration != timing.clip_duration:
+        video_bytes = VideoProcessor.update_video_speed(
+            variant_to_promote.location,
+            timing.animation_style,
+            timing.clip_duration
+        )
+
+        hosted_url = save_or_host_file_bytes(video_bytes, variant_to_promote.local_path)
+        if hosted_url:
+            data_repo.update_file(video.uuid, hosted_url=hosted_url)
+
+    data_repo.update_specific_timing(timing.uuid, timed_clip_id=variant_to_promote.uuid)
+
+
 
 def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_threshold=150) -> InternalFileObject:
     data_repo = DataRepo()

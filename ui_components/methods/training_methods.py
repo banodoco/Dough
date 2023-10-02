@@ -31,8 +31,10 @@ def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max
     from ui_components.methods.common_methods import convert_image_list_to_file_list
     
     ml_client = get_ml_client()
+    app_setting = DataRepo().get_app_setting_from_uuid()
+
     response = ml_client.dreambooth_training(
-        training_file_url, instance_prompt, class_prompt, max_train_steps, model_name, controller_type, len(images_list))
+        training_file_url, instance_prompt, class_prompt, max_train_steps, model_name, controller_type, len(images_list), app_setting.replicate_username)
     training_status = response["status"]
     
     model_id = response["id"]

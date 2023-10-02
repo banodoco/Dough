@@ -34,7 +34,32 @@ class REPLICATE_MODEL:
     real_esrgan_upscale = ReplicateModel("cjwbw/real-esrgan", "d0ee3d708c9b911f122a4ad90046c5d26a0293b99476d697f6bb7f2e251ce2d4")
     controlnet_1_1_x_realistic_vision_v2_0 = ReplicateModel("usamaehsan/controlnet-1.1-x-realistic-vision-v2.0", "7fbf4c86671738f97896c9cb4922705adfcdcf54a6edab193bb8c176c6b34a69")
     urpm = ReplicateModel("mcai/urpm-v1.3-img2img", "4df956e8dbfebf1afaf0c3ee98ad426ec58c4262d24360d054582e5eab2cb5f6")
-    sdxl = ReplicateModel("stability-ai/sdxl", "a00d0b7dcbb9c3fbb34ba87d2d5b46c56969c84a628bf778a7fdaec30b1b99c5")
+    sdxl = ReplicateModel("stability-ai/sdxl", "af1a68a271597604546c09c64aabcd7782c114a63539a4a8d14d1eeda5630c33")
 
+    # addition 30/9/2023
+    realistic_vision_v5 = ReplicateModel("heedster/realistic-vision-v5", "c0259010b93e7a4102a4ba946d70e06d7d0c7dc007201af443cfc8f943ab1d3c")
+    deliberate_v3 = ReplicateModel("pagebrain/deliberate-v3", "1851b62340ae657f05f8b8c8a020e3f9a46efde9fe80f273eef026c0003252ac")
+    dreamshaper_v7 = ReplicateModel("pagebrain/dreamshaper-v7", "0deba88df4e49b302585e1a7b6bd155e18962c1048966a40fe60ba05805743ff")
+    epicrealism_v5 = ReplicateModel("pagebrain/epicrealism-v5", "222465e57e4d9812207f14133c9499d47d706ecc41a8bf400120285b2f030b42")
+    sdxl_controlnet = ReplicateModel("lucataco/sdxl-controlnet", "db2ffdbdc7f6cb4d6dab512434679ee3366ae7ab84f89750f8947d5594b79a47")
+    realistic_vision_v5_img2img = ReplicateModel("lucataco/realistic-vision-v5-img2img", "82bbb4595458d6be142450fc6d8c4d79c936b92bd184dd2d6dd71d0796159819")
+
+    @staticmethod
+    def get_model_by_db_obj(model_db_obj):
+        for model in REPLICATE_MODEL.__dict__.values():
+            if isinstance(model, ReplicateModel) and model.name == model_db_obj.replicate_url and model.version == model_db_obj.version:
+                return model
+        return None
 
 DEFAULT_LORA_MODEL_URL = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
+
+CONTROLNET_MODELS = [
+    REPLICATE_MODEL.jagilley_controlnet_normal,
+    REPLICATE_MODEL.jagilley_controlnet_canny,
+    REPLICATE_MODEL.jagilley_controlnet_hed,
+    REPLICATE_MODEL.jagilley_controlnet_scribble,
+    REPLICATE_MODEL.jagilley_controlnet_seg,
+    REPLICATE_MODEL.jagilley_controlnet_hough,
+    REPLICATE_MODEL.jagilley_controlnet_depth2img,
+    REPLICATE_MODEL.jagilley_controlnet_pose,
+]

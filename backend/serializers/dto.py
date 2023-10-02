@@ -54,6 +54,7 @@ class InferenceLogDto(serializers.ModelSerializer):
     class Meta:
         model = InferenceLog
         fields = (
+            "uuid",
             "project", 
             "model", 
             "input_params", 

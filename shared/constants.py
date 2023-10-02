@@ -61,9 +61,13 @@ class InternalFileTag(ExtendedEnum):
     TEMP_IMAGE = 'temp'
 
 class AnimationStyleType(ExtendedEnum):
-    INTERPOLATION = "Interpolate to next"    
+    INTERPOLATION = "Interpolate to next"
     IMAGE_TO_VIDEO = "Image to video"
     DIRECT_MORPHING = "None"
+
+class AnimationToolType(ExtendedEnum):
+    ANIMATEDIFF = 'Animatediff'
+    G_FILM = "Google FiLM"
 
 
 ##################### global constants #####################
@@ -75,5 +79,3 @@ AWS_S3_REGION = 'ap-south-1'    # TODO: discuss this
 OFFLINE_MODE = os.getenv('OFFLINE_MODE', False)     # for picking up secrets and file storage
 
 LOCAL_DATABASE_NAME = 'banodoco_local.db'
-
-REPLICATE_USER = "piyushk52"

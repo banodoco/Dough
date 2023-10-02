@@ -99,8 +99,8 @@ class CreateTimingDao(serializers.Serializer):
     clip_duration = serializers.FloatField(default=0, required=False)
     animation_style = serializers.CharField(max_length=100, default=AnimationStyleType.INTERPOLATION.value, required=False)
     interpolation_steps = serializers.IntegerField(required=False)
-    low_threshold = serializers.FloatField(default=0, required=False)
-    high_threshold = serializers.FloatField(default=0, required=False)
+    low_threshold = serializers.FloatField(default=100, required=False)
+    high_threshold = serializers.FloatField(default=200, required=False)
     aux_frame_index = serializers.IntegerField(required=False)
 
 

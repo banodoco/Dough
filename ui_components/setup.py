@@ -11,6 +11,7 @@ from ui_components.components.new_project_page import new_project_page
 from ui_components.components.project_settings_page import project_settings_page
 from ui_components.components.video_rendering_page import video_rendering_page
 from streamlit_option_menu import option_menu
+from ui_components.constants import CreativeProcessType
 from ui_components.models import InternalAppSettingObject
 from utils.common_utils import create_working_assets, get_current_user_uuid, reset_project_state
 from utils import st_memory
@@ -120,7 +121,7 @@ def setup_app_ui():
 
                 with st.sidebar:
 
-                    pages = ["Styling", "Motion"]
+                    pages = CreativeProcessType.value_list()
 
                     if 'page' not in st.session_state:
                         st.session_state["page"] = pages[0]
