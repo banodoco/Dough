@@ -175,6 +175,7 @@ class Timing(BaseModel):
         super(Timing, self).__init__(*args, **kwargs)
         self.old_is_disabled = self.is_disabled
         self.old_aux_frame_index = self.aux_frame_index
+        self.old_timed_clip = self.timed_clip
 
     def save(self, *args, **kwargs):
         # TODO: updating details of every frame this way can be slow - implement a better strategy
@@ -233,7 +234,11 @@ class Timing(BaseModel):
                     
                 self.interpolated_video_id = None
                 self.timed_clip_id = None
-                
+
+        # if timed_clip is deleted then preview_video will also be deleted
+        if self.old_timed_clip != self.timed_clip and self.old_timed_clip and not self.timed_clip:
+            self.preview_video = None
+              
         super().save(*args, **kwargs)
 
     def add_interpolated_clip_list(self, clip_uuid_list):

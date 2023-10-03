@@ -113,8 +113,6 @@ class InternalFrameTimingObject:
             **kwargs["mask"]) if 'mask' in kwargs and kwargs["mask"] else None
         self.canny_image = InternalFileObject(
             **kwargs["canny_image"]) if 'canny_image' in kwargs and kwargs["canny_image"] else None
-        self.preview_video = InternalFileObject(
-            **kwargs["preview_video"]) if 'preview_video' in kwargs and kwargs["preview_video"] else None
         self.primary_image = InternalFileObject(
             **kwargs["primary_image"]) if 'primary_image' in kwargs and kwargs["primary_image"] else None
         self.frame_time = kwargs['frame_time'] if 'frame_time' in kwargs else None

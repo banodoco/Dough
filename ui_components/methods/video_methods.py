@@ -21,7 +21,7 @@ from utils.media_processor.video import VideoProcessor
 
 
 # NOTE: interpolated_clip_uuid signals which clip to promote to timed clip (this is the main variant)
-# this function returns the preview_clip, which is the interpolated video with correct length
+# this function returns the 'single' preview_clip, which is basically timed_clip with the frame number
 def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None):
     from ui_components.methods.file_methods import generate_temp_file, save_or_host_file_bytes
     from ui_components.methods.common_methods import get_audio_bytes_for_slice
@@ -96,7 +96,7 @@ def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None)
                 inference_log_id=None
             )
 
-            data_repo.update_specific_timing(timing_uuid, preview_id=preview_video.uuid)
+            data_repo.update_specific_timing(timing_uuid, preview_video_id=preview_video.uuid)
             os.remove(temp_output_file.name)
 
         # preview has the correct length (equal to the time difference between the current and the next frame)
@@ -151,8 +151,9 @@ def create_single_interpolated_clip(timing_uuid, quality, settings={}, variant_c
             )
 
             data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video.uuid)
-            output_video = update_speed_of_video_clip(video, timing_uuid)
-            data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
+            if not timing.timed_clip:
+                output_video = update_speed_of_video_clip(video, timing_uuid)
+                data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
 
             output_video_list.append(output_video)
 
@@ -340,7 +341,7 @@ def add_audio_to_video_slice(video_file, audio_bytes):
     os.rename("output_with_audio.mp4", video_location)
 
 
-# final video rendering of all the frames involved
+# final video rendering of all the frames involved (it bascially combines all the timed clips)
 def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileTag.GENERATED_VIDEO.value):
     from ui_components.methods.common_methods import update_clip_duration_of_all_timing_frames
     from ui_components.methods.file_methods import convert_bytes_to_file, generate_temp_file
@@ -354,51 +355,64 @@ def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileT
 
     total_number_of_videos = len(timing_details) - 1
 
+    # creating timed clip for every frame
     for i in range(0, total_number_of_videos):
         index_of_current_item = i
         current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(
             project_uuid, i)
 
         timing = timing_details[i]
+
+        # updating the interpolation steps
         if quality == VideoQuality.HIGH.value:
-            data_repo.update_specific_timing(
-                current_timing.uuid, timed_clip_id=None)
+            # data_repo.update_specific_timing(current_timing.uuid, timed_clip_id=None)
             interpolation_steps = VideoInterpolator.calculate_dynamic_interpolations_steps(
                 timing_details[index_of_current_item].clip_duration)
-            if not timing.interpolation_steps or timing.interpolation_steps < interpolation_steps:
-                data_repo.update_specific_timing(
-                    current_timing.uuid, interpolation_steps=interpolation_steps, interpolated_clip_id=None)
+            timing.interpolation_steps = interpolation_steps
         else:
             if not timing.interpolation_steps or timing.interpolation_steps < 3:
                 data_repo.update_specific_timing(
                     current_timing.uuid, interpolation_steps=3)
 
-        if not timing.interpolated_clip:
-            next_timing = data_repo.get_next_timing(current_timing.uuid)
-            settings = {
-                "animation_tool": current_timing.animation_tool,
-                "interpolation_steps": current_timing.interpolation_steps
-            }
+        # creating timed clips if not already present
+        if not timing.timed_clip:
+            video_clip = None
 
-            res = VideoInterpolator.create_interpolated_clip(
-                img_location_list=[current_timing.source_image.location, next_timing.source_image.location],
-                settings=settings,
-                interpolation_steps=current_timing.interpolation_steps
-            )
+            # creating an interpolated clip if not already present
+            if not len(timing.interpolated_clip_list):
+                next_timing = data_repo.get_next_timing(current_timing.uuid)
+                settings = {
+                    "animation_tool": current_timing.animation_tool,
+                    "interpolation_steps": current_timing.interpolation_steps
+                }
 
-            video_bytes, log = res[0]
+                res = VideoInterpolator.create_interpolated_clip(
+                    img_location_list=[current_timing.source_image.location, next_timing.source_image.location],
+                    animation_style=current_timing.animation_style,
+                    settings=settings,
+                    interpolation_steps=current_timing.interpolation_steps
+                )
 
-            file_location = "videos/" + current_timing.project.name + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
-            video_file = convert_bytes_to_file(
-                file_location_to_save=file_location,
-                mime_type="video/mp4",
-                file_bytes=video_bytes,
-                project_uuid=current_timing.project.uuid,
-                inference_log_id=log.uuid
-            )
+                video_bytes, log = res[0]
 
-            data_repo.update_specific_timing(
-                current_timing.uuid, interpolated_clip_id=video_file.uuid)
+                file_location = "videos/" + current_timing.project.name + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
+                video_file = convert_bytes_to_file(
+                    file_location_to_save=file_location,
+                    mime_type="video/mp4",
+                    file_bytes=video_bytes,
+                    project_uuid=current_timing.project.uuid,
+                    inference_log_id=log.uuid
+                )
+
+                data_repo.add_interpolated_clip(
+                    current_timing.uuid, interpolated_clip_id=video_file.uuid)
+            else:
+                video_file = timing.interpolated_clip_list[0]
+            
+            # add timed clip
+            output_video = update_speed_of_video_clip(video_file, current_timing.uuid)
+            data_repo.update_specific_timing(current_timing.uuid, timed_clip_id=output_video.uuid)
+
 
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         timing.project.uuid)
@@ -406,46 +420,13 @@ def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileT
         timing.project.uuid)
     total_number_of_videos = len(timing_details) - 2
 
-    for i in timing_details:
-        index_of_current_item = timing_details.index(i)
-        timing = timing_details[index_of_current_item]
-        current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(
-            timing.project.uuid, index_of_current_item)
-        if index_of_current_item <= total_number_of_videos:
-            if not current_timing.timed_clip:
-                desired_duration = current_timing.clip_duration
-                location_of_input_video_file = current_timing.interpolated_clip
-
-                output_video = update_speed_of_video_clip(
-                    location_of_input_video_file, timing.uuid)
-
-                if quality == VideoQuality.PREVIEW.value:
-                    print("")
-                    '''
-                    clip = VideoFileClip(location_of_output_video)
-
-                    number_text = TextClip(str(index_of_current_item), fontsize=24, color='white')
-                    number_background = TextClip(" ", fontsize=24, color='black', bg_color='black', size=(number_text.w + 10, number_text.h + 10))
-                    number_background = number_background.set_position(('right', 'bottom')).set_duration(clip.duration)
-                    number_text = number_text.set_position((number_background.w - number_text.w - 5, number_background.h - number_text.h - 5)).set_duration(clip.duration)
-
-                    clip_with_number = CompositeVideoClip([clip, number_background, number_text])
-
-                    # remove existing preview video
-                    os.remove(location_of_output_video)
-                    clip_with_number.write_videofile(location_of_output_video, codec='libx264', bitrate='3000k')
-                    '''
-
-                data_repo.update_specific_timing(
-                    current_timing.uuid, timed_clip_id=output_video.uuid)
-
     video_list = []
     temp_file_list = []
 
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         timing.project.uuid)
 
-    # TODO: CORRECT-CODE
+    # joining all the timed clips
     for i in timing_details:
         index_of_current_item = timing_details.index(i)
         current_timing: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(

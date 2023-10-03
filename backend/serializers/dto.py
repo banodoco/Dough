@@ -119,7 +119,6 @@ class TimingDto(serializers.ModelSerializer):
         )
 
     def get_interpolated_clip_list(self, obj):
-        res = []
         id_list = json.loads(obj.interpolated_clip_list) if obj.interpolated_clip_list else []
         file_list = InternalFileObject.objects.filter(uuid__in=id_list, is_disabled=False).all()
         return [InternalFileDto(file).data for file in file_list]

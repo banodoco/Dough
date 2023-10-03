@@ -64,7 +64,8 @@ def compare_to_previous_and_next_frame(project_uuid, timing_details):
                 prev_frame_timing = data_repo.get_prev_timing(st.session_state['current_frame_uuid'])
                 create_or_get_single_preview_video(prev_frame_timing.uuid)
                 prev_frame_timing = data_repo.get_timing_from_uuid(prev_frame_timing.uuid)
-                st.video(prev_frame_timing.timed_clip.location)
+                if prev_frame_timing.preview_video:
+                    st.video(prev_frame_timing.preview_video.location)
 
     with mainimages2:
         st.success(f"Current image:")
@@ -78,8 +79,7 @@ def compare_to_previous_and_next_frame(project_uuid, timing_details):
             display_image(timing_uuid=next_image.uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
 
             if st.button(f"Preview Interpolation From #{st.session_state['current_frame_index']} to #{st.session_state['current_frame_index']+1}", key=f"Preview Interpolation From #{st.session_state['current_frame_index']} to #{st.session_state['current_frame_index']+1}", use_container_width=True):
-                create_or_get_single_preview_video(
-                    st.session_state['current_frame_uuid'])
+                create_or_get_single_preview_video(st.session_state['current_frame_uuid'])
                 current_frame = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
                 st.video(current_frame.timed_clip.location)
 
@@ -702,13 +702,6 @@ def move_frame_back_button(timing_uuid, orientation):
         st.rerun()
 
 
-
-
-
-        
-
-
-
 def move_frame_forward_button(timing_uuid, orientation):
     direction = "Down"
     if orientation == "side-to-side":
@@ -735,10 +728,10 @@ def delete_frame(timing_uuid):
 
     if next_timing:
         data_repo.update_specific_timing(
-                next_timing.uuid, interpolated_video_id=None)
-
-        data_repo.update_specific_timing(
-                next_timing.uuid, timed_clip_id=None)
+            next_timing.uuid,
+            interpolated_clip_list=None,
+            preview_video_id=None
+        )
 
     # If the deleted frame is the first one, set the time of the next frame to 0.00
     if timing.aux_frame_index == 0 and next_timing:
@@ -853,6 +846,7 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
     if frame_idx < len(timing_details):
         data_repo.update_specific_timing(timing.uuid, timed_clip_id=None)
 
+# updates the clip duration of the variant_to_promote and sets it as the timed_clip
 def promote_video_variant(timing_uuid, variant_to_promote_frame_number: str):
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
