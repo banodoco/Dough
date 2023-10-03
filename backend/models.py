@@ -235,10 +235,10 @@ class Timing(BaseModel):
                 self.interpolated_video_id = None
                 self.timed_clip_id = None
 
-        # if timed_clip is deleted then preview_video will also be deleted
-        if self.old_timed_clip != self.timed_clip and self.old_timed_clip and not self.timed_clip:
+        # if timed_clip is deleted/changed then preview_video will be deleted
+        if self.old_timed_clip and (not self.timed_clip or self.old_timed_clip != self.timed_clip):
             self.preview_video = None
-              
+
         super().save(*args, **kwargs)
 
     def add_interpolated_clip_list(self, clip_uuid_list):

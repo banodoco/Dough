@@ -12,13 +12,9 @@ from utils.local_storage.url_storage import delete_url_param, get_url_param, set
 from utils.third_party_auth.google.google_auth import get_google_auth_url
 
 
-if 'django_init' in st.session_state and st.session_state['django_init']:
-    print("************ django initialized ************")
-    # loading the django app
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
-    # Initialize Django
-    django.setup()
-    st.session_state['django_init'] = True
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
+django.setup()
+st.session_state['django_init'] = True
 
 from banodoco_settings import project_init
 from ui_components.models import InternalAppSettingObject

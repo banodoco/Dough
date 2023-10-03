@@ -56,7 +56,7 @@ def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None)
         output_video = update_speed_of_video_clip(interpolated_clip, timing_uuid)
         data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
 
-    if not timing.preview:
+    if not timing.preview_video:
         timing = data_repo.get_timing_from_uuid(timing_uuid)
         timed_clip = timing.timed_clip
         
@@ -107,57 +107,57 @@ def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None)
     # adding audio if the audio file is present
     if project_details.audio:
         audio_bytes = get_audio_bytes_for_slice(timing_uuid)
-        add_audio_to_video_slice(timing.preview, audio_bytes)
+        add_audio_to_video_slice(timing.preview_video, audio_bytes)
 
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
-    return timing.preview
+    return timing.preview_video
 
 # this includes all the animation styles [direct morphing, interpolation, image to video]
 def create_single_interpolated_clip(timing_uuid, quality, settings={}, variant_count=1):
-        data_repo = DataRepo()
-        timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-        next_timing: InternalFrameTimingObject = data_repo.get_next_timing(timing_uuid)
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    next_timing: InternalFrameTimingObject = data_repo.get_next_timing(timing_uuid)
 
-        if quality == 'full':
-            interpolation_steps = VideoInterpolator.calculate_dynamic_interpolations_steps(timing.clip_duration)
-        elif quality == 'preview':
-            interpolation_steps = 3
+    if quality == 'full':
+        interpolation_steps = VideoInterpolator.calculate_dynamic_interpolations_steps(timing.clip_duration)
+    elif quality == 'preview':
+        interpolation_steps = 3
 
-        timing.interpolated_steps = interpolation_steps
-        img_list = [timing.source_image.location, next_timing.source_image.location]
-        settings.update(interpolation_steps=timing.interpolation_steps)
+    timing.interpolated_steps = interpolation_steps
+    img_list = [timing.primary_image.location, next_timing.primary_image.location]
+    settings.update(interpolation_steps=timing.interpolation_steps)
 
-        # res is an array of tuples (video_bytes, log)
-        res = VideoInterpolator.create_interpolated_clip(
-            img_list,
-            timing.animation_style,
-            settings,
-            variant_count
+    # res is an array of tuples (video_bytes, log)
+    res = VideoInterpolator.create_interpolated_clip(
+        img_list,
+        timing.animation_style,
+        settings,
+        variant_count
+    )
+
+    output_video_list = []
+    for (video_bytes, log) in res:
+        if 'normalise_speed' in settings and settings['normalise_speed']:
+            video_bytes = VideoProcessor.update_video_bytes_speed(video_bytes, timing.animation_style, timing.clip_duration)
+
+        video_location = "videos/" + str(timing.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
+        video = convert_bytes_to_file(
+            file_location_to_save=video_location,
+            mime_type="video/mp4",
+            file_bytes=video_bytes,
+            project_uuid=timing.project.uuid,
+            inference_log_id=log.uuid
         )
 
-        output_video_list = []
-        for (video_bytes, log) in res:
-            if 'normalise_speed' in settings and settings['normalise_speed']:
-                video_bytes = VideoProcessor.update_video_bytes_speed(video_bytes, timing.animation_style, timing.clip_duration)
+        data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video.uuid)
+        if not timing.timed_clip:
+            output_video = update_speed_of_video_clip(video, timing_uuid)
+            data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
 
-            video_location = "videos/" + str(timing.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
-            video = convert_bytes_to_file(
-                file_location_to_save=video_location,
-                mime_type="video/mp4",
-                file_bytes=video_bytes,
-                project_uuid=timing.project.uuid,
-                inference_log_id=log.uuid
-            )
+        output_video_list.append(video)
 
-            data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video.uuid)
-            if not timing.timed_clip:
-                output_video = update_speed_of_video_clip(video, timing_uuid)
-                data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
-
-            output_video_list.append(output_video)
-
-        return output_video_list
+    return output_video_list
 
 
 # preview_clips have frame numbers on them. Preview clip is generated from index-2 to index+2 frames
