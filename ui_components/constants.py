@@ -34,6 +34,23 @@ class DefaultTimingStyleParams:
     animation_style = AnimationStyleType.INTERPOLATION.value
     model = None
 
+class DefaultProjectSettingParams:
+    batch_prompt = ""
+    batch_negative_prompt = "bad image, worst quality"
+    batch_strength = 1
+    batch_guidance_scale = 0.5
+    batch_seed = 0
+    batch_num_inference_steps = 25
+    batch_low_threshold = 100
+    batch_high_threshold = 200
+    batch_adapter_type = None
+    batch_interpolation_steps = 3
+    batch_transformation_stage = ImageStage.SOURCE_IMAGE.value
+    batch_custom_model_id_list = []
+    batch_animation_tool = AnimationToolType.G_FILM.value
+    batch_animation_style = AnimationStyleType.INTERPOLATION.value
+    batch_model = None
+
 # TODO: make proper paths for every file
 CROPPED_IMG_LOCAL_PATH = "videos/temp/cropped.png"
 

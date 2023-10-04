@@ -3,7 +3,7 @@ import streamlit as st
 import json
 from shared.constants import AnimationStyleType, AnimationToolType
 
-from ui_components.constants import TEMP_MASK_FILE, DefaultTimingStyleParams
+from ui_components.constants import TEMP_MASK_FILE, DefaultProjectSettingParams, DefaultTimingStyleParams
 from utils.common_decorators import session_state_attributes
 from utils.constants import MLQueryObject
 
@@ -187,6 +187,7 @@ class InternalAppSettingObject:
         self.replicate_key = kwargs['replicate_key'] if 'replicate_key' in kwargs and kwargs['replicate_key'] else ""
 
 
+@session_state_attributes(DefaultProjectSettingParams)
 class InternalSettingObject:
     def __init__(self, **kwargs):
         self.uuid = kwargs['uuid'] if 'uuid' in kwargs else None

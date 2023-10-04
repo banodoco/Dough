@@ -1,4 +1,5 @@
 import streamlit as st
+from shared.constants import ViewType
 
 
 from ui_components.methods.common_methods import add_key_frame,compare_to_previous_and_next_frame,compare_to_source_frame,style_cloning_element
@@ -124,7 +125,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 with st.expander("🛠️ Generate Variants + Prompt Settings", expanded=True):
                     col1, col2 = st.columns([1, 1])
                     with col1:
-                        styling_element(st.session_state['current_frame_uuid'], view_type="Single")
+                        styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.SINGLE.value)
                     with col2:
                         detail1, detail2 = st.columns([1, 1])
                         with detail1:
@@ -216,7 +217,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
             if st.session_state['page'] == "Styling":
 
                 with st.sidebar:                            
-                    styling_element(st.session_state['current_frame_uuid'], view_type="List")
+                    styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.LIST.value)
                 
                 styling_list_view(start_index, end_index, shift_frames_setting, project_uuid)
                                 
@@ -232,7 +233,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
         elif st.session_state['list_view_type'] == "Timeline View":
 
             with st.sidebar:                            
-                    styling_element(st.session_state['current_frame_uuid'], view_type="List")
+                    styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.LIST.value)
 
             
             if st.session_state['page'] == "Styling":
