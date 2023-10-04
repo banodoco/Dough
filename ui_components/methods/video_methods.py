@@ -2,6 +2,7 @@ import os
 import random
 import string
 import tempfile
+import time
 from typing import List
 import ffmpeg
 import streamlit as st
@@ -352,6 +353,10 @@ def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileT
 
     data_repo = DataRepo()
 
+    if not final_video_name:
+        st.error("Please enter a video name")
+        return
+
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         project_uuid)
 
@@ -417,11 +422,8 @@ def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileT
             output_video = update_speed_of_video_clip(video_file, current_timing.uuid)
             data_repo.update_specific_timing(current_timing.uuid, timed_clip_id=output_video.uuid)
 
-
-    project_settings: InternalSettingObject = data_repo.get_project_setting(
-        timing.project.uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
+    project_settings: InternalSettingObject = data_repo.get_project_setting(project_uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(project_uuid)
     total_number_of_videos = len(timing_details) - 2
 
     video_list = []
