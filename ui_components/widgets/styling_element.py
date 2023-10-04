@@ -61,8 +61,7 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
             st.error(f"No {st.session_state['transformation_stage']} image found for this variant")
 
     if stages.index(st.session_state["transformation_stage"]) != st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}']:
-        st.session_state['index_of_which_stage_to_run_on'] = stages.index(
-            st.session_state["transformation_stage"])
+        st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = stages.index(st.session_state["transformation_stage"])
         st.rerun()
 
     
@@ -405,7 +404,6 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
             st.write("")
             st.write("")
             if st.button(f'Batch restyle') or st.session_state['restyle_button'] == 'yes':
-
                 if st.session_state['restyle_button'] == 'yes':
                     range_start = int(st.session_state['item_to_restyle'])
                     range_end = range_start + 1
@@ -432,5 +430,6 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
                             high_threshold=st.session_state['high_threshold'],
                             canny_image=st.session_state['canny_image'] if 'canny_image' in st.session_state else None,
                         )
+                        
                 st.rerun()
 
