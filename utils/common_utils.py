@@ -59,6 +59,8 @@ def create_working_assets(project_uuid):
     if new_project:
         copy_sample_assets(project_uuid)
 
+def truncate_decimal(num: float, n: int = 2) -> float:
+    return int(num * 10 ** n) / 10 ** n
 
 # fresh_fetch - bypasses the cache
 def get_current_user(fresh_fetch=False) -> InternalUserObject:

@@ -236,9 +236,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             
             if st.session_state['page'] == "Styling":
-                timeline_view(shift_frames_setting, project_uuid,"Styling",header_col_3,header_col_4)
+                timeline_view(shift_frames_setting, project_uuid, "Styling", header_col_3, header_col_4)
             elif st.session_state['page'] == "Motion":
-                timeline_view(shift_frames_setting, project_uuid,"Motion",header_col_3,header_col_4)
+                timeline_view(shift_frames_setting, project_uuid, "Motion", header_col_3, header_col_4)
 
                 
 
