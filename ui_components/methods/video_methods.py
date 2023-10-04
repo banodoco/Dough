@@ -119,6 +119,10 @@ def create_single_interpolated_clip(timing_uuid, quality, settings={}, variant_c
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
     next_timing: InternalFrameTimingObject = data_repo.get_next_timing(timing_uuid)
 
+    if not next_timing:
+        st.error('This is the last image. Please add more images to create interpolated clip.')
+        return None
+
     if quality == 'full':
         interpolation_steps = VideoInterpolator.calculate_dynamic_interpolations_steps(timing.clip_duration)
     elif quality == 'preview':

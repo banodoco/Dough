@@ -1070,7 +1070,7 @@ def update_clip_duration_of_all_timing_frames(project_uuid):
             total_duration_of_frame = float(
                 time_of_next_frame) - float(time_of_frame)
 
-        total_duration_of_frame = round(total_duration_of_frame)
+        total_duration_of_frame = round(total_duration_of_frame, 2)
         data_repo.update_specific_timing(timing_item.uuid, clip_duration=total_duration_of_frame)
 
 

@@ -42,11 +42,7 @@ def single_frame_time_duration_setter(timing_uuid, src, shift_frames=True):
     next_timing = data_repo.get_next_timing(timing_uuid)
     
     # Calculate clip_duration
-    if next_timing:
-        clip_duration = max(round(next_timing.frame_time - timing.frame_time, 2), 0.0)
-    else:
-        clip_duration = 0.0  # or some default value
-
+    clip_duration = max(float(round(timing.clip_duration, 2)), float(0.0))
     max_value = 100.0 if shift_frames else clip_duration
     
     disable_duration_input = False if next_timing else True
