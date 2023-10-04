@@ -205,7 +205,7 @@ class Timing(BaseModel):
             elif self.old_aux_frame_index != self.aux_frame_index:
                 if self.aux_frame_index >= self.old_aux_frame_index:
                     timings_to_move = Timing.objects.filter(project_id=self.project_id, aux_frame_index__gt=self.old_aux_frame_index, \
-                                    aux_frame_index__lte=self.aux_frame_index, is_disabled=False)
+                                    aux_frame_index__lte=self.aux_frame_index, is_disabled=False).order_by('aux_frame_index')
                     frame_time_list = [int(self.frame_time * 100) / 100]
                     for t in timings_to_move:
                         frame_time_list.append(t.frame_time)
@@ -218,7 +218,7 @@ class Timing(BaseModel):
                     timings_to_move.update(aux_frame_index=F('aux_frame_index') - 1)
                 else:
                     timings_to_move = Timing.objects.filter(project_id=self.project_id, aux_frame_index__gte=self.aux_frame_index, \
-                                       aux_frame_index__lt=self.old_aux_frame_index, is_disabled=False)
+                                       aux_frame_index__lt=self.old_aux_frame_index, is_disabled=False).order_by('aux_frame_index')
                     
                     frame_time_list = [self.frame_time]
                     for t in reversed(timings_to_move):

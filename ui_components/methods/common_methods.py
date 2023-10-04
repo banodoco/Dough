@@ -613,9 +613,9 @@ def change_frame_position_input(timing_uuid, src):
     max_value = len(timing_list)
 
     new_position = st.number_input("Move to new position:", min_value=min_value, max_value=max_value,
-                                   value=timing.aux_frame_index + 1, step=1, key=f"new_position_{timing.aux_frame_index}_{src}")
+                                   value=timing.aux_frame_index + 1, step=1, key=f"new_position_{timing.uuid}_{src}")
     
-    if st.button('Update Position',key=f"change_frame_position_{timing.aux_frame_index}_{src}"):  
+    if st.button('Update Position',key=f"change_frame_position_{timing.uuid}_{src}"): 
         data_repo.update_specific_timing(timing.uuid, aux_frame_index=new_position - 1)
         st.rerun()
         
