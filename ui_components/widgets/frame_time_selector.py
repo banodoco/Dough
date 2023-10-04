@@ -24,8 +24,8 @@ def update_frame_duration(timing_uuid, frame_duration, next_timing, shift_frames
     
     if next_timing:
         # Calculate time_delta before updating next_timing.frame_time
-        time_delta = frame_duration - truncate_decimal(next_timing.frame_time - timing.frame_time)
-        next_timing.frame_time = truncate_decimal(timing.frame_time + frame_duration)
+        time_delta = frame_duration - round(next_timing.frame_time - timing.frame_time, 2)
+        next_timing.frame_time = round(timing.frame_time + frame_duration, 2)
         data_repo.update_specific_timing(next_timing.uuid, frame_time=next_timing.frame_time, timed_clip_id=None)
         if shift_frames:
             shift_subsequent_frames(timing, time_delta)
@@ -43,7 +43,7 @@ def single_frame_time_duration_setter(timing_uuid, src, shift_frames=True):
     
     # Calculate clip_duration
     if next_timing:
-        clip_duration = max(truncate_decimal(next_timing.frame_time - timing.frame_time), 0.0)
+        clip_duration = max(round(next_timing.frame_time - timing.frame_time, 2), 0.0)
     else:
         clip_duration = 0.0  # or some default value
 
@@ -55,7 +55,7 @@ def single_frame_time_duration_setter(timing_uuid, src, shift_frames=True):
                                      value=clip_duration, step=0.1, key=f"frame_duration_{timing.uuid}_{src}", 
                                      disabled=disable_duration_input, help=help_text)
     
-    frame_duration = truncate_decimal(frame_duration)
+    frame_duration = round(frame_duration, 2)
     if frame_duration != clip_duration:
         update_frame_duration(timing_uuid, frame_duration, next_timing, shift_frames)
 
@@ -75,10 +75,10 @@ def single_frame_time_selector(timing_uuid, src, shift_frames=True):
     else:
         max_value = timing.frame_time + 100  # Allow up to 100 seconds more if it's the last item
 
-    adjusted_value = max(min_value + 0.01, timing.frame_time) if timing.aux_frame_index != 0 else timing.frame_time   # hackish solution to avoid timing.frame_time < min_value while streamlit is refreshing
+    # adjusted_value = max(min_value + 0.01, timing.frame_time) if timing.aux_frame_index != 0 else timing.frame_time   # hackish solution to avoid timing.frame_time < min_value while streamlit is refreshing
     help_text = None if shift_frames else "You currently won't shift subsequent frames - to do this, go to the List View and turn on Shift Frames."
     frame_time = st.number_input("Time:", min_value=min_value, max_value=max_value,
-                                     value=adjusted_value, step=0.1, key=f"frame_time_{timing.uuid}_{src}",disabled=disabled_time_change, help=help_text)
+                                     value=timing.frame_time, step=0.1, key=f"frame_time_{timing.uuid}_{src}",disabled=disabled_time_change, help=help_text)
     
     frame_time = int(frame_time * 100) / 100.0
     if frame_time != timing.frame_time:

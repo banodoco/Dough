@@ -21,7 +21,7 @@ from ui_components.methods.file_methods import add_temp_file_to_project, generat
 from ui_components.methods.ml_methods import create_depth_mask_image, inpainting, remove_background
 from ui_components.methods.video_methods import calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
-from utils.common_utils import reset_styling_settings
+from utils.common_utils import reset_styling_settings, truncate_decimal
 from utils.constants import ImageStage, MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
@@ -621,39 +621,25 @@ def change_frame_position_input(timing_uuid, src):
         
 
 def move_frame(direction, timing_uuid):
-    print(f"{datetime.now()} - Starting move_frame function")
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
 
-    print(f"{datetime.now()} - Retrieved timing object")
-
     if direction == "Up":
-        print(f"{datetime.now()} - Moving frame up")
         if timing.aux_frame_index == 0:
-            print(f"{datetime.now()} - This is the first frame")
             st.error("This is the first frame")       
             time.sleep(1)     
             return
         
         data_repo.update_specific_timing(timing.uuid, aux_frame_index=timing.aux_frame_index - 1)
-        print(f"{datetime.now()} - Updated timing object")
-
     elif direction == "Down":
-        print(f"{datetime.now()} - Moving frame down")
         timing_list = data_repo.get_timing_list_from_project(project_uuid=timing.project.uuid)
         if timing.aux_frame_index == len(timing_list) - 1:
-            print(f"{datetime.now()} - This is the last frame")
             st.error("This is the last frame")
             time.sleep(1)
             return
         
         data_repo.update_specific_timing(timing.uuid, aux_frame_index=timing.aux_frame_index + 1)
-        print(f"{datetime.now()} - Updated timing object")
-
-    print(f"{datetime.now()} - Updating clip duration of all timing frames")
-    update_clip_duration_of_all_timing_frames(timing.project.uuid)
-    print(f"{datetime.now()} - Finished move_frame function")
 
 def move_frame_back_button(timing_uuid, orientation):
     if orientation == "side-to-side":
@@ -1084,12 +1070,9 @@ def update_clip_duration_of_all_timing_frames(project_uuid):
             total_duration_of_frame = float(
                 time_of_next_frame) - float(time_of_frame)
 
-        duration_of_static_time = 0.0
+        total_duration_of_frame = round(total_duration_of_frame)
+        data_repo.update_specific_timing(timing_item.uuid, clip_duration=total_duration_of_frame)
 
-        
-
-        data_repo.update_specific_timing(
-            timing_item.uuid, clip_duration=total_duration_of_frame)
 
 def create_timings_row_at_frame_number(project_uuid, index_of_frame, frame_time=0.0):
     data_repo = DataRepo()

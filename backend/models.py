@@ -232,11 +232,31 @@ class Timing(BaseModel):
                         Timing.objects.filter(uuid=t.uuid, is_disabled=False).update(frame_time=int(frame_time_list[idx] * 100) / 100)
                         idx += 1
                     # moving frames
-                    timings_to_move.update(aux_frame_index=F('aux_frame_index') + 1)
+                    timings_to_move.update(aux_frame_index=F('aux_frame_index') + 1, timed_clip=None, preview_video=None)
                     
                     
                 self.interpolated_video_id = None
                 self.timed_clip_id = None
+
+                # updating clip_duration
+                timing_list = Timing.objects.filter(project_id=self.project_id, is_disabled=False).order_by('aux_frame_index')
+                length_of_list = len(timing_list)
+
+                for idx, timing_item in enumerate(timing_list):
+                    # last frame
+                    if idx == (length_of_list - 1):
+                        time_of_frame = timing_item.frame_time
+                        duration_of_static_time = 0.0
+                        end_duration_of_frame = float(time_of_frame) + float(duration_of_static_time)
+                        total_duration_of_frame = float(end_duration_of_frame) - float(time_of_frame)
+                    else:
+                        time_of_frame = timing_item.frame_time
+                        next_timing = timing_list[idx + 1]
+                        time_of_next_frame = next_timing.frame_time
+                        total_duration_of_frame = float(time_of_next_frame) - float(time_of_frame)
+
+                    Timing.objects.filter(uuid=timing_item.uuid, is_disabled=False).update(clip_duration=total_duration_of_frame)
+                
 
         # ------ handling timed_clip ------
         # if timed_clip is deleted/changed then preview_video will be deleted
