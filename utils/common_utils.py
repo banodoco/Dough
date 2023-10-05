@@ -69,7 +69,7 @@ def get_current_user() -> InternalUserObject:
 
 def user_credits_available():
     current_user = get_current_user()
-    return True if (current_user and current_user['total_credits'] > 0) else False
+    return True if (current_user and current_user.total_credits > 0) else False
 
 def get_current_user_uuid():
     current_user = get_current_user()

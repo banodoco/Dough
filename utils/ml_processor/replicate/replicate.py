@@ -59,15 +59,21 @@ class ReplicateProcessor(MachineLearningProcessor):
         return self.predict_model_output(model, **params)
     
     @check_user_credits
-    def predict_model_output(self, model: ReplicateModel, **kwargs):
-        model_version = self.get_model(model)
+    def predict_model_output(self, replicate_model: ReplicateModel, **kwargs):
+        model_version = self.get_model(replicate_model)
         start_time = time.time()
         output = model_version.predict(**kwargs)
         end_time = time.time()
-        log = log_model_inference(model, end_time - start_time, **kwargs)
+
+        # hackish fix for now, will update replicate model later
+        if 'model' in kwargs:
+            kwargs['inf_model'] = kwargs['model']
+            del kwargs['model']
+
+        log = log_model_inference(replicate_model, end_time - start_time, **kwargs)
         self._update_usage_credits(end_time - start_time)
 
-        if model == REPLICATE_MODEL.clip_interrogator:
+        if replicate_model == REPLICATE_MODEL.clip_interrogator:
             output = output     # adding this for organisation purpose
         else:
             output = [output[-1]]
@@ -75,24 +81,29 @@ class ReplicateProcessor(MachineLearningProcessor):
         return output, log
     
     @check_user_credits
-    def predict_model_output_async(self, model: ReplicateModel, **kwargs):
-        res = asyncio.run(self._multi_async_prediction(model, **kwargs))
+    def predict_model_output_async(self, replicate_model: ReplicateModel, **kwargs):
+        res = asyncio.run(self._multi_async_prediction(replicate_model, **kwargs))
 
         output_list = []
         for (output, time_taken) in  res:
-            log = log_model_inference(model, time_taken, **kwargs)
+            # hackish fix for now, will update replicate model later
+            if 'model' in kwargs:
+                kwargs['inf_model'] = kwargs['model']
+                del kwargs['model']
+                
+            log = log_model_inference(replicate_model, time_taken, **kwargs)
             self._update_usage_credits(time_taken)
             output_list.append((output, log))
 
         return output_list
     
-    async def _multi_async_prediction(self, model: ReplicateModel, **kwargs):
+    async def _multi_async_prediction(self, replicate_model: ReplicateModel, **kwargs):
         variant_count = kwargs['variant_count'] if ('variant_count' in kwargs and kwargs['variant_count']) else 1
-        res = await asyncio.gather(*[self._async_model_prediction(model, **kwargs) for _ in range(variant_count)])
+        res = await asyncio.gather(*[self._async_model_prediction(replicate_model, **kwargs) for _ in range(variant_count)])
         return res
     
-    async def _async_model_prediction(self, model: ReplicateModel, **kwargs):
-        model_version = self.get_model(model)
+    async def _async_model_prediction(self, replicate_model: ReplicateModel, **kwargs):
+        model_version = self.get_model(replicate_model)
         start_time = time.time()
         output = await asyncio.to_thread(model_version.predict, **kwargs)
         end_time = time.time()

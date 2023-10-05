@@ -7,9 +7,8 @@ class MotionModuleCheckpoint:
 
 # make sure to have unique names (streamlit limitation)
 class AnimateDiffCheckpoint:
-    mm_v15_v2 = MotionModuleCheckpoint(name="mm-v15-v2")
-    ad_stabilized_motion = MotionModuleCheckpoint(name="AD_Stabilized_Motion")
-    temporal_diff = MotionModuleCheckpoint(name="TemporalDiff")
+    mm_v15 = MotionModuleCheckpoint(name="mm_sd_v15.ckpt")
+    mm_v14 = MotionModuleCheckpoint(name="mm_sd_v14.ckpt")
     
     @staticmethod
     def get_name_list():

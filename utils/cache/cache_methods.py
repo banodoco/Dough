@@ -381,7 +381,7 @@ def cache_data(cls):
     def _cache_update_user(self, *args, **kwargs):
         original_func = getattr(cls, '_original_update_user')
         user = original_func(self, *args, **kwargs)
-        StCache.delete_all(user, CacheKey.LOGGED_USER.value)
+        StCache.delete_all(CacheKey.LOGGED_USER.value)
 
         return user
     
