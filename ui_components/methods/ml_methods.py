@@ -238,6 +238,7 @@ def prompt_model_blip2(input_image, query):
     return output
 
 def facial_expression_recognition(input_image):
+    input_image = input_image.location
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
 

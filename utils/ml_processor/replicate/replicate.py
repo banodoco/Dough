@@ -67,7 +67,12 @@ class ReplicateProcessor(MachineLearningProcessor):
         log = log_model_inference(model, end_time - start_time, **kwargs)
         self._update_usage_credits(end_time - start_time)
 
-        return [output[-1]], log
+        if model == REPLICATE_MODEL.clip_interrogator:
+            output = output     # adding this for organisation purpose
+        else:
+            output = [output[-1]]
+
+        return output, log
     
     @check_user_credits
     def predict_model_output_async(self, model: ReplicateModel, **kwargs):
