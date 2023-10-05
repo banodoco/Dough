@@ -8,6 +8,7 @@ class CacheKey(ExtendedEnum):
     APP_SECRET = "app_secret"
     PROJECT_SETTING = "project_setting"
     AI_MODEL = "ai_model"
+    LOGGED_USER = "logged_user"
 
 
 class StCache:

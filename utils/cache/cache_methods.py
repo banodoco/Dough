@@ -1,7 +1,7 @@
 from shared.logging.logging import AppLogger
 from utils.cache.cache import CacheKey, StCache
+import streamlit as st
 
-from utils.enum import ExtendedEnum
 
 logger = AppLogger()
 
@@ -377,5 +377,51 @@ def cache_data(cls):
     
     setattr(cls, '_original_bulk_update_project_setting', cls.bulk_update_project_setting)
     setattr(cls, "bulk_update_project_setting", _cache_bulk_update_project_setting)
+
+    def _cache_update_user(self, *args, **kwargs):
+        original_func = getattr(cls, '_original_update_user')
+        user = original_func(self, *args, **kwargs)
+        StCache.delete_all(user, CacheKey.LOGGED_USER.value)
+
+        return user
+    
+    setattr(cls, '_original_update_user', cls.update_user)
+    setattr(cls, "update_user", _cache_update_user)
+
+    def _cache_get_first_active_user(self, *args, **kwargs):
+        logged_user_list = StCache.get_all(CacheKey.LOGGED_USER.value)
+        if logged_user_list and len(logged_user_list):
+            return logged_user_list[0]
+
+        original_func = getattr(cls, '_original_get_first_active_user')
+        user = original_func(self, *args, **kwargs)
+        StCache.delete_all(CacheKey.LOGGED_USER.value)
+        StCache.add(user, CacheKey.LOGGED_USER.value)
+
+        return user
+    
+    setattr(cls, '_original_get_first_active_user', cls.get_first_active_user)
+    setattr(cls, "get_first_active_user", _cache_get_first_active_user)
+
+    def _cache_create_user(self, **kwargs):
+        original_func = getattr(cls, '_original_create_user')
+        user = original_func(self, **kwargs)
+        StCache.update(user, CacheKey.LOGGED_USER.value)
+
+        return user
+    
+    setattr(cls, '_original_create_user', cls.create_user)
+    setattr(cls, "create_user", _cache_create_user)
+
+    def _cache_google_user_login(self, **kwargs):
+        original_func = getattr(cls, '_original_google_user_login')
+        user, token, refresh_token = original_func(self, **kwargs)
+        StCache.delete_all(CacheKey.LOGGED_USER.value)
+        StCache.add(user, CacheKey.LOGGED_USER.value)
+
+        return user, token, refresh_token
+    
+    setattr(cls, '_original_google_user_login', cls.google_user_login)
+    setattr(cls, "google_user_login", _cache_google_user_login)
 
     return cls

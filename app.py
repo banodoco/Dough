@@ -7,7 +7,7 @@ import django
 from shared.constants import OFFLINE_MODE, SERVER, ServerType
 import sentry_sdk
 
-from utils.constants import AUTH_TOKEN, LOGGED_USER
+from utils.constants import AUTH_TOKEN
 from utils.local_storage.url_storage import delete_url_param, get_url_param, set_url_param
 from utils.third_party_auth.google.google_auth import get_google_auth_url
 
@@ -59,9 +59,7 @@ def main():
             data_repo = DataRepo()
             user, token, refresh_token = data_repo.google_user_login(**data)
             if user:
-                st.session_state[LOGGED_USER] = user.to_json() if user else None
                 set_url_param(AUTH_TOKEN, str(token))
-                # st.experimental_set_query_params(test='testing')
                 st.rerun()
             else:
                 delete_url_param(AUTH_TOKEN)

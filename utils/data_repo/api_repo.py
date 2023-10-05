@@ -8,7 +8,7 @@ import streamlit as st
 from shared.constants import SERVER, InternalFileType, InternalResponse, ServerType
 from utils.common_decorators import log_time
 
-from utils.constants import AUTH_TOKEN, AUTH_TOKEN, LOGGED_USER
+from utils.constants import AUTH_TOKEN, AUTH_TOKEN
 from utils.local_storage.url_storage import delete_url_param, get_url_param
 
 

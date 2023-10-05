@@ -3,6 +3,7 @@ import streamlit as st
 import os
 import math
 from moviepy.editor import *
+from shared.constants import SERVER, ServerType
 
 from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.custom_models_page import custom_models_page
@@ -13,7 +14,7 @@ from ui_components.components.video_rendering_page import video_rendering_page
 from streamlit_option_menu import option_menu
 from ui_components.constants import CreativeProcessType
 from ui_components.models import InternalAppSettingObject
-from utils.common_utils import create_working_assets, get_current_user_uuid, reset_project_state
+from utils.common_utils import create_working_assets, get_current_user, get_current_user_uuid, reset_project_state
 from utils import st_memory
 
 from utils.data_repo.data_repo import DataRepo
@@ -26,15 +27,18 @@ def setup_app_ui():
 
     app_settings: InternalAppSettingObject = data_repo.get_app_setting_from_uuid()
 
+    if SERVER != ServerType.DEVELOPMENT.value:
+        current_user = get_current_user()
+        user_credits = current_user.total_credits if (current_user and current_user.total_credits > 0) else 0
+        if user_credits < 0.5:
+            st.error(f"You have {user_credits} credits left - please go to App Settings to add more credits")
+
     with st.sidebar:
-
         h1, h2 = st.columns([1, 3])
-
         with h1:
             st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
 
         sections = ["Open Project", "App Settings", "New Project"]
-
         with h2:
             st.write("")
             st.session_state["section"] = st_memory.menu(
