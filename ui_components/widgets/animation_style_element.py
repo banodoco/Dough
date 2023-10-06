@@ -1,7 +1,7 @@
 import time
 import streamlit as st
 from typing import List
-from shared.constants import AnimationToolType
+from shared.constants import AnimationStyleType, AnimationToolType
 from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.motion_module import AnimateDiffCheckpoint
@@ -14,39 +14,61 @@ def animation_style_element(timing_uuid, project_uuid):
     current_animation_style = timing.animation_style
     variant_count = 1
 
-    if current_animation_style == "Interpolation":
+    if current_animation_style == AnimationStyleType.INTERPOLATION.value:
         animation_tool = st.radio("Animation Tool:", options=AnimationToolType.value_list(), key="animation_tool", horizontal=True)
-        video_resolution = st.radio("Video Resolution:", options=["Preview Resolution", "Full Resolution"], key="video_resolution", horizontal=True)
+        video_resolution = None
 
         settings = {
             "animation_tool": animation_tool
         }
         timing.animation_tool = animation_tool
         if animation_tool == AnimationToolType.ANIMATEDIFF.value:
-            motion_module = st.selectbox("Which motion module would you like to use?", options=motion_modules, key="motion_module")
+            c1, c2 = st.columns([1,1])
+            with c1:
+                motion_module = st.selectbox("Which motion module would you like to use?", options=motion_modules, key="motion_module")
+            with c2:
+                sd_model_list = [
+                    "Realistic_Vision_V5.0.safetensors",
+                    "Counterfeit-V3.0_fp32.safetensors",
+                    "epic_realism.safetensors",
+                    "dreamshaper_v8.safetensors",
+                    "deliberate_v3.safetensors"
+                ]
+                sd_model = st.selectbox("Which Stable Diffusion model would you like to use?", options=sd_model_list, key="sd_model")
+
             prompt_column_1, prompt_column_2 = st.columns([1, 1])
 
             with prompt_column_1:
-                starting_prompt = st.text_area("Starting Prompt:", value=project_settings.default_prompt, key="starting_prompt")
+                positive_prompt = st.text_area("Positive Prompt:", value=project_settings.default_prompt, key="positive_prompt")
             
             with prompt_column_2:
-                ending_prompt = st.text_area("Ending Prompt:", value=project_settings.default_prompt, key="ending_prompt")
+                negative_prompt = st.text_area("Negative Prompt:", value=project_settings.default_prompt, key="negative_prompt")
 
-            animate_col_1, animate_col_2 = st.columns([1, 3])
+            animate_col_1, animate_col_2, _ = st.columns([1, 1, 2])
 
             with animate_col_1:
+                img_dimension_list = ["512x512", "512x768", "768x512"]
+                img_dimension = st.selectbox("Image Dimension:", options=img_dimension_list, key="img_dimension")
+            with animate_col_2:
                 variant_count = st.number_input("How many variants?", min_value=1, max_value=100, value=1, step=1, key="variant_count")
             
             normalise_speed = st.checkbox("Normalise Speed", value=True, key="normalise_speed")
 
             settings.update(
-                motion_module=AnimateDiffCheckpoint.get_model_from_name(motion_module),
-                starting_prompt=starting_prompt,
-                ending_prompt=ending_prompt,
+                positive_prompt=positive_prompt,
+                negative_prompt=negative_prompt,
+                image_dimension=img_dimension,
+                sampling_steps=30,
+                motion_module=motion_module,
+                model=sd_model,
                 normalise_speed=normalise_speed
             )
+        
+        elif animation_tool == AnimationToolType.G_FILM.value:
+            video_resolution = st.selectbox("Video Resolution:", options=["Full Resolution", "Preview"], key="video_resolution")
+            
 
-    elif current_animation_style == "Image to Video":
+    elif current_animation_style == AnimationStyleType.IMAGE_TO_VIDEO.value:
         st.info("For image to video, you can select one or more prompts, and how many frames you want to generate for each prompt - it'll attempt to travel from one prompt to the next.")
         which_motion_module = st.selectbox("Which motion module would you like to use?", options=motion_modules, key="which_motion_module")
 
@@ -76,7 +98,7 @@ def animation_style_element(timing_uuid, project_uuid):
                 with bottom3:
                     if st.button(f"Delete Prompt {i+1}"):
                         del st.session_state['travel_list'][i]
-                        st.experimental_rerun()
+                        st.rerun()
                 # Update the item if it has been edited
                 if new_prompt != item['prompt'] or new_frame_count != item['frame_count']:
                     st.session_state['travel_list'][i] = {'prompt': new_prompt, 'frame_count': new_frame_count}
@@ -96,5 +118,5 @@ def animation_style_element(timing_uuid, project_uuid):
             settings,
             variant_count
         )
-        st.experimental_rerun()
+        st.rerun()
     

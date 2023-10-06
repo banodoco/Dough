@@ -142,7 +142,7 @@ def convert_bytes_to_file(file_location_to_save, mime_type, file_bytes, project_
     hosted_url = save_or_host_file_bytes(file_bytes, file_location_to_save, "." + mime_type.split("/")[1])
     file_data = {
         "name": str(uuid.uuid4()) + "." + mime_type.split("/")[1] if not filename else filename,
-        "type": InternalFileType.IMAGE.value,
+        "type": InternalFileType.VIDEO.value if 'video' in mime_type else (InternalFileType.AUDIO.value if 'audio' in mime_type else InternalFileType.IMAGE.value),
         "project_id": project_uuid,
         "inference_log_id": inference_log_id,
         "tag": tag

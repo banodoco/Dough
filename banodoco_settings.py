@@ -20,6 +20,7 @@ ENCRYPTION_KEY = 'J2684nBgNUYa_K0a6oBr5H8MpSRW0EJ52Qmq7jExE-w='
 logger = AppLogger()
 
 def project_init():
+    from utils.data_repo.data_repo import DataRepo
     data_repo = DataRepo()
 
     # db initialization takes some time

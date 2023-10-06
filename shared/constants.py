@@ -69,6 +69,9 @@ class AnimationToolType(ExtendedEnum):
     ANIMATEDIFF = 'Animatediff'
     G_FILM = "Google FiLM"
 
+class ViewType(ExtendedEnum):
+    SINGLE = "Single"
+    LIST = "List"
 
 ##################### global constants #####################
 SERVER = os.getenv('SERVER', ServerType.PRODUCTION.value)

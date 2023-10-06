@@ -1,7 +1,6 @@
 # this repo serves as a middlerware between API backend and the frontend
 import threading
 from shared.constants import InternalFileType, InternalResponse
-from backend.db_repo import DBRepo
 from shared.constants import SERVER, ServerType
 from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalUserObject
 from utils.cache.cache_methods import cache_data
@@ -25,6 +24,7 @@ class DataRepo:
     def __init__(self):
         if not self._initialized:
             if SERVER == ServerType.DEVELOPMENT.value:
+                from backend.db_repo import DBRepo
                 self.db_repo = DBRepo()
             else:
                 self.db_repo = APIRepo()
@@ -354,7 +354,7 @@ class DataRepo:
     # update user credits - updates the credit of the user calling the API
     def update_usage_credits(self, credits_to_add):
         user = self.update_user(user_id=None, credits_to_add=credits_to_add)
-        return True if user else None
+        return user
     
     def generate_payment_link(self, amount):
         res = self.db_repo.generate_payment_link(amount)

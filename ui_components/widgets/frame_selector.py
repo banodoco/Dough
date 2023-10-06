@@ -20,7 +20,9 @@ def frame_selector_widget():
 
         # st.write(st.session_state['prev_frame_index'])
         # st.write(st.session_state['current_frame_index'])
-        st.session_state['current_frame_index'] = st.number_input(f"Key frame # (out of {len(timing_details)})", 1, len(timing_details), value=st.session_state['prev_frame_index'], step=1, key="which_image_selector")
+        st.session_state['current_frame_index'] = st.number_input(f"Key frame # (out of {len(timing_details)})", 1, 
+                                                                  len(timing_details), value=st.session_state['prev_frame_index'], 
+                                                                  step=1, key="which_image_selector")
         
         st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
         
@@ -31,7 +33,7 @@ def frame_selector_widget():
             st.session_state['frame_styling_view_type_index'] = 0
             st.session_state['frame_styling_view_type'] = "Individual View"
                                         
-            st.experimental_rerun()       
+            st.rerun()       
 
     with time2:
         single_frame_time_selector(st.session_state['current_frame_uuid'], 'navbar', shift_frames=False)
@@ -55,4 +57,4 @@ def frame_selector_widget():
     
     if st.button("Delete key frame"):
         delete_frame(st.session_state['current_frame_uuid'])
-        st.experimental_rerun()
+        st.rerun()

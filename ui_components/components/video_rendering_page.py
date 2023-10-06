@@ -50,7 +50,7 @@ def video_rendering_page(mainheader2, project_uuid):
         render_video(final_video_name, project_uuid, quality_of_video, InternalFileTag.COMPLETE_GENERATED_VIDEO.value)
         st.success("Video rendered!")
         time.sleep(1.5)
-        st.experimental_rerun()
+        st.rerun()
 
     st.markdown("***")
 
@@ -81,6 +81,6 @@ def video_rendering_page(mainheader2, project_uuid):
                     # removing from database
                     data_repo.delete_file_from_uuid(video.uuid)
 
-                    st.experimental_rerun()
+                    st.rerun()
             else:
                 st.button(f"Delete {video}", disabled=True)

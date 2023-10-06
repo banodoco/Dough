@@ -1,4 +1,4 @@
-streamlit==1.23.1
+streamlit==1.27.0
 streamlit-image-comparison==0.0.3
 opencv-python-headless
 sahi

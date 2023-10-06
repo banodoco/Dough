@@ -69,14 +69,24 @@ class VideoInterpolator:
         ml_client = get_ml_client()
         animation_tool = settings['animation_tool'] if 'animation_tool' in settings else AnimationToolType.G_FILM.value
 
-        # if animation_tool == AnimationToolType.G_FILM.value: 
-        if True:
+        if animation_tool == AnimationToolType.G_FILM.value:
             res = ml_client.predict_model_output_async(REPLICATE_MODEL.google_frame_interpolation, frame1=img1, frame2=img2,
                                                         times_to_interpolate=settings['interpolation_steps'], variant_count=variant_count)
-        # else:
-        #     # TODO: integrate the AD interpolation API here
-        #     output, log = ml_client.predict_model_output(REPLICATE_MODEL.google_frame_interpolation, frame1=img1, frame2=img2,
-        #                                                 times_to_interpolate=settings['interpolation_steps'])
+        
+        # since workflows can have multiple input params it's not standardized yet
+        elif animation_tool == AnimationToolType.ANIMATEDIFF.value:
+            data = {
+                "positive_prompt": settings['positive_prompt'],
+                "negative_prompt": settings['negative_prompt'],
+                "image_dimension": settings['image_dimension'],
+                "starting_image_path": img1,
+                "ending_image_path": img2,
+                "sampling_steps": settings['sampling_steps'],
+                "motion_module": settings['motion_module'],
+                "model": settings['model'],
+            }
+
+            res = ml_client.predict_model_output_async(REPLICATE_MODEL.ad_interpolation, **data)
         
         final_res = []
         for (output, log) in res: 

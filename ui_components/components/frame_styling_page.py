@@ -1,4 +1,5 @@
 import streamlit as st
+from shared.constants import ViewType
 
 
 from ui_components.methods.common_methods import add_key_frame,compare_to_previous_and_next_frame,compare_to_source_frame,style_cloning_element
@@ -78,7 +79,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             idx = st.session_state['current_frame_index'] - 1
                                     
-            st.session_state['show_comparison'] = st_memory.radio("Show:", options=["Other Variants", "Preview Video in Context"], horizontal=True, project_settings=project_settings, key="show_comparison_radio_motion")
+            st.session_state['show_comparison'] = st_memory.radio("Show:", options=["Other Variants", "Preview Video in Context"], horizontal=True, key="show_comparison_radio_motion")
 
             if st.session_state['show_comparison'] == "Other Variants":
                 variant_comparison_element(st.session_state['current_frame_uuid'])
@@ -124,7 +125,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 with st.expander("🛠️ Generate Variants + Prompt Settings", expanded=True):
                     col1, col2 = st.columns([1, 1])
                     with col1:
-                        styling_element(st.session_state['current_frame_uuid'], view_type="Single")
+                        styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.SINGLE.value)
                     with col2:
                         detail1, detail2 = st.columns([1, 1])
                         with detail1:
@@ -156,7 +157,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         lora_model_2_url=st.session_state['lora_model_2_url'] if ('lora_model_2_url' in st.session_state and st.session_state['lora_model_2_url']) else None,
                                         lora_model_3_url=st.session_state['lora_model_3_url'] if ('lora_model_3_url' in st.session_state and st.session_state['lora_model_3_url']) else None,
                                     )
-                                st.experimental_rerun()
+                                st.rerun()
 
                         st.markdown("***")
 
@@ -192,7 +193,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 if st.button(f"Add key frame",type="primary",use_container_width=True):
                                 
                     add_key_frame(selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image)
-                    st.experimental_rerun()
+                    st.rerun()
                         
     elif st.session_state['frame_styling_view_type'] == "List View":
         
@@ -216,7 +217,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
             if st.session_state['page'] == "Styling":
 
                 with st.sidebar:                            
-                    styling_element(st.session_state['current_frame_uuid'], view_type="List")
+                    styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.LIST.value)
                 
                 styling_list_view(start_index, end_index, shift_frames_setting, project_uuid)
                                 
@@ -232,13 +233,13 @@ def frame_styling_page(mainheader2, project_uuid: str):
         elif st.session_state['list_view_type'] == "Timeline View":
 
             with st.sidebar:                            
-                    styling_element(st.session_state['current_frame_uuid'], view_type="List")
+                    styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.LIST.value)
 
             
             if st.session_state['page'] == "Styling":
-                timeline_view(shift_frames_setting, project_uuid,"Styling",header_col_3,header_col_4)
+                timeline_view(shift_frames_setting, project_uuid, "Styling", header_col_3, header_col_4)
             elif st.session_state['page'] == "Motion":
-                timeline_view(shift_frames_setting, project_uuid,"Motion",header_col_3,header_col_4)
+                timeline_view(shift_frames_setting, project_uuid, "Motion", header_col_3, header_col_4)
 
                 
 

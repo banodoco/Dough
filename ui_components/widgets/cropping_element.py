@@ -74,7 +74,7 @@ def precision_cropping_element(stage, project_uuid):
             save_zoomed_image(output_image, st.session_state['current_frame_uuid'], stage, promote=True)
             st.success("Image saved successfully!")
             time.sleep(1)
-            st.experimental_rerun()
+            st.rerun()
 
         inpaint_in_black_space_element(
             output_image, project_settings.project.uuid, stage)
@@ -111,7 +111,7 @@ def manual_cropping_element(stage, timing_uuid):
 
         if 'working_image' not in st.session_state or st.session_state['current_working_image_number'] != st.session_state['current_frame_index'] or st.session_state['current_stage'] != stage:
             get_working_image()
-            st.experimental_rerun()
+            st.rerun()
 
         options1, options2, option3, option4 = st.columns([3, 1, 1, 1])
         with options1:
@@ -126,7 +126,7 @@ def manual_cropping_element(stage, timing_uuid):
                     st.session_state['working_image'] = st.session_state['working_image'].rotate(
                         -st.session_state['degree'], resample=Image.BICUBIC, expand=True)
                     st.session_state['degrees_rotated_to'] = st.session_state['degree']
-                    st.experimental_rerun()
+                    st.rerun()
 
             with sub_options_2:
                 st.write("")
@@ -135,7 +135,7 @@ def manual_cropping_element(stage, timing_uuid):
                     st.session_state['degree'] = 0
                     get_working_image()
                     st.session_state['degrees_rotated_to'] = 0
-                    st.experimental_rerun()
+                    st.rerun()
         
         project_settings: InternalProjectObject = data_repo.get_project_setting(
             timing.project.uuid)
@@ -186,7 +186,7 @@ def manual_cropping_element(stage, timing_uuid):
                         data_repo.update_specific_timing(
                             st.session_state['current_frame_uuid'], source_image_id=cropped_image.uuid)
                         time.sleep(1)
-                    st.experimental_rerun()
+                    st.rerun()
             with cropbtn2:
                 st.warning("Warning: This will overwrite the original image")
 

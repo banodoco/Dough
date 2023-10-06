@@ -6,7 +6,6 @@ import json
 from shared.constants import SERVER, ServerType
 from ui_components.models import InternalUserObject
 from utils.cache.cache import StCache
-from utils.constants import LOGGED_USER
 from utils.data_repo.data_repo import DataRepo
 
 def copy_sample_assets(project_uuid):
@@ -59,25 +58,23 @@ def create_working_assets(project_uuid):
     if new_project:
         copy_sample_assets(project_uuid)
 
+def truncate_decimal(num: float, n: int = 2) -> float:
+    return int(num * 10 ** n) / 10 ** n
 
-# fresh_fetch - bypasses the cache
-def get_current_user(fresh_fetch=False) -> InternalUserObject:
-    # changing the code to operate on streamlit state rather than local file
-    if not LOGGED_USER in st.session_state or fresh_fetch:
-        data_repo = DataRepo()
-        user = data_repo.get_first_active_user()
-        st.session_state[LOGGED_USER] = user.to_json() if user else None
-    
-    return json.loads(st.session_state[LOGGED_USER]) if LOGGED_USER in st.session_state else None
+
+def get_current_user() -> InternalUserObject:
+    data_repo = DataRepo()
+    user = data_repo.get_first_active_user()
+    return user
 
 def user_credits_available():
-    current_user = get_current_user(fresh_fetch=True)
-    return True if (current_user and current_user['total_credits'] > 0) else False
+    current_user = get_current_user()
+    return True if (current_user and current_user.total_credits > 0) else False
 
 def get_current_user_uuid():
     current_user = get_current_user()
-    if current_user and 'uuid' in current_user:
-        return current_user['uuid']
+    if current_user:
+        return current_user.uuid
     else: 
         return None
 

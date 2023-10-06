@@ -36,7 +36,7 @@ def page_toggle(num_pages, items_per_page, project_uuid, position):
         1, num_pages), horizontal=True, index=st.session_state['index_of_current_page'] - 1, key=f"page_selection_radio_{position}")
     if st.session_state['current_page'] != st.session_state['index_of_current_page']:
         st.session_state['index_of_current_page'] = st.session_state['current_page']
-        st.experimental_rerun()
+        st.rerun()
 
     start_index = (st.session_state['current_page'] - 1) * items_per_page         
     end_index = min(start_index + items_per_page,len(timing_details))
@@ -72,13 +72,17 @@ def styling_list_view(start_index, end_index, shift_frames_setting, project_uuid
             st.markdown("---")
             btn1, btn2, btn3 = st.columns([2, 1, 1])
             with btn1:
-                delete_frame_button(timing_details[i].uuid, show_label=False)
-            with btn2:                
-                move_frame_back_button(timing_details[i].uuid, orientation='up-down')
-
-            with btn3:                
-                move_frame_forward_button(timing_details[i].uuid, orientation='up-down')
-                    
+                if st.button("Delete this keyframe", key=f'{i}'):
+                    delete_frame(timing_details[i].uuid)
+                    st.rerun()
+            with btn2:
+                if st.button("⬆️", key=f"Promote {display_number}"):
+                    move_frame("Up", timing_details[i].uuid)
+                    st.rerun()
+            with btn3:
+                if st.button("⬇️", key=f"Demote {display_number}"):
+                    move_frame("Down", timing_details[i].uuid)
+                    st.rerun()
 
         st.markdown("***")
 

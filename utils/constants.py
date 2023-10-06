@@ -6,7 +6,6 @@ from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 import streamlit as st
 
 
-LOGGED_USER = 'logged_user'
 AUTH_TOKEN = 'auth_details'
 
 class ImageStage(ExtendedEnum):

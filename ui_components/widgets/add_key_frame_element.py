@@ -15,8 +15,6 @@ def add_key_frame_element(timing_details, project_uuid):
     data_repo = DataRepo()
 
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
-    project_settings = data_repo.get_project_setting(project_uuid)
-
     add1, add2 = st.columns(2)
 
     with add1:
@@ -25,22 +23,35 @@ def add_key_frame_element(timing_details, project_uuid):
         image1,image2 = st.columns(2)
         with image1:
             source_of_starting_image = st.radio("Where would you like to get the starting image from?", [
-                                                "Previous frame", "Uploaded image"], key="source_of_starting_image")
+                                                "Existing Frame", "Uploaded image"], key="source_of_starting_image")
         
-        which_stage_for_starting_image = None
-        if source_of_starting_image == "Previous frame":                
+        transformation_stage = None
+        if source_of_starting_image == "Existing Frame":                
             with image2:
-                which_stage_for_starting_image = st.radio("Which stage would you like to use?", [
-                                                        ImageStage.MAIN_VARIANT.value, ImageStage.SOURCE_IMAGE.value], key="which_stage_for_starting_image", horizontal=True)
-                which_number_for_starting_image = st.number_input("Which frame would you like to use?", min_value=1, max_value=
-                                                            max(1, len(timing_details)), value=st.session_state['current_frame_index'], step=1, key="which_number_for_starting_image")
-            if which_stage_for_starting_image == ImageStage.SOURCE_IMAGE.value:
-                if timing_details[which_number_for_starting_image - 1].source_image != "":
-                    selected_image_location = timing_details[which_number_for_starting_image - 1].source_image.location
+                transformation_stage = st.radio(
+                                                "Which stage would you like to use?",
+                                                [
+                                                    ImageStage.MAIN_VARIANT.value, 
+                                                    ImageStage.SOURCE_IMAGE.value
+                                                ],
+                                                key="transformation_stage",
+                                                horizontal=True
+                                            )
+                image_idx = st.number_input(
+                                            "Which frame would you like to use?", 
+                                            min_value=1, 
+                                            max_value=max(1, len(timing_details)), 
+                                            value=st.session_state['current_frame_index'], 
+                                            step=1, 
+                                            key="image_idx"
+                                        )
+            if transformation_stage == ImageStage.SOURCE_IMAGE.value:
+                if timing_details[image_idx - 1].source_image != "":
+                    selected_image_location = timing_details[image_idx - 1].source_image.location
                 else:
                     selected_image_location = ""
-            elif which_stage_for_starting_image == ImageStage.MAIN_VARIANT.value:
-                selected_image_location = timing_details[which_number_for_starting_image - 1].primary_image_location
+            elif transformation_stage == ImageStage.MAIN_VARIANT.value:
+                selected_image_location = timing_details[image_idx - 1].primary_image_location
         elif source_of_starting_image == "Uploaded image":
             with image2:
                 uploaded_image = st.file_uploader(
@@ -53,7 +64,7 @@ def add_key_frame_element(timing_details, project_uuid):
                     selected_image_location = selected_image_location or file_location
                 else:
                     selected_image_location = ""
-                which_number_for_starting_image = st.session_state['current_frame_index']
+                image_idx = st.session_state['current_frame_index']
 
         
         how_long_after = st.slider(
@@ -83,4 +94,4 @@ def add_key_frame_element(timing_details, project_uuid):
         else:
             st.error("No Starting Image Found")
 
-    return selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image
+    return selected_image, inherit_styling_settings, how_long_after, transformation_stage

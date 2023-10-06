@@ -172,4 +172,4 @@ def custom_models_page(project_uuid):
     #             st.success(
     #                 f"Successfully uploaded - the model '{model_name}' is now available for use!")
     #             time.sleep(1.5)
-    #             st.experimental_rerun()
+    #             st.rerun()

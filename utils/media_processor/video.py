@@ -14,9 +14,13 @@ class VideoProcessor:
 
     @staticmethod
     def update_video_bytes_speed(video_bytes, animation_style, desired_duration):
-        video_io = BytesIO(video_bytes)
-        clip = VideoFileClip(video_io)
+        # video_io = BytesIO(video_bytes)
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
+        with open(temp_file.name, 'wb') as out_file:
+            out_file.write(video_bytes)
 
+        clip = VideoFileClip(temp_file.name)
+        os.remove(temp_file.name)
         return VideoProcessor.update_clip_speed(clip, animation_style, desired_duration)
 
     @staticmethod

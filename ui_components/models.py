@@ -3,7 +3,7 @@ import streamlit as st
 import json
 from shared.constants import AnimationStyleType, AnimationToolType
 
-from ui_components.constants import TEMP_MASK_FILE, DefaultTimingStyleParams
+from ui_components.constants import TEMP_MASK_FILE, DefaultProjectSettingParams, DefaultTimingStyleParams
 from utils.common_decorators import session_state_attributes
 from utils.constants import MLQueryObject
 
@@ -108,12 +108,11 @@ class InternalFrameTimingObject:
                     if 'interpolated_clip_list' in kwargs and kwargs["interpolated_clip_list"] else []
         self.timed_clip = InternalFileObject(
             **kwargs["timed_clip"]) if 'timed_clip' in kwargs and kwargs["timed_clip"] else None
+        self.preview_video = InternalFileObject(**kwargs['preview_video']) if 'preview_video' in kwargs and kwargs['preview_video'] else None
         self.mask = InternalFileObject(
             **kwargs["mask"]) if 'mask' in kwargs and kwargs["mask"] else None
         self.canny_image = InternalFileObject(
             **kwargs["canny_image"]) if 'canny_image' in kwargs and kwargs["canny_image"] else None
-        self.preview_video = InternalFileObject(
-            **kwargs["preview_video"]) if 'preview_video' in kwargs and kwargs["preview_video"] else None
         self.primary_image = InternalFileObject(
             **kwargs["primary_image"]) if 'primary_image' in kwargs and kwargs["primary_image"] else None
         self.frame_time = kwargs['frame_time'] if 'frame_time' in kwargs else None
@@ -188,6 +187,7 @@ class InternalAppSettingObject:
         self.replicate_key = kwargs['replicate_key'] if 'replicate_key' in kwargs and kwargs['replicate_key'] else ""
 
 
+@session_state_attributes(DefaultProjectSettingParams)
 class InternalSettingObject:
     def __init__(self, **kwargs):
         self.uuid = kwargs['uuid'] if 'uuid' in kwargs else None
