@@ -674,8 +674,7 @@ def delete_frame_button(timing_uuid):
 
 def delete_frame(timing_uuid):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
     next_timing = data_repo.get_next_timing(timing_uuid)
     timing_details = data_repo.get_timing_list_from_project(project_uuid=timing.project.uuid)
 
@@ -683,18 +682,15 @@ def delete_frame(timing_uuid):
         data_repo.update_specific_timing(
             next_timing.uuid,
             interpolated_clip_list=None,
-            preview_video_id=None
+            preview_video_id=None,
+            timed_clip_id=None
         )
-
-    # If the deleted frame is the first one, set the time of the next frame to 0.00
-    if timing.aux_frame_index == 0 and next_timing:
-        data_repo.update_specific_timing(
-                next_timing.uuid, frame_time=0.00)
 
     data_repo.delete_timing_from_uuid(timing.uuid)
     
     if timing.aux_frame_index == len(timing_details) - 1:
         st.session_state['current_frame_index'] = max(1, st.session_state['current_frame_index'] - 1)
+        st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
         st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
 
 def replace_image_widget(timing_uuid, stage):
