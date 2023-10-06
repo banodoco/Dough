@@ -15,7 +15,7 @@ class VideoProcessor:
     @staticmethod
     def update_video_bytes_speed(video_bytes, animation_style, desired_duration):
         # video_io = BytesIO(video_bytes)
-        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png", mode='wb')
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
         with open(temp_file.name, 'wb') as out_file:
             out_file.write(video_bytes)
 
