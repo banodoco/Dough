@@ -19,7 +19,7 @@ def main():
     if SERVER != 'development':
         return
     
-    retries = 10000
+    retries = 3
     
     print('runner running')
     while True:
