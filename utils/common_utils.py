@@ -29,6 +29,7 @@ def create_working_assets(project_uuid):
     directory_list = [
         # project specific files
         "videos/" + project_uuid,
+        "videos/" + project_uuid + "/temp",
         "videos/" + project_uuid + "/assets",
         "videos/" + project_uuid + "/assets/frames",
         "videos/" + project_uuid + "/assets/frames/0_extracted",

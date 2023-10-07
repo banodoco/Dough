@@ -1016,12 +1016,6 @@ def resize_image(video_name, new_width, new_height, image_file: InternalFileObje
     data_repo = DataRepo()
     image_file = data_repo.create_file(**file_data)
 
-    # not uploading or removing the created image as of now
-    # resized_image = upload_image(
-    #     "videos/" + str(video_name) + "/temp_image.png")
-
-    # os.remove("videos/" + str(video_name) + "/temp_image.png")
-
     return image_file
 
 def get_audio_bytes_for_slice(timing_uuid):

@@ -2,7 +2,6 @@ import asyncio
 import io
 import time
 from shared.file_upload.s3 import upload_file
-from utils.common_utils import get_current_user_uuid
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import MachineLearningProcessor
@@ -14,9 +13,8 @@ import zipfile
 from PIL import Image
 
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
-from repository.data_logger import log_model_inference
-import utils.local_storage.local_storage as local_storage
-from utils.ml_processor.replicate.utils import check_user_credits, check_user_credits_async, get_model_params_from_query_obj
+from ui_components.methods.data_logger import log_model_inference
+from utils.ml_processor.replicate.utils import check_user_credits, get_model_params_from_query_obj
 
 
 class ReplicateProcessor(MachineLearningProcessor):

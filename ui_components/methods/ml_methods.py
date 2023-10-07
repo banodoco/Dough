@@ -318,7 +318,6 @@ def create_depth_mask_image(input_image, layer, timing_uuid):
         REPLICATE_MODEL.cjwbw_midas, image=input_image, model_type="dpt_beit_large_512")
     try:
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png", mode='wb')
-        # urllib.request.urlretrieve(output, "videos/temp/depth.png")
         with urllib.request.urlopen(output) as response, open(temp_file.name, 'wb') as out_file:
             out_file.write(response.read())
     except Exception as e:

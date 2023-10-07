@@ -29,7 +29,7 @@ def main():
                 return
             retries -= 1
         else:
-            retries = max(retries + 1, 3)
+            retries = min(retries + 1, 3)
         
         time.sleep(1)
         check_and_update_db()
