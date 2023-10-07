@@ -22,7 +22,7 @@ from utils.ml_processor.replicate.utils import check_user_credits, check_user_cr
 class ReplicateProcessor(MachineLearningProcessor):
     def __init__(self):
         data_repo = DataRepo()
-        self.app_settings = data_repo.get_app_secrets_from_user_uuid(uuid=get_current_user_uuid())
+        self.app_settings = data_repo.get_app_secrets_from_user_uuid()
 
         self.logger = None
         try:
@@ -239,3 +239,15 @@ class ReplicateProcessor(MachineLearningProcessor):
 
         version = (response.json())['results'][0]['id']
         return version
+    
+    @check_user_credits
+    def create_prediction(self, replicate_model: ReplicateModel, **kwargs):
+        model_version = self.get_model(replicate_model)
+        headers = {
+            "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),
+            "Content-Type": "application/json"
+        }
+
+        response = r.post(self.dreambooth_training_url, headers=headers, data=json.dumps(kwargs))
+        response = (response.json())
+

@@ -1,6 +1,8 @@
 from pathlib import Path
 import os
 import csv
+import subprocess
+import psutil
 import streamlit as st
 import json
 from shared.constants import SERVER, ServerType
@@ -164,3 +166,14 @@ def reset_styling_settings(timing_uuid):
     for k in keys_to_delete:
         if k in st.session_state:
             del st.session_state[k]
+
+
+def is_process_active(custom_process_name):
+    try:
+        ps_output = subprocess.check_output(["ps", "aux"]).decode("utf-8")
+        if custom_process_name in ps_output:
+            return True
+    except subprocess.CalledProcessError:
+        return False
+
+    return False
