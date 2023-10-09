@@ -374,6 +374,9 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
 
     st.session_state["use_new_settings"] = True
 
+    st.session_state["promote_new_generation"] = st.checkbox(
+            "Promote new generation to main variant", key="promote_new_generation_to_main_variant")
+
     if view_type == ViewType.LIST.value:
         batch_run_range = st.slider(
             "Select range:", 1, 1, (1, len(timing_details)))
@@ -381,9 +384,7 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
         last_batch_run_value = batch_run_range[1] - 1
 
         st.write(batch_run_range)
-
-        st.session_state["promote_new_generation"] = st.checkbox(
-            "Promote new generation to main variant", key="promote_new_generation_to_main_variant")
+        
         st.session_state["use_new_settings"] = st.checkbox(
             "Use new settings for batch query", key="keep_existing_settings", help="If unchecked, the new settings will be applied to the existing variants.")
 

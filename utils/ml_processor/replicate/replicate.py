@@ -1,7 +1,10 @@
 import asyncio
 import io
 import time
+from shared.constants import InferenceParamType
 from shared.file_upload.s3 import upload_file
+from shared.logging.constants import LoggingType
+from shared.logging.logging import AppLogger
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import MachineLearningProcessor
@@ -22,7 +25,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         data_repo = DataRepo()
         self.app_settings = data_repo.get_app_secrets_from_user_uuid()
 
-        self.logger = None
+        self.logger = AppLogger()
         try:
             os.environ["REPLICATE_API_TOKEN"] = self.app_settings['replicate_key']
         except Exception as e:
@@ -51,10 +54,10 @@ class ReplicateProcessor(MachineLearningProcessor):
         return model_version
     
     # it converts the standardized query_obj into params required by replicate
-    def predict_model_output_standardized(self, model: ReplicateModel, query_obj: MLQueryObject):
+    def predict_model_output_standardized(self, model: ReplicateModel, query_obj: MLQueryObject, queue_inference=False):
         params = get_model_params_from_query_obj(model, query_obj)
-        params['query_dict'] = query_obj.to_json()
-        return self.predict_model_output(model, **params)
+        params[InferenceParamType.QUERY_DICT.value] = query_obj.to_json()
+        return self.predict_model_output(model, **params) if not queue_inference else self.queue_prediction(model, **params)
     
     @check_user_credits
     def predict_model_output(self, replicate_model: ReplicateModel, **kwargs):
@@ -239,13 +242,42 @@ class ReplicateProcessor(MachineLearningProcessor):
         return version
     
     @check_user_credits
-    def create_prediction(self, replicate_model: ReplicateModel, **kwargs):
-        model_version = self.get_model(replicate_model)
+    def queue_prediction(self, replicate_model: ReplicateModel, **kwargs):
+        url = "https://api.replicate.com/v1/predictions"
         headers = {
             "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),
             "Content-Type": "application/json"
         }
 
-        response = r.post(self.dreambooth_training_url, headers=headers, data=json.dumps(kwargs))
+        del kwargs['query_dict']
+        data = {
+            "version": replicate_model.version,
+            "input": dict(kwargs)
+        }
+
+        if 'image' in data['input'] and not isinstance(data['input']['image'], str):
+            response = r.post(self.training_data_upload_url, headers=headers)
+            if response.status_code != 200:
+                raise Exception(str(response.content))
+            upload_url = response.json()["upload_url"]
+            serving_url = response.json()["serving_url"]
+            r.put(upload_url, data=data['input']['image'], headers=headers)
+            data['input']['image'] = serving_url
+
+        response = r.post(url, headers=headers, json=data)
         response = (response.json())
 
+        if response.status_code == 200:
+            result = response.json()
+            data = {
+                "prediction_id": result['id'],
+                "error": result['error'],
+                "status": result['status'],
+                "created_at": result['created_at'],
+                "urls": result['urls'],     # these contain "cancel" and "get" urls
+            }
+
+            log = log_model_inference(replicate_model, None, **kwargs)
+            return None, log
+        else:
+            self.logger.log(LoggingType.ERROR, f"Error in creating prediction: {response.content}")

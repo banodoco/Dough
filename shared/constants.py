@@ -73,6 +73,22 @@ class ViewType(ExtendedEnum):
     SINGLE = "Single"
     LIST = "List"
 
+class InferenceType(ExtendedEnum):
+    FRAME_TIMING_IMAGE_INFERENCE = "frame_timing_inference"         # for generating variants of a frame
+    FRAME_TIMING_VIDEO_INFERENCE = "frame_timing_video_inference"   # for generating variants of a video
+
+class InferenceStatus(ExtendedEnum):
+    QUEUED = "queued"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELED = "canceled"
+
+class InferenceParamType(ExtendedEnum):
+    REPLICATE_INFERENCE = "replicate_inference"     # replicate url for queue inference and other data
+    QUERY_DICT = "query_dict"                       # query dict of standardized inference params
+    ORIGIN_DATA = "origin_data"                     # origin data - used to store file once inference is completed
+
 ##################### global constants #####################
 SERVER = os.getenv('SERVER', ServerType.PRODUCTION.value)
 

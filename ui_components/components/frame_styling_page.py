@@ -1,5 +1,5 @@
 import streamlit as st
-from shared.constants import ViewType
+from shared.constants import InferenceStatus, ViewType
 
 
 from ui_components.methods.common_methods import add_key_frame,compare_to_previous_and_next_frame,compare_to_source_frame,style_cloning_element
@@ -241,6 +241,23 @@ def frame_styling_page(mainheader2, project_uuid: str):
             elif st.session_state['page'] == "Motion":
                 timeline_view(shift_frames_setting, project_uuid, "Motion", header_col_3, header_col_4)
 
-                
+    # ------- change this ----------
+    elif st.session_state['frame_styling_view_type'] == "Log List":
+        log_list = data_repo.get_all_inference_log_list(project_uuid)
+        for log in log_list:
+            if not log.status:
+                continue
+            
+            c1, c2, c3 = st.columns([1, 1, 1])
+            with c1:
+                st.write(log.uuid)
+            
+            with c2:
+                st.write(log.status)
+
+            with c3:
+                if log.status == InferenceStatus.COMPLETED.value:
+                    with st.button("Add to project"):
+                        print("add to project")
 
 

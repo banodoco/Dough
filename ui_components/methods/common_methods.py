@@ -14,16 +14,15 @@ import uuid
 from io import BytesIO
 import numpy as np
 import urllib3
-from shared.constants import SERVER, AIModelCategory, AIModelType, InternalFileType, ServerType
+from shared.constants import SERVER, AIModelCategory, AIModelType, InferenceType, InternalFileType, ServerType
 from pydub import AudioSegment
 from backend.models import InternalFileObject
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, CreativeProcessType, WorkflowStageType
 from ui_components.methods.file_methods import add_temp_file_to_project, generate_pil_image, save_or_host_file, save_or_host_file_bytes
-from ui_components.methods.ml_methods import create_depth_mask_image, inpainting, remove_background
 from ui_components.methods.video_methods import calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
-from utils.common_utils import reset_styling_settings, truncate_decimal
-from utils.constants import ImageStage, MLQueryObject
+from utils.common_utils import reset_styling_settings
+from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
 
@@ -484,6 +483,8 @@ def reset_zoom_element():
 
 # cropped_img here is a PIL image object
 def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStageType.SOURCE.value):
+    from ui_components.methods.ml_methods import inpainting
+
     data_repo = DataRepo()
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         project_uuid)
@@ -1127,13 +1128,11 @@ def save_audio_file(uploaded_file, project_uuid):
 def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
                        background_image, editing_image, prompt, negative_prompt,
                        width, height, layer, timing_uuid) -> InternalFileObject:
+    from ui_components.methods.ml_methods import inpainting, remove_background, create_depth_mask_image
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
     project = timing.project
-    app_secret = data_repo.get_app_secrets_from_user_uuid(
-        timing.project.user_uuid)
-    index_of_current_item = timing.aux_frame_index
 
     if type_of_mask_selection == "Automated Background Selection":
         removed_background = remove_background(editing_image)
@@ -1288,3 +1287,33 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
                 editing_image, prompt, negative_prompt, timing_uuid, False)
 
     return edited_image
+
+
+# if the output_file is present it adds it to the respective place or else it updates the inference log
+def process_inference_output(**kwargs):
+    data_repo = DataRepo()
+
+    inference_type = kwargs.get('inference_type')
+    if inference_type == InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value:
+        output_file = kwargs.get('output_file')
+
+        if output_file:
+            timing_uuid = kwargs.get('timing_uuid')
+            promote_new_generation = kwargs.get('promote_new_generation')
+
+            if output_file != None:
+                add_image_variant(output_file.uuid, timing_uuid)
+
+                if promote_new_generation == True:
+                    timing = data_repo.get_timing_from_uuid(timing_uuid)
+                    variants = timing.alternative_images_list
+                    number_of_variants = len(variants)
+                    if number_of_variants == 1:
+                        print("No new generation to promote")
+                    else:
+                        promote_image_variant(timing_uuid, number_of_variants - 1)
+            else:
+                print("No new generation to promote")
+        else:
+            log = kwargs.get('log')
+            data_repo.update_inference_log_origin_data(log.uuid, **kwargs)

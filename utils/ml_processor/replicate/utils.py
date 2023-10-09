@@ -236,6 +236,25 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         } 
 
     else:
+        app_settings = data_repo.get_app_settings()
         data = query_obj.to_json()
+
+        # hackish sol: handling custom dreambooth models
+        if app_settings.replicate_username in model.name:
+            data = {
+                "image": input_image,
+                "prompt": query_obj.prompt,
+                "prompt_strength": query_obj.strength,
+                "height": query_obj.height,
+                "width": query_obj.width,
+                "disable_safety_check": True,
+                "negative_prompt": query_obj.negative_prompt,
+                "guidance_scale": query_obj.guidance_scale,
+                "seed": -1,
+                "num_inference_steps": query_obj.num_inference_steps
+            }
+
+            if input_image:
+                data['control_image'] = input_image
 
     return data

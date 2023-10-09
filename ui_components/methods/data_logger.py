@@ -1,6 +1,7 @@
 import json
 import streamlit as st
 import time
+from shared.constants import InferenceStatus
 from shared.logging.constants import LoggingPayload, LoggingType
 from shared.logging.logging import AppLogger
 from utils.data_repo.data_repo import DataRepo
@@ -17,7 +18,7 @@ def log_model_inference(model: ReplicateModel, time_taken, **kwargs):
             del kwargs_dict[key]
 
     data_str = json.dumps(kwargs_dict)
-    time_taken = round(time_taken, 2)
+    time_taken = round(time_taken, 2) if time_taken else None
 
     data = {
         'model_name': model.name,
@@ -43,6 +44,7 @@ def log_model_inference(model: ReplicateModel, time_taken, **kwargs):
         "input_params" : data_str,
         "output_details" : json.dumps({"model_name": model.name, "version": model.version}),
         "total_inference_time" : time_taken,
+        "status" : InferenceStatus.COMPLETED.value if time_taken else InferenceStatus.QUEUED.value,
     }
     
     log = data_repo.create_inference_log(**log_data)
