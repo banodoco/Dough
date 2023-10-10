@@ -1,4 +1,5 @@
 import json
+import time
 import streamlit as st
 from shared.constants import InferenceParamType, InferenceStatus, ViewType
 from shared.utils import is_url_valid
@@ -282,12 +283,16 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         if st.button("Add to project", key=str(log.uuid)):
                             origin_data['output'] = output_data['output']
                             origin_data['log'] = log
-                            process_inference_output(**origin_data)
+                            status = process_inference_output(**origin_data)
 
-                            # delete origin data (doing this will remove the log from the list)
-                            input_params = json.loads(log.input_params)
-                            del input_params[InferenceParamType.ORIGIN_DATA.value]
-                            data_repo.update_inference_log(log.uuid, input_params=json.dumps(input_params))
+                            if status:
+                                # delete origin data (doing this will remove the log from the list)
+                                input_params = json.loads(log.input_params)
+                                del input_params[InferenceParamType.ORIGIN_DATA.value]
+                                data_repo.update_inference_log(log.uuid, input_params=json.dumps(input_params))
+                            else:
+                                st.write("Failed to add to project, timing deleted")
+                                time.sleep(1)
                             st.rerun()
                     else:
                         st.write("Data expired")

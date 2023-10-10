@@ -1310,20 +1310,24 @@ def process_inference_output(**kwargs):
             timing_uuid = kwargs.get('timing_uuid')
             promote_new_generation = kwargs.get('promote_new_generation')
 
-            if output_file != None:
-                add_image_variant(output_file.uuid, timing_uuid)
-
-                if promote_new_generation == True:
-                    timing = data_repo.get_timing_from_uuid(timing_uuid)
-                    variants = timing.alternative_images_list
-                    number_of_variants = len(variants)
-                    if number_of_variants == 1:
-                        print("No new generation to promote")
-                    else:
-                        promote_image_variant(timing_uuid, number_of_variants - 1)
+            timing = data_repo.get_timing_from_uuid(timing_uuid)
+            if not timing:
+                return False
+            
+            add_image_variant(output_file.uuid, timing_uuid)
+            if promote_new_generation == True:
+                timing = data_repo.get_timing_from_uuid(timing_uuid)
+                variants = timing.alternative_images_list
+                number_of_variants = len(variants)
+                if number_of_variants == 1:
+                    print("No new generation to promote")
+                else:
+                    promote_image_variant(timing_uuid, number_of_variants - 1)
             else:
                 print("No new generation to promote")
         else:
             log = kwargs.get('log')
             del kwargs['log']
             data_repo.update_inference_log_origin_data(log.uuid, **kwargs)
+
+    return True
