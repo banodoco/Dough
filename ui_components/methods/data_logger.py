@@ -18,7 +18,7 @@ def log_model_inference(model: ReplicateModel, time_taken, **kwargs):
             del kwargs_dict[key]
 
     data_str = json.dumps(kwargs_dict)
-    time_taken = round(time_taken, 2) if time_taken else None
+    time_taken = round(time_taken, 2) if time_taken else 0
 
     data = {
         'model_name': model.name,

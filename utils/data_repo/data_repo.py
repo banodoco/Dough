@@ -211,10 +211,10 @@ class DataRepo:
             return False
         
         input_params_data = json.loads(res.input_params)
-        input_params_data[InferenceParamType.ORIGIN_DATA.value] = kwargs[InferenceParamType.ORIGIN_DATA.value]
+        input_params_data[InferenceParamType.ORIGIN_DATA.value] = dict(kwargs)
 
-        res = self.update_inference_log(uuid, input_params=json.dumps(input_params_data))
-        return res.status
+        status = self.update_inference_log(uuid, input_params=json.dumps(input_params_data))
+        return status
     
 
     # ai model param map

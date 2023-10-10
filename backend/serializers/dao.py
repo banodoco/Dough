@@ -65,6 +65,7 @@ class CreateInferenceLogDao(serializers.Serializer):
     input_params = serializers.CharField(required=False)
     output_details = serializers.CharField(required=False)
     total_inference_time = serializers.CharField(required=False)
+    status = serializers.CharField(required=False, default="")
 
 
 class CreateAIModelParamMapDao(serializers.Serializer):

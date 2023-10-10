@@ -1,10 +1,12 @@
 import asyncio
 import io
 import time
+import uuid
 from shared.constants import InferenceParamType
 from shared.file_upload.s3 import upload_file
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
+from ui_components.methods.file_methods import convert_file_to_base64
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import MachineLearningProcessor
@@ -250,24 +252,25 @@ class ReplicateProcessor(MachineLearningProcessor):
         }
 
         del kwargs['query_dict']
+        keys_to_delete = []
+        for k, _ in kwargs.items():
+            if kwargs[k] == None:
+                keys_to_delete.append(k)
+        
+        for k in keys_to_delete:
+            del kwargs[k]
+
         data = {
             "version": replicate_model.version,
             "input": dict(kwargs)
         }
 
         if 'image' in data['input'] and not isinstance(data['input']['image'], str):
-            response = r.post(self.training_data_upload_url, headers=headers)
-            if response.status_code != 200:
-                raise Exception(str(response.content))
-            upload_url = response.json()["upload_url"]
-            serving_url = response.json()["serving_url"]
-            r.put(upload_url, data=data['input']['image'], headers=headers)
-            data['input']['image'] = serving_url
+            data['input']['image'] = convert_file_to_base64(data['input']['image'])
 
         response = r.post(url, headers=headers, json=data)
-        response = (response.json())
 
-        if response.status_code == 200:
+        if response.status_code in [200, 201]:
             result = response.json()
             data = {
                 "prediction_id": result['id'],
@@ -276,6 +279,8 @@ class ReplicateProcessor(MachineLearningProcessor):
                 "created_at": result['created_at'],
                 "urls": result['urls'],     # these contain "cancel" and "get" urls
             }
+
+            kwargs[InferenceParamType.REPLICATE_INFERENCE.value] = data
 
             log = log_model_inference(replicate_model, None, **kwargs)
             return None, log

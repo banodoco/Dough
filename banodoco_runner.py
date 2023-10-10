@@ -66,20 +66,20 @@ def check_and_update_db():
         input_params = json.loads(log.input_params)
         replicate_data = input_params.get(InferenceParamType.REPLICATE_INFERENCE.value, None)
         if replicate_data:
-            prediction_id = replicate_data['id']
+            prediction_id = replicate_data['prediction_id']
 
             url = "https://api.replicate.com/v1/predictions/" + prediction_id
             headers = {
                 "Authorization": f"Token {replicate_key}"
             }
             response = requests.get(url, headers=headers)
-            if response.status_code == 200:
+            if response.status_code in [200, 201]:
                 result = response.json()
                 log_status = replicate_status_map[result['status']] if result['status'] in replicate_status_map else InferenceStatus.IN_PROGRESS.value
-                output_details['output'] = result['output']
+                output_details = json.loads(log.output_details)
                 
                 if log_status == InferenceStatus.COMPLETED.value:
-                    output_details = json.loads(log.output_details)
+                    output_details['output'] = result['output']    
                 
                 InferenceLog.objects.filter(id=log.id).update(status=log_status, output_details=json.dumps(output_details))
             else:

@@ -1316,4 +1316,5 @@ def process_inference_output(**kwargs):
                 print("No new generation to promote")
         else:
             log = kwargs.get('log')
+            del kwargs['log']
             data_repo.update_inference_log_origin_data(log.uuid, **kwargs)
