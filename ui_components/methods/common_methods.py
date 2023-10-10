@@ -1289,13 +1289,20 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
     return edited_image
 
 
-# if the output_file is present it adds it to the respective place or else it updates the inference log
+# if the output is present it adds it to the respective place or else it updates the inference log
 def process_inference_output(**kwargs):
     data_repo = DataRepo()
 
     inference_type = kwargs.get('inference_type')
     if inference_type == InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value:
-        output_file = kwargs.get('output_file')
+        output = kwargs.get('output')
+        filename = str(uuid.uuid4()) + ".png"
+        output_file = data_repo.create_file(
+            name=filename, 
+            type=InternalFileType.IMAGE.value,
+            hosted_url=output[0], 
+            inference_log_id=log.uuid
+        )
 
         if output_file:
             timing_uuid = kwargs.get('timing_uuid')

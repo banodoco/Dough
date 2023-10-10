@@ -20,11 +20,14 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
 django.setup()
 SERVER = os.getenv('SERVER', 'development')
 
+REFRESH_FREQUENCY = 2   # refresh every 2 seconds
+MAX_APP_RETRY_CHECK = 3  # if the app is not running after 3 retries then the script will stop
+
 def main():
     if SERVER != 'development':
         return
     
-    retries = 3
+    retries = MAX_APP_RETRY_CHECK
     
     print('runner running')
     while True:
@@ -34,9 +37,9 @@ def main():
                 return
             retries -= 1
         else:
-            retries = min(retries + 1, 3)
+            retries = min(retries + 1, MAX_APP_RETRY_CHECK)
         
-        time.sleep(1)
+        time.sleep(REFRESH_FREQUENCY)
         check_and_update_db()
 
 def is_app_running():
@@ -58,7 +61,7 @@ def check_and_update_db():
     
     app_logger = AppLogger()
     app_setting = AppSetting.objects.filter(is_disabled=False).first()
-    replicate_key = app_setting.replicate_key
+    replicate_key = app_setting.replicate_key_decrypted
     log_list = InferenceLog.objects.filter(status__in=[InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
                                            is_disabled=False).all()
     
@@ -72,6 +75,7 @@ def check_and_update_db():
             headers = {
                 "Authorization": f"Token {replicate_key}"
             }
+            print("replicate key: ", replicate_key)
             response = requests.get(url, headers=headers)
             if response.status_code in [200, 201]:
                 result = response.json()
@@ -79,11 +83,19 @@ def check_and_update_db():
                 output_details = json.loads(log.output_details)
                 
                 if log_status == InferenceStatus.COMPLETED.value:
-                    output_details['output'] = result['output']    
+                    output_details['output'] = [result['output'][-1]] if output_details['version'] == \
+                        "a4a8bafd6089e1716b06057c42b19378250d008b80fe87caa5cd36d40c1eda90" else result['output']
                 
                 InferenceLog.objects.filter(id=log.id).update(status=log_status, output_details=json.dumps(output_details))
             else:
                 app_logger.log(LoggingType.DEBUG, f"Error: {response.content}")
+        else:
+            # if not replicate data is present then removing the status
+            InferenceLog.objects.filter(id=log.id).update(status="")
+
+    if not len(log_list):
+        app_logger.log(LoggingType.DEBUG, f"No logs found")
+
     return
 
 main()

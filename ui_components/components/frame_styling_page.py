@@ -1,8 +1,9 @@
+import json
 import streamlit as st
-from shared.constants import InferenceStatus, ViewType
+from shared.constants import InferenceParamType, InferenceStatus, ViewType
 
 
-from ui_components.methods.common_methods import add_key_frame,compare_to_previous_and_next_frame,compare_to_source_frame,style_cloning_element
+from ui_components.methods.common_methods import add_key_frame,compare_to_previous_and_next_frame,compare_to_source_frame, process_inference_output,style_cloning_element
 from ui_components.methods.ml_methods import trigger_restyling_process
 from ui_components.widgets.cropping_element import cropping_selector_element
 from ui_components.widgets.frame_clip_generation_elements import  current_preview_video_element, update_animation_style_element
@@ -247,8 +248,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
         for log in log_list:
             if not log.status:
                 continue
-            
-            c1, c2, c3 = st.columns([1, 1, 1])
+
+            c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
             with c1:
                 st.write(log.uuid)
             
@@ -256,8 +257,30 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 st.write(log.status)
 
             with c3:
+                output_data = json.loads(log.output_details)
+                if 'output' in output_data and output_data['output']:
+                    if isinstance(output_data['output'], list):
+                        output_data['output'] = output_data['output'][0]
+
+                    if output_data['output'].endswith('png'):
+                        st.image(output_data['output'])
+                    elif output_data['output'].endswith('mp4') or output_data['output'].endswith('gif'):
+                        st.video(output_data['output'])
+                    else:
+                        st.write("No data to display")
+                else:
+                    st.write("No data to display")
+
+            with c4:
                 if log.status == InferenceStatus.COMPLETED.value:
-                    with st.button("Add to project"):
-                        print("add to project")
+                    output_data = json.loads(log.output_details)
+                    if output_data and ('output' in output_data and output_data['output']):
+                        if st.button("Add to project", key=str(log.uuid)):
+                            origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
+                            if origin_data:
+                                process_inference_output(**origin_data)
+                    else:
+                        if st.button("Data expired", key=str(log.uuid)):
+                            pass
 
 
