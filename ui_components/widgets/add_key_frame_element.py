@@ -29,11 +29,8 @@ def add_key_frame_element(timing_details, project_uuid):
         if source_of_starting_image == "Existing Frame":                
             with image2:
                 transformation_stage = st.radio(
-                                                "Which stage would you like to use?",
-                                                [
-                                                    ImageStage.MAIN_VARIANT.value, 
-                                                    ImageStage.SOURCE_IMAGE.value
-                                                ],
+                                                label="Which stage would you like to use?",
+                                                options=ImageStage.value_list(),
                                                 key="transformation_stage",
                                                 horizontal=True
                                             )

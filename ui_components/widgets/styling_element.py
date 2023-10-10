@@ -66,8 +66,11 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
     
     # -------------------- Model Selection -------------------- #
     if st.session_state["transformation_stage"] != ImageStage.NONE.value:
+        st.session_state['add_image_in_params'] = True
         model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.IMG2IMG.value], custom_trained=False)
     else:
+        # when NONE is selected then removing input image from the session state
+        st.session_state['add_image_in_params'] = False
         model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)
 
     model_name_list = [m.name for m in model_list]
@@ -374,6 +377,9 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
 
     st.session_state["use_new_settings"] = True
 
+    st.session_state["promote_new_generation"] = st.checkbox(
+            "Promote new generation to main variant", key="promote_new_generation_to_main_variant")
+
     if view_type == ViewType.LIST.value:
         batch_run_range = st.slider(
             "Select range:", 1, 1, (1, len(timing_details)))
@@ -381,9 +387,7 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
         last_batch_run_value = batch_run_range[1] - 1
 
         st.write(batch_run_range)
-
-        st.session_state["promote_new_generation"] = st.checkbox(
-            "Promote new generation to main variant", key="promote_new_generation_to_main_variant")
+        
         st.session_state["use_new_settings"] = st.checkbox(
             "Use new settings for batch query", key="keep_existing_settings", help="If unchecked, the new settings will be applied to the existing variants.")
 
@@ -428,6 +432,7 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
                             low_threshold=st.session_state['low_threshold'], 
                             high_threshold=st.session_state['high_threshold'],
                             canny_image=st.session_state['canny_image'] if 'canny_image' in st.session_state else None,
+                            add_image_in_params=st.session_state['add_image_in_params'],
                         )
                         
                 st.rerun()

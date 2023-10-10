@@ -605,7 +605,8 @@ class DBRepo:
         # cls_name = inspect.currentframe().f_code.co_name
         # print("db call: ", DBRepo._count, " class name: ", cls_name)
         if project_id:
-            log_list = InferenceLog.objects.filter(project_id=project_id, is_disabled=False).all()
+            project = Project.objects.filter(uuid=project_id, is_disabled=False).first()
+            log_list = InferenceLog.objects.filter(project_id=project.id, is_disabled=False).all()
         else:
             log_list = InferenceLog.objects.filter(is_disabled=False).all()
         
@@ -661,6 +662,20 @@ class DBRepo:
 
         return InternalResponse({}, 'inference log deleted successfully', True)
     
+    def update_inference_log(self, uuid, **kwargs):
+        log = InferenceLog.objects.filter(uuid=uuid, is_disabled=False).first()
+        if not log:
+            return InternalResponse({}, 'invalid inference log uuid', False)
+        
+        for attr, value in kwargs.items():
+            setattr(log, attr, value)
+        log.save()
+
+        payload = {
+            'data': InferenceLogDto(log).data
+        }
+
+        return InternalResponse(payload, 'inference log updated successfully', True)
 
     # ai model param map
     # TODO: add DTO in the output

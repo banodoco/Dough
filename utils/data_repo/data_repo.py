@@ -1,6 +1,7 @@
 # this repo serves as a middlerware between API backend and the frontend
+import json
 import threading
-from shared.constants import InternalFileType, InternalResponse
+from shared.constants import InferenceParamType, InternalFileType, InternalResponse
 from shared.constants import SERVER, ServerType
 from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalUserObject
 from utils.cache.cache_methods import cache_data
@@ -190,6 +191,7 @@ class DataRepo:
         log_list = self.db_repo.get_all_inference_log_list(project_id).data['data']
         return [InferenceLogObject(**log) for log in log_list] if log_list else None
     
+    
     def create_inference_log(self, **kwargs):
         res = self.db_repo.create_inference_log(**kwargs)
         log = res.data['data'] if res else None
@@ -198,6 +200,21 @@ class DataRepo:
     def delete_inference_log_from_uuid(self, uuid):
         res = self.db_repo.delete_inference_log_from_uuid(uuid)
         return res.status
+    
+    def update_inference_log(self, uuid, **kwargs):
+        res = self.db_repo.update_inference_log(uuid, **kwargs)
+        return res.status
+    
+    def update_inference_log_origin_data(self, uuid, **kwargs):
+        res = self.get_inference_log_from_uuid(uuid)
+        if not res:
+            return False
+        
+        input_params_data = json.loads(res.input_params)
+        input_params_data[InferenceParamType.ORIGIN_DATA.value] = dict(kwargs)
+
+        status = self.update_inference_log(uuid, input_params=json.dumps(input_params_data))
+        return status
     
 
     # ai model param map

@@ -34,3 +34,4 @@ httpx-oauth==0.13.0
 extra-streamlit-components==0.1.56
 wrapt==1.15.0
 pydantic==1.10.9
+streamlit-server-state==0.17.1

@@ -284,7 +284,12 @@ class APIRepo:
         res = self.db_repo.delete_inference_log_from_uuid(uuid)
         return InternalResponse(res['payload'], 'success', res['status']).status
     
-    # TODO: complete this
+    def update_inference_log(self, uuid, **kwargs):
+        kwargs['uuid'] = uuid
+        res = self.http_put(url=self.LOG_URL, data=kwargs)
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    # TODO: complete this: backend
     def get_ai_model_param_map_from_uuid(self, uuid):
         pass
     

@@ -139,7 +139,7 @@ def setup_app_ui():
                                                             "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "green"}}, manual_select=st.session_state["manual_select"])
 
                     # TODO: CORRECT-CODE
-                    view_types = ["Individual View", "List View"]
+                    view_types = ["Individual View", "List View", "Log List"]
 
                     if 'frame_styling_view_type_index' not in st.session_state:
                         st.session_state['frame_styling_view_type_index'] = 0

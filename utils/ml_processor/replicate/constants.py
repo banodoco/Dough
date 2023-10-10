@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from shared.constants import InferenceStatus
+
 
 @dataclass
 class ReplicateModel:
@@ -64,3 +66,11 @@ CONTROLNET_MODELS = [
     REPLICATE_MODEL.jagilley_controlnet_depth2img,
     REPLICATE_MODEL.jagilley_controlnet_pose,
 ]
+
+replicate_status_map = {
+    "starting": InferenceStatus.QUEUED.value,
+    "processing": InferenceStatus.IN_PROGRESS.value,
+    "succeeded": InferenceStatus.COMPLETED.value,
+    "failed": InferenceStatus.FAILED.value,
+    "canceled": InferenceStatus.CANCELED.value
+}

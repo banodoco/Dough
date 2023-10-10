@@ -1,6 +1,6 @@
 from cryptography.fernet import Fernet
+from shared.constants import ENCRYPTION_KEY
 
-from banodoco_settings import ENCRYPTION_KEY
 
 class Encryptor:
     def __init__(self):

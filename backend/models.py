@@ -70,6 +70,7 @@ class InferenceLog(BaseModel):
     input_params = models.TextField(default="", blank=True)
     output_details = models.TextField(default="", blank=True)
     total_inference_time = models.FloatField(default=0)
+    status = models.CharField(max_length=255, default="")   # success, failed, in_progress, queued
 
     class Meta:
         app_label = 'backend'

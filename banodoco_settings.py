@@ -15,8 +15,6 @@ from utils.constants import ML_MODEL_LIST, ImageStage
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
-ENCRYPTION_KEY = 'J2684nBgNUYa_K0a6oBr5H8MpSRW0EJ52Qmq7jExE-w='
-
 logger = AppLogger()
 
 def project_init():

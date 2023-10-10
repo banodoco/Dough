@@ -1,7 +1,7 @@
 import datetime
 import streamlit as st
 import json
-from shared.constants import AnimationStyleType, AnimationToolType
+from shared.constants import AnimationStyleType, AnimationToolType, InferenceParamType
 
 from ui_components.constants import TEMP_MASK_FILE, DefaultProjectSettingParams, DefaultTimingStyleParams
 from utils.common_decorators import session_state_attributes
@@ -37,8 +37,8 @@ class InternalFileObject:
         
         if log and log.input_params:
             params = json.loads(log.input_params)
-            if 'query_dict' in params:
-                return MLQueryObject(**json.loads(params['query_dict']))
+            if InferenceParamType.QUERY_DICT.value in params:
+                return MLQueryObject(**json.loads(params[InferenceParamType.QUERY_DICT.value]))
         
         return None
 
@@ -267,7 +267,7 @@ class InternalUserObject:
     def to_json(self):
         return json.dumps(self, default=lambda o: o.__dict__, sort_keys=True, indent=4)
 
-
+# input_params = {**input_params, "query_dict": {}, "origin_data": {}, "replicate_inference": {}}
 class InferenceLogObject:
     def __init__(self, **kwargs):
         self.uuid = kwargs['uuid'] if key_present('uuid', kwargs) else None
@@ -278,6 +278,7 @@ class InferenceLogObject:
         self.input_params = kwargs['input_params'] if key_present('input_params', kwargs) else None
         self.output_details = kwargs['output_details'] if key_present('output_details', kwargs) else None
         self.total_inference_time = kwargs['total_inference_time'] if key_present('total_inference_time', kwargs) else None
+        self.status = kwargs['status'] if key_present('status', kwargs) else None
 
 
 def key_present(key, dict):

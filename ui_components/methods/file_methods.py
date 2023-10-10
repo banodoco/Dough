@@ -1,7 +1,9 @@
+import base64
 from io import BytesIO
 import io
 import json
 import os
+import mimetypes
 import tempfile
 from typing import Union
 from urllib.parse import urlparse
@@ -156,3 +158,18 @@ def convert_bytes_to_file(file_location_to_save, mime_type, file_bytes, project_
     file = data_repo.create_file(**file_data)
 
     return file
+
+
+def convert_file_to_base64(fh: io.IOBase) -> str:
+    fh.seek(0)
+
+    b = fh.read()
+    if isinstance(b, str):
+        b = b.encode("utf-8")
+    encoded_body = base64.b64encode(b)
+    if getattr(fh, "name", None):
+        mime_type = mimetypes.guess_type(fh.name)[0]  # type: ignore
+    else:
+        mime_type = "application/octet-stream"
+    s = encoded_body.decode("utf-8")
+    return f"data:{mime_type};base64,{s}"
