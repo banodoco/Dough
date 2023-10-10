@@ -1290,6 +1290,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
 
 
 # if the output is present it adds it to the respective place or else it updates the inference log
+# TODO: handle cases when the origin frame has been moved or deleted
 def process_inference_output(**kwargs):
     data_repo = DataRepo()
 
@@ -1297,6 +1298,7 @@ def process_inference_output(**kwargs):
     if inference_type == InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value:
         output = kwargs.get('output')
         filename = str(uuid.uuid4()) + ".png"
+        log = kwargs.get('log')
         output_file = data_repo.create_file(
             name=filename, 
             type=InternalFileType.IMAGE.value,
