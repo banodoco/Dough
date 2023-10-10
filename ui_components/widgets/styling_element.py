@@ -66,8 +66,11 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
     
     # -------------------- Model Selection -------------------- #
     if st.session_state["transformation_stage"] != ImageStage.NONE.value:
+        st.session_state['add_image_in_params'] = True
         model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.IMG2IMG.value], custom_trained=False)
     else:
+        # when NONE is selected then removing input image from the session state
+        st.session_state['add_image_in_params'] = False
         model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)
 
     model_name_list = [m.name for m in model_list]
@@ -429,6 +432,7 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
                             low_threshold=st.session_state['low_threshold'], 
                             high_threshold=st.session_state['high_threshold'],
                             canny_image=st.session_state['canny_image'] if 'canny_image' in st.session_state else None,
+                            add_image_in_params=st.session_state['add_image_in_params'],
                         )
                         
                 st.rerun()

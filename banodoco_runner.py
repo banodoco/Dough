@@ -94,7 +94,8 @@ def check_and_update_db():
             InferenceLog.objects.filter(id=log.id).update(status="")
 
     if not len(log_list):
-        app_logger.log(LoggingType.DEBUG, f"No logs found")
+        # app_logger.log(LoggingType.DEBUG, f"No logs found")
+        pass
 
     return
 

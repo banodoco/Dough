@@ -64,6 +64,16 @@ class ReplicateProcessor(MachineLearningProcessor):
     @check_user_credits
     def predict_model_output(self, replicate_model: ReplicateModel, **kwargs):
         model_version = self.get_model(replicate_model)
+        
+        del kwargs['query_dict']
+        keys_to_delete = []
+        for k, _ in kwargs.items():
+            if kwargs[k] == None:
+                keys_to_delete.append(k)
+        
+        for k in keys_to_delete:
+            del kwargs[k]
+        
         start_time = time.time()
         output = model_version.predict(**kwargs)
         end_time = time.time()

@@ -24,7 +24,6 @@ from utils import st_memory
 
 import math
 from ui_components.constants import CreativeProcessType, WorkflowStageType
-from utils.constants import ImageStage
 
 from utils.data_repo.data_repo import DataRepo
 
@@ -152,6 +151,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         custom_models=st.session_state['custom_models'], 
                                         adapter_type=st.session_state['adapter_type'], 
                                         update_inference_settings=True, 
+                                        add_image_in_params=st.session_state['add_image_in_params'],
                                         low_threshold=st.session_state['low_threshold'], 
                                         high_threshold=st.session_state['high_threshold'],
                                         canny_image=st.session_state['canny_image'] if 'canny_image' in st.session_state else None,
@@ -245,6 +245,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
     # ------- change this ----------
     elif st.session_state['frame_styling_view_type'] == "Log List":
+        # TODO: add filtering/pagination when fetching log list
         log_list = data_repo.get_all_inference_log_list(project_uuid)
 
         for log in log_list:

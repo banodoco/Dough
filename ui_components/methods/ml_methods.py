@@ -8,7 +8,7 @@ from PIL import Image
 import uuid
 import urllib
 from backend.models import InternalFileObject
-from shared.constants import SERVER, AIModelCategory, InferenceType, InternalFileType, ServerType
+from shared.constants import QUEUE_INFERENCE_QUERIES, SERVER, AIModelCategory, InferenceType, InternalFileType, ServerType
 from ui_components.constants import MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE
 from ui_components.methods.common_methods import process_inference_output
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
@@ -30,7 +30,7 @@ def trigger_restyling_process(timing_uuid, update_inference_settings, \
 
     query_obj = MLQueryObject(
         timing_uuid, 
-        image_uuid=source_image.uuid, 
+        image_uuid=source_image.uuid if 'add_image_in_params' in kwargs and kwargs['add_image_in_params'] else None, 
         width=project_settings.width, 
         height=project_settings.height, 
         **kwargs
@@ -53,11 +53,12 @@ def trigger_restyling_process(timing_uuid, update_inference_settings, \
             default_custom_models=query_obj.data.get('custom_models', []),
             default_adapter_type=query_obj.adapter_type,
             default_low_threshold=query_obj.low_threshold,
-            default_high_threshold=query_obj.high_threshold
+            default_high_threshold=query_obj.high_threshold,
+            add_image_in_params=st.session_state['add_image_in_params'],
         )
 
     query_obj.prompt = dynamic_prompting(prompt, source_image)
-    output, log = restyle_images(query_obj, True)
+    output, log = restyle_images(query_obj, QUEUE_INFERENCE_QUERIES)
 
     inference_data = {
         "inference_type": InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
