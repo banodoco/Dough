@@ -11,10 +11,11 @@ from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, vfx,
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 
 from backend.models import InternalFileObject
-from shared.constants import AnimationToolType, InternalFileTag
+from shared.constants import AnimationToolType, InferenceType, InternalFileTag
 from shared.file_upload.s3 import is_s3_image_url
 from ui_components.constants import VideoQuality
-from ui_components.methods.file_methods import convert_bytes_to_file
+from ui_components.methods.common_methods import process_inference_output
+from ui_components.methods.file_methods import convert_bytes_to_file, generate_temp_file
 from ui_components.models import InternalFrameTimingObject, InternalSettingObject
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.interpolator import VideoInterpolator
@@ -24,7 +25,7 @@ from utils.media_processor.video import VideoProcessor
 # NOTE: interpolated_clip_uuid signals which clip to promote to timed clip (this is the main variant)
 # this function returns the 'single' preview_clip, which is basically timed_clip with the frame number
 def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None):
-    from ui_components.methods.file_methods import generate_temp_file, save_or_host_file_bytes
+    from ui_components.methods.file_methods import generate_temp_file
     from ui_components.methods.common_methods import get_audio_bytes_for_slice
 
     data_repo = DataRepo()
@@ -38,17 +39,22 @@ def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None)
         timing.interpolation_steps = 3
         next_timing = data_repo.get_next_timing(timing.uuid)
         img_list = [timing.source_image.location, next_timing.source_image.location]
-        video_bytes, log = VideoInterpolator.video_through_frame_interpolation(img_list, {"interpolation_steps": timing.interpolation_steps})
-        file_data = {
+        res = VideoInterpolator.video_through_frame_interpolation(img_list, {"interpolation_steps": timing.interpolation_steps})
+        
+        output_url, log = res[0]
+
+        inference_data = {
+            "inference_type": InferenceType.SINGLE_PREVIEW_VIDEO.value,
             "file_location_to_save": "videos/" + timing.project.uuid + "/assets/videos" + (str(uuid.uuid4())) + ".mp4",
             "mime_type": "video/mp4",
-            "file_bytes": video_bytes,
+            "output": output_url,
             "project_uuid": timing.project.uuid,
-            "inference_log_id": log.uuid
+            "log_uuid": log.uuid,
+            "timing_uuid": timing_uuid
         }
+
+        process_inference_output(**inference_data)
         
-        video_fie = convert_bytes_to_file(**file_data)
-        data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video_fie.uuid)
 
     if not timing.timed_clip:
         interpolated_clip = data_repo.get_file_from_uuid(interpolated_clip_uuid) if interpolated_clip_uuid \
@@ -141,28 +147,16 @@ def create_single_interpolated_clip(timing_uuid, quality, settings={}, variant_c
         variant_count
     )
 
-    output_video_list = []
-    for (video_bytes, log) in res:
-        if 'normalise_speed' in settings and settings['normalise_speed']:
-            video_bytes = VideoProcessor.update_video_bytes_speed(video_bytes, timing.animation_style, timing.clip_duration)
+    for (output, log) in res:
+        inference_data = {
+            "inference_type": InferenceType.FRAME_INTERPOLATION.value,
+            "output": output,
+            "log_uuid": log.uuid,
+            "settings": settings,
+            "timing_uuid": timing_uuid
+        }
 
-        video_location = "videos/" + str(timing.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
-        video = convert_bytes_to_file(
-            file_location_to_save=video_location,
-            mime_type="video/mp4",
-            file_bytes=video_bytes,
-            project_uuid=timing.project.uuid,
-            inference_log_id=log.uuid
-        )
-
-        data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video.uuid)
-        if not timing.timed_clip:
-            output_video = update_speed_of_video_clip(video, timing_uuid)
-            data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
-
-        output_video_list.append(video)
-
-    return output_video_list
+        process_inference_output(**inference_data)
 
 
 # preview_clips have frame numbers on them. Preview clip is generated from index-2 to index+2 frames
@@ -385,8 +379,6 @@ def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileT
 
         # creating timed clips if not already present
         if not timing.timed_clip:
-            video_clip = None
-
             # creating an interpolated clip if not already present
             if not len(timing.interpolated_clip_list):
                 next_timing = data_repo.get_next_timing(current_timing.uuid)

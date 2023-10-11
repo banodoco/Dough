@@ -76,6 +76,8 @@ class ViewType(ExtendedEnum):
 class InferenceType(ExtendedEnum):
     FRAME_TIMING_IMAGE_INFERENCE = "frame_timing_inference"         # for generating variants of a frame
     FRAME_TIMING_VIDEO_INFERENCE = "frame_timing_video_inference"   # for generating variants of a video
+    SINGLE_PREVIEW_VIDEO = "single_preview_video"                   # for generating a single preview video
+    FRAME_INTERPOLATION = "frame_interpolation"                     # for generating single/multiple interpolated videos
 
 class InferenceStatus(ExtendedEnum):
     QUEUED = "queued"

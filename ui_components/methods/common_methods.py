@@ -18,8 +18,8 @@ from shared.constants import SERVER, AIModelCategory, AIModelType, InferenceType
 from pydub import AudioSegment
 from backend.models import InternalFileObject
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, TEMP_MASK_FILE, CreativeProcessType, WorkflowStageType
-from ui_components.methods.file_methods import add_temp_file_to_project, generate_pil_image, save_or_host_file, save_or_host_file_bytes
-from ui_components.methods.video_methods import calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video
+from ui_components.methods.file_methods import add_temp_file_to_project, convert_bytes_to_file, generate_pil_image, generate_temp_file, save_or_host_file, save_or_host_file_bytes
+from ui_components.methods.video_methods import calculate_desired_duration_of_individual_clip, create_or_get_single_preview_video, update_speed_of_video_clip
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
 from utils.common_utils import reset_styling_settings
 from utils.constants import ImageStage
@@ -1290,15 +1290,16 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
 
 
 # if the output is present it adds it to the respective place or else it updates the inference log
-# TODO: handle cases when the origin frame has been moved or deleted
 def process_inference_output(**kwargs):
     data_repo = DataRepo()
 
     inference_type = kwargs.get('inference_type')
+    # ------------------- FRAME TIMING IMAGE INFERENCE -------------------
     if inference_type == InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value:
         output = kwargs.get('output')
         filename = str(uuid.uuid4()) + ".png"
-        log = kwargs.get('log')
+        log_uuid = kwargs.get('log_uuid')
+        log = data_repo.get_inference_log_from_uuid(log_uuid)
         output_file = data_repo.create_file(
             name=filename, 
             type=InternalFileType.IMAGE.value,
@@ -1326,8 +1327,84 @@ def process_inference_output(**kwargs):
             else:
                 print("No new generation to promote")
         else:
-            log = kwargs.get('log')
-            del kwargs['log']
-            data_repo.update_inference_log_origin_data(log.uuid, **kwargs)
+            log_uuid = kwargs.get('log_uuid')
+            del kwargs['log_uuid']
+            data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
+    
+    # --------------------- SINGLE PREVIEW VIDEO INFERENCE -------------------
+    elif inference_type == InferenceType.SINGLE_PREVIEW_VIDEO.value:
+        output = kwargs.get('output')
+        file_bytes = None
+        if isinstance(output, str) and output.startswith('http'):
+            temp_output_file = generate_temp_file(output, '.mp4')
+            file_bytes = None
+            with open(temp_output_file.name, 'rb') as f:
+                file_bytes = f.read()
+
+            os.remove(temp_output_file.name)
+
+        if file_bytes:
+            file_data = {
+                "file_location_to_save": kwargs.get('file_location_to_save'),
+                "mime_type": kwargs.get('mime_type'),
+                "file_bytes": file_bytes,
+                "project_uuid": kwargs.get('project_uuid'),
+                "inference_log_id": kwargs.get('log_uuid')
+            }
+
+            timing_uuid = kwargs.get('timing_uuid')
+            timing = data_repo.get_timing_from_uuid(timing_uuid)
+            if not timing:
+                return False
+            
+            video_fie = convert_bytes_to_file(**file_data)
+            data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video_fie.uuid)
+
+        else:
+            log_uuid = kwargs.get('log_uuid')
+            del kwargs['log_uuid']
+            data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
+    
+    # --------------------- MULTI VIDEO INFERENCE (INTERPOLATION + MORPHING) -------------------
+    elif inference_type == InferenceType.FRAME_INTERPOLATION.value:
+        output = kwargs.get('output')
+        
+        if output:
+            settings = kwargs.get('settings')
+            timing_uuid = kwargs.get('timing_uuid')
+            timing = data_repo.get_timing_from_uuid(timing_uuid)
+            if not timing:
+                return False
+            
+            # output can also be an url
+            if isinstance(output, str) and output.startswith("http"):
+                temp_output_file = generate_temp_file(output, '.mp4')
+                output = None
+                with open(temp_output_file.name, 'rb') as f:
+                    output = f.read()
+
+                os.remove(temp_output_file.name)
+
+            if 'normalise_speed' in settings and settings['normalise_speed']:
+                output = VideoProcessor.update_video_bytes_speed(output, timing.animation_style, timing.clip_duration)
+
+            video_location = "videos/" + str(timing.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
+            video = convert_bytes_to_file(
+                file_location_to_save=video_location,
+                mime_type="video/mp4",
+                file_bytes=output,
+                project_uuid=timing.project.uuid,
+                inference_log_id=log.uuid
+            )
+
+            data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video.uuid)
+            if not timing.timed_clip:
+                output_video = update_speed_of_video_clip(video, timing_uuid)
+                data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
+        
+        else:
+            log_uuid = kwargs.get('log_uuid')
+            del kwargs['log_uuid']
+            data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
 
     return True

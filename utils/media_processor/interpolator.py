@@ -88,17 +88,17 @@ class VideoInterpolator:
 
             res = ml_client.predict_model_output_async(REPLICATE_MODEL.ad_interpolation, **data)
         
-        final_res = []
-        for (output, log) in res: 
-            temp_output_file = generate_temp_file(output, '.mp4')
-            video_bytes = None
-            with open(temp_output_file.name, 'rb') as f:
-                video_bytes = f.read()
+        # final_res = []
+        # for (output, log) in res:
+        #     temp_output_file = generate_temp_file(output, '.mp4')
+        #     video_bytes = None
+        #     with open(temp_output_file.name, 'rb') as f:
+        #         video_bytes = f.read()
 
-            os.remove(temp_output_file.name)
-            final_res.append((video_bytes, log))
+        #     os.remove(temp_output_file.name)
+        #     final_res.append((video_bytes, log))
 
-        return final_res
+        return res
     
 
     @staticmethod

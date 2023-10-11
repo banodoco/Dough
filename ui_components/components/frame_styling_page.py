@@ -282,7 +282,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     if output_data and ('output' in output_data and output_data['output'] and is_url_valid(output_data['output'][0])):
                         if st.button("Add to project", key=str(log.uuid)):
                             origin_data['output'] = output_data['output']
-                            origin_data['log'] = log
+                            origin_data['log_uuid'] = log.uuid
                             status = process_inference_output(**origin_data)
 
                             if status:
