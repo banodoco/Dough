@@ -97,7 +97,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             'prompt': query_obj.prompt,
             'negative_prompt': query_obj.negative_prompt,
             'strength': query_obj.strength,
-            'guidance_scale': query_obj.guidance_scale,
+            'guidance_scale': min( query_obj.guidance_scale, 1),
             'num_inference_steps': query_obj.num_inference_steps,
             'upscale': 1,
             'seed': query_obj.seed,

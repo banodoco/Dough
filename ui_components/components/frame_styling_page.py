@@ -300,3 +300,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     else:
                         st.write("Data expired")
 
+                    
+                    if st.button("Delete", key=f"delete_{log.uuid}"):
+                        data_repo.update_inference_log(log.uuid, status="")
+                        st.rerun()
+

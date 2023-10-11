@@ -63,7 +63,7 @@ def trigger_restyling_process(timing_uuid, update_inference_settings, \
     inference_data = {
         "inference_type": InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
         "output": output,
-        "log": log,
+        "log_uuid": log.uuid,
         "timing_uuid": timing_uuid,
         "promote_new_generation": promote_new_generation,
     }

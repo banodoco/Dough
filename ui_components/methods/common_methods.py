@@ -1297,23 +1297,23 @@ def process_inference_output(**kwargs):
     # ------------------- FRAME TIMING IMAGE INFERENCE -------------------
     if inference_type == InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value:
         output = kwargs.get('output')
-        filename = str(uuid.uuid4()) + ".png"
-        log_uuid = kwargs.get('log_uuid')
-        log = data_repo.get_inference_log_from_uuid(log_uuid)
-        output_file = data_repo.create_file(
-            name=filename, 
-            type=InternalFileType.IMAGE.value,
-            hosted_url=output[0], 
-            inference_log_id=log.uuid
-        )
-
-        if output_file:
+        if output:
             timing_uuid = kwargs.get('timing_uuid')
             promote_new_generation = kwargs.get('promote_new_generation')
 
             timing = data_repo.get_timing_from_uuid(timing_uuid)
             if not timing:
                 return False
+            
+            filename = str(uuid.uuid4()) + ".png"
+            log_uuid = kwargs.get('log_uuid')
+            log = data_repo.get_inference_log_from_uuid(log_uuid)
+            output_file = data_repo.create_file(
+                name=filename, 
+                type=InternalFileType.IMAGE.value,
+                hosted_url=output[0], 
+                inference_log_id=log.uuid
+            )
             
             add_image_variant(output_file.uuid, timing_uuid)
             if promote_new_generation == True:

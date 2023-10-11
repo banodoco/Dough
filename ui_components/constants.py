@@ -21,7 +21,7 @@ class DefaultTimingStyleParams:
     prompt = ""
     negative_prompt = "bad image, worst quality"
     strength = 1
-    guidance_scale = 0.5
+    guidance_scale = 7.5
     seed = 0
     num_inference_steps = 25
     low_threshold = 100
