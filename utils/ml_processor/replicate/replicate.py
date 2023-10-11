@@ -95,7 +95,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         if replicate_model == REPLICATE_MODEL.clip_interrogator:
             output = output     # adding this for organisation purpose
         else:
-            output = [output[-1]]
+            output = [output[-1]] if isinstance(output, list) else output
 
         return output, log
     

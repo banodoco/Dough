@@ -83,8 +83,9 @@ def check_and_update_db():
                 output_details = json.loads(log.output_details)
                 
                 if log_status == InferenceStatus.COMPLETED.value:
-                    output_details['output'] = [result['output'][-1]] if output_details['version'] == \
-                        "a4a8bafd6089e1716b06057c42b19378250d008b80fe87caa5cd36d40c1eda90" else result['output']
+                    output_details['output'] = result['output'] if (output_details['version'] == \
+                        "a4a8bafd6089e1716b06057c42b19378250d008b80fe87caa5cd36d40c1eda90" or \
+                            isinstance(output_details['version'], str)) else [result['output'][-1]]
                 
                 InferenceLog.objects.filter(id=log.id).update(status=log_status, output_details=json.dumps(output_details))
             else:

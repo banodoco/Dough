@@ -42,7 +42,7 @@ def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None)
         img_list = [timing.source_image.location, next_timing.source_image.location]
         res = VideoInterpolator.video_through_frame_interpolation(img_list, \
                                                                   {"interpolation_steps": timing.interpolation_steps}, 1, \
-                                                                    QUEUE_INFERENCE_QUERIES)
+                                                                    False)      # TODO: queuing is not enabled here
         
         output_url, log = res[0]
 
@@ -58,7 +58,7 @@ def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None)
 
         process_inference_output(**inference_data)
         
-
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
     if not timing.timed_clip:
         interpolated_clip = data_repo.get_file_from_uuid(interpolated_clip_uuid) if interpolated_clip_uuid \
                                 else timing.interpolated_clip_list[0]
