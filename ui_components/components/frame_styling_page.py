@@ -248,11 +248,17 @@ def frame_styling_page(mainheader2, project_uuid: str):
     elif st.session_state['frame_styling_view_type'] == "Log List":
         # TODO: add filtering/pagination when fetching log list
         log_list = data_repo.get_all_inference_log_list(project_uuid)
-
-        for log in log_list:
+        valid_url = [False] * len(log_list)
+        for idx, log in enumerate(log_list):
             origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
             if not log.status or not origin_data:
                 continue
+            
+            output_url = None
+            output_data = json.loads(log.output_details)
+            if 'output' in output_data and output_data['output']:
+                output_url = output_data['output'][0] if isinstance(output_data['output'], list) else output_data['output']
+                valid_url[idx] = is_url_valid(output_url)
 
             c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
             with c1:
@@ -262,13 +268,13 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 st.write(log.status)
 
             with c3:
-                output_data = json.loads(log.output_details)
-                output_url = (output_data['output'][0] if isinstance(output_data['output'], list) else output_data['output']) if 'output' in output_data else None
-                if 'output' in output_data and output_data['output'] and is_url_valid(output_url):
-                    if output_url.endswith('png'):
+                
+                
+                if valid_url[idx]:
+                    if output_url.endswith('png') or output_url.endswith('jpg') or output_url.endswith('jpeg') or output_url.endswith('gif'):
                         st.image(output_url)
-                    elif output_url.endswith('mp4') or output_url.endswith('gif'):
-                        st.video(output_url)
+                    elif output_url.endswith('mp4'):
+                        st.video(output_url, format='mp4', start_time=0)
                     else:
                         st.write("No data to display")
                 else:
@@ -276,9 +282,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             with c4:
                 if log.status == InferenceStatus.COMPLETED.value:
-                    output_data = json.loads(log.output_details)
-                    output_url = output_data['output'][0] if isinstance(output_data['output'], list) else output_data['output']
-                    if output_data and ('output' in output_data and output_data['output'] and is_url_valid(output_url)):
+                    if valid_url[idx]:
                         if st.button("Add to project", key=str(log.uuid)):
                             origin_data['output'] = output_data['output']
                             origin_data['log_uuid'] = log.uuid

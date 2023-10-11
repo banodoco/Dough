@@ -19,6 +19,6 @@ def is_url_valid(url):
         response = requests.head(url, allow_redirects=True)
         final_response = response.history[-1] if response.history else response
 
-        return final_response.status_code in [200, 201, 307]    # TODO: handle all possible status codes
+        return final_response.status_code in [200, 201, 307]   # TODO: handle all possible status codes
     except Exception as e:
         return False
