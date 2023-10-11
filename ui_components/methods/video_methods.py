@@ -14,7 +14,6 @@ from backend.models import InternalFileObject
 from shared.constants import AnimationToolType, InferenceType, InternalFileTag
 from shared.file_upload.s3 import is_s3_image_url
 from ui_components.constants import VideoQuality
-from ui_components.methods.common_methods import process_inference_output
 from ui_components.methods.file_methods import convert_bytes_to_file, generate_temp_file
 from ui_components.models import InternalFrameTimingObject, InternalSettingObject
 from utils.data_repo.data_repo import DataRepo
@@ -27,6 +26,8 @@ from utils.media_processor.video import VideoProcessor
 def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None):
     from ui_components.methods.file_methods import generate_temp_file
     from ui_components.methods.common_methods import get_audio_bytes_for_slice
+    from ui_components.methods.common_methods import process_inference_output
+    from shared.constants import QUEUE_INFERENCE_QUERIES
 
     data_repo = DataRepo()
 
@@ -39,7 +40,9 @@ def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None)
         timing.interpolation_steps = 3
         next_timing = data_repo.get_next_timing(timing.uuid)
         img_list = [timing.source_image.location, next_timing.source_image.location]
-        res = VideoInterpolator.video_through_frame_interpolation(img_list, {"interpolation_steps": timing.interpolation_steps})
+        res = VideoInterpolator.video_through_frame_interpolation(img_list, \
+                                                                  {"interpolation_steps": timing.interpolation_steps}, 1, \
+                                                                    QUEUE_INFERENCE_QUERIES)
         
         output_url, log = res[0]
 
@@ -122,6 +125,9 @@ def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None)
 
 # this includes all the animation styles [direct morphing, interpolation, image to video]
 def create_single_interpolated_clip(timing_uuid, quality, settings={}, variant_count=1):
+    from ui_components.methods.common_methods import process_inference_output
+    from shared.constants import QUEUE_INFERENCE_QUERIES
+
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
     next_timing: InternalFrameTimingObject = data_repo.get_next_timing(timing_uuid)
@@ -144,7 +150,8 @@ def create_single_interpolated_clip(timing_uuid, quality, settings={}, variant_c
         img_list,
         timing.animation_style,
         settings,
-        variant_count
+        variant_count,
+        QUEUE_INFERENCE_QUERIES
     )
 
     for (output, log) in res:
@@ -344,6 +351,7 @@ def add_audio_to_video_slice(video_file, audio_bytes):
 def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileTag.GENERATED_VIDEO.value):
     from ui_components.methods.common_methods import update_clip_duration_of_all_timing_frames
     from ui_components.methods.file_methods import convert_bytes_to_file, generate_temp_file
+    from shared.constants import QUEUE_INFERENCE_QUERIES
 
     data_repo = DataRepo()
 
@@ -377,6 +385,7 @@ def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileT
                 data_repo.update_specific_timing(
                     current_timing.uuid, interpolation_steps=3)
 
+        # TODO: add this flow in the async inference as well
         # creating timed clips if not already present
         if not timing.timed_clip:
             # creating an interpolated clip if not already present
@@ -391,7 +400,8 @@ def render_video(final_video_name, project_uuid, quality, file_tag=InternalFileT
                     img_location_list=[current_timing.source_image.location, next_timing.source_image.location],
                     animation_style=current_timing.animation_style,
                     settings=settings,
-                    interpolation_steps=current_timing.interpolation_steps
+                    variant_count=1,
+                    queue_inference=QUEUE_INFERENCE_QUERIES
                 )
 
                 video_bytes, log = res[0]

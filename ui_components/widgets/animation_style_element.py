@@ -42,7 +42,7 @@ def animation_style_element(timing_uuid, project_uuid):
                 positive_prompt = st.text_area("Positive Prompt:", value=project_settings.default_prompt, key="positive_prompt")
             
             with prompt_column_2:
-                negative_prompt = st.text_area("Negative Prompt:", value=project_settings.default_prompt, key="negative_prompt")
+                negative_prompt = st.text_area("Negative Prompt:", value=project_settings.default_negative_prompt, key="negative_prompt")
 
             animate_col_1, animate_col_2, _ = st.columns([1, 1, 2])
 

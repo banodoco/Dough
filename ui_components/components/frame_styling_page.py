@@ -263,14 +263,12 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             with c3:
                 output_data = json.loads(log.output_details)
-                if 'output' in output_data and output_data['output'] and is_url_valid(output_data['output'][0]):
-                    if isinstance(output_data['output'], list):
-                        output_data['output'] = output_data['output'][0]
-
-                    if output_data['output'].endswith('png'):
-                        st.image(output_data['output'])
-                    elif output_data['output'].endswith('mp4') or output_data['output'].endswith('gif'):
-                        st.video(output_data['output'])
+                output_url = (output_data['output'][0] if isinstance(output_data['output'], list) else output_data['output']) if 'output' in output_data else None
+                if 'output' in output_data and output_data['output'] and is_url_valid(output_url):
+                    if output_url.endswith('png'):
+                        st.image(output_url)
+                    elif output_url.endswith('mp4') or output_url.endswith('gif'):
+                        st.video(output_url)
                     else:
                         st.write("No data to display")
                 else:
@@ -279,7 +277,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
             with c4:
                 if log.status == InferenceStatus.COMPLETED.value:
                     output_data = json.loads(log.output_details)
-                    if output_data and ('output' in output_data and output_data['output'] and is_url_valid(output_data['output'][0])):
+                    output_url = output_data['output'][0] if isinstance(output_data['output'], list) else output_data['output']
+                    if output_data and ('output' in output_data and output_data['output'] and is_url_valid(output_url)):
                         if st.button("Add to project", key=str(log.uuid)):
                             origin_data['output'] = output_data['output']
                             origin_data['log_uuid'] = log.uuid

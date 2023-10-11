@@ -75,7 +75,7 @@ def check_and_update_db():
             headers = {
                 "Authorization": f"Token {replicate_key}"
             }
-            print("replicate key: ", replicate_key)
+
             response = requests.get(url, headers=headers)
             if response.status_code in [200, 201]:
                 result = response.json()

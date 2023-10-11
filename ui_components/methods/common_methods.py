@@ -1368,7 +1368,8 @@ def process_inference_output(**kwargs):
     # --------------------- MULTI VIDEO INFERENCE (INTERPOLATION + MORPHING) -------------------
     elif inference_type == InferenceType.FRAME_INTERPOLATION.value:
         output = kwargs.get('output')
-        
+        log_uuid = kwargs.get('log_uuid')
+
         if output:
             settings = kwargs.get('settings')
             timing_uuid = kwargs.get('timing_uuid')
@@ -1394,7 +1395,7 @@ def process_inference_output(**kwargs):
                 mime_type="video/mp4",
                 file_bytes=output,
                 project_uuid=timing.project.uuid,
-                inference_log_id=log.uuid
+                inference_log_id=log_uuid
             )
 
             data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video.uuid)
@@ -1403,7 +1404,6 @@ def process_inference_output(**kwargs):
                 data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
         
         else:
-            log_uuid = kwargs.get('log_uuid')
             del kwargs['log_uuid']
             data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
 
