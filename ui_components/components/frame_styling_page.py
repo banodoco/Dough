@@ -1,3 +1,4 @@
+from datetime import timedelta
 import json
 import time
 import streamlit as st
@@ -246,8 +247,12 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
     # ------- change this ----------
     elif st.session_state['frame_styling_view_type'] == "Log List":
+        if st.button("Refresh log list"):
+            st.rerun()
+
         # TODO: add filtering/pagination when fetching log list
         log_list = data_repo.get_all_inference_log_list(project_uuid)
+        log_list = log_list[::-1]
         valid_url = [False] * len(log_list)
         for idx, log in enumerate(log_list):
             origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
@@ -258,7 +263,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
             output_data = json.loads(log.output_details)
             if 'output' in output_data and output_data['output']:
                 output_url = output_data['output'][0] if isinstance(output_data['output'], list) else output_data['output']
-                valid_url[idx] = is_url_valid(output_url)
+                valid_url[idx] = log.updated_on.timestamp() + 60*45 > time.time()
 
             c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
             with c1:

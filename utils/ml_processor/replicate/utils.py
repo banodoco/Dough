@@ -179,6 +179,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
 
         data = {
             'image': input_image,
+            'input_image': input_image,
             'prompt': query_obj.prompt,
             'num_samples': "1",
             'image_resolution': str(query_obj.width),

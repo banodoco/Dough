@@ -61,6 +61,7 @@ class InferenceLogDto(serializers.ModelSerializer):
             "output_details", 
             "total_inference_time",
             "created_on",
+            "updated_on",
             "status"
         )
 
