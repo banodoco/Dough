@@ -76,6 +76,8 @@ class ViewType(ExtendedEnum):
 class InferenceType(ExtendedEnum):
     FRAME_TIMING_IMAGE_INFERENCE = "frame_timing_inference"         # for generating variants of a frame
     FRAME_TIMING_VIDEO_INFERENCE = "frame_timing_video_inference"   # for generating variants of a video
+    SINGLE_PREVIEW_VIDEO = "single_preview_video"                   # for generating a single preview video
+    FRAME_INTERPOLATION = "frame_interpolation"                     # for generating single/multiple interpolated videos
 
 class InferenceStatus(ExtendedEnum):
     QUEUED = "queued"
@@ -100,4 +102,4 @@ OFFLINE_MODE = os.getenv('OFFLINE_MODE', False)     # for picking up secrets and
 LOCAL_DATABASE_NAME = 'banodoco_local.db'
 ENCRYPTION_KEY = 'J2684nBgNUYa_K0a6oBr5H8MpSRW0EJ52Qmq7jExE-w='
 
-QUEUE_INFERENCE_QUERIES = False
+QUEUE_INFERENCE_QUERIES = True

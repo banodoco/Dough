@@ -184,7 +184,8 @@ class DataRepo:
 
     # inference log
     def get_inference_log_from_uuid(self, uuid):
-        log = self.db_repo.get_inference_log_from_uuid(uuid).data['data']
+        res = self.db_repo.get_inference_log_from_uuid(uuid)
+        log = res.data['data'] if res else None
         return InferenceLogObject(**log) if log else None
     
     def get_all_inference_log_list(self, project_id=None):

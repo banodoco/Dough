@@ -63,9 +63,15 @@ class ReplicateProcessor(MachineLearningProcessor):
     
     @check_user_credits
     def predict_model_output(self, replicate_model: ReplicateModel, **kwargs):
+        # TODO: make unified interface for directing to queue_prediction
+        queue_inference = kwargs.get('queue_inference', False)
+        if queue_inference:
+            return self.queue_prediction(replicate_model, **kwargs)
+        
         model_version = self.get_model(replicate_model)
         
-        del kwargs['query_dict']
+        if 'query_dict' in kwargs:
+            del kwargs['query_dict']
         keys_to_delete = []
         for k, _ in kwargs.items():
             if kwargs[k] == None:
@@ -89,9 +95,62 @@ class ReplicateProcessor(MachineLearningProcessor):
         if replicate_model == REPLICATE_MODEL.clip_interrogator:
             output = output     # adding this for organisation purpose
         else:
-            output = [output[-1]]
+            output = [output[-1]] if isinstance(output, list) else output
 
         return output, log
+    
+    @check_user_credits
+    def queue_prediction(self, replicate_model: ReplicateModel, **kwargs):
+        url = "https://api.replicate.com/v1/predictions"
+        headers = {
+            "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),
+            "Content-Type": "application/json"
+        }
+
+        if 'query_dict' in kwargs:
+            del kwargs['query_dict']
+        
+        keys_to_delete = []
+        for k, _ in kwargs.items():
+            if kwargs[k] == None:
+                keys_to_delete.append(k)
+        
+        for k in keys_to_delete:
+            del kwargs[k]
+
+        data = {
+            "version": replicate_model.version,
+            "input": dict(kwargs)
+        }
+
+        # converting io buffers to base64 format
+        for k, v in data['input'].items():
+            if not isinstance(v, (int, str, list, dict, float)):
+                data['input'][k] = convert_file_to_base64(v)
+
+        response = r.post(url, headers=headers, json=data)
+
+        if response.status_code in [200, 201]:
+            result = response.json()
+            data = {
+                "prediction_id": result['id'],
+                "error": result['error'],
+                "status": result['status'],
+                "created_at": result['created_at'],
+                "urls": result['urls'],     # these contain "cancel" and "get" urls
+            }
+
+            kwargs[InferenceParamType.REPLICATE_INFERENCE.value] = data
+
+            # hackish fix for now, will update replicate model later
+            if 'model' in kwargs:
+                kwargs['inf_model'] = kwargs['model']
+                del kwargs['model']
+
+            log = log_model_inference(replicate_model, None, **kwargs)
+            return None, log
+        else:
+            self.logger.log(LoggingType.ERROR, f"Error in creating prediction: {response.content}")
     
     @check_user_credits
     def predict_model_output_async(self, replicate_model: ReplicateModel, **kwargs):
@@ -252,47 +311,3 @@ class ReplicateProcessor(MachineLearningProcessor):
 
         version = (response.json())['results'][0]['id']
         return version
-    
-    @check_user_credits
-    def queue_prediction(self, replicate_model: ReplicateModel, **kwargs):
-        url = "https://api.replicate.com/v1/predictions"
-        headers = {
-            "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),
-            "Content-Type": "application/json"
-        }
-
-        del kwargs['query_dict']
-        keys_to_delete = []
-        for k, _ in kwargs.items():
-            if kwargs[k] == None:
-                keys_to_delete.append(k)
-        
-        for k in keys_to_delete:
-            del kwargs[k]
-
-        data = {
-            "version": replicate_model.version,
-            "input": dict(kwargs)
-        }
-
-        if 'image' in data['input'] and not isinstance(data['input']['image'], str):
-            data['input']['image'] = convert_file_to_base64(data['input']['image'])
-
-        response = r.post(url, headers=headers, json=data)
-
-        if response.status_code in [200, 201]:
-            result = response.json()
-            data = {
-                "prediction_id": result['id'],
-                "error": result['error'],
-                "status": result['status'],
-                "created_at": result['created_at'],
-                "urls": result['urls'],     # these contain "cancel" and "get" urls
-            }
-
-            kwargs[InferenceParamType.REPLICATE_INFERENCE.value] = data
-
-            log = log_model_inference(replicate_model, None, **kwargs)
-            return None, log
-        else:
-            self.logger.log(LoggingType.ERROR, f"Error in creating prediction: {response.content}")
