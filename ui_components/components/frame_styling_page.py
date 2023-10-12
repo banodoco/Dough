@@ -236,9 +236,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
         elif st.session_state['list_view_type'] == "Timeline View":
 
-            with st.sidebar:                            
+            with st.sidebar:        
+                with st.expander("🌀 Batch Styling", expanded=True):                                        
                     styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.LIST.value)
-
             
             if st.session_state['page'] == "Styling":
                 timeline_view(shift_frames_setting, project_uuid, "Styling", header_col_3, header_col_4)
@@ -246,67 +246,77 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 timeline_view(shift_frames_setting, project_uuid, "Motion", header_col_3, header_col_4)
 
     # ------- change this ----------
-    elif st.session_state['frame_styling_view_type'] == "Log List":
-        if st.button("Refresh log list"):
-            st.rerun()
-
-        # TODO: add filtering/pagination when fetching log list
-        log_list = data_repo.get_all_inference_log_list(project_uuid)
-        log_list = log_list[::-1]
-        valid_url = [False] * len(log_list)
-        for idx, log in enumerate(log_list):
-            origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
-            if not log.status or not origin_data:
-                continue
+  
+    with st.sidebar:
+        with st.expander("🔍 Inference Logging", expanded=True):
             
-            output_url = None
-            output_data = json.loads(log.output_details)
-            if 'output' in output_data and output_data['output']:
-                output_url = output_data['output'][0] if isinstance(output_data['output'], list) else output_data['output']
-                valid_url[idx] = log.updated_on.timestamp() + 60*45 > time.time()
-
-            c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
-            with c1:
-                st.write(log.uuid)
-            
-            with c2:
-                st.write(log.status)
-
-            with c3:
+            def display_sidebar_log_list(data_repo, project_uuid):
+                a1, _, a3 = st.columns([1, 0.2, 1])
                 
+                log_list = data_repo.get_all_inference_log_list(project_uuid)
+                refresh_disabled = not any(log.status in [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value] for log in log_list)
+
+                if a1.button("Refresh log", disabled=refresh_disabled): st.rerun()
+                a3.button("Jump to full log view")
+
+                b1, b2 = st.columns([1, 1])
+                items_per_page = b2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
+                page_number = b1.number_input('Page number', min_value=1, max_value=math.ceil(len(log_list) / items_per_page), value=1, step=1)
                 
-                if valid_url[idx]:
-                    if output_url.endswith('png') or output_url.endswith('jpg') or output_url.endswith('jpeg') or output_url.endswith('gif'):
-                        st.image(output_url)
-                    elif output_url.endswith('mp4'):
-                        st.video(output_url, format='mp4', start_time=0)
-                    else:
-                        st.write("No data to display")
-                else:
-                    st.write("No data to display")
+                log_list = log_list[::-1][(page_number - 1) * items_per_page : page_number * items_per_page]                
 
-            with c4:
-                if log.status == InferenceStatus.COMPLETED.value:
-                    if valid_url[idx]:
-                        if st.button("Add to project", key=str(log.uuid)):
-                            origin_data['output'] = output_data['output']
-                            origin_data['log_uuid'] = log.uuid
-                            status = process_inference_output(**origin_data)
+                st.markdown("---")
 
-                            if status:
-                                # delete origin data (doing this will remove the log from the list)
-                                input_params = json.loads(log.input_params)
-                                del input_params[InferenceParamType.ORIGIN_DATA.value]
-                                data_repo.update_inference_log(log.uuid, input_params=json.dumps(input_params))
-                            else:
-                                st.write("Failed to add to project, timing deleted")
-                                time.sleep(1)
-                            st.rerun()
-                    else:
-                        st.write("Data expired")
-
+                for idx, log in enumerate(log_list):  
+                                            
+                    origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
+                    if not log.status or not origin_data:
+                        continue
                     
-                    if st.button("Delete", key=f"delete_{log.uuid}"):
-                        data_repo.update_inference_log(log.uuid, status="")
-                        st.rerun()
+                    output_url = None
+                    output_data = json.loads(log.output_details)
+                    if 'output' in output_data and output_data['output']:
+                        output_url = output_data['output'][0] if isinstance(output_data['output'], list) else output_data['output']                        
+                    
+                    c1, c2, c3 = st.columns([1, 1 if output_url else 0.01, 1])
 
+                    with c1:                
+                        input_params = json.loads(log.input_params)
+                        st.caption(f"Prompt:")
+                        prompt = input_params.get('prompt', 'No prompt found')                
+                        st.write(f'"{prompt[:30]}..."' if len(prompt) > 30 else f'"{prompt}"')
+                        st.caption(f"Model:")
+                        st.write(json.loads(log.output_details)['model_name'].split('/')[-1])
+                                    
+                    with c2:
+                        if output_url:                                              
+                            if output_url.endswith('png') or output_url.endswith('jpg') or output_url.endswith('jpeg') or output_url.endswith('gif'):
+                                st.image(output_url)
+                            elif output_url.endswith('mp4'):
+                                st.video(output_url, format='mp4', start_time=0)
+                            else:
+                                st.info("No data to display")         
+                
+                    with c3:
+                        if log.status == InferenceStatus.COMPLETED.value:
+                            st.success("Completed")
+                        elif log.status == InferenceStatus.FAILED.value:
+                            st.warning("Failed")
+                        elif log.status == InferenceStatus.QUEUED.value:
+                            st.info("Queued")
+                        elif log.status == InferenceStatus.IN_PROGRESS.value:
+                            st.info("In progress")
+                        elif log.status == InferenceStatus.CANCELED.value:
+                            st.warning("Canceled")
+                        
+                        if output_url:
+                            if st.button(f"Jump to frame {idx}"):
+                                st.info("Fix this.")
+                        
+                        # if st.button("Delete", key=f"delete_{log.uuid}"):
+                        #    data_repo.update_inference_log(log.uuid, status="")
+                        #    st.rerun()
+                    
+                    st.markdown("---")
+
+            display_sidebar_log_list(data_repo, project_uuid)

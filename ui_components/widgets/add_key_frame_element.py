@@ -31,7 +31,7 @@ def add_key_frame_element(timing_details, project_uuid):
                 transformation_stage = st.radio(
                                                 label="Which stage would you like to use?",
                                                 options=ImageStage.value_list(),
-                                                key="transformation_stage",
+                                                key="transformation_stage-bottom",
                                                 horizontal=True
                                             )
                 image_idx = st.number_input(
@@ -43,7 +43,7 @@ def add_key_frame_element(timing_details, project_uuid):
                                             key="image_idx"
                                         )
             if transformation_stage == ImageStage.SOURCE_IMAGE.value:
-                if timing_details[image_idx - 1].source_image != "":
+                if timing_details[image_idx - 1].source_image is not None and timing_details[image_idx - 1].source_image != "":
                     selected_image_location = timing_details[image_idx - 1].source_image.location
                 else:
                     selected_image_location = ""

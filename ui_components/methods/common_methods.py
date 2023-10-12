@@ -746,27 +746,29 @@ def replace_image_widget(timing_uuid, stage):
         if stage == "source":
             uploaded_file = st.file_uploader("Upload Source Image", type=[
                 "png", "jpeg"], accept_multiple_files=False)
-            if st.button("Upload Source Image"):
-                if uploaded_file:
-                    timing = data_repo.get_timing_from_uuid(timing.uuid)
-                    if save_uploaded_image(uploaded_file, timing.project.uuid, timing.uuid, "source"):
-                        time.sleep(1.5)
-                        st.rerun()
+            if uploaded_file != None:
+                if st.button("Upload Source Image"):
+                    if uploaded_file:
+                        timing = data_repo.get_timing_from_uuid(timing.uuid)
+                        if save_uploaded_image(uploaded_file, timing.project.uuid, timing.uuid, "source"):
+                            time.sleep(1.5)
+                            st.rerun()
         else:
-            replacement_frame = st.file_uploader("Upload a replacement frame here", type=[
+            replacement_frame = st.file_uploader("Upload Styled Image", type=[
                 "png", "jpeg"], accept_multiple_files=False, key=f"replacement_frame_upload_{stage}")
-            if st.button("Replace frame", disabled=False):
-                images_for_model = []
-                timing = data_repo.get_timing_from_uuid(timing.uuid)
-                if replacement_frame:
-                    saved_file = save_uploaded_image(replacement_frame, timing.project.uuid, timing.uuid, "styled")
-                    if saved_file:
-                        number_of_image_variants = add_image_variant(saved_file.uuid, timing.uuid)
-                        promote_image_variant(
-                            timing.uuid, number_of_image_variants - 1)
-                        st.success("Replaced")
-                        time.sleep(1)
-                        st.rerun()
+            if replacement_frame != None:
+                if st.button("Replace frame", disabled=False):
+                    images_for_model = []
+                    timing = data_repo.get_timing_from_uuid(timing.uuid)
+                    if replacement_frame:
+                        saved_file = save_uploaded_image(replacement_frame, timing.project.uuid, timing.uuid, "styled")
+                        if saved_file:
+                            number_of_image_variants = add_image_variant(saved_file.uuid, timing.uuid)
+                            promote_image_variant(
+                                timing.uuid, number_of_image_variants - 1)
+                            st.success("Replaced")
+                            time.sleep(1)
+                            st.rerun()
 
 def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
     data_repo = DataRepo()

@@ -139,7 +139,7 @@ def setup_app_ui():
                                                             "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "green"}}, manual_select=st.session_state["manual_select"])
 
                     # TODO: CORRECT-CODE
-                    view_types = ["Individual View", "List View", "Log List"]
+                    view_types = ["Individual View", "List View"]
 
                     if 'frame_styling_view_type_index' not in st.session_state:
                         st.session_state['frame_styling_view_type_index'] = 0
@@ -184,7 +184,7 @@ def setup_app_ui():
             elif st.session_state["main_view_type"] == "Tools & Settings":
 
                 with st.sidebar:
-                    tool_pages = ["Custom Models", "Project Settings"]
+                    tool_pages = ["Query Logger", "Custom Models", "Project Settings"]
 
                     if st.session_state["page"] not in tool_pages:
                         st.session_state["page"] = tool_pages[0]
@@ -192,7 +192,8 @@ def setup_app_ui():
 
                     st.session_state['page'] = option_menu(None, tool_pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
                                                             "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "green"}}, manual_select=st.session_state["manual_select"])
-
+                if st.session_state["page"] == "Query Logger":
+                    st.info("Query Logger will appear here.")
                 if st.session_state["page"] == "Custom Models":
                     custom_models_page(st.session_state["project_uuid"])                
                 elif st.session_state["page"] == "Project Settings":
