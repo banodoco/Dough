@@ -4,7 +4,7 @@ import streamlit as st
 import uuid
 from typing import List
 from ui_components.constants import CreativeProcessType
-from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
+from ui_components.methods.common_methods import promote_image_variant
 from utils.data_repo.data_repo import DataRepo
 
 

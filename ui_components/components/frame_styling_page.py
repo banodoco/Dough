@@ -2,7 +2,7 @@
 import streamlit as st
 from shared.constants import ViewType
 
-from ui_components.methods.common_methods import add_key_frame,compare_to_previous_and_next_frame,compare_to_source_frame, process_inference_output,style_cloning_element
+from ui_components.methods.common_methods import add_key_frame,compare_to_previous_and_next_frame,compare_to_source_frame, process_inference_output,style_cloning_element, promote_image_variant
 from ui_components.methods.ml_methods import trigger_restyling_process
 from ui_components.widgets.cropping_element import cropping_selector_element
 from ui_components.widgets.frame_clip_generation_elements import  current_preview_video_element, update_animation_style_element
@@ -17,8 +17,11 @@ from ui_components.widgets.animation_style_element import animation_style_elemen
 from ui_components.widgets.inpainting_element import inpainting_element
 from ui_components.widgets.drawing_element import drawing_element
 from ui_components.widgets.sidebar_logger import sidebar_logger
+from ui_components.widgets.variant_comparison_grid import variant_comparison_grid
 from ui_components.widgets.list_view import list_view_set_up, page_toggle, styling_list_view,motion_list_view
 from utils import st_memory
+
+import time
 
 from ui_components.constants import CreativeProcessType, WorkflowStageType
 
@@ -95,13 +98,19 @@ def frame_styling_page(mainheader2, project_uuid: str):
         elif st.session_state['page'] == CreativeProcessType.STYLING.value:
             # carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.value)
             comparison_values = [
-                "Other Variants", "Source Frame", "Previous & Next Frame", "None"]
+                "Single Variants", "All Other Variants","Source Frame", "Previous & Next Frame", "None"]
             
             st.session_state['show_comparison'] = st_memory.radio("Show comparison to:", options=comparison_values, horizontal=True, key="show_comparison_radio")
             
 
-            if st.session_state['show_comparison'] == "Other Variants":
+            if st.session_state['show_comparison'] == "Single Variants":
                 variant_comparison_element(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
+
+            elif st.session_state['show_comparison'] == "All Other Variants":
+                                
+
+
+                variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)                
                 
             elif st.session_state['show_comparison'] == "Source Frame":
                 compare_to_source_frame(timing_details)
@@ -242,6 +251,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 timeline_view(shift_frames_setting, project_uuid, "Motion", header_col_3, header_col_4)
       
     with st.sidebar:
+
         with st.expander("🔍 Inference Logging", expanded=True):
                         
             sidebar_logger(data_repo, project_uuid)
