@@ -146,12 +146,12 @@ def setup_app_ui():
                     st.session_state['frame_styling_view_type'] = option_menu(
                         None,
                         view_types,
-                        icons=['aspect-ratio', 'bookshelf', "hourglass", 'stopwatch'],
+                        icons=['compass', 'bookshelf','aspect-ratio', "hourglass", 'stopwatch'],
                         menu_icon="cast",
                         orientation="horizontal",
                         key="section-selecto1r",
                         styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#eee"},
-                                "nav-link-selected": {"background-color": "orange"}},
+                                "nav-link-selected": {"background-color": "green"}},
                         manual_select=st.session_state['frame_styling_view_type_index']                        
                     )
 
@@ -169,7 +169,7 @@ def setup_app_ui():
                         st.session_state["manual_select"] = None
 
                     st.session_state['page'] = option_menu(None, pages, icons=['palette', 'camera-reels', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
-                                                            "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "green"}}, manual_select=st.session_state["manual_select"])
+                                                            "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
 
                     # TODO: CORRECT-CODE
 

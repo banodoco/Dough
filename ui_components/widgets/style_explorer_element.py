@@ -34,35 +34,28 @@ def style_explorer_element(project_uuid):
 
         return ", ".join(text_list)
     
-    st.markdown("***")
-    data_repo = DataRepo()    
-    a1, a2, a3 = st.columns([0.5, 1, 0.5])
-    with a2:
-        prompt = st.text_area("What's your prompt?", key="prompt")
-
 
     def create_variate_option(column, key):
         label = key.replace('_', ' ').capitalize()
-        variate_option = column.checkbox(f"Variate {label.lower()}", key=f"{key}_checkbox")
+        variate_option = column.checkbox(f"Vary {label.lower()}", key=f"{key}_checkbox")
         if variate_option:
-            instructions = column.text_area(f"How would you like to variate {label.lower()}?", key=f"{key}_textarea")
+            instructions = column.text_area(f"How would you like to vary the {label.lower()}?", key=f"{key}_textarea", help=f"It'll write a custom {label.lower()} prompt based on your instructions.")
         else:
             instructions = ""
         return instructions
+    
+    st.markdown("***")
+    data_repo = DataRepo() 
 
-    b1, b2, b3, b4 = st.columns([1, 1, 1, 1])
+    a1, a2, a3 = st.columns([0.5, 1, 0.5])    
+    prompt = a2.text_area("What's your base prompt?", key="prompt", help="This will be included at the beginning of each prompt")
 
-    with b1:
-        styling_instructions = create_variate_option(b1, "styling")
-
-    with b2:
-        character_instructions = create_variate_option(b2, "character")
-
-    with b3:
-        action_instructions = create_variate_option(b3, "action")
-
-    with b4:
-        scene_instructions = create_variate_option(b4, "scene")
+    b1, b2, b3, b4,b5,b6 = st.columns([0.5, 1, 1, 1, 1, 0.5])
+    
+    styling_instructions = create_variate_option(b2, "styling")    
+    character_instructions = create_variate_option(b3, "character")    
+    action_instructions = create_variate_option(b4, "action")    
+    scene_instructions = create_variate_option(b5, "scene")
 
     model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)
     model_name_list = list(set([m.name for m in model_list]))
@@ -70,14 +63,16 @@ def style_explorer_element(project_uuid):
     c1, c2, c3 = st.columns([0.25, 1, 0.25])
     
     with c2:
-        models_to_use = st.multiselect("Which models would you like to use?", model_name_list, key="models_to_use", default=model_name_list)
+        models_to_use = st.multiselect("Which models would you like to use?", model_name_list, key="models_to_use", default=model_name_list, help="It'll rotate through the models you select.")
 
     d1, d2, d3 = st.columns([0.5, 1, 0.5])
 
     with d2:        
-        number_to_generate = st.slider("How many images would you like to generate?", min_value=1, max_value=100, value=10, step=1, key="number_to_generate")  
+        number_to_generate = st.slider("How many images would you like to generate?", min_value=1, max_value=100, value=10, step=1, key="number_to_generate", help="It'll generate 4 from each variation.")
+    
+    e1, e2, e3 = st.columns([0.5, 1, 0.5])
 
-    if st.button("Generate images", key="generate_images", use_container_width=True, type="primary"):
+    if e2.button("Generate images", key="generate_images", use_container_width=True, type="primary"):
         st.info("Generating images...")
         counter = 0
         varied_text = ""
@@ -95,6 +90,7 @@ def style_explorer_element(project_uuid):
     variants = timing.alternative_images_list
     
     st.markdown("***")
+
     num_columns = st.slider('Number of columns', min_value=1, max_value=10, value=4)
 
     num_items_per_page = 30
