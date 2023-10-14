@@ -3,7 +3,7 @@ from utils.data_repo.data_repo import DataRepo
 from shared.constants import AIModelType
 
 
-def mood_board_page(project_uuid):
+def style_explorer_element(project_uuid):
 
     def get_varied_text(styling_instructions="", character_instructions="", action_instructions="", scene_instructions=""):
         text_list = []
@@ -34,50 +34,46 @@ def mood_board_page(project_uuid):
 
         return ", ".join(text_list)
     
-    data_repo = DataRepo()
-    st.subheader("Mood Board")
+    st.markdown("***")
+    data_repo = DataRepo()    
     a1, a2, a3 = st.columns([0.5, 1, 0.5])
     with a2:
         prompt = st.text_area("What's your prompt?", key="prompt")
 
 
-    b1, b2, b3, b4 = st.columns([1, 1, 1, 1])
-    with b1:
-        variate_styling = st.checkbox("Variate styling", key="variate_styling")
-        if variate_styling:
-            styling_instructions = st.text_area("How would you like to variate styling?", key="variate_styling_textarea")
+    def create_variate_option(column, key):
+        label = key.replace('_', ' ').capitalize()
+        variate_option = column.checkbox(f"Variate {label.lower()}", key=f"{key}_checkbox")
+        if variate_option:
+            instructions = column.text_area(f"How would you like to variate {label.lower()}?", key=f"{key}_textarea")
         else:
-            styling_instructions = ""
+            instructions = ""
+        return instructions
+
+    b1, b2, b3, b4 = st.columns([1, 1, 1, 1])
+
+    with b1:
+        styling_instructions = create_variate_option(b1, "styling")
 
     with b2:
-        variate_character = st.checkbox("Variate character", key="variate_character")
-        if variate_character:
-            character_instructions = st.text_area("How would you like to variate character?", key="variate_character_textarea")
-        else:
-            character_instructions = ""
+        character_instructions = create_variate_option(b2, "character")
 
     with b3:
-        variate_action = st.checkbox("Variate action", key="variate_action")
-        if variate_action:
-            action_instructions = st.text_area("How would you like to variate action?", key="variate_action_textarea")
-        else:
-            action_instructions = ""
+        action_instructions = create_variate_option(b3, "action")
 
     with b4:
-        variate_scene = st.checkbox("Variate scene", key="variate_scene")
-        if variate_scene:
-            scene_instructions = st.text_area("How would you like to variate the scene?", key="variate_scene_textarea")
-        else:
-            scene_instructions = ""
+        scene_instructions = create_variate_option(b4, "scene")
 
     model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)
     model_name_list = list(set([m.name for m in model_list]))
     
     c1, c2, c3 = st.columns([0.25, 1, 0.25])
+    
     with c2:
         models_to_use = st.multiselect("Which models would you like to use?", model_name_list, key="models_to_use", default=model_name_list)
 
     d1, d2, d3 = st.columns([0.5, 1, 0.5])
+
     with d2:        
         number_to_generate = st.slider("How many images would you like to generate?", min_value=1, max_value=100, value=10, step=1, key="number_to_generate")  
 

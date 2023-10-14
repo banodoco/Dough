@@ -2,10 +2,10 @@
 import streamlit as st
 from shared.constants import ViewType
 
-from ui_components.methods.common_methods import add_key_frame,compare_to_previous_and_next_frame,compare_to_source_frame, process_inference_output,style_cloning_element, promote_image_variant
+from ui_components.methods.common_methods import add_key_frame,compare_to_previous_and_next_frame,compare_to_source_frame,style_cloning_element
 from ui_components.methods.ml_methods import trigger_restyling_process
 from ui_components.widgets.cropping_element import cropping_selector_element
-from ui_components.widgets.frame_clip_generation_elements import  current_preview_video_element, update_animation_style_element
+from ui_components.widgets.frame_clip_generation_elements import  current_preview_video_element
 from ui_components.widgets.frame_selector import frame_selector_widget
 from ui_components.widgets.image_carousal import display_image
 from ui_components.widgets.prompt_finder import prompt_finder_element
@@ -17,8 +17,8 @@ from ui_components.widgets.animation_style_element import animation_style_elemen
 from ui_components.widgets.inpainting_element import inpainting_element
 from ui_components.widgets.drawing_element import drawing_element
 from ui_components.widgets.sidebar_logger import sidebar_logger
+from ui_components.widgets.style_explorer_element import style_explorer_element
 from ui_components.widgets.variant_comparison_grid import variant_comparison_grid
-from ui_components.widgets.list_view import list_view_set_up, page_toggle, styling_list_view,motion_list_view
 from utils import st_memory
 
 import time
@@ -54,7 +54,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
     
     
     if 'frame_styling_view_type' not in st.session_state:
-        st.session_state['frame_styling_view_type'] = "Individual View"
+        st.session_state['frame_styling_view_type'] = "Individual"
         st.session_state['frame_styling_view_type_index'] = 0
 
 
@@ -63,7 +63,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
         # round down st.session_state['which_image']to nearest 10
 
     
-    if st.session_state['frame_styling_view_type'] == "List View":
+    if st.session_state['frame_styling_view_type'] == "Timeline" or st.session_state['frame_styling_view_type'] == "Explorer":
         st.markdown(
             f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{st.session_state['page']}]")
     else:
@@ -72,7 +72,11 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
     project_settings = data_repo.get_project_setting(project_uuid)
 
-    if st.session_state['frame_styling_view_type'] == "Individual View":
+    if st.session_state['frame_styling_view_type'] == "Explorer":
+        style_explorer_element(project_uuid)
+
+
+    elif st.session_state['frame_styling_view_type'] == "Individual":
         with st.sidebar:
             frame_selector_widget()
                 
@@ -170,7 +174,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         st.markdown("***")
 
                         st.info(
-                            "You can restyle multiple frames at once in the List view.")
+                            "You can restyle multiple frames at once in the Timeline view.")
 
                         st.markdown("***")
 
@@ -203,53 +207,24 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     add_key_frame(selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image)
                     st.rerun()
                         
-    elif st.session_state['frame_styling_view_type'] == "List View":
+    elif st.session_state['frame_styling_view_type'] == "Timeline":
         
         st.markdown("---")
 
-        header_col_1, header_col_2, header_col_3, header_col_4, header_col_5 = st.columns([1.25,0.25,4, 1.5, 1.5])
-        with header_col_1:                    
-            st.session_state['list_view_type'] = st_memory.radio("View type:", options=["Timeline View","Detailed View"], key="list_view_type_slider")
-        
+        header_col_3, header_col_4, header_col_5 = st.columns([4, 1.5, 1.5])
+  
         with header_col_5:
             shift_frames_setting = st.toggle("Shift Frames", help="If set to True, it will shift the frames after your adjustment forward by the amount of time you move.")
 
-        if st.session_state['list_view_type'] == "Detailed View":
             
-            with header_col_4:                
-                num_pages, items_per_page = list_view_set_up(timing_details, project_uuid)
-                start_index, end_index = page_toggle(num_pages, items_per_page,project_uuid, position='top')
-            
-            st.markdown("***")
-                                                                                    
-            if st.session_state['page'] == "Styling":
-
-                with st.sidebar:                            
+        if st.session_state['page'] == "Styling":
+            with st.sidebar:        
+                with st.expander("🌀 Batch Styling", expanded=False):                                        
                     styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.LIST.value)
-                
-                styling_list_view(start_index, end_index, shift_frames_setting, project_uuid)
-                                
-                st.markdown("***")
-            
-            # Update the current page in session state
-            elif st.session_state['page'] == "Motion":
-                                                            
-                motion_list_view(start_index, end_index, shift_frames_setting, project_uuid)
-
-            start_index, end_index = page_toggle(num_pages, items_per_page,project_uuid, position='bottom')
-
-        elif st.session_state['list_view_type'] == "Timeline View":
-
-
-            
-            if st.session_state['page'] == "Styling":
-                with st.sidebar:        
-                    with st.expander("🌀 Batch Styling", expanded=False):                                        
-                        styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.LIST.value)
-                timeline_view(shift_frames_setting, project_uuid, "Styling", header_col_3, header_col_4)
-            elif st.session_state['page'] == "Motion":
-                timeline_view(shift_frames_setting, project_uuid, "Motion", header_col_3, header_col_4)
-      
+            timeline_view(shift_frames_setting, project_uuid, "Styling", header_col_3, header_col_4)
+        elif st.session_state['page'] == "Motion":
+            timeline_view(shift_frames_setting, project_uuid, "Motion", header_col_3, header_col_4)
+    
     with st.sidebar:
 
         with st.expander("🔍 Inference Logging", expanded=True):

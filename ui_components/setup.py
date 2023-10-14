@@ -11,7 +11,6 @@ from ui_components.components.frame_styling_page import frame_styling_page
 from ui_components.components.new_project_page import new_project_page
 from ui_components.components.project_settings_page import project_settings_page
 from ui_components.components.video_rendering_page import video_rendering_page
-from ui_components.components.mood_board_page import mood_board_page
 from streamlit_option_menu import option_menu
 from ui_components.constants import CreativeProcessType
 from ui_components.models import InternalAppSettingObject
@@ -126,8 +125,41 @@ def setup_app_ui():
 
                 with st.sidebar:
 
-                    pages = CreativeProcessType.value_list()
+                    view_types = ["Explorer","Timeline","Individual"]
 
+                    if 'frame_styling_view_type_index' not in st.session_state:
+                        st.session_state['frame_styling_view_type_index'] = 0
+                        st.session_state['frame_styling_view_type'] = "Explorer"
+                        st.session_state['change_view_type'] = False
+
+                    if 'change_view_type' not in st.session_state:
+                        st.session_state['change_view_type'] = False
+
+                    if st.session_state['change_view_type'] == True:
+                        st.session_state['frame_styling_view_type_index'] = view_types.index(
+                            st.session_state['frame_styling_view_type'])
+                    else:
+                        st.session_state['frame_styling_view_type_index'] = None
+
+
+                    # Option menu
+                    st.session_state['frame_styling_view_type'] = option_menu(
+                        None,
+                        view_types,
+                        icons=['aspect-ratio', 'bookshelf', "hourglass", 'stopwatch'],
+                        menu_icon="cast",
+                        orientation="horizontal",
+                        key="section-selecto1r",
+                        styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#eee"},
+                                "nav-link-selected": {"background-color": "orange"}},
+                        manual_select=st.session_state['frame_styling_view_type_index']                        
+                    )
+
+                    if st.session_state['frame_styling_view_type'] != "Explorer":
+                        pages = CreativeProcessType.value_list()
+                    else:
+                        pages = ["Styling"]
+                    
                     if 'page' not in st.session_state:
                         st.session_state["page"] = pages[0]
                         st.session_state["manual_select"] = None
@@ -140,44 +172,8 @@ def setup_app_ui():
                                                             "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "green"}}, manual_select=st.session_state["manual_select"])
 
                     # TODO: CORRECT-CODE
-                    view_types = ["Individual View", "List View"]
 
-                    if 'frame_styling_view_type_index' not in st.session_state:
-                        st.session_state['frame_styling_view_type_index'] = 0
-                        st.session_state['frame_styling_view_type'] = "Individual View"
-                        st.session_state['change_view_type'] = False
-
-                    if 'change_view_type' not in st.session_state:
-                        st.session_state['change_view_type'] = False
-
-                    if st.session_state['change_view_type'] == True:
-                        st.session_state['frame_styling_view_type_index'] = view_types.index(
-                            st.session_state['frame_styling_view_type'])
-                    else:
-                        st.session_state['frame_styling_view_type_index'] = None
-
-                    def on_change_view_type(key):
-                        selection = st.session_state[key]
-                        if selection == "List View":
-                            st.session_state['index_of_current_page'] = math.ceil(
-                                st.session_state['current_frame_index'] / 10)
-                            
-                    # Option menu
-                    st.session_state['frame_styling_view_type'] = option_menu(
-                        None,
-                        view_types,
-                        icons=['aspect-ratio', 'bookshelf', "hourglass", 'stopwatch'],
-                        menu_icon="cast",
-                        orientation="horizontal",
-                        key="section-selecto1r",
-                        styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#eee"},
-                                "nav-link-selected": {"background-color": "orange"}},
-                        manual_select=st.session_state['frame_styling_view_type_index'],
-                        on_change=on_change_view_type 
-                    )
-
-                    
-            
+                                
 
                 frame_styling_page(
                     mainheader2, st.session_state["project_uuid"])
@@ -185,7 +181,7 @@ def setup_app_ui():
             elif st.session_state["main_view_type"] == "Tools & Settings":
 
                 with st.sidebar:
-                    tool_pages = ["Query Logger", "Mood Board", "Custom Models", "Project Settings"]
+                    tool_pages = ["Query Logger",  "Custom Models", "Project Settings"]
 
                     if st.session_state["page"] not in tool_pages:
                         st.session_state["page"] = tool_pages[0]
@@ -199,8 +195,7 @@ def setup_app_ui():
                     custom_models_page(st.session_state["project_uuid"])                
                 elif st.session_state["page"] == "Project Settings":
                     project_settings_page(st.session_state["project_uuid"])
-                elif st.session_state["page"] == "Mood Board":
-                    mood_board_page(st.session_state["project_uuid"])
+
                 
 
             elif st.session_state["main_view_type"] == "Video Rendering":
