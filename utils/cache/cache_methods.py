@@ -187,14 +187,18 @@ def cache_data(cls):
     setattr(cls, "update_specific_timing", _cache_update_specific_timing)
 
     def _cache_get_timing_from_uuid(self, *args, **kwargs):
-        timing_list = StCache.get_all(CacheKey.TIMING_DETAILS.value)
-        if timing_list and len(timing_list) and len(args) > 0:
-            for timing in timing_list:
-                if timing.uuid == args[0]:
-                    return timing
+        if kwargs.get('invalidate_cache', None):
+            timing_list = StCache.get_all(CacheKey.TIMING_DETAILS.value)
+            if timing_list and len(timing_list) and len(args) > 0:
+                for timing in timing_list:
+                    if timing.uuid == args[0]:
+                        return timing
         
         original_func = getattr(cls, '_original_get_timing_from_uuid')
         timing = original_func(self, *args, **kwargs)
+
+        if kwargs.get('invalidate_cache', None):
+            StCache.add(timing, CacheKey.TIMING_DETAILS.value)
 
         return timing
     
