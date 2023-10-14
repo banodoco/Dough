@@ -49,10 +49,6 @@ def sidebar_logger(project_uuid):
         if log.uuid in log_file_dict:
             output_url = log_file_dict[log.uuid].location
 
-        # output_data = json.loads(log.output_details)
-        # if 'output' in output_data and output_data['output']:
-        #     output_url = output_data['output'][0] if isinstance(output_data['output'], list) else output_data['output']                        
-        
         c1, c2, c3 = st.columns([1, 1 if output_url else 0.01, 1])
 
         with c1:                

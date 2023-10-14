@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import csv
 import subprocess
+import time
 import psutil
 import streamlit as st
 import json
@@ -183,3 +184,23 @@ def is_process_active(custom_process_name):
         return False
 
     return False
+
+
+def acquire_lock(key):
+    data_repo = DataRepo()
+    retries = 0
+    while retries < 6:
+        lock_status = data_repo.acquire_lock(key)
+        
+        if lock_status:
+            return lock_status
+        
+        retries += 1
+        time.sleep(0.3)
+    
+    return False
+
+def release_lock(key):
+    data_repo = DataRepo()
+    data_repo.release_lock(key)
+    return True

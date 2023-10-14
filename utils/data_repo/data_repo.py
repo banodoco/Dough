@@ -380,3 +380,12 @@ class DataRepo:
         res = self.db_repo.generate_payment_link(amount)
         link = res.data['data'] if res.status else None
         return link
+    
+    # lock
+    def acquire_lock(self, key):
+        res = self.db_repo.acquire_lock(key)
+        return res.data['data'] if res.status else None
+    
+    def release_lock(self, key):
+        res = self.db_repo.release_lock(key)
+        return res.status

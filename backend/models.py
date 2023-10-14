@@ -18,6 +18,14 @@ class BaseModel(models.Model):
         abstract = True
 
 
+class Lock(models.Model):
+    row_key = models.CharField(max_length=255, unique=True)
+
+    class Meta:
+        app_label = 'backend'
+        db_table = 'lock'
+
+
 class User(BaseModel):
     name = models.CharField(max_length=255, default="")
     email = models.CharField(max_length=255)

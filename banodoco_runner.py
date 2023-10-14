@@ -8,6 +8,7 @@ import django
 from shared.constants import InferenceParamType, InferenceStatus, ProjectMetaData
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
+from utils.common_utils import acquire_lock, release_lock
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import replicate_status_map
 
@@ -120,9 +121,11 @@ def check_and_update_db():
     from django.db import transaction
 
     for project_uuid, val in timing_update_list.items():
-        with transaction.atomic():
+        key = str(project_uuid)
+        if acquire_lock(key):    
             val = list(set(val))
             _ = Project.objects.filter(uuid=project_uuid).update(meta_data=json.dumps({ProjectMetaData.DATA_UPDATE.value: val}))
+            release_lock(key)
 
     if not len(log_list):
         # app_logger.log(LoggingType.DEBUG, f"No logs found")

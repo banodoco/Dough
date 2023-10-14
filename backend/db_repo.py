@@ -19,15 +19,17 @@ from backend.serializers.dto import  AIModelDto, AppSettingDto, BackupDto, Backu
 from shared.constants import AUTOMATIC_FILE_HOSTING, LOCAL_DATABASE_NAME, SERVER, ServerType
 from shared.file_upload.s3 import upload_file, upload_file_from_obj
 
-from backend.models import AIModel, AIModelParamMap, AppSetting, BackupTiming, InferenceLog, InternalFileObject, Project, Setting, Timing, User
+from backend.models import AIModel, AIModelParamMap, AppSetting, BackupTiming, InferenceLog, InternalFileObject, Lock, Project, Setting, Timing, User
 
 from backend.serializers.dao import CreateAIModelDao, CreateAIModelParamMapDao, CreateAppSettingDao, CreateFileDao, CreateInferenceLogDao, CreateProjectDao, CreateSettingDao, CreateTimingDao, CreateUserDao, UpdateAIModelDao, UpdateAppSettingDao, UpdateSettingDao
 from shared.constants import InternalResponse
 from django.db.models import F
+from django.db import transaction
+
 
 logger = AppLogger()
 
-# @measure_execution_time
+@measure_execution_time
 class DBRepo:
     _instance = None
     _count = 0
@@ -1630,3 +1632,14 @@ class DBRepo:
     # payment
     def generate_payment_link(self, amount):
         return InternalResponse({'data': 'https://buy.stripe.com/test_8wMbJib8g3HK7vi5ko'}, 'success', True)     # temp link
+    
+    # lock
+    def acquire_lock(self, key):
+        with transaction.atomic():
+            _, created = Lock.objects.get_or_create(row_key=key)
+            return InternalResponse({'data': True if created else False}, 'success', True)
+        
+    def release_lock(self, key):
+        with transaction.atomic():
+            Lock.objects.filter(row_key=key).delete()
+            return InternalResponse({'data': True}, 'success', True)

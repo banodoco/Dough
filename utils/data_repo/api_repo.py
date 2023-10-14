@@ -177,7 +177,7 @@ class APIRepo:
         return InternalResponse(res['payload'], 'success', res['status'])
     
     def get_file_list_from_log_uuid_list(self, log_uuid_list):
-        res = self.http_post(self.FILE_LIST_URL, data={'log_uuid_list': log_uuid_list})
+        res = self.http_post(self.FILE_UUID_LIST_URL, data={'log_uuid_list': log_uuid_list})
         return InternalResponse(res['payload'], 'success', res['status'])
     
     def get_all_file_list(self, type: InternalFileType, tag = None, project_id = None):
@@ -447,4 +447,13 @@ class APIRepo:
     # payment link
     def generate_payment_link(self, amount):
         res = self.http_get(self.STRIPE_PAYMENT_URL, params={'total_amount': amount})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    # lock
+    def acquire_lock(self, key):
+        res = self.http_get(self.LOCK_URL, params={'key': key, 'action': 'acquire'})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def release_lock(self, key):
+        res = self.http_get(self.LOCK_URL, params={'key': key, 'action': 'release'})
         return InternalResponse(res['payload'], 'success', res['status'])

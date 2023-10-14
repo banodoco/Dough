@@ -16,7 +16,7 @@ from ui_components.components.mood_board_page import mood_board_page
 from streamlit_option_menu import option_menu
 from ui_components.constants import CreativeProcessType
 from ui_components.models import InternalAppSettingObject
-from utils.common_utils import create_working_assets, get_current_user, get_current_user_uuid, reset_project_state
+from utils.common_utils import acquire_lock, create_working_assets, get_current_user, get_current_user_uuid, release_lock, reset_project_state
 from utils import st_memory
 
 from utils.data_repo.data_repo import DataRepo
@@ -96,7 +96,10 @@ def setup_app_ui():
                 _ = data_repo.get_timing_from_uuid(timing_uuid, invalidate_cache=True)
             
             # removing the metadata after processing
-            data_repo.update_project(uuid=project_list[selected_index].uuid, meta_data=json.dumps({ProjectMetaData.DATA_UPDATE.value: []}))
+            key = str(project_list[selected_index].uuid)
+            if acquire_lock(key):
+                data_repo.update_project(uuid=project_list[selected_index].uuid, meta_data=json.dumps({ProjectMetaData.DATA_UPDATE.value: []}))
+                release_lock(key)
 
         if "current_frame_index" not in st.session_state:
             st.session_state['current_frame_index'] = 1
