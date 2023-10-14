@@ -54,10 +54,10 @@ def inpainting_element(timing_uuid):
             st.info("You need to add a style first in the Style Selection section.")
         else:
             if stage == WorkflowStageType.SOURCE.value:
-                editing_image = timing.source_image.location
+                editing_image = timing.source_image.location if timing.source_image is not None else ""
             elif stage == WorkflowStageType.STYLED.value:
                 variants = timing.alternative_images_list
-                editing_image = timing.primary_image_location
+                editing_image = timing.primary_image_location if timing.primary_image_location is not None else ""
 
             width = int(project_settings.width)
             height = int(project_settings.height)

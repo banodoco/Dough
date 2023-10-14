@@ -40,21 +40,20 @@ def frame_selector_widget():
     
     
 
-
-    image_1, image_2 = st.columns([1,1])
-    with image_1:
-        st.warning(f"Guidance Image:")
-        display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
-        with st.expander("Replace guidance image"):
+    with st.expander("🖼️ Frame Details"):
+        image_1, image_2 = st.columns([1,1])
+        with image_1:
+            st.warning(f"Guidance Image:")
+            display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
+            st.caption("Replace guidance image")
             replace_image_widget(st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value)
-    with image_2:
-        st.success(f"Main Styled Image:")
-        display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
-        with st.expander("Replace styled image"):
+        with image_2:
+            st.success(f"Main Styled Image:")
+            display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
+            st.caption("Replace styled image")
             replace_image_widget(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value)
-    
-    st.markdown("***")
-    
-    if st.button("Delete key frame"):
-        delete_frame(st.session_state['current_frame_uuid'])
-        st.rerun()
+            
+        
+        if st.button("Delete key frame"):
+            delete_frame(st.session_state['current_frame_uuid'])
+            st.rerun()
