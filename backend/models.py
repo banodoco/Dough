@@ -40,6 +40,7 @@ class Project(BaseModel):
     name = models.CharField(max_length=255, default="")
     user = models.ForeignKey(User, on_delete=models.DO_NOTHING, null=True)
     temp_file_list = models.TextField(default=None, null=True)
+    meta_data = models.TextField(default=None, null=True)
 
     class Meta:
         app_label = 'backend'

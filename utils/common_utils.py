@@ -170,9 +170,14 @@ def reset_styling_settings(timing_uuid):
 
 
 def is_process_active(custom_process_name):
+    # this caching assumes that the runner won't interupt or break once started
+    if custom_process_name + "_process_state" in st.session_state and st.session_state[custom_process_name + "_process_state"]:
+        return True
+
     try:
         ps_output = subprocess.check_output(["ps", "aux"]).decode("utf-8")
         if custom_process_name in ps_output:
+            st.session_state[custom_process_name + "_process_state"] = True
             return True
     except subprocess.CalledProcessError:
         return False

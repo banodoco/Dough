@@ -1,9 +1,8 @@
 import datetime
-import streamlit as st
 import json
-from shared.constants import AnimationStyleType, AnimationToolType, InferenceParamType
+from shared.constants import InferenceParamType
 
-from ui_components.constants import TEMP_MASK_FILE, DefaultProjectSettingParams, DefaultTimingStyleParams
+from ui_components.constants import DefaultProjectSettingParams, DefaultTimingStyleParams
 from utils.common_decorators import session_state_attributes
 from utils.constants import MLQueryObject
 
@@ -44,12 +43,13 @@ class InternalFileObject:
 
 
 class InternalProjectObject:
-    def __init__(self, uuid, name, user_uuid, created_on, temp_file_list):
+    def __init__(self, uuid, name, user_uuid, created_on, temp_file_list, meta_data=None):
         self.uuid = uuid
         self.name = name
         self.user_uuid = user_uuid
         self.created_on = created_on
         self.temp_file_list = temp_file_list
+        self.meta_data = meta_data
 
     @property
     def project_temp_file_list(self):

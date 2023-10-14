@@ -1,9 +1,10 @@
+import json
 import time
 import streamlit as st
 import os
 import math
 from moviepy.editor import *
-from shared.constants import SERVER, ServerType
+from shared.constants import SERVER, ProjectMetaData, ServerType
 
 from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.custom_models_page import custom_models_page
@@ -55,8 +56,7 @@ def setup_app_ui():
                 }
             )
     
-    project_list = data_repo.get_all_project_list(
-        user_id=get_current_user_uuid())
+    project_list = data_repo.get_all_project_list(user_id=get_current_user_uuid())
 
     if st.session_state["section"] == "Open Project":
 
@@ -85,6 +85,17 @@ def setup_app_ui():
             reset_project_state()
         
         st.session_state["project_uuid"] = project_list[selected_index].uuid
+
+        # checking for project metadata (like cache updates)
+        # project_update_data is of the format {"data_update": [{"timing_uuid": timing_uuid}]}
+        project_update_data = json.loads(project_list[selected_index].meta_data).\
+            get(ProjectMetaData.DATA_UPDATE.value, None) if project_list[selected_index].meta_data else None
+        if project_update_data:
+            for timing_uuid in project_update_data:
+                _ = data_repo.get_timing_from_uuid(timing_uuid)
+            
+            # removing the metadata after processing
+            data_repo.update_project(uuid=project_list[selected_index].uuid, meta_data=json.dumps({ProjectMetaData.DATA_UPDATE.value: []}))
 
         if "current_frame_index" not in st.session_state:
             st.session_state['current_frame_index'] = 1

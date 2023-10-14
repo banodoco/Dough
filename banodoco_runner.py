@@ -5,9 +5,10 @@ import requests
 import setproctitle
 from dotenv import load_dotenv
 import django
-from shared.constants import InferenceParamType, InferenceStatus
+from shared.constants import InferenceParamType, InferenceStatus, ProjectMetaData
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
+from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import replicate_status_map
 
 from utils.constants import RUNNER_PROCESS_NAME
@@ -41,6 +42,12 @@ def main():
         
         time.sleep(REFRESH_FREQUENCY)
         check_and_update_db()
+        # test_data_repo()
+
+def test_data_repo():
+    data_repo = DataRepo()
+    app_settings = data_repo.get_app_setting_from_uuid()
+    print(app_settings.replicate_username)
 
 def is_app_running():
     url = 'http://localhost:5500/healthz'
@@ -65,6 +72,7 @@ def check_and_update_db():
     log_list = InferenceLog.objects.filter(status__in=[InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
                                            is_disabled=False).all()
     
+    timing_update_list = {}     # {project_id: [timing_uuids]}
     for log in log_list:
         input_params = json.loads(log.input_params)
         replicate_data = input_params.get(InferenceParamType.REPLICATE_INFERENCE.value, None)
@@ -88,11 +96,33 @@ def check_and_update_db():
                             isinstance(result['output'], str)) else [result['output'][-1]]
                 
                 InferenceLog.objects.filter(id=log.id).update(status=log_status, output_details=json.dumps(output_details))
+                origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
+                if origin_data and log_status == InferenceStatus.COMPLETED.value:
+                    from ui_components.methods.common_methods import process_inference_output
+
+                    origin_data['output'] = output_details['output']
+                    origin_data['log_uuid'] = log.uuid
+                    print("processing inference output")
+                    process_inference_output(**origin_data)
+                    if  str(log.project.uuid) not in timing_update_list:
+                        timing_update_list[str(log.project.uuid)] = []
+                    
+                    timing_update_list[str(log.project.uuid)].append(origin_data['timing_uuid'])
+
             else:
                 app_logger.log(LoggingType.DEBUG, f"Error: {response.content}")
         else:
             # if not replicate data is present then removing the status
             InferenceLog.objects.filter(id=log.id).update(status="")
+
+    # adding update_data in the project
+    from backend.models import Project
+    from django.db import transaction
+
+    for project_uuid, val in timing_update_list.items():
+        with transaction.atomic():
+            val = list(set(val))
+            _ = Project.objects.filter(uuid=project_uuid).update(meta_data=json.dumps({ProjectMetaData.DATA_UPDATE.value: val}))
 
     if not len(log_list):
         # app_logger.log(LoggingType.DEBUG, f"No logs found")

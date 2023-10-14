@@ -91,6 +91,9 @@ class InferenceParamType(ExtendedEnum):
     QUERY_DICT = "query_dict"                       # query dict of standardized inference params
     ORIGIN_DATA = "origin_data"                     # origin data - used to store file once inference is completed
 
+class ProjectMetaData(ExtendedEnum):
+    DATA_UPDATE = "data_update"                     # info regarding cache/data update when runner updates the db
+
 ##################### global constants #####################
 SERVER = os.getenv('SERVER', ServerType.PRODUCTION.value)
 

@@ -1,12 +1,11 @@
 import streamlit as st
 from ui_components.constants import WorkflowStageType
+from ui_components.widgets.frame_movement_widgets import delete_frame, jump_to_single_frame_view_button, move_frame
 from utils.data_repo.data_repo import DataRepo
 from ui_components.widgets.frame_time_selector import single_frame_time_selector, single_frame_time_duration_setter
 from ui_components.widgets.image_carousal import display_image
-from ui_components.methods.common_methods import delete_frame, move_frame,jump_to_single_frame_view_button,delete_frame_button,move_frame_back_button,move_frame_forward_button
 import math
 from utils.data_repo.data_repo import DataRepo
-from ui_components.methods.common_methods import delete_frame
 from ui_components.widgets.frame_clip_generation_elements import current_individual_clip_element, current_preview_video_element, update_animation_style_element
 from ui_components.widgets.frame_time_selector import single_frame_time_selector, single_frame_time_duration_setter
 from ui_components.widgets.image_carousal import display_image

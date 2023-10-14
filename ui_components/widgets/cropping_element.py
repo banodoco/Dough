@@ -8,10 +8,12 @@ from streamlit_cropper import st_cropper
 from backend.models import InternalFileObject
 from shared.constants import InternalFileType
 
-from ui_components.methods.common_methods import apply_image_transformations, fetch_image_by_stage, inpaint_in_black_space_element, reset_zoom_element, save_zoomed_image, zoom_inputs
+from ui_components.methods.common_methods import apply_image_transformations, fetch_image_by_stage
 from ui_components.constants import WorkflowStageType
 from ui_components.methods.file_methods import generate_pil_image, save_or_host_file
 from ui_components.models import InternalProjectObject, InternalSettingObject
+from ui_components.widgets.image_zoom_widgets import reset_zoom_element, save_zoomed_image, zoom_inputs
+from ui_components.widgets.inpainting_element import inpaint_in_black_space_element
 from utils.data_repo.data_repo import DataRepo
 
 from utils import st_memory
@@ -40,7 +42,7 @@ def precision_cropping_element(stage, project_uuid):
         project_uuid)
 
     
-    input_image = fetch_image_by_stage(project_uuid, stage)
+    input_image = fetch_image_by_stage(project_uuid, stage, st.session_state['current_frame_index'] - 1)
 
     # TODO: CORRECT-CODE check if this code works
     if not input_image:

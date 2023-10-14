@@ -27,6 +27,7 @@ from django.db.models import F
 
 logger = AppLogger()
 
+# @measure_execution_time
 class DBRepo:
     _instance = None
     _count = 0

@@ -1,12 +1,9 @@
 # this repo serves as a middlerware between API backend and the frontend
 import json
-import threading
 from shared.constants import InferenceParamType, InternalFileType, InternalResponse
 from shared.constants import SERVER, ServerType
 from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalUserObject
 from utils.cache.cache_methods import cache_data
-from utils.common_decorators import count_calls
-import streamlit as st
 import wrapt
 
 from utils.data_repo.api_repo import APIRepo
