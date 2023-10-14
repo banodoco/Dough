@@ -255,4 +255,4 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
         with st.expander("🔍 Inference Logging", expanded=True):
                         
-            sidebar_logger(data_repo, project_uuid)
+            sidebar_logger(project_uuid)

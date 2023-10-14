@@ -5,19 +5,22 @@ from shared.constants import InferenceParamType, InferenceStatus
 import json
 import math
 
-def sidebar_logger(data_repo, project_uuid):
+from utils.data_repo.data_repo import DataRepo
+
+def sidebar_logger(project_uuid):
+    data_repo = DataRepo()
+
     a1, _, a3 = st.columns([1, 0.2, 1])
     
     log_list = data_repo.get_all_inference_log_list(project_uuid)
-    refresh_disabled = not any(log.status in [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value] for log in log_list)
+    log_list.reverse()
+    refresh_disabled = False # not any(log.status in [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value] for log in log_list)
 
     if a1.button("Refresh log", disabled=refresh_disabled): st.rerun()
-    a3.button("Jump to full log view")
+    # a3.button("Jump to full log view")
 
-    # Add radio button for status selection
     status_option = st.radio("Statuses to display:", options=["All", "In Progress", "Succeeded", "Failed"], key="status_option", index=0, horizontal=True)
 
-    # Filter log_list based on selected status
     if status_option == "In Progress":
         log_list = [log for log in log_list if log.status in [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value]]
     elif status_option == "Succeeded":
@@ -29,20 +32,26 @@ def sidebar_logger(data_repo, project_uuid):
     items_per_page = b2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
     page_number = b1.number_input('Page number', min_value=1, max_value=math.ceil(len(log_list) / items_per_page), value=1, step=1)
     
-    log_list = log_list[::-1][(page_number - 1) * items_per_page : page_number * items_per_page]                
+    display_list = log_list[(page_number - 1) * items_per_page : page_number * items_per_page]                
+    file_list = data_repo.get_file_list_from_log_uuid_list([log.uuid for log in display_list])
+    log_file_dict = {}
+    for file in file_list:
+        log_file_dict[str(file.inference_log.uuid)] = file
 
     st.markdown("---")
 
-    for idx, log in enumerate(log_list):  
-                                
+    for idx, log in enumerate(display_list):
         origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
         if not log.status or not origin_data:
             continue
         
         output_url = None
-        output_data = json.loads(log.output_details)
-        if 'output' in output_data and output_data['output']:
-            output_url = output_data['output'][0] if isinstance(output_data['output'], list) else output_data['output']                        
+        if log.uuid in log_file_dict:
+            output_url = log_file_dict[log.uuid].location
+
+        # output_data = json.loads(log.output_details)
+        # if 'output' in output_data and output_data['output']:
+        #     output_url = output_data['output'][0] if isinstance(output_data['output'], list) else output_data['output']                        
         
         c1, c2, c3 = st.columns([1, 1 if output_url else 0.01, 1])
 

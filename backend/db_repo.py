@@ -226,6 +226,15 @@ class DBRepo:
 
         return InternalResponse(payload, 'file found', True)
     
+    def get_file_list_from_log_uuid_list(self, log_uuid_list):
+        inference_log_list = InferenceLog.objects.filter(uuid__in=log_uuid_list, is_disabled=False).all()
+        file_list = InternalFileObject.objects.filter(inference_log__uuid__in=[str(log.uuid) for log in inference_log_list], is_disabled=False).all()
+        payload = {
+            'data': InternalFileDto(file_list, many=True).data
+        }
+
+        return InternalResponse(payload, 'file list fetched successfully', True)
+    
     def create_or_update_file(self, file_uuid, type=InternalFileType.IMAGE.value, **kwargs):
         # DBRepo._count += 1
         # cls_name = inspect.currentframe().f_code.co_name

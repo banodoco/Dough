@@ -176,6 +176,10 @@ class APIRepo:
         res = self.http_get(self.FILE_URL, params={'uuid': uuid})
         return InternalResponse(res['payload'], 'success', res['status'])
     
+    def get_file_list_from_log_uuid_list(self, log_uuid_list):
+        res = self.http_post(self.FILE_LIST_URL, data={'log_uuid_list': log_uuid_list})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
     def get_all_file_list(self, type: InternalFileType, tag = None, project_id = None):
         filter_data = {"type": type}
         if tag:
