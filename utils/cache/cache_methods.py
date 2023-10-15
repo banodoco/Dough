@@ -8,21 +8,27 @@ logger = AppLogger()
 
 # NOTE: caching only timing_details, project settings, models and app settings. invalidating cache everytime a related data is updated
 def cache_data(cls):
+    # ---------------- FILE METHODS ----------------------
     def _cache_create_or_update_file(self, *args, **kwargs):
         original_func = getattr(cls, '_original_create_or_update_file')
         file = original_func(self, *args, **kwargs)
-        StCache.delete_all(CacheKey.TIMING_DETAILS.value)
+        
+        if file:
+            StCache.delete(file.uuid, CacheKey.FILE.value)
+            StCache.add(file, CacheKey.FILE.value)
         
         return file
     
     setattr(cls, '_original_create_or_update_file', cls.create_or_update_file)
     setattr(cls, "create_or_update_file", _cache_create_or_update_file)
     
-
     def _cache_create_file(self, *args, **kwargs):
         original_func = getattr(cls, '_original_create_file')
         file = original_func(self, *args, **kwargs)
-        StCache.delete_all(CacheKey.TIMING_DETAILS.value)
+        
+        if file:
+            StCache.delete(file.uuid, CacheKey.FILE.value)
+            StCache.add(file, CacheKey.FILE.value)
         
         return file
     
@@ -34,24 +40,131 @@ def cache_data(cls):
         status = original_func(self, *args, **kwargs)
         
         if status:
+            StCache.delete(args[0], CacheKey.TIMING_DETAILS.value)
             StCache.delete_all(CacheKey.TIMING_DETAILS.value)
     
     setattr(cls, '_original_delete_file_from_uuid', cls.delete_file_from_uuid)
     setattr(cls, "delete_file_from_uuid", _cache_delete_file_from_uuid)
     
-    
     def _cache_update_file(self, *args, **kwargs):
         original_func = getattr(cls, '_original_update_file')
         file = original_func(self, *args, **kwargs)
+        
         if file:
-            StCache.delete_all(CacheKey.TIMING_DETAILS.value)
+            StCache.delete(file.uuid, CacheKey.FILE.value)
+            StCache.add(file, CacheKey.FILE.value)
         
         return file
     
     setattr(cls, '_original_update_file', cls.update_file)
     setattr(cls, "update_file", _cache_update_file)
+
+    def _cache_get_file_from_name(self, *args, **kwargs):
+        file_list = StCache.get_all(CacheKey.FILE.value)
+        if file_list and len(file_list) and len(args) > 0:
+            for file in file_list:
+                if file.name == args[0]:
+                    return file
+        
+        original_func = getattr(cls, '_original_get_file_from_name')
+        file = original_func(self, *args, **kwargs)
+        if file:
+            StCache.add(file, CacheKey.FILE.value)
+
+        return file
+    
+    setattr(cls, '_original_get_file_from_name', cls.get_file_from_name)
+    setattr(cls, "get_file_from_name", _cache_get_file_from_name)
+
+    def _cache_get_file_from_uuid(self, *args, **kwargs):
+        file_list = StCache.get_all(CacheKey.FILE.value)
+        if file_list and len(file_list) and len(args) > 0:
+            for file in file_list:
+                if file.uuid == args[0]:
+                    return file
+        
+        original_func = getattr(cls, '_original_get_file_from_uuid')
+        file = original_func(self, *args, **kwargs)
+        if file:
+            StCache.add(file, CacheKey.FILE.value)
+
+        return file
+    
+    setattr(cls, '_original_get_file_from_uuid', cls.get_file_from_uuid)
+    setattr(cls, "get_file_from_uuid", _cache_get_file_from_uuid)
+
+    def _cache_get_image_list_from_uuid_list(self, *args, **kwargs):
+        not_found_list, found_list = [], {}
+        # finding the images in the cache
+        file_list = StCache.get_all(CacheKey.FILE.value)
+        if file_list and len(file_list) and len(args) > 0:
+            for file in file_list:
+                if file.uuid in args[0]:
+                    found_list[file.uuid] = file
+
+        for file_uuid in args[0]:
+            if file_uuid not in found_list:
+                not_found_list.append(file_uuid)
+
+        # images which are not present in the cache are fetched through the db
+        if len(not_found_list):
+            original_func = getattr(cls, '_original_get_image_list_from_uuid_list')
+            res = original_func(self, not_found_list, **kwargs)
+            for file in res:
+                found_list[file.uuid] = file
+
+        # ordering the result
+        res = []
+        if found_list:
+            for file_uuid in args[0]:
+                if file_uuid in found_list:
+                    res.append(found_list[file_uuid])
+
+        for file in res:
+            StCache.delete(file, CacheKey.FILE.value)
+            StCache.add(file, CacheKey.FILE.value)
+        
+        return res
+    
+    setattr(cls, '_original_get_image_list_from_uuid_list', cls.get_image_list_from_uuid_list)
+    setattr(cls, "get_image_list_from_uuid_list", _cache_get_image_list_from_uuid_list)
+
+    def _cache_get_file_list_from_log_uuid_list(self, *args, **kwargs):
+        not_found_list, found_list = [], {}
+        # finding files in the cache
+        file_list = StCache.get_all(CacheKey.FILE.value)
+        if file_list and len(file_list) and len(args) > 0:
+            for file in file_list:
+                if file.inference_log and file.inference_log.uuid in args[0]:
+                    found_list[file.inference_log.uuid] = file
+        
+        for log_uuid in args[0]:
+            if log_uuid not in found_list:
+                not_found_list.append(log_uuid)
+
+        if len(not_found_list):
+            original_func = getattr(cls, '_original_get_file_list_from_log_uuid_list')
+            res = original_func(self, not_found_list, **kwargs)
+            for file in res:
+                found_list[file.inference_log.uuid] = file
+
+        res = []
+        if found_list:
+            for log_uuid in args[0]:
+                if log_uuid in found_list:
+                    res.append(found_list[log_uuid])
+
+        for file in res:
+            StCache.delete(file, CacheKey.FILE.value)
+            StCache.add(file, CacheKey.FILE.value)
+        
+        return res
+    
+    setattr(cls, '_original_get_file_list_from_log_uuid_list', cls.get_file_list_from_log_uuid_list)
+    setattr(cls, "get_file_list_from_log_uuid_list", _cache_get_file_list_from_log_uuid_list)
     
     
+    # ------------------ PROJECT METHODS -----------------------
     def _cache_create_project(self, *args, **kwargs):
         original_func = getattr(cls, '_original_create_project')
         project = original_func(self, *args, **kwargs)
@@ -75,6 +188,8 @@ def cache_data(cls):
     setattr(cls, '_original_delete_project_from_uuid', cls.delete_project_from_uuid)
     setattr(cls, "delete_project_from_uuid", _cache_delete_project_from_uuid)
     
+    
+    # -------------------- AI MODEL METHODS ----------------------
     def _cache_get_ai_model_from_uuid(self, *args, **kwargs):
         model_list = StCache.get_all(CacheKey.AI_MODEL.value)
         if model_list and len(model_list) and len(args) > 0:
@@ -142,6 +257,7 @@ def cache_data(cls):
     setattr(cls, "delete_ai_model_from_uuid", _cache_delete_ai_model_from_uuid)
 
     
+    # ------------------- TIMING METHODS ---------------------
     def _cache_get_timing_list_from_project(self, *args, **kwargs):
         # checking if it's already present in the cache
         timing_list = StCache.get_all(CacheKey.TIMING_DETAILS.value)
@@ -255,6 +371,8 @@ def cache_data(cls):
     setattr(cls, '_original_move_frame_one_step_forward', cls.move_frame_one_step_forward)
     setattr(cls, "move_frame_one_step_forward", _cache_move_frame_one_step_forward)
 
+
+    # ------------------ APP SETTING METHODS ---------------------
     def _cache_get_app_setting_from_uuid(self, *args, **kwargs):
         app_setting_list = StCache.get_all(CacheKey.APP_SETTING.value)
         if not len(kwargs) and len(app_setting_list):
@@ -274,7 +392,6 @@ def cache_data(cls):
     
     setattr(cls, '_original_get_app_setting_from_uuid', cls.get_app_setting_from_uuid)
     setattr(cls, "get_app_setting_from_uuid", _cache_get_app_setting_from_uuid)
-
 
     def _cache_get_all_app_setting_list(self, *args, **kwargs):
         app_setting_list = StCache.get_all(CacheKey.APP_SETTING.value)
@@ -332,6 +449,8 @@ def cache_data(cls):
     setattr(cls, '_original_delete_app_setting', cls.delete_app_setting)
     setattr(cls, "delete_app_setting", _cache_delete_app_setting)
 
+
+    # ------------------ PROJECT SETTING METHODS ---------------------
     def _cache_get_project_setting(self, *args, **kwargs):
         project_setting = StCache.get(args[0], CacheKey.PROJECT_SETTING.value)
         if project_setting:
@@ -382,6 +501,8 @@ def cache_data(cls):
     setattr(cls, '_original_bulk_update_project_setting', cls.bulk_update_project_setting)
     setattr(cls, "bulk_update_project_setting", _cache_bulk_update_project_setting)
 
+
+    # ---------------------- USER METHODS ---------------------
     def _cache_update_user(self, *args, **kwargs):
         original_func = getattr(cls, '_original_update_user')
         user = original_func(self, *args, **kwargs)

@@ -29,7 +29,7 @@ from django.db import transaction
 
 logger = AppLogger()
 
-@measure_execution_time
+# @measure_execution_time
 class DBRepo:
     _instance = None
     _count = 0
