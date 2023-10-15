@@ -158,7 +158,7 @@ def setup_app_ui():
                     if st.session_state['frame_styling_view_type'] != "Explorer":
                         pages = CreativeProcessType.value_list()
                     else:
-                        pages = ["Styling"]
+                        pages = ["Key Frames"]
                     
                     if 'page' not in st.session_state:
                         st.session_state["page"] = pages[0]

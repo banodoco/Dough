@@ -608,7 +608,7 @@ def update_timings_in_order(project_uuid):
             data_repo.update_specific_timing(timing.uuid, frame_time=float(i))
 
 
-def change_frame_position_input(timing_uuid, src):
+def change_position_input(timing_uuid, src):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
     timing_list = data_repo.get_timing_list_from_project(project_uuid=timing.project.uuid)

@@ -210,20 +210,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
     elif st.session_state['frame_styling_view_type'] == "Timeline":
         
         st.markdown("---")
-
-        header_col_3, header_col_4, header_col_5 = st.columns([4, 1.5, 1.5])
-  
-        with header_col_5:
-            shift_frames_setting = st.toggle("Shift Frames", help="If set to True, it will shift the frames after your adjustment forward by the amount of time you move.")
-
-            
-        if st.session_state['page'] == "Styling":
+                    
+        if st.session_state['page'] == "Key Frames":
             with st.sidebar:        
                 with st.expander("🌀 Batch Styling", expanded=False):                                        
                     styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.LIST.value)
-            timeline_view(shift_frames_setting, project_uuid, "Styling", header_col_3, header_col_4)
-        elif st.session_state['page'] == "Motion":
-            timeline_view(shift_frames_setting, project_uuid, "Motion", header_col_3, header_col_4)
+            timeline_view(project_uuid, "Key Frames")
+        elif st.session_state['page'] == "Videos":
+            timeline_view(project_uuid, "Videos")
     
     with st.sidebar:
 

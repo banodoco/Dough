@@ -14,8 +14,8 @@ class VideoQuality(ExtendedEnum):
     LOW = "Low"
 
 class CreativeProcessType(ExtendedEnum):
-    STYLING = "Styling"
-    MOTION = "Motion"
+    STYLING = "Key Frames"
+    MOTION = "Videos"
 
 class DefaultTimingStyleParams:
     prompt = ""
