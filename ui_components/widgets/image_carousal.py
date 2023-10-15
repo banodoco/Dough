@@ -44,7 +44,7 @@ def display_image(timing_uuid, stage=None, clickable=False):
                     st.session_state['current_frame_index'] = timing_idx + 1
                     st.session_state['prev_frame_index'] = timing_idx + 1
                     # st.session_state['frame_styling_view_type_index'] = 0
-                    st.session_state['frame_styling_view_type'] = "Individual View"
+                    st.session_state['frame_styling_view_type'] = "Individual"
                     st.session_state['counter'] += 1
                     st.rerun()
 

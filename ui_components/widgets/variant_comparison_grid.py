@@ -9,9 +9,7 @@ def variant_comparison_grid(timing_uuid, stage=CreativeProcessType.MOTION.value)
 
     timing = data_repo.get_timing_from_uuid(timing_uuid)
     variants = timing.alternative_images_list
-
     
-
     current_variant = timing.primary_interpolated_video_index if stage == CreativeProcessType.MOTION.value else int(
         timing.primary_variant_index)
 
@@ -20,17 +18,19 @@ def variant_comparison_grid(timing_uuid, stage=CreativeProcessType.MOTION.value)
     for i in range(0, len(variants), num_columns):
         cols = st.columns(num_columns)
         for j in range(num_columns):
-            if i + j < len(variants):
+            variant_index = i + j
+            if variant_index < len(variants):
                 with cols[j]:
                     if stage == CreativeProcessType.MOTION.value:
-                        st.video(variants[i + j].location, format='mp4', start_time=0) if variants[i + j] else st.error("No video present")
+                        st.video(variants[variant_index].location, format='mp4', start_time=0) if variants[variant_index] else st.error("No video present")
                     else:
-                        st.image(variants[i + j].location, use_column_width=True)
+                        st.image(variants[variant_index].location, use_column_width=True)
 
-                    if i + j == current_variant:
+                    if variant_index == current_variant:
                         st.success("**Main variant**")
-                    else:                                        
-                        if st.button(f"Promote Variant #{i + j + 1}", key=f"Promote Variant #{i + j + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
+                    else:
+                        st.info(f"Variant #{variant_index + 1}")
 
-                            promote_image_variant(timing.uuid, i + j)                                            
+                        if st.button(f"Promote Variant #{variant_index + 1}", key=f"Promote Variant #{variant_index + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
+                            promote_image_variant(timing.uuid, variant_index)                                            
                             st.rerun()

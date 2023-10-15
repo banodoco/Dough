@@ -1,6 +1,6 @@
 import streamlit as st
 from banodoco_settings import create_new_project
-from ui_components.methods.common_methods import save_audio_file,create_timings_row_at_frame_number, save_uploaded_image
+from ui_components.methods.common_methods import save_audio_file,create_timings_row_at_frame_number, save_and_promote_image
 from utils.common_utils import get_current_user_uuid, reset_project_state
 from utils.data_repo.data_repo import DataRepo
 import time
@@ -86,8 +86,8 @@ def new_project_page():
 
             if starting_image:
                 try:
-                    save_uploaded_image(starting_image, new_project.uuid, new_timing.uuid, "source")
-                    save_uploaded_image(starting_image, new_project.uuid, new_timing.uuid, "styled")
+                    save_and_promote_image(starting_image, new_project.uuid, new_timing.uuid, "source")
+                    save_and_promote_image(starting_image, new_project.uuid, new_timing.uuid, "styled")
                 except Exception as e:
                     st.error(f"Failed to save the uploaded image due to {str(e)}")
 

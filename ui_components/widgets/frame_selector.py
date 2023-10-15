@@ -31,7 +31,7 @@ def frame_selector_widget():
             st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
             st.session_state['reset_canvas'] = True
             st.session_state['frame_styling_view_type_index'] = 0
-            st.session_state['frame_styling_view_type'] = "Individual View"
+            st.session_state['frame_styling_view_type'] = "Individual"
                                         
             st.rerun()       
 
