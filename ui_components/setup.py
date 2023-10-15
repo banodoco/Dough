@@ -60,7 +60,6 @@ def setup_app_ui():
     project_list = data_repo.get_all_project_list(user_id=get_current_user_uuid())
 
     if st.session_state["section"] == "Open Project":
-
         if "index_of_project_name" not in st.session_state:
             if app_settings.previous_project:
                 st.session_state["project_uuid"] = app_settings.previous_project
@@ -89,17 +88,19 @@ def setup_app_ui():
 
         # checking for project metadata (like cache updates)
         # project_update_data is of the format {"data_update": [{"timing_uuid": timing_uuid}]}
-        project_update_data = json.loads(project_list[selected_index].meta_data).\
-            get(ProjectMetaData.DATA_UPDATE.value, None) if project_list[selected_index].meta_data else None
-        if project_update_data:
-            for timing_uuid in project_update_data:
-                _ = data_repo.get_timing_from_uuid(timing_uuid, invalidate_cache=True)
+        key = st.session_state["project_uuid"]
+        if acquire_lock(key):
+            project = data_repo.get_project_from_uuid(st.session_state["project_uuid"])
+            project_update_data = json.loads(project.meta_data).\
+                get(ProjectMetaData.DATA_UPDATE.value, None) if project.meta_data else None
+            if project_update_data:
+                for timing_uuid in project_update_data:
+                    _ = data_repo.get_timing_from_uuid(timing_uuid, invalidate_cache=True)
+                
+                # removing the metadata after processing
+                data_repo.update_project(uuid=project.uuid, meta_data=json.dumps({ProjectMetaData.DATA_UPDATE.value: []}))
             
-            # removing the metadata after processing
-            key = str(project_list[selected_index].uuid)
-            if acquire_lock(key):
-                data_repo.update_project(uuid=project_list[selected_index].uuid, meta_data=json.dumps({ProjectMetaData.DATA_UPDATE.value: []}))
-                release_lock(key)
+            release_lock(key)
 
         if "current_frame_index" not in st.session_state:
             st.session_state['current_frame_index'] = 1
@@ -226,7 +227,6 @@ def setup_app_ui():
         app_settings_page()
 
     elif st.session_state["section"] == "New Project":
-
         new_project_page()
 
     else:

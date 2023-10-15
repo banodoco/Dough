@@ -118,11 +118,10 @@ def check_and_update_db():
 
     # adding update_data in the project
     from backend.models import Project
-    from django.db import transaction
 
     for project_uuid, val in timing_update_list.items():
         key = str(project_uuid)
-        if acquire_lock(key):    
+        if acquire_lock(key):
             val = list(set(val))
             _ = Project.objects.filter(uuid=project_uuid).update(meta_data=json.dumps({ProjectMetaData.DATA_UPDATE.value: val}))
             release_lock(key)

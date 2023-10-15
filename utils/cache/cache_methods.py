@@ -197,6 +197,7 @@ def cache_data(cls):
         original_func = getattr(cls, '_original_get_timing_from_uuid')
         timing = original_func(self, *args, **kwargs)
 
+        StCache.delete(timing.uuid, CacheKey.TIMING_DETAILS.value)
         StCache.add(timing, CacheKey.TIMING_DETAILS.value)
 
         return timing

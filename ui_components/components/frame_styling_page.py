@@ -108,20 +108,15 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 variant_comparison_element(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
 
             elif st.session_state['show_comparison'] == "All Other Variants":
-                                
-
-
                 variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)                
                 
             elif st.session_state['show_comparison'] == "Source Frame":
                 compare_to_source_frame(timing_details)
                 
             elif st.session_state['show_comparison'] == "Previous & Next Frame":
-
                 compare_to_previous_and_next_frame(project_uuid,timing_details)
 
             elif st.session_state['show_comparison'] == "None":
-
                 display_image(timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
 
             st.markdown("***")
