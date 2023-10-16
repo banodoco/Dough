@@ -43,12 +43,6 @@ def main():
         
         time.sleep(REFRESH_FREQUENCY)
         check_and_update_db()
-        # test_data_repo()
-
-def test_data_repo():
-    data_repo = DataRepo()
-    app_settings = data_repo.get_app_setting_from_uuid()
-    print(app_settings.replicate_username)
 
 def is_app_running():
     url = 'http://localhost:5500/healthz'

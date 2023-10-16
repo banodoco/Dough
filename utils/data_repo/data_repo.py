@@ -190,8 +190,8 @@ class DataRepo:
         log = res.data['data'] if res else None
         return InferenceLogObject(**log) if log else None
     
-    def get_all_inference_log_list(self, project_id=None):
-        log_list = self.db_repo.get_all_inference_log_list(project_id).data['data']
+    def get_all_inference_log_list(self, **kwargs):
+        log_list = self.db_repo.get_all_inference_log_list(**kwargs).data['data']
         return [InferenceLogObject(**log) for log in log_list] if log_list else None
     
     

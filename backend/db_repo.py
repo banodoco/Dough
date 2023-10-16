@@ -4,9 +4,10 @@ import os
 
 import sys
 from shared.logging.constants import LoggingType
+from django.core.paginator import Paginator
 
 from shared.logging.logging import AppLogger
-from utils.common_decorators import count_calls, measure_execution_time
+from utils.common_decorators import measure_execution_time
 sys.path.append('../')
 
 import sqlite3
@@ -66,9 +67,6 @@ class DBRepo:
 
     # user operations
     def create_user(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         data = CreateUserDao(data=kwargs)
         if not data.is_valid():
             return InternalResponse({}, data.errors, False)
@@ -86,9 +84,6 @@ class DBRepo:
         return InternalResponse(payload, 'user created successfully', True)
     
     def get_first_active_user(self):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         user = User.objects.filter(is_disabled=False).first()
         if not user:
             return InternalResponse(None, 'no user found', True)
@@ -100,9 +95,6 @@ class DBRepo:
         return InternalResponse(payload, 'user found', True)
     
     def get_user_by_email(self, email):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         user = User.objects.filter(email=email, is_disabled=False).first()
         if user:
             return InternalResponse(user, 'user found', True)
@@ -114,9 +106,6 @@ class DBRepo:
         return InternalResponse(payload, 'user not found', False)
     
     def update_user(self, user_id, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         if user_id:
             user = User.objects.filter(uuid=user_id, is_disabled=False).first()
         else:
@@ -140,9 +129,6 @@ class DBRepo:
         return InternalResponse(payload, 'user updated successfully', True)
 
     def get_all_user_list(self):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         user_list = User.objects.all()
 
         payload = {
@@ -151,9 +137,6 @@ class DBRepo:
         return InternalResponse(payload, 'user list', True)
     
     def get_total_user_count(self):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         if SERVER != ServerType.PRODUCTION.value:
             count = User.objects.filter(is_disabled=False).count()
         else:
@@ -162,9 +145,6 @@ class DBRepo:
         return InternalResponse(count, 'user count fetched', True)
     
     def delete_user_by_email(self, email):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         user = User.objects.filter(email=email, is_disabled=False).first()
         if user:
             user.is_disabled = True
@@ -179,9 +159,6 @@ class DBRepo:
 
     # internal file object
     def get_file_from_name(self, name):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         file = InternalFileObject.objects.filter(name=name, is_disabled=False).first()
         if not file:
             return InternalResponse({}, 'file not found', False)
@@ -193,9 +170,6 @@ class DBRepo:
         return InternalResponse(payload, 'file found', True)
 
     def get_file_from_uuid(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         file = InternalFileObject.objects.filter(uuid=uuid, is_disabled=False).first()
         if not file:
             return InternalResponse({}, 'file not found', False)
@@ -208,9 +182,6 @@ class DBRepo:
     
     # TODO: create a dao for this
     def get_all_file_list(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         kwargs['is_disabled'] = False
 
         if 'project_id' in kwargs and kwargs['project_id']:
@@ -238,9 +209,6 @@ class DBRepo:
         return InternalResponse(payload, 'file list fetched successfully', True)
     
     def create_or_update_file(self, file_uuid, type=InternalFileType.IMAGE.value, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         file = InternalFileType.objects.filter(uuid=file_uuid, type=type, is_disabled=False).first()
         if not file:
             file = InternalFileObject.objects.create(uuid=file_uuid, name=str(uuid.uuid4()), file_type=type, **kwargs)
@@ -258,9 +226,6 @@ class DBRepo:
         return InternalResponse(payload, 'file found', True)
     
     def upload_file(self, file, ext):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         url = upload_file_from_obj(file, ext)
         payload = {
             'data': url
@@ -269,9 +234,6 @@ class DBRepo:
         return InternalResponse(payload, 'file uploaded', True)
     
     def create_file(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         data = CreateFileDao(data=kwargs)
         if not data.is_valid():
             return InternalResponse({}, data.errors, False)
@@ -321,9 +283,6 @@ class DBRepo:
         return InternalResponse(payload, 'file found', True)
     
     def delete_file_from_uuid(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         file = InternalFileObject.objects.filter(uuid=uuid, is_disabled=False).first()
         if not file:
             return InternalResponse({}, 'invalid file uuid', False)
@@ -331,9 +290,6 @@ class DBRepo:
         return InternalResponse({}, 'file deleted successfully', True)
     
     def get_image_list_from_uuid_list(self, uuid_list, file_type=InternalFileType.IMAGE.value):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         file_list = InternalFileObject.objects.filter(uuid__in=uuid_list, \
                                                       is_disabled=False, type=file_type).all()
         
@@ -348,9 +304,6 @@ class DBRepo:
         return InternalResponse(payload, 'file list fetched', True)
     
     def update_file(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         if 'uuid' not in kwargs:
             return InternalResponse({}, 'uuid is required', False)
         
@@ -385,9 +338,6 @@ class DBRepo:
     
     # project
     def get_project_from_uuid(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         project = Project.objects.filter(uuid=uuid, is_disabled=False).first()
         if not project:
             return InternalResponse({}, 'invalid project uuid', False)
@@ -399,9 +349,6 @@ class DBRepo:
         return InternalResponse(payload, 'project fetched', True)
     
     def update_project(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         project = Project.objects.filter(uuid=kwargs['uuid'], is_disabled=False).first()
         if not project:
             return InternalResponse({}, 'invalid project uuid', False)
@@ -418,9 +365,6 @@ class DBRepo:
         return InternalResponse(payload, 'successfully updated project', True)
     
     def get_all_project_list(self, user_uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         user: User = User.objects.filter(uuid=user_uuid, is_disabled=False).first()
         if not user:
             return InternalResponse({}, 'invalid user', False)
@@ -434,9 +378,6 @@ class DBRepo:
         return InternalResponse(payload, 'project fetched', True)
     
     def create_project(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         data = CreateProjectDao(data=kwargs)
         if not data.is_valid():
             return InternalResponse({}, data.errors, False)
@@ -457,9 +398,6 @@ class DBRepo:
         return InternalResponse(payload, 'project fetched', True)
     
     def delete_project_from_uuid(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         project = Project.objects.filter(uuid=uuid, is_disabled=False).first()
         if not project:
             return InternalResponse({}, 'invalid project uuid', False)
@@ -471,9 +409,6 @@ class DBRepo:
     
     # ai model (custom ai model)
     def get_ai_model_from_uuid(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         ai_model = AIModel.objects.filter(uuid=uuid, is_disabled=False).first()
         if not ai_model:
             return InternalResponse({}, 'invalid ai model uuid', False)
@@ -485,9 +420,6 @@ class DBRepo:
         return InternalResponse(payload, 'ai_model fetched', True)
     
     def get_ai_model_from_name(self, name):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         ai_model = AIModel.objects.filter(replicate_url=name, is_disabled=False).first()
         if not ai_model:
             return InternalResponse({}, 'invalid ai model name', False)
@@ -499,9 +431,6 @@ class DBRepo:
         return InternalResponse(payload, 'ai_model fetched', True)
     
     def get_all_ai_model_list(self, model_category_list=None, user_id=None, custom_trained=False, model_type_list=None):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         query = {'custom_trained': "all" if custom_trained == None else ("user" if custom_trained else "predefined"), 'is_disabled': False}
         if user_id:
             user = User.objects.filter(uuid=user_id, is_disabled=False).first()
@@ -529,9 +458,6 @@ class DBRepo:
         return InternalResponse(payload, 'ai_model fetched', True)
     
     def create_ai_model(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         attributes = CreateAIModelDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
@@ -555,9 +481,6 @@ class DBRepo:
         return InternalResponse(payload, 'ai_model fetched', True)
     
     def update_ai_model(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         attributes = UpdateAIModelDao(attributes=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
@@ -585,9 +508,6 @@ class DBRepo:
         return InternalResponse(payload, 'ai_model fetched', True)
     
     def delete_ai_model_from_uuid(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         ai_model = AIModel.objects.filter(uuid=uuid, is_disabled=False).first()
         if not ai_model:
             return InternalResponse({}, 'invalid ai model uuid', False)
@@ -599,9 +519,6 @@ class DBRepo:
 
     # inference log
     def get_inference_log_from_uuid(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         log = InferenceLog.objects.filter(uuid=uuid, is_disabled=False).first()
         if not log:
             return InternalResponse({}, 'invalid inference log uuid', False)
@@ -612,26 +529,33 @@ class DBRepo:
         
         return InternalResponse(payload, 'inference log fetched', True)
     
-    def get_all_inference_log_list(self, project_id=None):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
+    def get_all_inference_log_list(self, project_id=None, page=1, data_per_page=5, status_list=None):
         if project_id:
             project = Project.objects.filter(uuid=project_id, is_disabled=False).first()
-            log_list = InferenceLog.objects.filter(project_id=project.id, is_disabled=False).all()
+            log_list = InferenceLog.objects.filter(project_id=project.id, is_disabled=False).order_by('-created_on').all()
         else:
-            log_list = InferenceLog.objects.filter(is_disabled=False).all()
+            log_list = InferenceLog.objects.filter(is_disabled=False).order_by('-created_on').all()
+        
+        if status_list:
+            log_list = log_list.filter(status__in=status_list)
+
+        paginator = Paginator(log_list, data_per_page)
+        if page > paginator.num_pages or page < 1:
+            return InternalResponse({}, "invalid page number", False)
         
         payload = {
-            'data': InferenceLogDto(log_list, many=True).data
+            "data_per_page": data_per_page,
+            "page": page,
+            "total_pages": paginator.num_pages,
+            "count": paginator.count,
+            "data": InferenceLogDto(
+                paginator.page(page), many=True
+            ).data,
         }
-        
+
         return InternalResponse(payload, 'inference log list fetched', True)
     
     def create_inference_log(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         attributes = CreateInferenceLogDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
@@ -662,9 +586,6 @@ class DBRepo:
         return InternalResponse(payload, 'inference log created successfully', True)
     
     def delete_inference_log_from_uuid(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         log = InferenceLog.objects.filter(uuid=uuid, is_disabled=False).first()
         if not log:
             return InternalResponse({}, 'invalid inference log uuid', False)
@@ -692,9 +613,6 @@ class DBRepo:
     # ai model param map
     # TODO: add DTO in the output
     def get_ai_model_param_map_from_uuid(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         map = AIModelParamMap.objects.filter(uuid=uuid, is_disabled=False).first()
         if not map:
             return InternalResponse({}, 'invalid ai model param map uuid', False)
@@ -702,9 +620,6 @@ class DBRepo:
         return InternalResponse(map, 'ai model param map fetched', True)
     
     def get_all_ai_model_param_map_list(self, model_id=None):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         if model_id:
             map_list = AIModelParamMap.objects.filter(model_id=model_id, is_disabled=False).all()
         else:
@@ -713,9 +628,6 @@ class DBRepo:
         return InternalResponse(map_list, 'ai model param map list fetched', True)
     
     def create_ai_model_param_map(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         attributes = CreateAIModelParamMapDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
@@ -734,9 +646,6 @@ class DBRepo:
         return InternalResponse(map, 'ai model param map created successfully', True)
     
     def delete_ai_model(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         map = AIModelParamMap.objects.filter(uuid=uuid, is_disabled=False).first()
         if not map:
             return InternalResponse({}, 'invalid ai model param map uuid', False)
@@ -748,9 +657,6 @@ class DBRepo:
 
     # timing
     def get_timing_from_uuid(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
             return InternalResponse({'data': None}, 'invalid timing uuid', False)
@@ -762,9 +668,6 @@ class DBRepo:
         return InternalResponse(payload, 'timing fetched', True)
     
     def get_timing_from_frame_number(self, project_uuid, frame_number):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
         if project:
             timing = Timing.objects.filter(aux_frame_index=frame_number, project_id=project.id, is_disabled=False).first()
@@ -778,9 +681,6 @@ class DBRepo:
         return InternalResponse({'data': None}, 'invalid timing frame number', False)
     
     def get_primary_variant_location(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)
@@ -793,9 +693,6 @@ class DBRepo:
     
     # this is based on the aux_frame_index and not the order in the db
     def get_next_timing(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)
@@ -809,9 +706,6 @@ class DBRepo:
         return InternalResponse(payload, 'timing fetched', True)
     
     def get_prev_timing(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)
@@ -825,9 +719,6 @@ class DBRepo:
         return InternalResponse(payload, 'timing fetched', True)
     
     def get_alternative_image_list(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
             return InternalResponse([], 'invalid timing uuid', False)
@@ -835,9 +726,6 @@ class DBRepo:
         return timing.alternative_image_list
     
     def get_timing_list_from_project(self, project_uuid=None):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         if project_uuid:
             project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
             if not project:
@@ -854,9 +742,6 @@ class DBRepo:
         return InternalResponse(payload, 'timing list fetched', True)
     
     def create_timing(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         attributes = CreateTimingDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
@@ -955,9 +840,6 @@ class DBRepo:
         return InternalResponse(payload, 'timing created successfully', True)
     
     def remove_existing_timing(self, project_uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         if project_uuid:
             project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
         else:
@@ -985,9 +867,6 @@ class DBRepo:
     
     # TODO: add dao in this method
     def update_specific_timing(self, uuid, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)
@@ -1082,9 +961,6 @@ class DBRepo:
         return InternalResponse(payload, 'timing updated successfully', True)
     
     def delete_timing_from_uuid(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)
@@ -1094,9 +970,6 @@ class DBRepo:
         return InternalResponse({}, 'timing deleted successfully', True)
 
     def remove_primary_frame(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)
@@ -1106,9 +979,6 @@ class DBRepo:
         return InternalResponse({}, 'primay frame removed successfully', True)
     
     def remove_source_image(self, uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)
@@ -1118,9 +988,6 @@ class DBRepo:
         return InternalResponse({}, 'source image removed successfully', True)
     
     def move_frame_one_step_forward(self, project_uuid, index_of_frame):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
         if not project:
             return InternalResponse({}, 'invalid project uuid', False)
@@ -1135,9 +1002,6 @@ class DBRepo:
 
     # app setting
     def get_app_setting_from_uuid(self, uuid=None):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         if uuid:
             app_setting = AppSetting.objects.filter(uuid=uuid, is_disabled=False).first()
         else:
@@ -1150,9 +1014,6 @@ class DBRepo:
         return InternalResponse(payload, 'app_setting fetched successfully', True)
     
     def update_app_setting(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         attributes = UpdateAppSettingDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
@@ -1180,9 +1041,6 @@ class DBRepo:
 
     
     def get_app_secrets_from_user_uuid(self, user_uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         if user_uuid:
             user: User = User.objects.filter(uuid=user_uuid, is_disabled=False).first()
             if not user:
@@ -1204,9 +1062,6 @@ class DBRepo:
         return InternalResponse(payload, 'app_setting fetched successfully', True)
     
     def get_all_app_setting_list(self):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         app_setting_list = AppSetting.objects.filter(is_disabled=False).all()
 
         payload = {
@@ -1216,9 +1071,6 @@ class DBRepo:
         return InternalResponse(payload, 'app_setting list fetched successfully', True)
     
     def create_app_setting(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         attributes = CreateAppSettingDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
@@ -1242,9 +1094,6 @@ class DBRepo:
     
 
     def delete_app_setting(self, user_id):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         if AppSetting.objects.filter(is_disabled=False).count() <= 1:
             return InternalResponse({}, 'cannot delete the last app setting', False)
         
@@ -1259,9 +1108,6 @@ class DBRepo:
 
     # setting
     def get_project_setting(self, project_uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
         if not project:
             return InternalResponse({}, 'invalid project_id', False)
@@ -1278,9 +1124,6 @@ class DBRepo:
     
     # TODO: add valid model_id check throughout dp_repo
     def create_project_setting(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         attributes = CreateSettingDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
@@ -1324,9 +1167,6 @@ class DBRepo:
         return InternalResponse(payload, 'setting fetched', True)
     
     def update_project_setting(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         attributes = UpdateSettingDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
@@ -1381,9 +1221,6 @@ class DBRepo:
         return InternalResponse(payload, 'setting fetched', True)
 
     def bulk_update_project_setting(self, **kwargs):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         attributes = UpdateSettingDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
@@ -1436,9 +1273,6 @@ class DBRepo:
     
     # backup data
     def create_backup(self, project_uuid, backup_name):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
         if not project:
             return InternalResponse({}, 'invalid project', False)
@@ -1537,9 +1371,6 @@ class DBRepo:
         return InternalResponse(payload, 'backup created', True)
     
     def get_backup_from_uuid(self, backup_uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         backup: BackupTiming = BackupTiming.objects.filter(uuid=backup_uuid, is_disabled=False).first()
         if not backup:
             return InternalResponse({}, 'invalid backup', False)
@@ -1551,9 +1382,6 @@ class DBRepo:
         return InternalResponse(payload, 'backup fetched', True)
     
     def get_backup_list(self, project_uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
         if not project:
             return InternalResponse({}, 'invalid project', False)
@@ -1567,9 +1395,6 @@ class DBRepo:
         return InternalResponse(payload, 'backup list fetched', True)
     
     def delete_backup(self, backup_uuid):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         backup: BackupTiming = BackupTiming.objects.filter(uuid=backup_uuid, is_disabled=False).first()
         if not backup:
             return InternalResponse({}, 'invalid backup', False)
@@ -1580,9 +1405,6 @@ class DBRepo:
         return InternalResponse({}, 'backup deleted', True)
     
     def restore_backup(self, backup_uuid: str):
-        # DBRepo._count += 1
-        # cls_name = inspect.currentframe().f_code.co_name
-        # print("db call: ", DBRepo._count, " class name: ", cls_name)
         backup: BackupTiming = self.get_backup_from_uuid(backup_uuid)
 
         current_timing_list: List[Timing] = self.get_timing_list_from_project(backup.project.uuid)
