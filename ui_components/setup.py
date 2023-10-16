@@ -141,25 +141,11 @@ def setup_app_ui():
 
                 with st.sidebar:
 
-                    pages = CreativeProcessType.value_list()
-
-                    if 'page' not in st.session_state:
-                        st.session_state["page"] = pages[0]
-                        st.session_state["manual_select"] = None
-
-                    if st.session_state["page"] not in pages:
-                        st.session_state["page"] = pages[0]
-                        st.session_state["manual_select"] = None
-
-                    st.session_state['page'] = option_menu(None, pages, icons=['palette', 'camera-reels', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
-                                                            "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "green"}}, manual_select=st.session_state["manual_select"])
-
-                    # TODO: CORRECT-CODE
-                    view_types = ["Individual View", "List View"]
+                    view_types = ["Explorer","Timeline","Individual"]
 
                     if 'frame_styling_view_type_index' not in st.session_state:
                         st.session_state['frame_styling_view_type_index'] = 0
-                        st.session_state['frame_styling_view_type'] = "Individual View"
+                        st.session_state['frame_styling_view_type'] = "Explorer"
                         st.session_state['change_view_type'] = False
 
                     if 'change_view_type' not in st.session_state:
@@ -171,28 +157,39 @@ def setup_app_ui():
                     else:
                         st.session_state['frame_styling_view_type_index'] = None
 
-                    def on_change_view_type(key):
-                        selection = st.session_state[key]
-                        if selection == "List View":
-                            st.session_state['index_of_current_page'] = math.ceil(
-                                st.session_state['current_frame_index'] / 10)
-                            
+
                     # Option menu
                     st.session_state['frame_styling_view_type'] = option_menu(
                         None,
                         view_types,
-                        icons=['aspect-ratio', 'bookshelf', "hourglass", 'stopwatch'],
+                        icons=['compass', 'bookshelf','aspect-ratio', "hourglass", 'stopwatch'],
                         menu_icon="cast",
                         orientation="horizontal",
                         key="section-selecto1r",
                         styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#eee"},
-                                "nav-link-selected": {"background-color": "orange"}},
-                        manual_select=st.session_state['frame_styling_view_type_index'],
-                        on_change=on_change_view_type 
+                                "nav-link-selected": {"background-color": "green"}},
+                        manual_select=st.session_state['frame_styling_view_type_index']                        
                     )
 
+                    if st.session_state['frame_styling_view_type'] != "Explorer":
+                        pages = CreativeProcessType.value_list()
+                    else:
+                        pages = ["Key Frames"]
                     
-            
+                    if 'page' not in st.session_state:
+                        st.session_state["page"] = pages[0]
+                        st.session_state["manual_select"] = None
+
+                    if st.session_state["page"] not in pages:
+                        st.session_state["page"] = pages[0]
+                        st.session_state["manual_select"] = None
+
+                    st.session_state['page'] = option_menu(None, pages, icons=['palette', 'camera-reels', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
+                                                            "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
+
+                    # TODO: CORRECT-CODE
+
+                                
 
                 frame_styling_page(
                     mainheader2, st.session_state["project_uuid"])
@@ -216,6 +213,8 @@ def setup_app_ui():
                     project_settings_page(st.session_state["project_uuid"])
                 elif st.session_state["page"] == "Mood Board":
                     mood_board_page(st.session_state["project_uuid"])
+                
+
                 
 
             elif st.session_state["main_view_type"] == "Video Rendering":

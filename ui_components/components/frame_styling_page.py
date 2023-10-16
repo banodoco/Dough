@@ -1,30 +1,28 @@
-
 import streamlit as st
 from shared.constants import ViewType
 
-from ui_components.methods.common_methods import process_inference_output
+
+from ui_components.methods.common_methods import add_key_frame,compare_to_previous_and_next_frame,compare_to_source_frame,style_cloning_element
 from ui_components.methods.ml_methods import trigger_restyling_process
 from ui_components.widgets.cropping_element import cropping_selector_element
 from ui_components.widgets.frame_clip_generation_elements import  current_preview_video_element, update_animation_style_element
 from ui_components.widgets.frame_selector import frame_selector_widget
-from ui_components.widgets.frame_style_clone_element import style_cloning_element
 from ui_components.widgets.image_carousal import display_image
 from ui_components.widgets.prompt_finder import prompt_finder_element
-from ui_components.widgets.add_key_frame_element import add_key_frame, add_key_frame_element
+from ui_components.widgets.add_key_frame_element import add_key_frame_element
 from ui_components.widgets.styling_element import styling_element
 from ui_components.widgets.timeline_view import timeline_view
-from ui_components.widgets.variant_comparison_element import compare_to_previous_and_next_frame, compare_to_source_frame, variant_comparison_element
+from ui_components.widgets.variant_comparison_element import variant_comparison_element
 from ui_components.widgets.animation_style_element import animation_style_element
 from ui_components.widgets.inpainting_element import inpainting_element
 from ui_components.widgets.drawing_element import drawing_element
-from ui_components.widgets.sidebar_logger import sidebar_logger
-from ui_components.widgets.variant_comparison_grid import variant_comparison_grid
 from ui_components.widgets.list_view import list_view_set_up, page_toggle, styling_list_view,motion_list_view
 from utils import st_memory
 
-import time
 
+import math
 from ui_components.constants import CreativeProcessType, WorkflowStageType
+from utils.constants import ImageStage
 
 from utils.data_repo.data_repo import DataRepo
 
@@ -99,24 +97,23 @@ def frame_styling_page(mainheader2, project_uuid: str):
         elif st.session_state['page'] == CreativeProcessType.STYLING.value:
             # carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.value)
             comparison_values = [
-                "Single Variants", "All Other Variants","Source Frame", "Previous & Next Frame", "None"]
+                "Other Variants", "Source Frame", "Previous & Next Frame", "None"]
             
             st.session_state['show_comparison'] = st_memory.radio("Show comparison to:", options=comparison_values, horizontal=True, key="show_comparison_radio")
             
 
-            if st.session_state['show_comparison'] == "Single Variants":
+            if st.session_state['show_comparison'] == "Other Variants":
                 variant_comparison_element(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
-
-            elif st.session_state['show_comparison'] == "All Other Variants":
-                variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)                
                 
             elif st.session_state['show_comparison'] == "Source Frame":
                 compare_to_source_frame(timing_details)
                 
             elif st.session_state['show_comparison'] == "Previous & Next Frame":
+
                 compare_to_previous_and_next_frame(project_uuid,timing_details)
 
             elif st.session_state['show_comparison'] == "None":
+
                 display_image(timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
 
             st.markdown("***")
@@ -153,7 +150,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                         custom_models=st.session_state['custom_models'], 
                                         adapter_type=st.session_state['adapter_type'], 
                                         update_inference_settings=True, 
-                                        add_image_in_params=st.session_state['add_image_in_params'],
                                         low_threshold=st.session_state['low_threshold'], 
                                         high_threshold=st.session_state['high_threshold'],
                                         canny_image=st.session_state['canny_image'] if 'canny_image' in st.session_state else None,
@@ -236,18 +232,15 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
         elif st.session_state['list_view_type'] == "Timeline View":
 
+            with st.sidebar:                            
+                    styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.LIST.value)
 
             
             if st.session_state['page'] == "Styling":
-                with st.sidebar:        
-                    with st.expander("🌀 Batch Styling", expanded=False):                                        
-                        styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.LIST.value)
                 timeline_view(shift_frames_setting, project_uuid, "Styling", header_col_3, header_col_4)
             elif st.session_state['page'] == "Motion":
                 timeline_view(shift_frames_setting, project_uuid, "Motion", header_col_3, header_col_4)
-      
-    with st.sidebar:
 
-        with st.expander("🔍 Inference Logging", expanded=True):
-                        
-            sidebar_logger(project_uuid)
+                
+
+

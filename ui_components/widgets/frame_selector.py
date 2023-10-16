@@ -33,6 +33,12 @@ def frame_selector_widget():
             st.warning(f"Guidance Image:")
             display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
 
+    with st.expander(f"🖼️ Frame #{st.session_state['current_frame_index']} Details"):
+        a1, a2 = st.columns([1,1])
+        with a1:
+            st.warning(f"Guidance Image:")
+            display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
+
         with a2:
             st.success(f"Main Styled Image:")
             display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)

@@ -56,8 +56,7 @@ def variant_comparison_element(timing_uuid, stage=CreativeProcessType.MOTION.val
         if stage == CreativeProcessType.MOTION.value:
             if number_of_variants:
                 if not (timing.interpolated_clip_list and len(timing.interpolated_clip_list)):
-                    st.error("No variant for this frame")
-                    
+                    st.error("No variant for this frame")                
                 if which_variant - 1 == current_variant:
                     st.success("**Main variant**")
                 else:
