@@ -19,11 +19,13 @@ from ui_components.constants import SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, Wor
 from ui_components.methods.file_methods import add_temp_file_to_project, convert_bytes_to_file, generate_pil_image, generate_temp_file, save_or_host_file, save_or_host_file_bytes
 from ui_components.methods.video_methods import calculate_desired_duration_of_individual_clip, update_speed_of_video_clip
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
+from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
 
 from ui_components.models import InternalFileObject
 from typing import Union
+import streamlit as st
 
 from utils.media_processor.video import VideoProcessor
 
@@ -350,6 +352,32 @@ def delete_frame(timing_uuid):
         st.session_state['current_frame_index'] = max(1, st.session_state['current_frame_index'] - 1)
         st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
         st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
+
+def save_uploaded_image(image, project_uuid, frame_uuid, save_type):
+    data_repo = DataRepo()
+
+    try:
+        saved_image = save_new_image(image, project_uuid)
+
+        # Update records based on save_type
+        if save_type == "source":
+            data_repo.update_specific_timing(frame_uuid, source_image_id=saved_image.uuid)
+        elif save_type == "styled":
+            number_of_image_variants = add_image_variant(saved_image.uuid, frame_uuid)
+            promote_image_variant(frame_uuid, number_of_image_variants - 1)
+
+        return saved_image
+    except Exception as e:
+        print(f"Failed to save image file due to: {str(e)}")
+        return None
+    
+def jump_to_single_frame_view_button(display_number, timing_details):
+    if st.button(f"Jump to #{display_number}"):
+        st.session_state['prev_frame_index'] = display_number
+        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
+        st.session_state['frame_styling_view_type'] = "Individual View"
+        st.session_state['change_view_type'] = True
+        st.rerun()
 
 def replace_image_widget(timing_uuid, stage, options=["Other Frame", "Uploaded Frame"]):
     data_repo = DataRepo()

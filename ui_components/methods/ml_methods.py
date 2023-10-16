@@ -304,3 +304,23 @@ def dynamic_prompting(prompt, source_image):
         prompt = prompt.replace("[looking]", "looking " + str(prompt_looking))
 
     return prompt
+
+def query_llama2(user_instructions, system_instructions):        
+    prompt = system_instructions + "\n" + user_instructions + "|"
+    output = replicate.run(
+        "meta/llama-2-7b:527827021d8756c7ab79fde0abbfaac885c37a3ed5fe23c7465093f0878d55ef",
+        input={
+            "debug": False,
+            "top_k": 250,
+            "top_p": 0.95,
+            "prompt": prompt,
+            "temperature": 0.73,
+            "max_new_tokens": 30,
+            "min_new_tokens": -1,
+            "stop_sequences": "\n"
+        }
+    )
+    result = ""
+    for item in output:
+        result += item
+    return result
