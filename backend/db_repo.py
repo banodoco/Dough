@@ -538,6 +538,8 @@ class DBRepo:
         
         if status_list:
             log_list = log_list.filter(status__in=status_list)
+        else:
+            log_list = log_list.exclude(status="")
 
         paginator = Paginator(log_list, data_per_page)
         if page > paginator.num_pages or page < 1:

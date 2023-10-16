@@ -50,6 +50,7 @@ class DefaultProjectSettingParams:
     batch_animation_tool = AnimationToolType.G_FILM.value
     batch_animation_style = AnimationStyleType.INTERPOLATION.value
     batch_model = None
+    total_log_pages = 1
 
 # TODO: make proper paths for every file
 CROPPED_IMG_LOCAL_PATH = "videos/temp/cropped.png"

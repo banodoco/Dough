@@ -191,8 +191,11 @@ class DataRepo:
         return InferenceLogObject(**log) if log else None
     
     def get_all_inference_log_list(self, **kwargs):
-        log_list = self.db_repo.get_all_inference_log_list(**kwargs).data['data']
-        return [InferenceLogObject(**log) for log in log_list] if log_list else None
+        res = self.db_repo.get_all_inference_log_list(**kwargs)
+        log_list = res.data['data'] if res.status else None
+        total_page_count = res.data['total_pages'] if res.status else None
+
+        return ([InferenceLogObject(**log) for log in log_list] if log_list else None, total_page_count)
     
     
     def create_inference_log(self, **kwargs):

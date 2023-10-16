@@ -29,12 +29,17 @@ def sidebar_logger(project_uuid):
         status_list = [InferenceStatus.FAILED.value]
 
     b1, b2 = st.columns([1, 1])
-    items_per_page = b2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
-    log_list = data_repo.get_all_inference_log_list(project_id=project_uuid, page=1, data_per_page=items_per_page, status_list=status_list)
-    log_list.reverse()
 
-    page_number = b1.number_input('Page number', min_value=1, max_value=math.ceil(len(log_list) / items_per_page), value=1, step=1)
+    project_setting = data_repo.get_project_setting(project_uuid)
+    page_number = b1.number_input('Page number', min_value=1, max_value=project_setting.total_log_pages, value=1, step=1)
+    items_per_page = b2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
+    log_list, total_page_count = data_repo.get_all_inference_log_list(project_id=project_uuid, page=page_number, data_per_page=items_per_page, status_list=status_list)
     
+    if project_setting.total_log_pages != total_page_count:
+        project_setting.total_log_pages = total_page_count
+        st.rerun()
+    
+    st.write("Total page count: ", total_page_count)
     # display_list = log_list[(page_number - 1) * items_per_page : page_number * items_per_page]                
     file_list = data_repo.get_file_list_from_log_uuid_list([log.uuid for log in log_list])
     log_file_dict = {}

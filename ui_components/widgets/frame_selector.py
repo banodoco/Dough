@@ -27,8 +27,6 @@ def frame_selector_widget():
     with time2:
         single_frame_time_selector(st.session_state['current_frame_uuid'], 'navbar', shift_frames=False)
     
-    
-
     with st.expander(f"🖼️ Frame #{st.session_state['current_frame_index']} Details"):
         a1, a2 = st.columns([1,1])
         with a1:
