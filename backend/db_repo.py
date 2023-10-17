@@ -1,3 +1,4 @@
+import datetime
 import inspect
 import json
 import os
@@ -1492,7 +1493,9 @@ class DBRepo:
     # lock
     def acquire_lock(self, key):
         with transaction.atomic():
-            _, created = Lock.objects.get_or_create(row_key=key)
+            lock, created = Lock.objects.get_or_create(row_key=key)
+            if lock.created_on + datetime.timedelta(minutes=1) < datetime.datetime.now():
+                created = True  # after 1 min, we will assume this to be a fresh lock
             return InternalResponse({'data': True if created else False}, 'success', True)
         
     def release_lock(self, key):

@@ -96,28 +96,28 @@ def check_and_update_db():
                 if origin_data and log_status == InferenceStatus.COMPLETED.value:
                     from ui_components.methods.common_methods import process_inference_output
 
-                    # try:
-                    origin_data['output'] = output_details['output']
-                    origin_data['log_uuid'] = log.uuid
-                    print("processing inference output")
-                    process_inference_output(**origin_data)
+                    try:
+                        origin_data['output'] = output_details['output']
+                        origin_data['log_uuid'] = log.uuid
+                        print("processing inference output")
+                        process_inference_output(**origin_data)
 
-                    if origin_data['inference_type'] in [InferenceType.FRAME_INTERPOLATION.value, \
-                                                        InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value, \
-                                                        InferenceType.SINGLE_PREVIEW_VIDEO.value]:
-                        if str(log.project.uuid) not in timing_update_list:
-                            timing_update_list[str(log.project.uuid)] = []
-                        timing_update_list[str(log.project.uuid)].append(origin_data['timing_uuid'])
+                        if origin_data['inference_type'] in [InferenceType.FRAME_INTERPOLATION.value, \
+                                                            InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value, \
+                                                            InferenceType.SINGLE_PREVIEW_VIDEO.value]:
+                            if str(log.project.uuid) not in timing_update_list:
+                                timing_update_list[str(log.project.uuid)] = []
+                            timing_update_list[str(log.project.uuid)].append(origin_data['timing_uuid'])
 
-                    elif origin_data['inference_type'] == InferenceType.GALLERY_IMAGE_GENERATION.value:
-                        if str(log.project.uuid) not in gallery_update_list:
-                            gallery_update_list[str(log.project.uuid)] = False
-                        gallery_update_list[str(log.project.uuid)] = True
+                        elif origin_data['inference_type'] == InferenceType.GALLERY_IMAGE_GENERATION.value:
+                            if str(log.project.uuid) not in gallery_update_list:
+                                gallery_update_list[str(log.project.uuid)] = False
+                            gallery_update_list[str(log.project.uuid)] = True
 
-                    # except Exception as e:
-                    #     app_logger.log(LoggingType.ERROR, f"Error: {e}")
-                    #     output_details['error'] = str(e)
-                    #     InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.FAILED.value, output_details=json.dumps(output_details))
+                    except Exception as e:
+                        app_logger.log(LoggingType.ERROR, f"Error: {e}")
+                        output_details['error'] = str(e)
+                        InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.FAILED.value, output_details=json.dumps(output_details))
 
             else:
                 app_logger.log(LoggingType.DEBUG, f"Error: {response.content}")
@@ -133,16 +133,15 @@ def check_and_update_db():
         final_res[project_uuid] = {ProjectMetaData.DATA_UPDATE.value: list(set(val))}
 
     for project_uuid, val in gallery_update_list.items():
-        if project_uuid in final_res:
-            final_res[project_uuid][ProjectMetaData.GALLERY_UPDATE.value] = val
-        else:
-            final_res[project_uuid] = {ProjectMetaData.GALLERY_UPDATE.value: val}
+        if project_uuid not in final_res:
+            final_res[project_uuid] = {}
+        
+        final_res[project_uuid].update({f"{ProjectMetaData.GALLERY_UPDATE.value}": val})
     
 
     for project_uuid, val in final_res.items():
         key = str(project_uuid)
         if acquire_lock(key):
-            val = list(set(val))
             _ = Project.objects.filter(uuid=project_uuid).update(meta_data=json.dumps(val))
             release_lock(key)
 

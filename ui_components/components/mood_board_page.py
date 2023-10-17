@@ -1,4 +1,5 @@
 import streamlit as st
+from ui_components.methods.common_methods import promote_image_variant
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AIModelType
 

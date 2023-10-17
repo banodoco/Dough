@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django.db import models
 import uuid
 import json
@@ -18,7 +19,7 @@ class BaseModel(models.Model):
         abstract = True
 
 
-class Lock(models.Model):
+class Lock(BaseModel):
     row_key = models.CharField(max_length=255, unique=True)
 
     class Meta:

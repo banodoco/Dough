@@ -189,15 +189,12 @@ def is_process_active(custom_process_name):
 def acquire_lock(key):
     data_repo = DataRepo()
     retries = 0
-    while retries < 6:
+    while retries < 1:
         lock_status = data_repo.acquire_lock(key)
-        
         if lock_status:
             return lock_status
-        
         retries += 1
-        time.sleep(0.3)
-    
+        time.sleep(0.2)
     return False
 
 def release_lock(key):
