@@ -1,6 +1,6 @@
 import time
 import streamlit as st
-from ui_components.methods.common_methods import add_image_variant, promote_image_variant, save_uploaded_image
+from ui_components.methods.common_methods import add_image_variant, promote_image_variant, save_uploaded_image, update_clip_duration_of_all_timing_frames
 from ui_components.models import InternalFrameTimingObject
 from utils.constants import ImageStage
 
@@ -79,8 +79,13 @@ def delete_frame_button(timing_uuid, show_label=False):
 def delete_frame(timing_uuid):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    project_uuid = timing.project.uuid
     next_timing = data_repo.get_next_timing(timing_uuid)
     timing_details = data_repo.get_timing_list_from_project(project_uuid=timing.project.uuid)
+
+    if len(timing_details) == 1:
+        st.error("can't delete the only image present in the project")
+        return
 
     if next_timing:
         data_repo.update_specific_timing(
@@ -91,11 +96,20 @@ def delete_frame(timing_uuid):
         )
 
     data_repo.delete_timing_from_uuid(timing.uuid)
+    timing_details = data_repo.get_timing_list_from_project(project_uuid=project_uuid)
     
-    if timing.aux_frame_index == len(timing_details) - 1:
+    # this is the last frame
+    if not next_timing:
         st.session_state['current_frame_index'] = max(1, st.session_state['current_frame_index'] - 1)
         st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
         st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
+    # this is the first frame or something in the middle
+    else:
+        st.session_state['current_frame_index'] = min(len(timing_details) - 1, st.session_state['current_frame_index'] + 1)
+        st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
+        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
+    
+    update_clip_duration_of_all_timing_frames(project_uuid)
 
 def replace_image_widget(timing_uuid, stage):
     data_repo = DataRepo()

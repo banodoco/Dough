@@ -581,6 +581,8 @@ def update_clip_duration_of_all_timing_frames(project_uuid):
         total_duration_of_frame = round(total_duration_of_frame, 2)
         data_repo.update_specific_timing(timing_item.uuid, clip_duration=total_duration_of_frame)
 
+    _ = data_repo.get_timing_list_from_project(project_uuid)
+
 
 def create_timings_row_at_frame_number(project_uuid, index_of_frame, frame_time=0.0):
     data_repo = DataRepo()

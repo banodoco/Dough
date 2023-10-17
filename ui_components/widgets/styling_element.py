@@ -12,8 +12,7 @@ from utils.data_repo.data_repo import DataRepo
 
 def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
     project_settings: InternalSettingObject = data_repo.get_project_setting(timing.project.uuid)
 
