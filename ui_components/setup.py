@@ -116,17 +116,10 @@ def setup_app_ui():
                 st.session_state['main_view_type'] = st_memory.menu(None, main_view_types, icons=['search-heart', 'tools', "play-circle", 'stopwatch'], menu_icon="cast", default_index=0, key="main_view_type_name", orientation="horizontal", styles={
                                                                     "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "red"}})
 
-            mainheader1, mainheader2 = st.columns([3, 2])
-            # with mainheader1:
-            # st.header(st.session_state["page"])
-
-        
-
+            _, mainheader2 = st.columns([3, 2])
 
             if st.session_state["main_view_type"] == "Creative Process":
-
                 with st.sidebar:
-
                     view_types = ["Explorer","Timeline","Individual"]
 
                     if 'frame_styling_view_type_index' not in st.session_state:
@@ -142,7 +135,6 @@ def setup_app_ui():
                             st.session_state['frame_styling_view_type'])
                     else:
                         st.session_state['frame_styling_view_type_index'] = None
-
 
                     # Option menu
                     st.session_state['frame_styling_view_type'] = option_menu(
@@ -173,12 +165,7 @@ def setup_app_ui():
                     st.session_state['page'] = option_menu(None, pages, icons=['palette', 'camera-reels', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
                                                             "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
 
-                    # TODO: CORRECT-CODE
-
-                                
-
-                frame_styling_page(
-                    mainheader2, st.session_state["project_uuid"])
+                frame_styling_page(mainheader2, st.session_state["project_uuid"])
 
             elif st.session_state["main_view_type"] == "Tools & Settings":
 
@@ -199,12 +186,8 @@ def setup_app_ui():
                     project_settings_page(st.session_state["project_uuid"])
                 elif st.session_state["page"] == "Mood Board":
                     mood_board_page(st.session_state["project_uuid"])
-                
-
-                
 
             elif st.session_state["main_view_type"] == "Video Rendering":
-
                 video_rendering_page(
                     mainheader2, st.session_state["project_uuid"])
 

@@ -107,10 +107,6 @@ def style_explorer_element(project_uuid):
     if gallery_image_list and len(gallery_image_list):
         st.markdown("***")
         num_columns = st.slider('Number of columns', min_value=1, max_value=10, value=4)
-        
-        if len(gallery_image_list) % num_items_per_page > 0:
-            num_pages += 1  # Add extra page if there are remaining items
-
 
         start_index = (page_number - 1) * num_items_per_page
         end_index = start_index + num_items_per_page
@@ -163,7 +159,7 @@ def create_prompt(**kwargs):
             "scene_instructions": "Input|Scene Description:\nForest|Misty woods with towering trees and glowing plants.\nFuturistic city|Skyscrapers, flying cars, neon lights in a futuristic metropolis.\nMedieval|Castle courtyard with knights, cobblestones, and a fountain.\nBeach|Golden sands, rolling waves, and a vibrant sunset.\nApocalypse|Ruined buildings and desolation in a bleak wasteland.",
         }
 
-        for instruction_type, user_instruction in kwargs:
+        for instruction_type, user_instruction in kwargs.items():
             if instruction_type in system_instruction_template_list and user_instruction:
                 result = query_llama2(user_instruction, system_instruction_template_list[instruction_type])
                 text_list.append(result)

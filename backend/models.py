@@ -109,7 +109,7 @@ class InternalFileObject(BaseModel):
             if self.project:
                 video = self.project.uuid
 
-            file_location = "videos/" + video + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".png"
+            file_location = "videos/" + str(video) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".png"
             try:
                 urllib.request.urlretrieve(self.hosted_url, file_location)
                 self.local_path = file_location

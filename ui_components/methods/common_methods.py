@@ -1083,7 +1083,7 @@ def process_inference_output(**kwargs):
 
         if output:
             if isinstance(output, str) and output.startswith("http"):
-                temp_output_file = generate_temp_file(output, '.mp4')
+                temp_output_file = generate_temp_file(output, '.png')
                 output = None
                 with open(temp_output_file.name, 'rb') as f:
                     output = f.read()
@@ -1093,6 +1093,7 @@ def process_inference_output(**kwargs):
             log_uuid = kwargs.get('log_uuid')
             project_uuid = kwargs.get('project_uuid')
             log = data_repo.get_inference_log_from_uuid(log_uuid)
+            filename = str(uuid.uuid4()) + ".png"
             output_file = data_repo.create_file(
                 name=filename, 
                 type=InternalFileType.IMAGE.value,
@@ -1102,6 +1103,7 @@ def process_inference_output(**kwargs):
                 tag=InternalFileTag.GALLERY_IMAGE.value
             )
         else:
+            log_uuid = kwargs.get('log_uuid')
             del kwargs['log_uuid']
             data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
 

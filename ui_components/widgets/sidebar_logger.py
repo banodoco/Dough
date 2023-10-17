@@ -89,10 +89,19 @@ def sidebar_logger(project_uuid):
                 st.warning("Canceled")
             
             if output_url:
-                timing = data_repo.get_timing_from_uuid(origin_data['timing_uuid'])
-                if timing:
-                    if st.button(f"Jump to frame {timing.aux_frame_index + 1}", key=str(log.uuid)):
-                        update_current_frame_index(timing.aux_frame_index + 1)
+                if 'timing_uuid' in origin_data:
+                    timing = data_repo.get_timing_from_uuid(origin_data['timing_uuid'])
+                    if timing:
+                        if st.button(f"Jump to frame {timing.aux_frame_index + 1}", key=str(log.uuid)):
+                            update_current_frame_index(timing.aux_frame_index + 1)
+                else:
+                    if st.button(f"Jump to explorer view", key=str(log.uuid)):
+                        # TODO: fix this
+                        st.session_state['main_view_type'] = "Creative Process"
+                        st.session_state['frame_styling_view_type_index'] = 0
+                        st.session_state['frame_styling_view_type'] = "Explorer"
+                        st.session_state['change_view_type'] = False
+                        st.rerun()
             
             
         st.markdown("---")

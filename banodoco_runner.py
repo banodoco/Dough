@@ -96,24 +96,28 @@ def check_and_update_db():
                 if origin_data and log_status == InferenceStatus.COMPLETED.value:
                     from ui_components.methods.common_methods import process_inference_output
 
+                    # try:
                     origin_data['output'] = output_details['output']
                     origin_data['log_uuid'] = log.uuid
                     print("processing inference output")
                     process_inference_output(**origin_data)
 
                     if origin_data['inference_type'] in [InferenceType.FRAME_INTERPOLATION.value, \
-                                                         InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value, \
-                                                            InferenceType.SINGLE_PREVIEW_VIDEO.value]:
+                                                        InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value, \
+                                                        InferenceType.SINGLE_PREVIEW_VIDEO.value]:
                         if str(log.project.uuid) not in timing_update_list:
                             timing_update_list[str(log.project.uuid)] = []
-                        
                         timing_update_list[str(log.project.uuid)].append(origin_data['timing_uuid'])
 
                     elif origin_data['inference_type'] == InferenceType.GALLERY_IMAGE_GENERATION.value:
                         if str(log.project.uuid) not in gallery_update_list:
                             gallery_update_list[str(log.project.uuid)] = False
-                        
                         gallery_update_list[str(log.project.uuid)] = True
+
+                    # except Exception as e:
+                    #     app_logger.log(LoggingType.ERROR, f"Error: {e}")
+                    #     output_details['error'] = str(e)
+                    #     InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.FAILED.value, output_details=json.dumps(output_details))
 
             else:
                 app_logger.log(LoggingType.DEBUG, f"Error: {response.content}")

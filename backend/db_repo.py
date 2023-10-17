@@ -214,7 +214,7 @@ class DBRepo:
                 "page": page,
                 "total_pages": paginator.num_pages,
                 "count": paginator.count,
-                "data": InferenceLogDto(
+                "data": InternalFileDto(
                     paginator.page(page), many=True
                 ).data,
             }
