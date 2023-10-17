@@ -50,7 +50,7 @@ def sidebar_logger(project_uuid):
 
     for _, log in enumerate(log_list):
         origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
-        if not log.status or not origin_data:
+        if not log.status:
             continue
         
         output_url = None
