@@ -86,7 +86,6 @@ def add_key_frame_element(timing_details, project_uuid):
             if apply_zoom_effects == "Yes":
                 image_preview = generate_pil_image(selected_image_location)
                 selected_image = apply_image_transformations(image_preview, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'])
-
             else:
                 selected_image = generate_pil_image(selected_image_location)
             st.info("Starting Image:")                
@@ -96,7 +95,7 @@ def add_key_frame_element(timing_details, project_uuid):
 
     return selected_image, inherit_styling_settings, how_long_after, transformation_stage
 
-def add_key_frame(selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image):
+def add_key_frame(selected_image, inherit_styling_settings, how_long_after):
     data_repo = DataRepo()
     project_uuid = st.session_state['project_uuid']
     timing_details = data_repo.get_timing_list_from_project(project_uuid)

@@ -182,9 +182,9 @@ def frame_styling_page(mainheader2, project_uuid: str):
                     drawing_element(timing_details,project_settings,project_uuid)
                                         
             with st.expander("➕ Add Key Frame", expanded=True):
-                selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image = add_key_frame_element(timing_details, project_uuid)
+                selected_image, inherit_styling_settings, how_long_after, _ = add_key_frame_element(timing_details, project_uuid)
                 if st.button(f"Add key frame",type="primary",use_container_width=True):
-                    add_key_frame(selected_image, inherit_styling_settings, how_long_after, which_stage_for_starting_image)
+                    add_key_frame(selected_image, inherit_styling_settings, how_long_after)
                     st.rerun()
                         
     elif st.session_state['frame_styling_view_type'] == "Timeline":

@@ -12,7 +12,6 @@ from ui_components.components.frame_styling_page import frame_styling_page
 from ui_components.components.new_project_page import new_project_page
 from ui_components.components.project_settings_page import project_settings_page
 from ui_components.components.video_rendering_page import video_rendering_page
-from ui_components.components.mood_board_page import mood_board_page
 from streamlit_option_menu import option_menu
 from ui_components.constants import CreativeProcessType
 from ui_components.methods.common_methods import check_project_meta_data
@@ -170,7 +169,7 @@ def setup_app_ui():
             elif st.session_state["main_view_type"] == "Tools & Settings":
 
                 with st.sidebar:
-                    tool_pages = ["Query Logger", "Mood Board", "Custom Models", "Project Settings"]
+                    tool_pages = ["Query Logger", "Custom Models", "Project Settings"]
 
                     if st.session_state["page"] not in tool_pages:
                         st.session_state["page"] = tool_pages[0]
@@ -184,8 +183,6 @@ def setup_app_ui():
                     custom_models_page(st.session_state["project_uuid"])                
                 elif st.session_state["page"] == "Project Settings":
                     project_settings_page(st.session_state["project_uuid"])
-                elif st.session_state["page"] == "Mood Board":
-                    mood_board_page(st.session_state["project_uuid"])
 
             elif st.session_state["main_view_type"] == "Video Rendering":
                 video_rendering_page(

@@ -191,7 +191,7 @@ def zoom_image(image, zoom_factor, fill_with=None):
         return cropped_image
 
 # image here is a PIL object
-def apply_image_transformations(image, zoom_level, rotation_angle, x_shift, y_shift):
+def apply_image_transformations(image: Image, zoom_level, rotation_angle, x_shift, y_shift) -> Image:
     width, height = image.size
 
     # Calculate the diagonal for the rotation

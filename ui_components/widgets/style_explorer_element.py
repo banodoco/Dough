@@ -1,7 +1,9 @@
 import json
 import streamlit as st
 from ui_components.methods.common_methods import process_inference_output, promote_image_variant
+from ui_components.methods.file_methods import generate_pil_image
 from ui_components.methods.ml_methods import query_llama2
+from ui_components.widgets.add_key_frame_element import add_key_frame
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AIModelType, InferenceType, InternalFileTag, InternalFileType, SortOrder
@@ -89,7 +91,7 @@ def style_explorer_element(project_uuid):
     
     project_setting = data_repo.get_project_setting(project_uuid)
     page_number = st.radio("Select page", options=range(1, project_setting.total_gallery_pages + 1), horizontal=True)
-    num_items_per_page = 30
+    num_items_per_page = 10
 
     gallery_image_list, res_payload = data_repo.get_all_file_list(
         file_type=InternalFileType.IMAGE.value, 
@@ -103,37 +105,38 @@ def style_explorer_element(project_uuid):
     if project_setting.total_gallery_pages != res_payload['total_pages']:
         project_setting.total_gallery_pages = res_payload['total_pages']
         st.rerun()
+    
+    total_image_count = res_payload['count']
 
     if gallery_image_list and len(gallery_image_list):
         st.markdown("***")
         num_columns = st.slider('Number of columns', min_value=1, max_value=10, value=4)
+        start_index = 0
+        end_index = min(start_index + num_items_per_page, total_image_count)
 
-        start_index = (page_number - 1) * num_items_per_page
-        end_index = start_index + num_items_per_page
-
-        for i in range(start_index, min(end_index, len(gallery_image_list)), num_columns):
+        for i in range(start_index, end_index, num_columns):
             cols = st.columns(num_columns)
             for j in range(num_columns):
                 if i + j < len(gallery_image_list):
                     with cols[j]:
                         st.image(gallery_image_list[i + j].location, use_column_width=True)
-                        with st.expander(f'Variant #{i + j + 1}', False):
+                        with st.expander(f'Variant #{(page_number - 1) * num_items_per_page + i + j + 1}', False):
                             if gallery_image_list[i + j].inference_log:
                                 log = data_repo.get_inference_log_from_uuid(gallery_image_list[i + j].inference_log.uuid)
                                 if log:
                                     input_params = json.loads(log.input_params)
                                     prompt = input_params.get('prompt', 'No prompt found')
                                     model = json.loads(log.output_details)['model_name'].split('/')[-1]
-                                    st.info(
-                                        f"Prompt: '{prompt}' -- Model: {model}"
-                                    )
+                                    st.info(f"Prompt: {prompt}")
+                                    st.info(f"Model: {model}")
                                 else:
                                     st.warning("No data found")
                             else:
                                 st.warning("No data found")
                                     
-                        if st.button(f"Add to timeline", key=f"Promote Variant #{i + j + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
-                            # TODO: add method to create a new frame with this as the main image
+                        if st.button(f"Add to timeline", key=f"Promote Variant #{(page_number - 1) * num_items_per_page + i + j + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
+                            pil_image = generate_pil_image(gallery_image_list[i + j].location)
+                            add_key_frame(pil_image, False, 2.5)
                             st.rerun()
             st.markdown("***")
     else:
