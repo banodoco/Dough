@@ -30,7 +30,7 @@ def move_frame(direction, timing_uuid):
     if direction == "Up":
         if timing.aux_frame_index == 0:
             st.error("This is the first frame")       
-            time.sleep(1)     
+            time.sleep(0.5)     
             return
         
         data_repo.update_specific_timing(timing.uuid, aux_frame_index=timing.aux_frame_index - 1)
@@ -38,7 +38,7 @@ def move_frame(direction, timing_uuid):
         timing_list = data_repo.get_timing_list_from_project(project_uuid=timing.project.uuid)
         if timing.aux_frame_index == len(timing_list) - 1:
             st.error("This is the last frame")
-            time.sleep(1)
+            time.sleep(0.5)
             return
         
         data_repo.update_specific_timing(timing.uuid, aux_frame_index=timing.aux_frame_index + 1)

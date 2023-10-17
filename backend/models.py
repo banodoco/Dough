@@ -193,6 +193,7 @@ class Timing(BaseModel):
         # TODO: updating details of every frame this way can be slow - implement a better strategy
 
         # ------ handling aux_frame_index ------
+        update_frame_duration = False
         # if the frame is being deleted (disabled)
         if self.old_is_disabled != self.is_disabled and self.is_disabled:
             timing_list = Timing.objects.filter(project_id=self.project_id, \
@@ -248,26 +249,8 @@ class Timing(BaseModel):
                     
                 self.interpolated_video_id = None
                 self.timed_clip_id = None
-
-                # updating clip_duration
-                timing_list = Timing.objects.filter(project_id=self.project_id, is_disabled=False).order_by('aux_frame_index')
-                length_of_list = len(timing_list)
-
-                for idx, timing_item in enumerate(timing_list):
-                    # last frame
-                    if idx == (length_of_list - 1):
-                        time_of_frame = timing_item.frame_time
-                        duration_of_static_time = 0.0
-                        end_duration_of_frame = float(time_of_frame) + float(duration_of_static_time)
-                        total_duration_of_frame = float(end_duration_of_frame) - float(time_of_frame)
-                    else:
-                        time_of_frame = timing_item.frame_time
-                        next_timing = timing_list[idx + 1]
-                        time_of_next_frame = next_timing.frame_time
-                        total_duration_of_frame = float(time_of_next_frame) - float(time_of_frame)
-
-                    Timing.objects.filter(uuid=timing_item.uuid, is_disabled=False).update(clip_duration=total_duration_of_frame)
                 
+                update_frame_duration = True
 
         # ------ handling timed_clip ------
         # if timed_clip is deleted/changed then preview_video will be deleted
@@ -275,6 +258,27 @@ class Timing(BaseModel):
             self.preview_video = None
 
         super().save(*args, **kwargs)
+
+        if update_frame_duration:
+            # updating clip_duration
+            timing_list = Timing.objects.filter(project_id=self.project_id, is_disabled=False).order_by('aux_frame_index')
+            length_of_list = len(timing_list)
+
+            for idx, timing_item in enumerate(timing_list):
+                # last frame
+                if idx == (length_of_list - 1):
+                    time_of_frame = timing_item.frame_time
+                    duration_of_static_time = 0.0
+                    end_duration_of_frame = float(time_of_frame) + float(duration_of_static_time)
+                    total_duration_of_frame = float(end_duration_of_frame) - float(time_of_frame)
+                else:
+                    time_of_frame = timing_item.frame_time
+                    next_timing = timing_list[idx + 1]
+                    time_of_next_frame = next_timing.frame_time
+                    total_duration_of_frame = float(time_of_next_frame) - float(time_of_frame)
+
+                total_duration_of_frame = round(total_duration_of_frame, 2)
+                Timing.objects.filter(uuid=timing_item.uuid, is_disabled=False).update(clip_duration=total_duration_of_frame)
 
     def add_interpolated_clip_list(self, clip_uuid_list):
         cur_list = json.loads(self.interpolated_clip_list) if self.interpolated_clip_list else []
