@@ -1,5 +1,5 @@
 import streamlit as st
-from ui_components.constants import CreativeProcessType
+from ui_components.constants import CreativeProcessType, WorkflowStageType
 from ui_components.methods.video_methods import calculate_desired_duration_of_individual_clip
 from ui_components.widgets.image_zoom_widgets import zoom_inputs
 
@@ -9,7 +9,7 @@ from utils.data_repo.data_repo import DataRepo
 
 from utils.constants import ImageStage
 from ui_components.methods.file_methods import generate_pil_image,save_or_host_file
-from ui_components.methods.common_methods import apply_image_transformations, clone_styling_settings, create_timings_row_at_frame_number, save_uploaded_image
+from ui_components.methods.common_methods import apply_image_transformations, clone_styling_settings, create_timings_row_at_frame_number, save_uploaded_image, update_clip_duration_of_all_timing_frames
 from PIL import Image
 
 
@@ -95,17 +95,17 @@ def add_key_frame_element(timing_details, project_uuid):
 
     return selected_image, inherit_styling_settings, how_long_after, transformation_stage
 
-def add_key_frame(selected_image, inherit_styling_settings, how_long_after):
+def add_key_frame(selected_image, inherit_styling_settings, how_long_after, cur_frame_index=None):
     data_repo = DataRepo()
     project_uuid = st.session_state['project_uuid']
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
     project_settings = data_repo.get_project_setting(project_uuid)
-    
 
     if len(timing_details) == 0:
         index_of_current_item = 1
     else:
-        index_of_current_item = min(len(timing_details), st.session_state['current_frame_index'])
+        cur_frame_index = st.session_state['current_frame_index'] if cur_frame_index is None else cur_frame_index
+        index_of_current_item = min(len(timing_details), cur_frame_index)
 
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
@@ -121,14 +121,12 @@ def add_key_frame(selected_image, inherit_styling_settings, how_long_after):
         new_timing = create_timings_row_at_frame_number(project_uuid, 0)
     else:
         new_timing = create_timings_row_at_frame_number(project_uuid, index_of_current_item, frame_time=key_frame_time)
-        
-        clip_duration = calculate_desired_duration_of_individual_clip(new_timing.uuid)
-        data_repo.update_specific_timing(new_timing.uuid, clip_duration=clip_duration)
+        update_clip_duration_of_all_timing_frames(project_uuid)
 
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
     if selected_image:
-        save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "source")
-        save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, "styled")
+        save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, WorkflowStageType.SOURCE.value)
+        save_uploaded_image(selected_image, project_uuid, timing_details[index_of_current_item].uuid, WorkflowStageType.STYLED.value)
 
     if inherit_styling_settings == "Yes":    
         clone_styling_settings(index_of_current_item - 1, timing_details[index_of_current_item].uuid)
@@ -138,9 +136,10 @@ def add_key_frame(selected_image, inherit_styling_settings, how_long_after):
     if len(timing_details) == 1:
         st.session_state['current_frame_index'] = 1
         st.session_state['current_frame_uuid'] = timing_details[0].uuid
-    else:        
-        st.session_state['prev_frame_index'] = min(len(timing_details), st.session_state['current_frame_index']+1)
-        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index']].uuid
+    else:
+        st.session_state['prev_frame_index'] = min(len(timing_details), index_of_current_item + 1)
+        st.session_state['current_frame_index'] = min(len(timing_details), index_of_current_item + 1)
+        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
 
     st.session_state['page'] = CreativeProcessType.STYLING.value
     st.session_state['section_index'] = 0

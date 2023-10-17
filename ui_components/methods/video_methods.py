@@ -299,10 +299,8 @@ def update_speed_of_video_clip(video_file: InternalFileObject, timing_uuid) -> I
 
 def calculate_desired_duration_of_individual_clip(timing_uuid):
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-    timing_details = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_details = data_repo.get_timing_list_from_project(timing.project.uuid)
     length_of_list = len(timing_details)
 
     # last frame
@@ -312,8 +310,7 @@ def calculate_desired_duration_of_individual_clip(timing_uuid):
     else:
         time_of_frame = timing.frame_time
         time_of_next_frame = data_repo.get_next_timing(timing_uuid).frame_time
-        total_duration_of_frame = float(
-            time_of_next_frame) - float(time_of_frame)
+        total_duration_of_frame = float(time_of_next_frame) - float(time_of_frame)
 
     return total_duration_of_frame
 

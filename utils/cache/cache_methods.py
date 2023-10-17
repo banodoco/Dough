@@ -269,7 +269,8 @@ def cache_data(cls):
 
             # if there are any timings for the project, return them
             if len(project_specific_list):
-                return project_specific_list
+                sorted_objects = sorted(project_specific_list, key=lambda x: x.aux_frame_index)
+                return sorted_objects
         
         original_func = getattr(cls, '_original_get_timing_list_from_project')
         timing_list = original_func(self, *args, **kwargs)
@@ -313,8 +314,8 @@ def cache_data(cls):
         original_func = getattr(cls, '_original_get_timing_from_uuid')
         timing = original_func(self, *args, **kwargs)
 
-        StCache.delete(timing.uuid, CacheKey.TIMING_DETAILS.value)
-        StCache.add(timing, CacheKey.TIMING_DETAILS.value)
+        if timing:
+            StCache.add(timing, CacheKey.TIMING_DETAILS.value)
 
         return timing
     

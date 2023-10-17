@@ -166,11 +166,25 @@ def replace_image_widget(timing_uuid, stage):
                         time.sleep(1)
                         st.rerun()
 
-
 def jump_to_single_frame_view_button(display_number, timing_details):
     if st.button(f"Jump to #{display_number}"):
         st.session_state['prev_frame_index'] = display_number
         st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
         st.session_state['frame_styling_view_type'] = "Individual View"
         st.session_state['change_view_type'] = True
+        st.rerun()
+
+def change_position_input(timing_uuid, src):
+    data_repo = DataRepo()
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_list = data_repo.get_timing_list_from_project(project_uuid=timing.project.uuid)
+
+    min_value = 1
+    max_value = len(timing_list)
+
+    new_position = st.number_input("Move to new position:", min_value=min_value, max_value=max_value,
+                                   value=timing.aux_frame_index + 1, step=1, key=f"new_position_{timing.uuid}_{src}")
+    
+    if st.button('Update Position',key=f"change_frame_position_{timing.uuid}_{src}"): 
+        data_repo.update_specific_timing(timing.uuid, aux_frame_index=new_position - 1)
         st.rerun()

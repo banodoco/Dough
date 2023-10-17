@@ -15,9 +15,11 @@ class CacheKey(ExtendedEnum):
 class StCache:
     @staticmethod
     def get(uuid, data_type):
+        uuid = str(uuid)
         if data_type in st.session_state:
             for ele in st.session_state[data_type]:
-                if ele.uuid == uuid:
+                ele_uuid = ele['uuid'] if type(ele) is dict else str(ele.uuid)
+                if ele_uuid == uuid:
                     return ele
         
         return None
@@ -26,14 +28,15 @@ class StCache:
     def update(data, data_type) -> bool:
         object_found = False
         uuid = data['uuid'] if type(data) is dict else data.uuid
+        uuid = str(uuid)
 
         if data_type in st.session_state:
             object_list = st.session_state[data_type]
-            for ele in object_list:
-                if ele.uuid == uuid:
-                    ele = data
+            for idx, ele in enumerate(object_list):
+                ele_uuid = ele['uuid'] if type(ele) is dict else str(ele.uuid)
+                if ele_uuid == uuid:
+                    object_list[idx] = data
                     object_found = True
-                    break
             
             st.session_state[data_type] = object_list
 
@@ -42,6 +45,7 @@ class StCache:
     @staticmethod
     def add(data, data_type) -> bool:
         uuid = data['uuid'] if type(data) is dict else data.uuid
+        uuid = str(uuid)
         obj = StCache.get(uuid, data_type)
         if obj:
             StCache.update(data, data_type)
@@ -59,10 +63,12 @@ class StCache:
     @staticmethod
     def delete(uuid, data_type) -> bool:
         object_found = False
+        uuid = str(uuid)
         if data_type in st.session_state:
             object_list = st.session_state[data_type]
             for ele in object_list:
-                if ele.uuid == uuid:
+                ele_uuid = ele['uuid'] if type(ele) is dict else str(ele.uuid)
+                if ele_uuid == uuid:
                     object_list.remove(ele)
                     object_found = True
                     break
