@@ -12,16 +12,18 @@ import uuid
 from io import BytesIO
 import numpy as np
 import urllib3
-from shared.constants import SERVER, InferenceType, InternalFileType, ServerType
+from shared.constants import SERVER, InferenceType, InternalFileTag, InternalFileType, ProjectMetaData, ServerType
 from pydub import AudioSegment
 from backend.models import InternalFileObject
 from ui_components.constants import SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, WorkflowStageType
 from ui_components.methods.file_methods import add_temp_file_to_project, convert_bytes_to_file, generate_pil_image, generate_temp_file, save_or_host_file, save_or_host_file_bytes
 from ui_components.methods.video_methods import calculate_desired_duration_of_individual_clip, update_speed_of_video_clip
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
+from utils.common_utils import acquire_lock, release_lock
 from utils.constants import ImageStage
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
+from utils.cache.cache import StCache
 
 from ui_components.models import InternalFileObject
 from typing import Union
@@ -1075,4 +1077,57 @@ def process_inference_output(**kwargs):
             del kwargs['log_uuid']
             data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
 
+    # --------------------- GALLERY IMAGE GENERATION ------------------------
+    elif inference_type == InferenceType.GALLERY_IMAGE_GENERATION.value:
+        output = kwargs.get('output')
+
+        if output:
+            if isinstance(output, str) and output.startswith("http"):
+                temp_output_file = generate_temp_file(output, '.mp4')
+                output = None
+                with open(temp_output_file.name, 'rb') as f:
+                    output = f.read()
+
+                os.remove(temp_output_file.name)
+
+            log_uuid = kwargs.get('log_uuid')
+            project_uuid = kwargs.get('project_uuid')
+            log = data_repo.get_inference_log_from_uuid(log_uuid)
+            output_file = data_repo.create_file(
+                name=filename, 
+                type=InternalFileType.IMAGE.value,
+                hosted_url=output[0], 
+                inference_log_id=log.uuid,
+                project_id=project_uuid,
+                tag=InternalFileTag.GALLERY_IMAGE.value
+            )
+        else:
+            del kwargs['log_uuid']
+            data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
+
     return True
+
+
+def check_project_meta_data(project_uuid):
+    # checking for project metadata (like cache updates)
+    # project_update_data is of the format {"data_update": [timing_uuid], "gallery_update": True/False}
+    data_repo = DataRepo()
+    
+    key = project_uuid
+    if acquire_lock(key):
+        project = data_repo.get_project_from_uuid(project_uuid)
+        timing_update_data = json.loads(project.meta_data).\
+            get(ProjectMetaData.DATA_UPDATE.value, None) if project.meta_data else None
+        if timing_update_data:
+            for timing_uuid in timing_update_data:
+                _ = data_repo.get_timing_from_uuid(timing_uuid, invalidate_cache=True)
+            
+            # removing the metadata after processing
+            data_repo.update_project(uuid=project.uuid, meta_data=json.dumps({ProjectMetaData.DATA_UPDATE.value: []}))
+
+        gallery_update_data = json.loads(project.meta_data).\
+            get(ProjectMetaData.GALLERY_UPDATE.value, False) if project.meta_data else False
+        if gallery_update_data:
+            pass
+        
+        release_lock(key)

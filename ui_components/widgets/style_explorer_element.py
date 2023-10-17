@@ -1,14 +1,20 @@
+import json
 import streamlit as st
-from ui_components.methods.common_methods import promote_image_variant
+from ui_components.methods.common_methods import process_inference_output, promote_image_variant
 from ui_components.methods.ml_methods import query_llama2
+from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
-from shared.constants import AIModelType
+from shared.constants import AIModelType, InferenceType, InternalFileTag, InternalFileType, SortOrder
 import replicate
+
+from utils.ml_processor.ml_interface import get_ml_client
+from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
 
 def style_explorer_element(project_uuid):
     st.markdown("***")
     data_repo = DataRepo() 
+    project_settings = data_repo.get_project_setting(project_uuid)
 
     _, a2, _ = st.columns([0.5, 1, 0.5])    
     prompt = a2.text_area("What's your base prompt?", key="prompt", help="This will be included at the beginning of each prompt")
@@ -19,7 +25,12 @@ def style_explorer_element(project_uuid):
     action_instructions = create_variate_option(b4, "action")    
     scene_instructions = create_variate_option(b5, "scene")
 
-    model_name_list = list(set([m.name for m in data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)]))
+    model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)
+    model_dict = {}
+    for m in model_list:
+        model_dict[m.name] = m
+
+    model_name_list = list(model_dict.keys())
     
     _, c2, _ = st.columns([0.25, 1, 0.25])
     with c2:
@@ -31,48 +42,106 @@ def style_explorer_element(project_uuid):
     
     _, e2, _ = st.columns([0.5, 1, 0.5])
     if e2.button("Generate images", key="generate_images", use_container_width=True, type="primary"):
+        ml_client = get_ml_client()
         counter = 0
         varied_text = ""
         num_models = len(models_to_use)
         num_images_per_model = number_to_generate // num_models
+        varied_prompt = create_prompt(
+                        styling_instructions=styling_instructions, 
+                        character_instructions=character_instructions, 
+                        action_instructions=action_instructions, 
+                        scene_instructions=scene_instructions
+                    )
         for _ in range(num_images_per_model):
             for model_name in models_to_use:
                 if counter % 4 == 0 and (styling_instructions or character_instructions or action_instructions or scene_instructions):
-                    varied_text = create_prompt(styling_instructions, character_instructions, action_instructions, scene_instructions)
+                    varied_text = varied_prompt
                 prompt_with_variations = f"{prompt}, {varied_text}" if prompt else varied_text
                 st.write(f"Prompt: '{prompt_with_variations}'")
-                st.write(f"Model: {model_name}")                 
+                st.write(f"Model: {model_name}")
                 counter += 1
-    
-    timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
-    variants = timing.alternative_images_list
-    
-    st.markdown("***")
-    num_columns = st.slider('Number of columns', min_value=1, max_value=10, value=4)
 
+                query_obj = MLQueryObject(
+                    timing_uuid=None,
+                    model_uuid=None,
+                    guidance_scale=7.5,
+                    seed=-1,
+                    num_inference_steps=30,            
+                    strength=1,
+                    adapter_type=None,
+                    prompt=prompt_with_variations,
+                    negative_prompt="bad image, worst image, bad anatomy, washed out colors",
+                    height=project_settings.height,
+                    width=project_settings.width,
+                )
+
+                replicate_model = REPLICATE_MODEL.get_model_by_db_obj(model_dict[model_name])
+                output, log = ml_client.predict_model_output_standardized(replicate_model, query_obj, queue_inference=True)
+
+                inference_data = {
+                    "inference_type": InferenceType.GALLERY_IMAGE_GENERATION.value,
+                    "output": output,
+                    "log_uuid": log.uuid,
+                    "project_uuid": project_uuid
+                }
+                process_inference_output(**inference_data)
+    
+    project_setting = data_repo.get_project_setting(project_uuid)
+    page_number = st.radio("Select page", options=range(1, project_setting.total_gallery_pages + 1), horizontal=True)
     num_items_per_page = 30
-    num_pages = len(variants) // num_items_per_page
-    if len(variants) % num_items_per_page > 0:
-        num_pages += 1  # Add extra page if there are remaining items
 
-    page_number = st.radio("Select page", options=range(1, num_pages + 1))
+    gallery_image_list, res_payload = data_repo.get_all_file_list(
+        file_type=InternalFileType.IMAGE.value, 
+        tag=InternalFileTag.GALLERY_IMAGE.value, 
+        project_id=project_uuid,
+        page=page_number,
+        data_per_page=num_items_per_page,
+        sort_order=SortOrder.DESCENDING.value     # newly created images appear first
+    )
 
-    start_index = (page_number - 1) * num_items_per_page
-    end_index = start_index + num_items_per_page
+    if project_setting.total_gallery_pages != res_payload['total_pages']:
+        project_setting.total_gallery_pages = res_payload['total_pages']
+        st.rerun()
 
-    for i in range(start_index, min(end_index, len(variants)), num_columns):
-        cols = st.columns(num_columns)
-        for j in range(num_columns):
-            if i + j < len(variants):
-                with cols[j]:
-                    st.image(variants[i + j].location, use_column_width=True)
-                    with st.expander(f'Variant #{i + j + 1}', False):
-                        st.info("Instructions: PLACEHOLDER")
-                                
-                    if st.button(f"Add to timeline", key=f"Promote Variant #{i + j + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
-                        promote_image_variant(timing.uuid, i + j)                                            
-                        st.rerun()
+    if gallery_image_list and len(gallery_image_list):
         st.markdown("***")
+        num_columns = st.slider('Number of columns', min_value=1, max_value=10, value=4)
+        
+        if len(gallery_image_list) % num_items_per_page > 0:
+            num_pages += 1  # Add extra page if there are remaining items
+
+
+        start_index = (page_number - 1) * num_items_per_page
+        end_index = start_index + num_items_per_page
+
+        for i in range(start_index, min(end_index, len(gallery_image_list)), num_columns):
+            cols = st.columns(num_columns)
+            for j in range(num_columns):
+                if i + j < len(gallery_image_list):
+                    with cols[j]:
+                        st.image(gallery_image_list[i + j].location, use_column_width=True)
+                        with st.expander(f'Variant #{i + j + 1}', False):
+                            if gallery_image_list[i + j].inference_log:
+                                log = data_repo.get_inference_log_from_uuid(gallery_image_list[i + j].inference_log.uuid)
+                                if log:
+                                    input_params = json.loads(log.input_params)
+                                    prompt = input_params.get('prompt', 'No prompt found')
+                                    model = json.loads(log.output_details)['model_name'].split('/')[-1]
+                                    st.info(
+                                        f"Prompt: '{prompt}' -- Model: {model}"
+                                    )
+                                else:
+                                    st.warning("No data found")
+                            else:
+                                st.warning("No data found")
+                                    
+                        if st.button(f"Add to timeline", key=f"Promote Variant #{i + j + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
+                            # TODO: add method to create a new frame with this as the main image
+                            st.rerun()
+            st.markdown("***")
+    else:
+        st.warning("No images present")
 
 
 def create_variate_option(column, key):

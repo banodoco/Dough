@@ -15,6 +15,7 @@ from ui_components.components.video_rendering_page import video_rendering_page
 from ui_components.components.mood_board_page import mood_board_page
 from streamlit_option_menu import option_menu
 from ui_components.constants import CreativeProcessType
+from ui_components.methods.common_methods import check_project_meta_data
 from ui_components.models import InternalAppSettingObject
 from utils.common_utils import acquire_lock, create_working_assets, get_current_user, get_current_user_uuid, release_lock, reset_project_state
 from utils import st_memory
@@ -85,22 +86,7 @@ def setup_app_ui():
             reset_project_state()
         
         st.session_state["project_uuid"] = project_list[selected_index].uuid
-
-        # checking for project metadata (like cache updates)
-        # project_update_data is of the format {"data_update": [{"timing_uuid": timing_uuid}]}
-        key = st.session_state["project_uuid"]
-        if acquire_lock(key):
-            project = data_repo.get_project_from_uuid(st.session_state["project_uuid"])
-            project_update_data = json.loads(project.meta_data).\
-                get(ProjectMetaData.DATA_UPDATE.value, None) if project.meta_data else None
-            if project_update_data:
-                for timing_uuid in project_update_data:
-                    _ = data_repo.get_timing_from_uuid(timing_uuid, invalidate_cache=True)
-                
-                # removing the metadata after processing
-                data_repo.update_project(uuid=project.uuid, meta_data=json.dumps({ProjectMetaData.DATA_UPDATE.value: []}))
-            
-            release_lock(key)
+        check_project_meta_data(st.session_state["project_uuid"])
 
         if "current_frame_index" not in st.session_state:
             st.session_state['current_frame_index'] = 1

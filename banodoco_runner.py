@@ -5,7 +5,7 @@ import requests
 import setproctitle
 from dotenv import load_dotenv
 import django
-from shared.constants import InferenceParamType, InferenceStatus, ProjectMetaData
+from shared.constants import InferenceParamType, InferenceStatus, InferenceType, ProjectMetaData
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from utils.common_utils import acquire_lock, release_lock
@@ -68,6 +68,7 @@ def check_and_update_db():
                                            is_disabled=False).all()
     
     timing_update_list = {}     # {project_id: [timing_uuids]}
+    gallery_update_list = {}    # {project_id: True/False}
     for log in log_list:
         input_params = json.loads(log.input_params)
         replicate_data = input_params.get(InferenceParamType.REPLICATE_INFERENCE.value, None)
@@ -99,10 +100,20 @@ def check_and_update_db():
                     origin_data['log_uuid'] = log.uuid
                     print("processing inference output")
                     process_inference_output(**origin_data)
-                    if  str(log.project.uuid) not in timing_update_list:
-                        timing_update_list[str(log.project.uuid)] = []
-                    
-                    timing_update_list[str(log.project.uuid)].append(origin_data['timing_uuid'])
+
+                    if origin_data['inference_type'] in [InferenceType.FRAME_INTERPOLATION.value, \
+                                                         InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value, \
+                                                            InferenceType.SINGLE_PREVIEW_VIDEO.value]:
+                        if str(log.project.uuid) not in timing_update_list:
+                            timing_update_list[str(log.project.uuid)] = []
+                        
+                        timing_update_list[str(log.project.uuid)].append(origin_data['timing_uuid'])
+
+                    elif origin_data['inference_type'] == InferenceType.GALLERY_IMAGE_GENERATION.value:
+                        if str(log.project.uuid) not in gallery_update_list:
+                            gallery_update_list[str(log.project.uuid)] = False
+                        
+                        gallery_update_list[str(log.project.uuid)] = True
 
             else:
                 app_logger.log(LoggingType.DEBUG, f"Error: {response.content}")
@@ -113,11 +124,22 @@ def check_and_update_db():
     # adding update_data in the project
     from backend.models import Project
 
+    final_res = {}
     for project_uuid, val in timing_update_list.items():
+        final_res[project_uuid] = {ProjectMetaData.DATA_UPDATE.value: list(set(val))}
+
+    for project_uuid, val in gallery_update_list.items():
+        if project_uuid in final_res:
+            final_res[project_uuid][ProjectMetaData.GALLERY_UPDATE.value] = val
+        else:
+            final_res[project_uuid] = {ProjectMetaData.GALLERY_UPDATE.value: val}
+    
+
+    for project_uuid, val in final_res.items():
         key = str(project_uuid)
         if acquire_lock(key):
             val = list(set(val))
-            _ = Project.objects.filter(uuid=project_uuid).update(meta_data=json.dumps({ProjectMetaData.DATA_UPDATE.value: val}))
+            _ = Project.objects.filter(uuid=project_uuid).update(meta_data=json.dumps(val))
             release_lock(key)
 
     if not len(log_list):

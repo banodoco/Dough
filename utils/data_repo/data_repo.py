@@ -79,17 +79,15 @@ class DataRepo:
         file_list = res.data['data'] if res.status else []
         return [InternalFileObject(**file) for file in file_list]
     
-    def get_all_file_list(self, file_type: InternalFileType, tag = None, project_id = None):
-        filter_data = {"type": file_type}
-        if tag:
-            filter_data['tag'] = tag
-        if project_id:
-            filter_data['project_id'] = project_id
+    # kwargs -  file_type: InternalFileType, tag = None, project_id = None, page=None, data_per_page=None, sort_order=None
+    def get_all_file_list(self, **kwargs):
+        kwargs["type"] = kwargs['file_type']
+        del kwargs['file_type']
 
-        res = self.db_repo.get_all_file_list(**filter_data)
+        res = self.db_repo.get_all_file_list(**kwargs)
         file_list = res.data['data'] if res.status else None
         
-        return [InternalFileObject(**file) for file in file_list] if file_list else []
+        return ([InternalFileObject(**file) for file in file_list] if file_list else [], res.data)
     
     def create_or_update_file(self, uuid, type=InternalFileType.IMAGE.value, **kwargs):
         file = self.db_repo.create_or_update_file(uuid, type, **kwargs).data['data']

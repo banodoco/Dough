@@ -14,7 +14,7 @@ import sqlite3
 import subprocess
 from typing import List
 import uuid
-from shared.constants import Colors, InternalFileType
+from shared.constants import Colors, InternalFileType, SortOrder
 from backend.serializers.dto import  AIModelDto, AppSettingDto, BackupDto, BackupListDto, InferenceLogDto, InternalFileDto, ProjectDto, SettingDto, TimingDto, UserDto
 
 from shared.constants import AUTOMATIC_FILE_HOSTING, LOCAL_DATABASE_NAME, SERVER, ServerType
@@ -180,7 +180,8 @@ class DBRepo:
 
         return InternalResponse(payload, 'file found', True)
     
-    # TODO: create a dao for this
+    # TODO: right now if page is passed then paginated result will be provided
+    # or else entire list will be fetched. will standardise this later
     def get_all_file_list(self, **kwargs):
         kwargs['is_disabled'] = False
 
@@ -191,11 +192,42 @@ class DBRepo:
 
             kwargs['project_id'] = project.id
 
-        file_list = InternalFileObject.objects.filter(**kwargs).all()
-        
-        payload = {
-            'data': InternalFileDto(file_list, many=True).data
-        }
+        if 'page' in kwargs and kwargs['page']:
+            page = kwargs['page']
+            del kwargs['page']
+            data_per_page = kwargs['data_per_page']
+            del kwargs['data_per_page']
+            sort_order = kwargs['sort_order'] if 'sort_order' in kwargs else None
+            del kwargs['sort_order']
+
+            file_list = InternalFileObject.objects.filter(**kwargs).all()
+            if sort_order:
+                if sort_order == SortOrder.DESCENDING.value:
+                    file_list = file_list.order_by('-created_on')
+
+            paginator = Paginator(file_list, data_per_page)
+            if page > paginator.num_pages or page < 1:
+                return InternalResponse({}, "invalid page number", False)
+            
+            payload = {
+                "data_per_page": data_per_page,
+                "page": page,
+                "total_pages": paginator.num_pages,
+                "count": paginator.count,
+                "data": InferenceLogDto(
+                    paginator.page(page), many=True
+                ).data,
+            }
+        else:
+            file_list = InternalFileObject.objects.filter(**kwargs).all()
+
+            if 'sort_order' in kwargs:
+                if kwargs['sort_order'] == SortOrder.DESCENDING.value:
+                    file_list = file_list.order_by('-created_on')
+            
+            payload = {
+                'data': InternalFileDto(file_list, many=True).data
+            }
 
         return InternalResponse(payload, 'file found', True)
     

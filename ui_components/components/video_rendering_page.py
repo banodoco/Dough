@@ -55,7 +55,11 @@ def video_rendering_page(mainheader2, project_uuid):
     st.markdown("***")
 
     # TODO: only show completed videos
-    video_list: List[InternalFileObject] = data_repo.get_all_file_list(InternalFileType.VIDEO.value, tag=InternalFileTag.COMPLETE_GENERATED_VIDEO.value, project_id=project_uuid)
+    video_list, _ = data_repo.get_all_file_list(
+        file_type=InternalFileType.VIDEO.value, 
+        tag=InternalFileTag.COMPLETE_GENERATED_VIDEO.value, 
+        project_id=project_uuid
+    )
     video_list = sorted(video_list, key=lambda x: x.created_on, reverse=True)
     
     for video in video_list:
