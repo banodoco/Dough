@@ -5,9 +5,11 @@ import requests
 import setproctitle
 from dotenv import load_dotenv
 import django
-from shared.constants import InferenceParamType, InferenceStatus
+from shared.constants import InferenceParamType, InferenceStatus, InferenceType, ProjectMetaData
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
+from utils.common_utils import acquire_lock, release_lock
+from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import replicate_status_map
 
 from utils.constants import RUNNER_PROCESS_NAME
@@ -65,6 +67,8 @@ def check_and_update_db():
     log_list = InferenceLog.objects.filter(status__in=[InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
                                            is_disabled=False).all()
     
+    timing_update_list = {}     # {project_id: [timing_uuids]}
+    gallery_update_list = {}    # {project_id: True/False}
     for log in log_list:
         input_params = json.loads(log.input_params)
         replicate_data = input_params.get(InferenceParamType.REPLICATE_INFERENCE.value, None)
@@ -88,11 +92,58 @@ def check_and_update_db():
                             isinstance(result['output'], str)) else [result['output'][-1]]
                 
                 InferenceLog.objects.filter(id=log.id).update(status=log_status, output_details=json.dumps(output_details))
+                origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
+                if origin_data and log_status == InferenceStatus.COMPLETED.value:
+                    from ui_components.methods.common_methods import process_inference_output
+
+                    try:
+                        origin_data['output'] = output_details['output']
+                        origin_data['log_uuid'] = log.uuid
+                        print("processing inference output")
+                        process_inference_output(**origin_data)
+
+                        if origin_data['inference_type'] in [InferenceType.FRAME_INTERPOLATION.value, \
+                                                            InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value, \
+                                                            InferenceType.SINGLE_PREVIEW_VIDEO.value]:
+                            if str(log.project.uuid) not in timing_update_list:
+                                timing_update_list[str(log.project.uuid)] = []
+                            timing_update_list[str(log.project.uuid)].append(origin_data['timing_uuid'])
+
+                        elif origin_data['inference_type'] == InferenceType.GALLERY_IMAGE_GENERATION.value:
+                            if str(log.project.uuid) not in gallery_update_list:
+                                gallery_update_list[str(log.project.uuid)] = False
+                            gallery_update_list[str(log.project.uuid)] = True
+
+                    except Exception as e:
+                        app_logger.log(LoggingType.ERROR, f"Error: {e}")
+                        output_details['error'] = str(e)
+                        InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.FAILED.value, output_details=json.dumps(output_details))
+
             else:
                 app_logger.log(LoggingType.DEBUG, f"Error: {response.content}")
         else:
             # if not replicate data is present then removing the status
             InferenceLog.objects.filter(id=log.id).update(status="")
+
+    # adding update_data in the project
+    from backend.models import Project
+
+    final_res = {}
+    for project_uuid, val in timing_update_list.items():
+        final_res[project_uuid] = {ProjectMetaData.DATA_UPDATE.value: list(set(val))}
+
+    for project_uuid, val in gallery_update_list.items():
+        if project_uuid not in final_res:
+            final_res[project_uuid] = {}
+        
+        final_res[project_uuid].update({f"{ProjectMetaData.GALLERY_UPDATE.value}": val})
+    
+
+    for project_uuid, val in final_res.items():
+        key = str(project_uuid)
+        if acquire_lock(key):
+            _ = Project.objects.filter(uuid=project_uuid).update(meta_data=json.dumps(val))
+            release_lock(key)
 
     if not len(log_list):
         # app_logger.log(LoggingType.DEBUG, f"No logs found")

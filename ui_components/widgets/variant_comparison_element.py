@@ -1,10 +1,10 @@
 import time
-import json
 import streamlit as st
-import uuid
-from typing import List
-from ui_components.constants import CreativeProcessType
-from ui_components.methods.common_methods import promote_image_variant
+from streamlit_image_comparison import image_comparison
+from ui_components.constants import CreativeProcessType, WorkflowStageType
+from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
+from ui_components.methods.video_methods import create_or_get_single_preview_video
+from ui_components.widgets.image_carousal import display_image
 from utils.data_repo.data_repo import DataRepo
 
 
@@ -85,3 +85,51 @@ def variant_comparison_element(timing_uuid, stage=CreativeProcessType.MOTION.val
                         promote_image_variant(timing.uuid, which_variant - 1)
                     time.sleep(0.5)
                     st.rerun()
+
+
+def compare_to_previous_and_next_frame(project_uuid, timing_details):
+    data_repo = DataRepo()
+    mainimages1, mainimages2, mainimages3 = st.columns([1, 1, 1])
+
+    with mainimages1:
+        if st.session_state['current_frame_index'] - 2 >= 0:
+            previous_image = data_repo.get_timing_from_frame_number(project_uuid, frame_number=st.session_state['current_frame_index'] - 2)
+            st.info(f"Previous image:")
+            display_image(
+                timing_uuid=previous_image.uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
+
+            if st.button(f"Preview Interpolation From #{st.session_state['current_frame_index']-1} to #{st.session_state['current_frame_index']}", key=f"Preview Interpolation From #{st.session_state['current_frame_index']-1} to #{st.session_state['current_frame_index']}", use_container_width=True):
+                prev_frame_timing = data_repo.get_prev_timing(st.session_state['current_frame_uuid'])
+                create_or_get_single_preview_video(prev_frame_timing.uuid)
+                prev_frame_timing = data_repo.get_timing_from_uuid(prev_frame_timing.uuid)
+                if prev_frame_timing.preview_video:
+                    st.video(prev_frame_timing.preview_video.location)
+
+    with mainimages2:
+        st.success(f"Current image:")
+        display_image(
+            timing_uuid=st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
+
+    with mainimages3:
+        if st.session_state['current_frame_index'] + 1 <= len(timing_details):
+            next_image = data_repo.get_timing_from_frame_number(project_uuid, frame_number=st.session_state['current_frame_index'])
+            st.info(f"Next image")
+            display_image(timing_uuid=next_image.uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
+
+            if st.button(f"Preview Interpolation From #{st.session_state['current_frame_index']} to #{st.session_state['current_frame_index']+1}", key=f"Preview Interpolation From #{st.session_state['current_frame_index']} to #{st.session_state['current_frame_index']+1}", use_container_width=True):
+                create_or_get_single_preview_video(st.session_state['current_frame_uuid'])
+                current_frame = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
+                st.video(current_frame.timed_clip.location)
+
+
+def compare_to_source_frame(timing_details):
+    if timing_details[st.session_state['current_frame_index']- 1].primary_image:
+        img2 = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
+    else:
+        img2 = 'https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'
+    
+    img1 = timing_details[st.session_state['current_frame_index'] - 1].source_image.location if timing_details[st.session_state['current_frame_index'] - 1].source_image else 'https://i.ibb.co/GHVfjP0/Image-Not-Yet-Created.png'
+    
+    image_comparison(starting_position=50,
+                        img1=img1,
+                        img2=img2, make_responsive=False, label1=WorkflowStageType.SOURCE.value, label2=WorkflowStageType.STYLED.value)

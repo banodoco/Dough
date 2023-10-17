@@ -1,9 +1,10 @@
+import json
 import time
 import streamlit as st
 import os
 import math
 from moviepy.editor import *
-from shared.constants import SERVER, ServerType
+from shared.constants import SERVER, ProjectMetaData, ServerType
 
 from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.custom_models_page import custom_models_page
@@ -13,8 +14,9 @@ from ui_components.components.project_settings_page import project_settings_page
 from ui_components.components.video_rendering_page import video_rendering_page
 from streamlit_option_menu import option_menu
 from ui_components.constants import CreativeProcessType
+from ui_components.methods.common_methods import check_project_meta_data
 from ui_components.models import InternalAppSettingObject
-from utils.common_utils import create_working_assets, get_current_user, get_current_user_uuid, reset_project_state
+from utils.common_utils import acquire_lock, create_working_assets, get_current_user, get_current_user_uuid, release_lock, reset_project_state
 from utils import st_memory
 
 from utils.data_repo.data_repo import DataRepo
@@ -55,11 +57,9 @@ def setup_app_ui():
                 }
             )
     
-    project_list = data_repo.get_all_project_list(
-        user_id=get_current_user_uuid())
+    project_list = data_repo.get_all_project_list(user_id=get_current_user_uuid())
 
     if st.session_state["section"] == "Open Project":
-
         if "index_of_project_name" not in st.session_state:
             if app_settings.previous_project:
                 st.session_state["project_uuid"] = app_settings.previous_project
@@ -85,6 +85,7 @@ def setup_app_ui():
             reset_project_state()
         
         st.session_state["project_uuid"] = project_list[selected_index].uuid
+        check_project_meta_data(st.session_state["project_uuid"])
 
         if "current_frame_index" not in st.session_state:
             st.session_state['current_frame_index'] = 1
@@ -114,17 +115,10 @@ def setup_app_ui():
                 st.session_state['main_view_type'] = st_memory.menu(None, main_view_types, icons=['search-heart', 'tools', "play-circle", 'stopwatch'], menu_icon="cast", default_index=0, key="main_view_type_name", orientation="horizontal", styles={
                                                                     "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "red"}})
 
-            mainheader1, mainheader2 = st.columns([3, 2])
-            # with mainheader1:
-            # st.header(st.session_state["page"])
-
-        
-
+            _, mainheader2 = st.columns([3, 2])
 
             if st.session_state["main_view_type"] == "Creative Process":
-
                 with st.sidebar:
-
                     view_types = ["Explorer","Timeline","Individual"]
 
                     if 'frame_styling_view_type_index' not in st.session_state:
@@ -140,7 +134,6 @@ def setup_app_ui():
                             st.session_state['frame_styling_view_type'])
                     else:
                         st.session_state['frame_styling_view_type_index'] = None
-
 
                     # Option menu
                     st.session_state['frame_styling_view_type'] = option_menu(
@@ -171,17 +164,12 @@ def setup_app_ui():
                     st.session_state['page'] = option_menu(None, pages, icons=['palette', 'camera-reels', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
                                                             "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
 
-                    # TODO: CORRECT-CODE
-
-                                
-
-                frame_styling_page(
-                    mainheader2, st.session_state["project_uuid"])
+                frame_styling_page(mainheader2, st.session_state["project_uuid"])
 
             elif st.session_state["main_view_type"] == "Tools & Settings":
 
                 with st.sidebar:
-                    tool_pages = ["Query Logger",  "Custom Models", "Project Settings"]
+                    tool_pages = ["Query Logger", "Custom Models", "Project Settings"]
 
                     if st.session_state["page"] not in tool_pages:
                         st.session_state["page"] = tool_pages[0]
@@ -196,10 +184,7 @@ def setup_app_ui():
                 elif st.session_state["page"] == "Project Settings":
                     project_settings_page(st.session_state["project_uuid"])
 
-                
-
             elif st.session_state["main_view_type"] == "Video Rendering":
-
                 video_rendering_page(
                     mainheader2, st.session_state["project_uuid"])
 
@@ -207,7 +192,6 @@ def setup_app_ui():
         app_settings_page()
 
     elif st.session_state["section"] == "New Project":
-
         new_project_page()
 
     else:

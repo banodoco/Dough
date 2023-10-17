@@ -7,7 +7,7 @@ import streamlit as st
 
 
 AUTH_TOKEN = 'auth_details'
-RUNNER_PROCESS_NAME = 'banodoco_runner_SFX8T'
+RUNNER_PROCESS_NAME = 'banodoco_runner'
 
 class ImageStage(ExtendedEnum):
     SOURCE_IMAGE = 'Source Image'

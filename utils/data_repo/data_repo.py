@@ -1,12 +1,9 @@
 # this repo serves as a middlerware between API backend and the frontend
 import json
-import threading
 from shared.constants import InferenceParamType, InternalFileType, InternalResponse
 from shared.constants import SERVER, ServerType
 from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalUserObject
 from utils.cache.cache_methods import cache_data
-from utils.common_decorators import count_calls
-import streamlit as st
 import wrapt
 
 from utils.data_repo.api_repo import APIRepo
@@ -77,17 +74,20 @@ class DataRepo:
         file = self.db_repo.get_file_from_uuid(uuid).data['data']
         return InternalFileObject(**file) if file else None
     
-    def get_all_file_list(self, file_type: InternalFileType, tag = None, project_id = None):
-        filter_data = {"type": file_type}
-        if tag:
-            filter_data['tag'] = tag
-        if project_id:
-            filter_data['project_id'] = project_id
+    def get_file_list_from_log_uuid_list(self, log_uuid_list):
+        res = self.db_repo.get_file_list_from_log_uuid_list(log_uuid_list)
+        file_list = res.data['data'] if res.status else []
+        return [InternalFileObject(**file) for file in file_list]
+    
+    # kwargs -  file_type: InternalFileType, tag = None, project_id = None, page=None, data_per_page=None, sort_order=None
+    def get_all_file_list(self, **kwargs):
+        kwargs["type"] = kwargs['file_type']
+        del kwargs['file_type']
 
-        res = self.db_repo.get_all_file_list(**filter_data)
+        res = self.db_repo.get_all_file_list(**kwargs)
         file_list = res.data['data'] if res.status else None
         
-        return [InternalFileObject(**file) for file in file_list] if file_list else []
+        return ([InternalFileObject(**file) for file in file_list] if file_list else [], res.data)
     
     def create_or_update_file(self, uuid, type=InternalFileType.IMAGE.value, **kwargs):
         file = self.db_repo.create_or_update_file(uuid, type, **kwargs).data['data']
@@ -188,9 +188,12 @@ class DataRepo:
         log = res.data['data'] if res else None
         return InferenceLogObject(**log) if log else None
     
-    def get_all_inference_log_list(self, project_id=None):
-        log_list = self.db_repo.get_all_inference_log_list(project_id).data['data']
-        return [InferenceLogObject(**log) for log in log_list] if log_list else None
+    def get_all_inference_log_list(self, **kwargs):
+        res = self.db_repo.get_all_inference_log_list(**kwargs)
+        log_list = res.data['data'] if res.status else None
+        total_page_count = res.data['total_pages'] if res.status else None
+
+        return ([InferenceLogObject(**log) for log in log_list] if log_list else None, total_page_count)
     
     
     def create_inference_log(self, **kwargs):
@@ -234,7 +237,7 @@ class DataRepo:
     
 
     # timing
-    def get_timing_from_uuid(self, uuid):
+    def get_timing_from_uuid(self, uuid, invalidate_cache=False):
         timing = self.db_repo.get_timing_from_uuid(uuid).data['data']
         return InternalFrameTimingObject(**timing) if timing else None
     
@@ -378,3 +381,12 @@ class DataRepo:
         res = self.db_repo.generate_payment_link(amount)
         link = res.data['data'] if res.status else None
         return link
+    
+    # lock
+    def acquire_lock(self, key):
+        res = self.db_repo.acquire_lock(key)
+        return res.data['data'] if res.status else None
+    
+    def release_lock(self, key):
+        res = self.db_repo.release_lock(key)
+        return res.status

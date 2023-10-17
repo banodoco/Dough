@@ -304,3 +304,22 @@ def dynamic_prompting(prompt, source_image):
         prompt = prompt.replace("[looking]", "looking " + str(prompt_looking))
 
     return prompt
+
+def query_llama2(user_instructions, system_instructions):
+    ml_client = get_ml_client()
+    input={
+            "debug": False,
+            "top_k": 250,
+            "top_p": 0.95,
+            "prompt": system_instructions + "\n" + user_instructions + "|",
+            "temperature": 0.73,
+            "max_new_tokens": 30,
+            "min_new_tokens": -1,
+            "stop_sequences": "\n"
+        }
+    
+    output, log = ml_client.predict_model_output(REPLICATE_MODEL.llama_2_7b, **input)
+    result = ""
+    for item in output:
+        result += item
+    return result

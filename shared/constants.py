@@ -59,6 +59,7 @@ class InternalFileTag(ExtendedEnum):
     COMPLETE_GENERATED_VIDEO = 'complete_generated_video'
     INPUT_VIDEO = 'input_video'
     TEMP_IMAGE = 'temp'
+    GALLERY_IMAGE = 'gallery_image'
 
 class AnimationStyleType(ExtendedEnum):
     INTERPOLATION = "Interpolate to next"
@@ -78,6 +79,7 @@ class InferenceType(ExtendedEnum):
     FRAME_TIMING_VIDEO_INFERENCE = "frame_timing_video_inference"   # for generating variants of a video
     SINGLE_PREVIEW_VIDEO = "single_preview_video"                   # for generating a single preview video
     FRAME_INTERPOLATION = "frame_interpolation"                     # for generating single/multiple interpolated videos
+    GALLERY_IMAGE_GENERATION = "gallery_image_generation"           # for generating gallery images
 
 class InferenceStatus(ExtendedEnum):
     QUEUED = "queued"
@@ -90,6 +92,14 @@ class InferenceParamType(ExtendedEnum):
     REPLICATE_INFERENCE = "replicate_inference"     # replicate url for queue inference and other data
     QUERY_DICT = "query_dict"                       # query dict of standardized inference params
     ORIGIN_DATA = "origin_data"                     # origin data - used to store file once inference is completed
+
+class ProjectMetaData(ExtendedEnum):
+    DATA_UPDATE = "data_update"                     # info regarding cache/data update when runner updates the db
+    GALLERY_UPDATE = "gallery_update"
+
+class SortOrder(ExtendedEnum):
+    ASCENDING = "asc"
+    DESCENDING = "desc"
 
 ##################### global constants #####################
 SERVER = os.getenv('SERVER', ServerType.PRODUCTION.value)

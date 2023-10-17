@@ -1,9 +1,9 @@
 import streamlit as st
+from ui_components.widgets.frame_movement_widgets import delete_frame, replace_image_widget
 from ui_components.widgets.frame_time_selector import single_frame_time_selector
 from ui_components.widgets.image_carousal import display_image
 from utils.data_repo.data_repo import DataRepo
 from ui_components.constants import WorkflowStageType
-from ui_components.methods.common_methods import delete_frame, replace_image_widget
 
 
 def frame_selector_widget():
@@ -18,28 +18,15 @@ def frame_selector_widget():
         if 'prev_frame_index' not in st.session_state:
             st.session_state['prev_frame_index'] = 1
 
-        # st.write(st.session_state['prev_frame_index'])
-        # st.write(st.session_state['current_frame_index'])
         st.session_state['current_frame_index'] = st.number_input(f"Key frame # (out of {len(timing_details)})", 1, 
                                                                   len(timing_details), value=st.session_state['prev_frame_index'], 
                                                                   step=1, key="which_image_selector")
         
-        st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
-        
-        if st.session_state['prev_frame_index'] != st.session_state['current_frame_index']:
-            st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
-            st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
-            st.session_state['reset_canvas'] = True
-            st.session_state['frame_styling_view_type_index'] = 0
-            st.session_state['frame_styling_view_type'] = "Individual"
-                                        
-            st.rerun()       
+        update_current_frame_index(st.session_state['current_frame_index'])
 
     with time2:
         single_frame_time_selector(st.session_state['current_frame_uuid'], 'navbar', shift_frames=False)
     
-    
-
     with st.expander(f"🖼️ Frame #{st.session_state['current_frame_index']} Details"):
         a1, a2 = st.columns([1,1])
         with a1:
@@ -66,3 +53,19 @@ def frame_selector_widget():
         if st.button("Delete key frame"):
             delete_frame(st.session_state['current_frame_uuid'])
             st.rerun()
+
+
+def update_current_frame_index(index):
+    data_repo = DataRepo()
+    timing_details = data_repo.get_timing_list_from_project(project_uuid=st.session_state["project_uuid"])
+
+    st.session_state['current_frame_uuid'] = timing_details[index - 1].uuid
+        
+    if st.session_state['prev_frame_index'] != index:
+        st.session_state['prev_frame_index'] = index
+        st.session_state['current_frame_uuid'] = timing_details[index - 1].uuid
+        st.session_state['reset_canvas'] = True
+        st.session_state['frame_styling_view_type_index'] = 0
+        st.session_state['frame_styling_view_type'] = "Individual View"
+                                    
+        st.rerun()       

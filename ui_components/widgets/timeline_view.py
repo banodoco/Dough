@@ -1,16 +1,12 @@
 import streamlit as st
-from ui_components.methods.common_methods import delete_frame, jump_to_single_frame_view_button, move_frame,delete_frame_button,move_frame_back_button,move_frame_forward_button,change_position_input,update_clip_duration_of_all_timing_frames,replace_image_widget
+from ui_components.widgets.frame_movement_widgets import change_position_input, delete_frame_button, jump_to_single_frame_view_button, move_frame_back_button, move_frame_forward_button, replace_image_widget
 from ui_components.widgets.frame_time_selector import single_frame_time_selector, single_frame_time_duration_setter
-from typing import List
 from ui_components.widgets.image_carousal import display_image
 from utils.data_repo.data_repo import DataRepo
-from ui_components.widgets.frame_clip_generation_elements import update_animation_style_element
 from ui_components.constants import WorkflowStageType
 from utils import st_memory
 
 def timeline_view_buttons(i, j, timing_details, shift_frames_setting, time_setter_toggle, replace_image_widget_toggle, duration_setter_toggle, move_frames_toggle, delete_frames_toggle, change_position_toggle):
-    
-    
     if time_setter_toggle:
         single_frame_time_selector(timing_details[i + j].uuid, 'motion', shift_frames=shift_frames_setting)                                    
     if duration_setter_toggle:
@@ -33,13 +29,13 @@ def timeline_view_buttons(i, j, timing_details, shift_frames_setting, time_sette
     if change_position_toggle:
         change_position_input(timing_details[i + j].uuid, "side-to-side")        
 
-    if time_setter_toggle or duration_setter_toggle or replace_image_widget_toggle or move_frames_toggle or delete_frames_toggle or change_frame_position_toggle:
+    if time_setter_toggle or duration_setter_toggle or replace_image_widget_toggle or move_frames_toggle or delete_frames_toggle or change_position_toggle:
         st.caption("--")
     
     jump_to_single_frame_view_button(i + j + 1, timing_details)        
 
+
 def timeline_view(project_uuid, stage):
-    
     data_repo = DataRepo()
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
@@ -47,8 +43,6 @@ def timeline_view(project_uuid, stage):
     
     with header_col_1:
         shift_frames_setting = st.toggle("Shift Frames", help="If set to True, it will shift the frames after your adjustment forward by the amount of time you move.")
-        
-        
 
     with header_col_2:
         col1, col2, col3 = st.columns(3)

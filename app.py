@@ -49,6 +49,7 @@ def start_runner():
         
         if not is_process_active(RUNNER_PROCESS_NAME):
             app_logger.info("Starting runner")
+            # _ = subprocess.Popen(["streamlit", "run", "banodoco_runner.py", "--runner.fastReruns", "false", "--server.port", "5502", "--server.headless", "true"])
             _ = subprocess.Popen(["python", "banodoco_runner.py"])
             while not is_process_active(RUNNER_PROCESS_NAME):
                 time.sleep(0.1)

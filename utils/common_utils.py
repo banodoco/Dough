@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import csv
 import subprocess
+import time
 import psutil
 import streamlit as st
 import json
@@ -170,11 +171,33 @@ def reset_styling_settings(timing_uuid):
 
 
 def is_process_active(custom_process_name):
+    # this caching assumes that the runner won't interupt or break once started
+    if custom_process_name + "_process_state" in st.session_state and st.session_state[custom_process_name + "_process_state"]:
+        return True
+
     try:
         ps_output = subprocess.check_output(["ps", "aux"]).decode("utf-8")
         if custom_process_name in ps_output:
+            st.session_state[custom_process_name + "_process_state"] = True
             return True
     except subprocess.CalledProcessError:
         return False
 
     return False
+
+
+def acquire_lock(key):
+    data_repo = DataRepo()
+    retries = 0
+    while retries < 1:
+        lock_status = data_repo.acquire_lock(key)
+        if lock_status:
+            return lock_status
+        retries += 1
+        time.sleep(0.2)
+    return False
+
+def release_lock(key):
+    data_repo = DataRepo()
+    data_repo.release_lock(key)
+    return True

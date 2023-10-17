@@ -19,7 +19,7 @@ class ProjectDto(serializers.ModelSerializer):
     user_uuid = serializers.SerializerMethodField()
     class Meta:
         model = Project
-        fields = ('uuid', 'name', 'user_uuid', 'created_on', 'temp_file_list')
+        fields = ('uuid', 'name', 'user_uuid', 'created_on', 'temp_file_list', 'meta_data')
 
     def get_user_uuid(self, obj):
         return obj.user.uuid
