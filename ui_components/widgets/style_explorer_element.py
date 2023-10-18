@@ -1,13 +1,12 @@
 import json
 import streamlit as st
-from ui_components.methods.common_methods import process_inference_output, promote_image_variant
+from ui_components.methods.common_methods import process_inference_output
 from ui_components.methods.file_methods import generate_pil_image
 from ui_components.methods.ml_methods import query_llama2
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AIModelType, InferenceType, InternalFileTag, InternalFileType, SortOrder
-import replicate
 
 from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
@@ -67,7 +66,7 @@ def style_explorer_element(project_uuid):
                 query_obj = MLQueryObject(
                     timing_uuid=None,
                     model_uuid=None,
-                    guidance_scale=7.5,
+                    guidance_scale=5,
                     seed=-1,
                     num_inference_steps=30,            
                     strength=1,
@@ -98,7 +97,7 @@ def style_explorer_element(project_uuid):
         tag=InternalFileTag.GALLERY_IMAGE.value, 
         project_id=project_uuid,
         page=page_number,
-        data_per_page=num_items_per_page,
+        data_per_page=10,
         sort_order=SortOrder.DESCENDING.value     # newly created images appear first
     )
 
@@ -118,7 +117,7 @@ def style_explorer_element(project_uuid):
             cols = st.columns(num_columns)
             for j in range(num_columns):
                 if i + j < len(gallery_image_list):
-                    with cols[j]:
+                    with cols[j]:                        
                         st.image(gallery_image_list[i + j].location, use_column_width=True)
                         with st.expander(f'Variant #{(page_number - 1) * num_items_per_page + i + j + 1}', False):
                             if gallery_image_list[i + j].inference_log:
@@ -136,7 +135,7 @@ def style_explorer_element(project_uuid):
                                     
                         if st.button(f"Add to timeline", key=f"Promote Variant #{(page_number - 1) * num_items_per_page + i + j + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
                             pil_image = generate_pil_image(gallery_image_list[i + j].location)
-                            add_key_frame(pil_image, False, 2.5)
+                            add_key_frame(pil_image, False, 2.5, len(data_repo.get_timing_list_from_project(project_uuid)))
                             st.rerun()
             st.markdown("***")
     else:

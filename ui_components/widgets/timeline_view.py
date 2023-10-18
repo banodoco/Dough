@@ -56,11 +56,11 @@ def timeline_view(project_uuid, stage):
         else:           
             with col2:     
                 time_setter_toggle = st_memory.toggle("Time Setter", value=True, key="time_setter_toggle")
-                replace_image_widget_toggle = st_memory.toggle("Replace Image", value=False, key="replace_image_widget_toggle")
+                delete_frames_toggle = st_memory.toggle("Delete Frames", value=True, key="delete_frames_toggle")                
                 duration_setter_toggle = st_memory.toggle("Duration Setter", value=False, key="duration_setter_toggle")
             with col3:
                 move_frames_toggle = st_memory.toggle("Move Frames", value=True, key="move_frames_toggle")
-                delete_frames_toggle = st_memory.toggle("Delete Frames", value=False, key="delete_frames_toggle")
+                replace_image_widget_toggle = st_memory.toggle("Replace Image", value=False, key="replace_image_widget_toggle")
                 change_position_toggle = st_memory.toggle("Change Position", value=False, key="change_position_toggle")
 
     with header_col_3:
