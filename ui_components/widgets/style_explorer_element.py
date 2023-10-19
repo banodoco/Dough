@@ -75,6 +75,7 @@ def style_explorer_element(project_uuid):
                     negative_prompt="bad image, worst image, bad anatomy, washed out colors",
                     height=project_settings.height,
                     width=project_settings.width,
+                    project_uuid=project_uuid
                 )
 
                 replicate_model = REPLICATE_MODEL.get_model_by_db_obj(model_dict[model_name])
@@ -97,7 +98,7 @@ def style_explorer_element(project_uuid):
         tag=InternalFileTag.GALLERY_IMAGE.value, 
         project_id=project_uuid,
         page=page_number,
-        data_per_page=10,
+        data_per_page=num_items_per_page,
         sort_order=SortOrder.DESCENDING.value     # newly created images appear first
     )
 
@@ -135,8 +136,13 @@ def style_explorer_element(project_uuid):
                                     
                         if st.button(f"Add to timeline", key=f"Promote Variant #{(page_number - 1) * num_items_per_page + i + j + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
                             pil_image = generate_pil_image(gallery_image_list[i + j].location)
-                            add_key_frame(pil_image, False, 2.5, len(data_repo.get_timing_list_from_project(project_uuid)))
+                            add_key_frame(pil_image, False, 2.5, len(data_repo.get_timing_list_from_project(project_uuid)), refresh_state=False)
+
+                            # removing this from the gallery view
+                            data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+
                             st.rerun()
+
             st.markdown("***")
     else:
         st.warning("No images present")

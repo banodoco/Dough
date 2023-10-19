@@ -106,7 +106,13 @@ class DataRepo:
 
         res = self.db_repo.create_file(**kwargs)
         file = res.data['data'] if res.status else None
-        return InternalFileObject(**file) if file else None
+        file = InternalFileObject(**file) if file else None
+
+        if file and file.type == InternalFileType.IMAGE.value:
+            from ui_components.methods.file_methods import normalize_size_internal_file_obj
+            file = normalize_size_internal_file_obj(file)
+        
+        return file
     
     def delete_file_from_uuid(self, uuid):
         res = self.db_repo.delete_file_from_uuid(uuid)

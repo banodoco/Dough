@@ -72,8 +72,8 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         data = {
             "prompt" : query_obj.prompt,
             "negative_prompt" : query_obj.negative_prompt,
-            "width" : query_obj.width,
-            "height" : query_obj.height,
+            "width" : max(768, query_obj.width),    # 768 is the default for sdxl
+            "height" : max(768, query_obj.height),
             "mask": mask
         }
 
