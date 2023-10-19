@@ -17,8 +17,9 @@ def style_explorer_element(project_uuid):
     data_repo = DataRepo() 
     project_settings = data_repo.get_project_setting(project_uuid)
 
-    _, a2, _ = st.columns([0.5, 1, 0.5])    
+    _, a2, a3,_= st.columns([0.5, 1, 0.5,0.5])    
     prompt = a2.text_area("What's your base prompt?", key="prompt", help="This will be included at the beginning of each prompt")
+    base_prompt_position = a3.radio("Where would you like to place the base prompt?", options=["Beginning", "End"], key="base_prompt_position", help="This will be included at the beginning of each prompt")
 
     _, b2, b3, b4, b5, _ = st.columns([0.5, 1, 1, 1, 1, 0.5])    
     character_instructions = create_variate_option(b2, "character")  
@@ -45,22 +46,25 @@ def style_explorer_element(project_uuid):
     if e2.button("Generate images", key="generate_images", use_container_width=True, type="primary"):
         ml_client = get_ml_client()
         counter = 0
-        varied_text = ""
         num_models = len(models_to_use)
         num_images_per_model = number_to_generate // num_models
-        varied_prompt = create_prompt(
+        varied_text = ""
+        for _ in range(num_images_per_model):
+            for model_name in models_to_use:
+                if counter % 4 == 0 and (styling_instructions or character_instructions or action_instructions or scene_instructions):
+                    varied_prompt = create_prompt(
                         styling_instructions=styling_instructions, 
                         character_instructions=character_instructions, 
                         action_instructions=action_instructions, 
                         scene_instructions=scene_instructions
                     )
-        for _ in range(num_images_per_model):
-            for model_name in models_to_use:
-                if counter % 4 == 0 and (styling_instructions or character_instructions or action_instructions or scene_instructions):
                     varied_text = varied_prompt
-                prompt_with_variations = f"{prompt}, {varied_text}" if prompt else varied_text
-                st.write(f"Prompt: '{prompt_with_variations}'")
-                st.write(f"Model: {model_name}")
+                if base_prompt_position == "Beginning":
+                    prompt_with_variations = f"{prompt}, {varied_text}" if prompt else varied_text
+                else:  # base_prompt_position is "End"
+                    prompt_with_variations = f"{varied_text}, {prompt}" if prompt else varied_text
+                # st.write(f"Prompt: '{prompt_with_variations}'")
+                # st.write(f"Model: {model_name}")
                 counter += 1
 
                 query_obj = MLQueryObject(
@@ -97,7 +101,7 @@ def style_explorer_element(project_uuid):
         tag=InternalFileTag.GALLERY_IMAGE.value, 
         project_id=project_uuid,
         page=page_number,
-        data_per_page=10,
+        data_per_page=20,
         sort_order=SortOrder.DESCENDING.value     # newly created images appear first
     )
 
@@ -153,6 +157,8 @@ def create_variate_option(column, key):
 
 def create_prompt(**kwargs):
         text_list = []
+        order = ["character_instructions", "styling_instructions", "action_instructions", "scene_instructions"]
+
 
         system_instruction_template_list = {
             "character_instructions": "Input|Character Descriptions:\nSickly old man|Francois Leger,old Russian man, beaten-down look, wearing suit\nPretty young woman|Jules van Cohen,beautiful young woman, floral dress,vibrant\nIrish boy|James McCarthy,10 year old Irish boy,red hair,pink shirt,wheezing in a small voice\nYoung thug|Hughie Banks,23 y/o English football hooligan with skinned head",
@@ -161,8 +167,9 @@ def create_prompt(**kwargs):
             "scene_instructions": "Input|Scene Description:\nForest|Misty woods with towering trees and glowing plants.\nFuturistic city|Skyscrapers, flying cars, neon lights in a futuristic metropolis.\nMedieval|Castle courtyard with knights, cobblestones, and a fountain.\nBeach|Golden sands, rolling waves, and a vibrant sunset.\nApocalypse|Ruined buildings and desolation in a bleak wasteland.",
         }
 
-        for instruction_type, user_instruction in kwargs.items():
-            if instruction_type in system_instruction_template_list and user_instruction:
+        for instruction_type in order:
+            user_instruction = kwargs.get(instruction_type)
+            if user_instruction and instruction_type in system_instruction_template_list:
                 result = query_llama2(user_instruction, system_instruction_template_list[instruction_type])
                 text_list.append(result)
 

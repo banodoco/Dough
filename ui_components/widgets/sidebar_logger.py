@@ -94,7 +94,7 @@ def sidebar_logger(project_uuid):
                     st.warning("Canceled")
                 
                 if output_url:
-                    if 'timing_uuid' in origin_data:
+                    if origin_data is not None and 'timing_uuid' in origin_data:
                         timing = data_repo.get_timing_from_uuid(origin_data['timing_uuid'])
                         if st.session_state['frame_styling_view_type'] != "Timeline":
                             if timing:
