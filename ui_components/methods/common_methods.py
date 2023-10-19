@@ -825,7 +825,7 @@ def process_inference_output(**kwargs):
             output_file = data_repo.create_file(
                 name=filename, 
                 type=InternalFileType.IMAGE.value,
-                hosted_url=output[0], 
+                hosted_url=output[0] if isinstance(output, list) else output, 
                 inference_log_id=log.uuid
             )
             
@@ -926,14 +926,6 @@ def process_inference_output(**kwargs):
         output = kwargs.get('output')
 
         if output:
-            if isinstance(output, str) and output.startswith("http"):
-                temp_output_file = generate_temp_file(output, '.png')
-                output = None
-                with open(temp_output_file.name, 'rb') as f:
-                    output = f.read()
-
-                os.remove(temp_output_file.name)
-
             log_uuid = kwargs.get('log_uuid')
             project_uuid = kwargs.get('project_uuid')
             log = data_repo.get_inference_log_from_uuid(log_uuid)
@@ -941,7 +933,7 @@ def process_inference_output(**kwargs):
             output_file = data_repo.create_file(
                 name=filename, 
                 type=InternalFileType.IMAGE.value,
-                hosted_url=output[0], 
+                hosted_url=output[0] if isinstance(output, list) else output, 
                 inference_log_id=log.uuid,
                 project_id=project_uuid,
                 tag=InternalFileTag.GALLERY_IMAGE.value

@@ -1,6 +1,6 @@
 import time
 import streamlit as st
-from ui_components.methods.common_methods import add_image_variant, promote_image_variant, save_uploaded_image, update_clip_duration_of_all_timing_frames
+from ui_components.methods.common_methods import add_image_variant, promote_image_variant, save_and_promote_image, save_uploaded_image, update_clip_duration_of_all_timing_frames
 from ui_components.models import InternalFrameTimingObject
 from utils.constants import ImageStage
 

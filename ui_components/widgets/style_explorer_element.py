@@ -75,6 +75,7 @@ def style_explorer_element(project_uuid):
                     negative_prompt="bad image, worst image, bad anatomy, washed out colors",
                     height=project_settings.height,
                     width=project_settings.width,
+                    project_uuid=project_uuid
                 )
 
                 replicate_model = REPLICATE_MODEL.get_model_by_db_obj(model_dict[model_name])
@@ -97,7 +98,7 @@ def style_explorer_element(project_uuid):
         tag=InternalFileTag.GALLERY_IMAGE.value, 
         project_id=project_uuid,
         page=page_number,
-        data_per_page=10,
+        data_per_page=num_items_per_page,
         sort_order=SortOrder.DESCENDING.value     # newly created images appear first
     )
 
