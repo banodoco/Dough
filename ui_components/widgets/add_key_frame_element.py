@@ -95,7 +95,7 @@ def add_key_frame_element(timing_details, project_uuid):
 
     return selected_image, inherit_styling_settings, how_long_after, transformation_stage
 
-def add_key_frame(selected_image, inherit_styling_settings, how_long_after, target_frame_position=None):
+def add_key_frame(selected_image, inherit_styling_settings, how_long_after, target_frame_position=None, refresh_state=True):
     data_repo = DataRepo()
     project_uuid = st.session_state['project_uuid']
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
@@ -145,4 +145,6 @@ def add_key_frame(selected_image, inherit_styling_settings, how_long_after, targ
 
     st.session_state['page'] = CreativeProcessType.STYLING.value
     st.session_state['section_index'] = 0
-    st.rerun()
+    
+    if refresh_state:
+        st.rerun()
