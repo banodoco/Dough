@@ -17,6 +17,7 @@ class InternalFileObject:
         self.tag = kwargs['tag'] if key_present('tag', kwargs) else None
         self.created_on = kwargs['created_on'] if key_present('created_on', kwargs) else None
         self.inference_log = InferenceLogObject(**kwargs['inference_log']) if key_present('inference_log', kwargs) else None
+        self.project = InternalProjectObject(**kwargs['project']) if key_present('project', kwargs) else None
 
     @property
     def location(self):

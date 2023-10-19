@@ -13,15 +13,21 @@ import uuid
 import requests
 import streamlit as st
 from shared.constants import SERVER, InternalFileType, ServerType
+from ui_components.models import InternalFileObject
 from utils.data_repo.data_repo import DataRepo
 
 # depending on the environment it will either save or host the PIL image object
-def save_or_host_file(file, path, mime_type='image/png'):
+def save_or_host_file(file, path, mime_type='image/png', dim=None):
     data_repo = DataRepo()
     # TODO: fix session state management, remove direct access out side the main code
-    project_setting = data_repo.get_project_setting(st.session_state['project_uuid'])
-    if project_setting:
-        file = zoom_and_crop(file, project_setting.width, project_setting.height)
+    if dim:
+        width, height = dim[0], dim[1]
+    elif 'project_uuid' in st.session_state and st.session_state['project_uuid']:
+        project_setting = data_repo.get_project_setting(st.session_state['project_uuid'])
+        width, height = project_setting.width, project_setting.height
+
+    if width and height:
+        file = zoom_and_crop(file, width, height)
     else:
         # new project
         file = zoom_and_crop(file, 512, 512)
@@ -56,6 +62,24 @@ def zoom_and_crop(file, width, height):
     file = file.crop((left, top, right, bottom))
 
     return file
+
+# resizes file dimensions to current project_settings
+def normalize_size_internal_file_obj(file_obj: InternalFileObject):
+    if not file_obj or file_obj.type != InternalFileType.IMAGE.value:
+        return file_obj
+    
+    data_repo = DataRepo()
+    project_setting = data_repo.get_project_setting(file_obj.project.uuid)
+    dim = (project_setting.width, project_setting.height)
+
+    pil_file = generate_pil_image(file_obj.location)
+    uploaded_url = save_or_host_file(pil_file, file_obj.location, mime_type='image/png', dim=dim)
+    if uploaded_url:
+        data_repo = DataRepo()
+        data_repo.update_file(file_obj.uuid, hosted_url=uploaded_url)
+    
+    return file_obj
+
 
 def save_or_host_file_bytes(video_bytes, path, ext=".mp4"):
     uploaded_url = None

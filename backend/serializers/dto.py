@@ -67,10 +67,11 @@ class InferenceLogDto(serializers.ModelSerializer):
 
 
 class InternalFileDto(serializers.ModelSerializer):
+    project = ProjectDto()      # TODO: pass this as context to speed up the api
     inference_log = InferenceLogDto()
     class Meta:
         model = InternalFileObject
-        fields = ('uuid', 'name', 'local_path', 'type',  'hosted_url', 'created_on', 'inference_log')
+        fields = ('uuid', 'name', 'local_path', 'type',  'hosted_url', 'created_on', 'inference_log', 'project')
 
 
 class TimingDto(serializers.ModelSerializer):
