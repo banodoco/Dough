@@ -7,6 +7,7 @@ import math
 from ui_components.widgets.frame_selector import update_current_frame_index
 
 from utils.data_repo.data_repo import DataRepo
+from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
 def sidebar_logger(project_uuid):
     data_repo = DataRepo()
@@ -33,9 +34,15 @@ def sidebar_logger(project_uuid):
     b1, b2 = st.columns([1, 1])
 
     project_setting = data_repo.get_project_setting(project_uuid)
+    
     page_number = b1.number_input('Page number', min_value=1, max_value=project_setting.total_log_pages, value=1, step=1)
     items_per_page = b2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
-    log_list, total_page_count = data_repo.get_all_inference_log_list(project_id=project_uuid, page=page_number, data_per_page=items_per_page, status_list=status_list)
+    log_list, total_page_count = data_repo.get_all_inference_log_list(
+        project_id=project_uuid, 
+        page=page_number, 
+        data_per_page=items_per_page, 
+        status_list=status_list
+    )
     
     if project_setting.total_log_pages != total_page_count:
         project_setting.total_log_pages = total_page_count
