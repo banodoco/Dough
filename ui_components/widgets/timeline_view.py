@@ -32,7 +32,7 @@ def timeline_view_buttons(i, j, timing_details, shift_frames_setting, time_sette
     if time_setter_toggle or duration_setter_toggle or replace_image_widget_toggle or move_frames_toggle or delete_frames_toggle or change_position_toggle:
         st.caption("--")
     
-    jump_to_single_frame_view_button(i + j + 1, timing_details)        
+    jump_to_single_frame_view_button(i + j + 1, timing_details, 'timeline_btn_'+str(timing_details[i+j].uuid))        
 
 
 def timeline_view(project_uuid, stage):

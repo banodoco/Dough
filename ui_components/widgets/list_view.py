@@ -66,7 +66,7 @@ def styling_list_view(start_index, end_index, shift_frames_setting, project_uuid
                 st.write("") 
 
 
-            jump_to_single_frame_view_button(display_number,timing_details)
+            jump_to_single_frame_view_button(display_number,timing_details, 'styling_list_view_'+str(timing_details[i].uuid))
 
             st.markdown("---")
             btn1, btn2, btn3 = st.columns([2, 1, 1])
