@@ -212,8 +212,7 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, invert_ma
         input_image = open(input_image, "rb")
 
     ml_client = get_ml_client()
-    output, log = ml_client.predict_model_output(REPLICATE_MODEL.andreas_sd_inpainting, mask=mask, image=input_image, prompt=prompt,
-                                            invert_mask=invert_mask, negative_prompt=negative_prompt, num_inference_steps=25)
+    output, log = ml_client.predict_model_output(REPLICATE_MODEL.andreas_sd_inpainting, mask=mask, image=input_image, prompt=prompt, negative_prompt=negative_prompt, num_inference_steps=25, strength=1.0)
 
     file_name = str(uuid.uuid4()) + ".png"
     image_file = data_repo.create_file(
