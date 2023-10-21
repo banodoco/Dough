@@ -52,6 +52,8 @@ def timeline_view(project_uuid, stage):
     data_repo = DataRepo()
     timing_details = data_repo.get_timing_list_from_project(project_uuid)
 
+    st.markdown("***")
+
     header_col_1, header_col_2, header_col_3 = st.columns([1.5,4,1.5])
     
     with header_col_1:
@@ -81,6 +83,7 @@ def timeline_view(project_uuid, stage):
         items_per_row = st_memory.slider("How many frames per row?", min_value=1, max_value=10, value=5, step=1, key="items_per_row_slider")
     
     st.markdown("***")
+
     total_count = len(timing_details)
     for i in range(0, total_count, items_per_row):  # Step of items_per_row for grid
         grid = st.columns(items_per_row)  # Create items_per_row columns for grid
