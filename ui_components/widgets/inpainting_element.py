@@ -3,6 +3,7 @@ import os
 import time
 from io import BytesIO
 from typing import List
+import numpy as np
 import requests as r
 from PIL import Image, ImageOps
 import streamlit as st
@@ -146,7 +147,9 @@ def inpainting_element(timing_uuid):
                             if 'image_created' not in st.session_state:
                                 st.session_state['image_created'] = 'no'
 
-                            if canvas_result.image_data is not None:
+                            is_completely_transparent = np.all(canvas_result.image_data[:, :, 3] == 0)
+                            
+                            if not is_completely_transparent:
                                 img_data = canvas_result.image_data
                                 im = Image.fromarray(img_data.astype("uint8"), mode="RGBA")
                                 im_rgb = Image.new("RGB", im.size, (255, 255, 255))
@@ -154,6 +157,11 @@ def inpainting_element(timing_uuid):
                                 im = im_rgb
                                 im = ImageOps.invert(im)    # inverting for sdxl inpainting
                                 create_or_update_mask(st.session_state['current_frame_uuid'], im)
+                            
+                            if st.button("Reset Canvas"):
+                                cava
+                                st.session_state['edited_image'] = ""
+                                st.rerun()
                     else:
                         image_file = data_repo.get_file_from_uuid(st.session_state['edited_image'])
                         image_comparison(
