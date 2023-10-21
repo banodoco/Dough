@@ -129,7 +129,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             'width': query_obj.width,
             'height': query_obj.height,
             'steps': query_obj.num_inference_steps,
-            'seed': query_obj.seed
+            'seed': query_obj.seed if query_obj.seed not in [-1, 0] else 0
         }
     elif model == REPLICATE_MODEL.deliberate_v3 or model == REPLICATE_MODEL.dreamshaper_v7 or model == REPLICATE_MODEL.epicrealism_v5:
         data = {
@@ -140,8 +140,12 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             'prompt_strength': query_obj.strength,
             'guidance_scale': query_obj.guidance_scale,
             'num_inference_steps': query_obj.num_inference_steps,
-            'safety_checker': False
+            'safety_checker': False,
+            'seed': query_obj.seed
         }
+
+        if query_obj.seed in [-1, 0]:
+                del data['seed']
 
         if input_image:
             data['image'] = input_image
