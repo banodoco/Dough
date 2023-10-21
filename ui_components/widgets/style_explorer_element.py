@@ -7,6 +7,7 @@ from ui_components.widgets.add_key_frame_element import add_key_frame
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AIModelType, InferenceType, InternalFileTag, InternalFileType, SortOrder
+from utils import st_memory
 
 from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
@@ -18,8 +19,11 @@ def style_explorer_element(project_uuid):
     project_settings = data_repo.get_project_setting(project_uuid)
 
     _, a2, a3,_= st.columns([0.5, 1, 0.5,0.5])   
-    prompt = a2.text_area("What's your base prompt?", key="prompt", help="This will be included at the beginning of each prompt")
-    base_prompt_position = a3.radio("Where would you like to place the base prompt?", options=["Beginning", "End"], key="base_prompt_position", help="This will be included at the beginning of each prompt")
+    with a2:
+        prompt = st_memory.text_area("What's your base prompt?", key="explorer_base_prompt", help="This will be included at the beginning of each prompt")
+    with a3:
+        st.write("")
+        base_prompt_position = st_memory.radio("Where would you like to place the base prompt?", options=["Beginning", "End"], key="base_prompt_position", help="This will be included at the beginning of each prompt")
 
 
     _, b2, b3, b4, b5, _ = st.columns([0.5, 1, 1, 1, 1, 0.5])    
@@ -37,11 +41,11 @@ def style_explorer_element(project_uuid):
     
     _, c2, _ = st.columns([0.25, 1, 0.25])
     with c2:
-        models_to_use = st.multiselect("Which models would you like to use?", model_name_list, key="models_to_use", default=model_name_list, help="It'll rotate through the models you select.")
+        models_to_use = st.multiselect("Which models would you like to use?", model_name_list, key="models_to_use", default=[model_name_list[0]], help="It'll rotate through the models you select.")
 
     _, d2, _ = st.columns([0.75, 1, 0.75])
     with d2:        
-        number_to_generate = st.slider("How many images would you like to generate?", min_value=1, max_value=100, value=10, step=1, key="number_to_generate", help="It'll generate 4 from each variation.")
+        number_to_generate = st.slider("How many images would you like to generate?", min_value=0, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
     
     _, e2, _ = st.columns([0.5, 1, 0.5])
     if e2.button("Generate images", key="generate_images", use_container_width=True, type="primary"):
@@ -161,7 +165,8 @@ def create_variate_option(column, key):
     label = key.replace('_', ' ').capitalize()
     variate_option = column.checkbox(f"Vary {label.lower()}", key=f"{key}_checkbox")
     if variate_option:
-        instructions = column.text_area(f"How would you like to vary the {label.lower()}?", key=f"{key}_textarea", help=f"It'll write a custom {label.lower()} prompt based on your instructions.")
+        with column:
+            instructions = st_memory.text_area(f"How would you like to vary the {label.lower()}?", key=f"{key}_textarea", help=f"It'll write a custom {label.lower()} prompt based on your instructions.")
     else:
         instructions = ""
     return instructions

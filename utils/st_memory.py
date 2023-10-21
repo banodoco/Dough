@@ -105,3 +105,17 @@ def menu(menu_title,options, icons=None, menu_icon=None, default_index=0, key=No
         st.rerun()
         
     return selection
+
+def text_area(label, value='', height=None, max_chars=None, key=None, help=None, on_change=None, args=None, kwargs=None, *, disabled=False, label_visibility="visible"):
+    
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+    selection = st.text_area(label=label, value=st.session_state[key], height=height, max_chars=max_chars, help=help, on_change=on_change, disabled=disabled, label_visibility=label_visibility)
+
+    if selection != st.session_state[key]:
+        st.session_state[key] = selection
+        st.rerun()
+
+    return selection
+

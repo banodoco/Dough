@@ -95,6 +95,17 @@ def delete_frame(timing_uuid):
             timed_clip_id=None
         )
 
+    # If the frame being deleted is the first one
+    if timing.aux_frame_index == 0 and next_timing:
+        print("first frame")
+        print(next_timing.uuid)
+        print(timing.uuid)
+        data_repo.update_specific_timing(
+            next_timing.uuid,
+            start_time=0.0
+        )
+        
+
     data_repo.delete_timing_from_uuid(timing.uuid)
     timing_details = data_repo.get_timing_list_from_project(project_uuid=project_uuid)
     
