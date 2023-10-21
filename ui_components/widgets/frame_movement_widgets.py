@@ -180,8 +180,8 @@ def replace_image_widget(timing_uuid, stage, options=["Uploaded Frame","Other Fr
                         time.sleep(1)
                         st.rerun()
 
-def jump_to_single_frame_view_button(display_number, timing_details):
-    if st.button(f"Jump to #{display_number}"):
+def jump_to_single_frame_view_button(display_number, timing_details, src):
+    if st.button(f"Jump to #{display_number}", key=src):
         st.session_state['prev_frame_index'] = display_number
         st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
         st.session_state['frame_styling_view_type'] = "Individual"

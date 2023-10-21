@@ -51,8 +51,7 @@ def sidebar_logger(project_uuid):
     st.write("Total page count: ", total_page_count)
     # display_list = log_list[(page_number - 1) * items_per_page : page_number * items_per_page]                
 
-    if log_list is not None:
-        
+    if log_list and len(log_list):
         file_list = data_repo.get_file_list_from_log_uuid_list([log.uuid for log in log_list])
         log_file_dict = {}
         for file in file_list:
@@ -100,12 +99,10 @@ def sidebar_logger(project_uuid):
                 elif log.status == InferenceStatus.CANCELED.value:
                     st.warning("Canceled")
                 
-                if output_url:
-                    if 'timing_uuid' in origin_data:
-                        timing = data_repo.get_timing_from_uuid(origin_data['timing_uuid'])
-                        if st.session_state['frame_styling_view_type'] != "Timeline":
-                            if timing:
-                                jump_to_single_frame_view_button(timing.aux_frame_index + 1, timing_details)     
+                if output_url and 'timing_uuid' in origin_data:
+                    timing = data_repo.get_timing_from_uuid(origin_data['timing_uuid'])
+                    if timing and st.session_state['frame_styling_view_type'] != "Timeline":
+                        jump_to_single_frame_view_button(timing.aux_frame_index + 1, timing_details, 'sidebar_'+str(log.uuid))     
 
                     else:
                         if st.session_state['frame_styling_view_type'] != "Explorer":

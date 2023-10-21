@@ -1,6 +1,6 @@
 import datetime
 import json
-from shared.constants import InferenceParamType
+from shared.constants import InferenceParamType, ProjectMetaData
 
 from ui_components.constants import DefaultProjectSettingParams, DefaultTimingStyleParams
 from utils.common_decorators import session_state_attributes
@@ -66,6 +66,16 @@ class InternalProjectObject:
                 return file
             
         return None
+    
+    def get_background_image_list(self):
+        image_list = json.loads(self.meta_data).get(ProjectMetaData.BACKGROUND_IMG_LIST.value, [])
+        if image_list and len(image_list):
+            from utils.data_repo.data_repo import DataRepo
+            data_repo = DataRepo()
+            image_list = data_repo.get_image_list_from_uuid_list(image_list)
+            return image_list
+        
+        return []
 
 
 class InternalAIModelObject:

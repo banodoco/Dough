@@ -6,7 +6,7 @@ from shared.logging.constants import LoggingPayload, LoggingType
 from shared.logging.logging import AppLogger
 from utils.data_repo.data_repo import DataRepo
 
-from utils.ml_processor.replicate.constants import ReplicateModel
+from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
 
 
 def log_model_inference(model: ReplicateModel, time_taken, **kwargs):
@@ -37,6 +37,10 @@ def log_model_inference(model: ReplicateModel, time_taken, **kwargs):
     # storing the log in db
     data_repo = DataRepo()
     ai_model = data_repo.get_ai_model_from_name(model.name)
+
+    # hackish sol for insuring that inpainting logs don't have an empty model field
+    if ai_model is None and model.name == REPLICATE_MODEL.sdxl_inpainting.name:
+        ai_model = data_repo.get_ai_model_from_name(REPLICATE_MODEL.sdxl.name)
 
     log_data = {
         "project_id" : st.session_state["project_uuid"],

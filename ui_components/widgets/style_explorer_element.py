@@ -120,10 +120,7 @@ def style_explorer_element(project_uuid):
         st.rerun()
     
     total_image_count = res_payload['count']
-
     if gallery_image_list and len(gallery_image_list):
-        
-        
         start_index = 0
         end_index = min(start_index + num_items_per_page, total_image_count)
 
@@ -146,8 +143,8 @@ def style_explorer_element(project_uuid):
                                     st.warning("No data found")
                             else:
                                 st.warning("No data found")
-                                    
-                        if st.button(f"Add to timeline", key=f"Promote Variant #{(page_number - 1) * num_items_per_page + i + j + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
+                        
+                        if st.button(f"Add to timeline", key=f"{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
                             pil_image = generate_pil_image(gallery_image_list[i + j].location)
                             add_key_frame(pil_image, False, 2.5, len(data_repo.get_timing_list_from_project(project_uuid)), refresh_state=False)
 
