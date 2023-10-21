@@ -289,12 +289,12 @@ def inpainting_element(timing_uuid):
                                 which_image_to_use = st.number_input("Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0)
                                 
                                 if which_stage_to_use == WorkflowStageType.SOURCE.value:
-                                    background_image = timing_details[which_image_to_use].source_image.location
+                                    background_image = timing_details[which_image_to_use].source_image
                                 elif which_stage_to_use == WorkflowStageType.STYLED.value:
-                                    background_image = timing_details[which_image_to_use].primary_image_location
+                                    background_image = timing_details[which_image_to_use].primary_image
                             
                             with btn2:
-                                st.image(background_image, use_column_width=True)
+                                st.image(background_image.location, use_column_width=True)
 
                     elif st.session_state["type_of_mask_replacement"] == "Inpainting":
                         btn1, btn2 = st.columns([1, 1])
