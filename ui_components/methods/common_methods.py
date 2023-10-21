@@ -473,12 +473,12 @@ def replace_background(project_uuid, background_image) -> InternalFileObject:
     else:
         background_image = Image.open(f"{background_image}")
     
-    if SERVER == ServerType.DEVELOPMENT.value:
-        foreground_image = Image.open(SECOND_MASK_FILE_PATH)
-    else:
-        path = project.get_temp_mask_file(SECOND_MASK_FILE).location
+    path = project.get_temp_mask_file(SECOND_MASK_FILE).location
+    if path.startswith('http'):
         response = r.get(path)
         foreground_image = Image.open(BytesIO(response.content))
+    else:
+        foreground_image = Image.open(path)
 
     background_image.paste(foreground_image, (0, 0), foreground_image)
     filename = str(uuid.uuid4()) + ".png"
@@ -652,19 +652,18 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
         response = r.get(removed_background)
         img = Image.open(BytesIO(response.content))
         hosted_url = save_or_host_file(img, SECOND_MASK_FILE_PATH)
-        if hosted_url:
-            add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_url)
+        add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_url or SECOND_MASK_FILE_PATH)
 
         if type_of_mask_replacement == "Replace With Image":
             edited_image = replace_background(project.uuid, background_image)
 
         elif type_of_mask_replacement == "Inpainting":
-            if SERVER == ServerType.DEVELOPMENT.value:
-                image = Image.open(SECOND_MASK_FILE_PATH)
-            else:
-                path = project.get_temp_mask_file(SECOND_MASK_FILE).location
+            path = project.get_temp_mask_file(SECOND_MASK_FILE).location
+            if path.startswith("http"):
                 response = r.get(path)
                 image = Image.open(BytesIO(response.content))
+            else:
+                image = Image.open(path)
 
             converted_image = Image.new("RGB", image.size, (255, 255, 255))
             for x in range(image.width):
@@ -705,10 +704,9 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
                             result_img.putpixel((x, y), bg_img.getpixel((x, y)))
             
             hosted_manual_bg_url = save_or_host_file(result_img, SECOND_MASK_FILE_PATH)
-            if hosted_manual_bg_url:
-                add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_manual_bg_url)
-            edited_image = replace_background(
-                project.uuid, SECOND_MASK_FILE_PATH, background_image)
+            add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_manual_bg_url or SECOND_MASK_FILE_PATH)
+            edited_image = replace_background(project.uuid, SECOND_MASK_FILE_PATH, background_image)
+
         elif type_of_mask_replacement == "Inpainting":
             mask_location = timing.mask.location
             if mask_location.startswith("http"):
@@ -739,10 +737,9 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
             masked_img = Image.composite(bg_img, Image.new(
                 'RGBA', bg_img.size, (0, 0, 0, 0)), mask)
             hosted_automated_bg_url = save_or_host_file(result_img, SECOND_MASK_FILE_PATH)
-            if hosted_automated_bg_url:
-                add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_automated_bg_url)
-            edited_image = replace_background(
-                project.uuid, SECOND_MASK_FILE_PATH, background_image)
+            add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_automated_bg_url or SECOND_MASK_FILE_PATH)
+            edited_image = replace_background(project.uuid, SECOND_MASK_FILE_PATH, background_image)
+
         elif type_of_mask_replacement == "Inpainting":
             edited_image = inpainting(
                 editing_image, prompt, negative_prompt, timing_uuid, True)
@@ -760,14 +757,11 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
                 bg_img = Image.open(BytesIO(response.content)).convert('RGBA')
             else:
                 bg_img = Image.open(editing_image).convert('RGBA')
-            masked_img = Image.composite(bg_img, Image.new(
-                'RGBA', bg_img.size, (0, 0, 0, 0)), mask)
-            hosted_image_replace_url = save_or_host_file(result_img, SECOND_MASK_FILE_PATH)
-            if hosted_image_replace_url:
-                add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_image_replace_url)
             
-            edited_image = replace_background(
-                project.uuid, SECOND_MASK_FILE_PATH, background_image)
+            hosted_image_replace_url = save_or_host_file(result_img, SECOND_MASK_FILE_PATH)
+            add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_image_replace_url or SECOND_MASK_FILE_PATH)
+            edited_image = replace_background(project.uuid, SECOND_MASK_FILE_PATH, background_image)
+
         elif type_of_mask_replacement == "Inpainting":
             edited_image = inpainting(
                 editing_image, prompt, negative_prompt, timing_uuid, True)
@@ -790,11 +784,9 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
                 'RGBA', bg_img.size, (0, 0, 0, 0)), inverted_mask)
             # TODO: standardise temproray fixes
             hosted_prvious_invert_url = save_or_host_file(result_img, SECOND_MASK_FILE_PATH)
-            if hosted_prvious_invert_url:
-                add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_prvious_invert_url)
-            
-            edited_image = replace_background(
-                project.uuid, SECOND_MASK_FILE_PATH, background_image)
+            add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_prvious_invert_url or SECOND_MASK_FILE_PATH)
+            edited_image = replace_background(project.uuid, SECOND_MASK_FILE_PATH, background_image)
+
         elif type_of_mask_replacement == "Inpainting":
             edited_image = inpainting(
                 editing_image, prompt, negative_prompt, timing_uuid, False)

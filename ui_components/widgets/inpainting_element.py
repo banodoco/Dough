@@ -4,7 +4,7 @@ import time
 from io import BytesIO
 from typing import List
 import requests as r
-from PIL import Image
+from PIL import Image, ImageOps
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE, WorkflowStageType
@@ -127,9 +127,7 @@ def inpainting_element(timing_uuid):
                                     stroke_width = 3
 
                         with main_col_2:
-
                             realtime_update = True
-
                             canvas_result = st_canvas(
                                 fill_color="rgba(0, 0, 0)",
                                 stroke_width=stroke_width,
@@ -149,10 +147,12 @@ def inpainting_element(timing_uuid):
 
                             if canvas_result.image_data is not None:
                                 img_data = canvas_result.image_data
-                                im = Image.fromarray(
-                                    img_data.astype("uint8"), mode="RGBA")
-                                create_or_update_mask(
-                                    st.session_state['current_frame_uuid'], im)
+                                im = Image.fromarray(img_data.astype("uint8"), mode="RGBA")
+                                im_rgb = Image.new("RGB", im.size, (255, 255, 255))
+                                im_rgb.paste(im, mask=im.split()[3])
+                                im = im_rgb
+                                im = ImageOps.invert(im)    # inverting for sdxl inpainting
+                                create_or_update_mask(st.session_state['current_frame_uuid'], im)
                     else:
                         image_file = data_repo.get_file_from_uuid(st.session_state['edited_image'])
                         image_comparison(
@@ -389,10 +389,10 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
                 # Otherwise, make the pixel white in the new image
                 else:
                     mask.putpixel((x, y), (255, 255, 255))  # White
+
         # Save the mask image
         hosted_url = save_or_host_file(mask, MASK_IMG_LOCAL_PATH)
-        if hosted_url:
-            add_temp_file_to_project(project_uuid, TEMP_MASK_FILE, hosted_url)
+        add_temp_file_to_project(project_uuid, TEMP_MASK_FILE, hosted_url or MASK_IMG_LOCAL_PATH)
 
         cropped_img_path = hosted_cropped_img_path if hosted_cropped_img_path else CROPPED_IMG_LOCAL_PATH
         inpainted_file = inpainting(cropped_img_path, inpaint_prompt,

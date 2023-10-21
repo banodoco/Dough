@@ -199,11 +199,7 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, invert_ma
     if pass_mask == False:
         mask = timing.mask.location
     else:
-        # TODO: store the local temp files in the db too
-        if SERVER != ServerType.DEVELOPMENT.value:
-            mask = timing.project.get_temp_mask_file(TEMP_MASK_FILE).location
-        else:
-            mask = MASK_IMG_LOCAL_PATH
+        mask = timing.project.get_temp_mask_file(TEMP_MASK_FILE).location
 
     if not mask.startswith("http"):
         mask = open(mask, "rb")
@@ -212,11 +208,16 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, invert_ma
         input_image = open(input_image, "rb")
 
     ml_client = get_ml_client()
-    output, log = ml_client.predict_model_output(REPLICATE_MODEL.andreas_sd_inpainting, mask=mask, image=input_image, prompt=prompt, negative_prompt=negative_prompt, num_inference_steps=25, strength=1.0)
+    output, log = ml_client.predict_model_output(REPLICATE_MODEL.sdxl_inpainting, mask=mask, image=input_image, prompt=prompt, negative_prompt=negative_prompt, num_inference_steps=25, strength=1.0)
 
     file_name = str(uuid.uuid4()) + ".png"
     image_file = data_repo.create_file(
-        name=file_name, type=InternalFileType.IMAGE.value, hosted_url=output[0], inference_log_id=log.uuid)
+        name=file_name, 
+        type=InternalFileType.IMAGE.value, 
+        hosted_url=output[0] if isinstance(output, list) else output, 
+        inference_log_id=log.uuid,
+        project_id=timing.project.uuid
+    )
 
     return image_file
 

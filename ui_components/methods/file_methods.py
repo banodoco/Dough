@@ -46,6 +46,9 @@ def save_or_host_file(file, path, mime_type='image/png', dim=None):
     return uploaded_url
 
 def zoom_and_crop(file, width, height):
+    if file.width == width and file.height == height:
+        return file
+    
     # scaling
     s_x = width / file.width
     s_y = height / file.height
@@ -65,7 +68,7 @@ def zoom_and_crop(file, width, height):
 
 # resizes file dimensions to current project_settings
 def normalize_size_internal_file_obj(file_obj: InternalFileObject):
-    if not file_obj or file_obj.type != InternalFileType.IMAGE.value:
+    if not file_obj or file_obj.type != InternalFileType.IMAGE.value or not file_obj.project:
         return file_obj
     
     data_repo = DataRepo()
@@ -93,15 +96,19 @@ def save_or_host_file_bytes(video_bytes, path, ext=".mp4"):
     
     return uploaded_url
 
-def add_temp_file_to_project(project_uuid, key, hosted_url):
+def add_temp_file_to_project(project_uuid, key, file_path):
     data_repo = DataRepo()
 
     file_data = {
         "name": str(uuid.uuid4()) + ".png",
         "type": InternalFileType.IMAGE.value,
-        "project_id": project_uuid,
-        'hosted_url': hosted_url
+        "project_id": project_uuid
     }
+
+    if file_path.startswith('http'):
+        file_data.update({'hosted_url': file_path})
+    else:
+        file_data.update({'local_path': file_path})
 
     temp_file = data_repo.create_file(**file_data)
     project = data_repo.get_project_from_uuid(project_uuid)

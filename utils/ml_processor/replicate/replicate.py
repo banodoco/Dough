@@ -184,7 +184,7 @@ class ReplicateProcessor(MachineLearningProcessor):
 
     @check_user_credits
     def inpainting(self, video_name, input_image, prompt, negative_prompt):
-        model = self.get_model(REPLICATE_MODEL.andreas_sd_inpainting)
+        model = self.get_model(REPLICATE_MODEL.sdxl_inpainting)
         
         mask = "mask.png"
         mask = upload_file("mask.png", self.app_settings['aws_access_key'], self.app_settings['aws_secret_key'])
