@@ -157,11 +157,6 @@ def inpainting_element(timing_uuid):
                                 im = im_rgb
                                 im = ImageOps.invert(im)    # inverting for sdxl inpainting
                                 create_or_update_mask(st.session_state['current_frame_uuid'], im)
-                            
-                            if st.button("Reset Canvas"):
-                                cava
-                                st.session_state['edited_image'] = ""
-                                st.rerun()
                     else:
                         image_file = data_repo.get_file_from_uuid(st.session_state['edited_image'])
                         image_comparison(
