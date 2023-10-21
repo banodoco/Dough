@@ -674,13 +674,11 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
             bg_img = generate_pil_image(editing_image)
             mask_img = generate_pil_image(timing.mask.location)
 
-            # TODO: fix this logic, if the uploaded image and the image to be editted are of different sizes then
-            # this code will cause issues
             result_img = Image.new("RGBA", bg_img.size, (255, 255, 255, 0))
             for x in range(bg_img.size[0]):
                 for y in range(bg_img.size[1]):
                     if x < mask_img.size[0] and y < mask_img.size[1]:
-                        if mask_img.getpixel((x, y)) == (0, 0, 0) or mask_img.getpixel((x, y)) == (0, 0, 0, 255):
+                        if mask_img.getpixel((x, y)) == (255, 255, 255):
                             result_img.putpixel((x, y), (255, 255, 255, 0))
                         else:
                             result_img.putpixel((x, y), bg_img.getpixel((x, y)))
@@ -940,8 +938,10 @@ def process_inference_output(**kwargs):
 
 
 def check_project_meta_data(project_uuid):
-    # checking for project metadata (like cache updates)
-    # project_update_data is of the format {"data_update": [timing_uuid], "gallery_update": True/False}
+    '''
+    checking for project metadata (like cache updates)
+    project_update_data is of the format {"data_update": [timing_uuid], "gallery_update": True/False, "background_img_list": []}
+    '''
     data_repo = DataRepo()
     
     key = project_uuid

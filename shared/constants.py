@@ -97,6 +97,7 @@ class InferenceParamType(ExtendedEnum):
 class ProjectMetaData(ExtendedEnum):
     DATA_UPDATE = "data_update"                     # info regarding cache/data update when runner updates the db
     GALLERY_UPDATE = "gallery_update"
+    BACKGROUND_IMG_LIST = "background_img_list"
 
 class SortOrder(ExtendedEnum):
     ASCENDING = "asc"
