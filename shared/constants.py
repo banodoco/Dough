@@ -80,6 +80,7 @@ class InferenceType(ExtendedEnum):
     SINGLE_PREVIEW_VIDEO = "single_preview_video"                   # for generating a single preview video
     FRAME_INTERPOLATION = "frame_interpolation"                     # for generating single/multiple interpolated videos
     GALLERY_IMAGE_GENERATION = "gallery_image_generation"           # for generating gallery images
+    FRAME_INPAINTING = "frame_inpainting"                           # for generating inpainted frames
 
 class InferenceStatus(ExtendedEnum):
     QUEUED = "queued"

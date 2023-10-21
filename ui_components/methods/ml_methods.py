@@ -191,12 +191,11 @@ def facial_expression_recognition(input_image):
         emotion = (f"neutral expression")
     return emotion
 
-def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, invert_mask, pass_mask=False) -> InternalFileObject:
+def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, mask_in_project=False) -> InternalFileObject:
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
-    if pass_mask == False:
+    if mask_in_project == False:
         mask = timing.mask.location
     else:
         mask = timing.project.get_temp_mask_file(TEMP_MASK_FILE).location
@@ -208,18 +207,18 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, invert_ma
         input_image = open(input_image, "rb")
 
     ml_client = get_ml_client()
-    output, log = ml_client.predict_model_output(REPLICATE_MODEL.sdxl_inpainting, mask=mask, image=input_image, prompt=prompt, negative_prompt=negative_prompt, num_inference_steps=25, strength=1.0)
-
-    file_name = str(uuid.uuid4()) + ".png"
-    image_file = data_repo.create_file(
-        name=file_name, 
-        type=InternalFileType.IMAGE.value, 
-        hosted_url=output[0] if isinstance(output, list) else output, 
-        inference_log_id=log.uuid,
-        project_id=timing.project.uuid
+    output, log = ml_client.predict_model_output(
+        REPLICATE_MODEL.sdxl_inpainting, 
+        mask=mask, 
+        image=input_image, 
+        prompt=prompt, 
+        negative_prompt=negative_prompt, 
+        num_inference_steps=25, 
+        strength=1.0,
+        queue_inference=True
     )
 
-    return image_file
+    return output, log
 
 def remove_background(input_image):
     if not input_image.startswith("http"):

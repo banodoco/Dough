@@ -7,6 +7,7 @@ import requests as r
 from PIL import Image, ImageOps
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
+from shared.constants import InferenceType
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE, WorkflowStageType
 from ui_components.methods.file_methods import add_temp_file_to_project, save_or_host_file
 from utils.data_repo.data_repo import DataRepo
@@ -14,7 +15,7 @@ from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
-from ui_components.methods.common_methods import add_image_variant, execute_image_edit, create_or_update_mask, promote_image_variant
+from ui_components.methods.common_methods import add_image_variant, execute_image_edit, create_or_update_mask, process_inference_output, promote_image_variant
 from ui_components.models import InternalFrameTimingObject, InternalSettingObject
 from streamlit_image_comparison import image_comparison
 
@@ -237,17 +238,15 @@ def inpainting_element(timing_uuid):
                                             f.write(uploaded_file.getbuffer())
                                             st.success(
                                                 "Your backgrounds are uploaded file - they should appear in the dropdown.")
-                                            background_list.append(
-                                                uploaded_file.name)
+                                            background_list.append(uploaded_file.name)
                                             time.sleep(1.5)
                                             st.rerun()
                             with btn2:
-                                background_selection = st.selectbox(
-                                    "Range background", background_list)
+                                background_selection = st.selectbox("Range background", background_list)
                                 background_image = f'videos/{timing.project.uuid}/assets/resources/backgrounds/{background_selection}'
                                 if background_list != []:
-                                    st.image(f"{background_image}",
-                                             use_column_width=True)
+                                    st.image(f"{background_image}", use_column_width=True)
+
                         elif source_of_image == "From Other Frame":
                             btn1, btn2 = st.columns([1, 1])
                             with btn1:
@@ -278,14 +277,23 @@ def inpainting_element(timing_uuid):
                     with edit1:
                         if st.button(f'Run Edit On Current Image'):
                             if st.session_state["type_of_mask_replacement"] == "Inpainting":
-                                edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
+                                edited_image, log = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
                                                                   "", editing_image, prompt, negative_prompt, width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
-                                st.session_state['edited_image'] = edited_image.uuid
+                                
                             elif st.session_state["type_of_mask_replacement"] == "Replace With Image":
-                                edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
+                                edited_image, log = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
                                                                   background_image, editing_image, "", "", width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
-                                st.session_state['edited_image'] = edited_image.uuid
-                            st.rerun()
+                                
+                            inference_data = {
+                                "inference_type": InferenceType.FRAME_INPAINTING.value,
+                                "output": edited_image,
+                                "log_uuid": log.uuid,
+                                "timing_uuid": st.session_state['current_frame_uuid'],
+                                "promote_generation": False,
+                                "stage": stage
+                            }
+
+                            process_inference_output(**inference_data)
 
                     with edit2:
                         if st.session_state['edited_image'] != "":
@@ -303,26 +311,23 @@ def inpainting_element(timing_uuid):
                         else:
                             if st.button("Run Edit & Promote"):
                                 if st.session_state["type_of_mask_replacement"] == "Inpainting":
-                                    edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
+                                    edited_image, log = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
                                                                       "", editing_image, prompt, negative_prompt, width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
-                                    st.session_state['edited_image'] = edited_image.uuid
+
                                 elif st.session_state["type_of_mask_replacement"] == "Replace With Image":
-                                    edited_image = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
+                                    edited_image, log = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
                                                                       background_image, editing_image, "", "", width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
-                                    st.session_state['edited_image'] = edited_image.uuid
+                                
+                                inference_data = {
+                                    "inference_type": InferenceType.FRAME_INPAINTING.value,
+                                    "output": edited_image,
+                                    "log_uuid": log.uuid,
+                                    "timing_uuid": st.session_state['current_frame_uuid'],
+                                    "promote_generation": True,
+                                    "stage": stage
+                                }
 
-                                if stage == WorkflowStageType.SOURCE.value:
-                                    data_repo.update_specific_timing(
-                                        st.session_state['current_frame_uuid'], source_image_id=st.session_state['edited_image'])
-                                elif stage == WorkflowStageType.STYLED.value:
-                                    number_of_image_variants = add_image_variant(
-                                        edited_image.uuid, st.session_state['current_frame_uuid'])
-                                    promote_image_variant(
-                                        st.session_state['current_frame_uuid'], number_of_image_variants - 1)
-
-                                st.session_state['edited_image'] = ""
-                                st.success("Image promoted!")
-                                st.rerun()
+                                process_inference_output(**inference_data)
 
 
 # cropped_img here is a PIL image object

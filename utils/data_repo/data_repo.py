@@ -243,7 +243,7 @@ class DataRepo:
     
 
     # timing
-    def get_timing_from_uuid(self, uuid, invalidate_cache=False):
+    def get_timing_from_uuid(self, uuid, **kwargs):
         timing = self.db_repo.get_timing_from_uuid(uuid).data['data']
         return InternalFrameTimingObject(**timing) if timing else None
     
