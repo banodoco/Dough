@@ -110,7 +110,7 @@ class DataRepo:
 
         if file and file.type == InternalFileType.IMAGE.value:
             from ui_components.methods.file_methods import normalize_size_internal_file_obj
-            file = normalize_size_internal_file_obj(file)
+            file = normalize_size_internal_file_obj(file, **kwargs)
         
         return file
     
