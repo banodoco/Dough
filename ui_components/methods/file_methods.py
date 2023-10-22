@@ -67,13 +67,17 @@ def zoom_and_crop(file, width, height):
     return file
 
 # resizes file dimensions to current project_settings
-def normalize_size_internal_file_obj(file_obj: InternalFileObject):
+def normalize_size_internal_file_obj(file_obj: InternalFileObject, **kwargs):
     if not file_obj or file_obj.type != InternalFileType.IMAGE.value or not file_obj.project:
         return file_obj
     
     data_repo = DataRepo()
-    project_setting = data_repo.get_project_setting(file_obj.project.uuid)
-    dim = (project_setting.width, project_setting.height)
+
+    if 'dim' in kwargs:
+        dim = kwargs['dim']
+    else:
+        project_setting = data_repo.get_project_setting(file_obj.project.uuid)
+        dim = (project_setting.width, project_setting.height)
 
     pil_file = generate_pil_image(file_obj.location)
     uploaded_url = save_or_host_file(pil_file, file_obj.location, mime_type='image/png', dim=dim)

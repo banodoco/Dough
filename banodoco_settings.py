@@ -92,11 +92,12 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     sample_file_location = "sample_assets/sample_images/v.jpeg"
     img = Image.open(sample_file_location)
     img = img.resize((width, height))
-    hosted_url = save_or_host_file(img, sample_file_location)
+    hosted_url = save_or_host_file(img, sample_file_location, mime_type='image/png', dim=(width, height))
     file_data = {
         "name": str(uuid.uuid4()),
         "type": InternalFileType.IMAGE.value,
-        "project_id": project.uuid
+        "project_id": project.uuid,
+        "dim": (width, height),
     }
 
     if hosted_url:
