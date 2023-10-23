@@ -7,6 +7,7 @@ from ui_components.widgets.add_key_frame_element import add_key_frame
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AIModelType, InferenceType, InternalFileTag, InternalFileType, SortOrder
+from utils import st_memory
 
 from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
@@ -17,9 +18,19 @@ def style_explorer_element(project_uuid):
     data_repo = DataRepo() 
     project_settings = data_repo.get_project_setting(project_uuid)
 
+<<<<<<< HEAD
     _, a2, a3,_= st.columns([0.5, 1, 0.5,0.5])    
     prompt = a2.text_area("What's your base prompt?", key="prompt", help="This will be included at the beginning of each prompt")
     base_prompt_position = a3.radio("Where would you like to place the base prompt?", options=["Beginning", "End"], key="base_prompt_position", help="This will be included at the beginning of each prompt")
+=======
+    _, a2, a3,_= st.columns([0.5, 1, 0.5,0.5])   
+    with a2:
+        prompt = st_memory.text_area("What's your base prompt?", key="explorer_base_prompt", help="This will be included at the beginning of each prompt")
+    with a3:
+        st.write("")
+        base_prompt_position = st_memory.radio("Where would you like to place the base prompt?", options=["Beginning", "End"], key="base_prompt_position", help="This will be included at the beginning of each prompt")
+
+>>>>>>> green-head
 
     _, b2, b3, b4, b5, _ = st.columns([0.5, 1, 1, 1, 1, 0.5])    
     character_instructions = create_variate_option(b2, "character")  
@@ -36,11 +47,11 @@ def style_explorer_element(project_uuid):
     
     _, c2, _ = st.columns([0.25, 1, 0.25])
     with c2:
-        models_to_use = st.multiselect("Which models would you like to use?", model_name_list, key="models_to_use", default=model_name_list, help="It'll rotate through the models you select.")
+        models_to_use = st.multiselect("Which models would you like to use?", model_name_list, key="models_to_use", default=[model_name_list[0]], help="It'll rotate through the models you select.")
 
     _, d2, _ = st.columns([0.75, 1, 0.75])
     with d2:        
-        number_to_generate = st.slider("How many images would you like to generate?", min_value=1, max_value=100, value=10, step=1, key="number_to_generate", help="It'll generate 4 from each variation.")
+        number_to_generate = st.slider("How many images would you like to generate?", min_value=0, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
     
     _, e2, _ = st.columns([0.5, 1, 0.5])
     if e2.button("Generate images", key="generate_images", use_container_width=True, type="primary"):
@@ -79,6 +90,7 @@ def style_explorer_element(project_uuid):
                     negative_prompt="bad image, worst image, bad anatomy, washed out colors",
                     height=project_settings.height,
                     width=project_settings.width,
+                    project_uuid=project_uuid
                 )
 
                 replicate_model = REPLICATE_MODEL.get_model_by_db_obj(model_dict[model_name])
@@ -93,15 +105,23 @@ def style_explorer_element(project_uuid):
                 process_inference_output(**inference_data)
     
     project_setting = data_repo.get_project_setting(project_uuid)
+    st.markdown("***")
     page_number = st.radio("Select page", options=range(1, project_setting.total_gallery_pages + 1), horizontal=True)
-    num_items_per_page = 10
-
+    
+    f1,f2 = st.columns([1, 1])
+    num_columns = f1.slider('Number of columns:', min_value=1, max_value=10, value=4)
+    num_items_per_page = f2.slider('Items per page:', min_value=1, max_value=100, value=20)
+    st.markdown("***")
     gallery_image_list, res_payload = data_repo.get_all_file_list(
         file_type=InternalFileType.IMAGE.value, 
         tag=InternalFileTag.GALLERY_IMAGE.value, 
         project_id=project_uuid,
         page=page_number,
+<<<<<<< HEAD
         data_per_page=20,
+=======
+        data_per_page=num_items_per_page,
+>>>>>>> green-head
         sort_order=SortOrder.DESCENDING.value     # newly created images appear first
     )
 
@@ -110,10 +130,7 @@ def style_explorer_element(project_uuid):
         st.rerun()
     
     total_image_count = res_payload['count']
-
     if gallery_image_list and len(gallery_image_list):
-        st.markdown("***")
-        num_columns = st.slider('Number of columns', min_value=1, max_value=10, value=4)
         start_index = 0
         end_index = min(start_index + num_items_per_page, total_image_count)
 
@@ -136,11 +153,16 @@ def style_explorer_element(project_uuid):
                                     st.warning("No data found")
                             else:
                                 st.warning("No data found")
-                                    
-                        if st.button(f"Add to timeline", key=f"Promote Variant #{(page_number - 1) * num_items_per_page + i + j + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
+                        
+                        if st.button(f"Add to timeline", key=f"{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
                             pil_image = generate_pil_image(gallery_image_list[i + j].location)
-                            add_key_frame(pil_image, False, 2.5, len(data_repo.get_timing_list_from_project(project_uuid)))
+                            add_key_frame(pil_image, False, 2.5, len(data_repo.get_timing_list_from_project(project_uuid)), refresh_state=False)
+
+                            # removing this from the gallery view
+                            data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+
                             st.rerun()
+
             st.markdown("***")
     else:
         st.warning("No images present")
@@ -150,7 +172,8 @@ def create_variate_option(column, key):
     label = key.replace('_', ' ').capitalize()
     variate_option = column.checkbox(f"Vary {label.lower()}", key=f"{key}_checkbox")
     if variate_option:
-        instructions = column.text_area(f"How would you like to vary the {label.lower()}?", key=f"{key}_textarea", help=f"It'll write a custom {label.lower()} prompt based on your instructions.")
+        with column:
+            instructions = st_memory.text_area(f"How would you like to vary the {label.lower()}?", key=f"{key}_textarea", help=f"It'll write a custom {label.lower()} prompt based on your instructions.")
     else:
         instructions = ""
     return instructions

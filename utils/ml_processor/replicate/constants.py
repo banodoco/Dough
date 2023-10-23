@@ -9,7 +9,7 @@ class ReplicateModel:
     version: str
 
 class REPLICATE_MODEL:
-    andreas_sd_inpainting = ReplicateModel("andreasjansson/stable-diffusion-inpainting", "e490d072a34a94a11e9711ed5a6ba621c3fab884eda1665d9d3a282d65a21180")
+    sdxl_inpainting = ReplicateModel("lucataco/sdxl-inpainting", "f03c01943bacdee38d6a5d216586bf9bfbfd799350aed263aa32980efc173f0b")
     clones_lora_training = ReplicateModel("cloneofsimo/lora-training", "b2a308762e36ac48d16bfadc03a65493fe6e799f429f7941639a6acec5b276cc")
     clones_lora_training_2 = ReplicateModel("cloneofsimo/lora", "fce477182f407ffd66b94b08e761424cabd13b82b518754b83080bc75ad32466")
     google_frame_interpolation = ReplicateModel("google-research/frame-interpolation", "4f88a16a13673a8b589c18866e540556170a5bcb2ccdc12de556e800e9456d3d")

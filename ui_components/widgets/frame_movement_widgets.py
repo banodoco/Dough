@@ -1,6 +1,6 @@
 import time
 import streamlit as st
-from ui_components.methods.common_methods import add_image_variant, promote_image_variant, save_uploaded_image, update_clip_duration_of_all_timing_frames
+from ui_components.methods.common_methods import add_image_variant, promote_image_variant, save_and_promote_image, save_uploaded_image, update_clip_duration_of_all_timing_frames
 from ui_components.models import InternalFrameTimingObject
 from utils.constants import ImageStage
 
@@ -95,6 +95,17 @@ def delete_frame(timing_uuid):
             timed_clip_id=None
         )
 
+    # If the frame being deleted is the first one
+    if timing.aux_frame_index == 0 and next_timing:
+        print("first frame")
+        print(next_timing.uuid)
+        print(timing.uuid)
+        data_repo.update_specific_timing(
+            next_timing.uuid,
+            start_time=0.0
+        )
+        
+
     data_repo.delete_timing_from_uuid(timing.uuid)
     timing_details = data_repo.get_timing_list_from_project(project_uuid=project_uuid)
     
@@ -169,8 +180,8 @@ def replace_image_widget(timing_uuid, stage, options=["Uploaded Frame","Other Fr
                         time.sleep(1)
                         st.rerun()
 
-def jump_to_single_frame_view_button(display_number, timing_details):
-    if st.button(f"Jump to #{display_number}"):
+def jump_to_single_frame_view_button(display_number, timing_details, src):
+    if st.button(f"Jump to #{display_number}", key=src):
         st.session_state['prev_frame_index'] = display_number
         st.session_state['current_frame_uuid'] = timing_details[st.session_state['current_frame_index'] - 1].uuid
         st.session_state['frame_styling_view_type'] = "Individual"

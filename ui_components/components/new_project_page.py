@@ -78,12 +78,9 @@ def new_project_page():
             new_project_name = new_project_name.replace(" ", "_")
             current_user = data_repo.get_first_active_user()
 
-            try:
-                new_project = create_new_project(current_user, new_project_name, width, height, "Images", "Interpolation")
-                new_timing = create_timings_row_at_frame_number(new_project.uuid, 0)
-            except Exception as e:
-                st.error(f"Failed to create the new project due to {str(e)}")
-
+            new_project = create_new_project(current_user, new_project_name, width, height, "Images", "Interpolation")
+            new_timing = create_timings_row_at_frame_number(new_project.uuid, 0)
+            
             if starting_image:
                 try:
                     save_and_promote_image(starting_image, new_project.uuid, new_timing.uuid, "source")

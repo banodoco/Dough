@@ -1,6 +1,6 @@
 import datetime
 import json
-from shared.constants import InferenceParamType
+from shared.constants import InferenceParamType, ProjectMetaData
 
 from ui_components.constants import DefaultProjectSettingParams, DefaultTimingStyleParams
 from utils.common_decorators import session_state_attributes
@@ -17,6 +17,7 @@ class InternalFileObject:
         self.tag = kwargs['tag'] if key_present('tag', kwargs) else None
         self.created_on = kwargs['created_on'] if key_present('created_on', kwargs) else None
         self.inference_log = InferenceLogObject(**kwargs['inference_log']) if key_present('inference_log', kwargs) else None
+        self.project = InternalProjectObject(**kwargs['project']) if key_present('project', kwargs) else None
 
     @property
     def location(self):
@@ -65,6 +66,16 @@ class InternalProjectObject:
                 return file
             
         return None
+    
+    def get_background_image_list(self):
+        image_list = json.loads(self.meta_data).get(ProjectMetaData.BACKGROUND_IMG_LIST.value, [])
+        if image_list and len(image_list):
+            from utils.data_repo.data_repo import DataRepo
+            data_repo = DataRepo()
+            image_list = data_repo.get_image_list_from_uuid_list(image_list)
+            return image_list
+        
+        return []
 
 
 class InternalAIModelObject:

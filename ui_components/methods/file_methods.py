@@ -13,15 +13,21 @@ import uuid
 import requests
 import streamlit as st
 from shared.constants import SERVER, InternalFileType, ServerType
+from ui_components.models import InternalFileObject
 from utils.data_repo.data_repo import DataRepo
 
 # depending on the environment it will either save or host the PIL image object
-def save_or_host_file(file, path, mime_type='image/png'):
+def save_or_host_file(file, path, mime_type='image/png', dim=None):
     data_repo = DataRepo()
     # TODO: fix session state management, remove direct access out side the main code
-    project_setting = data_repo.get_project_setting(st.session_state['project_uuid'])
-    if project_setting:
-        file = zoom_and_crop(file, project_setting.width, project_setting.height)
+    if dim:
+        width, height = dim[0], dim[1]
+    elif 'project_uuid' in st.session_state and st.session_state['project_uuid']:
+        project_setting = data_repo.get_project_setting(st.session_state['project_uuid'])
+        width, height = project_setting.width, project_setting.height
+
+    if width and height:
+        file = zoom_and_crop(file, width, height)
     else:
         # new project
         file = zoom_and_crop(file, 512, 512)
@@ -40,6 +46,9 @@ def save_or_host_file(file, path, mime_type='image/png'):
     return uploaded_url
 
 def zoom_and_crop(file, width, height):
+    if file.width == width and file.height == height:
+        return file
+    
     # scaling
     s_x = width / file.width
     s_y = height / file.height
@@ -57,6 +66,28 @@ def zoom_and_crop(file, width, height):
 
     return file
 
+# resizes file dimensions to current project_settings
+def normalize_size_internal_file_obj(file_obj: InternalFileObject, **kwargs):
+    if not file_obj or file_obj.type != InternalFileType.IMAGE.value or not file_obj.project:
+        return file_obj
+    
+    data_repo = DataRepo()
+
+    if 'dim' in kwargs:
+        dim = kwargs['dim']
+    else:
+        project_setting = data_repo.get_project_setting(file_obj.project.uuid)
+        dim = (project_setting.width, project_setting.height)
+
+    pil_file = generate_pil_image(file_obj.location)
+    uploaded_url = save_or_host_file(pil_file, file_obj.location, mime_type='image/png', dim=dim)
+    if uploaded_url:
+        data_repo = DataRepo()
+        data_repo.update_file(file_obj.uuid, hosted_url=uploaded_url)
+    
+    return file_obj
+
+
 def save_or_host_file_bytes(video_bytes, path, ext=".mp4"):
     uploaded_url = None
     if SERVER != ServerType.DEVELOPMENT.value:
@@ -69,15 +100,19 @@ def save_or_host_file_bytes(video_bytes, path, ext=".mp4"):
     
     return uploaded_url
 
-def add_temp_file_to_project(project_uuid, key, hosted_url):
+def add_temp_file_to_project(project_uuid, key, file_path):
     data_repo = DataRepo()
 
     file_data = {
         "name": str(uuid.uuid4()) + ".png",
         "type": InternalFileType.IMAGE.value,
-        "project_id": project_uuid,
-        'hosted_url': hosted_url
+        "project_id": project_uuid
     }
+
+    if file_path.startswith('http'):
+        file_data.update({'hosted_url': file_path})
+    else:
+        file_data.update({'local_path': file_path})
 
     temp_file = data_repo.create_file(**file_data)
     project = data_repo.get_project_from_uuid(project_uuid)

@@ -562,7 +562,7 @@ class DBRepo:
         
         return InternalResponse(payload, 'inference log fetched', True)
     
-    def get_all_inference_log_list(self, project_id=None, page=1, data_per_page=5, status_list=None):
+    def get_all_inference_log_list(self, project_id=None, page=1, data_per_page=5, status_list=None, exclude_model_list=None):
         if project_id:
             project = Project.objects.filter(uuid=project_id, is_disabled=False).first()
             log_list = InferenceLog.objects.filter(project_id=project.id, is_disabled=False).order_by('-created_on').all()
@@ -573,6 +573,8 @@ class DBRepo:
             log_list = log_list.filter(status__in=status_list)
         else:
             log_list = log_list.exclude(status__in=["", None])
+
+        log_list = log_list.exclude(model_id=None)       # hackish sol to exclude non-image/video logs
 
         paginator = Paginator(log_list, data_per_page)
         if page > paginator.num_pages or page < 1:

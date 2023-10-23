@@ -7,6 +7,7 @@ import math
 from ui_components.widgets.frame_selector import update_current_frame_index
 
 from utils.data_repo.data_repo import DataRepo
+from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
 def sidebar_logger(project_uuid):
     data_repo = DataRepo()
@@ -33,9 +34,15 @@ def sidebar_logger(project_uuid):
     b1, b2 = st.columns([1, 1])
 
     project_setting = data_repo.get_project_setting(project_uuid)
+    
     page_number = b1.number_input('Page number', min_value=1, max_value=project_setting.total_log_pages, value=1, step=1)
     items_per_page = b2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
-    log_list, total_page_count = data_repo.get_all_inference_log_list(project_id=project_uuid, page=page_number, data_per_page=items_per_page, status_list=status_list)
+    log_list, total_page_count = data_repo.get_all_inference_log_list(
+        project_id=project_uuid, 
+        page=page_number, 
+        data_per_page=items_per_page, 
+        status_list=status_list
+    )
     
     if project_setting.total_log_pages != total_page_count:
         project_setting.total_log_pages = total_page_count
@@ -44,8 +51,7 @@ def sidebar_logger(project_uuid):
     st.write("Total page count: ", total_page_count)
     # display_list = log_list[(page_number - 1) * items_per_page : page_number * items_per_page]                
 
-    if log_list is not None:
-        
+    if log_list and len(log_list):
         file_list = data_repo.get_file_list_from_log_uuid_list([log.uuid for log in log_list])
         log_file_dict = {}
         for file in file_list:
@@ -93,12 +99,19 @@ def sidebar_logger(project_uuid):
                 elif log.status == InferenceStatus.CANCELED.value:
                     st.warning("Canceled")
                 
+<<<<<<< HEAD
                 if output_url:
                     if origin_data is not None and 'timing_uuid' in origin_data:
                         timing = data_repo.get_timing_from_uuid(origin_data['timing_uuid'])
                         if st.session_state['frame_styling_view_type'] != "Timeline":
                             if timing:
                                 jump_to_single_frame_view_button(timing.aux_frame_index + 1, timing_details)     
+=======
+                if output_url and 'timing_uuid' in origin_data:
+                    timing = data_repo.get_timing_from_uuid(origin_data['timing_uuid'])
+                    if timing and st.session_state['frame_styling_view_type'] != "Timeline":
+                        jump_to_single_frame_view_button(timing.aux_frame_index + 1, timing_details, 'sidebar_'+str(log.uuid))     
+>>>>>>> green-head
 
                     else:
                         if st.session_state['frame_styling_view_type'] != "Explorer":
