@@ -111,8 +111,8 @@ def add_key_frame(selected_image, inherit_styling_settings, how_long_after, targ
 
     if len(timing_details) == 0:
         key_frame_time = 0.0
-    elif target_frame_position is not None:
-        key_frame_time = float(timing_details[target_frame_position - 1].frame_time) + how_long_after
+    # elif target_frame_position is not None:
+      #  key_frame_time = float(timing_details[target_frame_position - 1].frame_time) + how_long_after
     elif index_of_current_item == len(timing_details):
         key_frame_time = float(timing_details[index_of_current_item - 1].frame_time) + how_long_after
     else:

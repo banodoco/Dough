@@ -188,6 +188,11 @@ def manual_cropping_element(stage, timing_uuid):
                         data_repo.update_specific_timing(
                             st.session_state['current_frame_uuid'], source_image_id=cropped_image.uuid)
                         time.sleep(1)
+                    else:
+                        save_zoomed_image(cropped_img, timing_uuid, stage)
+                        st.success("Cropped Image Saved Successfully")
+                        time.sleep(1)
+
                     st.rerun()
             with cropbtn2:
                 st.warning("Warning: This will overwrite the original image")

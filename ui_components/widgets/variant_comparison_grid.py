@@ -41,10 +41,11 @@ def variant_comparison_grid(timing_uuid, stage=CreativeProcessType.MOTION.value)
             st.image(variants[current_variant].location, use_column_width=True)
         st.success("**Main variant**")
 
-    # Calculate start and end indices for the variants to display on this page
-    start = (page - 1) * items_to_show
-    end = min(start + items_to_show, len(variants))  # Ensure end does not exceed the length of the variants list
-
+    total_variants = len(variants)
+    start = total_variants - (page * items_to_show)
+    end = start + items_to_show
+    if start < 0:
+        start = 0
     # Start from the last variant
     next_col = 1
     for i in range(end - 1, start - 1, -1):
