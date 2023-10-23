@@ -4,7 +4,7 @@ import streamlit as st
 import os
 import math
 from moviepy.editor import *
-from shared.constants import SERVER, ProjectMetaData, ServerType
+from shared.constants import SERVER, ServerType
 
 from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.custom_models_page import custom_models_page

@@ -1,5 +1,6 @@
 import time
 import streamlit as st
+from streamlit import runtime
 
 def count_calls(cls):
     class Wrapper(cls):
@@ -69,7 +70,7 @@ def session_state_attributes(default_value_cls):
                 if not (key in st.session_state and st.session_state[key]):
                     st.session_state[key] = getattr(default_value_cls, attr)
 
-                return st.session_state[key]
+                return st.session_state[key] if runtime.exists() else getattr(default_value_cls, attr)
             else:
                 return original_getattr(self, attr)
             

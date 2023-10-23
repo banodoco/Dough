@@ -279,47 +279,54 @@ def save_uploaded_image(image, project_uuid, frame_uuid, save_type):
         print(f"Failed to save image file due to: {str(e)}")
         return None
 
+# TODO: change variant_to_promote_frame_number to variant_uuid
 def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
+    '''
+    this methods promotes the variant to the primary image (also referred to as styled image)
+    and clears the interpolation data of the prev and the current frame
+    '''
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
 
+    # promoting variant
     variant_to_promote = timing.alternative_images_list[variant_to_promote_frame_number]
-    data_repo.update_specific_timing(
-        timing_uuid, primary_image_id=variant_to_promote.uuid)
+    data_repo.update_specific_timing(timing_uuid, primary_image_id=variant_to_promote.uuid)
 
     prev_timing = data_repo.get_prev_timing(timing_uuid)
+    # clearing the interpolation data of the prev frame
     if prev_timing:
-        data_repo.update_specific_timing(
-            prev_timing.uuid, interpolated_clip_list=None)
-        data_repo.update_specific_timing(
-            timing_uuid, interpolated_clip_list=None)
+        data_repo.update_specific_timing(prev_timing.uuid, interpolated_clip_list=None)
+        data_repo.update_specific_timing(timing_uuid, interpolated_clip_list=None)
+        data_repo.update_specific_timing(prev_timing.uuid, timed_clip_id=None)
 
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
         timing.project.uuid)
-    frame_idx = timing.aux_frame_index
-
-    # DOUBT: setting last interpolated_video to empty?
-    if frame_idx < len(timing_details):
-        data_repo.update_specific_timing(
-            timing.uuid, interpolated_clip_list=None)
-
-    if frame_idx > 1:
-        data_repo.update_specific_timing(
-            data_repo.get_prev_timing(timing_uuid).uuid, timed_clip_id=None)
-
-    data_repo.update_specific_timing(timing_uuid, timed_clip_id=None)
-
-    if frame_idx < len(timing_details):
+    
+    # if this is not the last element then clearing it's interpolation data
+    if timing.aux_frame_index < len(timing_details):
+        data_repo.update_specific_timing(timing.uuid, interpolated_clip_list=None)
         data_repo.update_specific_timing(timing.uuid, timed_clip_id=None)
 
+    data_repo.update_specific_timing(timing_uuid, timed_clip_id=None)
     _ = data_repo.get_timing_list_from_project(timing.project.uuid)
 
-# updates the clip duration of the variant_to_promote and sets it as the timed_clip
-def promote_video_variant(timing_uuid, variant_to_promote_frame_number: str):
+
+def promote_video_variant(timing_uuid, variant_uuid):
+    '''
+    this first changes the duration of the interpolated_clip to the frame clip_duration
+    then adds the clip to the timed_clip (which is considered as the main variant)
+    '''
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
 
-    variant_to_promote = timing.interpolated_clip_list[variant_to_promote_frame_number]
+    variant_to_promote = None
+    for variant in timing.interpolated_clip_list:
+        if variant.uuid == variant_uuid:
+            variant_to_promote = variant
+            break
+    
+    if not variant_to_promote:
+        return None
 
     if variant_to_promote.location.startswith(('http://', 'https://')):
         temp_video_path, _ = urllib3.request.urlretrieve(variant_to_promote.location)
