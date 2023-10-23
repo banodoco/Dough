@@ -39,7 +39,7 @@ def log_model_inference(model: ReplicateModel, time_taken, **kwargs):
     ai_model = data_repo.get_ai_model_from_name(model.name)
 
     # hackish sol for insuring that inpainting logs don't have an empty model field
-    if ai_model is None and model.name == REPLICATE_MODEL.sdxl_inpainting.name:
+    if ai_model is None and model.name in [REPLICATE_MODEL.sdxl_inpainting.name, REPLICATE_MODEL.ad_interpolation.name]:
         ai_model = data_repo.get_ai_model_from_name(REPLICATE_MODEL.sdxl.name)
 
     log_data = {

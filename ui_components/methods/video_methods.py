@@ -123,17 +123,29 @@ def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None)
         timing_uuid)
     return timing.preview_video
 
-# this includes all the animation styles [direct morphing, interpolation, image to video]
 def create_single_interpolated_clip(timing_uuid, quality, settings={}, variant_count=1):
+    '''
+    - this includes all the animation styles [direct morphing, interpolation, image to video]
+    - this stores the newly created video in the interpolated_clip_list and promotes them to
+    timed_clip (if it's not already present)
+    '''
+
     from ui_components.methods.common_methods import process_inference_output
     from shared.constants import QUEUE_INFERENCE_QUERIES
 
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
     next_timing: InternalFrameTimingObject = data_repo.get_next_timing(timing_uuid)
+    prev_timing: InternalFrameTimingObject = data_repo.get_prev_timing(timing_uuid)
 
     if not next_timing:
-        st.error('This is the last image. Please add more images to create interpolated clip.')
+        st.error('This is the last image. Please select images having both prev & next images')
+        time.sleep(0.5)
+        return None
+    
+    if not prev_timing:
+        st.error('This is the first image. Please select images having both prev & next images')
+        time.sleep(0.5)
         return None
 
     if quality == 'full':
@@ -142,7 +154,7 @@ def create_single_interpolated_clip(timing_uuid, quality, settings={}, variant_c
         interpolation_steps = 3
 
     timing.interpolated_steps = interpolation_steps
-    img_list = [timing.primary_image.location, next_timing.primary_image.location]
+    img_list = [prev_timing.primary_image.location, timing.primary_image.location, next_timing.primary_image.location]
     settings.update(interpolation_steps=timing.interpolation_steps)
 
     # res is an array of tuples (video_bytes, log)

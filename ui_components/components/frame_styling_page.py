@@ -4,10 +4,8 @@ from shared.constants import ViewType
 
 from ui_components.methods.ml_methods import trigger_restyling_process
 from ui_components.widgets.cropping_element import cropping_selector_element
-from ui_components.widgets.frame_clip_generation_elements import  current_preview_video_element
 from ui_components.widgets.frame_selector import frame_selector_widget
 from ui_components.widgets.frame_style_clone_element import style_cloning_element
-from ui_components.widgets.image_carousal import display_image
 from ui_components.widgets.prompt_finder import prompt_finder_element
 from ui_components.widgets.add_key_frame_element import add_key_frame, add_key_frame_element
 from ui_components.widgets.styling_element import styling_element
@@ -21,7 +19,7 @@ from ui_components.widgets.style_explorer_element import style_explorer_element
 from ui_components.widgets.variant_comparison_grid import variant_comparison_grid
 from utils import st_memory
 
-from ui_components.constants import CreativeProcessType, WorkflowStageType
+from ui_components.constants import CreativeProcessType
 
 from utils.data_repo.data_repo import DataRepo
 
@@ -41,7 +39,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
         st.session_state['seed'] = project_settings.default_seed
         st.session_state['num_inference_steps'] = project_settings.default_num_inference_steps
         st.session_state['transformation_stage'] = project_settings.default_stage
-        st.session_state['show_comparison'] = "Don't show"
         
     if "current_frame_uuid" not in st.session_state:        
         timing = data_repo.get_timing_list_from_project(project_uuid)[0]
@@ -67,30 +64,20 @@ def frame_styling_page(mainheader2, project_uuid: str):
     if st.session_state['frame_styling_view_type'] == "Explorer":
         style_explorer_element(project_uuid)
 
+    # -------------------- INDIVIDUAL VIEW ----------------------
     elif st.session_state['frame_styling_view_type'] == "Individual":
         with st.sidebar:
             frame_selector_widget()
                 
         if st.session_state['page'] == CreativeProcessType.MOTION.value:
-            idx = st.session_state['current_frame_index'] - 1
-            st.session_state['show_comparison'] = st_memory.radio("Show:", options=["Other Variants", "Preview Video in Context"], horizontal=True, key="show_comparison_radio_motion")
+            variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.MOTION.value)
 
-            if st.session_state['show_comparison'] == "Other Variants":
-                variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)                
-
-            elif st.session_state['show_comparison'] == "Preview Video in Context":
-                current_preview_video_element(st.session_state['current_frame_uuid'])
-                        
             st.markdown("***")
             with st.expander("🎬 Choose Animation Style & Create Variants", expanded=True):
                 animation_style_element(st.session_state['current_frame_uuid'], project_uuid)
 
         elif st.session_state['page'] == CreativeProcessType.STYLING.value:
-            # carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.value)
-
-            variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)                
-                
-
+            variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
 
             st.markdown("***")
             st.session_state['styling_view'] = st_memory.menu('',\
@@ -115,7 +102,6 @@ def frame_styling_page(mainheader2, project_uuid: str):
                                 )
 
                         with detail2:
-                            # TODO: add custom model validation such for sd img2img the value of strength can only be 1
                             if st.button(f"Generate variants", key=f"new_variations_{st.session_state['current_frame_index']}", help="This will generate new variants based on the settings to the left."):
                                 for i in range(0, max(st.session_state['individual_number_of_variants'], 1)):
                                     trigger_restyling_process(
@@ -168,7 +154,8 @@ def frame_styling_page(mainheader2, project_uuid: str):
                 if st.button(f"Add key frame",type="primary",use_container_width=True):
                     add_key_frame(selected_image, inherit_styling_settings, how_long_after)
                     st.rerun()
-                        
+
+    # -------------------- TIMELINE VIEW --------------------------       
     elif st.session_state['frame_styling_view_type'] == "Timeline":
 
         if st.session_state['page'] == "Key Frames":
@@ -179,6 +166,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
         elif st.session_state['page'] == "Videos":
             timeline_view(project_uuid, "Videos")
     
+    # -------------------- SIDEBAR NAVIGATION --------------------------
     with st.sidebar:
         with st.expander("🔍 Inference Logging", expanded=True):    
             sidebar_logger(project_uuid)
