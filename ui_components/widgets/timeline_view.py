@@ -24,7 +24,7 @@ def timeline_view_buttons(i, j, timing_list, shift_frames_setting, time_setter_t
         with btn3:
             if st.button("🔁", key=f"copy_frame_{timing_list[i + j].uuid}"):
                 pil_image = generate_pil_image(timing_list[i + j].primary_image.location)
-                add_key_frame(pil_image, False, 2.5, timing_list[i + j].aux_frame_index+1, refresh_state=False)
+                add_key_frame(pil_image, False, timing_list[i + j].aux_frame_index+1, refresh_state=False)
 
                 st.rerun()
 

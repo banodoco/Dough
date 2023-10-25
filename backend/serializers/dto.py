@@ -98,7 +98,6 @@ class TimingDto(serializers.ModelSerializer):
             "canny_image",
             "preview_video",
             "custom_model_id_list",
-            "frame_time",
             "frame_number",
             "primary_image",
             "alternative_images",

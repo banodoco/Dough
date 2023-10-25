@@ -8,7 +8,7 @@ from utils.data_repo.data_repo import DataRepo
 
 from utils.constants import ImageStage
 from ui_components.methods.file_methods import generate_pil_image,save_or_host_file
-from ui_components.methods.common_methods import apply_image_transformations, clone_styling_settings, create_timings_row_at_frame_number, save_uploaded_image
+from ui_components.methods.common_methods import apply_image_transformations, clone_styling_settings, create_frame_inside_shot, save_uploaded_image
 from PIL import Image
 
 
@@ -65,9 +65,6 @@ def add_key_frame_element(shot_uuid):
                 image_idx = st.session_state['current_frame_index']
 
         
-        how_long_after = st.slider(
-            "How long after the current frame?", min_value=0.0, max_value=10.0, value=2.5, step=0.1)
-        
         radio_text = "Inherit styling settings from the " + ("current frame?" if source_of_starting_image == "Uploaded image" else "selected frame")
         inherit_styling_settings = st_memory.radio(radio_text, ["Yes", "No"], \
                                                 key="inherit_styling_settings", horizontal=True)
@@ -91,9 +88,9 @@ def add_key_frame_element(shot_uuid):
         else:
             st.error("No Starting Image Found")
 
-    return selected_image, inherit_styling_settings, how_long_after, transformation_stage
+    return selected_image, inherit_styling_settings, transformation_stage
 
-def add_key_frame(selected_image, inherit_styling_settings, how_long_after, target_frame_position=None, refresh_state=True):
+def add_key_frame(selected_image, inherit_styling_settings, target_frame_position=None, refresh_state=True):
     data_repo = DataRepo()
     shot_uuid = st.session_state['shot_uuid']
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
@@ -105,20 +102,11 @@ def add_key_frame(selected_image, inherit_styling_settings, how_long_after, targ
         target_frame_position = st.session_state['current_frame_index'] if target_frame_position is None else target_frame_position
         index_of_current_item = min(len(timing_list), target_frame_position)
 
-    if len(timing_list) == 0:
-        key_frame_time = 0.0
-    elif target_frame_position is not None:
-        key_frame_time = float(timing_list[target_frame_position - 1].frame_time) + how_long_after
-    elif index_of_current_item == len(timing_list):
-        key_frame_time = float(timing_list[index_of_current_item - 1].frame_time) + how_long_after
-    else:
-        key_frame_time = (float(timing_list[index_of_current_item - 1].frame_time) + float(
-            timing_list[index_of_current_item].frame_time)) / 2.0
 
     if len(timing_list) == 0:
-        _ = create_timings_row_at_frame_number(shot_uuid, 0)
+        _ = create_frame_inside_shot(shot_uuid, 0)
     else:
-        _ = create_timings_row_at_frame_number(shot_uuid, index_of_current_item, frame_time=key_frame_time)
+        _ = create_frame_inside_shot(shot_uuid, index_of_current_item)
 
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
     if selected_image:

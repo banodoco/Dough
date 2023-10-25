@@ -1,6 +1,6 @@
 import streamlit as st
 from banodoco_settings import create_new_project
-from ui_components.methods.common_methods import save_audio_file,create_timings_row_at_frame_number, save_and_promote_image
+from ui_components.methods.common_methods import save_audio_file,create_frame_inside_shot, save_and_promote_image
 from utils.common_utils import get_current_user_uuid, reset_project_state
 from utils.data_repo.data_repo import DataRepo
 import time
@@ -79,7 +79,7 @@ def new_project_page():
             current_user = data_repo.get_first_active_user()
 
             new_project, shot = create_new_project(current_user, new_project_name, width, height, "Images", "Interpolation")
-            new_timing = create_timings_row_at_frame_number(shot.uuid, 0)
+            new_timing = create_frame_inside_shot(shot.uuid, 0)
             
             if starting_image:
                 try:

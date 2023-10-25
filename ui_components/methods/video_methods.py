@@ -7,116 +7,18 @@ from typing import List
 import ffmpeg
 import streamlit as st
 import uuid
-from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, vfx, AudioFileClip
+from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, AudioFileClip
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 
 from backend.models import InternalFileObject
-from shared.constants import AnimationToolType, InferenceType, InternalFileTag
+from shared.constants import InferenceType, InternalFileTag
 from shared.file_upload.s3 import is_s3_image_url
-from ui_components.constants import VideoQuality
-from ui_components.methods.file_methods import convert_bytes_to_file, generate_temp_file
+from ui_components.methods.file_methods import convert_bytes_to_file
 from ui_components.models import InternalFrameTimingObject, InternalSettingObject, InternalShotObject
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.interpolator import VideoInterpolator
 from utils.media_processor.video import VideoProcessor
 
-
-# NOTE: interpolated_clip_uuid signals which clip to promote to timed clip (this is the main variant)
-# this function returns the 'single' preview_clip, which is basically timed_clip with the frame number
-def create_or_get_single_preview_video(timing_uuid, interpolated_clip_uuid=None):
-    from ui_components.methods.file_methods import generate_temp_file
-    from ui_components.methods.common_methods import get_audio_bytes_for_slice
-    from ui_components.methods.common_methods import process_inference_output
-    from shared.constants import QUEUE_INFERENCE_QUERIES
-
-    data_repo = DataRepo()
-
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-    project_details: InternalSettingObject = data_repo.get_project_setting(
-        timing.project.uuid)
-
-    if not len(timing.interpolated_clip_list):
-        timing.interpolation_steps = 3
-        next_timing = data_repo.get_next_timing(timing.uuid)
-        img_list = [timing.source_image.location, next_timing.source_image.location]
-        res = VideoInterpolator.video_through_frame_interpolation(img_list, \
-                                                                  {"interpolation_steps": timing.interpolation_steps}, 1, \
-                                                                    False)      # TODO: queuing is not enabled here
-        
-        output_url, log = res[0]
-
-        inference_data = {
-            "inference_type": InferenceType.SINGLE_PREVIEW_VIDEO.value,
-            "file_location_to_save": "videos/" + timing.project.uuid + "/assets/videos" + (str(uuid.uuid4())) + ".mp4",
-            "mime_type": "video/mp4",
-            "output": output_url,
-            "project_uuid": timing.project.uuid,
-            "log_uuid": log.uuid,
-            "timing_uuid": timing_uuid
-        }
-
-        process_inference_output(**inference_data)
-        
-    timing = data_repo.get_timing_from_uuid(timing_uuid)
-    if not timing.timed_clip:
-        interpolated_clip = data_repo.get_file_from_uuid(interpolated_clip_uuid) if interpolated_clip_uuid \
-                                else timing.interpolated_clip_list[0]
-        
-        output_video = update_speed_of_video_clip(interpolated_clip, timing_uuid)
-        data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
-
-    if not timing.preview_video:
-        timing = data_repo.get_timing_from_uuid(timing_uuid)
-        timed_clip = timing.timed_clip
-        
-        temp_video_file = None
-        if timed_clip.hosted_url and is_s3_image_url(timed_clip.hosted_url):
-            temp_video_file = generate_temp_file(timed_clip.hosted_url, '.mp4')
-
-        file_path = temp_video_file.name if temp_video_file else timed_clip.local_path
-        clip = VideoFileClip(file_path)
-        
-        if temp_video_file:
-            os.remove(temp_video_file.name)
-
-        number_text = TextClip(str(timing.aux_frame_index),
-                               fontsize=24, color='white')
-        number_background = TextClip(" ", fontsize=24, color='black', bg_color='black', size=(
-            number_text.w + 10, number_text.h + 10))
-        number_background = number_background.set_position(
-            ('left', 'top')).set_duration(clip.duration)
-        number_text = number_text.set_position(
-            (number_background.w - number_text.w - 5, number_background.h - number_text.h - 5)).set_duration(clip.duration)
-        clip_with_number = CompositeVideoClip([clip, number_background, number_text])
-
-        temp_output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
-        clip_with_number.write_videofile(filename=temp_output_file.name, codec='libx264', audio_codec='aac')
-
-        if temp_output_file:
-            video_bytes = None
-            with open(file_path, 'rb') as f:
-                video_bytes = f.read()
-
-            preview_video = convert_bytes_to_file(
-                file_location_to_save="videos/" + str(timing.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".png",
-                mime_type="video/mp4",
-                file_bytes=video_bytes,
-                project_uuid=timing.project.uuid,
-                inference_log_id=None
-            )
-
-            data_repo.update_specific_timing(timing_uuid, preview_video_id=preview_video.uuid)
-            os.remove(temp_output_file.name)
-
-    # adding audio if the audio file is present
-    if project_details.audio:
-        audio_bytes = get_audio_bytes_for_slice(timing_uuid)
-        add_audio_to_video_slice(timing.preview_video, audio_bytes)
-
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-    return timing.preview_video
 
 def create_single_interpolated_clip(timing_uuid, quality, settings={}, variant_count=1):
     '''

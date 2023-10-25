@@ -922,7 +922,7 @@ class DBRepo:
 
         return InternalResponse({}, 'success', True)
     
-    def update_specific_timing(self, uuid, **kwargs):       ## change this
+    def update_specific_timing(self, uuid, **kwargs):
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)

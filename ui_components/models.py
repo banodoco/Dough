@@ -126,7 +126,6 @@ class InternalFrameTimingObject:
             **kwargs["canny_image"]) if 'canny_image' in kwargs and kwargs["canny_image"] else None
         self.primary_image = InternalFileObject(
             **kwargs["primary_image"]) if 'primary_image' in kwargs and kwargs["primary_image"] else None
-        self.frame_time = kwargs['frame_time'] if 'frame_time' in kwargs else None
         self.frame_number = kwargs['frame_number'] if 'frame_number' in kwargs else None
         self.alternative_images = kwargs['alternative_images'] if 'alternative_images' in kwargs and kwargs["alternative_images"] else [
         ]

@@ -149,7 +149,7 @@ def style_explorer_element(shot_uuid):
                         
                         if st.button(f"Add to timeline", key=f"{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
                             pil_image = generate_pil_image(gallery_image_list[i + j].location)
-                            add_key_frame(pil_image, False, 2.5, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
+                            add_key_frame(pil_image, False, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
 
                             # removing this from the gallery view
                             data_repo.update_file(gallery_image_list[i + j].uuid, tag="")

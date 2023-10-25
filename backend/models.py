@@ -212,14 +212,6 @@ class Shot(BaseModel):
                     shots_to_move.update(shot_idx=F('shot_idx') + 1, timed_clip=None, preview_video=None)
 
         super(Shot, self).save(*args, **kwargs)
-        
-        # if the overall duration of the shot is updated
-        # then we update the duration of the last frame inside the shot
-        if self.old_duration != self.duration:
-            shot_timing_list = Timing.objects.filter(shot_id=self.id, is_disabled=False).order_by('aux_frame_index')
-            if shot_timing_list and len(shot_timing_list):
-                clip_duration = round(self.duration - shot_timing_list[len(shot_timing_list)-1].frame_time, 2)
-                shot_timing_list[len(shot_timing_list)-1].update(clip_duration=clip_duration)
 
 
 class Timing(BaseModel):
@@ -234,7 +226,6 @@ class Timing(BaseModel):
     primary_image = models.ForeignKey(InternalFileObject, related_name="primary_image", on_delete=models.DO_NOTHING, null=True)   # variant number that is currently selected (among alternative images) NONE if none is present
     shot_id = models.ForeignKey(Shot, on_delete=models.CASCADE, null=True)
     custom_model_id_list = models.TextField(default=None, null=True, blank=True)    
-    frame_time = models.FloatField(default=None, null=True)
     frame_number = models.IntegerField(default=None, null=True)
     alternative_images = models.TextField(default=None, null=True)
     custom_pipeline = models.CharField(max_length=255, default=None, null=True, blank=True)
@@ -263,7 +254,6 @@ class Timing(BaseModel):
         self.old_is_disabled = self.is_disabled
         self.old_aux_frame_index = self.aux_frame_index
         self.old_timed_clip = self.timed_clip
-        self.old_frame_time = self.frame_time
 
     def save(self, *args, **kwargs):
         # TODO: updating details of every frame this way can be slow - implement a better strategy
@@ -294,13 +284,6 @@ class Timing(BaseModel):
                 if self.aux_frame_index >= self.old_aux_frame_index:
                     timings_to_move = Timing.objects.filter(project_id=self.project_id, aux_frame_index__gt=self.old_aux_frame_index, \
                                     aux_frame_index__lte=self.aux_frame_index, is_disabled=False).order_by('aux_frame_index')
-                    frame_time_list = [int(self.frame_time * 100) / 100]
-                    for t in timings_to_move:
-                        frame_time_list.append(t.frame_time)
-                    # updating frame time
-                    for idx, t in enumerate(timings_to_move):
-                        Timing.objects.filter(uuid=t.uuid, is_disabled=False).update(frame_time=int(frame_time_list[idx] * 100) / 100)
-                    self.frame_time = frame_time_list[-1]
 
                     # moving the frames between old and new index one step backwards
                     timings_to_move.update(aux_frame_index=F('aux_frame_index') - 1)
@@ -308,17 +291,6 @@ class Timing(BaseModel):
                     timings_to_move = Timing.objects.filter(project_id=self.project_id, aux_frame_index__gte=self.aux_frame_index, \
                                        aux_frame_index__lt=self.old_aux_frame_index, is_disabled=False).order_by('aux_frame_index')
                     
-                    frame_time_list = [self.frame_time]
-                    for t in reversed(timings_to_move):
-                        frame_time_list.append(t.frame_time)
-                    # updating frame time
-                    frame_time_list.reverse()
-                    idx = 0
-                    self.frame_time = int(frame_time_list[idx] * 100) / 100
-                    idx += 1
-                    for t in timings_to_move:
-                        Timing.objects.filter(uuid=t.uuid, is_disabled=False).update(frame_time=int(frame_time_list[idx] * 100) / 100)
-                        idx += 1
                     # moving frames
                     timings_to_move.update(aux_frame_index=F('aux_frame_index') + 1, timed_clip=None, preview_video=None)
                     
@@ -335,26 +307,6 @@ class Timing(BaseModel):
 
         super().save(*args, **kwargs)
 
-        if update_frame_duration:
-            # updating clip_duration
-            timing_list = Timing.objects.filter(project_id=self.project_id, is_disabled=False).order_by('aux_frame_index')
-            length_of_list = len(timing_list)
-
-            for idx, timing_item in enumerate(timing_list):
-                # last frame
-                if idx == (length_of_list - 1):
-                    time_of_frame = timing_item.frame_time
-                    duration_of_static_time = 0.0
-                    end_duration_of_frame = float(time_of_frame) + float(duration_of_static_time)
-                    total_duration_of_frame = float(end_duration_of_frame) - float(time_of_frame)
-                else:
-                    time_of_frame = timing_item.frame_time
-                    next_timing = timing_list[idx + 1]
-                    time_of_next_frame = next_timing.frame_time
-                    total_duration_of_frame = float(time_of_next_frame) - float(time_of_frame)
-
-                total_duration_of_frame = round(total_duration_of_frame, 2)
-                Timing.objects.filter(uuid=timing_item.uuid, is_disabled=False).update(clip_duration=total_duration_of_frame)
 
     def add_interpolated_clip_list(self, clip_uuid_list):
         cur_list = json.loads(self.interpolated_clip_list) if self.interpolated_clip_list else []
