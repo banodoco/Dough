@@ -1,4 +1,3 @@
-
 import streamlit as st
 from shared.constants import ViewType
 
@@ -24,10 +23,11 @@ from ui_components.constants import CreativeProcessType
 from utils.data_repo.data_repo import DataRepo
 
 
-def frame_styling_page(mainheader2, project_uuid: str):
+def frame_styling_page(shot_uuid: str):
     data_repo = DataRepo()
-    timing_details = data_repo.get_timing_list_from_project(project_uuid)
-    project_settings = data_repo.get_project_setting(project_uuid)
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
+    project_settings = data_repo.get_project_setting(shot.project.uuid)
 
     if "strength" not in st.session_state:
         st.session_state['strength'] = project_settings.default_strength
@@ -40,10 +40,10 @@ def frame_styling_page(mainheader2, project_uuid: str):
         st.session_state['num_inference_steps'] = project_settings.default_num_inference_steps
         st.session_state['transformation_stage'] = project_settings.default_stage
         
-    if "current_frame_uuid" not in st.session_state:        
-        timing = data_repo.get_timing_list_from_project(project_uuid)[0]
-        st.session_state['current_frame_uuid'] = timing.uuid
-        st.session_state['current_frame_index'] = timing.aux_frame_index + 1
+    if f"{shot.uuid}__" + "current_frame_uuid" not in st.session_state:        
+        timing = data_repo.get_timing_list_from_shot(shot_uuid)[0]
+        st.session_state[f"{shot.uuid}__" + 'current_frame_uuid'] = timing.uuid
+        st.session_state[f"{shot.uuid}__" + 'current_frame_index'] = timing.aux_frame_index + 1
     
     if 'frame_styling_view_type' not in st.session_state:
         st.session_state['frame_styling_view_type'] = "Individual"
@@ -59,10 +59,10 @@ def frame_styling_page(mainheader2, project_uuid: str):
         st.markdown(
             f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{st.session_state['page']}] > :blue[Frame #{st.session_state['current_frame_index']}]")
 
-    project_settings = data_repo.get_project_setting(project_uuid)
+    project_settings = data_repo.get_project_setting(shot.project.uuid)
 
     if st.session_state['frame_styling_view_type'] == "Explorer":
-        style_explorer_element(project_uuid)
+        style_explorer_element(shot_uuid)
 
     # -------------------- INDIVIDUAL VIEW ----------------------
     elif st.session_state['frame_styling_view_type'] == "Individual":
@@ -74,7 +74,7 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             st.markdown("***")
             with st.expander("🎬 Choose Animation Style & Create Variants", expanded=True):
-                animation_style_element(st.session_state['current_frame_uuid'], project_uuid)
+                animation_style_element(st.session_state['current_frame_uuid'], shot_uuid)
 
         elif st.session_state['page'] == CreativeProcessType.STYLING.value:
             variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
@@ -132,14 +132,14 @@ def frame_styling_page(mainheader2, project_uuid: str):
                         st.info(
                             "You can restyle multiple frames at once in the Timeline view.")
                         st.markdown("***")
-                        style_cloning_element(timing_details)
+                        style_cloning_element(timing_list)
                                     
                 with st.expander("🔍 Prompt Finder"):
-                    prompt_finder_element(project_uuid)
+                    prompt_finder_element(shot_uuid)
             
             elif st.session_state['styling_view'] == "Crop, Move & Rotate Image":
                 with st.expander("🤏 Crop, Move & Rotate Image", expanded=True):                    
-                    cropping_selector_element(project_uuid)
+                    cropping_selector_element(shot_uuid)
 
             elif st.session_state['styling_view'] == "Inpainting & BG Removal":
                 with st.expander("🌌 Inpainting, Background Removal & More", expanded=True):
@@ -147,10 +147,10 @@ def frame_styling_page(mainheader2, project_uuid: str):
 
             elif st.session_state['styling_view'] == "Draw On Image":
                 with st.expander("📝 Draw On Image", expanded=True):
-                    drawing_element(timing_details,project_settings,project_uuid)
+                    drawing_element(timing_list,project_settings, shot_uuid)
                                         
             with st.expander("➕ Add Key Frame", expanded=True):
-                selected_image, inherit_styling_settings, how_long_after, _ = add_key_frame_element(timing_details, project_uuid)
+                selected_image, inherit_styling_settings, how_long_after, _ = add_key_frame_element(shot_uuid)
                 if st.button(f"Add key frame",type="primary",use_container_width=True):
                     add_key_frame(selected_image, inherit_styling_settings, how_long_after)
                     st.rerun()
@@ -162,11 +162,11 @@ def frame_styling_page(mainheader2, project_uuid: str):
             with st.sidebar:        
                 with st.expander("🌀 Batch Styling", expanded=False):                                        
                     styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.LIST.value)
-            timeline_view(project_uuid, "Key Frames")
+            timeline_view(shot_uuid, "Key Frames")
         elif st.session_state['page'] == "Videos":
-            timeline_view(project_uuid, "Videos")
+            timeline_view(shot_uuid, "Videos")
     
     # -------------------- SIDEBAR NAVIGATION --------------------------
     with st.sidebar:
         with st.expander("🔍 Inference Logging", expanded=True):    
-            sidebar_logger(project_uuid)
+            sidebar_logger(shot_uuid)

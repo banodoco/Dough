@@ -6,10 +6,11 @@ from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.motion_module import AnimateDiffCheckpoint
 
-def animation_style_element(timing_uuid, project_uuid):
+def animation_style_element(timing_uuid, shot_uuid):
     motion_modules = AnimateDiffCheckpoint.get_name_list()
     data_repo = DataRepo()
-    project_settings = data_repo.get_project_setting(project_uuid)
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    project_settings = data_repo.get_project_setting(shot.project.uuid)
     timing = data_repo.get_timing_from_uuid(timing_uuid)
     current_animation_style = timing.animation_style
     variant_count = 1

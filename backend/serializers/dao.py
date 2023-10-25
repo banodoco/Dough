@@ -84,6 +84,7 @@ class CreateTimingDao(serializers.Serializer):
     canny_image_id = serializers.CharField(max_length=100, required=False)
     preview_video_id = serializers.CharField(max_length=100, required=False)
     custom_model_id_list = serializers.CharField(max_length=100, required=False)
+    shot_id = serializers.CharField(max_length=100)
     frame_time = serializers.CharField(max_length=100)
     frame_number = serializers.CharField(max_length=100, required=False)
     primary_image = serializers.CharField(max_length=100, required=False)

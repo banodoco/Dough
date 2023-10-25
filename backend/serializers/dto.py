@@ -1,7 +1,7 @@
 import json
 from rest_framework import serializers
 
-from backend.models import AIModel, AppSetting, BackupTiming, InferenceLog, InternalFileObject, Project, Setting, Timing, User
+from backend.models import AIModel, AppSetting, BackupTiming, InferenceLog, InternalFileObject, Project, Setting, Shot, Timing, User
 
 
 class UserDto(serializers.ModelSerializer):
@@ -205,3 +205,27 @@ class BackupListDto(serializers.ModelSerializer):
             "note",
             "created_on"
         )
+
+
+class ShotDto(serializers.ModelSerializer):
+    timing_list = serializers.SerializerMethodField()
+    main_clip = InternalFileDto()
+
+    class Meta:
+        model = Shot
+        fields = (
+            "uuid",
+            "name",
+            "desc",
+            "shot_idx",
+            "duration",
+            "meta_data",
+            "timing_list",
+            "interpolated_clip_list",
+            "main_clip"
+        )
+    
+    def get_timing_list(self, obj):
+        timing_list = self.context.get("timing_list", [])
+        return [TimingDto(timing).data for timing in timing_list]
+        

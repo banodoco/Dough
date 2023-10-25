@@ -1,6 +1,5 @@
 import json
 import streamlit as st
-import uuid
 
 from typing import List
 from shared.constants import AIModelCategory, AIModelType, ViewType
@@ -13,7 +12,7 @@ from utils.data_repo.data_repo import DataRepo
 def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
+    timing_list: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_shot(timing.shot.uuid)
     project_settings: InternalSettingObject = data_repo.get_project_setting(timing.project.uuid)
 
     # -------------------- Transfomation Stage -------------------- #
@@ -48,10 +47,10 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
     with stages2:
         image = None
         if st.session_state["transformation_stage"] == ImageStage.SOURCE_IMAGE.value:
-            source_img = timing_details[st.session_state['current_frame_index'] - 1].source_image
+            source_img = timing_list[st.session_state['current_frame_index'] - 1].source_image
             image = source_img.location if source_img else ""
         elif st.session_state["transformation_stage"] == ImageStage.MAIN_VARIANT.value:
-            image = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
+            image = timing_list[st.session_state['current_frame_index'] - 1].primary_image_location
         
         if image:
             st.image(image, use_column_width=True, caption=f"Image {st.session_state['current_frame_index']}")
@@ -381,7 +380,7 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
 
     if view_type == ViewType.LIST.value:
         batch_run_range = st.slider(
-            "Select range:", 1, 1, (1, len(timing_details)))
+            "Select range:", 1, 1, (1, len(timing_list)))
         first_batch_run_value = batch_run_range[0] - 1
         last_batch_run_value = batch_run_range[1] - 1
 
@@ -415,7 +414,7 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
                 for i in range(first_batch_run_value, last_batch_run_value+1):
                     for _ in range(0, batch_number_of_variants):
                         trigger_restyling_process(
-                            timing_uuid=timing_details[i].uuid, 
+                            timing_uuid=timing_list[i].uuid, 
                             model_uuid=st.session_state['model'],
                             prompt=st.session_state['prompt'], 
                             strength=st.session_state['strength'], 

@@ -181,7 +181,26 @@ class InternalFrameTimingObject:
                 return idx
         
         return -1
-    
+
+class InternalShotObject:
+    def __init__(self, **kwargs):
+        self.uuid = kwargs['uuid'] if key_present('uuid', kwargs) else None
+        self.name = kwargs['name'] if key_present('name', kwargs) else ""
+        self.project_id = kwargs['project_id'] if key_present('project_id', kwargs) else None
+        self.desc = kwargs['desc'] if key_present('desc', kwargs) else ""
+        self.shot_idx = kwargs['shot_idx'] if key_present('shot_idx', kwargs) else 0
+        self.duration = kwargs['duration'] if key_present('duration', kwargs) else 0
+        self.meta_data = kwargs['meta_data'] if key_present('meta_data', kwargs) else {}
+        self.timing_list = [InternalFrameTimingObject(**timing) for timing in kwargs["timing_list"]] \
+            if key_present('timing_list', kwargs) and kwargs["timing_list"] else []
+        self.interpolated_clip_list = kwargs['interpolated_clip_list'] if key_present('interpolated_clip_list', kwargs) \
+                    else ""
+        self.main_clip = InternalFileObject(**kwargs['main_clip']) if key_present('main_clip', kwargs) else \
+                    None
+
+    @property
+    def meta_data_dict(self):
+        return json.loads(self.meta_data) if self.meta_data else {}
 
 
 class InternalAppSettingObject:

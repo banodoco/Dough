@@ -13,10 +13,11 @@ from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
 
-def style_explorer_element(project_uuid):
+def style_explorer_element(shot_uuid):
     st.markdown("***")
-    data_repo = DataRepo() 
-    project_settings = data_repo.get_project_setting(project_uuid)
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    project_settings = data_repo.get_project_setting(shot.project.uuid)
 
     _, a2, a3,_= st.columns([0.5, 1, 0.5,0.5])   
     with a2:
@@ -84,7 +85,8 @@ def style_explorer_element(project_uuid):
                     negative_prompt="bad image, worst image, bad anatomy, washed out colors",
                     height=project_settings.height,
                     width=project_settings.width,
-                    project_uuid=project_uuid
+                    project_uuid=shot.project.uuid,
+                    shot_uuid=shot.uuid
                 )
 
                 replicate_model = REPLICATE_MODEL.get_model_by_db_obj(model_dict[model_name])
@@ -94,11 +96,12 @@ def style_explorer_element(project_uuid):
                     "inference_type": InferenceType.GALLERY_IMAGE_GENERATION.value,
                     "output": output,
                     "log_uuid": log.uuid,
-                    "project_uuid": project_uuid
+                    "project_uuid": shot.project.uuid,
+                    "shot_uuid": shot.uuid
                 }
                 process_inference_output(**inference_data)
     
-    project_setting = data_repo.get_project_setting(project_uuid)
+    project_setting = data_repo.get_project_setting(shot.project.uuid)
     st.markdown("***")
     page_number = st.radio("Select page", options=range(1, project_setting.total_gallery_pages + 1), horizontal=True)
     
@@ -109,7 +112,7 @@ def style_explorer_element(project_uuid):
     gallery_image_list, res_payload = data_repo.get_all_file_list(
         file_type=InternalFileType.IMAGE.value, 
         tag=InternalFileTag.GALLERY_IMAGE.value, 
-        project_id=project_uuid,
+        project_id=shot.project.uuid,
         page=page_number,
         data_per_page=num_items_per_page,
         sort_order=SortOrder.DESCENDING.value     # newly created images appear first
@@ -146,7 +149,7 @@ def style_explorer_element(project_uuid):
                         
                         if st.button(f"Add to timeline", key=f"{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
                             pil_image = generate_pil_image(gallery_image_list[i + j].location)
-                            add_key_frame(pil_image, False, 2.5, len(data_repo.get_timing_list_from_project(project_uuid)), refresh_state=False)
+                            add_key_frame(pil_image, False, 2.5, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
 
                             # removing this from the gallery view
                             data_repo.update_file(gallery_image_list[i + j].uuid, tag="")

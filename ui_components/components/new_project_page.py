@@ -78,8 +78,8 @@ def new_project_page():
             new_project_name = new_project_name.replace(" ", "_")
             current_user = data_repo.get_first_active_user()
 
-            new_project = create_new_project(current_user, new_project_name, width, height, "Images", "Interpolation")
-            new_timing = create_timings_row_at_frame_number(new_project.uuid, 0)
+            new_project, shot = create_new_project(current_user, new_project_name, width, height, "Images", "Interpolation")
+            new_timing = create_timings_row_at_frame_number(shot.uuid, 0)
             
             if starting_image:
                 try:
@@ -88,8 +88,10 @@ def new_project_page():
                 except Exception as e:
                     st.error(f"Failed to save the uploaded image due to {str(e)}")
 
-            # remvoing the initial frame which moved to the 1st position
-            initial_frame = data_repo.get_timing_from_frame_number(new_project.uuid, 0)
+            # remvoing the initial frame which moved to the 1st position 
+            # (since creating new project also creates a frame)
+            shot = data_repo.get_shot_from_number(new_project.uuid, 0)
+            initial_frame = data_repo.get_timing_from_frame_number(shot.uuid, 0)
             data_repo.delete_timing_from_uuid(initial_frame.uuid)
             
             if uploaded_audio:

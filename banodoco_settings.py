@@ -87,6 +87,17 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     }
     project: InternalProjectObject = data_repo.create_project(**project_data)
 
+    # create a default first shot
+    shot_data = {
+        "name": "Shot 1",
+        "project_id": project.uuid,
+        "desc": "",
+        "shot_idx": 0,
+        "duration": 2
+    }
+
+    shot = data_repo.create_shot(**shot_data)
+
     # create a sample timing frame
     st.session_state["project_uuid"] = project.uuid
     sample_file_location = "sample_assets/sample_images/v.jpeg"
@@ -112,7 +123,8 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
         "frame_time": 0.0,
         "animation_style": animation_style,
         "aux_frame_index": 0,
-        "source_image_id": source_image.uuid
+        "source_image_id": source_image.uuid,
+        "shot_id": shot.uuid,
     }
     timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
 
@@ -148,7 +160,7 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
 
     create_working_assets(project.uuid)
 
-    return project
+    return project, shot
     
 
 def create_predefined_models(user):

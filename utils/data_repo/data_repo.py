@@ -2,7 +2,7 @@
 import json
 from shared.constants import InferenceParamType, InternalFileType, InternalResponse
 from shared.constants import SERVER, ServerType
-from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalUserObject
+from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalShotObject, InternalUserObject
 from utils.cache.cache_methods import cache_data
 import wrapt
 
@@ -267,6 +267,11 @@ class DataRepo:
         timing_list = res.data['data'] if res.status else None
         return [InternalFrameTimingObject(**timing) for timing in timing_list] if timing_list else []
     
+    def get_timing_list_from_shot(self, shot_uuid=None):
+        res = self.db_repo.get_timing_list_from_shot(shot_uuid)
+        timing_list = res.data['data'] if res.status else None
+        return [InternalFrameTimingObject(**timing) for timing in timing_list] if timing_list else []
+    
     def create_timing(self, **kwargs):
         res = self.db_repo.create_timing(**kwargs)
         timing = res.data['data'] if res.status else None
@@ -295,10 +300,6 @@ class DataRepo:
     
     def remove_source_image(self, timing_uuid):
         res = self.db_repo.remove_source_image(timing_uuid)
-        return res.status
-
-    def move_frame_one_step_forward(self, project_uuid, index_of_frame):
-        res = self.db_repo.move_frame_one_step_forward(project_uuid, index_of_frame)
         return res.status
     
 
@@ -395,4 +396,33 @@ class DataRepo:
     
     def release_lock(self, key):
         res = self.db_repo.release_lock(key)
+        return res.status
+    
+    # shot
+    def get_shot_from_uuid(self, shot_uuid):
+        res = self.db_repo.get_shot_from_uuid(shot_uuid)
+        shot = res.data['data'] if res.status else None
+        return InternalShotObject(**shot) if shot else None
+    
+    def get_shot_from_number(self, project_uuid, shot_number=0):
+        res = self.db_repo.get_shot_from_number(project_uuid, shot_number)
+        shot = res.data['data'] if res.status else None
+        return InternalShotObject(**shot) if shot else None
+
+    def get_shot_list(self, project_uuid):
+        res = self.db_repo.get_shot_list(project_uuid)
+        shot_list = res.data['data'] if res.status else None
+        return [InternalShotObject(**shot) for shot in shot_list] if shot_list else []
+
+    def create_shot(self, project_uuid, name, duration, meta_data="", desc=""):
+        res = self.db_repo.create_shot(project_uuid, name, duration, meta_data, desc)
+        shot = res.data['data'] if res.status else None
+        return InternalShotObject(**shot) if shot else None
+    
+    def update_shot(self, shot_uuid, name=None, duration=None, meta_data=None, desc=None):
+        res = self.db_repo.update_shot(shot_uuid, name, duration, meta_data, desc)
+        return res.status
+
+    def delete_shot(self, shot_uuid):
+        res = self.db_repo.delete_shot(shot_uuid)
         return res.status

@@ -1,6 +1,4 @@
-
 import json
-import os
 import random
 import string
 import time
@@ -19,7 +17,6 @@ from utils.data_repo.data_repo import DataRepo
 
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
-from utils import st_memory
 from ui_components.methods.common_methods import add_image_variant, execute_image_edit, create_or_update_mask, process_inference_output, promote_image_variant
 from ui_components.models import InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
 from streamlit_image_comparison import image_comparison
@@ -34,8 +31,8 @@ def inpainting_element(timing_uuid):
         stage = WorkflowStageType.SOURCE.value
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_shot(
+        timing.shot.uuid)
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         timing.project.uuid)
 
@@ -454,8 +451,6 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
 
         elif stage == WorkflowStageType.STYLED.value:
             if st.button("Save + Promote Image"):
-                timing_details = data_repo.get_timing_list_from_project(
-                    project_uuid)
                 number_of_image_variants = add_image_variant(
                     st.session_state['precision_cropping_inpainted_image_uuid'], st.session_state['current_frame_uuid'])
                 promote_image_variant(

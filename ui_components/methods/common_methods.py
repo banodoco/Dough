@@ -12,13 +12,13 @@ import uuid
 from io import BytesIO
 import numpy as np
 import urllib3
-from shared.constants import SERVER, InferenceType, InternalFileTag, InternalFileType, ProjectMetaData, ServerType
+from shared.constants import InferenceType, InternalFileTag, InternalFileType, ProjectMetaData
 from pydub import AudioSegment
 from backend.models import InternalFileObject
 from ui_components.constants import SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, WorkflowStageType
 from ui_components.methods.file_methods import add_temp_file_to_project, convert_bytes_to_file, generate_pil_image, generate_temp_file, save_or_host_file, save_or_host_file_bytes
-from ui_components.methods.video_methods import calculate_desired_duration_of_individual_clip, update_speed_of_video_clip
-from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
+from ui_components.methods.video_methods import update_speed_of_video_clip
+from ui_components.models import InternalFrameTimingObject, InternalSettingObject
 from utils.common_utils import acquire_lock, release_lock
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
@@ -31,11 +31,10 @@ from utils.media_processor.video import VideoProcessor
 def clone_styling_settings(source_frame_number, target_frame_uuid):
     data_repo = DataRepo()
     target_timing = data_repo.get_timing_from_uuid(target_frame_uuid)
-    timing_details = data_repo.get_timing_list_from_project(
-        target_timing.project.uuid)
+    timing_list = data_repo.get_timing_list_from_shot(
+        target_timing.shot.uuid)
     
-    primary_image = data_repo.get_file_from_uuid(timing_details[source_frame_number].primary_image.uuid)
-    params = primary_image.inference_params
+    params = timing_list[source_frame_number].primary_image.inference_params
 
     if params:
         target_timing.prompt = params.prompt
@@ -53,7 +52,9 @@ def clone_styling_settings(source_frame_number, target_frame_uuid):
             target_timing.model = model
 
 # TODO: image format is assumed to be PNG, change this later
-def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project_uuid) -> InternalFileObject:
+def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], shot_uuid) -> InternalFileObject:
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
     img = generate_pil_image(img)
     
     file_name = str(uuid.uuid4()) + ".png"
@@ -64,15 +65,14 @@ def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project
     file_data = {
         "name": str(uuid.uuid4()) + ".png",
         "type": InternalFileType.IMAGE.value,
-        "project_id": project_uuid
+        "project_id": shot.project.uuid
     }
 
     if hosted_url:
         file_data.update({'hosted_url': hosted_url})
     else:
         file_data.update({'local_path': file_path})
-
-    data_repo = DataRepo()
+    
     new_image = data_repo.create_file(**file_data)
     return new_image
 
@@ -221,14 +221,14 @@ def apply_image_transformations(image: Image, zoom_level, rotation_angle, x_shif
 
     return cropped_image
 
-def fetch_image_by_stage(project_uuid, stage, frame_idx):
+def fetch_image_by_stage(shot_uuid, stage, frame_idx):
     data_repo = DataRepo()
-    timing_details = data_repo.get_timing_list_from_project(project_uuid)
+    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
 
     if stage == WorkflowStageType.SOURCE.value:
-        return timing_details[frame_idx].source_image
+        return timing_list[frame_idx].source_image
     elif stage == WorkflowStageType.STYLED.value:
-        return timing_details[frame_idx].primary_image
+        return timing_list[frame_idx].primary_image
     else:
         return None
 
@@ -247,30 +247,22 @@ def rotate_image(location, degree):
     rotated_image = image.rotate(-degree, resample=Image.BICUBIC, expand=False)
 
     return rotated_image
-    
-def update_timings_in_order(project_uuid):
-    data_repo = DataRepo()
-
-    timing_list: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(project_uuid)
-
-    # Iterate through the timing objects
-    for i, timing in enumerate(timing_list):
-        # Set the frame time to the index of the timing object only if it's different from the current one
-        if timing.frame_time != float(i):
-            print(f"Updating timing {timing.uuid} frame time to {float(i)}")
-            data_repo.update_specific_timing(timing.uuid, frame_time=float(i))
 
 
-def save_uploaded_image(image, project_uuid, frame_uuid, save_type):
+def save_uploaded_image(image, shot_uuid, frame_uuid, stage_type):
+    '''
+    saves the image file (which can be a PIL, arr or url) into the project, without
+    any tags or logs. then adds that file as the source_image/primary_image, depending
+    on the stage selected
+    '''
     data_repo = DataRepo()
 
     try:
-        saved_image = save_new_image(image, project_uuid)
-
-        # Update records based on save_type
-        if save_type == "source":
+        saved_image = save_new_image(image, shot_uuid)
+        # Update records based on stage_type
+        if stage_type ==  WorkflowStageType.SOURCE.value:
             data_repo.update_specific_timing(frame_uuid, source_image_id=saved_image.uuid)
-        elif save_type == "styled":
+        elif stage_type ==  WorkflowStageType.STYLED.value:
             number_of_image_variants = add_image_variant(saved_image.uuid, frame_uuid)
             promote_image_variant(frame_uuid, number_of_image_variants - 1)
 
@@ -283,7 +275,7 @@ def save_uploaded_image(image, project_uuid, frame_uuid, save_type):
 def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
     '''
     this methods promotes the variant to the primary image (also referred to as styled image)
-    and clears the interpolation data of the prev and the current frame
+    interpolated_clips/videos of the shot are not cleared
     '''
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
@@ -291,24 +283,7 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
     # promoting variant
     variant_to_promote = timing.alternative_images_list[variant_to_promote_frame_number]
     data_repo.update_specific_timing(timing_uuid, primary_image_id=variant_to_promote.uuid)
-
-    prev_timing = data_repo.get_prev_timing(timing_uuid)
-    # clearing the interpolation data of the prev frame
-    if prev_timing:
-        data_repo.update_specific_timing(prev_timing.uuid, interpolated_clip_list=None)
-        data_repo.update_specific_timing(timing_uuid, interpolated_clip_list=None)
-        data_repo.update_specific_timing(prev_timing.uuid, timed_clip_id=None)
-
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
-    
-    # if this is not the last element then clearing it's interpolation data
-    if timing.aux_frame_index < len(timing_details):
-        data_repo.update_specific_timing(timing.uuid, interpolated_clip_list=None)
-        data_repo.update_specific_timing(timing.uuid, timed_clip_id=None)
-
-    data_repo.update_specific_timing(timing_uuid, timed_clip_id=None)
-    _ = data_repo.get_timing_list_from_project(timing.project.uuid)
+    _ = data_repo.get_timing_list_from_shot(timing.project.uuid)
 
 
 def promote_video_variant(timing_uuid, variant_uuid):
@@ -547,64 +522,17 @@ def get_audio_bytes_for_slice(timing_uuid):
     audio_bytes.seek(0)
     return audio_bytes
 
-# calculates and updates clip duration of all the timings
-def update_clip_duration_of_all_timing_frames(project_uuid):
-    data_repo = DataRepo()
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-        project_uuid)
 
-    length_of_list = len(timing_details)
-
-    for i in timing_details:
-        index_of_current_item = timing_details.index(i)
-        length_of_list = len(timing_details)
-        timing_item: InternalFrameTimingObject = data_repo.get_timing_from_frame_number(
-            project_uuid, index_of_current_item)
-
-        # last frame
-        if index_of_current_item == (length_of_list - 1):
-            time_of_frame = timing_item.frame_time
-            duration_of_static_time = 0.0
-            end_duration_of_frame = float(
-                time_of_frame) + float(duration_of_static_time)
-            total_duration_of_frame = float(
-                end_duration_of_frame) - float(time_of_frame)
-        else:
-            time_of_frame = timing_item.frame_time
-            next_timing = data_repo.get_next_timing(timing_item.uuid)
-            time_of_next_frame = next_timing.frame_time
-            total_duration_of_frame = float(
-                time_of_next_frame) - float(time_of_frame)
-
-        total_duration_of_frame = round(total_duration_of_frame, 2)
-        data_repo.update_specific_timing(timing_item.uuid, clip_duration=total_duration_of_frame)
-
-    _ = data_repo.get_timing_list_from_project(project_uuid)
-
-
-def create_timings_row_at_frame_number(project_uuid, index_of_frame, frame_time=0.0):
+def create_timings_row_at_frame_number(shot_uuid, index_of_frame, frame_time=0.0):
     data_repo = DataRepo()
     
-    # remove the interpolated video from the current row and the row before and after - unless it is the first or last row
     timing_data = {
-        "project_id": project_uuid,
+        "shot_id": shot_uuid,
         "frame_time": frame_time,
         "animation_style": AnimationStyleType.INTERPOLATION.value,
         "aux_frame_index": index_of_frame
     }
     timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
-
-    prev_timing: InternalFrameTimingObject = data_repo.get_prev_timing(
-        timing.uuid)
-    if prev_timing:
-        prev_clip_duration = calculate_desired_duration_of_individual_clip(prev_timing.uuid)
-        data_repo.update_specific_timing(
-            prev_timing.uuid, interpolated_clip_list=None, clip_duration=prev_clip_duration)
-
-    next_timing: InternalAIModelObject = data_repo.get_next_timing(timing.uuid)
-    if next_timing:
-        data_repo.update_specific_timing(
-            next_timing.uuid, interpolated_clip_list=None)
 
     return timing
 

@@ -363,16 +363,7 @@ class APIRepo:
         res = self.http_put(self.TIMING_URL, data=update_data)
         return InternalResponse(res['payload'], 'success', res['status'])
 
-    def move_frame_one_step_forward(self, project_uuid, index_of_frame):
-        data = {
-            "project_id": project_uuid,
-            "index_of_frame": index_of_frame
-        }
-        
-        res = self.http_post(self.SHIFT_TIMING_URL, data=data)
-        return InternalResponse(res['payload'], 'success', res['status'])
     
-
     # app setting
     def get_app_setting_from_uuid(self, uuid=None):
         res = self.http_get(self.APP_SETTING_URL, params={'uuid': uuid})

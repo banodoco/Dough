@@ -369,17 +369,7 @@ def cache_data(cls):
     setattr(cls, '_original_remove_source_image', cls.remove_source_image)
     setattr(cls, "remove_source_image", _cache_remove_source_image)
 
-    def _cache_move_frame_one_step_forward(self, *args, **kwargs):
-        original_func = getattr(cls, '_original_move_frame_one_step_forward')
-        status = original_func(self, *args, **kwargs)
-        
-        if status:
-            StCache.delete_all(CacheKey.TIMING_DETAILS.value)
     
-    setattr(cls, '_original_move_frame_one_step_forward', cls.move_frame_one_step_forward)
-    setattr(cls, "move_frame_one_step_forward", _cache_move_frame_one_step_forward)
-
-
     # ------------------ APP SETTING METHODS ---------------------
     def _cache_get_app_setting_from_uuid(self, *args, **kwargs):
         app_setting_list = StCache.get_all(CacheKey.APP_SETTING.value)
