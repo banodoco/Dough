@@ -312,8 +312,8 @@ class APIRepo:
        res = self.http_get(self.TIMING_URL, params={'uuid': uuid})
        return InternalResponse(res['payload'], 'success', res['status'])
     
-    def get_timing_from_frame_number(self, project_uuid, frame_number):
-        res = self.http_get(self.PROJECT_TIMING_URL, params={'project_id': project_uuid, 'frame_number': frame_number})
+    def get_timing_from_frame_number(self, shot_uuid, frame_number):
+        res = self.http_get(self.PROJECT_TIMING_URL, params={'project_id': shot_uuid, 'frame_number': frame_number})
         return InternalResponse(res['payload'], 'success', res['status']) 
     
     # this is based on the aux_frame_index and not the order in the db

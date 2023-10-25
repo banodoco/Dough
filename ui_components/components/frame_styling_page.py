@@ -40,10 +40,10 @@ def frame_styling_page(shot_uuid: str):
         st.session_state['num_inference_steps'] = project_settings.default_num_inference_steps
         st.session_state['transformation_stage'] = project_settings.default_stage
         
-    if f"{shot.uuid}__" + "current_frame_uuid" not in st.session_state:        
+    if "current_frame_uuid" not in st.session_state:        
         timing = data_repo.get_timing_list_from_shot(shot_uuid)[0]
-        st.session_state[f"{shot.uuid}__" + 'current_frame_uuid'] = timing.uuid
-        st.session_state[f"{shot.uuid}__" + 'current_frame_index'] = timing.aux_frame_index + 1
+        st.session_state['current_frame_uuid'] = timing.uuid
+        st.session_state['current_frame_index'] = timing.aux_frame_index + 1
     
     if 'frame_styling_view_type' not in st.session_state:
         st.session_state['frame_styling_view_type'] = "Individual"

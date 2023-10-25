@@ -226,7 +226,6 @@ class Timing(BaseModel):
     primary_image = models.ForeignKey(InternalFileObject, related_name="primary_image", on_delete=models.DO_NOTHING, null=True)   # variant number that is currently selected (among alternative images) NONE if none is present
     shot_id = models.ForeignKey(Shot, on_delete=models.CASCADE, null=True)
     custom_model_id_list = models.TextField(default=None, null=True, blank=True)    
-    frame_number = models.IntegerField(default=None, null=True)
     alternative_images = models.TextField(default=None, null=True)
     custom_pipeline = models.CharField(max_length=255, default=None, null=True, blank=True)
     prompt = models.TextField(default='', blank=True)

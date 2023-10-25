@@ -62,7 +62,7 @@ def carousal_of_images_element(shot_uuid, stage=WorkflowStageType.STYLED.value):
 
     header1, header2, header3, header4, header5 = st.columns([1, 1, 1, 1, 1])
 
-    current_frame_uuid = st.session_state[f"{shot.uuid}__" + 'current_frame_uuid']
+    current_frame_uuid = st.session_state['current_frame_uuid']
     current_timing = data_repo.get_timing_from_uuid(current_frame_uuid)
     
     with header1:

@@ -247,8 +247,8 @@ class DataRepo:
         timing = self.db_repo.get_timing_from_uuid(uuid).data['data']
         return InternalFrameTimingObject(**timing) if timing else None
     
-    def get_timing_from_frame_number(self, project_uuid, frame_number):
-        res = self.db_repo.get_timing_from_frame_number(project_uuid, frame_number)
+    def get_timing_from_frame_number(self, shot_uuid, frame_number):
+        res = self.db_repo.get_timing_from_frame_number(shot_uuid, frame_number)
         timing = res.data['data'] if res.status else None
         return InternalFrameTimingObject(**timing) if timing else None
     
