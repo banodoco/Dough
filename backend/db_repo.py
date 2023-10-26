@@ -1548,6 +1548,7 @@ class DBRepo:
 
         return InternalResponse(payload, 'shot fetched successfully', True)
 
+    # TODO: implement pagination if shot count gets too high
     def get_shot_list(self, project_uuid):
         project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
         if not project:

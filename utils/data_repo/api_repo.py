@@ -77,6 +77,13 @@ class APIRepo:
         # payment
         self.STRIPE_PAYMENT_URL = '/v1/payment/stripe-link'
 
+        # lock
+        self.LOCK_URL = 'v1/data/lock'
+
+        # shot
+        self.SHOT_URL = 'v1/data/shot'
+        self.SHOT_LIST_URL = 'v1/data/shot/list'
+
     def logout(self):
         delete_url_param(AUTH_TOKEN)
         st.rerun()
@@ -329,6 +336,10 @@ class APIRepo:
         res = self.http_get(self.TIMING_LIST_URL, params={'project_id': project_uuid, 'page': 1})
         return InternalResponse(res['payload'], 'success', res['status'])
     
+    def get_timing_list_from_shot(self, shot_uuid=None):
+        res = self.http_get(self.TIMING_LIST_URL, params={'shot_id': shot_uuid, 'page': 1})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
     def create_timing(self, **kwargs):
         res = self.http_post(url=self.TIMING_URL, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
@@ -447,4 +458,43 @@ class APIRepo:
     
     def release_lock(self, key):
         res = self.http_get(self.LOCK_URL, params={'key': key, 'action': 'release'})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    # shot
+    def get_shot_from_uuid(self, shot_uuid):
+        res = self.http_get(self.SHOT_URL, params={'uuid': shot_uuid})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def get_shot_from_number(self, project_uuid, shot_number=0):
+        res = self.http_get(self.SHOT_URL, params={'project_id': project_uuid, 'shot_idx': shot_number})
+        return InternalResponse(res['payload'], 'success', res['status'])
+
+    def get_shot_list(self, project_uuid):
+        res = self.http_get(self.SHOT_LIST_URL, params={'project_id': project_uuid})
+        return InternalResponse(res['payload'], 'success', res['status'])
+
+    def create_shot(self, project_uuid, name, duration, meta_data="", desc=""):
+        data = {
+            'project_id': project_uuid,
+            'name': name,
+            'duration': duration,
+            'meta_data': meta_data,
+            'desc': desc
+        }
+        res = self.http_post(self.SHOT_URL, data=data)
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def update_shot(self, shot_uuid, name=None, duration=None, meta_data=None, desc=None):
+        update_data = {
+            'uuid': shot_uuid,
+            'name': name,
+            'duration': duration,
+            'meta_data': meta_data,
+            'desc': desc
+        }
+        res = self.http_put(self.SHOT_URL, data=update_data)
+        return InternalResponse(res['payload'], 'success', res['status'])
+
+    def delete_shot(self, shot_uuid):
+        res = self.http_delete(self.SHOT_URL, params={'uuid': shot_uuid})
         return InternalResponse(res['payload'], 'success', res['status'])
