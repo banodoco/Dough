@@ -6,14 +6,13 @@ from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.motion_module import AnimateDiffCheckpoint
 
-def animation_style_element(timing_uuid, shot_uuid):
+def animation_style_element(shot_uuid):
     motion_modules = AnimateDiffCheckpoint.get_name_list()
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     project_settings = data_repo.get_project_setting(shot.project.uuid)
-    timing = data_repo.get_timing_from_uuid(timing_uuid)
-    current_animation_style = timing.animation_style
     variant_count = 1
+    current_animation_style = AnimationStyleType.INTERPOLATION.value    # setting a default value
 
     if current_animation_style == AnimationStyleType.INTERPOLATION.value:
         animation_tool = st.radio("Animation Tool:", options=AnimationToolType.value_list(), key="animation_tool", horizontal=True)
@@ -22,7 +21,7 @@ def animation_style_element(timing_uuid, shot_uuid):
         settings = {
             "animation_tool": animation_tool
         }
-        timing.animation_tool = animation_tool
+        
         if animation_tool == AnimationToolType.ANIMATEDIFF.value:
             c1, c2 = st.columns([1,1])
             with c1:
@@ -114,7 +113,7 @@ def animation_style_element(timing_uuid, shot_uuid):
         vid_quality = "full" if video_resolution == "Full Resolution" else "preview"
         st.write("Generating animation clip...")
         create_single_interpolated_clip(
-            timing_uuid,
+            shot_uuid,
             vid_quality,
             settings,
             variant_count

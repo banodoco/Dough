@@ -4,11 +4,22 @@ from ui_components.methods.common_methods import promote_image_variant, promote_
 from utils.data_repo.data_repo import DataRepo
 
 
-def variant_comparison_grid(timing_uuid, stage=CreativeProcessType.MOTION.value):
+def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
+    '''
+    UI element which compares different variant of images/videos. For images ele_uuid has to be timing_uuid
+    and for videos it has to be shot_uuid.
+    '''
     data_repo = DataRepo()
 
-    timing = data_repo.get_timing_from_uuid(timing_uuid)
-    variants = timing.interpolated_clip_list if stage == CreativeProcessType.MOTION.value else timing.alternative_images_list
+    timing_uuid, shot_uuid = None, None
+    if stage == CreativeProcessType.MOTION.value:
+        shot_uuid = ele_uuid
+        shot = data_repo.get_shot_from_uuid(shot_uuid)
+        variants = shot.interpolated_clip_list
+    else:
+        timing_uuid = ele_uuid
+        timing = data_repo.get_timing_from_uuid(timing_uuid)
+        variants = timing.alternative_images_list
 
     st.markdown("***")
 

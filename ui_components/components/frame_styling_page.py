@@ -70,11 +70,11 @@ def frame_styling_page(shot_uuid: str):
             frame_selector_widget()
                 
         if st.session_state['page'] == CreativeProcessType.MOTION.value:
-            variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.MOTION.value)
+            variant_comparison_grid(shot_uuid, stage=CreativeProcessType.MOTION.value)
 
             st.markdown("***")
             with st.expander("🎬 Choose Animation Style & Create Variants", expanded=True):
-                animation_style_element(st.session_state['current_frame_uuid'], shot_uuid)
+                animation_style_element(shot_uuid)
 
         elif st.session_state['page'] == CreativeProcessType.STYLING.value:
             variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)

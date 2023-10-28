@@ -208,8 +208,6 @@ class Shot(BaseModel):
                 else:
                     shots_to_move = Shot.objects.filter(project_id=self.project_id, shot_idx__gte=self.shot_idx, \
                                        shot_idx__lt=self.old_shot_idx, is_disabled=False).order_by('shot_idx')
-                    # moving frames
-                    shots_to_move.update(shot_idx=F('shot_idx') + 1, timed_clip=None, preview_video=None)
 
         super(Shot, self).save(*args, **kwargs)
 
@@ -218,11 +216,8 @@ class Timing(BaseModel):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
     model = models.ForeignKey(AIModel, on_delete=models.DO_NOTHING, null=True)
     source_image = models.ForeignKey(InternalFileObject, related_name="source_image", on_delete=models.DO_NOTHING, null=True)
-    interpolated_clip_list = models.TextField(default=None, null=True)
-    timed_clip = models.ForeignKey(InternalFileObject, related_name="timed_clip", on_delete=models.DO_NOTHING, null=True)
     mask = models.ForeignKey(InternalFileObject, related_name="mask", on_delete=models.DO_NOTHING, null=True)
     canny_image = models.ForeignKey(InternalFileObject, related_name="canny_image", on_delete=models.DO_NOTHING, null=True)
-    preview_video = models.ForeignKey(InternalFileObject, related_name="preview_video", on_delete=models.DO_NOTHING, null=True)
     primary_image = models.ForeignKey(InternalFileObject, related_name="primary_image", on_delete=models.DO_NOTHING, null=True)   # variant number that is currently selected (among alternative images) NONE if none is present
     shot_id = models.ForeignKey(Shot, on_delete=models.CASCADE, null=True)
     custom_model_id_list = models.TextField(default=None, null=True, blank=True)    
@@ -252,16 +247,14 @@ class Timing(BaseModel):
         super(Timing, self).__init__(*args, **kwargs)
         self.old_is_disabled = self.is_disabled
         self.old_aux_frame_index = self.aux_frame_index
-        self.old_timed_clip = self.timed_clip
 
     def save(self, *args, **kwargs):
         # TODO: updating details of every frame this way can be slow - implement a better strategy
 
         # ------ handling aux_frame_index ------
-        update_frame_duration = False
         # if the frame is being deleted (disabled)
         if self.old_is_disabled != self.is_disabled and self.is_disabled:
-            timing_list = Timing.objects.filter(project_id=self.project_id, \
+            timing_list = Timing.objects.filter(shot_id=self.shot_id, \
                                             aux_frame_index__gte=self.aux_frame_index, is_disabled=False).order_by('aux_frame_index')
             
             # shifting aux_frame_index of all frames after this frame one backwards
@@ -275,43 +268,23 @@ class Timing(BaseModel):
         if (not self.id or self.old_aux_frame_index != self.aux_frame_index) and not self.is_disabled:
             if not self.id:
                 # shifting aux_frame_index of all frames after this frame one forward
-                if Timing.objects.filter(project_id=self.project_id, aux_frame_index=self.aux_frame_index, is_disabled=False).exists():
-                    timing_list = Timing.objects.filter(project_id=self.project_id, \
+                if Timing.objects.filter(shot_id=self.shot_id, aux_frame_index=self.aux_frame_index, is_disabled=False).exists():
+                    timing_list = Timing.objects.filter(shot_id=self.shot_id, \
                                             aux_frame_index__gte=self.aux_frame_index, is_disabled=False)
                     timing_list.update(aux_frame_index=F('aux_frame_index') + 1)
             elif self.old_aux_frame_index != self.aux_frame_index:
                 if self.aux_frame_index >= self.old_aux_frame_index:
-                    timings_to_move = Timing.objects.filter(project_id=self.project_id, aux_frame_index__gt=self.old_aux_frame_index, \
+                    timings_to_move = Timing.objects.filter(shot_id=self.shot_id, aux_frame_index__gt=self.old_aux_frame_index, \
                                     aux_frame_index__lte=self.aux_frame_index, is_disabled=False).order_by('aux_frame_index')
 
                     # moving the frames between old and new index one step backwards
                     timings_to_move.update(aux_frame_index=F('aux_frame_index') - 1)
                 else:
-                    timings_to_move = Timing.objects.filter(project_id=self.project_id, aux_frame_index__gte=self.aux_frame_index, \
+                    timings_to_move = Timing.objects.filter(shot_id=self.shot_id, aux_frame_index__gte=self.aux_frame_index, \
                                        aux_frame_index__lt=self.old_aux_frame_index, is_disabled=False).order_by('aux_frame_index')
-                    
-                    # moving frames
-                    timings_to_move.update(aux_frame_index=F('aux_frame_index') + 1, timed_clip=None, preview_video=None)
-                    
-                    
-                self.interpolated_video_id = None
-                self.timed_clip_id = None
-                
-                update_frame_duration = True
-
-        # ------ handling timed_clip ------
-        # if timed_clip is deleted/changed then preview_video will be deleted
-        if self.old_timed_clip and (not self.timed_clip or self.old_timed_clip != self.timed_clip):
-            self.preview_video = None
 
         super().save(*args, **kwargs)
 
-
-    def add_interpolated_clip_list(self, clip_uuid_list):
-        cur_list = json.loads(self.interpolated_clip_list) if self.interpolated_clip_list else []
-        cur_list.extend(clip_uuid_list)
-        cur_list = list(set(cur_list))
-        self.interpolated_clip_list = json.dumps(cur_list)
 
     @property
     def alternative_images_list(self):

@@ -834,24 +834,6 @@ class DBRepo:
                 attributes._data['source_image_id'] = source_image.id
         
 
-        if 'interpolated_clip_list' in attributes.data and attributes.data['interpolated_clip_list'] != None:
-            for clip_uuid in attributes.data['interpolated_clip_list']:
-                interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=clip_uuid, is_disabled=False).first()
-                if not interpolated_clip:
-                    return InternalResponse({}, 'invalid interpolated clip uuid', False)
-                
-                attributes._data['interpolated_clip_list'] = list(set(attributes._data['interpolated_clip_list']))
-        
-
-        if 'timed_clip_id' in attributes.data:
-            if attributes.data['timed_clip_id'] != None:
-                timed_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['timed_clip_id'], is_disabled=False).first()
-                if not timed_clip:
-                    return InternalResponse({}, 'invalid timed clip uuid', False)
-                
-                attributes._data['timed_clip_id'] = timed_clip.id
-        
-
         if 'mask_id' in attributes.data:
             if attributes.data['mask_id'] != None:
                 mask: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['mask_id'], is_disabled=False).first()
@@ -868,15 +850,6 @@ class DBRepo:
                     return InternalResponse({}, 'invalid canny image uuid', False)
                 
                 attributes._data['canny_image_id'] = canny_image.id
-        
-
-        if 'preview_video_id' in attributes.data:
-            if attributes.data['preview_video_id'] != None:
-                preview_video: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['preview_video_id'], is_disabled=False).first()
-                if not preview_video:
-                    return InternalResponse({}, 'invalid preview video uuid', False)
-                
-                attributes._data['preview_video_id'] = preview_video.id
         
 
         if 'primay_image_id' in attributes.data:
@@ -908,17 +881,17 @@ class DBRepo:
         return InternalResponse({}, 'timing removed successfully', True)
     
     def add_interpolated_clip(self, uuid, **kwargs):
-        timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
-        if not timing:
-            return InternalResponse({}, 'invalid timing uuid', False)
+        shot = Shot.objects.filter(uuid=uuid, is_disabled=False).first()
+        if not shot:
+            return InternalResponse({}, 'invalid shot uuid', False)
         
         if 'interpolated_clip_id' in kwargs and kwargs['interpolated_clip_id'] != None:
             interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['interpolated_clip_id'], is_disabled=False).first()
             if not interpolated_clip:
                 return InternalResponse({}, 'invalid interpolated clip uuid', False)
                 
-            timing.add_interpolated_clip_list([interpolated_clip.uuid.hex])
-            timing.save()
+            shot.add_interpolated_clip_list([interpolated_clip.uuid.hex])
+            shot.save()
 
         return InternalResponse({}, 'success', True)
     
@@ -961,26 +934,6 @@ class DBRepo:
                 kwargs['source_image_id'] = source_image.id
         
 
-        if 'interpolated_clip_list' in kwargs and kwargs['interpolated_clip_list'] != None:
-            cur_list = []
-            for clip_uuid in kwargs['interpolated_clip_list']:
-                interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=clip_uuid, is_disabled=False).first()
-                if not interpolated_clip:
-                    return InternalResponse({}, 'invalid interpolated clip uuid', False)
-                
-                cur_list.append(interpolated_clip.uuid)
-            kwargs['interpolated_clip_list'] = list(set(kwargs['interpolated_clip_list']))
-        
-
-        if 'timed_clip_id' in kwargs:
-            if kwargs['timed_clip_id'] != None:
-                timed_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['timed_clip_id'], is_disabled=False).first()
-                if not timed_clip:
-                    return InternalResponse({}, 'invalid timed clip uuid', False)
-                
-                kwargs['timed_clip_id'] = timed_clip.id
-        
-
         if 'mask_id' in kwargs:
             if kwargs['mask_id'] != None:
                 mask: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['mask_id'], is_disabled=False).first()
@@ -997,15 +950,6 @@ class DBRepo:
                     return InternalResponse({}, 'invalid canny image uuid', False)
                 
                 kwargs['canny_image_id'] = canny_image.id
-        
-
-        if 'preview_video_id' in kwargs:
-            if kwargs['preview_video_id'] != None:
-                preview_video: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['preview_video_id'], is_disabled=False).first()
-                if not preview_video:
-                    return InternalResponse({}, 'invalid preview video uuid', False)
-                
-                kwargs['preview_video_id'] = preview_video.id
         
 
         if 'primay_image_id' in kwargs:
@@ -1340,20 +1284,11 @@ class DBRepo:
             if timing.source_image:
                 file_uuid_list.add(timing.source_image.uuid)
 
-            if timing.interpolated_clip_list:
-                file_uuid_list.extend(json.loads(timing.interpolated_clip_list))
-            
-            if timing.timed_clip:
-                file_uuid_list.add(timing.timed_clip.uuid)
-            
             if timing.mask:
                 file_uuid_list.add(timing.mask.uuid)
             
             if timing.canny_image:
                 file_uuid_list.add(timing.canny_image.uuid)
-            
-            if timing.preview_video:
-                file_uuid_list.add(timing.preview_video.uuid)
             
             if timing.primary_image:
                 file_uuid_list.add(timing.primary_image.uuid)
@@ -1382,21 +1317,11 @@ class DBRepo:
             timing['source_image_uuid'] = str(id_file_dict[timing['source_image_id']].uuid) if timing['source_image_id'] else None
             del timing['source_image_id']
 
-            # TODO: fix this code using interpolated_clip_list
-            timing['interpolated_clip_uuid'] = str(id_file_dict[timing['interpolated_clip_id']].uuid) if timing['interpolated_clip_id'] else None
-            del timing['interpolated_clip_id']
-
-            timing['timed_clip_uuid'] = str(id_file_dict[timing['timed_clip_id']].uuid) if timing['timed_clip_id'] else None
-            del timing['timed_clip_id']
-
             timing['mask_uuid'] = str(id_file_dict[timing['mask_id']].uuid) if timing['mask_id'] else None
             del timing['mask_id']
 
             timing['canny_image_uuid'] = str(id_file_dict[timing['canny_image_id']].uuid) if timing['canny_image_id'] else None
             del timing['canny_image_id']
-
-            timing['preview_video_uuid'] = str(id_file_dict[timing['preview_video_id']].uuid) if timing['preview_video_id'] else None
-            del timing['preview_video_id']
 
             timing['primary_image_uuid'] = str(id_file_dict[timing['primary_image_id']].uuid) if timing['primary_image_id'] else None
             del timing['primary_image_id']
@@ -1475,11 +1400,8 @@ class DBRepo:
                     timing.uuid,
                     model_uuid=backup_timing['model_uuid'],
                     source_image_uuid=backup_timing['source_image_uuid'],
-                    interpolated_clip_list=backup_timing['interpolated_clip_list'],
-                    timed_clip=backup_timing['timed_clip_uuid'],
                     mask=backup_timing['mask_uuid'],
                     canny_image=backup_timing['canny_image_uuid'],
-                    preview_video=backup_timing['preview_video_uuid'],
                     primary_image=backup_timing['primary_image_uuid'],
                     custom_model_id_list=backup_timing['custom_model_id_list'],
                     frame_time=backup_timing['frame_time'],

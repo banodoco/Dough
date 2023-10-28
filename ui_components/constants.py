@@ -10,7 +10,6 @@ class WorkflowStageType(ExtendedEnum):
 
 class VideoQuality(ExtendedEnum):
     HIGH = "High-Quality"
-    PREVIEW = "Preview"
     LOW = "Low"
 
 class CreativeProcessType(ExtendedEnum):

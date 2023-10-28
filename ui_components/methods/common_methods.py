@@ -286,16 +286,16 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
     _ = data_repo.get_timing_list_from_shot(timing.project.uuid)
 
 
-def promote_video_variant(timing_uuid, variant_uuid):
+def promote_video_variant(shot_uuid, variant_uuid):
     '''
     this first changes the duration of the interpolated_clip to the frame clip_duration
     then adds the clip to the timed_clip (which is considered as the main variant)
     '''
     data_repo = DataRepo()
-    timing = data_repo.get_timing_from_uuid(timing_uuid)
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
 
     variant_to_promote = None
-    for variant in timing.interpolated_clip_list:
+    for variant in shot.interpolated_clip_list:
         if variant.uuid == variant_uuid:
             variant_to_promote = variant
             break
@@ -309,18 +309,18 @@ def promote_video_variant(timing_uuid, variant_uuid):
     else:
         video = VideoFileClip(variant_to_promote.location)
 
-    if video.duration != timing.clip_duration:
+    if video.duration != shot.duration:
         video_bytes = VideoProcessor.update_video_speed(
             variant_to_promote.location,
-            timing.animation_style,
-            timing.clip_duration
+            shot.animation_style,
+            shot.duration
         )
 
         hosted_url = save_or_host_file_bytes(video_bytes, variant_to_promote.local_path)
         if hosted_url:
             data_repo.update_file(video.uuid, hosted_url=hosted_url)
 
-    data_repo.update_specific_timing(timing.uuid, timed_clip_id=variant_to_promote.uuid)
+    data_repo.update_shot(shot.uuid, main_clip_id=variant_to_promote.uuid)
 
 
 
@@ -736,40 +736,6 @@ def process_inference_output(**kwargs):
                     promote_image_variant(timing_uuid, number_of_variants - 1)
             else:
                 print("No new generation to promote")
-        else:
-            log_uuid = kwargs.get('log_uuid')
-            del kwargs['log_uuid']
-            data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
-    
-    # --------------------- SINGLE PREVIEW VIDEO INFERENCE -------------------
-    elif inference_type == InferenceType.SINGLE_PREVIEW_VIDEO.value:
-        output = kwargs.get('output')
-        file_bytes = None
-        if isinstance(output, str) and output.startswith('http'):
-            temp_output_file = generate_temp_file(output, '.mp4')
-            file_bytes = None
-            with open(temp_output_file.name, 'rb') as f:
-                file_bytes = f.read()
-
-            os.remove(temp_output_file.name)
-
-        if file_bytes:
-            file_data = {
-                "file_location_to_save": kwargs.get('file_location_to_save'),
-                "mime_type": kwargs.get('mime_type'),
-                "file_bytes": file_bytes,
-                "project_uuid": kwargs.get('project_uuid'),
-                "inference_log_id": kwargs.get('log_uuid')
-            }
-
-            timing_uuid = kwargs.get('timing_uuid')
-            timing = data_repo.get_timing_from_uuid(timing_uuid)
-            if not timing:
-                return False
-            
-            video_fie = convert_bytes_to_file(**file_data)
-            data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video_fie.uuid)
-
         else:
             log_uuid = kwargs.get('log_uuid')
             del kwargs['log_uuid']

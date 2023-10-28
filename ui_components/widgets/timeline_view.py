@@ -43,7 +43,8 @@ def timeline_view_buttons(i, j, timing_list, shift_frames_setting, time_setter_t
 
 def timeline_view(shot_uuid, stage):
     data_repo = DataRepo()
-    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    shot_list = data_repo.get_shot_list(shot.project.uuid)
 
     st.markdown("***")
 
@@ -77,7 +78,7 @@ def timeline_view(shot_uuid, stage):
     
     st.markdown("***")
 
-    total_count = len(timing_list)
+    total_count = len(shot_list)
     for i in range(0, total_count, items_per_row):  # Step of items_per_row for grid
         grid = st.columns(items_per_row)  # Create items_per_row columns for grid
         for j in range(items_per_row):
@@ -85,13 +86,13 @@ def timeline_view(shot_uuid, stage):
                 with grid[j]:
                     display_number = i + j + 1                            
                     if stage == 'Key Frames':
-                        display_image(timing_uuid=timing_list[i + j].uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
+                        display_image(timing_uuid=shot_list[i + j].uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
                     elif stage == 'Videos':
-                        if timing_list[i + j].timed_clip:
-                            st.video(timing_list[i + j].timed_clip.location)
+                        if shot_list[i + j].main_clip:
+                            st.video(shot_list[i + j].main_clip.location)
                         else:
                             st.error("No video found for this frame.")
                     with st.expander(f'Frame #{display_number}', True):    
-                        timeline_view_buttons(i, j, timing_list, shift_frames_setting, time_setter_toggle, replace_image_widget_toggle, duration_setter_toggle, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_position_toggle, project_uuid)
+                        timeline_view_buttons(i, j, shot_list, shift_frames_setting, time_setter_toggle, replace_image_widget_toggle, duration_setter_toggle, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_position_toggle, project_uuid)
 
 

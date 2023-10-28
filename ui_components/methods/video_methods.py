@@ -20,7 +20,7 @@ from utils.media_processor.interpolator import VideoInterpolator
 from utils.media_processor.video import VideoProcessor
 
 
-def create_single_interpolated_clip(timing_uuid, quality, settings={}, variant_count=1):
+def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_count=1):
     '''
     - this includes all the animation styles [direct morphing, interpolation, image to video]
     - this stores the newly created video in the interpolated_clip_list and promotes them to
@@ -31,33 +31,21 @@ def create_single_interpolated_clip(timing_uuid, quality, settings={}, variant_c
     from shared.constants import QUEUE_INFERENCE_QUERIES
 
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-    next_timing: InternalFrameTimingObject = data_repo.get_next_timing(timing_uuid)
-    prev_timing: InternalFrameTimingObject = data_repo.get_prev_timing(timing_uuid)
-
-    if not next_timing:
-        st.error('This is the last image. Please select images having both prev & next images')
-        time.sleep(0.5)
-        return None
-    
-    if not prev_timing:
-        st.error('This is the first image. Please select images having both prev & next images')
-        time.sleep(0.5)
-        return None
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
 
     if quality == 'full':
-        interpolation_steps = VideoInterpolator.calculate_dynamic_interpolations_steps(timing.clip_duration)
+        interpolation_steps = VideoInterpolator.calculate_dynamic_interpolations_steps(shot.duration)
     elif quality == 'preview':
         interpolation_steps = 3
 
-    timing.interpolated_steps = interpolation_steps
-    img_list = [prev_timing.primary_image.location, timing.primary_image.location, next_timing.primary_image.location]
-    settings.update(interpolation_steps=timing.interpolation_steps)
+    img_list = [t.primary_image for t in timing_list]
+    settings.update(interpolation_steps=interpolation_steps)
 
     # res is an array of tuples (video_bytes, log)
     res = VideoInterpolator.create_interpolated_clip(
         img_list,
-        timing.animation_style,
+        shot.animation_style,   # TODO: fix this
         settings,
         variant_count,
         QUEUE_INFERENCE_QUERIES
@@ -69,7 +57,7 @@ def create_single_interpolated_clip(timing_uuid, quality, settings={}, variant_c
             "output": output,
             "log_uuid": log.uuid,
             "settings": settings,
-            "timing_uuid": timing_uuid
+            "shot_uuid": shot_uuid
         }
 
         process_inference_output(**inference_data)

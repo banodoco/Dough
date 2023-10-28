@@ -115,11 +115,6 @@ class InternalFrameTimingObject:
             **kwargs["project"]) if 'project' in kwargs and kwargs["project"] else None
         self.source_image = InternalFileObject(
             **kwargs["source_image"]) if 'source_image' in kwargs and kwargs["source_image"] else None
-        self.interpolated_clip_list = [InternalFileObject(**file) for file in kwargs["interpolated_clip_list"]] \
-                    if 'interpolated_clip_list' in kwargs and kwargs["interpolated_clip_list"] else []
-        self.timed_clip = InternalFileObject(
-            **kwargs["timed_clip"]) if 'timed_clip' in kwargs and kwargs["timed_clip"] else None
-        self.preview_video = InternalFileObject(**kwargs['preview_video']) if 'preview_video' in kwargs and kwargs['preview_video'] else None
         self.mask = InternalFileObject(
             **kwargs["mask"]) if 'mask' in kwargs and kwargs["mask"] else None
         self.canny_image = InternalFileObject(
@@ -168,17 +163,7 @@ class InternalFrameTimingObject:
             idx += 1
 
         return -1
-    
-    @property
-    def primary_interpolated_video_index(self):
-        if not (self.interpolated_clip_list and len(self.interpolated_clip_list)) or not self.timed_clip:
-            return -1
-        
-        for idx, img in enumerate(self.interpolated_clip_list):
-            if img.uuid == self.timed_clip.uuid:
-                return idx
-        
-        return -1
+
 
 class InternalShotObject:
     def __init__(self, **kwargs):
@@ -199,6 +184,17 @@ class InternalShotObject:
     @property
     def meta_data_dict(self):
         return json.loads(self.meta_data) if self.meta_data else {}
+    
+    @property
+    def primary_interpolated_video_index(self):
+        if not (self.interpolated_clip_list and len(self.interpolated_clip_list)) or not self.main_clip:
+            return -1
+        
+        for idx, img in enumerate(self.interpolated_clip_list):
+            if img.uuid == self.main_clip.uuid:
+                return idx
+        
+        return -1
 
 
 class InternalAppSettingObject:
