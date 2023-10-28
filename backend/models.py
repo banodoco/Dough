@@ -149,8 +149,8 @@ class BackupTiming(BaseModel):
 
 class Shot(BaseModel):
     name = models.CharField(max_length=255, default="", blank=True)
-    project_id = models.ForeignKey(Project, on_delete=models.CASCADE)
-    main_clip_id = models.ForeignKey(InternalFileObject, default=None, null=True)   # main clip has the correct duration
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    main_clip = models.ForeignKey(InternalFileObject, default=None, null=True, on_delete=models.DO_NOTHING)   # main clip has the correct duration
     desc = models.TextField(default="", blank=True)
     shot_idx = models.IntegerField()
     duration = models.FloatField(default=2.5)
@@ -217,7 +217,7 @@ class Timing(BaseModel):
     mask = models.ForeignKey(InternalFileObject, related_name="mask", on_delete=models.DO_NOTHING, null=True)
     canny_image = models.ForeignKey(InternalFileObject, related_name="canny_image", on_delete=models.DO_NOTHING, null=True)
     primary_image = models.ForeignKey(InternalFileObject, related_name="primary_image", on_delete=models.DO_NOTHING, null=True)   # variant number that is currently selected (among alternative images) NONE if none is present
-    shot_id = models.ForeignKey(Shot, on_delete=models.CASCADE, null=True) 
+    shot = models.ForeignKey(Shot, on_delete=models.CASCADE, null=True) 
     alternative_images = models.TextField(default=None, null=True)
     notes = models.TextField(default="", blank=True)
     clip_duration = models.FloatField(default=None, null=True)

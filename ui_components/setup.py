@@ -87,6 +87,10 @@ def setup_app_ui():
         st.session_state["project_uuid"] = project_list[selected_index].uuid
         check_project_meta_data(st.session_state["project_uuid"])
 
+        if 'shot_uuid' not in st.session_state:
+            shot_list = data_repo.get_shot_list(st.session_state["project_uuid"])
+            st.session_state['shot_uuid'] = shot_list[0].uuid
+
         if "current_frame_index" not in st.session_state:
             st.session_state['current_frame_index'] = 1
 
@@ -164,7 +168,7 @@ def setup_app_ui():
                     st.session_state['page'] = option_menu(None, pages, icons=['palette', 'camera-reels', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
                                                             "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
 
-                frame_styling_page(mainheader2, st.session_state["project_uuid"])
+                frame_styling_page(st.session_state["shot_uuid"])
 
             elif st.session_state["main_view_type"] == "Tools & Settings":
 

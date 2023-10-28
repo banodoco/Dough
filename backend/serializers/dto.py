@@ -74,12 +74,30 @@ class InternalFileDto(serializers.ModelSerializer):
         fields = ('uuid', 'name', 'local_path', 'type',  'hosted_url', 'created_on', 'inference_log', 'project')
 
 
+class BasicShotDto(serializers.ModelSerializer):
+    project = ProjectDto()
+
+    class Meta:
+        model = Shot
+        fields = (
+            "uuid",
+            "name",
+            "project",
+            "desc",
+            "shot_idx",
+            "project",
+            "duration",
+            "meta_data",
+        )
+
+
 class TimingDto(serializers.ModelSerializer):
     model = AIModelDto()
     source_image = InternalFileDto()
     mask = InternalFileDto()
     canny_image = InternalFileDto()
     primary_image  = InternalFileDto()
+    shot = BasicShotDto()
     
     class Meta:
         model = Timing
@@ -91,16 +109,10 @@ class TimingDto(serializers.ModelSerializer):
             "canny_image",
             "primary_image",
             "alternative_images",
-            "prompt",
-            "negative_prompt",
-            "guidance_scale",
-            "seed",
-            "strength",
             "notes",
-            "adapter_type",
-            "clip_duration",
             "aux_frame_index",
             "created_on",
+            "shot"
         )
 
 
@@ -166,6 +178,7 @@ class ShotDto(serializers.ModelSerializer):
     timing_list = serializers.SerializerMethodField()
     interpolated_clip_list = serializers.SerializerMethodField()
     main_clip = InternalFileDto()
+    project = ProjectDto()
 
     class Meta:
         model = Shot
@@ -174,6 +187,7 @@ class ShotDto(serializers.ModelSerializer):
             "name",
             "desc",
             "shot_idx",
+            "project",
             "duration",
             "meta_data",
             "timing_list",

@@ -162,7 +162,7 @@ class InternalShotObject:
     def __init__(self, **kwargs):
         self.uuid = kwargs['uuid'] if key_present('uuid', kwargs) else None
         self.name = kwargs['name'] if key_present('name', kwargs) else ""
-        self.project_id = kwargs['project_id'] if key_present('project_id', kwargs) else None
+        self.project = InternalProjectObject(**kwargs['project']) if key_present('project', kwargs) else None
         self.desc = kwargs['desc'] if key_present('desc', kwargs) else ""
         self.shot_idx = kwargs['shot_idx'] if key_present('shot_idx', kwargs) else 0
         self.duration = kwargs['duration'] if key_present('duration', kwargs) else 0

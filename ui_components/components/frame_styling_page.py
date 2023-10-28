@@ -31,8 +31,8 @@ def frame_styling_page(shot_uuid: str):
 
     if "strength" not in st.session_state:
         st.session_state['strength'] = DefaultProjectSettingParams.batch_strength
-        st.session_state['prompt_value'] = project_settings.default_prompt
-        st.session_state['model'] = project_settings.default_model.uuid
+        st.session_state['prompt_value'] = DefaultProjectSettingParams.batch_prompt
+        st.session_state['model'] = None
         st.session_state['negative_prompt_value'] = DefaultProjectSettingParams.batch_negative_prompt
         st.session_state['guidance_scale'] = DefaultProjectSettingParams.batch_guidance_scale
         st.session_state['seed'] = DefaultProjectSettingParams.batch_seed

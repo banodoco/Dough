@@ -35,7 +35,7 @@ def sidebar_logger(shot_uuid):
     page_number = b1.number_input('Page number', min_value=1, max_value=project_setting.total_log_pages, value=1, step=1)
     items_per_page = b2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
     log_list, total_page_count = data_repo.get_all_inference_log_list(
-        project_id=shot_uuid,
+        project_id=shot.project.uuid,
         page=page_number,
         data_per_page=items_per_page,
         status_list=status_list

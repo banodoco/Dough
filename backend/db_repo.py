@@ -816,7 +816,6 @@ class DBRepo:
                     return InternalResponse({}, 'invalid model uuid', False)
                 
                 attributes._data['model_id'] = model.id
-        
 
         if 'source_image_id' in attributes.data:
             if attributes.data['source_image_id'] != None:
@@ -825,7 +824,6 @@ class DBRepo:
                     return InternalResponse({}, 'invalid source image uuid', False)
                 
                 attributes._data['source_image_id'] = source_image.id
-        
 
         if 'mask_id' in attributes.data:
             if attributes.data['mask_id'] != None:
@@ -834,7 +832,6 @@ class DBRepo:
                     return InternalResponse({}, 'invalid mask uuid', False)
                 
                 attributes._data['mask_id'] = mask.id
-        
 
         if 'canny_image_id' in attributes.data:
             if attributes.data['canny_image_id'] != None:
@@ -843,7 +840,6 @@ class DBRepo:
                     return InternalResponse({}, 'invalid canny image uuid', False)
                 
                 attributes._data['canny_image_id'] = canny_image.id
-        
 
         if 'primay_image_id' in attributes.data:
             if attributes.data['primay_image_id'] != None:
@@ -853,9 +849,7 @@ class DBRepo:
                 
                 attributes._data['primay_image_id'] = primay_image.id
         
-        
         timing = Timing.objects.create(**attributes.data)
-        
         payload = {
             'data': TimingDto(timing).data
         }

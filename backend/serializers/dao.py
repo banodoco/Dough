@@ -82,14 +82,7 @@ class CreateTimingDao(serializers.Serializer):
     shot_id = serializers.CharField(max_length=100)
     primary_image = serializers.CharField(max_length=100, required=False)
     alternative_images = serializers.CharField(max_length=100, required=False)
-    prompt = serializers.CharField(max_length=1024, required=False)
-    negative_prompt = serializers.CharField(max_length=1024, required=False)
-    guidance_scale = serializers.FloatField(required=False)
-    seed = serializers.IntegerField(required=False)
-    strength = serializers.FloatField(required=False)
     notes = serializers.CharField(max_length=1024, required=False)
-    adapter_type = serializers.CharField(max_length=255, required=False)
-    clip_duration = serializers.FloatField(default=0, required=False)
     aux_frame_index = serializers.IntegerField(required=False)
 
 
