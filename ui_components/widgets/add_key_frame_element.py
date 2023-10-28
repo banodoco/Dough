@@ -116,8 +116,6 @@ def add_key_frame(selected_image, inherit_styling_settings, target_frame_positio
     if inherit_styling_settings == "Yes":    
         clone_styling_settings(index_of_current_item - 1, timing_list[index_of_current_item].uuid)
 
-    timing_list[index_of_current_item].animation_style = project_settings.default_animation_style
-
     if len(timing_list) == 1:
         st.session_state['current_frame_index'] = 1
         st.session_state['current_frame_uuid'] = timing_list[0].uuid

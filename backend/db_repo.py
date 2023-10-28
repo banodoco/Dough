@@ -1412,7 +1412,6 @@ class DBRepo:
                     adapter_type=backup_timing['adapter_type'],
                     clip_duration=backup_timing['clip_duration'],
                     animation_style=backup_timing['animation_style'],
-                    interpolation_steps=backup_timing['interpolation_steps'],
                     low_threshold=backup_timing['low_threshold'],
                     high_threshold=backup_timing['high_threshold'],
                     aux_frame_index=backup_timing['aux_frame_index']

@@ -312,7 +312,6 @@ def promote_video_variant(shot_uuid, variant_uuid):
     if video.duration != shot.duration:
         video_bytes = VideoProcessor.update_video_speed(
             variant_to_promote.location,
-            shot.animation_style,
             shot.duration
         )
 

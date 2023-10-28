@@ -112,6 +112,7 @@ def animation_style_element(shot_uuid):
     if st.button("Generate Animation Clip", key="generate_animation_clip"):
         vid_quality = "full" if video_resolution == "Full Resolution" else "preview"
         st.write("Generating animation clip...")
+        settings.update(animation_style=current_animation_style)
         create_single_interpolated_clip(
             shot_uuid,
             vid_quality,

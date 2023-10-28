@@ -120,7 +120,6 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
 
     timing_data = {
         "frame_time": 0.0,
-        "animation_style": animation_style,
         "aux_frame_index": 0,
         "source_image_id": source_image.uuid,
         "shot_id": shot.uuid,

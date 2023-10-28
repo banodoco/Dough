@@ -231,8 +231,6 @@ class Timing(BaseModel):
     notes = models.TextField(default="", blank=True)
     adapter_type = models.CharField(max_length=255, default=None, null=True, blank=True)
     clip_duration = models.FloatField(default=None, null=True)     # clip duration of the timed_clip
-    animation_style = models.CharField(max_length=255, default=None, null=True)
-    interpolation_steps = models.IntegerField(default=0)
     low_threshold = models.FloatField(default=0)
     high_threshold = models.FloatField(default=0)
     aux_frame_index = models.IntegerField(default=0)    # starts with 0 # TODO: udpate this

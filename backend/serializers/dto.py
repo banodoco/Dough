@@ -102,8 +102,6 @@ class TimingDto(serializers.ModelSerializer):
             "notes",
             "adapter_type",
             "clip_duration",
-            "animation_style",
-            "interpolation_steps",
             "low_threshold",
             "high_threshold",
             "aux_frame_index",

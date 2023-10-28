@@ -6,15 +6,12 @@ import time
 from typing import List
 import ffmpeg
 import streamlit as st
-import uuid
-from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, AudioFileClip
-from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
+from moviepy.editor import concatenate_videoclips, VideoFileClip, AudioFileClip
 
 from backend.models import InternalFileObject
 from shared.constants import InferenceType, InternalFileTag
 from shared.file_upload.s3 import is_s3_image_url
-from ui_components.methods.file_methods import convert_bytes_to_file
-from ui_components.models import InternalFrameTimingObject, InternalSettingObject, InternalShotObject
+from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.interpolator import VideoInterpolator
 from utils.media_processor.video import VideoProcessor
@@ -45,7 +42,7 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
     # res is an array of tuples (video_bytes, log)
     res = VideoInterpolator.create_interpolated_clip(
         img_list,
-        shot.animation_style,   # TODO: fix this
+        settings['animation_style'],
         settings,
         variant_count,
         QUEUE_INFERENCE_QUERIES
@@ -71,7 +68,6 @@ def update_speed_of_video_clip(video_file: InternalFileObject, timing_uuid) -> I
         timing_uuid)
 
     desired_duration = timing.clip_duration
-    animation_style = timing.animation_style
 
     temp_video_file = None
     if video_file.hosted_url and is_s3_image_url(video_file.hosted_url):
@@ -84,7 +80,6 @@ def update_speed_of_video_clip(video_file: InternalFileObject, timing_uuid) -> I
 
     video_bytes = VideoProcessor.update_video_speed(
         location_of_video,
-        animation_style,
         desired_duration
     )
 
