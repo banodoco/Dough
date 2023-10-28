@@ -111,8 +111,6 @@ class InternalAIModelObject:
 class InternalFrameTimingObject:
     def __init__(self, **kwargs):
         self.uuid = kwargs['uuid'] if 'uuid' in kwargs else None
-        self.project = InternalProjectObject(
-            **kwargs["project"]) if 'project' in kwargs and kwargs["project"] else None
         self.source_image = InternalFileObject(
             **kwargs["source_image"]) if 'source_image' in kwargs and kwargs["source_image"] else None
         self.mask = InternalFileObject(

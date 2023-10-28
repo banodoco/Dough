@@ -225,7 +225,7 @@ def drawing_element(timing_details,project_settings,project_uuid,stage=WorkflowS
                                 "RGB")
 
                         unique_file_name = str(uuid.uuid4()) + ".png"
-                        file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{unique_file_name}"
+                        file_location = f"videos/{timing.shot.project.uuid}/assets/resources/masks/{unique_file_name}"
                         hosted_url = save_or_host_file(new_canny_image, file_location)
                         file_data = {
                             "name": str(uuid.uuid4()) + ".png",

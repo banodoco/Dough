@@ -75,7 +75,6 @@ class CreateAIModelParamMapDao(serializers.Serializer):
 
 
 class CreateTimingDao(serializers.Serializer):
-    project_id = serializers.CharField(max_length=100)
     model_id = serializers.CharField(max_length=100, required=False)
     source_image_id = serializers.CharField(max_length=100, required=False)
     mask_id = serializers.CharField(max_length=100, required=False)

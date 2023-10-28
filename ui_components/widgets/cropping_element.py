@@ -20,7 +20,7 @@ from utils import st_memory
 
 
 def cropping_selector_element(project_uuid):
-    selector1, selector2, selector3 = st.columns([1, 1, 1])
+    selector1, selector2, _ = st.columns([1, 1, 1])
     with selector1:
         which_stage = st_memory.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], key="which_stage", horizontal=True)
     with selector2:
@@ -86,7 +86,7 @@ def manual_cropping_element(stage, timing_uuid):
     
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
-    project_uuid = timing.project.uuid
+    project_uuid = timing.shot.project.uuid
 
     if not timing.source_image:
         st.error("Please select a source image before cropping")
@@ -115,7 +115,7 @@ def manual_cropping_element(stage, timing_uuid):
             get_working_image()
             st.rerun()
 
-        options1, options2, option3, option4 = st.columns([3, 1, 1, 1])
+        options1, _, _, _ = st.columns([3, 1, 1, 1])
         with options1:
             sub_options_1, sub_options_2 = st.columns(2)
             if 'degrees_rotated_to' not in st.session_state:
@@ -140,7 +140,7 @@ def manual_cropping_element(stage, timing_uuid):
                     st.rerun()
         
         project_settings: InternalProjectObject = data_repo.get_project_setting(
-            timing.project.uuid)
+            timing.shot.project.uuid)
 
         width = project_settings.width
         height = project_settings.height
@@ -193,4 +193,4 @@ def manual_cropping_element(stage, timing_uuid):
                 st.warning("Warning: This will overwrite the original image")
 
             inpaint_in_black_space_element(
-                cropped_img, timing.project.uuid, stage=stage)
+                cropped_img, timing.shot.project.uuid, stage=stage)

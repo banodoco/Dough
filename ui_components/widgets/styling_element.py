@@ -13,14 +13,14 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
     timing_list: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_shot(timing.shot.uuid)
-    project_settings: InternalSettingObject = data_repo.get_project_setting(timing.project.uuid)
+    project_settings: InternalSettingObject = data_repo.get_project_setting(timing.shot.project.uuid)
 
     # -------------------- Transfomation Stage -------------------- #
     stages = ImageStage.value_list()
     if view_type == ViewType.SINGLE.value:
         append_to_item_name = f"{timing_uuid}"
     elif view_type == ViewType.LIST.value:
-        append_to_item_name = str(timing.project.uuid)
+        append_to_item_name = str(timing.shot.project.uuid)
         st.markdown("## Batch queries")
 
     if project_settings.default_stage:

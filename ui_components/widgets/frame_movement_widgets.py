@@ -151,7 +151,7 @@ def replace_image_widget(timing_uuid, stage, options=["Uploaded Frame","Other Fr
                 if st.button("Upload Source Image"):
                     if uploaded_file:
                         timing = data_repo.get_timing_from_uuid(timing.uuid)
-                        if save_and_promote_image(uploaded_file, timing.project.uuid, timing.uuid, "source"):
+                        if save_and_promote_image(uploaded_file, timing.shot.project.uuid, timing.uuid, "source"):
                             time.sleep(1.5)
                             st.rerun()
         else:
@@ -161,7 +161,7 @@ def replace_image_widget(timing_uuid, stage, options=["Uploaded Frame","Other Fr
                 if st.button("Replace frame", disabled=False):                    
                     timing = data_repo.get_timing_from_uuid(timing.uuid)
                     if replacement_frame:
-                        save_and_promote_image(replacement_frame, timing.project.uuid, timing.uuid, "styled")
+                        save_and_promote_image(replacement_frame, timing.shot.project.uuid, timing.uuid, "styled")
                         st.success("Replaced")
                         time.sleep(1)
                         st.rerun()

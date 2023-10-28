@@ -75,7 +75,6 @@ class InternalFileDto(serializers.ModelSerializer):
 
 
 class TimingDto(serializers.ModelSerializer):
-    project = ProjectDto()
     model = AIModelDto()
     source_image = InternalFileDto()
     mask = InternalFileDto()
@@ -86,7 +85,6 @@ class TimingDto(serializers.ModelSerializer):
         model = Timing
         fields = (
             "uuid",
-            "project",
             "model",
             "source_image",
             "mask",
@@ -112,7 +110,6 @@ class TimingDto(serializers.ModelSerializer):
             "created_on",
             "transformation_stage"
         )
-
 
 
 class AppSettingDto(serializers.ModelSerializer):

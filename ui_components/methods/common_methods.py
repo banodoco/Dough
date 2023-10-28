@@ -283,7 +283,7 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
     # promoting variant
     variant_to_promote = timing.alternative_images_list[variant_to_promote_frame_number]
     data_repo.update_specific_timing(timing_uuid, primary_image_id=variant_to_promote.uuid)
-    _ = data_repo.get_timing_list_from_shot(timing.project.uuid)
+    _ = data_repo.get_timing_list_from_shot(timing.shot.uuid)
 
 
 def promote_video_variant(shot_uuid, variant_uuid):
@@ -373,7 +373,7 @@ def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
     timing = data_repo.get_timing_from_uuid(timing_uuid)
 
     unique_file_name = str(uuid.uuid4()) + ".png"
-    file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{unique_file_name}"
+    file_location = f"videos/{timing.shot.project.uuid}/assets/resources/masks/{unique_file_name}"
 
     hosted_url = save_or_host_file(image, file_location)
     # if mask is not present than creating a new one
@@ -509,7 +509,7 @@ def get_audio_bytes_for_slice(timing_uuid):
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
     project_settings: InternalSettingObject = data_repo.get_project_setting(
-        timing.project.uuid)
+        timing.shot.project.uuid)
 
     # TODO: add null check for the audio
     audio = AudioSegment.from_file(project_settings.audio.local_path)
@@ -570,7 +570,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)
-    project = timing.project
+    project = timing.shot.project
     inference_log = None
 
     if type_of_mask_selection == "Automated Background Selection":
@@ -765,12 +765,12 @@ def process_inference_output(**kwargs):
             if 'normalise_speed' in settings and settings['normalise_speed']:
                 output = VideoProcessor.update_video_bytes_speed(output, AnimationStyleType.INTERPOLATION.value, timing.clip_duration)
 
-            video_location = "videos/" + str(timing.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
+            video_location = "videos/" + str(timing.shot.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
             video = convert_bytes_to_file(
                 file_location_to_save=video_location,
                 mime_type="video/mp4",
                 file_bytes=output,
-                project_uuid=timing.project.uuid,
+                project_uuid=timing.shot.project.uuid,
                 inference_log_id=log_uuid
             )
 
@@ -822,7 +822,7 @@ def process_inference_output(**kwargs):
                 type=InternalFileType.IMAGE.value, 
                 hosted_url=output[0] if isinstance(output, list) else output, 
                 inference_log_id=str(log_uuid),
-                project_id=timing.project.uuid
+                project_id=timing.shot.project.uuid
             )
 
             if stage == WorkflowStageType.SOURCE.value:

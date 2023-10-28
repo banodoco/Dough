@@ -15,7 +15,7 @@ import sqlite3
 import subprocess
 from typing import List
 import uuid
-from shared.constants import Colors, InternalFileType, SortOrder
+from shared.constants import InternalFileType, SortOrder
 from backend.serializers.dto import  AIModelDto, AppSettingDto, BackupDto, BackupListDto, InferenceLogDto, InternalFileDto, ProjectDto, SettingDto, ShotDto, TimingDto, UserDto
 
 from shared.constants import AUTOMATIC_FILE_HOSTING, LOCAL_DATABASE_NAME, SERVER, ServerType
@@ -768,7 +768,8 @@ class DBRepo:
             if not project:
                 return InternalResponse({}, 'invalid project', False)
             
-            timing_list = Timing.objects.filter(project_id=project.id, is_disabled=False).order_by('aux_frame_index').all()
+            shot_list = Shot.objects.filter(project_id=project.id, is_disabled=False).all()
+            timing_list = Timing.objects.filter(shot_id__in=[s.id for s in shot_list], is_disabled=False).order_by('aux_frame_index').all()
         else:
             timing_list = Timing.objects.filter(is_disabled=False).order_by('aux_frame_index').all()
         
@@ -798,14 +799,6 @@ class DBRepo:
         
         print(attributes.data)
         
-        if 'project_id' in attributes.data and attributes.data['project_id']:
-            project = Project.objects.filter(uuid=attributes.data['project_id'], is_disabled=False).first()
-            if not project:
-                return InternalResponse({}, 'invalid project', False)
-            
-            print(attributes.data)
-            attributes._data['project_id'] = project.id
-
         if 'shot_id' in attributes.data and attributes.data['shot_id']:
             shot = Shot.objects.filter(uuid=attributes.data['shot_id'], is_disabled=False).first()
             if not shot:
@@ -876,7 +869,8 @@ class DBRepo:
             project: Project = Project.objects.filter(is_disabled=False).first()
         
         if project:
-            Timing.objects.filter(project_id=project.id, is_disabled=False).update(is_disabled=True)
+            shot_list = Shot.objects.filter(project_id=project.id, is_disabled=False).all()
+            Timing.objects.filter(shot_id__in=[s.id for s in shot_list], is_disabled=False).update(is_disabled=True)
         
         return InternalResponse({}, 'timing removed successfully', True)
     

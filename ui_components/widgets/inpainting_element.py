@@ -34,7 +34,7 @@ def inpainting_element(timing_uuid):
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_shot(
         timing.shot.uuid)
     project_settings: InternalSettingObject = data_repo.get_project_setting(
-        timing.project.uuid)
+        timing.shot.project.uuid)
 
     if "type_of_mask_replacement" not in st.session_state:
         st.session_state["type_of_mask_replacement"] = "Replace With Image"
@@ -214,7 +214,7 @@ def inpainting_element(timing_uuid):
 
                     if st.session_state["type_of_mask_replacement"] == "Replace With Image":
                         data_repo = DataRepo()
-                        project: InternalProjectObject = data_repo.get_project_from_uuid(timing.project.uuid)
+                        project: InternalProjectObject = data_repo.get_project_from_uuid(timing.shot.project.uuid)
 
                         prompt = ""
                         negative_prompt = ""

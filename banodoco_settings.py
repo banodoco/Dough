@@ -119,7 +119,6 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     source_image = data_repo.create_file(**file_data)
 
     timing_data = {
-        "project_id": project.uuid,
         "frame_time": 0.0,
         "animation_style": animation_style,
         "aux_frame_index": 0,
@@ -156,7 +155,7 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
         "default_high_threshold" : 100
     }
 
-    project_setting = data_repo.create_project_setting(**project_setting_data)
+    _ = data_repo.create_project_setting(**project_setting_data)
 
     create_working_assets(project.uuid)
 

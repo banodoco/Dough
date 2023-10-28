@@ -6,8 +6,6 @@ from utils.data_repo.data_repo import DataRepo
 
 def attach_audio_element(project_uuid, expanded):
     data_repo = DataRepo()
-    project: InternalProjectObject = data_repo.get_project_from_uuid(
-        uuid=project_uuid)
     project_setting: InternalSettingObject = data_repo.get_project_setting(project_uuid)
 
     with st.expander("Audio", expanded=expanded):

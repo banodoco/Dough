@@ -80,7 +80,7 @@ def update_speed_of_video_clip(video_file: InternalFileObject, timing_uuid) -> I
     location_of_video = temp_video_file.name if temp_video_file else video_file.local_path
     
     new_file_name = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16)) + ".mp4"
-    new_file_location = "videos/" + str(timing.project.uuid) + "/assets/videos/1_final/" + str(new_file_name)
+    new_file_location = "videos/" + str(timing.shot.project.uuid) + "/assets/videos/1_final/" + str(new_file_name)
 
     video_bytes = VideoProcessor.update_video_speed(
         location_of_video,
@@ -92,7 +92,7 @@ def update_speed_of_video_clip(video_file: InternalFileObject, timing_uuid) -> I
         new_file_location,
         "video/mp4",
         video_bytes,
-        timing.project.uuid
+        timing.shot.project.uuid
     )
 
     if temp_video_file:

@@ -35,7 +35,7 @@ def zoom_inputs(position='in-frame', horizontal=False):
 def save_zoomed_image(image, timing_uuid, stage, promote=False):
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
-    project_uuid = timing.project.uuid
+    project_uuid = timing.shot.project.uuid
 
     file_name = str(uuid.uuid4()) + ".png"
 

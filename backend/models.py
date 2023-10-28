@@ -213,7 +213,6 @@ class Shot(BaseModel):
 
 
 class Timing(BaseModel):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
     model = models.ForeignKey(AIModel, on_delete=models.DO_NOTHING, null=True)
     source_image = models.ForeignKey(InternalFileObject, related_name="source_image", on_delete=models.DO_NOTHING, null=True)
     mask = models.ForeignKey(InternalFileObject, related_name="mask", on_delete=models.DO_NOTHING, null=True)
@@ -298,15 +297,15 @@ class Timing(BaseModel):
 
         return ""
     
-    # gives the next entry in the project timings
+    # gives the next entry in the shot timings
     @property
     def next_timing(self):
-        next_timing = Timing.objects.filter(project=self.project, id__gt=self.id, is_disabled=False).order_by('id').first()
+        next_timing = Timing.objects.filter(shot=self.shot, id__gt=self.id, is_disabled=False).order_by('id').first()
         return next_timing
     
     @property
     def prev_timing(self):
-        prev_timing = Timing.objects.filter(project=self.project, id__lt=self.id, is_disabled=False).order_by('id').first()
+        prev_timing = Timing.objects.filter(shot=self.shot, id__lt=self.id, is_disabled=False).order_by('id').first()
         return prev_timing
 
 
