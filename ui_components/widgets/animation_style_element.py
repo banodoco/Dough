@@ -2,6 +2,7 @@ import time
 import streamlit as st
 from typing import List
 from shared.constants import AnimationStyleType, AnimationToolType
+from ui_components.constants import DefaultProjectSettingParams
 from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.motion_module import AnimateDiffCheckpoint
@@ -39,10 +40,10 @@ def animation_style_element(shot_uuid):
             prompt_column_1, prompt_column_2 = st.columns([1, 1])
 
             with prompt_column_1:
-                positive_prompt = st.text_area("Positive Prompt:", value=project_settings.default_prompt, key="positive_prompt")
+                positive_prompt = st.text_area("Positive Prompt:", value=DefaultProjectSettingParams.batch_prompt, key="positive_prompt")
             
             with prompt_column_2:
-                negative_prompt = st.text_area("Negative Prompt:", value=project_settings.default_negative_prompt, key="negative_prompt")
+                negative_prompt = st.text_area("Negative Prompt:", value=DefaultProjectSettingParams.batch_negative_prompt, key="negative_prompt")
 
             animate_col_1, animate_col_2, _ = st.columns([1, 1, 2])
 

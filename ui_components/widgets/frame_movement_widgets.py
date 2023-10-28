@@ -114,17 +114,17 @@ def replace_image_widget(timing_uuid, stage, options=["Uploaded Frame","Other Fr
     timing = data_repo.get_timing_from_uuid(timing_uuid)
     timing_list = data_repo.get_timing_list_from_shot(timing.shot.uuid)
 
-    replace_with = options[0] if len(options) == 1 else st.radio("Replace with:", options, horizontal=True, key=f"replace_with_what_{stage}_{timing_uuid}")
+    replace_with = options[0] if len(options) == 1 else st.radio("Replace with:", options, horizontal=True, key=f"replacement_entity_{stage}_{timing_uuid}")
 
     if replace_with == "Other Frame":
-        which_stage_to_use_for_replacement = st.radio("Select stage to use:", [
-            ImageStage.MAIN_VARIANT.value, ImageStage.SOURCE_IMAGE.value], key=f"which_stage_to_use_for_replacement_{stage}_{timing_uuid}", horizontal=True)
+        image_replacement_stage = st.radio("Select stage to use:", [
+            ImageStage.MAIN_VARIANT.value, ImageStage.SOURCE_IMAGE.value], key=f"image_replacement_stage_{stage}_{timing_uuid}", horizontal=True)
         which_image_to_use_for_replacement = st.number_input("Select image to use:", min_value=0, max_value=len(
             timing_list)-1, value=0, key=f"which_image_to_use_for_replacement_{stage}")
 
-        if which_stage_to_use_for_replacement == ImageStage.SOURCE_IMAGE.value:                                    
+        if image_replacement_stage == ImageStage.SOURCE_IMAGE.value:                                    
             selected_image = timing_list[which_image_to_use_for_replacement].source_image
-        elif which_stage_to_use_for_replacement == ImageStage.MAIN_VARIANT.value:
+        elif image_replacement_stage == ImageStage.MAIN_VARIANT.value:
             selected_image = timing_list[which_image_to_use_for_replacement].primary_image
 
         st.image(selected_image.local_path, use_column_width=True)

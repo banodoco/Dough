@@ -8,7 +8,7 @@ from ui_components.methods.file_methods import generate_pil_image
 from ui_components.widgets.add_key_frame_element import add_key_frame
 
 
-def timeline_view_buttons(i, j, timing_list, shift_frames_setting, time_setter_toggle, replace_image_widget_toggle, duration_setter_toggle, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_position_toggle, project_uuid):
+def timeline_view_buttons(i, j, timing_list, time_setter_toggle, replace_image_widget_toggle, duration_setter_toggle, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_position_toggle, project_uuid):
     if replace_image_widget_toggle:
         replace_image_widget(timing_list[i + j].uuid, stage=WorkflowStageType.STYLED.value,options=["Uploaded Frame"])
     
@@ -48,11 +48,8 @@ def timeline_view(shot_uuid, stage):
 
     st.markdown("***")
 
-    header_col_1, header_col_2, header_col_3 = st.columns([1.5,4,1.5])
+    _, header_col_2, header_col_3 = st.columns([1.5,4,1.5])
     
-    with header_col_1:
-        shift_frames_setting = st.toggle("Shift Frames", help="If set to True, it will shift the frames after your adjustment forward by the amount of time you move.")
-
     with header_col_2:
         col1, col2, col3 = st.columns(3)
 
@@ -93,6 +90,6 @@ def timeline_view(shot_uuid, stage):
                         else:
                             st.error("No video found for this frame.")
                     with st.expander(f'Frame #{display_number}', True):    
-                        timeline_view_buttons(i, j, shot_list, shift_frames_setting, time_setter_toggle, replace_image_widget_toggle, duration_setter_toggle, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_position_toggle, project_uuid)
+                        timeline_view_buttons(i, j, shot_list, time_setter_toggle, replace_image_widget_toggle, duration_setter_toggle, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_position_toggle, project_uuid)
 
 

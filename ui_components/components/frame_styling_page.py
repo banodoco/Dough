@@ -18,7 +18,7 @@ from ui_components.widgets.style_explorer_element import style_explorer_element
 from ui_components.widgets.variant_comparison_grid import variant_comparison_grid
 from utils import st_memory
 
-from ui_components.constants import CreativeProcessType
+from ui_components.constants import CreativeProcessType, DefaultProjectSettingParams, DefaultTimingStyleParams
 
 from utils.data_repo.data_repo import DataRepo
 
@@ -30,15 +30,14 @@ def frame_styling_page(shot_uuid: str):
     project_settings = data_repo.get_project_setting(shot.project.uuid)
 
     if "strength" not in st.session_state:
-        st.session_state['strength'] = project_settings.default_strength
+        st.session_state['strength'] = DefaultProjectSettingParams.batch_strength
         st.session_state['prompt_value'] = project_settings.default_prompt
         st.session_state['model'] = project_settings.default_model.uuid
-        st.session_state['custom_pipeline'] = project_settings.default_custom_pipeline
-        st.session_state['negative_prompt_value'] = project_settings.default_negative_prompt
-        st.session_state['guidance_scale'] = project_settings.default_guidance_scale
-        st.session_state['seed'] = project_settings.default_seed
-        st.session_state['num_inference_steps'] = project_settings.default_num_inference_steps
-        st.session_state['transformation_stage'] = project_settings.default_stage
+        st.session_state['negative_prompt_value'] = DefaultProjectSettingParams.batch_negative_prompt
+        st.session_state['guidance_scale'] = DefaultProjectSettingParams.batch_guidance_scale
+        st.session_state['seed'] = DefaultProjectSettingParams.batch_seed
+        st.session_state['num_inference_steps'] = DefaultProjectSettingParams.batch_num_inference_steps
+        st.session_state['transformation_stage'] = DefaultProjectSettingParams.batch_transformation_stage
         
     if "current_frame_uuid" not in st.session_state:        
         timing = data_repo.get_timing_list_from_shot(shot_uuid)[0]

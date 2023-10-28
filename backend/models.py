@@ -1,4 +1,3 @@
-from django.utils import timezone
 from django.db import models
 import uuid
 import json
@@ -218,23 +217,11 @@ class Timing(BaseModel):
     mask = models.ForeignKey(InternalFileObject, related_name="mask", on_delete=models.DO_NOTHING, null=True)
     canny_image = models.ForeignKey(InternalFileObject, related_name="canny_image", on_delete=models.DO_NOTHING, null=True)
     primary_image = models.ForeignKey(InternalFileObject, related_name="primary_image", on_delete=models.DO_NOTHING, null=True)   # variant number that is currently selected (among alternative images) NONE if none is present
-    shot_id = models.ForeignKey(Shot, on_delete=models.CASCADE, null=True)
-    custom_model_id_list = models.TextField(default=None, null=True, blank=True)    
+    shot_id = models.ForeignKey(Shot, on_delete=models.CASCADE, null=True) 
     alternative_images = models.TextField(default=None, null=True)
-    custom_pipeline = models.CharField(max_length=255, default=None, null=True, blank=True)
-    prompt = models.TextField(default='', blank=True)
-    negative_prompt = models.TextField(default="", blank=True)
-    guidance_scale = models.FloatField(default=7.5)
-    seed = models.IntegerField(default=0)
-    num_inteference_steps = models.IntegerField(default=50)
-    strength = models.FloatField(default=1)
     notes = models.TextField(default="", blank=True)
-    adapter_type = models.CharField(max_length=255, default=None, null=True, blank=True)
-    clip_duration = models.FloatField(default=None, null=True)     # clip duration of the timed_clip
-    low_threshold = models.FloatField(default=0)
-    high_threshold = models.FloatField(default=0)
-    aux_frame_index = models.IntegerField(default=0)    # starts with 0 # TODO: udpate this
-    transformation_stage = models.CharField(max_length=255, default=None, null=True)
+    clip_duration = models.FloatField(default=None, null=True)
+    aux_frame_index = models.IntegerField(default=0)
 
     class Meta:
         app_label = 'backend'
@@ -379,29 +366,9 @@ class Setting(BaseModel):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     default_model = models.ForeignKey(AIModel, on_delete=models.DO_NOTHING, null=True)
     audio = models.ForeignKey(InternalFileObject, related_name="audio", on_delete=models.DO_NOTHING, null=True)
-    input_video = models.ForeignKey(InternalFileObject, related_name="input_video", on_delete=models.DO_NOTHING, null=True)
-    default_prompt = models.TextField(default="")
-    default_strength = models.FloatField(default=0.7)
-    default_custom_pipeline = models.CharField(max_length=255, default="", blank=True)
     input_type = models.CharField(max_length=255)   # video, image, audio
-    extraction_type = models.CharField(max_length=255)   # Extract manually
     width = models.IntegerField(default=512)
     height = models.IntegerField(default=512)
-    default_negative_prompt = models.TextField(default="")
-    default_guidance_scale = models.FloatField(default=7.5)
-    default_seed = models.IntegerField(default=0)
-    default_num_inference_steps = models.IntegerField(default=50)
-    default_stage = models.CharField(max_length=255)    # extracted_key_frames
-    default_custom_model_uuid_list = models.TextField(default=None, null=True, blank=True)
-    default_adapter_type = models.CharField(max_length=255, default="", blank=True)
-    guidance_type = models.CharField(max_length=255)   # "Drawing", "Images", "Video"
-    default_animation_style = models.CharField(max_length=255)  # "Interpolation", "Direct Morphing"
-    default_low_threshold = models.FloatField(default=0)
-    default_high_threshold = models.FloatField(default=0)
-    zoom_level = models.IntegerField(default=100)
-    x_shift = models.IntegerField(default=0)
-    y_shift = models.IntegerField(default=0)
-    rotation_angle_value = models.FloatField(default=0.0)
 
     class Meta:
         app_label = 'backend'

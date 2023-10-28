@@ -89,24 +89,18 @@ class TimingDto(serializers.ModelSerializer):
             "source_image",
             "mask",
             "canny_image",
-            "custom_model_id_list",
             "primary_image",
             "alternative_images",
-            "custom_pipeline",
             "prompt",
             "negative_prompt",
             "guidance_scale",
             "seed",
-            "num_inteference_steps",
             "strength",
             "notes",
             "adapter_type",
             "clip_duration",
-            "low_threshold",
-            "high_threshold",
             "aux_frame_index",
             "created_on",
-            "transformation_stage"
         )
 
 
@@ -129,7 +123,6 @@ class SettingDto(serializers.ModelSerializer):
     project = ProjectDto()
     default_model = AIModelDto()
     audio = InternalFileDto()
-    input_video = InternalFileDto()
     class Meta:
         model = Setting
         fields = (
@@ -137,30 +130,10 @@ class SettingDto(serializers.ModelSerializer):
             "project",
             "default_model",
             "audio",
-            "input_video",
-            "default_prompt",
-            "default_strength",
-            "default_custom_pipeline",
             "input_type",
-            "extraction_type",
             "width",
             "height",
-            "default_negative_prompt",
-            "default_guidance_scale",
-            "default_seed",
-            "default_num_inference_steps",
-            "default_stage",
-            "default_custom_model_uuid_list",
-            "default_adapter_type",
-            "guidance_type",
-            "default_animation_style",
-            "default_low_threshold",
-            "default_high_threshold",
             "created_on",
-            "zoom_level",
-            "x_shift",
-            "y_shift",
-            "rotation_angle_value"
         )
 
 

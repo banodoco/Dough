@@ -4,6 +4,7 @@ import streamlit as st
 import requests as r
 import numpy as np
 from shared.constants import AnimationStyleType, AnimationToolType
+from ui_components.constants import DefaultTimingStyleParams
 from ui_components.methods.file_methods import generate_temp_file
 from ui_components.models import InferenceLogObject
 
@@ -36,8 +37,7 @@ class VideoInterpolator:
     def create_interpolated_clip(img_location_list, animation_style, settings, variant_count=1, queue_inference=False):
         data_repo = DataRepo()
         if not animation_style:
-            project_setting = data_repo.get_project_setting(st.session_state["project_uuid"])
-            animation_style = project_setting.default_animation_style
+            animation_style = DefaultTimingStyleParams.animation_style
 
         if animation_style == AnimationStyleType.INTERPOLATION.value:
             return VideoInterpolator.video_through_frame_interpolation(

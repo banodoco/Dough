@@ -157,7 +157,7 @@ def reset_project_state():
 
 def reset_styling_settings(timing_uuid):
     keys_to_delete = [
-        f"index_of_which_stage_to_run_on_{timing_uuid}",
+        f"frame_styling_stage_index_{timing_uuid}",
         "index_of_default_model",
         "index_of_controlnet_adapter_type",
         "index_of_dreambooth_model",

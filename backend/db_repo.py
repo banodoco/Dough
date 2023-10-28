@@ -1139,13 +1139,6 @@ class DBRepo:
                 return InternalResponse({}, 'invalid audio', False)
             
             attributes._data["audio_id"] = audio.id
-    
-        if "input_video_id" in attributes.data and attributes.data["input_video_id"]:
-            video = InternalFileObject.objects.filter(uuid=attributes.data["input_video_id"], is_disabled=False).first()
-            if not video:
-                return InternalResponse({}, 'invalid video', False)
-            
-            attributes._data["input_video_id"] = video.id
         
         setting = Setting.objects.create(**attributes.data)
         
@@ -1184,13 +1177,6 @@ class DBRepo:
                 return InternalResponse({}, 'invalid audio', False)
             
             attributes._data["audio_id"] = audio.id
-    
-        if "input_video_id" in attributes.data and attributes.data["input_video_id"]:
-            video = InternalFileObject.objects.filter(uuid=attributes.data["input_video_id"], is_disabled=False).first()
-            if not video:
-                return InternalResponse({}, 'invalid video', False)
-            
-            attributes._data["input_video_id"] = video.id
 
         if 'model_id' in attributes.data and attributes.data['model_id']:
             model = AIModel.objects.filter(uuid=attributes.data['model_id'], is_disabled=False).first()
@@ -1241,13 +1227,6 @@ class DBRepo:
                 return InternalResponse({}, 'invalid audio', False)
             
             attributes._data['audio_id'] = audio.id
-
-        if 'input_video_id' in attributes.data and attributes.data['input_video_id']:
-            video = InternalFileObject.objects.filter(uuid=attributes.data['input_video_id'], is_disabled=False).first()
-            if not video:
-                return InternalResponse({}, 'invalid video', False)
-            
-            attributes._data['input_video_id'] = video.id
 
         for attr, value in attributes.data.items():
             setattr(setting, attr, value)
@@ -1397,22 +1376,18 @@ class DBRepo:
                     mask=backup_timing['mask_uuid'],
                     canny_image=backup_timing['canny_image_uuid'],
                     primary_image=backup_timing['primary_image_uuid'],
-                    custom_model_id_list=backup_timing['custom_model_id_list'],
                     frame_time=backup_timing['frame_time'],
                     frame_number=backup_timing['frame_number'],
                     alternative_images=backup_timing['alternative_images'],
-                    custom_pipeline=backup_timing['custom_pipeline'],
                     prompt=backup_timing['prompt'],
                     negative_prompt=backup_timing['negative_prompt'],
                     guidance_scale=backup_timing['guidance_scale'],
                     seed=backup_timing['seed'],
-                    num_inteference_steps=backup_timing['num_inteference_steps'],
                     strength=backup_timing['strength'],
                     notes=backup_timing['notes'],
                     adapter_type=backup_timing['adapter_type'],
                     clip_duration=backup_timing['clip_duration'],
                     animation_style=backup_timing['animation_style'],
-                    low_threshold=backup_timing['low_threshold'],
                     high_threshold=backup_timing['high_threshold'],
                     aux_frame_index=backup_timing['aux_frame_index']
                 )

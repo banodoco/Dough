@@ -49,11 +49,8 @@ def trigger_restyling_process(timing_uuid, update_inference_settings, \
             default_guidance_scale=query_obj.guidance_scale,
             default_seed=query_obj.seed,
             default_num_inference_steps=query_obj.num_inference_steps,
-            default_which_stage_to_run_on=transformation_stage,
             default_custom_models=query_obj.data.get('custom_models', []),
             default_adapter_type=query_obj.adapter_type,
-            default_low_threshold=query_obj.low_threshold,
-            default_high_threshold=query_obj.high_threshold,
             add_image_in_params=st.session_state['add_image_in_params'],
         )
 
