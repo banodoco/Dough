@@ -484,15 +484,8 @@ class APIRepo:
         res = self.http_post(self.SHOT_URL, data=data)
         return InternalResponse(res['payload'], 'success', res['status'])
     
-    def update_shot(self, shot_uuid, name=None, duration=None, meta_data=None, desc=None):
-        update_data = {
-            'uuid': shot_uuid,
-            'name': name,
-            'duration': duration,
-            'meta_data': meta_data,
-            'desc': desc
-        }
-        res = self.http_put(self.SHOT_URL, data=update_data)
+    def update_shot(self, shot_uuid, **kwargs):
+        res = self.http_put(self.SHOT_URL, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
 
     def delete_shot(self, shot_uuid):

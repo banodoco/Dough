@@ -1438,7 +1438,7 @@ class DBRepo:
         if not project:
             return InternalResponse({}, 'invalid project uuid', False)
         
-        shot_list: List[Shot] = Shot.objects.filter(project_id=project.id, is_disabled=False).all()
+        shot_list: List[Shot] = Shot.objects.filter(project_id=project.id, is_disabled=False).order_by('shot_idx').all()
         timing_list = Timing.objects.filter(is_disabled=False).all()
         context = {'timing_list': timing_list}
 
@@ -1477,7 +1477,7 @@ class DBRepo:
 
         return InternalResponse(payload, 'shot created successfully', True)
     
-    def update_shot(self, shot_uuid, name=None, duration=None, meta_data=None, desc=None):
+    def update_shot(self, shot_uuid, shot_idx=None, name=None, duration=None, meta_data=None, desc=None):
         shot: Shot = Shot.objects.filter(uuid=shot_uuid, is_disabled=False).first()
         if not shot:
             return InternalResponse({}, 'invalid shot uuid', False)
@@ -1491,6 +1491,8 @@ class DBRepo:
             update_data['meta_data'] = meta_data
         if desc != None:
             update_data['desc'] = desc
+        if shot_idx != None:
+            update_data['shot_idx'] = shot_idx
         
         for k,v in update_data.items():
             setattr(shot, k, v)

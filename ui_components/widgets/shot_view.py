@@ -16,6 +16,23 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
     st.title(shot.name)
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
 
+    if st.button("Move shot down", key=f'shot_down_movement_{shot.uuid}'):
+        shot_list = data_repo.get_shot_list(shot.project.uuid)
+        if shot.shot_idx < len(shot_list):
+            data_repo.update_shot(shot_uuid, shot_idx=shot.shot_idx+1)
+        else:
+            st.error("this is the last shot")
+            time.sleep(0.3)
+        st.rerun()
+    
+    if st.button("Move shot up", key=f'shot_up_movement_{shot.uuid}'):
+        if shot.shot_idx > 0:
+            data_repo.update_shot(shot_uuid, shot_idx=shot.shot_idx-1)
+        else:
+            st.error("this is the first shot")
+            time.sleep(0.3)
+        st.rerun()
+
     grid = st.columns(items_per_row)
     if timing_list and len(timing_list):
         for idx, timing in enumerate(timing_list):
