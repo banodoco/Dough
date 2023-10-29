@@ -94,32 +94,24 @@ def add_key_frame(selected_image, inherit_styling_settings, shot_uuid, target_fr
     data_repo = DataRepo()
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
 
-    if len(timing_list) == 0:
-        index_of_current_item = 1
-    else:
-        target_frame_position = st.session_state['current_frame_index'] if target_frame_position is None else target_frame_position
-        index_of_current_item = min(len(timing_list), target_frame_position)
-
-
-    if len(timing_list) == 0:
-        _ = create_frame_inside_shot(shot_uuid, 0)
-    else:
-        _ = create_frame_inside_shot(shot_uuid, index_of_current_item)
+    target_frame_position = st.session_state['current_frame_index'] if target_frame_position is None else target_frame_position
+    target_aux_frame_index = min(len(timing_list), target_frame_position)
+    _ = create_frame_inside_shot(shot_uuid, target_aux_frame_index)
 
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
     if selected_image:
-        save_uploaded_image(selected_image, shot_uuid, timing_list[index_of_current_item - 1].uuid, WorkflowStageType.SOURCE.value)
-        save_uploaded_image(selected_image, shot_uuid, timing_list[index_of_current_item - 1].uuid, WorkflowStageType.STYLED.value)
+        save_uploaded_image(selected_image, shot_uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.SOURCE.value)
+        save_uploaded_image(selected_image, shot_uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.STYLED.value)
 
-    if inherit_styling_settings == "Yes":    
-        clone_styling_settings(index_of_current_item - 1, timing_list[index_of_current_item - 1].uuid)
+    if inherit_styling_settings == "Yes" and st.session_state['current_frame_index']:    
+        clone_styling_settings(st.session_state['current_frame_index'] - 1, timing_list[target_aux_frame_index].uuid)
 
     if len(timing_list) == 1:
         st.session_state['current_frame_index'] = 1
         st.session_state['current_frame_uuid'] = timing_list[0].uuid
     else:
-        st.session_state['prev_frame_index'] = min(len(timing_list), index_of_current_item + 1)
-        st.session_state['current_frame_index'] = min(len(timing_list), index_of_current_item + 1)
+        st.session_state['prev_frame_index'] = min(len(timing_list), target_aux_frame_index + 1)
+        st.session_state['current_frame_index'] = min(len(timing_list), target_aux_frame_index + 1)
         st.session_state['current_frame_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].uuid
 
     st.session_state['page'] = CreativeProcessType.STYLING.value

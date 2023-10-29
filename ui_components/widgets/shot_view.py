@@ -1,3 +1,4 @@
+import time
 from typing import List
 import streamlit as st
 from ui_components.constants import WorkflowStageType
@@ -27,20 +28,25 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
     else:
         st.warning("No keyframes present")
 
-def shot_video_element(shot_uuid, idx, items_per_row):
+def shot_video_element(shot_uuid):
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
 
-    grid = st.columns(items_per_row)
-    with grid[idx%items_per_row]:
-        st.title(shot.name)
-        if shot.main_clip and shot.main_clip.location:
-            st.video(shot.main_clip.location)
-        else:
-            st.warning("No video present")
+    st.title(shot.name)
+    if shot.main_clip and shot.main_clip.location:
+        st.video(shot.main_clip.location)
+    else:
+        st.warning("No video present")
+    
+    if st.button("Generate video", key=shot.uuid):
+        if not (shot.timing_list and len(shot.timing_list) and len(shot.timing_list) > 1):
+            st.error("Atleast two frames are required")
+            time.sleep(0.3)
+            return
         
-        if st.button("Generate video", key=shot.uuid):
-            pass
+        # NOTE: @peter let me know if you want me to complete this
+
+        
 
 def timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_position_toggle):
     data_repo = DataRepo()

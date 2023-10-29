@@ -92,6 +92,7 @@ def delete_frame(timing_uuid):
 
     if len(timing_list) == 1:
         st.error("can't delete the only image present in the shot")
+        time.sleep(0.3)
         return
 
     data_repo.delete_timing_from_uuid(timing.uuid)

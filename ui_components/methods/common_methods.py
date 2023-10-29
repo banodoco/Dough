@@ -533,13 +533,13 @@ def get_audio_bytes_for_slice(timing_uuid):
     return audio_bytes
 
 
-def create_frame_inside_shot(shot_uuid, index_of_frame):
+def create_frame_inside_shot(shot_uuid, aux_frame_index):
     data_repo = DataRepo()
     
     timing_data = {
         "shot_id": shot_uuid,
         "animation_style": AnimationStyleType.INTERPOLATION.value,
-        "aux_frame_index": index_of_frame
+        "aux_frame_index": aux_frame_index
     }
     timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
 

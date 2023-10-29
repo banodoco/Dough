@@ -51,8 +51,10 @@ def timeline_view(shot_uuid, stage):
         for shot in shot_list:
             shot_keyframe_element(shot.uuid, items_per_row, **btn_data)
     else:
+        grid = st.columns(items_per_row)
         for idx, shot in enumerate(shot_list):
-            shot_video_element(shot.uuid, idx, items_per_row)
+            with grid[idx%items_per_row]:
+                shot_video_element(shot.uuid)
     
     # for i in range(0, total_count, items_per_row):  # Step of items_per_row for grid
     #     grid = st.columns(items_per_row)  # Create items_per_row columns for grid

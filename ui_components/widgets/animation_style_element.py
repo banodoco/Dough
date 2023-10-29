@@ -9,9 +9,6 @@ from utils.ml_processor.motion_module import AnimateDiffCheckpoint
 
 def animation_style_element(shot_uuid):
     motion_modules = AnimateDiffCheckpoint.get_name_list()
-    data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
-    project_settings = data_repo.get_project_setting(shot.project.uuid)
     variant_count = 1
     current_animation_style = AnimationStyleType.INTERPOLATION.value    # setting a default value
 
