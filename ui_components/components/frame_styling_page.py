@@ -61,7 +61,7 @@ def frame_styling_page(shot_uuid: str):
     project_settings = data_repo.get_project_setting(shot.project.uuid)
 
     if st.session_state['frame_styling_view_type'] == "Explorer":
-        style_explorer_element(shot_uuid)
+        style_explorer_element(shot.project.uuid)
 
     # -------------------- INDIVIDUAL VIEW ----------------------
     elif st.session_state['frame_styling_view_type'] == "Individual":
@@ -151,7 +151,7 @@ def frame_styling_page(shot_uuid: str):
             with st.expander("➕ Add Key Frame", expanded=True):
                 selected_image, inherit_styling_settings, _ = add_key_frame_element(shot_uuid)
                 if st.button(f"Add key frame",type="primary",use_container_width=True):
-                    add_key_frame(selected_image, inherit_styling_settings)
+                    add_key_frame(selected_image, inherit_styling_settings, shot_uuid)
                     st.rerun()
 
     # -------------------- TIMELINE VIEW --------------------------       

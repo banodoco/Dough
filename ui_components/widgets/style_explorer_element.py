@@ -13,11 +13,11 @@ from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
 
-def style_explorer_element(shot_uuid):
+def style_explorer_element(project_uuid):
     st.markdown("***")
     data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
-    project_settings = data_repo.get_project_setting(shot.project.uuid)
+    shot_list = data_repo.get_shot_list(project_uuid)
+    project_settings = data_repo.get_project_setting(project_uuid)
 
     _, a2, a3,_= st.columns([0.5, 1, 0.5,0.5])   
     with a2:
@@ -85,8 +85,7 @@ def style_explorer_element(shot_uuid):
                     negative_prompt="bad image, worst image, bad anatomy, washed out colors",
                     height=project_settings.height,
                     width=project_settings.width,
-                    project_uuid=shot.project.uuid,
-                    shot_uuid=shot.uuid
+                    project_uuid=project_uuid
                 )
 
                 replicate_model = REPLICATE_MODEL.get_model_by_db_obj(model_dict[model_name])
@@ -96,12 +95,11 @@ def style_explorer_element(shot_uuid):
                     "inference_type": InferenceType.GALLERY_IMAGE_GENERATION.value,
                     "output": output,
                     "log_uuid": log.uuid,
-                    "project_uuid": shot.project.uuid,
-                    "shot_uuid": shot.uuid
+                    "project_uuid": project_uuid
                 }
                 process_inference_output(**inference_data)
     
-    project_setting = data_repo.get_project_setting(shot.project.uuid)
+    project_setting = data_repo.get_project_setting(project_uuid)
     st.markdown("***")
     page_number = st.radio("Select page", options=range(1, project_setting.total_gallery_pages + 1), horizontal=True)
     
@@ -112,7 +110,7 @@ def style_explorer_element(shot_uuid):
     gallery_image_list, res_payload = data_repo.get_all_file_list(
         file_type=InternalFileType.IMAGE.value, 
         tag=InternalFileTag.GALLERY_IMAGE.value, 
-        project_id=shot.project.uuid,
+        project_id=project_uuid,
         page=page_number,
         data_per_page=num_items_per_page,
         sort_order=SortOrder.DESCENDING.value     # newly created images appear first
@@ -147,14 +145,19 @@ def style_explorer_element(shot_uuid):
                             else:
                                 st.warning("No data found")
                         
-                        if st.button(f"Add to timeline", key=f"{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
-                            pil_image = generate_pil_image(gallery_image_list[i + j].location)
-                            add_key_frame(pil_image, False, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
+                        with st.expander('Add to shot', False):
+                            shot_number = st.number_input(f"Shot # (out of {len(shot_list)})", 1, 
+                                                                  len(shot_list), value=1, 
+                                                                  step=1, key=f"shot_frame_{gallery_image_list[i + j].uuid}")
+                            if st.button(f"Add to shot", key=f"{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
+                                pil_image = generate_pil_image(gallery_image_list[i + j].location)
+                                shot_uuid = shot_list[shot_number - 1].uuid
+                                add_key_frame(pil_image, False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
 
-                            # removing this from the gallery view
-                            data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+                                # removing this from the gallery view
+                                data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
 
-                            st.rerun()
+                                st.rerun()
 
             st.markdown("***")
     else:

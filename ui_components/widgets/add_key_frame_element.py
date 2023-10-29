@@ -90,11 +90,9 @@ def add_key_frame_element(shot_uuid):
 
     return selected_image, inherit_styling_settings, transformation_stage
 
-def add_key_frame(selected_image, inherit_styling_settings, target_frame_position=None, refresh_state=True):
+def add_key_frame(selected_image, inherit_styling_settings, shot_uuid, target_frame_position=None, refresh_state=True):
     data_repo = DataRepo()
-    shot_uuid = st.session_state['shot_uuid']
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
-    project_settings = data_repo.get_project_setting(shot_uuid)
 
     if len(timing_list) == 0:
         index_of_current_item = 1
