@@ -1,4 +1,5 @@
 import streamlit as st
+from ui_components.methods.common_methods import add_new_shot
 from ui_components.widgets.shot_view import shot_keyframe_element, shot_video_element
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
@@ -11,8 +12,13 @@ def timeline_view(shot_uuid, stage):
 
     st.markdown("***")
 
-    _, header_col_2, header_col_3 = st.columns([1.5,4,1.5])
+    header_col_1, header_col_2, header_col_3 = st.columns([1.5,4,1.5])
     
+    with header_col_1:
+        if st.button('Add new shot'):
+            add_new_shot(shot.project.uuid)
+            st.rerun()
+
     with header_col_2:
         col1, col2, col3 = st.columns(3)
 
@@ -20,7 +26,7 @@ def timeline_view(shot_uuid, stage):
             expand_all = st_memory.toggle("Expand All", key="expand_all",value=False)
         
         if expand_all:
-            time_setter_toggle = replace_image_widget_toggle = duration_setter_toggle = copy_frame_toggle = move_frames_toggle = delete_frames_toggle = change_position_toggle = True
+            replace_image_widget_toggle = copy_frame_toggle = move_frames_toggle = delete_frames_toggle = change_position_toggle = True
             
         else:           
             with col2:

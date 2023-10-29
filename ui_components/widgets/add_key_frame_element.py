@@ -108,11 +108,11 @@ def add_key_frame(selected_image, inherit_styling_settings, shot_uuid, target_fr
 
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
     if selected_image:
-        save_uploaded_image(selected_image, shot_uuid, timing_list[index_of_current_item].uuid, WorkflowStageType.SOURCE.value)
-        save_uploaded_image(selected_image, shot_uuid, timing_list[index_of_current_item].uuid, WorkflowStageType.STYLED.value)
+        save_uploaded_image(selected_image, shot_uuid, timing_list[index_of_current_item - 1].uuid, WorkflowStageType.SOURCE.value)
+        save_uploaded_image(selected_image, shot_uuid, timing_list[index_of_current_item - 1].uuid, WorkflowStageType.STYLED.value)
 
     if inherit_styling_settings == "Yes":    
-        clone_styling_settings(index_of_current_item - 1, timing_list[index_of_current_item].uuid)
+        clone_styling_settings(index_of_current_item - 1, timing_list[index_of_current_item - 1].uuid)
 
     if len(timing_list) == 1:
         st.session_state['current_frame_index'] = 1

@@ -16,13 +16,16 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
 
     grid = st.columns(items_per_row)
-    for idx, timing in enumerate(timing_list):
-        with grid[idx%items_per_row]:
-            if timing.primary_image and timing.primary_image.location:
-                st.image(timing.primary_image.location, use_column_width=True)
-                timeline_view_buttons(idx, shot_uuid, **kwargs)
-            else:
-                st.warning("No primary image present")
+    if timing_list and len(timing_list):
+        for idx, timing in enumerate(timing_list):
+            with grid[idx%items_per_row]:
+                if timing.primary_image and timing.primary_image.location:
+                    st.image(timing.primary_image.location, use_column_width=True)
+                    timeline_view_buttons(idx, shot_uuid, **kwargs)
+                else:
+                    st.warning("No primary image present")
+    else:
+        st.warning("No keyframes present")
 
 def shot_video_element(shot_uuid, idx, items_per_row):
     data_repo = DataRepo()

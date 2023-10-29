@@ -207,6 +207,7 @@ class Shot(BaseModel):
                 else:
                     shots_to_move = Shot.objects.filter(project_id=self.project_id, shot_idx__gte=self.shot_idx, \
                                        shot_idx__lt=self.old_shot_idx, is_disabled=False).order_by('shot_idx')
+                    shots_to_move.update(shot_idx=F('shot_idx') + 1)
 
         super(Shot, self).save(*args, **kwargs)
 
@@ -266,6 +267,7 @@ class Timing(BaseModel):
                 else:
                     timings_to_move = Timing.objects.filter(shot_id=self.shot_id, aux_frame_index__gte=self.aux_frame_index, \
                                        aux_frame_index__lt=self.old_aux_frame_index, is_disabled=False).order_by('aux_frame_index')
+                    timings_to_move.update(aux_frame_index=F('aux_frame_index') + 1)
 
         super().save(*args, **kwargs)
 

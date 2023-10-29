@@ -87,7 +87,6 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
 
     # create a default first shot
     shot_data = {
-        "name": "Shot 1",
         "project_uuid": project.uuid,
         "desc": "",
         "duration": 2

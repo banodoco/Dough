@@ -807,7 +807,7 @@ class DBRepo:
             attributes._data['shot_id'] = shot.id
         
         if 'aux_frame_index' not in attributes.data or attributes.data['aux_frame_index'] == None: 
-            attributes._data['aux_frame_index'] = Timing.objects.filter(project_id=attributes.data['project_id'], is_disabled=False).count()
+            attributes._data['aux_frame_index'] = Timing.objects.filter(shot_id=attributes.data['shot_id'], is_disabled=False).count()
         
         if 'model_id' in attributes.data:
             if attributes.data['model_id'] != None:
@@ -1448,13 +1448,15 @@ class DBRepo:
 
         return InternalResponse(payload, 'shot list fetched successfully', True)
 
-    def create_shot(self, project_uuid, name, duration, meta_data="", desc=""):
+    def create_shot(self, project_uuid, duration, name=None, meta_data="", desc=""):
         project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
         if not project:
             return InternalResponse({}, 'invalid project uuid', False)
         
         shot_number = Shot.objects.filter(project_id=project.id, is_disabled=False).count() + 1
-        
+        if not name:
+            name = "Shot " + str(shot_number)
+
         shot_data = {
             "name" : name,
             "desc" : desc,
