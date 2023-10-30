@@ -10,15 +10,28 @@ def frame_selector_widget():
     time1, time2 = st.columns([1,1])
 
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid=st.session_state["shot_uuid"])
+    shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
+    shot_list = data_repo.get_shot_list(shot.project.uuid)
     len_timing_list = len(timing_list) if len(timing_list) > 0 else 1.0
     st.progress(st.session_state['current_frame_index'] / len_timing_list)
+
     with time1:
+        if 'prev_shot_index' not in st.session_state:
+            st.session_state['prev_shot_index'] = shot.shot_idx
+
+        st.session_state['current_shot_index'] = st.number_input(f"Shot # (out of {len(shot_list)})", 1, 
+                                                                  len(shot_list), value=st.session_state['prev_shot_index'], 
+                                                                  step=1, key="current_shot_sidebar_selector")
+        
+        update_current_shot_index(st.session_state['current_shot_index'])
+
+    with time2:
         if 'prev_frame_index' not in st.session_state:
             st.session_state['prev_frame_index'] = 1
 
         st.session_state['current_frame_index'] = st.number_input(f"Key frame # (out of {len(timing_list)})", 1, 
                                                                   len(timing_list), value=st.session_state['prev_frame_index'], 
-                                                                  step=1, key="which_image_selector")
+                                                                  step=1, key="current_frame_sidebar_selector")
         
         update_current_frame_index(st.session_state['current_frame_index'])
     
@@ -59,6 +72,22 @@ def update_current_frame_index(index):
     if st.session_state['prev_frame_index'] != index:
         st.session_state['prev_frame_index'] = index
         st.session_state['current_frame_uuid'] = timing_list[index - 1].uuid
+        st.session_state['reset_canvas'] = True
+        st.session_state['frame_styling_view_type_index'] = 0
+        st.session_state['frame_styling_view_type'] = "Individual View"
+                                    
+        st.rerun()
+
+
+def update_current_shot_index(index):
+    data_repo = DataRepo()
+    shot_list = data_repo.get_shot_list(project_uuid=st.session_state["project_uuid"])
+
+    st.session_state['shot_uuid'] = shot_list[index - 1].uuid
+        
+    if st.session_state['prev_shot_index'] != index:
+        st.session_state['prev_shot_index'] = index
+        st.session_state['shot_uuid'] = shot_list[index - 1].uuid
         st.session_state['reset_canvas'] = True
         st.session_state['frame_styling_view_type_index'] = 0
         st.session_state['frame_styling_view_type'] = "Individual View"
