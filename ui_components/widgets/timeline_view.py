@@ -9,16 +9,14 @@ def timeline_view(shot_uuid, stage):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     shot_list = data_repo.get_shot_list(shot.project.uuid)
-
+    
     st.markdown("***")
-
+    
     header_col_1, header_col_2, header_col_3 = st.columns([1.5,4,1.5])
     
-    with header_col_1:
-        if st.button('Add new shot'):
-            add_new_shot(shot.project.uuid)
-            st.rerun()
-
+    # with header_col_1:
+        
+    '''
     with header_col_2:
         col1, col2, col3 = st.columns(3)
 
@@ -37,24 +35,32 @@ def timeline_view(shot_uuid, stage):
                 replace_image_widget_toggle = st_memory.toggle("Replace Image", value=False, key="replace_image_widget_toggle")
                 change_position_toggle = st_memory.toggle("Change Position", value=False, key="change_position_toggle")
 
-    with header_col_3:
-        items_per_row = st_memory.slider("How many frames per row?", min_value=1, max_value=10, value=5, step=1, key="items_per_row_slider")
-
     btn_data = {
-        "replace_image_widget_toggle": replace_image_widget_toggle,
+        "replace_imagshot_keyframe_element_widget_toggle": replace_image_widget_toggle,
         "copy_frame_toggle": copy_frame_toggle, 
         "move_frames_toggle": move_frames_toggle, 
         "delete_frames_toggle": delete_frames_toggle, 
         "change_position_toggle": change_position_toggle
     }
+    '''
+
+    with header_col_3:
+        items_per_row = st_memory.slider("How many frames per row?", min_value=1, max_value=10, value=5, step=1, key="items_per_row_slider")
+
     if stage == 'Key Frames':
         for shot in shot_list:
-            shot_keyframe_element(shot.uuid, items_per_row, **btn_data)
+            shot_keyframe_element(shot.uuid, items_per_row)
+            st.markdown("***")
+        if st.button('Add new shot', type="primary"):
+            add_new_shot(shot.project.uuid)
+            st.rerun()
     else:
         grid = st.columns(items_per_row)
         for idx, shot in enumerate(shot_list):
             with grid[idx%items_per_row]:
                 shot_video_element(shot.uuid)
+
+
     
     # for i in range(0, total_count, items_per_row):  # Step of items_per_row for grid
     #     grid = st.columns(items_per_row)  # Create items_per_row columns for grid

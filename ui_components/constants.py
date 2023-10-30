@@ -14,7 +14,7 @@ class VideoQuality(ExtendedEnum):
 
 class CreativeProcessType(ExtendedEnum):
     STYLING = "Key Frames"
-    MOTION = "Videos"
+    MOTION = "Shots"
 
 class DefaultTimingStyleParams:
     prompt = ""

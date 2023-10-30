@@ -8,64 +8,116 @@ from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.frame_movement_widgets import change_frame_position_input, delete_frame_button, jump_to_single_frame_view_button, move_frame_back_button, move_frame_forward_button, replace_image_widget
 from utils.data_repo.data_repo import DataRepo
+from utils import st_memory
 
 def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
-
-    st.title(shot.name)
-    timing_list: List[InternalFrameTimingObject] = shot.timing_list
-
-    if st.button("Move shot down", key=f'shot_down_movement_{shot.uuid}'):
-        shot_list = data_repo.get_shot_list(shot.project.uuid)
-        if shot.shot_idx < len(shot_list):
-            data_repo.update_shot(shot_uuid, shot_idx=shot.shot_idx+1)
-        else:
-            st.error("this is the last shot")
-            time.sleep(0.3)
-        st.rerun()
     
-    if st.button("Move shot up", key=f'shot_up_movement_{shot.uuid}'):
-        if shot.shot_idx > 0:
-            data_repo.update_shot(shot_uuid, shot_idx=shot.shot_idx-1)
-        else:
-            st.error("this is the first shot")
-            time.sleep(0.3)
-        st.rerun()
+    if "open_shot" not in st.session_state:
+        st.session_state["open_shot"] = None
 
-    grid = st.columns(items_per_row)
-    if timing_list and len(timing_list):
-        for idx, timing in enumerate(timing_list):
-            with grid[idx%items_per_row]:
-                if timing.primary_image and timing.primary_image.location:
-                    st.image(timing.primary_image.location, use_column_width=True)
-                    timeline_view_buttons(idx, shot_uuid, **kwargs)
+    # st.markdown(f"### {shot.name}", expanded=True)
+
+    timing_list: List[InternalFrameTimingObject] = shot.timing_list
+    
+    with st.expander(f"{shot.name}", expanded=True):
+
+        if st.session_state["open_shot"] != shot.shot_idx:
+            if st.toggle("Open shot", key=f"shot_{shot.shot_idx}"):
+                st.session_state["open_shot"] = shot.shot_idx
+                st.experimental_rerun()
+        else:
+            if not st.toggle("Open shot", key=f"close_shot_{shot.shot_idx}", value=True):
+                st.session_state["open_shot"] = None
+                st.experimental_rerun()
+
+        if st.session_state["open_shot"] == shot.shot_idx:
+
+            header_col_1, header_col_2 = st.columns([1.5,4])
+
+            with header_col_1:
+                name = st.text_input("Update name:", value=shot.name)
+                duration = st.number_input("Duration:")
+
+            with header_col_2:
+                col1, col2, col3, col4 = st.columns(4)
+    
+                with col2:
+                    delete_frames_toggle = st_memory.toggle("Delete Frames", value=True, key="delete_frames_toggle")
+                    copy_frame_toggle = st_memory.toggle("Copy Frame", value=True, key="copy_frame_toggle")
+                with col3:
+                    move_frames_toggle = st_memory.toggle("Move Frames", value=True, key="move_frames_toggle")
+                    replace_image_widget_toggle = st_memory.toggle("Replace Image", value=False, key="replace_image_widget_toggle")
+                    
+                with col4:
+                    change_shot_toggle = st_memory.toggle("Change Shot", value=False, key="change_shot_toggle")
+                
+            st.markdown("***")
+
+
+        grid = st.columns(items_per_row)
+        if timing_list and len(timing_list):
+            for idx, timing in enumerate(timing_list):
+                with grid[idx%items_per_row]:
+                    if timing.primary_image and timing.primary_image.location:
+                        st.image(timing.primary_image.location, use_column_width=True)
+                        if st.session_state["open_shot"] == shot.shot_idx:
+                            timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_frame_toggle, move_frames_toggle,delete_frames_toggle, change_shot_toggle)
+                    else:
+                        st.warning("No primary image present")
+        else:
+            st.warning("No keyframes present")
+
+        st.markdown("***")
+
+
+        if st.session_state["open_shot"] == shot.shot_idx:
+            bottom1, bottom2, bottom3 = st.columns([1,2,1])
+            with bottom1:            
+                confirm_delete = st.checkbox("I know that this will delete all the frames and videos within")
+                if confirm_delete:
+                    if st.button("Delete frame"):
+                        st.success("Done!")
                 else:
-                    st.warning("No primary image present")
-    else:
-        st.warning("No keyframes present")
+                    st.button("Delete frame", disabled=True, help="Check the box above to enable the delete bottom.")
+            with bottom3:
+                if st.button("Move shot down", key=f'shot_down_movement_{shot.uuid}'):
+                    shot_list = data_repo.get_shot_list(shot.project.uuid)
+                    if shot.shot_idx < len(shot_list):
+                        data_repo.update_shot(shot_uuid, shot_idx=shot.shot_idx+1)
+                    else:
+                        st.error("This is the last shot")
+                        time.sleep(0.3)
+                    st.rerun()
+                
+                if st.button("Move shot up", key=f'shot_up_movement_{shot.uuid}'):
+                    if shot.shot_idx > 0:
+                        data_repo.update_shot(shot_uuid, shot_idx=shot.shot_idx-1)
+                    else:
+                        st.error("This is the first shot")
+                        time.sleep(0.3)
+                    st.rerun()
+
 
 def shot_video_element(shot_uuid):
     data_repo = DataRepo()
+    
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
 
-    st.title(shot.name)
+    st.markdown(f"## {shot.name}")
     if shot.main_clip and shot.main_clip.location:
         st.video(shot.main_clip.location)
     else:
         st.warning("No video present")
+
+    if st.button(f"Jump to {shot.name}", key=f"btn_{shot_uuid}"):
+        st.success("Coming soon")
     
-    if st.button("Generate video", key=shot.uuid):
-        if not (shot.timing_list and len(shot.timing_list) and len(shot.timing_list) > 1):
-            st.error("Atleast two frames are required")
-            time.sleep(0.3)
-            return
-        
-        # NOTE: @peter let me know if you want me to complete this
 
         
 
-def timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_position_toggle):
+def timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_shot_toggle):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     timing_list = shot.timing_list
@@ -92,7 +144,7 @@ def timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_fram
         with btn4:
             delete_frame_button(timing_list[idx].uuid)
     
-    if change_position_toggle:
+    if change_shot_toggle:
         change_frame_position_input(timing_list[idx].uuid, "side-to-side")
     
     jump_to_single_frame_view_button(idx + 1, timing_list, 'timeline_btn_'+str(timing_list[idx].uuid))        

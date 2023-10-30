@@ -78,10 +78,10 @@ def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], shot_uu
 
 def save_and_promote_image(image, project_uuid, frame_uuid, save_type):
     data_repo = DataRepo()
-
+    
+    
     try:
-        saved_image = save_new_image(image, project_uuid)
-
+        saved_image = save_new_image(image, project_uuid)            
         # Update records based on save_type
         if save_type == "source":
             data_repo.update_specific_timing(frame_uuid, source_image_id=saved_image.uuid)
