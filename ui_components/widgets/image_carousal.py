@@ -2,6 +2,7 @@ import streamlit as st
 from st_clickable_images import clickable_images
 
 from ui_components.constants import WorkflowStageType
+from ui_components.models import InternalShotObject
 from utils.data_repo.data_repo import DataRepo
 
 
@@ -39,7 +40,7 @@ def display_image(timing_uuid, stage=None, clickable=False):
                     "max-width": "100%", "height": "auto", "cursor": "pointer"}, key=f"{timing_idx}_{stage}_image_{st.session_state['counter']}")
 
                 if st.session_state[f'{timing_idx}_{stage}_clicked'] == 0:
-                    timing_details = data_repo.get_timing_list_from_project(timing.project.uuid)
+                    timing_details = data_repo.get_timing_list_from_shot(timing.shot.uuid)
                     st.session_state['current_frame_uuid'] = timing_details[timing_idx].uuid
                     st.session_state['current_frame_index'] = timing_idx + 1
                     st.session_state['prev_frame_index'] = timing_idx + 1
@@ -54,19 +55,19 @@ def display_image(timing_uuid, stage=None, clickable=False):
             st.error(f"No {stage} image found for #{timing_idx + 1}")
 
 
-def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.value):
-    
+def carousal_of_images_element(shot_uuid, stage=WorkflowStageType.STYLED.value):
     data_repo = DataRepo()
-    timing_details = data_repo.get_timing_list_from_project(project_uuid)
+    shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
+    timing_list = shot.timing_list
 
     header1, header2, header3, header4, header5 = st.columns([1, 1, 1, 1, 1])
 
-    current_timing = data_repo.get_timing_from_uuid(
-        st.session_state['current_frame_uuid'])
+    current_frame_uuid = st.session_state['current_frame_uuid']
+    current_timing = data_repo.get_timing_from_uuid(current_frame_uuid)
     
     with header1:
         if current_timing.aux_frame_index - 2 >=0:
-            prev_2_timing = data_repo.get_timing_from_frame_number(project_uuid,
+            prev_2_timing = data_repo.get_timing_from_frame_number(shot_uuid,
                 current_timing.aux_frame_index - 2)
 
             if prev_2_timing:
@@ -75,7 +76,7 @@ def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.valu
 
     with header2:
         if current_timing.aux_frame_index - 1 >= 0:
-            prev_timing = data_repo.get_timing_from_frame_number(project_uuid,
+            prev_timing = data_repo.get_timing_from_frame_number(shot_uuid,
                 current_timing.aux_frame_index - 1)
             if prev_timing:
                 display_image(prev_timing.uuid, stage=stage, clickable=True)
@@ -83,21 +84,21 @@ def carousal_of_images_element(project_uuid, stage=WorkflowStageType.STYLED.valu
 
     with header3:
         
-        timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
+        timing = data_repo.get_timing_from_uuid(current_frame_uuid)
         display_image(timing.uuid,
                       stage=stage, clickable=True)
         st.success(f"#{current_timing.aux_frame_index + 1}")
     with header4:
-        if current_timing.aux_frame_index + 1 <= len(timing_details):
-            next_timing = data_repo.get_timing_from_frame_number(project_uuid,
+        if current_timing.aux_frame_index + 1 <= len(timing_list):
+            next_timing = data_repo.get_timing_from_frame_number(shot_uuid,
                 current_timing.aux_frame_index + 1)
             if next_timing:
                 display_image(next_timing.uuid, stage=stage, clickable=True)
                 st.info(f"#{next_timing.aux_frame_index + 1}")
 
     with header5:
-        if current_timing.aux_frame_index + 2 <= len(timing_details):
-            next_2_timing = data_repo.get_timing_from_frame_number(project_uuid,
+        if current_timing.aux_frame_index + 2 <= len(timing_list):
+            next_2_timing = data_repo.get_timing_from_frame_number(shot_uuid,
                 current_timing.aux_frame_index + 2)
             if next_2_timing:
                 display_image(next_2_timing.uuid, stage=stage, clickable=True)

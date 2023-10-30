@@ -16,12 +16,11 @@ from utils import st_memory
 
 
 def drawing_element(timing_details,project_settings,project_uuid,stage=WorkflowStageType.STYLED.value):
+    drawing_stage = st_memory.radio("Which stage to work on?", ["Styled Image", "Guidance Image"], horizontal=True, key="drawing_stage")
 
-    which_stage_to_draw_on = st_memory.radio("Which stage to work on?", ["Styled Image", "Guidance Image"], horizontal=True, key="which_stage_drawing")
-
-    if which_stage_to_draw_on == "Styled Image":
+    if drawing_stage == "Styled Image":
         stage=WorkflowStageType.STYLED.value
-    elif which_stage_to_draw_on == "Guidance Image":
+    elif drawing_stage == "Guidance Image":
         stage=WorkflowStageType.SOURCE.value
 
     if stage == WorkflowStageType.SOURCE.value:
@@ -225,7 +224,7 @@ def drawing_element(timing_details,project_settings,project_uuid,stage=WorkflowS
                                 "RGB")
 
                         unique_file_name = str(uuid.uuid4()) + ".png"
-                        file_location = f"videos/{timing.project.uuid}/assets/resources/masks/{unique_file_name}"
+                        file_location = f"videos/{timing.shot.project.uuid}/assets/resources/masks/{unique_file_name}"
                         hosted_url = save_or_host_file(new_canny_image, file_location)
                         file_data = {
                             "name": str(uuid.uuid4()) + ".png",

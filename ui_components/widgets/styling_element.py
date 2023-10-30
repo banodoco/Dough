@@ -1,9 +1,9 @@
 import json
 import streamlit as st
-import uuid
 
 from typing import List
 from shared.constants import AIModelCategory, AIModelType, ViewType
+from ui_components.constants import DefaultProjectSettingParams, DefaultTimingStyleParams
 from ui_components.methods.ml_methods import trigger_restyling_process
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
 from utils.constants import ImageStage
@@ -13,26 +13,19 @@ from utils.data_repo.data_repo import DataRepo
 def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(timing.project.uuid)
-    project_settings: InternalSettingObject = data_repo.get_project_setting(timing.project.uuid)
+    timing_list: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_shot(timing.shot.uuid)
+    project_settings: InternalSettingObject = data_repo.get_project_setting(timing.shot.project.uuid)
 
     # -------------------- Transfomation Stage -------------------- #
     stages = ImageStage.value_list()
     if view_type == ViewType.SINGLE.value:
         append_to_item_name = f"{timing_uuid}"
     elif view_type == ViewType.LIST.value:
-        append_to_item_name = str(timing.project.uuid)
+        append_to_item_name = str(timing.shot.project.uuid)
         st.markdown("## Batch queries")
 
-    if project_settings.default_stage:
-        if f'index_of_which_stage_to_run_on_{append_to_item_name}' not in st.session_state:
-            st.session_state["transformation_stage"] = project_settings.default_stage
-            st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = stages.index(
-                st.session_state["transformation_stage"])
-    else:
-        st.session_state["transformation_stage"] = ImageStage.SOURCE_IMAGE.value
-        st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = 0
-
+    st.session_state["transformation_stage"] = ImageStage.SOURCE_IMAGE.value
+    st.session_state[f'frame_styling_stage_index_{append_to_item_name}'] = 0
 
     stages1, stages2 = st.columns([1, 1])
     with stages1:
@@ -41,25 +34,25 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
             options=stages, 
             horizontal=True, 
             key=f"image_stage_selector_{append_to_item_name}",
-            index=st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'], 
+            index=st.session_state[f'frame_styling_stage_index_{append_to_item_name}'], 
             help="Extracted frames means the original frames from the video."
         )
 
     with stages2:
         image = None
         if st.session_state["transformation_stage"] == ImageStage.SOURCE_IMAGE.value:
-            source_img = timing_details[st.session_state['current_frame_index'] - 1].source_image
+            source_img = timing_list[st.session_state['current_frame_index'] - 1].source_image
             image = source_img.location if source_img else ""
         elif st.session_state["transformation_stage"] == ImageStage.MAIN_VARIANT.value:
-            image = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
+            image = timing_list[st.session_state['current_frame_index'] - 1].primary_image_location
         
         if image:
             st.image(image, use_column_width=True, caption=f"Image {st.session_state['current_frame_index']}")
         elif not image and st.session_state["transformation_stage"] in [ImageStage.SOURCE_IMAGE.value, ImageStage.MAIN_VARIANT.value]:
             st.error(f"No {st.session_state['transformation_stage']} image found for this variant")
 
-    if stages.index(st.session_state["transformation_stage"]) != st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}']:
-        st.session_state[f'index_of_which_stage_to_run_on_{append_to_item_name}'] = stages.index(st.session_state["transformation_stage"])
+    if stages.index(st.session_state["transformation_stage"]) != st.session_state[f'frame_styling_stage_index_{append_to_item_name}']:
+        st.session_state[f'frame_styling_stage_index_{append_to_item_name}'] = stages.index(st.session_state["transformation_stage"])
         st.rerun()
 
     
@@ -129,15 +122,8 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
         if st.session_state['adapter_type'] in ["canny", "pose"]:
             canny1, canny2 = st.columns(2)
             if view_type == ViewType.LIST.value:
-                if project_settings.default_low_threshold != "":
-                    low_threshold_value = project_settings.default_low_threshold
-                else:
-                    low_threshold_value = 50
-
-                if project_settings.default_high_threshold != "":
-                    high_threshold_value = project_settings.default_high_threshold
-                else:
-                    high_threshold_value = 150
+                low_threshold_value = 50
+                high_threshold_value = 150
 
             elif view_type == ViewType.SINGLE.value:
                 if timing.low_threshold != "":
@@ -308,30 +294,19 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
                 st.info("In our experience, setting the seed to 87870, and the guidance scale to 7.5 gets consistently good results. You can set this in advanced settings.")
 
         if view_type == ViewType.LIST.value:
-            if project_settings.default_strength:
-                st.session_state['strength'] = project_settings.default_strength
-            else:
-                st.session_state['strength'] = 0.5
+            st.session_state['strength'] = DefaultProjectSettingParams.batch_strength
 
         elif view_type == ViewType.SINGLE.value:
-            if timing.strength:
-                st.session_state['strength'] = timing.strength
-            else:
-                st.session_state['strength'] = 0.5
+            st.session_state['strength'] = DefaultTimingStyleParams.strength
 
         st.session_state['strength'] = st.slider(f"Strength", value=float(
             st.session_state['strength']), min_value=0.0, max_value=1.0, step=0.01)
 
         if view_type == ViewType.LIST.value:
-            if project_settings.default_guidance_scale:
-                st.session_state['guidance_scale'] = project_settings.default_guidance_scale
-            else:
-                st.session_state['guidance_scale'] = 7.5
+            st.session_state['guidance_scale'] = DefaultProjectSettingParams.batch_guidance_scale
+
         elif view_type == ViewType.SINGLE.value:
-            if timing.guidance_scale != "":
-                st.session_state['guidance_scale'] = timing.guidance_scale
-            else:
-                st.session_state['guidance_scale'] = 7.5
+            st.session_state['guidance_scale'] = DefaultTimingStyleParams.guidance_scale
 
         if not ('negative_prompt_value' in st.session_state and st.session_state['negative_prompt_value']) and timing.negative_prompt:
             st.session_state['negative_prompt_value'] = timing.negative_prompt
@@ -347,30 +322,20 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
             f"Guidance scale", value=float(st.session_state['guidance_scale']))
         
         if view_type == ViewType.LIST.value:
-            if project_settings.default_seed != "":
-                st.session_state['seed'] = project_settings.default_seed
-            else:
-                st.session_state['seed'] = 0
+            st.session_state['seed'] = DefaultProjectSettingParams.batch_seed
 
         elif view_type == ViewType.SINGLE.value:
-            if timing.seed != "":
-                st.session_state['seed'] = timing.seed
-            else:
-                st.session_state['seed'] = 0
+            st.session_state['seed'] = DefaultTimingStyleParams.seed
 
         st.session_state['seed'] = st.number_input(
             f"Seed", value=int(st.session_state['seed']))
         
         if view_type == ViewType.LIST.value:
-            if project_settings.default_num_inference_steps:
-                st.session_state['num_inference_steps'] = project_settings.default_num_inference_steps
-            else:
-                st.session_state['num_inference_steps'] = 50
+            st.session_state['num_inference_steps'] = DefaultProjectSettingParams.batch_num_inference_steps
+        
         elif view_type == ViewType.SINGLE.value:
-            if timing.num_inference_steps:
-                st.session_state['num_inference_steps'] = timing.num_inference_steps
-            else:
-                st.session_state['num_inference_steps'] = 50
+            st.session_state['num_inference_steps'] = DefaultTimingStyleParams.num_inference_steps
+        
         st.session_state['num_inference_steps'] = st.number_input(
             f"Inference steps", value=int(st.session_state['num_inference_steps']))
 
@@ -381,7 +346,7 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
 
     if view_type == ViewType.LIST.value:
         batch_run_range = st.slider(
-            "Select range:", 1, 1, (1, len(timing_details)))
+            "Select range:", 1, 1, (1, len(timing_list)))
         first_batch_run_value = batch_run_range[0] - 1
         last_batch_run_value = batch_run_range[1] - 1
 
@@ -415,7 +380,7 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
                 for i in range(first_batch_run_value, last_batch_run_value+1):
                     for _ in range(0, batch_number_of_variants):
                         trigger_restyling_process(
-                            timing_uuid=timing_details[i].uuid, 
+                            timing_uuid=timing_list[i].uuid, 
                             model_uuid=st.session_state['model'],
                             prompt=st.session_state['prompt'], 
                             strength=st.session_state['strength'], 

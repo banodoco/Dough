@@ -104,7 +104,6 @@ def check_and_update_db():
 
                         if origin_data['inference_type'] in [InferenceType.FRAME_INTERPOLATION.value, \
                                                             InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value, \
-                                                            InferenceType.SINGLE_PREVIEW_VIDEO.value, \
                                                             InferenceType.FRAME_INPAINTING.value]:
                             if str(log.project.uuid) not in timing_update_list:
                                 timing_update_list[str(log.project.uuid)] = []

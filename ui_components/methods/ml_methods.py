@@ -23,7 +23,7 @@ def trigger_restyling_process(timing_uuid, update_inference_settings, \
     data_repo = DataRepo()
     
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-    project_settings: InternalSettingObject = data_repo.get_project_setting(timing.project.uuid)
+    project_settings: InternalSettingObject = data_repo.get_project_setting(timing.shot.project.uuid)
     
     source_image = timing.source_image if transformation_stage == ImageStage.SOURCE_IMAGE.value else \
                             timing.primary_image
@@ -41,7 +41,7 @@ def trigger_restyling_process(timing_uuid, update_inference_settings, \
         prompt = prompt.replace(",", ".")
         prompt = prompt.replace("\n", "")
         data_repo.update_project_setting(
-            timing.project.uuid,
+            timing.shot.project.uuid,
             default_prompt=prompt,
             default_strength=query_obj.strength,
             default_model_id=query_obj.model_uuid,
@@ -49,11 +49,8 @@ def trigger_restyling_process(timing_uuid, update_inference_settings, \
             default_guidance_scale=query_obj.guidance_scale,
             default_seed=query_obj.seed,
             default_num_inference_steps=query_obj.num_inference_steps,
-            default_which_stage_to_run_on=transformation_stage,
             default_custom_models=query_obj.data.get('custom_models', []),
             default_adapter_type=query_obj.adapter_type,
-            default_low_threshold=query_obj.low_threshold,
-            default_high_threshold=query_obj.high_threshold,
             add_image_in_params=st.session_state['add_image_in_params'],
         )
 
@@ -198,7 +195,7 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, mask_in_p
     if mask_in_project == False:
         mask = timing.mask.location
     else:
-        mask = timing.project.get_temp_mask_file(TEMP_MASK_FILE).location
+        mask = timing.shot.project.get_temp_mask_file(TEMP_MASK_FILE).location
 
     if not mask.startswith("http"):
         mask = open(mask, "rb")

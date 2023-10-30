@@ -15,7 +15,8 @@ from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
 def style_explorer_element(project_uuid):
     st.markdown("***")
-    data_repo = DataRepo() 
+    data_repo = DataRepo()
+    shot_list = data_repo.get_shot_list(project_uuid)
     project_settings = data_repo.get_project_setting(project_uuid)
 
     _, a2, a3,_= st.columns([0.5, 1, 0.5,0.5])   
@@ -144,14 +145,19 @@ def style_explorer_element(project_uuid):
                             else:
                                 st.warning("No data found")
                         
-                        if st.button(f"Add to timeline", key=f"{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
-                            pil_image = generate_pil_image(gallery_image_list[i + j].location)
-                            add_key_frame(pil_image, False, 2.5, len(data_repo.get_timing_list_from_project(project_uuid)), refresh_state=False)
+                        with st.expander('Add to shot', False):
+                            shot_number = st.number_input(f"Shot # (out of {len(shot_list)})", 1, 
+                                                                  len(shot_list), value=1, 
+                                                                  step=1, key=f"shot_frame_{gallery_image_list[i + j].uuid}")
+                            if st.button(f"Add to shot", key=f"{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
+                                pil_image = generate_pil_image(gallery_image_list[i + j].location)
+                                shot_uuid = shot_list[shot_number - 1].uuid
+                                add_key_frame(pil_image, False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
 
-                            # removing this from the gallery view
-                            data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+                                # removing this from the gallery view
+                                data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
 
-                            st.rerun()
+                                st.rerun()
 
             st.markdown("***")
     else:

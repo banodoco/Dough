@@ -1,5 +1,4 @@
 from math import gcd
-import os
 import time
 import uuid
 import streamlit as st
@@ -11,7 +10,7 @@ from shared.constants import InternalFileType
 from ui_components.methods.common_methods import apply_image_transformations, fetch_image_by_stage
 from ui_components.constants import WorkflowStageType
 from ui_components.methods.file_methods import generate_pil_image, save_or_host_file
-from ui_components.models import InternalProjectObject, InternalSettingObject
+from ui_components.models import InternalProjectObject
 from ui_components.widgets.image_zoom_widgets import reset_zoom_element, save_zoomed_image, zoom_inputs
 from ui_components.widgets.inpainting_element import inpaint_in_black_space_element
 from utils.data_repo.data_repo import DataRepo
@@ -19,30 +18,27 @@ from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
 
 
-def cropping_selector_element(project_uuid):
-    selector1, selector2, selector3 = st.columns([1, 1, 1])
+def cropping_selector_element(shot_uuid):
+    selector1, selector2, _ = st.columns([1, 1, 1])
     with selector1:
-        which_stage = st_memory.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], key="which_stage", horizontal=True)
+        crop_stage = st_memory.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], key="crop_stage", horizontal=True)
     with selector2:
         how_to_crop = st_memory.radio("How to crop:", options=["Precision Cropping","Manual Cropping"], key="how_to_crop",horizontal=True)
                                         
-    if which_stage == "Styled Key Frame":
+    if crop_stage == "Styled Key Frame":
         stage_name = WorkflowStageType.STYLED.value
-    elif which_stage == "Unedited Key Frame":
+    elif crop_stage == "Unedited Key Frame":
         stage_name = WorkflowStageType.SOURCE.value
                                         
     if how_to_crop == "Manual Cropping":
         manual_cropping_element(stage_name, st.session_state['current_frame_uuid'])
     elif how_to_crop == "Precision Cropping":
-        precision_cropping_element(stage_name, project_uuid)
+        precision_cropping_element(stage_name, shot_uuid)
 
-def precision_cropping_element(stage, project_uuid):
+def precision_cropping_element(stage, shot_uuid):
     data_repo = DataRepo()
-    project_settings: InternalSettingObject = data_repo.get_project_setting(
-        project_uuid)
-
-    
-    input_image = fetch_image_by_stage(project_uuid, stage, st.session_state['current_frame_index'] - 1)
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    input_image = fetch_image_by_stage(shot_uuid, stage, st.session_state['current_frame_index'] - 1)
 
     # TODO: CORRECT-CODE check if this code works
     if not input_image:
@@ -78,15 +74,13 @@ def precision_cropping_element(stage, project_uuid):
             time.sleep(1)
             st.rerun()
 
-        inpaint_in_black_space_element(
-            output_image, project_settings.project.uuid, stage)
+        inpaint_in_black_space_element(output_image, shot.project.uuid, stage)
 
 
 def manual_cropping_element(stage, timing_uuid):
-    
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
-    project_uuid = timing.project.uuid
+    project_uuid = timing.shot.project.uuid
 
     if not timing.source_image:
         st.error("Please select a source image before cropping")
@@ -115,7 +109,7 @@ def manual_cropping_element(stage, timing_uuid):
             get_working_image()
             st.rerun()
 
-        options1, options2, option3, option4 = st.columns([3, 1, 1, 1])
+        options1, _, _, _ = st.columns([3, 1, 1, 1])
         with options1:
             sub_options_1, sub_options_2 = st.columns(2)
             if 'degrees_rotated_to' not in st.session_state:
@@ -140,7 +134,7 @@ def manual_cropping_element(stage, timing_uuid):
                     st.rerun()
         
         project_settings: InternalProjectObject = data_repo.get_project_setting(
-            timing.project.uuid)
+            timing.shot.project.uuid)
 
         width = project_settings.width
         height = project_settings.height
@@ -192,5 +186,4 @@ def manual_cropping_element(stage, timing_uuid):
             with cropbtn2:
                 st.warning("Warning: This will overwrite the original image")
 
-            inpaint_in_black_space_element(
-                cropped_img, timing.project.uuid, stage=stage)
+            inpaint_in_black_space_element(cropped_img, project_uuid, stage=stage)

@@ -1,6 +1,4 @@
-
 import json
-import os
 import random
 import string
 import time
@@ -13,31 +11,30 @@ from PIL import Image, ImageOps
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 from shared.constants import InferenceType, InternalFileType, ProjectMetaData
-from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE, WorkflowStageType
+from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE, DefaultProjectSettingParams, WorkflowStageType
 from ui_components.methods.file_methods import add_temp_file_to_project, save_or_host_file
 from utils.data_repo.data_repo import DataRepo
 
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
-from utils import st_memory
 from ui_components.methods.common_methods import add_image_variant, execute_image_edit, create_or_update_mask, process_inference_output, promote_image_variant
 from ui_components.models import InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
 from streamlit_image_comparison import image_comparison
 
 
 def inpainting_element(timing_uuid):
-    which_stage_to_inpaint = st_memory.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], horizontal=True, key="which_stage_inpainting")
+    inpainting_stage = st_memory.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], horizontal=True, key="inpainting_stage")
     
-    if which_stage_to_inpaint == "Styled Key Frame":
+    if inpainting_stage == "Styled Key Frame":
         stage = WorkflowStageType.STYLED.value
-    elif which_stage_to_inpaint == "Unedited Key Frame":
+    elif inpainting_stage == "Unedited Key Frame":
         stage = WorkflowStageType.SOURCE.value
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
-    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_project(
-        timing.project.uuid)
+    timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_shot(
+        timing.shot.uuid)
     project_settings: InternalSettingObject = data_repo.get_project_setting(
-        timing.project.uuid)
+        timing.shot.project.uuid)
 
     if "type_of_mask_replacement" not in st.session_state:
         st.session_state["type_of_mask_replacement"] = "Replace With Image"
@@ -217,7 +214,7 @@ def inpainting_element(timing_uuid):
 
                     if st.session_state["type_of_mask_replacement"] == "Replace With Image":
                         data_repo = DataRepo()
-                        project: InternalProjectObject = data_repo.get_project_from_uuid(timing.project.uuid)
+                        project: InternalProjectObject = data_repo.get_project_from_uuid(timing.shot.project.uuid)
 
                         prompt = ""
                         negative_prompt = ""
@@ -285,12 +282,12 @@ def inpainting_element(timing_uuid):
                         elif source_of_image == "From Other Frame":
                             btn1, btn2 = st.columns([1, 1])
                             with btn1:
-                                which_stage_to_use = st.radio("Select stage to use:", WorkflowStageType.value_list())
+                                inpainting_other_frame_stage = st.radio("Select stage to use:", WorkflowStageType.value_list())
                                 which_image_to_use = st.number_input("Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0)
                                 
-                                if which_stage_to_use == WorkflowStageType.SOURCE.value:
+                                if inpainting_other_frame_stage == WorkflowStageType.SOURCE.value:
                                     background_image = timing_details[which_image_to_use].source_image
-                                elif which_stage_to_use == WorkflowStageType.STYLED.value:
+                                elif inpainting_other_frame_stage == WorkflowStageType.STYLED.value:
                                     background_image = timing_details[which_image_to_use].primary_image
                             
                             with btn2:
@@ -300,10 +297,10 @@ def inpainting_element(timing_uuid):
                         btn1, btn2 = st.columns([1, 1])
                         with btn1:
                             prompt = st.text_area("Prompt:", help="Describe the whole image, but focus on the details you want changed!",
-                                                  value=project_settings.default_prompt)
+                                                  value=DefaultProjectSettingParams.batch_prompt)
                         with btn2:
                             negative_prompt = st.text_area(
-                                "Negative Prompt:", help="Enter any things you want to make the model avoid!", value=project_settings.default_negative_prompt)
+                                "Negative Prompt:", help="Enter any things you want to make the model avoid!", value=DefaultProjectSettingParams.batch_negative_prompt)
 
                     edit1, edit2 = st.columns(2)
 
@@ -375,9 +372,9 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
     st.markdown("##### Inpaint in black space:")
 
     inpaint_prompt = st.text_area(
-        "Prompt", value=project_settings.default_prompt)
+        "Prompt", value=DefaultProjectSettingParams.batch_prompt)
     inpaint_negative_prompt = st.text_input(
-        "Negative Prompt", value='edge,branches, frame, fractals, text' + project_settings.default_negative_prompt)
+        "Negative Prompt", value='edge,branches, frame, fractals, text' + DefaultProjectSettingParams.batch_negative_prompt)
     if 'precision_cropping_inpainted_image_uuid' not in st.session_state:
         st.session_state['precision_cropping_inpainted_image_uuid'] = ""
 
@@ -454,8 +451,6 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
 
         elif stage == WorkflowStageType.STYLED.value:
             if st.button("Save + Promote Image"):
-                timing_details = data_repo.get_timing_list_from_project(
-                    project_uuid)
                 number_of_image_variants = add_image_variant(
                     st.session_state['precision_cropping_inpainted_image_uuid'], st.session_state['current_frame_uuid'])
                 promote_image_variant(

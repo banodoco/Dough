@@ -1,6 +1,5 @@
 import streamlit as st
 from ui_components.widgets.frame_movement_widgets import delete_frame, replace_image_widget
-from ui_components.widgets.frame_time_selector import single_frame_time_selector
 from ui_components.widgets.image_carousal import display_image
 from utils.data_repo.data_repo import DataRepo
 from ui_components.constants import WorkflowStageType
@@ -8,24 +7,33 @@ from ui_components.constants import WorkflowStageType
 
 def frame_selector_widget():
     data_repo = DataRepo()
-    
     time1, time2 = st.columns([1,1])
 
-    timing_details = data_repo.get_timing_list_from_project(project_uuid=st.session_state["project_uuid"])
-    len_timing_details = len(timing_details) if len(timing_details) > 0 else 1.0
-    st.progress(st.session_state['current_frame_index'] / len_timing_details)
+    timing_list = data_repo.get_timing_list_from_shot(shot_uuid=st.session_state["shot_uuid"])
+    shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
+    shot_list = data_repo.get_shot_list(shot.project.uuid)
+    len_timing_list = len(timing_list) if len(timing_list) > 0 else 1.0
+    st.progress(st.session_state['current_frame_index'] / len_timing_list)
+
     with time1:
+        if 'prev_shot_index' not in st.session_state:
+            st.session_state['prev_shot_index'] = shot.shot_idx
+
+        st.session_state['current_shot_index'] = st.number_input(f"Shot # (out of {len(shot_list)})", 1, 
+                                                                  len(shot_list), value=st.session_state['prev_shot_index'], 
+                                                                  step=1, key="current_shot_sidebar_selector")
+        
+        update_current_shot_index(st.session_state['current_shot_index'])
+
+    with time2:
         if 'prev_frame_index' not in st.session_state:
             st.session_state['prev_frame_index'] = 1
 
-        st.session_state['current_frame_index'] = st.number_input(f"Key frame # (out of {len(timing_details)})", 1, 
-                                                                  len(timing_details), value=st.session_state['prev_frame_index'], 
-                                                                  step=1, key="which_image_selector")
+        st.session_state['current_frame_index'] = st.number_input(f"Key frame # (out of {len(timing_list)})", 1, 
+                                                                  len(timing_list), value=st.session_state['prev_frame_index'], 
+                                                                  step=1, key="current_frame_sidebar_selector")
         
         update_current_frame_index(st.session_state['current_frame_index'])
-
-    with time2:
-        single_frame_time_selector(st.session_state['current_frame_uuid'], 'navbar', shift_frames=False)
     
     with st.expander(f"🖼️ Frame #{st.session_state['current_frame_index']} Details"):
         a1, a2 = st.columns([1,1])
@@ -57,13 +65,29 @@ def frame_selector_widget():
 
 def update_current_frame_index(index):
     data_repo = DataRepo()
-    timing_details = data_repo.get_timing_list_from_project(project_uuid=st.session_state["project_uuid"])
+    timing_list = data_repo.get_timing_list_from_shot(shot_uuid=st.session_state["shot_uuid"])
 
-    st.session_state['current_frame_uuid'] = timing_details[index - 1].uuid
+    st.session_state['current_frame_uuid'] = timing_list[index - 1].uuid
         
     if st.session_state['prev_frame_index'] != index:
         st.session_state['prev_frame_index'] = index
-        st.session_state['current_frame_uuid'] = timing_details[index - 1].uuid
+        st.session_state['current_frame_uuid'] = timing_list[index - 1].uuid
+        st.session_state['reset_canvas'] = True
+        st.session_state['frame_styling_view_type_index'] = 0
+        st.session_state['frame_styling_view_type'] = "Individual View"
+                                    
+        st.rerun()
+
+
+def update_current_shot_index(index):
+    data_repo = DataRepo()
+    shot_list = data_repo.get_shot_list(project_uuid=st.session_state["project_uuid"])
+
+    st.session_state['shot_uuid'] = shot_list[index - 1].uuid
+        
+    if st.session_state['prev_shot_index'] != index:
+        st.session_state['prev_shot_index'] = index
+        st.session_state['shot_uuid'] = shot_list[index - 1].uuid
         st.session_state['reset_canvas'] = True
         st.session_state['frame_styling_view_type_index'] = 0
         st.session_state['frame_styling_view_type'] = "Individual View"

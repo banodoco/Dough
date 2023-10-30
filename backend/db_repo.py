@@ -15,13 +15,13 @@ import sqlite3
 import subprocess
 from typing import List
 import uuid
-from shared.constants import Colors, InternalFileType, SortOrder
-from backend.serializers.dto import  AIModelDto, AppSettingDto, BackupDto, BackupListDto, InferenceLogDto, InternalFileDto, ProjectDto, SettingDto, TimingDto, UserDto
+from shared.constants import InternalFileType, SortOrder
+from backend.serializers.dto import  AIModelDto, AppSettingDto, BackupDto, BackupListDto, InferenceLogDto, InternalFileDto, ProjectDto, SettingDto, ShotDto, TimingDto, UserDto
 
 from shared.constants import AUTOMATIC_FILE_HOSTING, LOCAL_DATABASE_NAME, SERVER, ServerType
 from shared.file_upload.s3 import upload_file, upload_file_from_obj
 
-from backend.models import AIModel, AIModelParamMap, AppSetting, BackupTiming, InferenceLog, InternalFileObject, Lock, Project, Setting, Timing, User
+from backend.models import AIModel, AIModelParamMap, AppSetting, BackupTiming, InferenceLog, InternalFileObject, Lock, Project, Setting, Shot, Timing, User
 
 from backend.serializers.dao import CreateAIModelDao, CreateAIModelParamMapDao, CreateAppSettingDao, CreateFileDao, CreateInferenceLogDao, CreateProjectDao, CreateSettingDao, CreateTimingDao, CreateUserDao, UpdateAIModelDao, UpdateAppSettingDao, UpdateSettingDao
 from shared.constants import InternalResponse
@@ -704,10 +704,10 @@ class DBRepo:
         
         return InternalResponse(payload, 'timing fetched', True)
     
-    def get_timing_from_frame_number(self, project_uuid, frame_number):
-        project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
-        if project:
-            timing = Timing.objects.filter(aux_frame_index=frame_number, project_id=project.id, is_disabled=False).first()
+    def get_timing_from_frame_number(self, shot_uuid, frame_number):
+        shot: Shot = Shot.objects.filter(uuid=shot_uuid, is_disabled=False).first()
+        if shot:
+            timing = Timing.objects.filter(aux_frame_index=frame_number, shot_id=shot.id, is_disabled=False).first()
             if timing:
                 payload = {
                     'data': TimingDto(timing).data
@@ -734,7 +734,7 @@ class DBRepo:
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)
         
-        next_timing = Timing.objects.filter(aux_frame_index=timing.aux_frame_index + 1, project_id=timing.project_id, is_disabled=False).order_by('aux_frame_index').first()
+        next_timing = Timing.objects.filter(aux_frame_index=timing.aux_frame_index + 1, shot_id=timing.shot_id, is_disabled=False).order_by('aux_frame_index').first()
         
         payload = {
             'data': TimingDto(next_timing).data if next_timing else None
@@ -747,7 +747,7 @@ class DBRepo:
         if not timing:
             return InternalResponse({}, 'invalid timing uuid', False)
         
-        prev_timing = Timing.objects.filter(aux_frame_index=timing.aux_frame_index - 1, project_id=timing.project_id, is_disabled=False).order_by('aux_frame_index').first()
+        prev_timing = Timing.objects.filter(aux_frame_index=timing.aux_frame_index - 1, shot_id=timing.shot_id, is_disabled=False).order_by('aux_frame_index').first()
         
         payload = {
             'data': TimingDto(prev_timing).data if prev_timing else None
@@ -761,14 +761,15 @@ class DBRepo:
             return InternalResponse([], 'invalid timing uuid', False)
         
         return timing.alternative_image_list
-    
+
     def get_timing_list_from_project(self, project_uuid=None):
         if project_uuid:
             project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
             if not project:
                 return InternalResponse({}, 'invalid project', False)
             
-            timing_list = Timing.objects.filter(project_id=project.id, is_disabled=False).order_by('aux_frame_index').all()
+            shot_list = Shot.objects.filter(project_id=project.id, is_disabled=False).all()
+            timing_list = Timing.objects.filter(shot_id__in=[s.id for s in shot_list], is_disabled=False).order_by('aux_frame_index').all()
         else:
             timing_list = Timing.objects.filter(is_disabled=False).order_by('aux_frame_index').all()
         
@@ -777,7 +778,20 @@ class DBRepo:
         }
         
         return InternalResponse(payload, 'timing list fetched', True)
-    
+
+    def get_timing_list_from_shot(self, shot_uuid):
+        shot: Shot = Shot.objects.filter(uuid=shot_uuid, is_disabled=False).first()
+        if not shot:
+            return InternalResponse({}, 'invalid shot', False)
+        
+        timing_list = Timing.objects.filter(shot_id=shot.id, is_disabled=False).order_by('aux_frame_index').all()
+        
+        payload = {
+            'data': TimingDto(timing_list, many=True).data
+        }
+        
+        return InternalResponse(payload, 'timing list fetched', True)
+
     def create_timing(self, **kwargs):
         attributes = CreateTimingDao(data=kwargs)
         if not attributes.is_valid():
@@ -785,16 +799,15 @@ class DBRepo:
         
         print(attributes.data)
         
-        if 'project_id' in attributes.data and attributes.data['project_id']:
-            project = Project.objects.filter(uuid=attributes.data['project_id'], is_disabled=False).first()
-            if not project:
-                return InternalResponse({}, 'invalid project', False)
+        if 'shot_id' in attributes.data and attributes.data['shot_id']:
+            shot = Shot.objects.filter(uuid=attributes.data['shot_id'], is_disabled=False).first()
+            if not shot:
+                return InternalResponse({}, 'invalid shot', False)
             
-            print(attributes.data)
-            attributes._data['project_id'] = project.id
+            attributes._data['shot_id'] = shot.id
         
         if 'aux_frame_index' not in attributes.data or attributes.data['aux_frame_index'] == None: 
-            attributes._data['aux_frame_index'] = Timing.objects.filter(project_id=attributes.data['project_id'], is_disabled=False).count()
+            attributes._data['aux_frame_index'] = Timing.objects.filter(shot_id=attributes.data['shot_id'], is_disabled=False).count()
         
         if 'model_id' in attributes.data:
             if attributes.data['model_id'] != None:
@@ -803,7 +816,6 @@ class DBRepo:
                     return InternalResponse({}, 'invalid model uuid', False)
                 
                 attributes._data['model_id'] = model.id
-        
 
         if 'source_image_id' in attributes.data:
             if attributes.data['source_image_id'] != None:
@@ -812,25 +824,6 @@ class DBRepo:
                     return InternalResponse({}, 'invalid source image uuid', False)
                 
                 attributes._data['source_image_id'] = source_image.id
-        
-
-        if 'interpolated_clip_list' in attributes.data and attributes.data['interpolated_clip_list'] != None:
-            for clip_uuid in attributes.data['interpolated_clip_list']:
-                interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=clip_uuid, is_disabled=False).first()
-                if not interpolated_clip:
-                    return InternalResponse({}, 'invalid interpolated clip uuid', False)
-                
-                attributes._data['interpolated_clip_list'] = list(set(attributes._data['interpolated_clip_list']))
-        
-
-        if 'timed_clip_id' in attributes.data:
-            if attributes.data['timed_clip_id'] != None:
-                timed_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['timed_clip_id'], is_disabled=False).first()
-                if not timed_clip:
-                    return InternalResponse({}, 'invalid timed clip uuid', False)
-                
-                attributes._data['timed_clip_id'] = timed_clip.id
-        
 
         if 'mask_id' in attributes.data:
             if attributes.data['mask_id'] != None:
@@ -839,7 +832,6 @@ class DBRepo:
                     return InternalResponse({}, 'invalid mask uuid', False)
                 
                 attributes._data['mask_id'] = mask.id
-        
 
         if 'canny_image_id' in attributes.data:
             if attributes.data['canny_image_id'] != None:
@@ -848,16 +840,6 @@ class DBRepo:
                     return InternalResponse({}, 'invalid canny image uuid', False)
                 
                 attributes._data['canny_image_id'] = canny_image.id
-        
-
-        if 'preview_video_id' in attributes.data:
-            if attributes.data['preview_video_id'] != None:
-                preview_video: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['preview_video_id'], is_disabled=False).first()
-                if not preview_video:
-                    return InternalResponse({}, 'invalid preview video uuid', False)
-                
-                attributes._data['preview_video_id'] = preview_video.id
-        
 
         if 'primay_image_id' in attributes.data:
             if attributes.data['primay_image_id'] != None:
@@ -867,9 +849,7 @@ class DBRepo:
                 
                 attributes._data['primay_image_id'] = primay_image.id
         
-        
         timing = Timing.objects.create(**attributes.data)
-        
         payload = {
             'data': TimingDto(timing).data
         }
@@ -883,26 +863,26 @@ class DBRepo:
             project: Project = Project.objects.filter(is_disabled=False).first()
         
         if project:
-            Timing.objects.filter(project_id=project.id, is_disabled=False).update(is_disabled=True)
+            shot_list = Shot.objects.filter(project_id=project.id, is_disabled=False).all()
+            Timing.objects.filter(shot_id__in=[s.id for s in shot_list], is_disabled=False).update(is_disabled=True)
         
         return InternalResponse({}, 'timing removed successfully', True)
     
     def add_interpolated_clip(self, uuid, **kwargs):
-        timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
-        if not timing:
-            return InternalResponse({}, 'invalid timing uuid', False)
+        shot = Shot.objects.filter(uuid=uuid, is_disabled=False).first()
+        if not shot:
+            return InternalResponse({}, 'invalid shot uuid', False)
         
         if 'interpolated_clip_id' in kwargs and kwargs['interpolated_clip_id'] != None:
             interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['interpolated_clip_id'], is_disabled=False).first()
             if not interpolated_clip:
                 return InternalResponse({}, 'invalid interpolated clip uuid', False)
                 
-            timing.add_interpolated_clip_list([interpolated_clip.uuid.hex])
-            timing.save()
+            shot.add_interpolated_clip_list([interpolated_clip.uuid.hex])
+            shot.save()
 
         return InternalResponse({}, 'success', True)
     
-    # TODO: add dao in this method
     def update_specific_timing(self, uuid, **kwargs):
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
         if not timing:
@@ -915,6 +895,14 @@ class DBRepo:
                     return InternalResponse({}, 'invalid primary image uuid', False)
                 
                 kwargs['primary_image_id'] = primary_image.id
+
+        if 'shot_id' in kwargs:
+            if kwargs['shot_id'] != None:
+                shot: Shot = Shot.objects.filter(uuid=kwargs['shot_id'], is_disabled=False).first()
+                if not shot:
+                    return InternalResponse({}, 'invalid shot uuid', False)
+                
+                kwargs['shot_id'] = shot.id
 
         if 'model_id' in kwargs:
             if kwargs['model_id'] != None:
@@ -934,26 +922,6 @@ class DBRepo:
                 kwargs['source_image_id'] = source_image.id
         
 
-        if 'interpolated_clip_list' in kwargs and kwargs['interpolated_clip_list'] != None:
-            cur_list = []
-            for clip_uuid in kwargs['interpolated_clip_list']:
-                interpolated_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=clip_uuid, is_disabled=False).first()
-                if not interpolated_clip:
-                    return InternalResponse({}, 'invalid interpolated clip uuid', False)
-                
-                cur_list.append(interpolated_clip.uuid)
-            kwargs['interpolated_clip_list'] = list(set(kwargs['interpolated_clip_list']))
-        
-
-        if 'timed_clip_id' in kwargs:
-            if kwargs['timed_clip_id'] != None:
-                timed_clip: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['timed_clip_id'], is_disabled=False).first()
-                if not timed_clip:
-                    return InternalResponse({}, 'invalid timed clip uuid', False)
-                
-                kwargs['timed_clip_id'] = timed_clip.id
-        
-
         if 'mask_id' in kwargs:
             if kwargs['mask_id'] != None:
                 mask: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['mask_id'], is_disabled=False).first()
@@ -970,15 +938,6 @@ class DBRepo:
                     return InternalResponse({}, 'invalid canny image uuid', False)
                 
                 kwargs['canny_image_id'] = canny_image.id
-        
-
-        if 'preview_video_id' in kwargs:
-            if kwargs['preview_video_id'] != None:
-                preview_video: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['preview_video_id'], is_disabled=False).first()
-                if not preview_video:
-                    return InternalResponse({}, 'invalid preview video uuid', False)
-                
-                kwargs['preview_video_id'] = preview_video.id
         
 
         if 'primay_image_id' in kwargs:
@@ -1024,19 +983,6 @@ class DBRepo:
         timing.save()
         return InternalResponse({}, 'source image removed successfully', True)
     
-    def move_frame_one_step_forward(self, project_uuid, index_of_frame):
-        project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
-        if not project:
-            return InternalResponse({}, 'invalid project uuid', False)
-        
-        timing_list = Timing.objects.filter(project_id=project.id, \
-                                            aux_frame_index__gte=index_of_frame, is_disabled=False).order_by('frame_number')
-        
-        timing_list.update(aux_frame_index=F('aux_frame_index') + 1)
-
-        return InternalResponse({}, 'frames moved successfully', True)
-    
-
     # app setting
     def get_app_setting_from_uuid(self, uuid=None):
         if uuid:
@@ -1187,13 +1133,6 @@ class DBRepo:
                 return InternalResponse({}, 'invalid audio', False)
             
             attributes._data["audio_id"] = audio.id
-    
-        if "input_video_id" in attributes.data and attributes.data["input_video_id"]:
-            video = InternalFileObject.objects.filter(uuid=attributes.data["input_video_id"], is_disabled=False).first()
-            if not video:
-                return InternalResponse({}, 'invalid video', False)
-            
-            attributes._data["input_video_id"] = video.id
         
         setting = Setting.objects.create(**attributes.data)
         
@@ -1232,13 +1171,6 @@ class DBRepo:
                 return InternalResponse({}, 'invalid audio', False)
             
             attributes._data["audio_id"] = audio.id
-    
-        if "input_video_id" in attributes.data and attributes.data["input_video_id"]:
-            video = InternalFileObject.objects.filter(uuid=attributes.data["input_video_id"], is_disabled=False).first()
-            if not video:
-                return InternalResponse({}, 'invalid video', False)
-            
-            attributes._data["input_video_id"] = video.id
 
         if 'model_id' in attributes.data and attributes.data['model_id']:
             model = AIModel.objects.filter(uuid=attributes.data['model_id'], is_disabled=False).first()
@@ -1290,13 +1222,6 @@ class DBRepo:
             
             attributes._data['audio_id'] = audio.id
 
-        if 'input_video_id' in attributes.data and attributes.data['input_video_id']:
-            video = InternalFileObject.objects.filter(uuid=attributes.data['input_video_id'], is_disabled=False).first()
-            if not video:
-                return InternalResponse({}, 'invalid video', False)
-            
-            attributes._data['input_video_id'] = video.id
-
         for attr, value in attributes.data.items():
             setattr(setting, attr, value)
         setting.save()
@@ -1326,20 +1251,11 @@ class DBRepo:
             if timing.source_image:
                 file_uuid_list.add(timing.source_image.uuid)
 
-            if timing.interpolated_clip_list:
-                file_uuid_list.extend(json.loads(timing.interpolated_clip_list))
-            
-            if timing.timed_clip:
-                file_uuid_list.add(timing.timed_clip.uuid)
-            
             if timing.mask:
                 file_uuid_list.add(timing.mask.uuid)
             
             if timing.canny_image:
                 file_uuid_list.add(timing.canny_image.uuid)
-            
-            if timing.preview_video:
-                file_uuid_list.add(timing.preview_video.uuid)
             
             if timing.primary_image:
                 file_uuid_list.add(timing.primary_image.uuid)
@@ -1368,21 +1284,11 @@ class DBRepo:
             timing['source_image_uuid'] = str(id_file_dict[timing['source_image_id']].uuid) if timing['source_image_id'] else None
             del timing['source_image_id']
 
-            # TODO: fix this code using interpolated_clip_list
-            timing['interpolated_clip_uuid'] = str(id_file_dict[timing['interpolated_clip_id']].uuid) if timing['interpolated_clip_id'] else None
-            del timing['interpolated_clip_id']
-
-            timing['timed_clip_uuid'] = str(id_file_dict[timing['timed_clip_id']].uuid) if timing['timed_clip_id'] else None
-            del timing['timed_clip_id']
-
             timing['mask_uuid'] = str(id_file_dict[timing['mask_id']].uuid) if timing['mask_id'] else None
             del timing['mask_id']
 
             timing['canny_image_uuid'] = str(id_file_dict[timing['canny_image_id']].uuid) if timing['canny_image_id'] else None
             del timing['canny_image_id']
-
-            timing['preview_video_uuid'] = str(id_file_dict[timing['preview_video_id']].uuid) if timing['preview_video_id'] else None
-            del timing['preview_video_id']
 
             timing['primary_image_uuid'] = str(id_file_dict[timing['primary_image_id']].uuid) if timing['primary_image_id'] else None
             del timing['primary_image_id']
@@ -1461,29 +1367,21 @@ class DBRepo:
                     timing.uuid,
                     model_uuid=backup_timing['model_uuid'],
                     source_image_uuid=backup_timing['source_image_uuid'],
-                    interpolated_clip_list=backup_timing['interpolated_clip_list'],
-                    timed_clip=backup_timing['timed_clip_uuid'],
                     mask=backup_timing['mask_uuid'],
                     canny_image=backup_timing['canny_image_uuid'],
-                    preview_video=backup_timing['preview_video_uuid'],
                     primary_image=backup_timing['primary_image_uuid'],
-                    custom_model_id_list=backup_timing['custom_model_id_list'],
                     frame_time=backup_timing['frame_time'],
                     frame_number=backup_timing['frame_number'],
                     alternative_images=backup_timing['alternative_images'],
-                    custom_pipeline=backup_timing['custom_pipeline'],
                     prompt=backup_timing['prompt'],
                     negative_prompt=backup_timing['negative_prompt'],
                     guidance_scale=backup_timing['guidance_scale'],
                     seed=backup_timing['seed'],
-                    num_inteference_steps=backup_timing['num_inteference_steps'],
                     strength=backup_timing['strength'],
                     notes=backup_timing['notes'],
                     adapter_type=backup_timing['adapter_type'],
                     clip_duration=backup_timing['clip_duration'],
                     animation_style=backup_timing['animation_style'],
-                    interpolation_steps=backup_timing['interpolation_steps'],
-                    low_threshold=backup_timing['low_threshold'],
                     high_threshold=backup_timing['high_threshold'],
                     aux_frame_index=backup_timing['aux_frame_index']
                 )
@@ -1504,3 +1402,117 @@ class DBRepo:
         with transaction.atomic():
             Lock.objects.filter(row_key=key).delete()
             return InternalResponse({'data': True}, 'success', True)
+        
+    
+    # shot
+    def get_shot_from_number(self, project_uuid, shot_number=0):
+        shot: Shot = Shot.objects.filter(project_id=project_uuid, shot_idx=shot_number, is_disabled=False).first()
+        if not shot:
+            return InternalResponse({}, 'invalid shot number', False)
+        
+        timing_list = Timing.objects.filter(shot_id=shot.id, is_disabled=False).all()
+        context = {'timing_list': timing_list}
+        payload = {
+            'data': ShotDto(shot, context=context).data
+        }
+
+        return InternalResponse(payload, 'shot fetched successfully', True)
+
+    def get_shot_from_uuid(self, shot_uuid):
+        shot: Shot = Shot.objects.filter(uuid=shot_uuid, is_disabled=False).first()
+        if not shot:
+            return InternalResponse({}, 'invalid shot uuid', False)
+        
+        timing_list = Timing.objects.filter(shot_id=shot.id, is_disabled=False).all()
+        context = {'timing_list': timing_list}
+
+        payload = {
+            'data': ShotDto(shot, context=context).data
+        }
+
+        return InternalResponse(payload, 'shot fetched successfully', True)
+
+    # TODO: implement pagination if shot count gets too high
+    def get_shot_list(self, project_uuid):
+        project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        if not project:
+            return InternalResponse({}, 'invalid project uuid', False)
+        
+        shot_list: List[Shot] = Shot.objects.filter(project_id=project.id, is_disabled=False).order_by('shot_idx').all()
+        timing_list = Timing.objects.filter(is_disabled=False).all()
+        context = {'timing_list': timing_list}
+
+        payload = {
+            'data': ShotDto(shot_list, context=context, many=True).data
+        }
+
+        return InternalResponse(payload, 'shot list fetched successfully', True)
+
+    def create_shot(self, project_uuid, duration, name=None, meta_data="", desc=""):
+        project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        if not project:
+            return InternalResponse({}, 'invalid project uuid', False)
+        
+        shot_number = Shot.objects.filter(project_id=project.id, is_disabled=False).count() + 1
+        if not name:
+            name = "Shot " + str(shot_number)
+
+        shot_data = {
+            "name" : name,
+            "desc" : desc,
+            "shot_idx" : shot_number,
+            "duration" : duration,
+            "meta_data" : meta_data,
+            "project_id" : project.id
+        }
+
+        shot = Shot.objects.create(**shot_data)
+        
+        timing_list = Timing.objects.filter(is_disabled=False).all()
+        context = {'timing_list': timing_list}
+        
+        payload = {
+            'data': ShotDto(shot, context=context).data
+        }
+
+        return InternalResponse(payload, 'shot created successfully', True)
+    
+    def update_shot(self, shot_uuid, shot_idx=None, name=None, duration=None, meta_data=None, desc=None):
+        shot: Shot = Shot.objects.filter(uuid=shot_uuid, is_disabled=False).first()
+        if not shot:
+            return InternalResponse({}, 'invalid shot uuid', False)
+        
+        update_data = {}
+        if name != None:
+            update_data['name'] = name
+        if duration != None:
+            update_data['duration'] = duration
+        if meta_data != None:
+            update_data['meta_data'] = meta_data
+        if desc != None:
+            update_data['desc'] = desc
+        if shot_idx != None:
+            update_data['shot_idx'] = shot_idx
+        
+        for k,v in update_data.items():
+            setattr(shot, k, v)
+
+        shot.save()
+        timing_list = Timing.objects.filter(is_disabled=False).all()
+        context = {'timing_list': timing_list}
+
+        payload = {
+            'data': ShotDto(shot, context=context).data
+        }
+
+        return InternalResponse(payload, 'shot updated successfully', True)
+
+    def delete_shot(self, shot_uuid):
+        shot: Shot = Shot.objects.filter(uuid=shot_uuid, is_disabled=False).first()
+        if not shot:
+            return InternalResponse({}, 'invalid shot uuid', False)
+        
+        shot.is_disabled = True
+        shot.save()
+        
+        return InternalResponse({}, 'shot deleted successfully', True)

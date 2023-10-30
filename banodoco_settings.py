@@ -3,7 +3,7 @@ import uuid
 import streamlit as st
 
 from PIL import Image
-from shared.constants import SERVER, AIModelCategory, AIModelType, GuidanceType, InternalFileType, ServerType
+from shared.constants import SERVER, AIModelCategory, GuidanceType, InternalFileType, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from shared.constants import AnimationStyleType
@@ -11,9 +11,8 @@ from ui_components.methods.common_methods import add_image_variant
 from ui_components.methods.file_methods import save_or_host_file
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalUserObject
 from utils.common_utils import create_working_assets
-from utils.constants import ML_MODEL_LIST, ImageStage
+from utils.constants import ML_MODEL_LIST
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
 logger = AppLogger()
 
@@ -74,8 +73,7 @@ def create_new_user_data(user: InternalUserObject):
     create_new_project(user, 'my_first_project')
 
 
-def create_new_project(user: InternalUserObject, project_name: str, width=512, height=512,\
-                        guidance_type=GuidanceType.DRAWING.value, animation_style=AnimationStyleType.INTERPOLATION.value):
+def create_new_project(user: InternalUserObject, project_name: str, width=512, height=512):
     data_repo = DataRepo()
 
     # creating a new project for this user
@@ -86,6 +84,15 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
         'height': height
     }
     project: InternalProjectObject = data_repo.create_project(**project_data)
+
+    # create a default first shot
+    shot_data = {
+        "project_uuid": project.uuid,
+        "desc": "",
+        "duration": 2
+    }
+
+    shot = data_repo.create_shot(**shot_data)
 
     # create a sample timing frame
     st.session_state["project_uuid"] = project.uuid
@@ -108,11 +115,10 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     source_image = data_repo.create_file(**file_data)
 
     timing_data = {
-        "project_id": project.uuid,
         "frame_time": 0.0,
-        "animation_style": animation_style,
         "aux_frame_index": 0,
-        "source_image_id": source_image.uuid
+        "source_image_id": source_image.uuid,
+        "shot_id": shot.uuid,
     }
     timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
 
@@ -125,30 +131,16 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     project_setting_data = {
         "project_id" : project.uuid,
         "input_type" : "video",
-        "default_strength": 1,
-        "extraction_type" : "Extract manually",
         "width" : width,
         "height" : height,
-        "default_prompt": "an oil painting",
-        "default_model_id": model_list[0].uuid,
-        "default_negative_prompt" : "",
-        "default_guidance_scale" : 7.5,
-        "default_seed" : 1234,
-        "default_num_inference_steps" : 30,
-        "default_stage" : ImageStage.SOURCE_IMAGE.value,
-        "default_custom_model_id_list" : "[]",
-        "default_adapter_type" : "N",
-        "guidance_type" : guidance_type,
-        "default_animation_style" : animation_style,
-        "default_low_threshold" : 50,
-        "default_high_threshold" : 100
+        "default_model_id": model_list[0].uuid
     }
 
-    project_setting = data_repo.create_project_setting(**project_setting_data)
+    _ = data_repo.create_project_setting(**project_setting_data)
 
     create_working_assets(project.uuid)
 
-    return project
+    return project, shot
     
 
 def create_predefined_models(user):

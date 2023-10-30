@@ -9,17 +9,14 @@ from ui_components.widgets.frame_selector import update_current_frame_index
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 
-def sidebar_logger(project_uuid):
+def sidebar_logger(shot_uuid):
     data_repo = DataRepo()
-
-    timing_details = data_repo.get_timing_list_from_project(project_uuid=project_uuid)
-
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    timing_list = data_repo.get_timing_list_from_shot(shot_uuid=shot_uuid)
     a1, _, a3 = st.columns([1, 0.2, 1])
-    
-    refresh_disabled = False # not any(log.status in [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value] for log in log_list)
 
+    refresh_disabled = False # not any(log.status in [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value] for log in log_list)
     if a1.button("Refresh log", disabled=refresh_disabled): st.rerun()
-    # a3.button("Jump to full log view")
 
     status_option = st.radio("Statuses to display:", options=["All", "In Progress", "Succeeded", "Failed"], key="status_option", index=0, horizontal=True)
 
@@ -33,14 +30,14 @@ def sidebar_logger(project_uuid):
 
     b1, b2 = st.columns([1, 1])
 
-    project_setting = data_repo.get_project_setting(project_uuid)
+    project_setting = data_repo.get_project_setting(shot.project.uuid)
     
     page_number = b1.number_input('Page number', min_value=1, max_value=project_setting.total_log_pages, value=1, step=1)
     items_per_page = b2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
     log_list, total_page_count = data_repo.get_all_inference_log_list(
-        project_id=project_uuid, 
-        page=page_number, 
-        data_per_page=items_per_page, 
+        project_id=shot.project.uuid,
+        page=page_number,
+        data_per_page=items_per_page,
         status_list=status_list
     )
     
@@ -102,7 +99,7 @@ def sidebar_logger(project_uuid):
                 if output_url and 'timing_uuid' in origin_data:
                     timing = data_repo.get_timing_from_uuid(origin_data['timing_uuid'])
                     if timing and st.session_state['frame_styling_view_type'] != "Timeline":
-                        jump_to_single_frame_view_button(timing.aux_frame_index + 1, timing_details, 'sidebar_'+str(log.uuid))     
+                        jump_to_single_frame_view_button(timing.aux_frame_index + 1, timing_list, 'sidebar_'+str(log.uuid))     
 
                     else:
                         if st.session_state['frame_styling_view_type'] != "Explorer":

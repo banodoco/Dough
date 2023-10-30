@@ -262,7 +262,7 @@ def cache_data(cls):
         if timing_list and len(timing_list) and len(args) > 0:
             project_specific_list = []
             for timing in timing_list:
-                if timing.project.uuid == args[0]:
+                if timing.shot.project.uuid == args[0]:
                     project_specific_list.append(timing)
 
             # if there are any timings for the project, return them
@@ -301,9 +301,9 @@ def cache_data(cls):
         # updating the timing list
         timing_func = getattr(cls, '_original_get_timing_from_uuid')
         timing = timing_func(self, args[0])
-        if timing and timing.project:
+        if timing and timing.shot.project:
             original_func = getattr(cls, '_original_get_timing_list_from_project')
-            timing_list = original_func(self, timing.project.uuid)
+            timing_list = original_func(self, timing.shot.project.uuid)
             if timing_list and len(timing_list):
                 StCache.add_all(timing_list, CacheKey.TIMING_DETAILS.value)
     
@@ -369,17 +369,7 @@ def cache_data(cls):
     setattr(cls, '_original_remove_source_image', cls.remove_source_image)
     setattr(cls, "remove_source_image", _cache_remove_source_image)
 
-    def _cache_move_frame_one_step_forward(self, *args, **kwargs):
-        original_func = getattr(cls, '_original_move_frame_one_step_forward')
-        status = original_func(self, *args, **kwargs)
-        
-        if status:
-            StCache.delete_all(CacheKey.TIMING_DETAILS.value)
     
-    setattr(cls, '_original_move_frame_one_step_forward', cls.move_frame_one_step_forward)
-    setattr(cls, "move_frame_one_step_forward", _cache_move_frame_one_step_forward)
-
-
     # ------------------ APP SETTING METHODS ---------------------
     def _cache_get_app_setting_from_uuid(self, *args, **kwargs):
         app_setting_list = StCache.get_all(CacheKey.APP_SETTING.value)

@@ -1,4 +1,3 @@
-from django.utils import timezone
 from django.db import models
 import uuid
 import json
@@ -146,37 +145,84 @@ class BackupTiming(BaseModel):
     @property
     def data_dump_dict(self):
         return json.loads(self.data_dump) if self.data_dump else None
+    
+
+class Shot(BaseModel):
+    name = models.CharField(max_length=255, default="", blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE)
+    main_clip = models.ForeignKey(InternalFileObject, default=None, null=True, on_delete=models.DO_NOTHING)   # main clip has the correct duration
+    desc = models.TextField(default="", blank=True)
+    shot_idx = models.IntegerField()
+    duration = models.FloatField(default=2.5)
+    meta_data = models.TextField(default="", blank=True)
+    interpolated_clip_list = models.TextField(default=None, null=True)
+
+    class Meta:
+        app_label = 'backend'
+        db_table = 'shot'
+
+    @property
+    def meta_data_dict(self):
+        return json.loads(self.meta_data) if self.meta_data else None
+
+    def __init__(self, *args, **kwargs):
+        super(Shot, self).__init__(*args, **kwargs)
+        self.old_shot_idx = self.shot_idx
+        self.old_is_disabled = self.is_disabled
+        self.old_duration = self.duration
+
+    def add_interpolated_clip_list(self, clip_uuid_list):
+        cur_list = json.loads(self.interpolated_clip_list) if self.interpolated_clip_list else []
+        cur_list.extend(clip_uuid_list)
+        cur_list = list(set(cur_list))
+        self.interpolated_clip_list = json.dumps(cur_list)
+
+    def save(self, *args, **kwargs):
+        # --------------- handling shot_idx change --------------
+        # if the shot is being deleted (disabled)
+        if self.old_is_disabled != self.is_disabled and self.is_disabled:
+            shot_list = Shot.objects.filter(project_id=self.project_id, is_disabled=False).order_by('shot_idx')
+
+            # if this is disabled then shifting every shot backwards one step
+            if self.is_disabled:
+                shot_list.update(shot_idx=F('shot_idx') - 1)
+            else:
+                shot_list.update(shot_idx=F('shot_idx') + 1)
+
+        # if this is a newly created shot or assigned new shot_idx (and not disabled)
+        if (not self.id or self.old_shot_idx != self.shot_idx) and not self.is_disabled:
+            # newly created shot
+            if not self.id:
+                # if a shot already exists at this place then moving everything one step forward
+                if Shot.objects.filter(project_id=self.project_id, shot_idx=self.shot_idx, is_disabled=False).exists():
+                    shot_list = Shot.objects.filter(project_id=self.project_id, \
+                                            shot_idx__gte=self.shot_idx, is_disabled=False)
+                    shot_list.update(shot_idx=F('shot_idx') + 1)
+            elif self.old_shot_idx != self.shot_idx:
+                if self.shot_idx >= self.old_shot_idx:
+                    shots_to_move = Shot.objects.filter(project_id=self.project_id, shot_idx__gt=self.old_shot_idx, \
+                                    shot_idx__lte=self.shot_idx, is_disabled=False).order_by('shot_idx')
+                    # moving the frames between old and new index one step backwards
+                    shots_to_move.update(shot_idx=F('shot_idx') - 1)
+                else:
+                    shots_to_move = Shot.objects.filter(project_id=self.project_id, shot_idx__gte=self.shot_idx, \
+                                       shot_idx__lt=self.old_shot_idx, is_disabled=False).order_by('shot_idx')
+                    shots_to_move.update(shot_idx=F('shot_idx') + 1)
+
+        super(Shot, self).save(*args, **kwargs)
+
 
 class Timing(BaseModel):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
     model = models.ForeignKey(AIModel, on_delete=models.DO_NOTHING, null=True)
     source_image = models.ForeignKey(InternalFileObject, related_name="source_image", on_delete=models.DO_NOTHING, null=True)
-    interpolated_clip_list = models.TextField(default=None, null=True)
-    timed_clip = models.ForeignKey(InternalFileObject, related_name="timed_clip", on_delete=models.DO_NOTHING, null=True)
     mask = models.ForeignKey(InternalFileObject, related_name="mask", on_delete=models.DO_NOTHING, null=True)
     canny_image = models.ForeignKey(InternalFileObject, related_name="canny_image", on_delete=models.DO_NOTHING, null=True)
-    preview_video = models.ForeignKey(InternalFileObject, related_name="preview_video", on_delete=models.DO_NOTHING, null=True)
     primary_image = models.ForeignKey(InternalFileObject, related_name="primary_image", on_delete=models.DO_NOTHING, null=True)   # variant number that is currently selected (among alternative images) NONE if none is present
-    custom_model_id_list = models.TextField(default=None, null=True, blank=True)    
-    frame_time = models.FloatField(default=None, null=True)
-    frame_number = models.IntegerField(default=None, null=True)
+    shot = models.ForeignKey(Shot, on_delete=models.CASCADE, null=True) 
     alternative_images = models.TextField(default=None, null=True)
-    custom_pipeline = models.CharField(max_length=255, default=None, null=True, blank=True)
-    prompt = models.TextField(default='', blank=True)
-    negative_prompt = models.TextField(default="", blank=True)
-    guidance_scale = models.FloatField(default=7.5)
-    seed = models.IntegerField(default=0)
-    num_inteference_steps = models.IntegerField(default=50)
-    strength = models.FloatField(default=1)
     notes = models.TextField(default="", blank=True)
-    adapter_type = models.CharField(max_length=255, default=None, null=True, blank=True)
-    clip_duration = models.FloatField(default=None, null=True)     # clip duration of the timed_clip
-    animation_style = models.CharField(max_length=255, default=None, null=True)
-    interpolation_steps = models.IntegerField(default=0)
-    low_threshold = models.FloatField(default=0)
-    high_threshold = models.FloatField(default=0)
-    aux_frame_index = models.IntegerField(default=0)    # starts with 0 # TODO: udpate this
-    transformation_stage = models.CharField(max_length=255, default=None, null=True)
+    clip_duration = models.FloatField(default=None, null=True)
+    aux_frame_index = models.IntegerField(default=0)
 
     class Meta:
         app_label = 'backend'
@@ -186,17 +232,14 @@ class Timing(BaseModel):
         super(Timing, self).__init__(*args, **kwargs)
         self.old_is_disabled = self.is_disabled
         self.old_aux_frame_index = self.aux_frame_index
-        self.old_timed_clip = self.timed_clip
-        self.old_frame_time = self.frame_time
 
     def save(self, *args, **kwargs):
         # TODO: updating details of every frame this way can be slow - implement a better strategy
 
         # ------ handling aux_frame_index ------
-        update_frame_duration = False
         # if the frame is being deleted (disabled)
         if self.old_is_disabled != self.is_disabled and self.is_disabled:
-            timing_list = Timing.objects.filter(project_id=self.project_id, \
+            timing_list = Timing.objects.filter(shot_id=self.shot_id, \
                                             aux_frame_index__gte=self.aux_frame_index, is_disabled=False).order_by('aux_frame_index')
             
             # shifting aux_frame_index of all frames after this frame one backwards
@@ -210,81 +253,24 @@ class Timing(BaseModel):
         if (not self.id or self.old_aux_frame_index != self.aux_frame_index) and not self.is_disabled:
             if not self.id:
                 # shifting aux_frame_index of all frames after this frame one forward
-                if Timing.objects.filter(project_id=self.project_id, aux_frame_index=self.aux_frame_index, is_disabled=False).exists():
-                    timing_list = Timing.objects.filter(project_id=self.project_id, \
+                if Timing.objects.filter(shot_id=self.shot_id, aux_frame_index=self.aux_frame_index, is_disabled=False).exists():
+                    timing_list = Timing.objects.filter(shot_id=self.shot_id, \
                                             aux_frame_index__gte=self.aux_frame_index, is_disabled=False)
                     timing_list.update(aux_frame_index=F('aux_frame_index') + 1)
             elif self.old_aux_frame_index != self.aux_frame_index:
                 if self.aux_frame_index >= self.old_aux_frame_index:
-                    timings_to_move = Timing.objects.filter(project_id=self.project_id, aux_frame_index__gt=self.old_aux_frame_index, \
+                    timings_to_move = Timing.objects.filter(shot_id=self.shot_id, aux_frame_index__gt=self.old_aux_frame_index, \
                                     aux_frame_index__lte=self.aux_frame_index, is_disabled=False).order_by('aux_frame_index')
-                    frame_time_list = [int(self.frame_time * 100) / 100]
-                    for t in timings_to_move:
-                        frame_time_list.append(t.frame_time)
-                    # updating frame time
-                    for idx, t in enumerate(timings_to_move):
-                        Timing.objects.filter(uuid=t.uuid, is_disabled=False).update(frame_time=int(frame_time_list[idx] * 100) / 100)
-                    self.frame_time = frame_time_list[-1]
 
                     # moving the frames between old and new index one step backwards
                     timings_to_move.update(aux_frame_index=F('aux_frame_index') - 1)
                 else:
-                    timings_to_move = Timing.objects.filter(project_id=self.project_id, aux_frame_index__gte=self.aux_frame_index, \
+                    timings_to_move = Timing.objects.filter(shot_id=self.shot_id, aux_frame_index__gte=self.aux_frame_index, \
                                        aux_frame_index__lt=self.old_aux_frame_index, is_disabled=False).order_by('aux_frame_index')
-                    
-                    frame_time_list = [self.frame_time]
-                    for t in reversed(timings_to_move):
-                        frame_time_list.append(t.frame_time)
-                    # updating frame time
-                    frame_time_list.reverse()
-                    idx = 0
-                    self.frame_time = int(frame_time_list[idx] * 100) / 100
-                    idx += 1
-                    for t in timings_to_move:
-                        Timing.objects.filter(uuid=t.uuid, is_disabled=False).update(frame_time=int(frame_time_list[idx] * 100) / 100)
-                        idx += 1
-                    # moving frames
-                    timings_to_move.update(aux_frame_index=F('aux_frame_index') + 1, timed_clip=None, preview_video=None)
-                    
-                    
-                self.interpolated_video_id = None
-                self.timed_clip_id = None
-                
-                update_frame_duration = True
-
-        # ------ handling timed_clip ------
-        # if timed_clip is deleted/changed then preview_video will be deleted
-        if self.old_timed_clip and (not self.timed_clip or self.old_timed_clip != self.timed_clip):
-            self.preview_video = None
+                    timings_to_move.update(aux_frame_index=F('aux_frame_index') + 1)
 
         super().save(*args, **kwargs)
 
-        if update_frame_duration:
-            # updating clip_duration
-            timing_list = Timing.objects.filter(project_id=self.project_id, is_disabled=False).order_by('aux_frame_index')
-            length_of_list = len(timing_list)
-
-            for idx, timing_item in enumerate(timing_list):
-                # last frame
-                if idx == (length_of_list - 1):
-                    time_of_frame = timing_item.frame_time
-                    duration_of_static_time = 0.0
-                    end_duration_of_frame = float(time_of_frame) + float(duration_of_static_time)
-                    total_duration_of_frame = float(end_duration_of_frame) - float(time_of_frame)
-                else:
-                    time_of_frame = timing_item.frame_time
-                    next_timing = timing_list[idx + 1]
-                    time_of_next_frame = next_timing.frame_time
-                    total_duration_of_frame = float(time_of_next_frame) - float(time_of_frame)
-
-                total_duration_of_frame = round(total_duration_of_frame, 2)
-                Timing.objects.filter(uuid=timing_item.uuid, is_disabled=False).update(clip_duration=total_duration_of_frame)
-
-    def add_interpolated_clip_list(self, clip_uuid_list):
-        cur_list = json.loads(self.interpolated_clip_list) if self.interpolated_clip_list else []
-        cur_list.extend(clip_uuid_list)
-        cur_list = list(set(cur_list))
-        self.interpolated_clip_list = json.dumps(cur_list)
 
     @property
     def alternative_images_list(self):
@@ -298,15 +284,15 @@ class Timing(BaseModel):
 
         return ""
     
-    # gives the next entry in the project timings
+    # gives the next entry in the shot timings
     @property
     def next_timing(self):
-        next_timing = Timing.objects.filter(project=self.project, id__gt=self.id, is_disabled=False).order_by('id').first()
+        next_timing = Timing.objects.filter(shot=self.shot, id__gt=self.id, is_disabled=False).order_by('id').first()
         return next_timing
     
     @property
     def prev_timing(self):
-        prev_timing = Timing.objects.filter(project=self.project, id__lt=self.id, is_disabled=False).order_by('id').first()
+        prev_timing = Timing.objects.filter(shot=self.shot, id__lt=self.id, is_disabled=False).order_by('id').first()
         return prev_timing
 
 
@@ -382,29 +368,9 @@ class Setting(BaseModel):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     default_model = models.ForeignKey(AIModel, on_delete=models.DO_NOTHING, null=True)
     audio = models.ForeignKey(InternalFileObject, related_name="audio", on_delete=models.DO_NOTHING, null=True)
-    input_video = models.ForeignKey(InternalFileObject, related_name="input_video", on_delete=models.DO_NOTHING, null=True)
-    default_prompt = models.TextField(default="")
-    default_strength = models.FloatField(default=0.7)
-    default_custom_pipeline = models.CharField(max_length=255, default="", blank=True)
     input_type = models.CharField(max_length=255)   # video, image, audio
-    extraction_type = models.CharField(max_length=255)   # Extract manually
     width = models.IntegerField(default=512)
     height = models.IntegerField(default=512)
-    default_negative_prompt = models.TextField(default="")
-    default_guidance_scale = models.FloatField(default=7.5)
-    default_seed = models.IntegerField(default=0)
-    default_num_inference_steps = models.IntegerField(default=50)
-    default_stage = models.CharField(max_length=255)    # extracted_key_frames
-    default_custom_model_uuid_list = models.TextField(default=None, null=True, blank=True)
-    default_adapter_type = models.CharField(max_length=255, default="", blank=True)
-    guidance_type = models.CharField(max_length=255)   # "Drawing", "Images", "Video"
-    default_animation_style = models.CharField(max_length=255)  # "Interpolation", "Direct Morphing"
-    default_low_threshold = models.FloatField(default=0)
-    default_high_threshold = models.FloatField(default=0)
-    zoom_level = models.IntegerField(default=100)
-    x_shift = models.IntegerField(default=0)
-    y_shift = models.IntegerField(default=0)
-    rotation_angle_value = models.FloatField(default=0.0)
 
     class Meta:
         app_label = 'backend'
