@@ -15,7 +15,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     if stage == CreativeProcessType.MOTION.value:
         shot_uuid = ele_uuid
         shot = data_repo.get_shot_from_uuid(shot_uuid)
-        variants = shot.interpolated_clip_list
+        variants = shot.interpolated_clip_file_list
     else:
         timing_uuid = ele_uuid
         timing = data_repo.get_timing_from_uuid(timing_uuid)
@@ -40,7 +40,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         st.info("No variants present")
         return
 
-    current_variant = timing.primary_interpolated_video_index if stage == CreativeProcessType.MOTION.value else int(
+    current_variant = shot.primary_interpolated_video_index if stage == CreativeProcessType.MOTION.value else int(
         timing.primary_variant_index)
 
     st.markdown("***")
@@ -68,7 +68,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 
                 if st.button(f"Promote Variant #{variant_index + 1}", key=f"Promote Variant #{variant_index + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
                     if stage == CreativeProcessType.MOTION.value:
-                        promote_video_variant(timing.uuid, variants[variant_index].uuid)
+                        promote_video_variant(shot.uuid, variants[variant_index].uuid)
                     else:
                         promote_image_variant(timing.uuid, variant_index)
                     

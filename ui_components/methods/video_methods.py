@@ -36,7 +36,7 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
     elif quality == 'preview':
         interpolation_steps = 3
 
-    img_list = [t.primary_image for t in timing_list]
+    img_list = [t.primary_image.location for t in timing_list]
     settings.update(interpolation_steps=interpolation_steps)
 
     # res is an array of tuples (video_bytes, log)
@@ -54,20 +54,13 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
             "output": output,
             "log_uuid": log.uuid,
             "settings": settings,
-            "shot_uuid": shot_uuid
+            "shot_uuid": str(shot_uuid)
         }
 
         process_inference_output(**inference_data)
 
-def update_speed_of_video_clip(video_file: InternalFileObject, timing_uuid) -> InternalFileObject:
+def update_speed_of_video_clip(video_file: InternalFileObject, duration) -> InternalFileObject:
     from ui_components.methods.file_methods import generate_temp_file, convert_bytes_to_file
-
-    data_repo = DataRepo()
-
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-
-    desired_duration = timing.clip_duration
 
     temp_video_file = None
     if video_file.hosted_url and is_s3_image_url(video_file.hosted_url):
@@ -76,18 +69,18 @@ def update_speed_of_video_clip(video_file: InternalFileObject, timing_uuid) -> I
     location_of_video = temp_video_file.name if temp_video_file else video_file.local_path
     
     new_file_name = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16)) + ".mp4"
-    new_file_location = "videos/" + str(timing.shot.project.uuid) + "/assets/videos/1_final/" + str(new_file_name)
+    new_file_location = "videos/" + str(video_file.project.uuid) + "/assets/videos/1_final/" + str(new_file_name)
 
     video_bytes = VideoProcessor.update_video_speed(
         location_of_video,
-        desired_duration
+        duration
     )
 
     video_file = convert_bytes_to_file(
         new_file_location,
         "video/mp4",
         video_bytes,
-        timing.shot.project.uuid
+        video_file.project.uuid
     )
 
     if temp_video_file:

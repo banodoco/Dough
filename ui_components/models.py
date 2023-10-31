@@ -180,14 +180,27 @@ class InternalShotObject:
     
     @property
     def primary_interpolated_video_index(self):
-        if not (self.interpolated_clip_list and len(self.interpolated_clip_list)) or not self.main_clip:
+        video_list = self.interpolated_clip_file_list
+        if not len(video_list):
             return -1
         
-        for idx, img in enumerate(self.interpolated_clip_list):
-            if img.uuid == self.main_clip.uuid:
+        for idx, vid in enumerate(video_list):
+            if vid.uuid == self.main_clip.uuid:
                 return idx
         
         return -1
+    
+    @property
+    def interpolated_clip_file_list(self):
+        if not (self.interpolated_clip_list and len(self.interpolated_clip_list)):
+            return []
+        
+        from utils.data_repo.data_repo import DataRepo
+        
+        data_repo = DataRepo()
+        video_id_list = json.loads(self.interpolated_clip_list) if self.interpolated_clip_list else []
+        video_list = data_repo.get_image_list_from_uuid_list(video_id_list)
+        return video_list
 
 
 class InternalAppSettingObject:

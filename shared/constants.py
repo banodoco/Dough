@@ -97,6 +97,7 @@ class ProjectMetaData(ExtendedEnum):
     DATA_UPDATE = "data_update"                     # info regarding cache/data update when runner updates the db
     GALLERY_UPDATE = "gallery_update"
     BACKGROUND_IMG_LIST = "background_img_list"
+    SHOT_VIDEO_UPDATE = "shot_video_update"
 
 class SortOrder(ExtendedEnum):
     ASCENDING = "asc"

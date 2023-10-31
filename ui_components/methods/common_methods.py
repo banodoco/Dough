@@ -321,7 +321,6 @@ def promote_video_variant(shot_uuid, variant_uuid):
     data_repo.update_shot(shot.uuid, main_clip_id=variant_to_promote.uuid)
 
 
-
 def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_threshold=150) -> InternalFileObject:
     data_repo = DataRepo()
 
@@ -757,9 +756,9 @@ def process_inference_output(**kwargs):
 
         if output:
             settings = kwargs.get('settings')
-            timing_uuid = kwargs.get('timing_uuid')
-            timing = data_repo.get_timing_from_uuid(timing_uuid)
-            if not timing:
+            shot_uuid = kwargs.get('shot_uuid')
+            shot = data_repo.get_shot_from_uuid(shot_uuid)
+            if not shot:
                 return False
             
             # output can also be an url
@@ -772,21 +771,21 @@ def process_inference_output(**kwargs):
                 os.remove(temp_output_file.name)
 
             if 'normalise_speed' in settings and settings['normalise_speed']:
-                output = VideoProcessor.update_video_bytes_speed(output, AnimationStyleType.INTERPOLATION.value, timing.clip_duration)
+                output = VideoProcessor.update_video_bytes_speed(output, AnimationStyleType.INTERPOLATION.value, shot.duration)
 
-            video_location = "videos/" + str(timing.shot.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
+            video_location = "videos/" + str(shot.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
             video = convert_bytes_to_file(
                 file_location_to_save=video_location,
                 mime_type="video/mp4",
                 file_bytes=output,
-                project_uuid=timing.shot.project.uuid,
+                project_uuid=shot.project.uuid,
                 inference_log_id=log_uuid
             )
 
-            data_repo.add_interpolated_clip(timing_uuid, interpolated_clip_id=video.uuid)
-            if not timing.timed_clip:
+            data_repo.add_interpolated_clip(shot_uuid, interpolated_clip_id=video.uuid)
+            if not shot.main_clip:
                 output_video = update_speed_of_video_clip(video, timing_uuid)
-                data_repo.update_specific_timing(timing_uuid, timed_clip_id=output_video.uuid)
+                data_repo.update_specific_timing(timing_uuid, main_clip_id=output_video.uuid)
         
         else:
             del kwargs['log_uuid']

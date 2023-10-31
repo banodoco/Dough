@@ -281,10 +281,6 @@ class DataRepo:
         res = self.db_repo.update_specific_timing(uuid, **kwargs)
         return res.status
     
-    def add_interpolated_clip(self, timing_uuid, **kwargs):
-        res = self.db_repo.add_interpolated_clip(timing_uuid, **kwargs)
-        return res.status
-    
     def delete_timing_from_uuid(self, uuid):
         res = self.db_repo.delete_timing_from_uuid(uuid)
         return res.status
@@ -425,4 +421,8 @@ class DataRepo:
 
     def delete_shot(self, shot_uuid):
         res = self.db_repo.delete_shot(shot_uuid)
+        return res.status
+
+    def add_interpolated_clip(self, shot_uuid, **kwargs):
+        res = self.db_repo.add_interpolated_clip(shot_uuid, **kwargs)
         return res.status
