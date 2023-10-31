@@ -84,8 +84,8 @@ def new_project_page():
             
             if starting_image:
                 try:
-                    save_and_promote_image(starting_image, new_project.uuid, new_timing.uuid, "source")
-                    save_and_promote_image(starting_image, new_project.uuid, new_timing.uuid, "styled")
+                    save_and_promote_image(starting_image, shot.uuid, new_timing.uuid, "source")
+                    save_and_promote_image(starting_image, shot.uuid, new_timing.uuid, "styled")
                 except Exception as e:
                     st.error(f"Failed to save the uploaded image due to {str(e)}")
 

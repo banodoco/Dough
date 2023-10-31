@@ -1,3 +1,4 @@
+from typing import List
 import streamlit as st
 from ui_components.widgets.frame_movement_widgets import delete_frame, replace_image_widget,jump_to_single_frame_view_button
 from ui_components.widgets.image_carousal import display_image

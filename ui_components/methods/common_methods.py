@@ -76,18 +76,17 @@ def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], shot_uu
     new_image = data_repo.create_file(**file_data)
     return new_image
 
-def save_and_promote_image(image, project_uuid, frame_uuid, save_type):
+def save_and_promote_image(image, shot_uuid, timing_uuid, stage):
     data_repo = DataRepo()
-    
-    
+
     try:
-        saved_image = save_new_image(image, project_uuid)            
-        # Update records based on save_type
-        if save_type == "source":
-            data_repo.update_specific_timing(frame_uuid, source_image_id=saved_image.uuid)
-        elif save_type == "styled":
-            number_of_image_variants = add_image_variant(saved_image.uuid, frame_uuid)
-            promote_image_variant(frame_uuid, number_of_image_variants - 1)
+        saved_image = save_new_image(image, shot_uuid)
+        # Update records based on stage
+        if stage == WorkflowStageType.SOURCE.value:
+            data_repo.update_specific_timing(timing_uuid, source_image_id=saved_image.uuid)
+        elif stage == WorkflowStageType.STYLED.value:
+            number_of_image_variants = add_image_variant(saved_image.uuid, timing_uuid)
+            promote_image_variant(timing_uuid, number_of_image_variants - 1)
 
         return saved_image
     except Exception as e:
