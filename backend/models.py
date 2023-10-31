@@ -277,7 +277,6 @@ class Timing(BaseModel):
                                                aux_frame_index__gt=self.aux_frame_index, is_disabled=False).order_by('aux_frame_index')
             # changing the aux_frame_index of this frame to be the last one in the new shot
             new_index = Timing.objects.filter(shot_id=self.shot.id, is_disabled=False).count()
-            timing = Timing.objects.filter(uuid=self.uuid, is_disabled=False).order_by('aux_frame_index').first()
             self.aux_frame_index = new_index
             timing_list.update(aux_frame_index=F('aux_frame_index') - 1)
 

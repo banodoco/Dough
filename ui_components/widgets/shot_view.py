@@ -26,19 +26,16 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
         header_col_0, header_col_1, header_col_2, header_col_3 = st.columns([1, 1.75,1,4])
 
         with header_col_0:
-            if st.session_state["open_shot"] != shot.shot_idx:
-                if st.toggle("Open shot", key=f"shot_{shot.shot_idx}"):
-                    st.session_state["open_shot"] = shot.shot_idx
+            if st.session_state["open_shot"] != shot.uuid:
+                if st.toggle("Open shot", key=f"shot_{shot.uuid}"):
+                    st.session_state["open_shot"] = shot.uuid
                     st.rerun()
             else:
-                if not st.toggle("Open shot", key=f"close_shot_{shot.shot_idx}", value=True):
+                if not st.toggle("Open shot", key=f"close_shot_{shot.uuid}", value=True):
                     st.session_state["open_shot"] = None
                     st.rerun()
 
-        if st.session_state["open_shot"] == shot.shot_idx:
-
-
-
+        if st.session_state["open_shot"] == shot.uuid:
             with header_col_1:
                 name = st.text_input("Update name:", value=shot.name,max_chars=40)
 
@@ -67,7 +64,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                 with grid[idx%items_per_row]:
                     if timing.primary_image and timing.primary_image.location:
                         st.image(timing.primary_image.location, use_column_width=True)
-                        if st.session_state["open_shot"] == shot.shot_idx:
+                        if st.session_state["open_shot"] == shot.uuid:
                             timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_frame_toggle, move_frames_toggle,delete_frames_toggle, change_shot_toggle)
                     else:
                         st.warning("No primary image present")
@@ -76,7 +73,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
             st.warning("No keyframes present")
 
         st.markdown("***")
-        if st.session_state["open_shot"] == shot.shot_idx:
+        if st.session_state["open_shot"] == shot.uuid:
             bottom1, _, bottom3 = st.columns([1,2,1])
             
             with bottom1:            

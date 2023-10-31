@@ -1456,6 +1456,10 @@ class DBRepo:
         shot_number = Shot.objects.filter(project_id=project.id, is_disabled=False).count() + 1
         if not name:
             name = "Shot " + str(shot_number)
+        else:
+            prev_shot = Shot.objects.filter(project_id=project.id, name=name, is_disabled=False).first()
+            if prev_shot:
+                return InternalResponse({}, 'shot name already exists', False)
 
         shot_data = {
             "name" : name,
@@ -1484,7 +1488,12 @@ class DBRepo:
         
         update_data = {}
         if name != None:
+            prev_shot = Shot.objects.filter(project_id=shot.project.id, name=name, is_disabled=False).first()
+            if prev_shot:
+                return InternalResponse({}, 'shot name already exists', False)
+            
             update_data['name'] = name
+
         if duration != None:
             update_data['duration'] = duration
         if meta_data != None:
@@ -1493,7 +1502,7 @@ class DBRepo:
             update_data['desc'] = desc
         if shot_idx != None:
             update_data['shot_idx'] = shot_idx
-        
+
         for k,v in update_data.items():
             setattr(shot, k, v)
 
