@@ -59,7 +59,7 @@ def frame_styling_page(shot_uuid: str):
             st.markdown(
                 f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{st.session_state['page']}] > :blue[Frame #{st.session_state['current_frame_index']}]")
         else:
-            st.markdown(f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{st.session_state['page']}] > :blue[Shot #{st.session_state['current_frame_index']}]")
+            st.markdown(f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{st.session_state['page']}] > :blue[{shot.name}]")
 
     project_settings = data_repo.get_project_setting(shot.project.uuid)
 
@@ -161,9 +161,9 @@ def frame_styling_page(shot_uuid: str):
     elif st.session_state['frame_styling_view_type'] == "Timeline":
 
         if st.session_state['page'] == "Key Frames":
-            with st.sidebar:        
-                with st.expander("🌀 Batch Styling", expanded=False):                                        
-                    styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.LIST.value)
+            # with st.sidebar:        
+              #  with st.expander("🌀 Batch Styling", expanded=False):                                        
+               #     styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.LIST.value)
             timeline_view(shot_uuid, "Key Frames")
         elif st.session_state['page'] == "Shots":
             timeline_view(shot_uuid, "Shots")

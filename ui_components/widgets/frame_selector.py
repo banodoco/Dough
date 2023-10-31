@@ -1,9 +1,10 @@
 import streamlit as st
-from ui_components.widgets.frame_movement_widgets import delete_frame, replace_image_widget
+from ui_components.widgets.frame_movement_widgets import delete_frame, replace_image_widget,jump_to_single_frame_view_button
 from ui_components.widgets.image_carousal import display_image
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from utils.data_repo.data_repo import DataRepo
 from ui_components.constants import WorkflowStageType
+
 
 
 def frame_selector_widget():
@@ -20,10 +21,15 @@ def frame_selector_widget():
         if 'prev_shot_index' not in st.session_state:
             st.session_state['prev_shot_index'] = shot.shot_idx
 
-        st.session_state['current_shot_index'] = st.number_input(f"Shot # (out of {len(shot_list)})", 1, 
-                                                                  len(shot_list), value=st.session_state['prev_shot_index'], 
-                                                                  step=1, key="current_shot_sidebar_selector")
-        
+        # Get the list of shot names
+        shot_names = [s.name for s in shot_list]
+
+        # Add a selectbox for shot_name
+        shot_name = st.selectbox('Shot Name', shot_names, key="current_shot_sidebar_selector")
+
+        # Set current_shot_index based on the selected shot_name
+        st.session_state['current_shot_index'] = shot_names.index(shot_name) + 1
+
         update_current_shot_index(st.session_state['current_shot_index'])
     if st.session_state['page'] == "Key Frames":
         with time2:
@@ -78,6 +84,10 @@ def frame_selector_widget():
                     with grid[idx % 3]:  # Change to 3 columns
                         if timing.primary_image and timing.primary_image.location:
                             st.image(timing.primary_image.location, use_column_width=True)
+                            
+                            # Call jump_to_single_frame_view_button function
+                            jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}")
+                                
                         else:
                             st.warning("No primary image present")
             else:

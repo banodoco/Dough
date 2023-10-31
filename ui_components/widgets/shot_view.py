@@ -23,25 +23,30 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
     
     with st.expander(f"{shot.name}", expanded=True):
 
-        if st.session_state["open_shot"] != shot.shot_idx:
-            if st.toggle("Open shot", key=f"shot_{shot.shot_idx}"):
-                st.session_state["open_shot"] = shot.shot_idx
-                st.experimental_rerun()
-        else:
-            if not st.toggle("Open shot", key=f"close_shot_{shot.shot_idx}", value=True):
-                st.session_state["open_shot"] = None
-                st.experimental_rerun()
+        header_col_0, header_col_1, header_col_2, header_col_3 = st.columns([1, 1.75,1,4])
+
+        with header_col_0:
+            if st.session_state["open_shot"] != shot.shot_idx:
+                if st.toggle("Open shot", key=f"shot_{shot.shot_idx}"):
+                    st.session_state["open_shot"] = shot.shot_idx
+                    st.experimental_rerun()
+            else:
+                if not st.toggle("Open shot", key=f"close_shot_{shot.shot_idx}", value=True):
+                    st.session_state["open_shot"] = None
+                    st.experimental_rerun()
 
         if st.session_state["open_shot"] == shot.shot_idx:
 
-            header_col_1, header_col_2 = st.columns([1.5,4])
+
 
             with header_col_1:
                 name = st.text_input("Update name:", value=shot.name)
-                duration = st.number_input("Duration:")
 
             with header_col_2:
-                col1, col2, col3, col4 = st.columns(4)
+                duration = st.number_input("Duration:")
+
+            with header_col_3:
+                col2, col3, col4 = st.columns(3)
     
                 with col2:
                     delete_frames_toggle = st_memory.toggle("Delete Frames", value=True, key="delete_frames_toggle")
@@ -53,7 +58,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                 with col4:
                     change_shot_toggle = st_memory.toggle("Change Shot", value=False, key="change_shot_toggle")
                 
-            st.markdown("***")
+            # st.markdown("***")
 
 
         grid = st.columns(items_per_row)
@@ -66,6 +71,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                             timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_frame_toggle, move_frames_toggle,delete_frames_toggle, change_shot_toggle)
                     else:
                         st.warning("No primary image present")
+                        
         else:
             st.warning("No keyframes present")
 

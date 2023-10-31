@@ -174,4 +174,6 @@ def jump_to_single_frame_view_button(display_number, timing_list, src):
         st.session_state['current_frame_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].uuid
         st.session_state['frame_styling_view_type'] = "Individual"
         st.session_state['change_view_type'] = True
+        # st.session_state['page'] = "Key Frames"
+        st.session_state["manual_select"] = 0
         st.rerun()

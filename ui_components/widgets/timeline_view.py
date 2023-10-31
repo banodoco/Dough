@@ -12,39 +12,11 @@ def timeline_view(shot_uuid, stage):
     
     st.markdown("***")
     
-    header_col_1, header_col_2, header_col_3 = st.columns([1.5,4,1.5])
-    
-    # with header_col_1:
-        
-    '''
-    with header_col_2:
-        col1, col2, col3 = st.columns(3)
-
-        with col1:
-            expand_all = st_memory.toggle("Expand All", key="expand_all",value=False)
-        
-        if expand_all:
-            replace_image_widget_toggle = copy_frame_toggle = move_frames_toggle = delete_frames_toggle = change_position_toggle = True
+    _, header_col_2 = st.columns([5.5,1.5])
             
-        else:           
-            with col2:
-                delete_frames_toggle = st_memory.toggle("Delete Frames", value=True, key="delete_frames_toggle")
-                copy_frame_toggle = st_memory.toggle("Copy Frame", value=False, key="copy_frame_toggle")
-            with col3:
-                move_frames_toggle = st_memory.toggle("Move Frames", value=True, key="move_frames_toggle")
-                replace_image_widget_toggle = st_memory.toggle("Replace Image", value=False, key="replace_image_widget_toggle")
-                change_position_toggle = st_memory.toggle("Change Position", value=False, key="change_position_toggle")
 
-    btn_data = {
-        "replace_imagshot_keyframe_element_widget_toggle": replace_image_widget_toggle,
-        "copy_frame_toggle": copy_frame_toggle, 
-        "move_frames_toggle": move_frames_toggle, 
-        "delete_frames_toggle": delete_frames_toggle, 
-        "change_position_toggle": change_position_toggle
-    }
-    '''
 
-    with header_col_3:
+    with header_col_2:
         items_per_row = st_memory.slider("How many frames per row?", min_value=1, max_value=10, value=5, step=1, key="items_per_row_slider")
 
     if stage == 'Key Frames':
