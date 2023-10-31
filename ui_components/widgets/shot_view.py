@@ -6,7 +6,7 @@ from ui_components.methods.file_methods import generate_pil_image
 
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from ui_components.widgets.add_key_frame_element import add_key_frame
-from ui_components.widgets.frame_movement_widgets import change_frame_position_input, delete_frame_button, jump_to_single_frame_view_button, move_frame_back_button, move_frame_forward_button, replace_image_widget
+from ui_components.widgets.frame_movement_widgets import change_frame_shot, delete_frame_button, jump_to_single_frame_view_button, move_frame_back_button, move_frame_forward_button, replace_image_widget
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
 
@@ -43,7 +43,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                 name = st.text_input("Update name:", value=shot.name,max_chars=40)
 
             with header_col_2:
-                duration = st.number_input("Duration:")
+                duration = st.number_input("Duration:", disabled=True, value=shot.duration)
 
             with header_col_3:
                 col2, col3, col4 = st.columns(3)
@@ -152,7 +152,7 @@ def timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_fram
             delete_frame_button(timing_list[idx].uuid)
     
     if change_shot_toggle:
-        change_frame_position_input(timing_list[idx].uuid, "side-to-side")
+        change_frame_shot(timing_list[idx].uuid, "side-to-side")
     
     jump_to_single_frame_view_button(idx + 1, timing_list, 'timeline_btn_'+str(timing_list[idx].uuid))        
 

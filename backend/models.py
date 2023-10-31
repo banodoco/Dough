@@ -232,6 +232,7 @@ class Timing(BaseModel):
         super(Timing, self).__init__(*args, **kwargs)
         self.old_is_disabled = self.is_disabled
         self.old_aux_frame_index = self.aux_frame_index
+        self.old_shot = self.shot
 
     def save(self, *args, **kwargs):
         # TODO: updating details of every frame this way can be slow - implement a better strategy
@@ -268,6 +269,17 @@ class Timing(BaseModel):
                     timings_to_move = Timing.objects.filter(shot_id=self.shot_id, aux_frame_index__gte=self.aux_frame_index, \
                                        aux_frame_index__lt=self.old_aux_frame_index, is_disabled=False).order_by('aux_frame_index')
                     timings_to_move.update(aux_frame_index=F('aux_frame_index') + 1)
+
+        # --------------- handling shot change -------------------
+        if not self.is_disabled and self.id and self.old_shot != self.shot:
+            # moving all frames ahead of this frame, one step backwards
+            timing_list = Timing.objects.filter(shot_id=self.old_shot.id, \
+                                               aux_frame_index__gt=self.aux_frame_index, is_disabled=False).order_by('aux_frame_index')
+            # changing the aux_frame_index of this frame to be the last one in the new shot
+            new_index = Timing.objects.filter(shot_id=self.shot.id, is_disabled=False).count()
+            timing = Timing.objects.filter(uuid=self.uuid, is_disabled=False).order_by('aux_frame_index').first()
+            self.aux_frame_index = new_index
+            timing_list.update(aux_frame_index=F('aux_frame_index') - 1)
 
         super().save(*args, **kwargs)
 

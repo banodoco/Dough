@@ -7,10 +7,9 @@ from utils.constants import ImageStage
 
 from utils.data_repo.data_repo import DataRepo
 
-def change_frame_position_input(timing_uuid, src):
+def change_frame_shot(timing_uuid, src):
     '''
-    changes frame position inside the respective shot
-    (used when large change is required, like moving a frame from 2nd pos to 10th pos)
+    used to move a frame from one shot to another
     '''
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
@@ -19,13 +18,15 @@ def change_frame_position_input(timing_uuid, src):
     shot_list = data_repo.get_shot_list(project_uuid)
     shot_names = [shot.name for shot in shot_list]
 
-    new_position = st.selectbox("Move to new shot:", shot_names, key=f"new_position_{timing.uuid}_{src}")
-    
-    if st.button('Move to shot',key=f"change_frame_position_{timing.uuid}_{src}",use_container_width=True):
-        data_repo.update_specific_timing(timing.uuid, aux_frame_index=new_position - 1)
-        st.rerun()
-        
-        
+    new_shot = st.selectbox("Move to new shot:", shot_names, key=f"new_shot_{timing.uuid}_{src}")
+    if st.button('Move to shot', key=f"change_frame_position_{timing.uuid}_{src}", use_container_width=True):
+        shot = next((obj for obj in shot_list if obj.name == new_shot), None)        # NOTE: this assumes unique name for different shots
+        if shot:
+            data_repo.update_specific_timing(timing.uuid, shot_id=shot.uuid)
+            st.success("Success")
+            time.sleep(0.3)
+            st.rerun()
+
 
 def move_frame(direction, timing_uuid):
     '''
