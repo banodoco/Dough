@@ -29,11 +29,11 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
             if st.session_state["open_shot"] != shot.shot_idx:
                 if st.toggle("Open shot", key=f"shot_{shot.shot_idx}"):
                     st.session_state["open_shot"] = shot.shot_idx
-                    st.experimental_rerun()
+                    st.rerun()
             else:
                 if not st.toggle("Open shot", key=f"close_shot_{shot.shot_idx}", value=True):
                     st.session_state["open_shot"] = None
-                    st.experimental_rerun()
+                    st.rerun()
 
         if st.session_state["open_shot"] == shot.shot_idx:
 
@@ -76,17 +76,18 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
             st.warning("No keyframes present")
 
         st.markdown("***")
-
-
         if st.session_state["open_shot"] == shot.shot_idx:
-            bottom1, bottom2, bottom3 = st.columns([1,2,1])
+            bottom1, _, bottom3 = st.columns([1,2,1])
+            
             with bottom1:            
                 confirm_delete = st.checkbox("I know that this will delete all the frames and videos within")
-                if confirm_delete:
-                    if st.button("Delete frame"):
-                        st.success("Done!")
-                else:
-                    st.button("Delete frame", disabled=True, help="Check the box above to enable the delete bottom.")
+                help = "Check the box above to enable the delete bottom." if confirm_delete else ""
+                if st.button("Delete shot", disabled=(not confirm_delete), help=help, key=shot_uuid):
+                    data_repo.delete_shot(shot_uuid)
+                    st.success("Done!")
+                    time.sleep(0.3)
+                    st.rerun()
+            
             with bottom3:
                 if st.button("Move shot down", key=f'shot_down_movement_{shot.uuid}'):
                     shot_list = data_repo.get_shot_list(shot.project.uuid)
