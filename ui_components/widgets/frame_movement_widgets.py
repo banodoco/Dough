@@ -157,8 +157,7 @@ def replace_image_widget(timing_uuid, stage, options=["Uploaded Frame","Other Fr
                             st.rerun()
         else:
             replacement_frame = st.file_uploader("Upload Styled Image", type=[
-                "png", "jpeg"], accept_multiple_files=False, key=f"replacement_frame_upload_{stage}_{timing_uuid}")
-            st.write(replacement_frame)
+                "png", "jpeg"], accept_multiple_files=False, key=f"replacement_frame_upload_{stage}_{timing_uuid}")            
             if replacement_frame != None:
                 if st.button("Replace frame", disabled=False):                    
                     timing = data_repo.get_timing_from_uuid(timing.uuid)

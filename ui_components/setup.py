@@ -167,6 +167,11 @@ def setup_app_ui():
 
                     st.session_state['page'] = option_menu(None, pages, icons=['palette', 'camera-reels', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
                                                             "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
+                    
+                    if st.session_state["manual_select"] != None:
+                        st.session_state["manual_select"] = None
+
+
 
                 frame_styling_page(st.session_state["shot_uuid"])
 

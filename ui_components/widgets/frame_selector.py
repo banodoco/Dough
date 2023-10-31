@@ -43,31 +43,37 @@ def frame_selector_widget():
             update_current_frame_index(st.session_state['current_frame_index'])
         
         with st.expander(f"🖼️ Frame #{st.session_state['current_frame_index']} Details"):
-            a1, a2 = st.columns([1,1])
+            a1, a2 = st.columns([3,2])
             with a1:
-                st.warning(f"Guidance Image:")
-                display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
-
-            with a2:
-                st.success(f"Main Styled Image:")
+                st.success(f"Main Key Frame:")
                 display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
 
-            st.markdown("---")
-            
-            b1, b2 = st.columns([1,1])
-            with b1:
-                st.caption("Replace guidance image")
-                replace_image_widget(st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value)
 
-            with b2:
+                # st.warning(f"Guidance Image:")
+                # display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
+            with a2:
                 st.caption("Replace styled image")
                 replace_image_widget(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value)
                 
+            st.info("In Context:")
+            shot_list = data_repo.get_shot_list(shot.project.uuid)
+            shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
+
+            # shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
+            timing_list: List[InternalFrameTimingObject] = shot.timing_list
+
+            if timing_list and len(timing_list):
+                grid = st.columns(4)  # Change to 4 columns
+                for idx, timing in enumerate(timing_list):
+                    with grid[idx % 4]:  # Change to 4 columns
+                        if timing.primary_image and timing.primary_image.location:
+                            st.image(timing.primary_image.location, use_column_width=True)
+                        else:
+                            st.warning("No primary image present")
+            else:
+                st.warning("No keyframes present")
+
             st.markdown("---")
-            
-            if st.button("Delete key frame"):
-                delete_frame(st.session_state['current_frame_uuid'])
-                st.rerun()
 
     else:
         shot_list = data_repo.get_shot_list(shot.project.uuid)

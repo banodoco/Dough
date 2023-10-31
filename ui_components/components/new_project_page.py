@@ -44,6 +44,7 @@ def new_project_page():
 
     # Prompt user for video dimension specifications
     video_width_column, video_height_column, video_info_column = st.columns(3)
+        
 
     frame_sizes = ["512", "704", "768", "896", "1024"]
     with video_width_column:

@@ -111,11 +111,11 @@ def shot_video_element(shot_uuid):
     
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
 
-    st.markdown(f"## {shot.name}")
+    st.markdown(f"### {shot.name}")
     if shot.main_clip and shot.main_clip.location:
         st.video(shot.main_clip.location)
     else:
-        st.warning("No video present")
+        st.warning('''No video present''')
 
     if st.button(f"Jump to {shot.name}", key=f"btn_{shot_uuid}"):
         st.success("Coming soon")

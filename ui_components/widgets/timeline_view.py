@@ -31,23 +31,3 @@ def timeline_view(shot_uuid, stage):
         for idx, shot in enumerate(shot_list):
             with grid[idx%items_per_row]:
                 shot_video_element(shot.uuid)
-
-
-    
-    # for i in range(0, total_count, items_per_row):  # Step of items_per_row for grid
-    #     grid = st.columns(items_per_row)  # Create items_per_row columns for grid
-    #     for j in range(items_per_row):
-    #         if i + j < total_count:  # Check if index is within range
-    #             with grid[j]:
-    #                 display_number = i + j + 1                            
-    #                 if stage == 'Key Frames':
-    #                     display_image(timing_uuid=shot_list[i + j].uuid, stage=WorkflowStageType.STYLED.value, clickable=False)
-    #                 elif stage == 'Videos':
-    #                     if shot_list[i + j].main_clip:
-    #                         st.video(shot_list[i + j].main_clip.location)
-    #                     else:
-    #                         st.error("No video found for this frame.")
-    #                 with st.expander(f'Frame #{display_number}', True):    
-    #                     timeline_view_buttons(i, j, shot_list, time_setter_toggle, replace_image_widget_toggle, duration_setter_toggle, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_position_toggle, project_uuid)
-
-
