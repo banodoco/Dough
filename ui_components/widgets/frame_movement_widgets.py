@@ -13,17 +13,17 @@ def change_frame_position_input(timing_uuid, src):
     '''
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-    timing_list = data_repo.get_timing_list_from_shot(shot_uuid=timing.shot.uuid)
-
-    min_value = 1
-    max_value = len(timing_list)
-
-    new_position = st.number_input("Move to new position:", min_value=min_value, max_value=max_value,
-                                   value=timing.aux_frame_index + 1, step=1, key=f"new_position_{timing.uuid}_{src}")
+    project_uuid = timing.shot.project.uuid
     
-    if st.button('Update Position',key=f"change_frame_position_{timing.uuid}_{src}"): 
+    shot_list = data_repo.get_shot_list(project_uuid)
+    shot_names = [shot.name for shot in shot_list]
+
+    new_position = st.selectbox("Move to new shot:", shot_names, key=f"new_position_{timing.uuid}_{src}")
+    
+    if st.button('Move to shot',key=f"change_frame_position_{timing.uuid}_{src}",use_container_width=True):
         data_repo.update_specific_timing(timing.uuid, aux_frame_index=new_position - 1)
         st.rerun()
+        
         
 
 def move_frame(direction, timing_uuid):

@@ -20,7 +20,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
     # st.markdown(f"### {shot.name}", expanded=True)
 
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
-    
+
     with st.expander(f"{shot.name}", expanded=True):
 
         header_col_0, header_col_1, header_col_2, header_col_3 = st.columns([1, 1.75,1,4])
@@ -40,7 +40,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
 
 
             with header_col_1:
-                name = st.text_input("Update name:", value=shot.name)
+                name = st.text_input("Update name:", value=shot.name,max_chars=40)
 
             with header_col_2:
                 duration = st.number_input("Duration:")

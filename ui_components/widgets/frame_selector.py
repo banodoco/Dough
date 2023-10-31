@@ -17,6 +17,7 @@ def frame_selector_widget():
     len_timing_list = len(timing_list) if len(timing_list) > 0 else 1.0
     st.progress(st.session_state['current_frame_index'] / len_timing_list)
 
+
     with time1:
         if 'prev_shot_index' not in st.session_state:
             st.session_state['prev_shot_index'] = shot.shot_idx
@@ -63,9 +64,9 @@ def frame_selector_widget():
             timing_list: List[InternalFrameTimingObject] = shot.timing_list
 
             if timing_list and len(timing_list):
-                grid = st.columns(4)  # Change to 4 columns
+                grid = st.columns(3)  # Change to 4 columns
                 for idx, timing in enumerate(timing_list):
-                    with grid[idx % 4]:  # Change to 4 columns
+                    with grid[idx % 3]:  # Change to 4 columns
                         if timing.primary_image and timing.primary_image.location:
                             st.image(timing.primary_image.location, use_column_width=True)
                         else:
