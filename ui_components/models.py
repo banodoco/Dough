@@ -169,8 +169,8 @@ class InternalShotObject:
         self.meta_data = kwargs['meta_data'] if key_present('meta_data', kwargs) else {}
         self.timing_list = [InternalFrameTimingObject(**timing) for timing in kwargs["timing_list"]] \
             if key_present('timing_list', kwargs) and kwargs["timing_list"] else []
-        self.interpolated_clip_list = kwargs['interpolated_clip_list'] if key_present('interpolated_clip_list', kwargs) \
-                    else ""
+        self.interpolated_clip_list = [InternalFileObject(**vid) for vid in kwargs['interpolated_clip_list']] if key_present('interpolated_clip_list', kwargs) \
+                    else []
         self.main_clip = InternalFileObject(**kwargs['main_clip']) if key_present('main_clip', kwargs) else \
                     None
 
@@ -180,27 +180,16 @@ class InternalShotObject:
     
     @property
     def primary_interpolated_video_index(self):
-        video_list = self.interpolated_clip_file_list
+        video_list = self.interpolated_clip_list
         if not len(video_list):
             return -1
         
-        for idx, vid in enumerate(video_list):
-            if vid.uuid == self.main_clip.uuid:
-                return idx
+        if self.main_clip:
+            for idx, vid in enumerate(video_list):
+                if vid.uuid == self.main_clip.uuid:
+                    return idx
         
         return -1
-    
-    @property
-    def interpolated_clip_file_list(self):
-        if not (self.interpolated_clip_list and len(self.interpolated_clip_list)):
-            return []
-        
-        from utils.data_repo.data_repo import DataRepo
-        
-        data_repo = DataRepo()
-        video_id_list = json.loads(self.interpolated_clip_list) if self.interpolated_clip_list else []
-        video_list = data_repo.get_image_list_from_uuid_list(video_id_list)
-        return video_list
 
 
 class InternalAppSettingObject:

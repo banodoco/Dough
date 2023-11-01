@@ -15,7 +15,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     if stage == CreativeProcessType.MOTION.value:
         shot_uuid = ele_uuid
         shot = data_repo.get_shot_from_uuid(shot_uuid)
-        variants = shot.interpolated_clip_file_list
+        variants = shot.interpolated_clip_list
     else:
         timing_uuid = ele_uuid
         timing = data_repo.get_timing_from_uuid(timing_uuid)
@@ -48,7 +48,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     cols = st.columns(num_columns)
     with cols[0]:
         if stage == CreativeProcessType.MOTION.value:
-            st.video(variants[current_variant].location, format='mp4', start_time=0) if variants[current_variant] else st.error("No video present")
+            st.video(variants[current_variant].location, format='mp4', start_time=0) if (current_variant != -1 and variants[current_variant]) else st.error("No video present")
         else:
             st.image(variants[current_variant].location, use_column_width=True)
         st.success("**Main variant**")

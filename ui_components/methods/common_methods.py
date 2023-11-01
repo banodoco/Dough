@@ -771,7 +771,7 @@ def process_inference_output(**kwargs):
                 os.remove(temp_output_file.name)
 
             if 'normalise_speed' in settings and settings['normalise_speed']:
-                output = VideoProcessor.update_video_bytes_speed(output, AnimationStyleType.INTERPOLATION.value, shot.duration)
+                output = VideoProcessor.update_video_bytes_speed(output, shot.duration)
 
             video_location = "videos/" + str(shot.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
             video = convert_bytes_to_file(
@@ -784,8 +784,8 @@ def process_inference_output(**kwargs):
 
             data_repo.add_interpolated_clip(shot_uuid, interpolated_clip_id=video.uuid)
             if not shot.main_clip:
-                output_video = update_speed_of_video_clip(video, timing_uuid)
-                data_repo.update_specific_timing(timing_uuid, main_clip_id=output_video.uuid)
+                output_video = update_speed_of_video_clip(video, shot.duration)
+                data_repo.update_shot(shot_uuid, main_clip_id=output_video.uuid)
         
         else:
             del kwargs['log_uuid']

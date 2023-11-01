@@ -194,8 +194,7 @@ def setup_app_ui():
                     project_settings_page(st.session_state["project_uuid"])
 
             elif st.session_state["main_view_type"] == "Video Rendering":
-                video_rendering_page(
-                    mainheader2, st.session_state["project_uuid"])
+                video_rendering_page(st.session_state["project_uuid"])
 
     elif st.session_state["section"] == "App Settings":
         app_settings_page()
