@@ -35,7 +35,6 @@ class VideoInterpolator:
     
     @staticmethod
     def create_interpolated_clip(img_location_list, animation_style, settings, variant_count=1, queue_inference=False):
-        data_repo = DataRepo()
         if not animation_style:
             animation_style = DefaultTimingStyleParams.animation_style
 

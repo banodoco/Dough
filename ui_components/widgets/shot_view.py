@@ -6,7 +6,7 @@ from ui_components.methods.file_methods import generate_pil_image
 
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from ui_components.widgets.add_key_frame_element import add_key_frame,add_key_frame_section
-from ui_components.widgets.frame_movement_widgets import change_frame_position_input, delete_frame_button, jump_to_single_frame_view_button, move_frame_back_button, move_frame_forward_button, replace_image_widget
+from ui_components.widgets.frame_movement_widgets import change_frame_shot, delete_frame_button, jump_to_single_frame_view_button, move_frame_back_button, move_frame_forward_button, replace_image_widget
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
 
@@ -26,28 +26,31 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
         header_col_0, header_col_1, header_col_2, header_col_3 = st.columns([1, 1.75,1,4])
 
         with header_col_0:
-            if st.session_state["open_shot"] != shot.shot_idx:
-                if st.toggle("Open shot", key=f"shot_{shot.shot_idx}"):
-                    st.session_state["open_shot"] = shot.shot_idx
-                    st.experimental_rerun()
+            if st.session_state["open_shot"] != shot.uuid:
+                if st.toggle("Open shot", key=f"shot_{shot.uuid}"):
+                    st.session_state["open_shot"] = shot.uuid
+                    st.rerun()
             else:
-                if not st.toggle("Open shot", key=f"close_shot_{shot.shot_idx}", value=True):
+                if not st.toggle("Open shot", key=f"close_shot_{shot.uuid}", value=True):
                     st.session_state["open_shot"] = None
-                    st.experimental_rerun()
+                    st.rerun()
 
-        if st.session_state["open_shot"] == shot.shot_idx:
-
-
-
+        if st.session_state["open_shot"] == shot.uuid:
             with header_col_1:
-                name = st.text_input("Name:", value=shot.name,max_chars=40)
+                name = st.text_input("Name:", value=shot.name, max_chars=40)
                 if name != shot.name:
-                    st.success("This would've updated.")
-                    # @pom4piyush, could you make this update the shot name in the db?
+                    data_repo.update_shot(shot_uuid, name=name)
+                    st.success("Success")
+                    time.sleep(0.3)
+                    st.rerun()
                     
             with header_col_2:
-                duration = st.number_input("Duration:")
-                # @pom4piyush, this should update the shot duration.
+                duration = st.number_input("Duration:", value=shot.duration)
+                if duration != shot.duration:
+                    data_repo.update_shot(shot_uuid, duration=duration)
+                    st.success("Success")
+                    time.sleep(0.3)
+                    st.rerun()
 
             with header_col_3:
                 col2, col3, col4 = st.columns(3)
@@ -80,7 +83,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                     timing = timing_list[idx]
                     if timing.primary_image and timing.primary_image.location:
                         st.image(timing.primary_image.location, use_column_width=True)
-                        if st.session_state["open_shot"] == shot.shot_idx:
+                        if st.session_state["open_shot"] == shot.uuid:
                             timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_frame_toggle, move_frames_toggle,delete_frames_toggle, change_shot_toggle)
                     else:
                         
@@ -95,15 +98,13 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
             bottom1, bottom2, bottom3 = st.columns([1,2,1])
             with bottom1:            
                 confirm_delete = st.checkbox("I know that this will delete all the frames and videos within")
-                if confirm_delete:
-                    if st.button("Delete frame"):
-                        
-                        # @pom4piyush, would you be able to add a shot deletion function that can be called it?
-                        st.success("Shot deleted!")
-                        time.sleep(0.3)
-                        st.rerun()
-                else:
-                    st.button("Delete frame", disabled=True, help="Check the box above to enable the delete bottom.")
+                help = "Check the box above to enable the delete bottom." if confirm_delete else ""
+                if st.button("Delete shot", disabled=(not confirm_delete), help=help, key=shot_uuid):
+                    data_repo.delete_shot(shot_uuid)
+                    st.success("Done!")
+                    time.sleep(0.3)
+                    st.rerun()
+            
             with bottom3:
                 if st.button("Move shot down", key=f'shot_down_movement_{shot.uuid}'):
                     shot_list = data_repo.get_shot_list(shot.project.uuid)
@@ -168,7 +169,7 @@ def timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_fram
             delete_frame_button(timing_list[idx].uuid)
     
     if change_shot_toggle:
-        change_frame_position_input(timing_list[idx].uuid, "side-to-side")
+        change_frame_shot(timing_list[idx].uuid, "side-to-side")
     
     jump_to_single_frame_view_button(idx + 1, timing_list, 'timeline_btn_'+str(timing_list[idx].uuid))        
 

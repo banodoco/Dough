@@ -51,6 +51,7 @@ class DefaultProjectSettingParams:
     batch_model = None
     total_log_pages = 1
     total_gallery_pages = 1
+    total_shortlist_gallery_pages = 1
 
 # TODO: make proper paths for every file
 CROPPED_IMG_LOCAL_PATH = "videos/temp/cropped.png"

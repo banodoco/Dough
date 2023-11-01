@@ -67,8 +67,11 @@ def check_and_update_db():
     log_list = InferenceLog.objects.filter(status__in=[InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
                                            is_disabled=False).all()
     
+    # these items will updated in the cache when the app refreshes the next time
     timing_update_list = {}     # {project_id: [timing_uuids]}
     gallery_update_list = {}    # {project_id: True/False}
+    shot_update_list = {}       # {project_id: [shot_uuids]}
+
     for log in log_list:
         input_params = json.loads(log.input_params)
         replicate_data = input_params.get(InferenceParamType.REPLICATE_INFERENCE.value, None)
@@ -102,17 +105,19 @@ def check_and_update_db():
                         print("processing inference output")
                         process_inference_output(**origin_data)
 
-                        if origin_data['inference_type'] in [InferenceType.FRAME_INTERPOLATION.value, \
-                                                            InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value, \
+                        if origin_data['inference_type'] in [InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value, \
                                                             InferenceType.FRAME_INPAINTING.value]:
                             if str(log.project.uuid) not in timing_update_list:
                                 timing_update_list[str(log.project.uuid)] = []
                             timing_update_list[str(log.project.uuid)].append(origin_data['timing_uuid'])
 
                         elif origin_data['inference_type'] == InferenceType.GALLERY_IMAGE_GENERATION.value:
-                            if str(log.project.uuid) not in gallery_update_list:
-                                gallery_update_list[str(log.project.uuid)] = False
                             gallery_update_list[str(log.project.uuid)] = True
+                        
+                        elif origin_data['inference_type'] == InferenceType.FRAME_INTERPOLATION.value:
+                            if str(log.project.uuid) not in shot_update_list:
+                                shot_update_list[str(log.project.uuid)] = []
+                            shot_update_list[str(log.project.uuid)].append(origin_data['shot_uuid'])
 
                     except Exception as e:
                         app_logger.log(LoggingType.ERROR, f"Error: {e}")
@@ -137,6 +142,9 @@ def check_and_update_db():
             final_res[project_uuid] = {}
         
         final_res[project_uuid].update({f"{ProjectMetaData.GALLERY_UPDATE.value}": val})
+
+    for project_uuid, val in shot_update_list.items():
+        final_res[project_uuid] = {ProjectMetaData.SHOT_VIDEO_UPDATE.value: list(set(val))}
     
 
     for project_uuid, val in final_res.items():

@@ -1,9 +1,6 @@
-from io import BytesIO
 import os
 import tempfile
-from moviepy.editor import concatenate_videoclips, TextClip, VideoFileClip, vfx
-
-from shared.constants import AnimationStyleType
+from moviepy.editor import VideoFileClip, vfx
 
 class VideoProcessor:
     @staticmethod
