@@ -37,10 +37,14 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
 
         if st.session_state["open_shot"] == shot.uuid:
             with header_col_1:
-                name = st.text_input("Update name:", value=shot.name,max_chars=40)
-
+                name = st.text_input("Name:", value=shot.name,max_chars=40)
+                if name != shot.name:
+                    st.success("This would've updated.")
+                    # @pom4piyush, could you make this update the shot name in the db?
+                    
             with header_col_2:
                 duration = st.number_input("Duration:", disabled=True, value=shot.duration)
+                # @pom4piyush, this should update the shot duration.
 
             with header_col_3:
                 col2, col3, col4 = st.columns(3)
