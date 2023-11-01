@@ -45,7 +45,7 @@ def frame_selector_widget():
             update_current_frame_index(st.session_state['current_frame_index'])
         
         with st.expander(f"🖼️ Frame #{st.session_state['current_frame_index']} Details", expanded=True):
-            if st_memory.toggle("Open", value=False, key="frame_toggle"):
+            if st_memory.toggle("Open", value=True, key="frame_toggle"):
                 a1, a2 = st.columns([3,2])
                 with a1:
                     st.success(f"Main Key Frame:")

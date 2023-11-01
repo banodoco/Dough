@@ -5,7 +5,7 @@ from ui_components.constants import WorkflowStageType
 from ui_components.methods.file_methods import generate_pil_image
 
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
-from ui_components.widgets.add_key_frame_element import add_key_frame
+from ui_components.widgets.add_key_frame_element import add_key_frame,add_key_frame_section
 from ui_components.widgets.frame_movement_widgets import change_frame_position_input, delete_frame_button, jump_to_single_frame_view_button, move_frame_back_button, move_frame_forward_button, replace_image_widget
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
@@ -62,24 +62,33 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                 with col4:
                     change_shot_toggle = st_memory.toggle("Change Shot", value=False, key="change_shot_toggle")
                 
-            # st.markdown("***")
+            st.markdown("***")
 
 
         grid = st.columns(items_per_row)
-        if timing_list and len(timing_list):
-            for idx, timing in enumerate(timing_list):
-                with grid[idx%items_per_row]:
+        # if timing_list and len(timing_list):
+        for idx in range(len(timing_list) + 1):
+            with grid[idx%items_per_row]:
+                if idx == len(timing_list):
+                    if st.session_state["open_shot"] == shot.shot_idx:
+                        st.info("**Add new frame to shot**")
+                        selected_image, inherit_styling_settings, _  =  add_key_frame_section(shot_uuid, False)                           
+                        if st.button(f"Add key frame",type="primary",use_container_width=True):
+                            add_key_frame(selected_image, inherit_styling_settings, shot_uuid)
+                            st.rerun()                         
+                else:
+                    timing = timing_list[idx]
                     if timing.primary_image and timing.primary_image.location:
                         st.image(timing.primary_image.location, use_column_width=True)
                         if st.session_state["open_shot"] == shot.shot_idx:
                             timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_frame_toggle, move_frames_toggle,delete_frames_toggle, change_shot_toggle)
                     else:
-                        st.warning("No primary image present")
                         
-        else:
-            st.warning("No keyframes present")
+                        st.warning("No primary image present")
+        # else:
+          #  st.warning("No keyframes present")
 
-        # st.markdown("***")
+        st.markdown("***")
 
 
         if st.session_state["open_shot"] == shot.shot_idx:

@@ -24,6 +24,7 @@ def timeline_view(shot_uuid, stage):
         if st.button('Add new shot', type="primary"):
             add_new_shot(shot.project.uuid)
             st.rerun()
+        
     else:
         grid = st.columns(items_per_row)
         for idx, shot in enumerate(shot_list):

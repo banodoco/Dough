@@ -155,7 +155,7 @@ def frame_styling_page(shot_uuid: str):
                     drawing_element(timing_list,project_settings, shot_uuid)
                                         
             with st.expander("➕ Add Key Frame", expanded=True):
-                selected_image, inherit_styling_settings, _ = add_key_frame_element(shot_uuid)
+                selected_image, inherit_styling_settings  = add_key_frame_element(shot_uuid)
                 if st.button(f"Add key frame",type="primary",use_container_width=True):
                     add_key_frame(selected_image, inherit_styling_settings, shot_uuid)
                     st.rerun()

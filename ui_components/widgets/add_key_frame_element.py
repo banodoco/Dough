@@ -13,82 +13,69 @@ from PIL import Image
 
 
 
-def add_key_frame_element(shot_uuid):
+def add_key_frame_section(shot_uuid, individual_view=True):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
-    add1, add2 = st.columns(2)
 
-    with add1:
-        selected_image_location = ""
-        image1,image2 = st.columns(2)
-        with image1:
-            source_of_starting_image = st.radio("Where would you like to get the starting image from?", [
-                                                "Existing Frame", "Uploaded image"], key="source_of_starting_image")
-        
-        transformation_stage = None
-        if source_of_starting_image == "Existing Frame":                
-            with image2:
-                transformation_stage = st.radio(
-                                                label="Which stage would you like to use?",
-                                                options=ImageStage.value_list(),
-                                                key="transformation_stage-bottom",
-                                                horizontal=True
-                                            )
-                image_idx = st.number_input(
-                                            "Which frame would you like to use?", 
-                                            min_value=1, 
-                                            max_value=max(1, len(timing_list)), 
-                                            value=st.session_state['current_frame_index'], 
-                                            step=1, 
-                                            key="image_idx"
-                                        )
-            if transformation_stage == ImageStage.SOURCE_IMAGE.value:
-                if timing_list[image_idx - 1].source_image is not None and timing_list[image_idx - 1].source_image != "":
-                    selected_image_location = timing_list[image_idx - 1].source_image.location
-                else:
-                    selected_image_location = ""
-            elif transformation_stage == ImageStage.MAIN_VARIANT.value:
-                selected_image_location = timing_list[image_idx - 1].primary_image_location
-        elif source_of_starting_image == "Uploaded image":
-            with image2:
-                uploaded_image = st.file_uploader(
-                    "Upload an image", type=["png", "jpg", "jpeg"])
-                # FILE UPLOAD HANDLE--
-                if uploaded_image is not None:
-                    image = Image.open(uploaded_image)
-                    file_location = f"videos/{shot.uuid}/assets/frames/1_selected/{uploaded_image.name}"
-                    selected_image_location = save_or_host_file(image, file_location)
-                    selected_image_location = selected_image_location or file_location
-                else:
-                    selected_image_location = ""
-                image_idx = st.session_state['current_frame_index']
+    selected_image_location = ""
+    source_of_starting_image = st.radio("Starting image source:", ["Uploaded image", "Existing Frame"], key="source_of_starting_image")
+    
+    if source_of_starting_image == "Existing Frame":                
+        image_idx = st.number_input("Which frame would you like to use?", min_value=1, max_value=max(1, len(timing_list)), value=st.session_state['current_frame_index'], step=1, key="image_idx")
+        selected_image_location = timing_list[image_idx - 1].primary_image_location
+    elif source_of_starting_image == "Uploaded image":            
+        uploaded_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
+        if uploaded_image is not None:
+            image = Image.open(uploaded_image)
+            file_location = f"videos/{shot.uuid}/assets/frames/1_selected/{uploaded_image.name}"
+            selected_image_location = save_or_host_file(image, file_location)
+            selected_image_location = selected_image_location or file_location
+        else:
+            selected_image_location = ""
+        image_idx = st.session_state['current_frame_index']
 
-        
+    if individual_view:
         radio_text = "Inherit styling settings from the " + ("current frame?" if source_of_starting_image == "Uploaded image" else "selected frame")
-        inherit_styling_settings = st_memory.radio(radio_text, ["Yes", "No"], \
-                                                key="inherit_styling_settings", horizontal=True)
+        inherit_styling_settings = st_memory.radio(radio_text, ["Yes", "No"], key="inherit_styling_settings", horizontal=True)
         
-        apply_zoom_effects = st_memory.radio("Apply zoom effects to inputted image?", [
-                                                        "No","Yes"], key="apply_zoom_effects", horizontal=True)
+        apply_zoom_effects = st_memory.radio("Apply zoom effects to inputted image?", ["No","Yes"], key="apply_zoom_effects", horizontal=True)
         
         if apply_zoom_effects == "Yes":
             zoom_inputs(position='new', horizontal=True)
+    else:
+        inherit_styling_settings = "Yes"
+        apply_zoom_effects = "No"
 
+    return selected_image_location, inherit_styling_settings, apply_zoom_effects
+
+def display_selected_key_frame(selected_image_location, apply_zoom_effects):
     selected_image = None
-    with add2:
-        if selected_image_location:
-            if apply_zoom_effects == "Yes":
-                image_preview = generate_pil_image(selected_image_location)
-                selected_image = apply_image_transformations(image_preview, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'])
-            else:
-                selected_image = generate_pil_image(selected_image_location)
-            st.info("Starting Image:")                
-            st.image(selected_image)
+    if selected_image_location:
+        if apply_zoom_effects == "Yes":
+            image_preview = generate_pil_image(selected_image_location)
+            selected_image = apply_image_transformations(image_preview, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'])
         else:
-            st.error("No Starting Image Found")
+            selected_image = generate_pil_image(selected_image_location)
+        st.info("Starting Image:")                
+        st.image(selected_image)
+    else:
+        st.error("No Starting Image Found")
 
-    return selected_image, inherit_styling_settings, transformation_stage
+    return selected_image
+
+def add_key_frame_element(shot_uuid):
+    add1, add2 = st.columns(2)
+    with add1:
+        selected_image_location, inherit_styling_settings, apply_zoom_effects = add_key_frame_section(shot_uuid)
+    with add2:
+        selected_image = display_selected_key_frame(selected_image_location, apply_zoom_effects)
+    
+    return selected_image, inherit_styling_settings
+
+
+
+
 
 def add_key_frame(selected_image, inherit_styling_settings, shot_uuid, target_frame_position=None, refresh_state=True):
     data_repo = DataRepo()
