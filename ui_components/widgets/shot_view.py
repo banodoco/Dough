@@ -73,7 +73,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
         for idx in range(len(timing_list) + 1):
             with grid[idx%items_per_row]:
                 if idx == len(timing_list):
-                    if st.session_state["open_shot"] == shot.shot_idx:
+                    if st.session_state["open_shot"] == shot.uuid:
                         st.info("**Add new frame to shot**")
                         selected_image, inherit_styling_settings, _  =  add_key_frame_section(shot_uuid, False)                           
                         if st.button(f"Add key frame",type="primary",use_container_width=True):
