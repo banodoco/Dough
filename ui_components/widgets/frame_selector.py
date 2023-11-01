@@ -2,6 +2,7 @@ from typing import List
 import streamlit as st
 from ui_components.widgets.frame_movement_widgets import delete_frame, replace_image_widget,jump_to_single_frame_view_button
 from ui_components.widgets.image_carousal import display_image
+from ui_components.widgets.shot_view import update_shot_name,update_shot_duration
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from utils.data_repo.data_repo import DataRepo
 from ui_components.constants import WorkflowStageType
@@ -25,7 +26,7 @@ def frame_selector_widget():
             st.session_state['prev_shot_index'] = shot.shot_idx
 
         shot_names = [s.name for s in shot_list]
-        shot_name = st.selectbox('Shot Name', shot_names, key="current_shot_sidebar_selector")
+        shot_name = st.selectbox('Shot name:', shot_names, key="current_shot_sidebar_selector")
         
         if not ('current_shot_index' in st.session_state and st.session_state['current_shot_index']):
             st.session_state['current_shot_index'] = shot_names.index(shot_name) + 1
@@ -81,6 +82,11 @@ def frame_selector_widget():
         shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
         with st.expander(f"🎬 {shot.name} Details",expanded=True):
             if st_memory.toggle("Open", value=True, key="shot_details_toggle"):
+                a1,a2 = st.columns([2,2])
+                with a1:
+                    update_shot_name(shot, data_repo)
+                with a2:
+                    update_shot_duration(shot, data_repo)
                 
                 timing_list: List[InternalFrameTimingObject] = shot.timing_list
 

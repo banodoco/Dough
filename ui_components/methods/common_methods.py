@@ -28,6 +28,9 @@ from typing import Union
 
 from utils.media_processor.video import VideoProcessor
 
+
+
+
 def clone_styling_settings(source_frame_number, target_frame_uuid):
     data_repo = DataRepo()
     target_timing = data_repo.get_timing_from_uuid(target_frame_uuid)

@@ -20,10 +20,10 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
     # st.markdown(f"### {shot.name}", expanded=True)
 
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
-
-    with st.expander(f"{shot.name}", expanded=True):
-
-        header_col_0, header_col_1, header_col_2, header_col_3 = st.columns([1, 1.75,1,4])
+    
+    with st.expander(f"_-_-_-_", expanded=True):
+        # st.info(f"##### {shot.name}")    
+        header_col_1, header_col_0, header_col_2, header_col_3 = st.columns([1.5, 1,1,4])
 
         with header_col_0:
             if st.session_state["open_shot"] != shot.uuid:
@@ -36,21 +36,12 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                     st.rerun()
 
         if st.session_state["open_shot"] == shot.uuid:
-            with header_col_1:
-                name = st.text_input("Name:", value=shot.name, max_chars=40)
-                if name != shot.name:
-                    data_repo.update_shot(shot_uuid, name=name)
-                    st.success("Success")
-                    time.sleep(0.3)
-                    st.rerun()
+                    
+            with header_col_1:        
+                update_shot_name(shot, data_repo)
                     
             with header_col_2:
-                duration = st.number_input("Duration:", value=shot.duration)
-                if duration != shot.duration:
-                    data_repo.update_shot(shot_uuid, duration=duration)
-                    st.success("Success")
-                    time.sleep(0.3)
-                    st.rerun()
+                update_shot_duration(shot, data_repo)
 
             with header_col_3:
                 col2, col3, col4 = st.columns(3)
@@ -66,6 +57,9 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                     change_shot_toggle = st_memory.toggle("Change Shot", value=False, key="change_shot_toggle")
                 
             st.markdown("***")
+        else:
+            with header_col_1:
+                st.info(f"**{shot.name}**")    
 
 
         grid = st.columns(items_per_row)
@@ -91,7 +85,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
         # else:
           #  st.warning("No keyframes present")
 
-        st.markdown("***")
+        st.markdown("***")     
 
 
         if st.session_state["open_shot"] == shot.uuid:
@@ -122,8 +116,21 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                         time.sleep(0.3)
                     st.rerun()
                 
+def update_shot_name(shot, data_repo):
+    name = st.text_area("Name:", value=shot.name, max_chars=40, height=15)
+    if name != shot.name:
+        data_repo.update_shot(shot.uuid, name=name)
+        st.success("Success")
+        time.sleep(0.3)
+        st.rerun()
 
-
+def update_shot_duration(shot, data_repo):
+    duration = st.number_input("Duration:", value=shot.duration)
+    if duration != shot.duration:
+        data_repo.update_shot(shot.uuid, duration=duration)
+        st.success("Success")
+        time.sleep(0.3)
+        st.rerun()
 
 def shot_video_element(shot_uuid):
     data_repo = DataRepo()
@@ -160,7 +167,7 @@ def timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_fram
     
     if copy_frame_toggle:
         with btn3:
-            if st.button("🔁", key=f"copy_frame_{timing_list[idx].uuid}"):
+            if st.button("🔁", key=f"copy_frame_{timing_list[idx].uuid}", use_container_width=True):
                 pil_image = generate_pil_image(timing_list[idx].primary_image.location)
                 add_key_frame(pil_image, False, st.session_state['shot_uuid'], timing_list[idx].aux_frame_index+1, refresh_state=False)
                 st.rerun()
