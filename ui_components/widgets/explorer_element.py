@@ -105,10 +105,6 @@ def explorer_element(project_uuid):
     
     project_setting = data_repo.get_project_setting(project_uuid)
     st.markdown("***")
-    k1,k2 = st.columns([5,1])
-    
-    page_number = k1.radio("Select page", options=range(1, project_setting.total_gallery_pages + 1), horizontal=True)
-    open_detailed_view_for_all = k2.toggle("Open detailed view for all:")
     
     f1,f2 = st.columns([1, 1])
     num_columns = f1.slider('Number of columns:', min_value=3, max_value=7, value=5)
@@ -116,33 +112,41 @@ def explorer_element(project_uuid):
     st.markdown("***")
 
     tab1, tab2 = st.tabs(["Explorations", "Shortlist"])
-    
-
     with tab1:
-        gallery_image_view(project_uuid,page_number,num_items_per_page,open_detailed_view_for_all, False,num_columns)
+        k1,k2 = st.columns([5,1])
+        page_number = k1.radio("Select page", options=range(1, project_setting.total_gallery_pages + 1), horizontal=True, key="main_gallery")
+        open_detailed_view_for_all = k2.toggle("Open detailed view for all:", key='main_gallery_toggle')
+        gallery_image_view(project_uuid, page_number, num_items_per_page, open_detailed_view_for_all, False, num_columns)
     with tab2:
-        # @pom4piyush, this should trigger the gallery image view based - passing shortlist = True to show only the shortlisted items. This throws an error right now due to duplicate items on the list but won't when it's set up correctly.
-        st.success("Commented out...")
-        # gallery_image_view(project_uuid,page_number,num_items_per_page,open_detailed_view_for_all, True,num_columns)
+        k1,k2 = st.columns([5,1])
+        shortlist_page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True, key="shortlist_gallery")
+        open_detailed_view_for_all = k2.toggle("Open detailed view for all:", key='shortlist_gallery_toggle')
+        gallery_image_view(project_uuid, shortlist_page_number, num_items_per_page, open_detailed_view_for_all, True, num_columns)
 
-def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_detailed_view_for_all=False, shortlist=False,num_columns=2):
+def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_detailed_view_for_all=False, shortlist=False, num_columns=2):
     data_repo = DataRepo()
     
     project_settings = data_repo.get_project_setting(project_uuid)
     shot_list = data_repo.get_shot_list(project_uuid)
-    # @pom4piyush, when you've added the shortlist, we should add a value tot the below that triggers based on the shortlist value that's fed into this function.
+    
     gallery_image_list, res_payload = data_repo.get_all_file_list(
         file_type=InternalFileType.IMAGE.value, 
-        tag=InternalFileTag.GALLERY_IMAGE.value, 
+        tag=InternalFileTag.GALLERY_IMAGE.value if not shortlist else InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value, 
         project_id=project_uuid,
         page=page_number,
         data_per_page=num_items_per_page,
         sort_order=SortOrder.DESCENDING.value 
     )
 
-    if project_settings.total_gallery_pages != res_payload['total_pages']:
-        project_settings.total_gallery_pages = res_payload['total_pages']
-        st.rerun()
+    if not shortlist:
+        if project_settings.total_gallery_pages != res_payload['total_pages']:
+            project_settings.total_gallery_pages = res_payload['total_pages']
+            st.rerun()
+    else:
+        if project_settings.total_shortlist_gallery_pages != res_payload['total_pages']:
+            project_settings.total_shortlist_gallery_pages = res_payload['total_pages']
+            st.rerun()
+
     total_image_count = res_payload['count']
     if gallery_image_list and len(gallery_image_list):
         start_index = 0
@@ -154,18 +158,18 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                 if i + j < len(gallery_image_list):
                     with cols[j]:                        
                         st.image(gallery_image_list[i + j].location, use_column_width=True)
-                        if st.toggle(f'Open Details For #{(page_number - 1) * num_items_per_page + i + j + 1}', open_detailed_view_for_all):                            
-                            # @pom4piyush, we should replace the shorlisted value with the shortlisted value from the database
-                            shortlisted = True
-                            if shortlisted == False:
+                        if st.toggle(f'Open Details For #{(page_number - 1) * num_items_per_page + i + j + 1}', open_detailed_view_for_all, key=f"open_gallery_details_{gallery_image_list[i + j].uuid}"):                            
+                            if not shortlist:
                                 if st.button("Add To Shortlist", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True):
+                                    data_repo.update_file(gallery_image_list[i + j].uuid, tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value)
+                                    st.success("Added To Shortlist")
                                     time.sleep(0.3)
-                                    st.success("Added To Shortlist")   
                                     st.rerun()
                             else:
                                 if st.button("Remove From Shortlist", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True):
+                                    data_repo.update_file(gallery_image_list[i + j].uuid, tag=InternalFileTag.GALLERY_IMAGE.value)
+                                    st.success("Removed From Shortlist")
                                     time.sleep(0.3)
-                                    st.success("Removed From Shortlist")   
                                     st.rerun()
 
                             if gallery_image_list[i + j].inference_log:
@@ -178,31 +182,24 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                     st.info(f"Model: {model}")
                                     shot_names = [s.name for s in shot_list]
                                     shot_names.append('**Create New Shot**')
-                                    shot_name = st.selectbox('Shot Name', shot_names, key="current_shot_sidebar_selector")
+                                    shot_name = st.selectbox('Shot Name', shot_names, key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}")
                                     
                                     if shot_name == "**Create New Shot**":
-                                        shot_name = st.text_input("New shot name:", max_chars=40)
+                                        shot_name = st.text_input("New shot name:", max_chars=40, key=f"shot_name_{gallery_image_list[i+j].uuid}")
                                         if st.button("Create new shot", key=f"create_new_{gallery_image_list[i + j].uuid}", use_container_width=True):
-                                            add_new_shot(project_uuid)
-                                            pil_image = generate_pil_image(gallery_image_list[i + j].location)
-                                            data_repo = DataRepo()
-                                            shot_list = data_repo.get_shot_list(project_uuid)
-                                            shot_uuid = shot_list[-1].uuid
-                                            add_key_frame(pil_image, False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
-                                            # @pom4piyush This should create a new shot, update its name to the specified name, and add the selected image to it. This might be done in an inelegent way + needs you to add an ability to update the shot name.
+                                            new_shot = add_new_shot(project_uuid, name=shot_name)
+                                            add_key_frame(gallery_image_list[i + j], False, new_shot.uuid, len(data_repo.get_timing_list_from_shot(new_shot.uuid)), refresh_state=False)
+                                            # removing this from the gallery view
+                                            data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
                                             st.rerun()
                                         
                                     else:
                                         if st.button(f"Add to shot", key=f"add_{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
                                             shot_number = shot_names.index(shot_name) + 1
-                                            pil_image = generate_pil_image(gallery_image_list[i + j].location)
                                             shot_uuid = shot_list[shot_number - 1].uuid
-                                            # @pom4piyush, in cases like these, why not keep the same file as is used in the gallery view? Assuming generate_pil_image is turning a PIL object that's then downloaded
-                                            add_key_frame(pil_image, False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
-
+                                            add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
                                             # removing this from the gallery view
                                             data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-
                                             st.rerun()
                                 else:
                                     st.warning("No data found")
@@ -212,6 +209,8 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
             st.markdown("***")
     else:
         st.warning("No images present")
+
+
 def create_variate_option(column, key):
     label = key.replace('_', ' ').capitalize()
     variate_option = column.checkbox(f"Vary {label.lower()}", key=f"{key}_checkbox")

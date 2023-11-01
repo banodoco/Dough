@@ -60,6 +60,7 @@ class InternalFileTag(ExtendedEnum):
     INPUT_VIDEO = 'input_video'
     TEMP_IMAGE = 'temp'
     GALLERY_IMAGE = 'gallery_image'
+    SHORTLISTED_GALLERY_IMAGE = 'shortlisted_gallery_image'
 
 class AnimationStyleType(ExtendedEnum):
     INTERPOLATION = "Interpolate to next"

@@ -397,16 +397,18 @@ def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
     timing = data_repo.get_timing_from_uuid(timing_uuid)
     return timing.mask.location
 
-def add_new_shot(project_uuid):
+def add_new_shot(project_uuid, name=""):
     data_repo = DataRepo()
 
     shot_data = {
         "project_uuid": project_uuid,
         "desc": "",
+        "name": name,
         "duration": 2
     }
 
-    _ = data_repo.create_shot(**shot_data)
+    shot = data_repo.create_shot(**shot_data)
+    return shot
 
 # adds the image file in variant (alternative images) list
 def add_image_variant(image_file_uuid: str, timing_uuid: str):
