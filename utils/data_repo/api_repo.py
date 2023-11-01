@@ -83,6 +83,7 @@ class APIRepo:
         # shot
         self.SHOT_URL = 'v1/data/shot'
         self.SHOT_LIST_URL = 'v1/data/shot/list'
+        self.SHOT_INTERPOLATED_CLIP = 'v1/data/shot/interpolated-clip'
 
     def logout(self):
         delete_url_param(AUTH_TOKEN)
@@ -490,4 +491,8 @@ class APIRepo:
 
     def delete_shot(self, shot_uuid):
         res = self.http_delete(self.SHOT_URL, params={'uuid': shot_uuid})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def add_interpolated_clip(self, shot_uuid, **kwargs):
+        res = self.http_post(self.SHOT_INTERPOLATED_CLIP, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])

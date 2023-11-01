@@ -1,3 +1,4 @@
+from typing import List
 import streamlit as st
 from ui_components.widgets.frame_movement_widgets import delete_frame, replace_image_widget,jump_to_single_frame_view_button
 from ui_components.widgets.image_carousal import display_image
@@ -23,16 +24,13 @@ def frame_selector_widget():
         if 'prev_shot_index' not in st.session_state:
             st.session_state['prev_shot_index'] = shot.shot_idx
 
-        # Get the list of shot names
         shot_names = [s.name for s in shot_list]
-
-        # Add a selectbox for shot_name
         shot_name = st.selectbox('Shot Name', shot_names, key="current_shot_sidebar_selector")
-
-        # Set current_shot_index based on the selected shot_name
-        st.session_state['current_shot_index'] = shot_names.index(shot_name) + 1
-
-        update_current_shot_index(st.session_state['current_shot_index'])
+        
+        if not ('current_shot_index' in st.session_state and st.session_state['current_shot_index']):
+            st.session_state['current_shot_index'] = shot_names.index(shot_name) + 1
+            update_current_shot_index(st.session_state['current_shot_index'])
+    
     if st.session_state['page'] == "Key Frames":
         with time2:
             if 'prev_frame_index' not in st.session_state:

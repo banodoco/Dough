@@ -40,7 +40,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         st.info("No variants present")
         return
 
-    current_variant = timing.primary_interpolated_video_index if stage == CreativeProcessType.MOTION.value else int(
+    current_variant = shot.primary_interpolated_video_index if stage == CreativeProcessType.MOTION.value else int(
         timing.primary_variant_index)
 
     st.markdown("***")
@@ -48,7 +48,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     cols = st.columns(num_columns)
     with cols[0]:
         if stage == CreativeProcessType.MOTION.value:
-            st.video(variants[current_variant].location, format='mp4', start_time=0) if variants[current_variant] else st.error("No video present")
+            st.video(variants[current_variant].location, format='mp4', start_time=0) if (current_variant != -1 and variants[current_variant]) else st.error("No video present")
         else:
             st.image(variants[current_variant].location, use_column_width=True)
         st.success("**Main variant**")
@@ -68,7 +68,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 
                 if st.button(f"Promote Variant #{variant_index + 1}", key=f"Promote Variant #{variant_index + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
                     if stage == CreativeProcessType.MOTION.value:
-                        promote_video_variant(timing.uuid, variants[variant_index].uuid)
+                        promote_video_variant(shot.uuid, variants[variant_index].uuid)
                     else:
                         promote_image_variant(timing.uuid, variant_index)
                     
