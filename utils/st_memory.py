@@ -84,7 +84,7 @@ def toggle(label, value=True,key=None, help=None, on_change=None, disabled=False
     if key not in st.session_state:
         st.session_state[key] = value
 
-    selection = st.toggle(label=label, value=st.session_state[key], help=help, on_change=on_change, disabled=disabled, label_visibility=label_visibility)
+    selection = st.toggle(label=label, value=st.session_state[key], help=help, on_change=on_change, disabled=disabled, label_visibility=label_visibility, key=f"{key}_value")
 
     if selection != st.session_state[key]:
         st.session_state[key] = selection

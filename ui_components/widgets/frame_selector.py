@@ -4,6 +4,7 @@ from ui_components.widgets.image_carousal import display_image
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from utils.data_repo.data_repo import DataRepo
 from ui_components.constants import WorkflowStageType
+from utils import st_memory
 
 
 
@@ -43,62 +44,62 @@ def frame_selector_widget():
             
             update_current_frame_index(st.session_state['current_frame_index'])
         
-        with st.expander(f"🖼️ Frame #{st.session_state['current_frame_index']} Details"):
-            a1, a2 = st.columns([3,2])
-            with a1:
-                st.success(f"Main Key Frame:")
-                display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
+        with st.expander(f"🖼️ Frame #{st.session_state['current_frame_index']} Details", expanded=True):
+            if st_memory.toggle("Open", value=False, key="frame_toggle"):
+                a1, a2 = st.columns([3,2])
+                with a1:
+                    st.success(f"Main Key Frame:")
+                    display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
 
 
-                # st.warning(f"Guidance Image:")
-                # display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
-            with a2:
-                st.caption("Replace styled image")
-                replace_image_widget(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value)
-                
-            st.info("In Context:")
-            shot_list = data_repo.get_shot_list(shot.project.uuid)
-            shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
+                    # st.warning(f"Guidance Image:")
+                    # display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
+                with a2:
+                    st.caption("Replace styled image")
+                    replace_image_widget(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value)
+                    
+                st.info("In Context:")
+                shot_list = data_repo.get_shot_list(shot.project.uuid)
+                shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
 
-            # shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
-            timing_list: List[InternalFrameTimingObject] = shot.timing_list
+                # shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
+                timing_list: List[InternalFrameTimingObject] = shot.timing_list
 
-            if timing_list and len(timing_list):
-                grid = st.columns(3)  # Change to 4 columns
-                for idx, timing in enumerate(timing_list):
-                    with grid[idx % 3]:  # Change to 4 columns
-                        if timing.primary_image and timing.primary_image.location:
-                            st.image(timing.primary_image.location, use_column_width=True)
-                        else:
-                            st.warning("No primary image present")
-            else:
-                st.warning("No keyframes present")
+                if timing_list and len(timing_list):
+                    grid = st.columns(3)  # Change to 4 columns
+                    for idx, timing in enumerate(timing_list):
+                        with grid[idx % 3]:  # Change to 4 columns
+                            if timing.primary_image and timing.primary_image.location:
+                                st.image(timing.primary_image.location, use_column_width=True)
+                            else:
+                                st.warning("No primary image present")
+                else:
+                    st.warning("No keyframes present")
 
-            st.markdown("---")
+                st.markdown("---")
 
     else:
         shot_list = data_repo.get_shot_list(shot.project.uuid)
         shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
-        with st.expander(f"🎬 {shot.name} Details"):
-            
-            # shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
-        
-            timing_list: List[InternalFrameTimingObject] = shot.timing_list
+        with st.expander(f"🎬 {shot.name} Details",expanded=True):
+            if st_memory.toggle("Open", value=True, key="shot_details_toggle"):
+                
+                timing_list: List[InternalFrameTimingObject] = shot.timing_list
 
-            if timing_list and len(timing_list):
-                grid = st.columns(3)  # Change to 3 columns
-                for idx, timing in enumerate(timing_list):
-                    with grid[idx % 3]:  # Change to 3 columns
-                        if timing.primary_image and timing.primary_image.location:
-                            st.image(timing.primary_image.location, use_column_width=True)
-                            
-                            # Call jump_to_single_frame_view_button function
-                            jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}")
+                if timing_list and len(timing_list):
+                    grid = st.columns(3)  # Change to 3 columns
+                    for idx, timing in enumerate(timing_list):
+                        with grid[idx % 3]:  # Change to 3 columns
+                            if timing.primary_image and timing.primary_image.location:
+                                st.image(timing.primary_image.location, use_column_width=True)
                                 
-                        else:
-                            st.warning("No primary image present")
-            else:
-                st.warning("No keyframes present")
+                                # Call jump_to_single_frame_view_button function
+                                jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}")
+                                    
+                            else:
+                                st.warning("No primary image present")
+                else:
+                    st.warning("No keyframes present")
 
 
 def update_current_frame_index(index):

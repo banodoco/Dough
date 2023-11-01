@@ -40,10 +40,14 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
 
 
             with header_col_1:
-                name = st.text_input("Update name:", value=shot.name,max_chars=40)
-
+                name = st.text_input("Name:", value=shot.name,max_chars=40)
+                if name != shot.name:
+                    st.success("This would've updated.")
+                    # @pom4piyush, could you make this update the shot name in the db?
+                    
             with header_col_2:
                 duration = st.number_input("Duration:")
+                # @pom4piyush, this should update the shot duration.
 
             with header_col_3:
                 col2, col3, col4 = st.columns(3)
@@ -75,7 +79,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
         else:
             st.warning("No keyframes present")
 
-        st.markdown("***")
+        # st.markdown("***")
 
 
         if st.session_state["open_shot"] == shot.shot_idx:
@@ -84,7 +88,11 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                 confirm_delete = st.checkbox("I know that this will delete all the frames and videos within")
                 if confirm_delete:
                     if st.button("Delete frame"):
-                        st.success("Done!")
+                        
+                        # @pom4piyush, would you be able to add a shot deletion function that can be called it?
+                        st.success("Shot deleted!")
+                        time.sleep(0.3)
+                        st.rerun()
                 else:
                     st.button("Delete frame", disabled=True, help="Check the box above to enable the delete bottom.")
             with bottom3:

@@ -14,7 +14,7 @@ from ui_components.widgets.animation_style_element import animation_style_elemen
 from ui_components.widgets.inpainting_element import inpainting_element
 from ui_components.widgets.drawing_element import drawing_element
 from ui_components.widgets.sidebar_logger import sidebar_logger
-from ui_components.widgets.style_explorer_element import style_explorer_element
+from ui_components.widgets.explorer_element import explorer_element,gallery_image_view
 from ui_components.widgets.variant_comparison_grid import variant_comparison_grid
 from utils import st_memory
 
@@ -66,7 +66,8 @@ def frame_styling_page(shot_uuid: str):
     project_settings = data_repo.get_project_setting(shot.project.uuid)
 
     if st.session_state['frame_styling_view_type'] == "Explorer":
-        style_explorer_element(shot.project.uuid)
+
+        explorer_element(shot.project.uuid)
 
     # -------------------- INDIVIDUAL VIEW ----------------------
     elif st.session_state['frame_styling_view_type'] == "Individual":
@@ -81,6 +82,7 @@ def frame_styling_page(shot_uuid: str):
                 animation_style_element(shot_uuid)
 
         elif st.session_state['page'] == CreativeProcessType.STYLING.value:
+
             variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
 
             st.markdown("***")
@@ -104,9 +106,11 @@ def frame_styling_page(shot_uuid: str):
                                 f"How many variants?", min_value=1, max_value=100, \
                                     key=f"number_of_variants_{st.session_state['current_frame_index']}"
                                 )
-
                         with detail2:
-                            if st.button(f"Generate variants", key=f"new_variations_{st.session_state['current_frame_index']}", help="This will generate new variants based on the settings to the left."):
+                            variant_term = "variant" if st.session_state['individual_number_of_variants'] == 1 else "variants"
+                            st.write("")
+                            
+                            if st.button(f"Generate {variant_term}", key=f"new_variations_{st.session_state['current_frame_index']}", help="This will generate new variants based on the settings to the left."):
                                 for i in range(0, max(st.session_state['individual_number_of_variants'], 1)):
                                     trigger_restyling_process(
                                         timing_uuid=st.session_state['current_frame_uuid'], 
@@ -132,10 +136,7 @@ def frame_styling_page(shot_uuid: str):
                                     )
                                 st.rerun()
 
-                        st.markdown("***")
-                        st.info(
-                            "You can restyle multiple frames at once in the Timeline view.")
-                        st.markdown("***")
+
                         style_cloning_element(timing_list)
                                     
                 with st.expander("🔍 Prompt Finder"):
@@ -162,15 +163,28 @@ def frame_styling_page(shot_uuid: str):
     # -------------------- TIMELINE VIEW --------------------------       
     elif st.session_state['frame_styling_view_type'] == "Timeline":
 
+        
+
         if st.session_state['page'] == "Key Frames":
-            # with st.sidebar:        
-              #  with st.expander("🌀 Batch Styling", expanded=False):                                        
-               #     styling_element(st.session_state['current_frame_uuid'], view_type=ViewType.LIST.value)
+
+            with st.sidebar:
+                with st.expander("📋 Explorer Shortlist",expanded=True):
+                    if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
+                        project_setting = data_repo.get_project_setting(shot.project.uuid)
+                        page_number = st.radio("Select page", options=range(1, project_setting.total_gallery_pages + 1), horizontal=True)
+                        gallery_image_view(shot.project.uuid,page_number=page_number,num_items_per_page=10, open_detailed_view_for_all=False, shortlist=False,num_columns=2)
+                                
             timeline_view(shot_uuid, "Key Frames")
         elif st.session_state['page'] == "Shots":
             timeline_view(shot_uuid, "Shots")
     
     # -------------------- SIDEBAR NAVIGATION --------------------------
     with st.sidebar:
-        with st.expander("🔍 Inference Logging", expanded=True):    
-            sidebar_logger(shot_uuid)
+        # with st.expander("🔍 Generation Log", expanded=True):    
+            # sidebar_logger(shot_uuid)        
+        
+        with st.expander("🔍 Generation Log", expanded=True):
+            if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
+                sidebar_logger(shot_uuid)
+        st.markdown("***")
+
