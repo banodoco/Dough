@@ -15,7 +15,7 @@ def timeline_view(shot_uuid, stage):
     _, header_col_2 = st.columns([5.5,1.5])
             
     with header_col_2:
-        items_per_row = st_memory.slider("How many frames per row?", min_value=3, max_value=7, value=5, step=1, key="items_per_row_slider")
+        items_per_row = st_memory.slider("How many frames per row?", min_value=3, max_value=7, value=4, step=1, key="items_per_row_slider")
 
     if stage == 'Key Frames':
         for shot in shot_list:

@@ -94,7 +94,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
         st.markdown("***")
 
 
-        if st.session_state["open_shot"] == shot.shot_idx:
+        if st.session_state["open_shot"] == shot.uuid:
             bottom1, bottom2, bottom3 = st.columns([1,2,1])
             with bottom1:            
                 confirm_delete = st.checkbox("I know that this will delete all the frames and videos within")
@@ -106,6 +106,13 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                     st.rerun()
             
             with bottom3:
+                if st.button("Move shot up", key=f'shot_up_movement_{shot.uuid}'):
+                    if shot.shot_idx > 0:
+                        data_repo.update_shot(shot_uuid, shot_idx=shot.shot_idx-1)
+                    else:
+                        st.error("This is the first shot")
+                        time.sleep(0.3)
+                    st.rerun()
                 if st.button("Move shot down", key=f'shot_down_movement_{shot.uuid}'):
                     shot_list = data_repo.get_shot_list(shot.project.uuid)
                     if shot.shot_idx < len(shot_list):
@@ -115,13 +122,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                         time.sleep(0.3)
                     st.rerun()
                 
-                if st.button("Move shot up", key=f'shot_up_movement_{shot.uuid}'):
-                    if shot.shot_idx > 0:
-                        data_repo.update_shot(shot_uuid, shot_idx=shot.shot_idx-1)
-                    else:
-                        st.error("This is the first shot")
-                        time.sleep(0.3)
-                    st.rerun()
+
 
 
 def shot_video_element(shot_uuid):
