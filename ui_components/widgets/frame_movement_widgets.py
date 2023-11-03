@@ -44,7 +44,7 @@ def move_frame(direction, timing_uuid):
         
         data_repo.update_specific_timing(timing.uuid, aux_frame_index=timing.aux_frame_index - 1)
     elif direction == "Down":
-        timing_list = data_repo.get_timing_list_from_shot(shot_uuid=timing.shot.uuid)
+        timing_list = data_repo.get_timing_list_from_shot(timing.shot.uuid)
         if timing.aux_frame_index == len(timing_list) - 1:
             st.error("This is the last frame")
             time.sleep(0.5)
@@ -90,7 +90,7 @@ def delete_frame(timing_uuid):
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
     shot_uuid = timing.shot.uuid
     next_timing = data_repo.get_next_timing(timing_uuid)
-    timing_list = data_repo.get_timing_list_from_shot(shot_uuid=timing.shot.uuid)
+    timing_list = data_repo.get_timing_list_from_shot(timing.shot.uuid)
 
     if len(timing_list) == 1:
         st.error("can't delete the only image present in the shot")
@@ -98,7 +98,7 @@ def delete_frame(timing_uuid):
         return
 
     data_repo.delete_timing_from_uuid(timing.uuid)
-    timing_list = data_repo.get_timing_list_from_shot(shot_uuid=shot_uuid)
+    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
     
     # this is the last frame
     if not next_timing:

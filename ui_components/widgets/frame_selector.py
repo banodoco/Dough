@@ -13,7 +13,7 @@ def frame_selector_widget():
     data_repo = DataRepo()
     time1, time2 = st.columns([1,1])
 
-    timing_list = data_repo.get_timing_list_from_shot(shot_uuid=st.session_state["shot_uuid"])
+    timing_list = data_repo.get_timing_list_from_shot(st.session_state["shot_uuid"])
     shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
     shot_list = data_repo.get_shot_list(shot.project.uuid)
     len_timing_list = len(timing_list) if len(timing_list) > 0 else 1.0
@@ -102,7 +102,7 @@ def frame_selector_widget():
 
 def update_current_frame_index(index):
     data_repo = DataRepo()
-    timing_list = data_repo.get_timing_list_from_shot(shot_uuid=st.session_state["shot_uuid"])
+    timing_list = data_repo.get_timing_list_from_shot(st.session_state["shot_uuid"])
 
     st.session_state['current_frame_uuid'] = timing_list[index - 1].uuid
         
@@ -118,7 +118,7 @@ def update_current_frame_index(index):
 
 def update_current_shot_index(index):
     data_repo = DataRepo()
-    shot_list = data_repo.get_shot_list(project_uuid=st.session_state["project_uuid"])
+    shot_list = data_repo.get_shot_list(st.session_state["project_uuid"])
 
     st.session_state['shot_uuid'] = shot_list[index - 1].uuid
         

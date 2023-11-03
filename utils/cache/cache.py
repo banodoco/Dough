@@ -10,6 +10,7 @@ class CacheKey(ExtendedEnum):
     AI_MODEL = "ai_model"
     LOGGED_USER = "logged_user"
     FILE = "file"
+    SHOT = "shot"
 
 
 class StCache:
