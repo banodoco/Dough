@@ -856,7 +856,7 @@ def process_inference_output(**kwargs):
 
 def check_project_meta_data(project_uuid):
     '''
-    checking for project metadata (like cache updates)
+    checking for project metadata (like cache updates - we update specific entities using this flag)
     project_update_data is of the format {"data_update": [timing_uuid], "gallery_update": True/False, "background_img_list": []}
     '''
     data_repo = DataRepo()

@@ -101,9 +101,9 @@ def frame_selector_widget():
             if st_memory.toggle("Open", value=True, key="shot_details_toggle"):
                 a1,a2 = st.columns([2,2])
                 with a1:
-                    update_shot_name(shot, data_repo)
+                    update_shot_name(shot.uuid)
                 with a2:
-                    update_shot_duration(shot, data_repo)
+                    update_shot_duration(shot.uuid)
                 
                 st.markdown("---")
 
@@ -113,7 +113,7 @@ def frame_selector_widget():
 
                 st.markdown("---")
 
-                delete_shot_button(shot, data_repo)
+                delete_shot_button(shot.uuid)
 
 def update_current_frame_index(index):
     data_repo = DataRepo()

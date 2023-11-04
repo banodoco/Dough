@@ -84,6 +84,7 @@ class APIRepo:
         self.SHOT_URL = 'v1/data/shot'
         self.SHOT_LIST_URL = 'v1/data/shot/list'
         self.SHOT_INTERPOLATED_CLIP = 'v1/data/shot/interpolated-clip'
+        self.SHOT_DUPLICATE_URL = 'v1/data/shot/duplicate'
 
     def logout(self):
         delete_url_param(AUTH_TOKEN)
@@ -487,6 +488,10 @@ class APIRepo:
     
     def update_shot(self, shot_uuid, **kwargs):
         res = self.http_put(self.SHOT_URL, data=kwargs)
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def duplicate_shot(self, shot_uuid):
+        res = self.http_post(self.SHOT_DUPLICATE_URL, params={'uuid': shot_uuid})
         return InternalResponse(res['payload'], 'success', res['status'])
 
     def delete_shot(self, shot_uuid):

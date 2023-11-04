@@ -1519,6 +1519,50 @@ class DBRepo:
         }
 
         return InternalResponse(payload, 'shot updated successfully', True)
+    
+    def duplicate_shot(self, shot_uuid):
+        shot: Shot = Shot.objects.filter(uuid=shot_uuid, is_disabled=False).first()
+        if not shot:
+            return InternalResponse({}, 'invalid shot uuid', False)
+        
+        shot_number = Shot.objects.filter(project_id=shot.project.id, is_disabled=False).count() + 1
+        shot_data = {
+            "name" : shot.name + " (copy)",
+            "desc" : shot.desc,
+            "shot_idx" : shot_number,
+            "duration" : shot.duration,
+            "meta_data" : shot.meta_data,
+            "project_id" : shot.project.id
+        }
+
+        new_shot = Shot.objects.create(**shot_data)
+        
+        timing_list = Timing.objects.filter(shot_id=shot.id, is_disabled=False).all()
+        new_timing_list = []
+        for timing in timing_list:
+            data = {
+                "model_id": timing.model_id,
+                "source_image_id": timing.source_image_id,
+                "mask_id": timing.mask_id,
+                "canny_image_id": timing.canny_image_id,
+                "primary_image_id": timing.primary_image_id,
+                "shot_id": new_shot.id,
+                "alternative_images": timing.alternative_images,
+                "notes": timing.notes,
+                "clip_duration": timing.clip_duration,
+                "aux_frame_index": timing.aux_frame_index,
+            }
+
+            new_timing = Timing.objects.create(**data)
+            new_timing_list.append(new_timing)
+        
+        context = {'timing_list': new_timing_list}
+        
+        payload = {
+            'data': ShotDto(new_shot, context=context).data
+        }
+
+        return InternalResponse(payload, 'shot duplicated successfully', True)
 
     def delete_shot(self, shot_uuid):
         shot: Shot = Shot.objects.filter(uuid=shot_uuid, is_disabled=False).first()

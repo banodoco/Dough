@@ -672,4 +672,16 @@ def cache_data(cls):
     setattr(cls, '_original_get_timing_list_from_shot', cls.get_timing_list_from_shot)
     setattr(cls, "get_timing_list_from_shot", _cache_get_timing_list_from_shot)
 
+    def _cache_duplicate_shot(self, *args, **kwargs):
+        original_func = getattr(cls, '_original_duplicate_shot')
+        shot = original_func(self, *args, **kwargs)
+        
+        if shot:
+            StCache.delete_all(CacheKey.SHOT.value)
+        
+        return shot
+    
+    setattr(cls, '_original_duplicate_shot', cls.duplicate_shot)
+    setattr(cls, "duplicate_shot", _cache_duplicate_shot)
+
     return cls
