@@ -6,21 +6,50 @@ from ui_components.constants import DefaultProjectSettingParams
 from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.motion_module import AnimateDiffCheckpoint
+from ui_components.models import InternalFrameTimingObject, InternalShotObject
 
 def animation_style_element(shot_uuid):
     motion_modules = AnimateDiffCheckpoint.get_name_list()
     variant_count = 1
     current_animation_style = AnimationStyleType.INTERPOLATION.value    # setting a default value
+    data_repo = DataRepo()
+
 
     if current_animation_style == AnimationStyleType.INTERPOLATION.value:
-        animation_tool = st.radio("Animation Tool:", options=AnimationToolType.value_list(), key="animation_tool", horizontal=True)
-        video_resolution = None
 
-        settings = {
-            "animation_tool": animation_tool
-        }
+        animation_type = st.radio("Animation Interpolation:", options=['Creative Interpolation', "Video To Video"], key="animation_tool", horizontal=True, disabled=True)
+
+
         
-        if animation_tool == AnimationToolType.ANIMATEDIFF.value:
+        if animation_type == "Creative Interpolation":
+
+            st.markdown("***")
+            
+            shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
+            timing_list: List[InternalFrameTimingObject] = shot.timing_list
+            st.markdown("#### Keyframe Settings")
+            if timing_list and len(timing_list):
+                columns = st.columns(len(timing_list))  # Create columns equal to the number of images
+                for idx, timing in enumerate(timing_list):
+                    if timing.primary_image and timing.primary_image.location:
+                        columns[idx].image(timing.primary_image.location, use_column_width=True)                    
+                    else:
+                        columns[idx].warning("No primary image present")
+                    prompt = columns[idx].text_area(f"Prompt {idx+1}", value=timing.prompt, key=f"prompt_{idx+1}")
+                    
+
+            else:
+                st.warning("No keyframes present")
+
+            st.markdown("***")
+            video_resolution = None
+
+            settings = {
+                "animation_tool": animation_type
+            }
+
+            st.markdown("#### Overall Settings")
+
             c1, c2 = st.columns([1,1])
             with c1:
                 motion_module = st.selectbox("Which motion module would you like to use?", options=motion_modules, key="motion_module")
@@ -34,27 +63,39 @@ def animation_style_element(shot_uuid):
                 ]
                 sd_model = st.selectbox("Which Stable Diffusion model would you like to use?", options=sd_model_list, key="sd_model")
 
-            prompt_column_1, prompt_column_2 = st.columns([1, 1])
+            d1, d2 = st.columns([1, 1])
 
-            with prompt_column_1:
-                positive_prompt = st.text_area("Positive Prompt:", value=DefaultProjectSettingParams.batch_prompt, key="positive_prompt")
+            with d1:
+                ip_adapter_strength = st.slider("IP Adapter Strength", min_value=0.0, max_value=1.0, value=0.5, step=0.1, key="ip_adapter_strength")
             
-            with prompt_column_2:
-                negative_prompt = st.text_area("Negative Prompt:", value=DefaultProjectSettingParams.batch_negative_prompt, key="negative_prompt")
+            with d2:
+                ip_adapter_noise = st.slider("IP Adapter Noise", min_value=0.0, max_value=1.0, value=0.5, step=0.1, key="ip_adapter_noise")
 
-            animate_col_1, animate_col_2, _ = st.columns([1, 1, 2])
+            interpolation_style = st.selectbox("Interpolation Style", options=["Big Dipper", "Linear", "Slerp", "Custom"], key="interpolation_style")
+            if interpolation_style == "Big Dipper":
+                interpolation_settings = "0=1.0,1=0.99,2=0.97,3=0.95,4=0.92,5=0.9,6=0.86,7=0.83,8=0.79,9=0.75,10=0.71,11=0.67,12=0.62,13=0.58,14=0.53,15=0.49,16=0.44,17=0.39,18=0.35,19=0.31,20=0.26,21=0.22,22=0.19,23=0.15,24=0.12,25=0.09,26=0.06,27=0.04,28=0.02,29=0.01,30=0.0,31=0.0,32=0.0,33=0.0,34=0.0,35=0.0,36=0.0,37=0.0,38=0.0,39=0.0,40=0.0,41=0.0,42=0.0,43=0.0,44=0.0,45=0.0,46=0.0,47=0.0,48=0.0,49=0.0,50=0.0,51=0.0,52=0.0,53=0.0,54=0.0,55=0.0,56=0.0,57=0.0,58=0.0,59=0.0,60=0.0,61=0.0,62=0.0,63=0.0"
+            elif interpolation_style == "Linear":
+                interpolation_settings = "0=1.0,1=0.99,2=0.97,3=0.95,4=0.92,5=0.9,6=0.86,7=0.83,8=0.79,9=0.75,10=0.71,11=0.67,12=0.62,13=0.58,14=0.53,15=0.49,16=0.44,17=0.39,18=0.35,19=0.31,20=0.26,21=0.22,22=0.19,23=0.15,24=0.12,25=0.09,26=0.06,27=0.04,28=0.02,29=0.01,30=0.0,31=0.0,32=0.0,33=0.0,34=0.0,35=0.0,36=0.0,37=0.0,38=0.0,39=0.0,40=0.0,41=0.0,42=0.0,43=0.0,44=0.0,45=0.0,46=0.0,47=0.0,48=0.0,49=0.0,50=0.0,51=0.0,52=0.0,53=0.0,54=0.0,55=0.0,56=0.0,57=0.0,58=0.0,59=0.0,60=0.0,61=0.0,62=0.0,63=0.0"
+            elif interpolation_style == "Slerp":
+                interpolation_settings = "0=1.0,1=0.99,2=0.97,3=0.95,4=0.92,5=0.9,6=0.86,7=0.83,8=0.79,9=0.75,10=0.71,11=0.67,12=0.62,13=0.58,14=0.53,15=0.49,16=0.44,17=0.39,18=0.35,19=0.31,20=0.26,21=0.22,22=0.19,23=0.15,24=0.12,25=0.09,26=0.06,27=0.04,28=0.02,29=0.01,30=0.0,31=0.0,32=0.0,33=0.0,34=0.0,35=0.0,36=0.0,37=0.0,38=0.0,39=0.0,40=0.0,41=0.0,42=0.0,43=0.0,44=0.0,45=0.0,46=0.0,47=0.0,48=0.0,49=0.0,50=0.0,51=0.0,52=0.0,53=0.0,54=0.0,55=0.0,56=0.0,57=0.0,58=0.0,59=0.0,60=0.0,61=0.0,62=0.0,63=0.0"
+            if interpolation_style == "Custom":
+                interpolation_settings = st.text_area("Custom Interpolation Style", value="0=1.0,1=0.99,2=0.97,3=0.95,4=0.92,5=0.9,6=0.86,7=0.83,8=0.79,9=0.75,10=0.71,11=0.67,12=0.62,13=0.58,14=0.53,15=0.49,16=0.44,17=0.39,18=0.35,19=0.31,20=0.26,21=0.22,22=0.19,23=0.15,24=0.12,25=0.09,26=0.06,27=0.04,28=0.02,29=0.01,30=0.0,31=0.0,32=0.0,33=0.0,34=0.0,35=0.0,36=0.0,37=0.0,38=0.0,39=0.0,40=0.0,41=0.0,42=0.0,43=0.0,44=0.0,45=0.0,46=0.0,47=0.0,48=0.0,49=0.0,50=0.0,51=0.0,52=0.0,53=0.0,54=0.0,55=0.0,56=0.0,57=0.0,58=0.0,59=0.0,60=0.0,61=0.0,62=0.0,63=0.0", key="custom_interpolation_style")
+
+            st.markdown("***")
+            st.markdown("#### Generation Settings")
+            animate_col_1, _, _ = st.columns([1, 1, 2])
 
             with animate_col_1:
-                img_dimension_list = ["512x512", "512x768", "768x512"]
-                img_dimension = st.selectbox("Image Dimension:", options=img_dimension_list, key="img_dimension")
-            with animate_col_2:
+                # img_dimension_list = ["512x512", "512x768", "768x512"]
+                # img_dimension = st.selectbox("Image Dimension:", options=img_dimension_list, key="img_dimension")  
+                img_dimension = "512x512"          
                 variant_count = st.number_input("How many variants?", min_value=1, max_value=100, value=1, step=1, key="variant_count")
             
             normalise_speed = st.checkbox("Normalise Speed", value=True, key="normalise_speed")
 
             settings.update(
-                positive_prompt=positive_prompt,
-                negative_prompt=negative_prompt,
+                # positive_prompt=positive_prompt,
+                # negative_prompt=negative_prompt,
                 image_dimension=img_dimension,
                 sampling_steps=30,
                 motion_module=motion_module,
@@ -102,11 +143,13 @@ def animation_style_element(shot_uuid):
                     st.session_state['travel_list'][i] = {'prompt': new_prompt, 'frame_count': new_frame_count}
                 st.markdown("***")
         
+        st.markdown("***")
+
         animate_col_1, animate_col_2 = st.columns([1, 3])
 
         with animate_col_1:
             variant_count = st.number_input("How many variants?", min_value=1, max_value=100, value=1, step=1, key="variant_count")
-
+    
     if st.button("Generate Animation Clip", key="generate_animation_clip"):
         vid_quality = "full" if video_resolution == "Full Resolution" else "preview"
         st.write("Generating animation clip...")

@@ -43,17 +43,26 @@ def new_project_page():
             st.success(f"The dimensions of the image are {img_width} x {img_height}")
 
     # Prompt user for video dimension specifications
-    video_width_column, video_height_column, video_info_column = st.columns(3)
+    v1, v2 = st.columns(2)
         
-
-    frame_sizes = ["512", "704", "768", "896", "1024"]
-    with video_width_column:
-        width = int(st.selectbox("Select video width:", options=frame_sizes, key="video_width"))
-    with video_height_column:
-        height = int(st.selectbox("Select video height:", options=frame_sizes, key="video_height"))
-    with video_info_column:
+    frame_sizes = ["512x512", "768x512", "512x768"]
+    with v1:
+        frame_size = st.selectbox("Select frame size:", options=frame_sizes, key="frame_size")
+        if frame_size == "512x512":
+            width = 512
+            height = 512
+        elif frame_size == "768x512":
+            width = 768
+            height = 512
+        elif frame_size == "512x768":
+            width = 512
+            height = 768
+    with v2:
+        st.write("")
+        st.write("")
         st.info("Uploaded images will be resized to the selected dimensions.")
-    
+
+
     # Prompt user for audio preferences
     audio = st.radio("Audio:", ["No audio", "Attach new audio"], key="audio", horizontal=True)
 
