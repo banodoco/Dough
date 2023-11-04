@@ -72,16 +72,7 @@ def frame_selector_widget():
                 # shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
                 timing_list: List[InternalFrameTimingObject] = shot.timing_list
 
-                if timing_list and len(timing_list):
-                    grid = st.columns(3)  # Change to 4 columns
-                    for idx, timing in enumerate(timing_list):
-                        with grid[idx % 3]:  # Change to 4 columns
-                            if timing.primary_image and timing.primary_image.location:
-                                st.image(timing.primary_image.location, use_column_width=True)
-                            else:
-                                st.warning("No primary image present")
-                else:
-                    st.warning("No keyframes present")
+                display_shot_frames(timing_list, False)
 
                 st.markdown("---")
 
@@ -104,20 +95,7 @@ def frame_selector_widget():
 
                 timing_list: List[InternalFrameTimingObject] = shot.timing_list
 
-                if timing_list and len(timing_list):
-                    grid = st.columns(3)  # Change to 3 columns
-                    for idx, timing in enumerate(timing_list):
-                        with grid[idx % 3]:  # Change to 3 columns
-                            if timing.primary_image and timing.primary_image.location:
-                                st.image(timing.primary_image.location, use_column_width=True)
-                                
-                                # Call jump_to_single_frame_view_button function
-                                jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}")
-                                    
-                            else:
-                                st.warning("No primary image present")
-                else:
-                    st.warning("No keyframes present")
+                display_shot_frames(timing_list, True)
 
                 st.markdown("---")
 
@@ -153,3 +131,27 @@ def update_current_shot_index(index):
         st.session_state['frame_styling_view_type'] = "Individual View"
                                     
         st.rerun()       
+
+
+def display_shot_frames(timing_list: List[InternalFrameTimingObject], show_button: bool):
+    if timing_list and len(timing_list):
+        items_per_row = 3
+        for i in range(0, len(timing_list), items_per_row):
+            with st.container():
+                grid = st.columns(items_per_row)
+                for j in range(items_per_row):
+                    idx = i + j
+                    if idx < len(timing_list):
+                        timing = timing_list[idx]
+                        with grid[j]:
+                            if timing.primary_image and timing.primary_image.location:
+                                st.image(timing.primary_image.location, use_column_width=True)
+                                # Show button if show_button is True
+                                if show_button:
+                                    # Call jump_to_single_frame_view_button function
+                                    jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}")
+                            else:
+                                st.warning("No primary image present")
+            st.markdown("***")
+    else:
+        st.warning("No keyframes present")

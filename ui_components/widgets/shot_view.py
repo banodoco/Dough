@@ -34,7 +34,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
 
             with header_col_0:
                 update_shot_name(shot, data_repo)    
-                if not st.toggle("Open shot", key=f"close_shot_{shot.uuid}", value=True):
+                if not st.toggle("Expand", key=f"close_shot_{shot.uuid}", value=True):
                     st.session_state["open_shot"] = None
                     st.rerun()
                     
@@ -62,7 +62,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                 
             with header_col_0:                     
                 st.info(f"##### {shot.name}")          
-                if st.toggle("Open shot", key=f"shot_{shot.uuid}"):
+                if st.toggle("Expand", key=f"shot_{shot.uuid}"):
                     st.session_state["open_shot"] = shot.uuid
                     st.rerun()
 
