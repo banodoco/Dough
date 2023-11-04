@@ -76,9 +76,6 @@ def add_key_frame_element(shot_uuid):
     return selected_image, inherit_styling_settings
 
 
-
-
-
 def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inherit_styling_settings, shot_uuid, target_frame_position=None, refresh_state=True):
     '''
     either a pil image or a internalfileobject can be passed to this method, for adding it inside a shot

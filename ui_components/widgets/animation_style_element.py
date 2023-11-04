@@ -32,12 +32,11 @@ def animation_style_element(shot_uuid):
                 columns = st.columns(len(timing_list))  # Create columns equal to the number of images
                 for idx, timing in enumerate(timing_list):
                     if timing.primary_image and timing.primary_image.location:
-                        columns[idx].image(timing.primary_image.location, use_column_width=True)                    
+                        columns[idx].image(timing.primary_image.location, use_column_width=True)
+                        b = timing.primary_image.inference_params
+                        prompt = columns[idx].text_area(f"Prompt {idx+1}", value=(b['prompt'] if b else ""), key=f"prompt_{idx+1}")
                     else:
                         columns[idx].warning("No primary image present")
-                    prompt = columns[idx].text_area(f"Prompt {idx+1}", value=timing.prompt, key=f"prompt_{idx+1}")
-                    
-
             else:
                 st.warning("No keyframes present")
 
