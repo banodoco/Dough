@@ -125,8 +125,8 @@ def setup_app_ui():
                 with st.sidebar:
                     view_types = ["Explorer","Timeline","Individual"]
 
-                    if 'frame_styling_view_type_index' not in st.session_state:
-                        st.session_state['frame_styling_view_type_index'] = 0
+                    if 'frame_styling_view_type_manual_select' not in st.session_state:
+                        st.session_state['frame_styling_view_type_manual_select'] = 0
                         st.session_state['frame_styling_view_type'] = "Explorer"
                         st.session_state['change_view_type'] = False
 
@@ -149,8 +149,11 @@ def setup_app_ui():
                         key="section-selecto1r",
                         styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#eee"},
                                 "nav-link-selected": {"background-color": "green"}},
-                        manual_select=st.session_state['frame_styling_view_type_index']                        
+                        manual_select=st.session_state['frame_styling_view_type_manual_select']                        
                     )
+
+                    if st.session_state['frame_styling_view_type_manual_select'] != None:
+                        st.session_state['frame_styling_view_type_manual_select'] = None
 
                     if st.session_state['frame_styling_view_type'] != "Explorer":
                         pages = CreativeProcessType.value_list()
