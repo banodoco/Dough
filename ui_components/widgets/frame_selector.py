@@ -40,19 +40,28 @@ def frame_selector_widget():
         
 
     if st.session_state['page'] == "Key Frames":
+        if st.session_state['current_frame_index'] > len_timing_list:
+            update_current_frame_index(len_timing_list)
         st.progress(st.session_state['current_frame_index'] / len_timing_list)
     elif st.session_state['page'] == "Shots":
+        if st.session_state['current_shot_index'] > len(shot_list):
+            update_current_shot_index(len(shot_list))
         st.progress(st.session_state['current_shot_index'] / len(shot_list))
     if st.session_state['page'] == "Key Frames":
-        with time2:
-            if 'prev_frame_index' not in st.session_state:
-                st.session_state['prev_frame_index'] = 1
 
-            st.session_state['current_frame_index'] = st.number_input(f"Key frame # (out of {len(timing_list)})", 1, 
-                                                                    len(timing_list), value=st.session_state['prev_frame_index'], 
-                                                                    step=1, key="current_frame_sidebar_selector")
-            
-            update_current_frame_index(st.session_state['current_frame_index'])
+        if len(timing_list):
+            with time2:
+                if 'prev_frame_index' not in st.session_state:
+                    st.session_state['prev_frame_index'] = 1
+
+                st.session_state['current_frame_index'] = st.number_input(f"Key frame # (out of {len(timing_list)})", 1, 
+                                                                        len(timing_list), value=st.session_state['prev_frame_index'], 
+                                                                        step=1, key="current_frame_sidebar_selector")
+                
+                update_current_frame_index(st.session_state['current_frame_index'])
+        else:
+            with time2:
+                st.error("No frames present")
         
         with st.expander(f"🖼️ Frame #{st.session_state['current_frame_index']} Details", expanded=True):
             if st_memory.toggle("Open", value=True, key="frame_toggle"):
@@ -112,8 +121,9 @@ def update_current_frame_index(index):
 
     st.session_state['current_frame_uuid'] = timing_list[index - 1].uuid
         
-    if st.session_state['prev_frame_index'] != index:
+    if st.session_state['prev_frame_index'] != index or st.session_state['current_frame_index'] != index:
         st.session_state['prev_frame_index'] = index
+        st.session_state['current_frame_index'] = index
         st.session_state['current_frame_uuid'] = timing_list[index - 1].uuid
         st.session_state['reset_canvas'] = True
         st.session_state['frame_styling_view_type_index'] = 0
@@ -128,7 +138,8 @@ def update_current_shot_index(index):
 
     st.session_state['shot_uuid'] = shot_list[index - 1].uuid
         
-    if st.session_state['prev_shot_index'] != index:
+    if st.session_state['prev_shot_index'] != index or st.session_state['current_shot_index'] != index:
+        st.session_state['current_shot_index'] = index
         st.session_state['prev_shot_index'] = index
         st.session_state['shot_uuid'] = shot_list[index - 1].uuid
         st.session_state['reset_canvas'] = True
