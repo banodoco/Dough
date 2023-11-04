@@ -18,10 +18,7 @@ def frame_selector_widget():
     shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
     shot_list = data_repo.get_shot_list(shot.project.uuid)
     len_timing_list = len(timing_list) if len(timing_list) > 0 else 1.0
-    if st.session_state['page'] == "Key Frames":
-        st.progress(st.session_state['current_frame_index'] / len_timing_list)
-    elif st.session_state['page'] == "Shots":
-        st.progress(st.session_state['current_shot_index'] / len(shot_list))
+
 
     with time1:
         if 'prev_shot_index' not in st.session_state:
@@ -29,6 +26,8 @@ def frame_selector_widget():
 
         shot_names = [s.name for s in shot_list]
         shot_name = st.selectbox('Shot name:', shot_names, key="current_shot_sidebar_selector",index=shot_names.index(shot.name))
+        # find shot index based on shot name
+        st.session_state['current_shot_index'] = shot_names.index(shot_name) + 1
 
         if shot_name != shot.name:
             st.session_state["shot_uuid"] = shot_list[shot_names.index(shot_name)].uuid
@@ -37,7 +36,13 @@ def frame_selector_widget():
         if not ('current_shot_index' in st.session_state and st.session_state['current_shot_index']):
             st.session_state['current_shot_index'] = shot_names.index(shot_name) + 1
             update_current_shot_index(st.session_state['current_shot_index'])
-    
+        
+        
+
+    if st.session_state['page'] == "Key Frames":
+        st.progress(st.session_state['current_frame_index'] / len_timing_list)
+    elif st.session_state['page'] == "Shots":
+        st.progress(st.session_state['current_shot_index'] / len(shot_list))
     if st.session_state['page'] == "Key Frames":
         with time2:
             if 'prev_frame_index' not in st.session_state:
