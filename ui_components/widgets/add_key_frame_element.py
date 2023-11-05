@@ -19,12 +19,12 @@ def add_key_frame_section(shot_uuid, individual_view=True):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
-
+    len_shot_timing_list = len(timing_list) if len(timing_list) > 0 else 0
     selected_image_location = ""
-    source_of_starting_image = st.radio("Starting image source:", ["Uploaded image", "Existing Frame"], key="source_of_starting_image")
+    source_of_starting_image = st.radio("Starting image:", ["None","Uploaded image", "Existing Frame"], key="source_of_starting_image")
     
     if source_of_starting_image == "Existing Frame":                
-        image_idx = st.number_input("Which frame would you like to use?", min_value=1, max_value=max(1, len(timing_list)), value=st.session_state['current_frame_index'], step=1, key="image_idx")
+        image_idx = st.number_input("Which frame would you like to use?", min_value=1, max_value=max(1, len(timing_list)), value=len_shot_timing_list, step=1, key="image_idx")
         selected_image_location = timing_list[image_idx - 1].primary_image_location
     elif source_of_starting_image == "Uploaded image":            
         uploaded_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
@@ -35,30 +35,30 @@ def add_key_frame_section(shot_uuid, individual_view=True):
             selected_image_location = selected_image_location or file_location
         else:
             selected_image_location = ""
-        image_idx = st.session_state['current_frame_index']
+        image_idx = len_shot_timing_list
 
     if individual_view:
         radio_text = "Inherit styling settings from the " + ("current frame?" if source_of_starting_image == "Uploaded image" else "selected frame")
         inherit_styling_settings = st_memory.radio(radio_text, ["Yes", "No"], key="inherit_styling_settings", horizontal=True)
         
-        apply_zoom_effects = st_memory.radio("Apply zoom effects to inputted image?", ["No","Yes"], key="apply_zoom_effects", horizontal=True)
+        # apply_zoom_effects = st_memory.radio("Apply zoom effects to inputted image?", ["No","Yes"], key="apply_zoom_effects", horizontal=True)
         
-        if apply_zoom_effects == "Yes":
-            zoom_inputs(position='new', horizontal=True)
+        #if apply_zoom_effects == "Yes":
+        #     zoom_inputs(position='new', horizontal=True)
     else:
         inherit_styling_settings = "Yes"
         apply_zoom_effects = "No"
 
-    return selected_image_location, inherit_styling_settings, apply_zoom_effects
+    return selected_image_location, inherit_styling_settings
 
 def display_selected_key_frame(selected_image_location, apply_zoom_effects):
     selected_image = None
     if selected_image_location:
-        if apply_zoom_effects == "Yes":
-            image_preview = generate_pil_image(selected_image_location)
-            selected_image = apply_image_transformations(image_preview, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'])
-        else:
-            selected_image = generate_pil_image(selected_image_location)
+        # if apply_zoom_effects == "Yes":
+            # image_preview = generate_pil_image(selected_image_location)
+            # selected_image = apply_image_transformations(image_preview, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'], st.session_state['flip_vertically'], st.session_state['flip_horizontally'])
+        
+        selected_image = generate_pil_image(selected_image_location)
         st.info("Starting Image:")                
         st.image(selected_image)
     else:
@@ -69,9 +69,9 @@ def display_selected_key_frame(selected_image_location, apply_zoom_effects):
 def add_key_frame_element(shot_uuid):
     add1, add2 = st.columns(2)
     with add1:
-        selected_image_location, inherit_styling_settings, apply_zoom_effects = add_key_frame_section(shot_uuid)
+        selected_image_location, inherit_styling_settings  = add_key_frame_section(shot_uuid)
     with add2:
-        selected_image = display_selected_key_frame(selected_image_location, apply_zoom_effects)
+        selected_image = display_selected_key_frame(selected_image_location, False)
     
     return selected_image, inherit_styling_settings
 
@@ -84,7 +84,8 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
 
     # creating frame inside the shot at target_frame_position
-    target_frame_position = st.session_state['current_frame_index'] if target_frame_position is None else target_frame_position
+    len_shot_timing_list = len(timing_list) if len(timing_list) > 0 else 0
+    target_frame_position = len_shot_timing_list if target_frame_position is None else target_frame_position
     target_aux_frame_index = min(len(timing_list), target_frame_position)
     _ = create_frame_inside_shot(shot_uuid, target_aux_frame_index)
 
@@ -94,7 +95,7 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
     save_uploaded_image(selected_image, shot_uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.STYLED.value)
 
     if inherit_styling_settings == "Yes" and st.session_state['current_frame_index']:    
-        clone_styling_settings(st.session_state['current_frame_index'] - 1, timing_list[target_aux_frame_index].uuid)
+        clone_styling_settings(st.session_state['current_frame_index'] - 1, timing_list[target_aux_frame_index-1].uuid)
 
     if len(timing_list) == 1:
         st.session_state['current_frame_index'] = 1

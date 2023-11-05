@@ -26,8 +26,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
 
         if st.session_state["open_shot"] == shot.uuid:
             with header_col_0:
-                update_shot_name(shot.uuid)
-                duplicate_shot_button(shot.uuid)
+                update_shot_name(shot.uuid)                
                 if not st.toggle("Expand", key=f"close_shot_{shot.uuid}", value=True):
                     st.session_state["open_shot"] = None
                     st.rerun()
@@ -71,7 +70,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                                     st.info("**Add new frame to shot**")
                                     selected_image, inherit_styling_settings, _  =  add_key_frame_section(shot_uuid, False)                           
                                     if st.button(f"Add key frame",type="primary",use_container_width=True):
-                                        add_key_frame(selected_image, inherit_styling_settings, shot_uuid)
+                                        add_key_frame(selected_image, "No", shot_uuid)
                                         st.rerun()                         
                             else:
                                 timing = timing_list[idx]
@@ -81,35 +80,46 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                                     st.warning("No primary image present")        
                                 if st.session_state["open_shot"] == shot.uuid:
                                     timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_frame_toggle, move_frames_toggle,delete_frames_toggle, change_shot_toggle)
-                st.markdown("***")
-        st.markdown("***")
+                if (i < len(timing_list) - 1) or (st.session_state["open_shot"] == shot.uuid) or (len(timing_list) % items_per_row != 0 and st.session_state["open_shot"] != shot.uuid):
+                    st.markdown("***")
+        # st.markdown("***")
 
         if st.session_state["open_shot"] == shot.uuid:
-            bottom1, _, bottom3 = st.columns([1,2,1])
-            with bottom1:            
+            st.markdown("##### Admin stuff:")
+            bottom1, bottom2, bottom3, _ = st.columns([1,1,1,3])
+            with bottom1:    
+                st.error("Delete:")
                 delete_shot_button(shot.uuid)
+                                
+            with bottom2:
+                st.warning("Duplicate:")
+                duplicate_shot_button(shot.uuid)       
             
             with bottom3:
-                if st.button("Move shot up", key=f'shot_up_movement_{shot.uuid}'):
-                    if shot.shot_idx > 0:
-                        data_repo.update_shot(shot_uuid, shot_idx=shot.shot_idx-1)
-                    else:
-                        st.error("This is the first shot")
-                        time.sleep(0.3)
-                    st.rerun()
-                if st.button("Move shot down", key=f'shot_down_movement_{shot.uuid}'):
-                    shot_list = data_repo.get_shot_list(shot.project.uuid)
-                    if shot.shot_idx < len(shot_list):
-                        data_repo.update_shot(shot_uuid, shot_idx=shot.shot_idx+1)
-                    else:
-                        st.error("This is the last shot")
-                        time.sleep(0.3)
-                    st.rerun()
+                st.info("Move:")
+                move1, move2 = st.columns(2)
+                with move1:
+                    if st.button("⬆️", key=f'shot_up_movement_{shot.uuid}', help="Move shot up", use_container_width=True):
+                        if shot.shot_idx > 0:
+                            data_repo.update_shot(shot_uuid, shot_idx=shot.shot_idx-1)
+                        else:
+                            st.error("This is the first shot")
+                            time.sleep(0.3)
+                        st.rerun()
+                with move2:
+                    if st.button("⬇️", key=f'shot_down_movement_{shot.uuid}', help="Move shot down", use_container_width=True):
+                        shot_list = data_repo.get_shot_list(shot.project.uuid)
+                        if shot.shot_idx < len(shot_list):
+                            data_repo.update_shot(shot_uuid, shot_idx=shot.shot_idx+1)
+                        else:
+                            st.error("This is the last shot")
+                            time.sleep(0.3)
+                        st.rerun()
 
 def duplicate_shot_button(shot_uuid):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
-    if st.button("Duplicate shot", key=f"duplicate_btn_{shot.uuid}"):
+    if st.button("Duplicate shot", key=f"duplicate_btn_{shot.uuid}", help="This will duplicate this shot.", use_container_width=True):
         data_repo.duplicate_shot(shot.uuid)
         st.success("Shot duplicated successfully")
         time.sleep(0.3)
@@ -118,9 +128,9 @@ def duplicate_shot_button(shot_uuid):
 def delete_shot_button(shot_uuid):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
-    confirm_delete = st.checkbox("I know that this will delete all the frames and videos within")
-    help_text = "Check the box above to enable the delete button." if confirm_delete else ""
-    if st.button("Delete shot", disabled=(not confirm_delete), help=help_text, key=shot.uuid):
+    confirm_delete = st.checkbox("I know that this will delete all the frames and videos within")    
+    help_text = "Check the box above to enable the delete button." if not confirm_delete else "This will this shot and all the frames and videos within."
+    if st.button("Delete shot", disabled=(not confirm_delete), help=help_text, key=shot.uuid, use_container_width=True):
         data_repo.delete_shot(shot.uuid)
         st.success("Shot deleted successfully")
         time.sleep(0.3)
@@ -151,7 +161,7 @@ def shot_video_element(shot_uuid):
     
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
     
-    st.markdown(f"#### {shot.name}")
+    st.info(f"##### {shot.name}")
     if shot.main_clip and shot.main_clip.location:
         st.video(shot.main_clip.location)
     else:

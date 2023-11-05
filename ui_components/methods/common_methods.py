@@ -190,7 +190,7 @@ def zoom_image(image, zoom_factor, fill_with=None):
         return cropped_image
 
 # image here is a PIL object
-def apply_image_transformations(image: Image, zoom_level, rotation_angle, x_shift, y_shift) -> Image:
+def apply_image_transformations(image: Image, zoom_level, rotation_angle, x_shift, y_shift, flip_vertically, flip_horizontally) -> Image:
     width, height = image.size
 
     # Calculate the diagonal for the rotation
@@ -207,7 +207,7 @@ def apply_image_transformations(image: Image, zoom_level, rotation_angle, x_shif
     # Shift
     # Create a new image with black background
     shift_bg = Image.new("RGB", (diagonal, diagonal), "black")
-    shift_bg.paste(rotated_image, (x_shift, y_shift))
+    shift_bg.paste(rotated_image, (-x_shift, y_shift)) 
 
     # Zoom
     zoomed_width = int(diagonal * (zoom_level / 100))
@@ -220,6 +220,14 @@ def apply_image_transformations(image: Image, zoom_level, rotation_angle, x_shif
     crop_x2 = crop_x1 + width
     crop_y2 = crop_y1 + height
     cropped_image = zoomed_image.crop((crop_x1, crop_y1, crop_x2, crop_y2))
+
+    # Flip vertically
+    if flip_vertically:
+        cropped_image = cropped_image.transpose(Image.FLIP_TOP_BOTTOM)
+
+    # Flip horizontally
+    if flip_horizontally:
+        cropped_image = cropped_image.transpose(Image.FLIP_LEFT_RIGHT)
 
     return cropped_image
 

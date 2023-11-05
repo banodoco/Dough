@@ -214,8 +214,8 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                                 # removing this from the gallery view
                                                 data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
                                             else:
-                                                st.error('Max frame limit reached')
-                                                time.sleep(0.3)
+                                                st.error('We currently only allow 5 frames per shot.')
+                                                time.sleep(0.4)
                                                 
                                             st.rerun()
                             else:
