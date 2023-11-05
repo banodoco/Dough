@@ -207,16 +207,9 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                             shot_number = shot_names.index(shot_name) + 1
                                             shot_uuid = shot_list[shot_number - 2].uuid
 
-                                            shot = data_repo.get_shot_from_uuid(shot_uuid)
-                                            project_settings = data_repo.get_project_setting(shot.project.uuid)
-                                            if len(shot.timing_list) < project_settings.max_frames_per_shot:
-                                                add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
-                                                # removing this from the gallery view
-                                                data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                            else:
-                                                st.error('Max frame limit reached')
-                                                time.sleep(0.3)
-                                                
+                                            add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
+                                            # removing this from the gallery view
+                                            data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
                                             st.rerun()
                             else:
                                 st.warning("No data found")

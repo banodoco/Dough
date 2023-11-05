@@ -1,3 +1,4 @@
+import time
 from typing import Union
 import streamlit as st
 from ui_components.constants import CreativeProcessType, WorkflowStageType
@@ -82,6 +83,14 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
     '''
     data_repo = DataRepo()
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
+
+    # checking if the shot has reached the max frame limit
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    project_settings = data_repo.get_project_setting(shot.project.uuid)
+    if len(shot.timing_list) >= project_settings.max_frames_per_shot:
+        st.error('Max frame limit reached')
+        time.sleep(0.3)
+        st.rerun()
 
     # creating frame inside the shot at target_frame_position
     target_frame_position = st.session_state['current_frame_index'] if target_frame_position is None else target_frame_position
