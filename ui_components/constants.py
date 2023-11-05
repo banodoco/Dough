@@ -52,6 +52,7 @@ class DefaultProjectSettingParams:
     total_log_pages = 1
     total_gallery_pages = 1
     total_shortlist_gallery_pages = 1
+    max_frames_per_shot = 3
 
 # TODO: make proper paths for every file
 CROPPED_IMG_LOCAL_PATH = "videos/temp/cropped.png"

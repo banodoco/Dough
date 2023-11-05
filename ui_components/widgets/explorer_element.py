@@ -51,7 +51,7 @@ def explorer_element(project_uuid):
     with d2:        
         number_to_generate = st.slider("How many images would you like to generate?", min_value=0, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
     
-    _, e2, _ = st.columns([0.5, 1, 0.5])
+    _, e2, e3 = st.columns([0.5, 1, 0.5])
     if e2.button("Generate images", key="generate_images", use_container_width=True, type="primary"):
         ml_client = get_ml_client()
         counter = 0
@@ -102,6 +102,9 @@ def explorer_element(project_uuid):
                 }
                 process_inference_output(**inference_data)
         e2.info("Check the Generation Log to the left for the status.")
+
+    with e3:
+        update_max_frame_per_shot_element(project_uuid)
     
     project_setting = data_repo.get_project_setting(project_uuid)
     st.markdown("***")
@@ -203,9 +206,17 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                         if st.button(f"Add to shot", key=f"add_{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
                                             shot_number = shot_names.index(shot_name) + 1
                                             shot_uuid = shot_list[shot_number - 2].uuid
-                                            add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
-                                            # removing this from the gallery view
-                                            data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+
+                                            shot = data_repo.get_shot_from_uuid(shot_uuid)
+                                            project_settings = data_repo.get_project_setting(shot.project.uuid)
+                                            if len(shot.timing_list) < project_settings.max_frames_per_shot:
+                                                add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
+                                                # removing this from the gallery view
+                                                data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+                                            else:
+                                                st.error('Max frame limit reached')
+                                                time.sleep(0.3)
+                                                
                                             st.rerun()
                             else:
                                 st.warning("No data found")
@@ -246,3 +257,16 @@ def create_prompt(**kwargs):
                 text_list.append(result)
 
         return ", ".join(text_list)
+
+
+def update_max_frame_per_shot_element(project_uuid):
+    data_repo = DataRepo()
+    project_settings = data_repo.get_project_setting(project_uuid)
+
+    max_frames = st.number_input(label='Max frames per shot', min_value=1, value=project_settings.max_frames_per_shot)
+
+    if max_frames != project_settings.max_frames_per_shot:
+        project_settings.max_frames_per_shot = max_frames
+        st.success("Updated")
+        time.sleep(0.3)
+        st.rerun()

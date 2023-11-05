@@ -22,26 +22,18 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
     
     with st.expander(f"_-_-_-_", expanded=True):
-        # st.info(f"##### {shot.name}")   
-        
         header_col_0, header_col_1, header_col_2, header_col_3 = st.columns([1.75, 1,1,3])
 
-
-
         if st.session_state["open_shot"] == shot.uuid:
-            
-                  
-
             with header_col_0:
-                update_shot_name(shot, data_repo)    
+                update_shot_name(shot.uuid)
+                duplicate_shot_button(shot.uuid)
                 if not st.toggle("Expand", key=f"close_shot_{shot.uuid}", value=True):
                     st.session_state["open_shot"] = None
                     st.rerun()
                     
             with header_col_1:   
-                update_shot_duration(shot, data_repo)
-                
-
+                update_shot_duration(shot.uuid)
 
             with header_col_3:
                 col2, col3, col4 = st.columns(3)
@@ -55,21 +47,15 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                     
                 with col4:
                     change_shot_toggle = st_memory.toggle("Change Shot", value=False, key="change_shot_toggle")
-                
-            
-        else:            
- 
-                
-            with header_col_0:                     
-                st.info(f"##### {shot.name}")          
+        else:
+            with header_col_0:      
+                st.info(f"##### {shot.name}")
                 if st.toggle("Expand", key=f"shot_{shot.uuid}"):
                     st.session_state["open_shot"] = shot.uuid
                     st.rerun()
 
             with header_col_1:                
                 st.info(f"**{shot.duration} secs**")
-              
-
 
         st.markdown("***")
 
@@ -96,15 +82,12 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                                 if st.session_state["open_shot"] == shot.uuid:
                                     timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_frame_toggle, move_frames_toggle,delete_frames_toggle, change_shot_toggle)
                 st.markdown("***")
-        
-
-        st.markdown("***")     
-
+        st.markdown("***")
 
         if st.session_state["open_shot"] == shot.uuid:
-            bottom1, bottom2, bottom3 = st.columns([1,2,1])
+            bottom1, _, bottom3 = st.columns([1,2,1])
             with bottom1:            
-                delete_shot_button(shot, data_repo)
+                delete_shot_button(shot.uuid)
             
             with bottom3:
                 if st.button("Move shot up", key=f'shot_up_movement_{shot.uuid}'):
@@ -123,7 +106,18 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                         time.sleep(0.3)
                     st.rerun()
 
-def delete_shot_button(shot, data_repo):
+def duplicate_shot_button(shot_uuid):
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    if st.button("Duplicate shot", key=f"duplicate_btn_{shot.uuid}"):
+        data_repo.duplicate_shot(shot.uuid)
+        st.success("Shot duplicated successfully")
+        time.sleep(0.3)
+        st.rerun()
+
+def delete_shot_button(shot_uuid):
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
     confirm_delete = st.checkbox("I know that this will delete all the frames and videos within")
     help_text = "Check the box above to enable the delete button." if confirm_delete else ""
     if st.button("Delete shot", disabled=(not confirm_delete), help=help_text, key=shot.uuid):
@@ -132,7 +126,9 @@ def delete_shot_button(shot, data_repo):
         time.sleep(0.3)
         st.rerun()
 
-def update_shot_name(shot, data_repo):
+def update_shot_name(shot_uuid):
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
     name = st.text_input("Name:", value=shot.name, max_chars=25)
     if name != shot.name:
         data_repo.update_shot(shot.uuid, name=name)
@@ -140,7 +136,9 @@ def update_shot_name(shot, data_repo):
         time.sleep(0.3)
         st.rerun()
 
-def update_shot_duration(shot, data_repo):
+def update_shot_duration(shot_uuid):
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
     duration = st.number_input("Duration:", value=shot.duration)
     if duration != shot.duration:
         data_repo.update_shot(shot.uuid, duration=duration)

@@ -26,7 +26,7 @@ class InternalFileObject:
         return self.hosted_url
     
     @property
-    def inference_params(self) -> MLQueryObject:
+    def inference_params(self):
         log = self.inference_log
         if not log:
             from utils.data_repo.data_repo import DataRepo
@@ -36,9 +36,7 @@ class InternalFileObject:
             log = fresh_obj.inference_log
         
         if log and log.input_params:
-            params = json.loads(log.input_params)
-            if InferenceParamType.QUERY_DICT.value in params:
-                return MLQueryObject(**json.loads(params[InferenceParamType.QUERY_DICT.value]))
+            return json.loads(log.input_params)
         
         return None
 

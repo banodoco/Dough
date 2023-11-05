@@ -251,16 +251,20 @@ def rotate_image(location, degree):
     return rotated_image
 
 
-def save_uploaded_image(image, shot_uuid, frame_uuid, stage_type):
+def save_uploaded_image(image: Union[Image.Image, str, np.ndarray, io.BytesIO, InternalFileObject], shot_uuid, frame_uuid, stage_type):
     '''
-    saves the image file (which can be a PIL, arr or url) into the project, without
+    saves the image file (which can be a PIL, arr, InternalFileObject or url) into the project, without
     any tags or logs. then adds that file as the source_image/primary_image, depending
     on the stage selected
     '''
     data_repo = DataRepo()
 
     try:
-        saved_image = save_new_image(image, shot_uuid)
+        if isinstance(image, InternalFileObject):
+            saved_image = image
+        else:
+            saved_image = save_new_image(image, shot_uuid)
+        
         # Update records based on stage_type
         if stage_type ==  WorkflowStageType.SOURCE.value:
             data_repo.update_specific_timing(frame_uuid, source_image_id=saved_image.uuid)
@@ -852,7 +856,7 @@ def process_inference_output(**kwargs):
 
 def check_project_meta_data(project_uuid):
     '''
-    checking for project metadata (like cache updates)
+    checking for project metadata (like cache updates - we update specific entities using this flag)
     project_update_data is of the format {"data_update": [timing_uuid], "gallery_update": True/False, "background_img_list": []}
     '''
     data_repo = DataRepo()

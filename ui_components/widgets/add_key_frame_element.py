@@ -76,9 +76,6 @@ def add_key_frame_element(shot_uuid):
     return selected_image, inherit_styling_settings
 
 
-
-
-
 def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inherit_styling_settings, shot_uuid, target_frame_position=None, refresh_state=True):
     '''
     either a pil image or a internalfileobject can be passed to this method, for adding it inside a shot
@@ -93,12 +90,8 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
 
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
     # updating the newly created frame timing
-    if isinstance(selected_image, InternalFileObject):
-        data_repo.update_specific_timing(timing_list[target_aux_frame_index].uuid, source_image_id=selected_image.uuid)
-        data_repo.update_specific_timing(timing_list[target_aux_frame_index].uuid, primary_image_id=selected_image.uuid)
-    else:
-        save_uploaded_image(selected_image, shot_uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.SOURCE.value)
-        save_uploaded_image(selected_image, shot_uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.STYLED.value)
+    save_uploaded_image(selected_image, shot_uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.SOURCE.value)
+    save_uploaded_image(selected_image, shot_uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.STYLED.value)
 
     if inherit_styling_settings == "Yes" and st.session_state['current_frame_index']:    
         clone_styling_settings(st.session_state['current_frame_index'] - 1, timing_list[target_aux_frame_index].uuid)

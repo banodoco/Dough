@@ -422,6 +422,10 @@ class DataRepo:
     def delete_shot(self, shot_uuid):
         res = self.db_repo.delete_shot(shot_uuid)
         return res.status
+    
+    def duplicate_shot(self, shot_uuid):
+        res = self.db_repo.duplicate_shot(shot_uuid)
+        return res.status
 
     def add_interpolated_clip(self, shot_uuid, **kwargs):
         res = self.db_repo.add_interpolated_clip(shot_uuid, **kwargs)

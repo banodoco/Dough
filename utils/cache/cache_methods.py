@@ -285,6 +285,7 @@ def cache_data(cls):
         timing = original_func(self, *args, **kwargs)
         if timing:
             StCache.delete_all(CacheKey.TIMING_DETAILS.value)
+            StCache.delete_all(CacheKey.SHOT.value)
         
         return timing
     
@@ -297,6 +298,9 @@ def cache_data(cls):
         
         if status:
             StCache.delete_all(CacheKey.TIMING_DETAILS.value)
+            # deleting shots as well. for e.g. timing update can be moving it from
+            # one shot to another
+            StCache.delete_all(CacheKey.SHOT.value)
 
         # updating the timing list
         timing_func = getattr(cls, '_original_get_timing_from_uuid')
@@ -335,6 +339,7 @@ def cache_data(cls):
         
         if status:
             StCache.delete(args[0],CacheKey.TIMING_DETAILS.value)
+            StCache.delete_all(CacheKey.SHOT.value)
     
     setattr(cls, '_original_delete_timing_from_uuid', cls.delete_timing_from_uuid)
     setattr(cls, "delete_timing_from_uuid", _cache_delete_timing_from_uuid)
@@ -345,6 +350,7 @@ def cache_data(cls):
         
         if status:
             StCache.delete_all(CacheKey.TIMING_DETAILS.value)
+            StCache.delete_all(CacheKey.SHOT.value)
     
     setattr(cls, '_original_remove_existing_timing', cls.remove_existing_timing)
     setattr(cls, "remove_existing_timing", _cache_remove_existing_timing)
@@ -355,6 +361,7 @@ def cache_data(cls):
         
         if status:
             StCache.delete_all(CacheKey.TIMING_DETAILS.value)
+            StCache.delete_all(CacheKey.SHOT.value)
     
     setattr(cls, '_original_remove_primary_frame', cls.remove_primary_frame)
     setattr(cls, "remove_primary_frame", _cache_remove_primary_frame)
@@ -365,6 +372,7 @@ def cache_data(cls):
         
         if status:
             StCache.delete_all(CacheKey.TIMING_DETAILS.value)
+            StCache.delete_all(CacheKey.SHOT.value)
     
     setattr(cls, '_original_remove_source_image', cls.remove_source_image)
     setattr(cls, "remove_source_image", _cache_remove_source_image)
@@ -450,9 +458,10 @@ def cache_data(cls):
 
     # ------------------ PROJECT SETTING METHODS ---------------------
     def _cache_get_project_setting(self, *args, **kwargs):
-        project_setting = StCache.get(args[0], CacheKey.PROJECT_SETTING.value)
-        if project_setting:
-            return project_setting
+        project_setting_list = StCache.get_all(CacheKey.PROJECT_SETTING.value)
+        for ele in project_setting_list:
+            if str(ele.project.uuid) == str(args[0]):
+                return ele
         
         original_func = getattr(cls, '_original_get_project_setting')
         project_setting = original_func(self, *args, **kwargs)
@@ -546,5 +555,133 @@ def cache_data(cls):
     
     setattr(cls, '_original_google_user_login', cls.google_user_login)
     setattr(cls, "google_user_login", _cache_google_user_login)
+
+    # ---------------------- SHOT METHODS ---------------------
+    def _cache_get_shot_from_uuid(self, *args, **kwargs):
+        shot_list = StCache.get_all(CacheKey.SHOT.value)
+        if shot_list and len(shot_list):
+            for shot in shot_list:
+                if shot.uuid == args[0]:
+                    return shot
+        
+        original_func = getattr(cls, '_original_get_shot_from_uuid')
+        shot = original_func(self, *args, **kwargs)
+        
+        return shot
+
+    setattr(cls, '_original_get_shot_from_uuid', cls.get_shot_from_uuid)
+    setattr(cls, "get_shot_from_uuid", _cache_get_shot_from_uuid)
+
+    def _cache_get_shot_from_number(self, *args, **kwargs):
+        shot_list = StCache.get_all(CacheKey.SHOT.value)
+        if shot_list and len(shot_list):
+            for shot in shot_list:
+                if shot.project.uuid == args[0] and shot.shot_idx == kwargs['shot_number']:
+                    return shot
+        
+        original_func = getattr(cls, '_original_get_shot_from_number')
+        shot = original_func(self, *args, **kwargs)
+        
+        return shot
+    
+    setattr(cls, '_original_get_shot_from_number', cls.get_shot_from_number)
+    setattr(cls, "get_shot_from_number", _cache_get_shot_from_number)
+
+    def _cache_get_shot_list(self, *args, **kwargs):
+        shot_list = StCache.get_all(CacheKey.SHOT.value)
+        if shot_list and len(shot_list):
+            res = []
+            for shot in shot_list:
+                if shot.project.uuid == args[0]:
+                    res.append(shot)
+            if len(res):
+                return res
+        
+        original_func = getattr(cls, '_original_get_shot_list')
+        shot_list = original_func(self, *args, **kwargs)
+        if shot_list:
+            StCache.add_all(shot_list, CacheKey.SHOT.value)
+        
+        return shot_list
+    
+    setattr(cls, '_original_get_shot_list', cls.get_shot_list)
+    setattr(cls, "get_shot_list", _cache_get_shot_list)
+
+    def _cache_create_shot(self, *args, **kwargs):
+        original_func = getattr(cls, '_original_create_shot')
+        shot = original_func(self, *args, **kwargs)
+        
+        if shot:
+            # deleting all the shots as this could have affected other shots as well
+            # for e.g. shot_idx shift
+            StCache.delete_all(CacheKey.SHOT.value)
+        
+        return shot
+    
+    setattr(cls, '_original_create_shot', cls.create_shot)
+    setattr(cls, "create_shot", _cache_create_shot)
+
+    def _cache_update_shot(self, *args, **kwargs):
+        original_func = getattr(cls, '_original_update_shot')
+        status = original_func(self, *args, **kwargs)
+        
+        if status:
+            StCache.delete_all(CacheKey.SHOT.value)
+        
+        return status
+    
+    setattr(cls, '_original_update_shot', cls.update_shot)
+    setattr(cls, "update_shot", _cache_update_shot)
+
+    def _cache_delete_shot(self, *args, **kwargs):
+        original_func = getattr(cls, '_original_delete_shot')
+        status = original_func(self, *args, **kwargs)
+        
+        if status:
+            StCache.delete(args[0], CacheKey.SHOT.value)
+        
+        return status
+    
+    setattr(cls, '_original_delete_shot', cls.delete_shot)
+    setattr(cls, "delete_shot", _cache_delete_shot)
+
+    def _cache_add_interpolated_clip(self, *args, **kwargs):
+        original_func = getattr(cls, '_original_add_interpolated_clip')
+        status = original_func(self, *args, **kwargs)
+        
+        if status:
+            StCache.delete(args[0], CacheKey.SHOT.value)
+        
+        return status
+    
+    setattr(cls, '_original_add_interpolated_clip', cls.add_interpolated_clip)
+    setattr(cls, "add_interpolated_clip", _cache_add_interpolated_clip)
+
+    def _cache_get_timing_list_from_shot(self, *args, **kwargs):
+        shot_list = StCache.get_all(CacheKey.SHOT.value)
+        if shot_list and len(shot_list):
+            for shot in shot_list:
+                if str(shot.uuid) == str(args[0]):
+                    return shot.timing_list
+        
+        original_func = getattr(cls, '_original_get_timing_list_from_shot')
+        timing_list = original_func(self, *args, **kwargs)
+        
+        return timing_list
+    
+    setattr(cls, '_original_get_timing_list_from_shot', cls.get_timing_list_from_shot)
+    setattr(cls, "get_timing_list_from_shot", _cache_get_timing_list_from_shot)
+
+    def _cache_duplicate_shot(self, *args, **kwargs):
+        original_func = getattr(cls, '_original_duplicate_shot')
+        shot = original_func(self, *args, **kwargs)
+        
+        if shot:
+            StCache.delete_all(CacheKey.SHOT.value)
+        
+        return shot
+    
+    setattr(cls, '_original_duplicate_shot', cls.duplicate_shot)
+    setattr(cls, "duplicate_shot", _cache_duplicate_shot)
 
     return cls

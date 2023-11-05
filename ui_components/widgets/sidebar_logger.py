@@ -12,7 +12,7 @@ from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 def sidebar_logger(shot_uuid):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
-    timing_list = data_repo.get_timing_list_from_shot(shot_uuid=shot_uuid)
+    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
     a1, _, a3 = st.columns([1, 0.2, 1])
 
     refresh_disabled = False # not any(log.status in [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value] for log in log_list)
