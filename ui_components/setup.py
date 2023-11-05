@@ -1,8 +1,5 @@
-import json
-import time
 import streamlit as st
 import os
-import math
 from moviepy.editor import *
 from shared.constants import SERVER, ServerType
 
@@ -16,12 +13,10 @@ from streamlit_option_menu import option_menu
 from ui_components.constants import CreativeProcessType
 from ui_components.methods.common_methods import check_project_meta_data
 from ui_components.models import InternalAppSettingObject
-from utils.common_utils import acquire_lock, create_working_assets, get_current_user, get_current_user_uuid, release_lock, reset_project_state
+from utils.common_utils import create_working_assets, get_current_user, get_current_user_uuid, reset_project_state
 from utils import st_memory
 
 from utils.data_repo.data_repo import DataRepo
-
-# TODO: CORRECT-CODE
 
 
 def setup_app_ui():
@@ -119,8 +114,6 @@ def setup_app_ui():
                 st.session_state['main_view_type'] = st_memory.menu(None, main_view_types, icons=['search-heart', 'tools', "play-circle", 'stopwatch'], menu_icon="cast", default_index=0, key="main_view_type_name", orientation="horizontal", styles={
                                                                     "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "red"}})
 
-            _, mainheader2 = st.columns([3, 2])
-
             if st.session_state["main_view_type"] == "Creative Process":
                 with st.sidebar:
                     view_types = ["Explorer","Timeline","Individual"]
@@ -174,12 +167,9 @@ def setup_app_ui():
                     if st.session_state["manual_select"] != None:
                         st.session_state["manual_select"] = None
 
-
-
                 frame_styling_page(st.session_state["shot_uuid"])
 
             elif st.session_state["main_view_type"] == "Tools & Settings":
-
                 with st.sidebar:
                     tool_pages = ["Query Logger", "Custom Models", "Project Settings"]
 

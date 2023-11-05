@@ -549,7 +549,8 @@ def cache_data(cls):
         original_func = getattr(cls, '_original_google_user_login')
         user, token, refresh_token = original_func(self, **kwargs)
         StCache.delete_all(CacheKey.LOGGED_USER.value)
-        StCache.add(user, CacheKey.LOGGED_USER.value)
+        if user:
+            StCache.add(user, CacheKey.LOGGED_USER.value)
 
         return user, token, refresh_token
     

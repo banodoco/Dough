@@ -24,8 +24,6 @@ from utils.data_repo.data_repo import DataRepo
 
 
 def frame_styling_page(shot_uuid: str):
-
-    
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
