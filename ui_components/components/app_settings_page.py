@@ -21,7 +21,7 @@ def app_settings_page():
 
     if SERVER != ServerType.DEVELOPMENT.value:
         with st.expander("Purchase Credits", expanded=True):
-            user_credits = get_current_user(fresh_fetch=True)['total_credits']
+            user_credits = get_current_user().total_credits
             st.write(f"Total Credits: {user_credits}")
             c1, c2 = st.columns([1,1])
             with c1:
