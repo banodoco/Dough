@@ -1,201 +1,125 @@
-from io import BytesIO
-import io
-import tempfile
-import uuid
-import requests
 import streamlit as st
 from banodoco_settings import create_new_project
-from shared.constants import SERVER, InternalFileType, ServerType
-from ui_components.constants import AUDIO_FILE
-from ui_components.models import InternalFileObject
-from utils.common_utils import create_working_assets, get_current_user, get_current_user_uuid, save_or_host_file, save_or_host_file_bytes
+from ui_components.methods.common_methods import save_audio_file,create_frame_inside_shot, save_and_promote_image
+from utils.common_utils import get_current_user_uuid, reset_project_state
 from utils.data_repo.data_repo import DataRepo
-from utils.media_processor.video import resize_video
-from moviepy.video.io.VideoFileClip import VideoFileClip
 import time
-import os
+from PIL import Image
 
 import utils.local_storage.local_storage as local_storage
 
 
 def new_project_page():
+
+    # Initialize data repository
     data_repo = DataRepo()
-
-    a1, a2 = st.columns(2)
-    with a1:
-        new_project_name = st.text_input("Project name:", value="")
-    with a2:
-        st.write("")
-    b1, b2, b3 = st.columns(3)
-    with b1:
-        width = int(st.selectbox("Select video width:", options=[
-                    "512", "683", "704", "768", "896", "1024"], key="video_width"))
-
-    with b2:
-        height = int(st.selectbox("Select video height:", options=[
-                     "512", "683", "704", "768", "1024"], key="video_height"))
-    with b3:
-        st.info("We recommend a small size + then scaling up afterwards.")
-
-    # NOTE: removing 'video' option for now, will update it later
-    guidance_type = st.radio("Select guidance type:", options=[
-                             "Drawing", "Images"], help="You can always change this later.", key="guidance_type", horizontal=True)
     
+    # Define multicolumn layout
+    project_column, filler_column = st.columns(2)
+    
+    # Prompt user for project naming within project_column
+    with project_column:
+        new_project_name = st.text_input("Project name:", value="")
 
-    audio_options = ["No audio", "Attach new audio"]
-    if guidance_type == "Video":
-        c1, c2 = st.columns(2)
-        with c1:
-            uploaded_video = st.file_uploader("Choose a video file:")
-        with c2:
-            st.write("")
-            st.write("")
-            if uploaded_video is not None:
-                audio_options.append("Keep audio from original video")
-            st.info("This video will be resized to match the dimensions above.")
-        if uploaded_video is not None:
-            resize_this_video = st.checkbox(
-                "Resize video to match video dimensions above", value=True)
-    else:
-        uploaded_video = None
-        resize_this_video = False
+    # Define multicolumn layout for images
+    image_column, image_display_column, img_info_column = st.columns([3, 1.5, 1])
 
-    audio = st.radio("Audio:", audio_options, key="audio", horizontal=True)
-    if uploaded_video is None:
-        st.info("You can also keep the audio from your original video - just upload the video above and the option will appear.")
+    # Prompt user for starting image within image_column
+    with image_column:    
+        starting_image = st.file_uploader("Choose a starting image:", key="starting_image", accept_multiple_files=False, type=["png", "jpg", "jpeg"])
+    
+    # Display starting image within image_display_column if available
+    with image_display_column:
+        if starting_image is not None: 
+            try:
+                image = Image.open(starting_image)
+                st.image(image, caption='Uploaded Image.', use_column_width=True)            
+                img_width, img_height = image.size      
+            except Exception as e:
+                st.error(f"Failed to open the image due to {str(e)}")
+    # Display image information within img_info_column if starting image exists            
+    with img_info_column:  
+        if starting_image is not None:
+            st.success(f"The dimensions of the image are {img_width} x {img_height}")
 
-    default_animation_style = st.radio("Select default animation style:", options=[
-                                       "Interpolation", "Direct Morphing"], help="You can always change this later.", key="default_animation_style", horizontal=True)
+    # Prompt user for video dimension specifications
+    v1, v2 = st.columns(2)
+        
+    frame_sizes = ["512x512", "768x512", "512x768"]
+    with v1:
+        frame_size = st.selectbox("Select frame size:", options=frame_sizes, key="frame_size")
+        if frame_size == "512x512":
+            width = 512
+            height = 512
+        elif frame_size == "768x512":
+            width = 768
+            height = 512
+        elif frame_size == "512x768":
+            width = 512
+            height = 768
+    with v2:
+        st.write("")
+        st.write("")
+        st.info("Uploaded images will be resized to the selected dimensions.")
 
+
+    # Prompt user for audio preferences
+    audio = st.radio("Audio:", ["No audio", "Attach new audio"], key="audio", horizontal=True)
+
+    # Display audio upload option if user selects "Attach new audio"
     if audio == "Attach new audio":
-        d1, d2 = st.columns([4, 5])
-        with d1:
-            uploaded_audio = st.file_uploader("Choose a audio file:")
-        with d2:
+        audio_upload_column, audio_info_column = st.columns([4, 5])
+        with audio_upload_column:
+            uploaded_audio = st.file_uploader("Choose an audio file:")
+        with audio_info_column:
             st.write("")
             st.write("")
-            st.info(
-                "Make sure that this audio is around the same length as your video.")
+            st.info("Make sure that this audio is around the same length as your video.")
+    else:
+        uploaded_audio = None
 
     st.write("")
+
     if st.button("Create New Project"):
+        # Add checks for project name existence and format
         if not new_project_name:
-            st.error("Please enter a project name")
+            st.error("Please enter a project name.")
         else:
             new_project_name = new_project_name.replace(" ", "_")
-
             current_user = data_repo.get_first_active_user()
-            # new_project = data_repo.create_project(name=new_project_name, user_id=current_user_uuid)
+
+            new_project, shot = create_new_project(current_user, new_project_name, width, height, "Images", "Interpolation")
+            new_timing = create_frame_inside_shot(shot.uuid, 0)
             
-            # data_repo.update_project_setting(new_project.uuid, width=width)
-            # data_repo.update_project_setting(new_project.uuid, height=height)
-            # data_repo.update_project_setting(new_project.uuid, guidance_type=guidance_type)
-            # data_repo.update_project_setting(new_project.uuid, default_animation_style=default_animation_style)
+            if starting_image:
+                try:
+                    save_and_promote_image(starting_image, shot.uuid, new_timing.uuid, "source")
+                    save_and_promote_image(starting_image, shot.uuid, new_timing.uuid, "styled")
+                except Exception as e:
+                    st.error(f"Failed to save the uploaded image due to {str(e)}")
 
-            new_project = create_new_project(current_user, new_project_name, width, height, guidance_type, default_animation_style)
-
-            if uploaded_video is not None:
-                video_path = f'videos/{new_project_name}/assets/resources/input_videos/{uploaded_video.name}'
-                hosted_url = save_or_host_file(uploaded_video, video_path)
-                
-                file_data = {
-                    "name": str(uuid.uuid4()) + ".png",
-                    "type": InternalFileType.VIDEO.value,
-                    "project_id": new_project.uuid
-                }
-
-                if hosted_url:
-                    file_data.update({"hosted_url": hosted_url})
-                else:
-                    file_data.update({"local_path": video_path})
-
-                video_file: InternalFileObject = data_repo.create_file(**file_data)
-                data_repo.update_project_setting(new_project.uuid, input_video_uuid=video_file.uuid)
-
-                if resize_this_video == True:
-                    resize_video(input_video_uuid=video_file.uuid, width=width, height=height)
-
-                if audio == "Keep audio from original video":
-                    audio_file_path = f'videos/{new_project_name}/assets/resources/audio/extracted_audio.mp3'
-
-                    video_path = video_file.location
-                    temp_file = None
-                    if video_path.contains('http'):
-                        response = requests.get(video_path)
-                        if not response.ok:
-                            raise ValueError(f"Could not download video from URL: {video_path}")
-
-                        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
-                        temp_file.write(response.content)
-                        temp_file.close()
-                        video_path = temp_file.name
-
-                    clip = VideoFileClip(video_path)
-                    uploaded_url = None
-                    if SERVER != ServerType.DEVELOPMENT.value:
-                        temp_audio_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3", mode='wb')
-                        clip.audio.write_audiofile(temp_audio_file)
-                        file_bytes = BytesIO()
-
-                        with open(temp_file.name, 'rb') as f:
-                            file_bytes.write(f.read())
-                        file_bytes.seek(0)
-                        uploaded_url = data_repo.upload_file(file_bytes)
-                        os.remove(temp_audio_file.name)
-                        if temp_file:
-                            os.remove(temp_file.name)
+            # remvoing the initial frame which moved to the 1st position 
+            # (since creating new project also creates a frame)
+            shot = data_repo.get_shot_from_number(new_project.uuid, 0)
+            initial_frame = data_repo.get_timing_from_frame_number(shot.uuid, 0)
+            data_repo.delete_timing_from_uuid(initial_frame.uuid)
+            
+            if uploaded_audio:
+                try:
+                    if save_audio_file(uploaded_audio, new_project.uuid):
+                        st.success("Audio file saved and attached successfully.")
                     else:
-                        clip.audio.write_audiofile(audio_file_path)
+                        st.error("Failed to save and attach the audio file.")  
+                except Exception as e:
+                    st.error(f"Failed to save the uploaded audio due to {str(e)}")
 
-                    file_data = {
-                        "name": str(uuid.uuid4()) + ".png",
-                        "type": InternalFileType.AUDIO.value,
-                        "project_id": new_project.uuid
-                    }
-
-                    if uploaded_url:
-                        file_data.update({"hosted_url": uploaded_url})
-                    else:
-                        file_data.update({"local_path": audio_file_path})
-
-                    audio_file: InternalFileObject = data_repo.create_file(**file_data)
-                    data_repo.update_project_setting(new_project.uuid, audio_uuid=audio_file.uuid)
-
-            if audio == "Attach new audio":
-                if uploaded_audio is not None:
-                    uploaded_file_path = f"videos/{new_project_name}/assets/resources/audio/{uploaded_audio.name}"
-                    
-                    audio_bytes = io.BytesIO(uploaded_audio.read())
-                    hosted_url = save_or_host_file_bytes(audio_bytes, uploaded_file_path, ".mp3")
-                    
-                    file_data = {
-                        "name": str(uuid.uuid4()) + ".png",
-                        "type": InternalFileType.AUDIO.value,
-                        "project_id": new_project.uuid 
-                    }
-
-                    if hosted_url:
-                        file_data.update({"hosted_url": hosted_url})
-                    else:
-                        file_data.update({"local_path": uploaded_file_path})
-
-                    audio_file: InternalFileObject = data_repo.create_file(**file_data)
-                    data_repo.update_project_setting(new_project.uuid, audio_uuid=audio_file.uuid)
+            reset_project_state()
 
             st.session_state["project_uuid"] = new_project.uuid
-
-            video_list = data_repo.get_all_file_list(file_type=InternalFileType.VIDEO.value)  #[f for f in os.listdir("videos") if not f.startswith('.')]
-            
-            # index = -1
-            # for video in video_list:
-            #     if video.name == new_project_name:
-            #         index = video_list.index(video)
-            #         break
-
-            # TODO: update the index to the latest value
-            st.session_state["index_of_project_name"] = 0
-            st.session_state["section"] = "Open Project"   
-            st.session_state['change_section'] = True      
+            project_list = data_repo.get_all_project_list(user_id=get_current_user_uuid())            
+            st.session_state["index_of_project_name"] = len(project_list) - 1
+            st.session_state["main_view_type"] = "Creative Process"
+            st.session_state['app_settings'] = 0 
             st.success("Project created successfully!")
-            time.sleep(1)   
-            st.experimental_rerun()
+            time.sleep(1)     
+            st.rerun()

@@ -1,4 +1,6 @@
 import time
+import streamlit as st
+from streamlit import runtime
 
 def count_calls(cls):
     class Wrapper(cls):
@@ -24,6 +26,15 @@ def count_calls(cls):
 
     return Wrapper
 
+def log_time(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        execution_time = end_time - start_time
+        print(f"{args[1] if args and len(args) >= 2 else kwargs['url']} took {execution_time:.4f} seconds to execute.")
+        return result
+    return wrapper
 
 def measure_execution_time(cls):
     class WrapperClass:
@@ -47,3 +58,31 @@ def measure_execution_time(cls):
             return wrapper
     
     return WrapperClass
+
+def session_state_attributes(default_value_cls):
+    def decorator(cls):
+        original_getattr = cls.__getattribute__
+        original_setattr = cls.__setattr__
+
+        def custom_attr(self, attr):
+            if hasattr(default_value_cls, attr):
+                key = f"{self.uuid}_{attr}"
+                if not (key in st.session_state and st.session_state[key]):
+                    st.session_state[key] = getattr(default_value_cls, attr)
+
+                return st.session_state[key] if runtime.exists() else getattr(default_value_cls, attr)
+            else:
+                return original_getattr(self, attr)
+            
+        def custom_setattr(self, attr, value):
+            if hasattr(default_value_cls, attr):
+                key = f"{self.uuid}_{attr}"
+                st.session_state[key] = value
+            else:
+                original_setattr(self, attr, value)
+
+        cls.__getattribute__ = custom_attr
+        cls.__setattr__ = custom_setattr
+        return cls
+
+    return decorator

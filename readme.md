@@ -1,10 +1,10 @@
-# Welcome to Banodoco - V.0.2 Alpha Version!
+# Welcome to Banodoco
 
 Banodoco is a simple but powerful open source animation tool build on top of Stable Diffusion, Google FILM, and various other online machine models.
 
 ## 1) Test It Out
 
-You can test out a preview version of Banodoco <a href="https://ba-no-do-co.streamlit.app/" target="_blank">here</a>.
+You can test out a preview version of Banodoco <a href="https://banodoco-0-2.streamlit.app/" target="_blank">here</a>.
 
 While the buttons and queries won't work and some things won't display properly, it should give you a good idea of what to expect. 
 
@@ -30,7 +30,7 @@ If you're a developer, you'll probably want to install these in a virtual enviro
 
 To run the app, you can run the following command in your terminal window:
 
-`streamlit run app.py`
+`streamlit run app.py --runner.fastReruns false`
 
 This should open a new tab in your browser with the app running. If it doesn't, you can copy and paste the link that is printed in your terminal window.
 
