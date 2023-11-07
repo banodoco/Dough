@@ -1,24 +1,60 @@
-import webbrowser
+import threading
+import time
 import streamlit as st
 from moviepy.editor import *
-from streamlit_javascript import st_javascript
-import time
+import subprocess
 import os
 import django
-from shared.constants import SERVER, ServerType
+from shared.constants import OFFLINE_MODE, SERVER, ServerType
+import sentry_sdk
+from shared.logging.logging import AppLogger
+from utils.common_utils import is_process_active
 
-from utils.constants import AUTH_TOKEN, LOGGED_USER
+from utils.constants import AUTH_TOKEN, RUNNER_PROCESS_NAME
 from utils.local_storage.url_storage import delete_url_param, get_url_param, set_url_param
 from utils.third_party_auth.google.google_auth import get_google_auth_url
+from streamlit_server_state import server_state_lock
 
-# loading the django app
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
-# Initialize Django
 django.setup()
+st.session_state['django_init'] = True
 
 from banodoco_settings import project_init
-from ui_components.models import InternalAppSettingObject
 from utils.data_repo.data_repo import DataRepo
+
+
+if OFFLINE_MODE:
+    SENTRY_DSN = os.getenv('SENTRY_DSN', '')
+    SENTRY_ENV = os.getenv('SENTRY_ENV', '')
+else:
+    import boto3
+    ssm = boto3.client("ssm", region_name="ap-south-1")
+
+    # SENTRY_ENV = ssm.get_parameter(Name='/banodoco-fe/sentry/environment')['Parameter']['Value']
+    # SENTRY_DSN = ssm.get_parameter(Name='/banodoco-fe/sentry/dsn')['Parameter']['Value']
+
+# sentry_sdk.init(
+#     environment=SENTRY_ENV,
+#     dsn=SENTRY_DSN,
+#     traces_sample_rate=0
+# )
+
+def start_runner():
+    if SERVER != ServerType.DEVELOPMENT.value:
+        return
+    
+    with server_state_lock["runner"]:
+        app_logger = AppLogger()
+        
+        if not is_process_active(RUNNER_PROCESS_NAME):
+            app_logger.info("Starting runner")
+            # _ = subprocess.Popen(["streamlit", "run", "banodoco_runner.py", "--runner.fastReruns", "false", "--server.port", "5502", "--server.headless", "true"])
+            _ = subprocess.Popen(["python", "banodoco_runner.py"])
+            while not is_process_active(RUNNER_PROCESS_NAME):
+                time.sleep(0.1)
+        else:
+            app_logger.debug("Runner already running")
 
 def main():
     st.set_page_config(page_title="Banodoco", page_icon="🎨", layout="wide")
@@ -26,8 +62,9 @@ def main():
     auth_details = get_url_param(AUTH_TOKEN)
     if (not auth_details or auth_details == 'None')\
         and SERVER != ServerType.DEVELOPMENT.value:
-        st.subheader("Login with google to proceed")
-
+        st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
+        st.subheader("Login with Google to proceed")
+ 
         auth_url = get_google_auth_url()
         st.markdown(auth_url, unsafe_allow_html=True)
         
@@ -40,42 +77,22 @@ def main():
             data_repo = DataRepo()
             user, token, refresh_token = data_repo.google_user_login(**data)
             if user:
-                st.session_state[LOGGED_USER] = user.to_json() if user else None
                 set_url_param(AUTH_TOKEN, str(token))
-                # st.experimental_set_query_params(test='testing')
-                st.experimental_rerun()
+                st.rerun()
             else:
                 delete_url_param(AUTH_TOKEN)
                 st.error("please login again")
     else:
-        # initializing project constants
+        start_runner()
         project_init()
         
-        data_repo = DataRepo()
-        app_settings: InternalAppSettingObject = data_repo.get_app_setting_from_uuid()
-        app_secret = data_repo.get_app_secrets_from_user_uuid()
-        
-        # set online status of user
-        if "online" not in st.session_state:
-            current_url = st_javascript("await fetch('').then(r => window.parent.location.href)")
-            time.sleep(1.5)
-            # if current_url contains streamlit.app
-            if current_url and "streamlit.app" in current_url:
-                st.session_state["online"] = True
-            else:
-                st.session_state["online"] = False
-                            
-            st.session_state["welcome_state"] = app_settings.welcome_state
-
-        if 'online' in st.session_state and st.session_state["online"] == True:
-            st.error("**PLEASE READ:** This is a demo app. While you can click around, *buttons & queries won't work* and some things won't display properly. To use the proper version, follow the instructions [here](https://github.com/peter942/banodoco) to run it locally.")
-        else:
-            if app_secret["replicate_key"] == "":
-                st.error("**To run restyling and other functions, you need to set your Replicate.com API key by going to Settings -> App Settings.**")
-    
         from ui_components.setup import setup_app_ui
         setup_app_ui()
                                                     
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception as e:
+        # sentry_sdk.capture_exception(e)
+        raise e
 

@@ -1,32 +1,25 @@
-import ast
-import os
-import time
+import json
 from typing import List
-import pandas as pd
 import streamlit as st
-from shared.constants import AIModelType
-from ui_components.common_methods import train_model
+from shared.constants import AIModelCategory, AIModelType
+from ui_components.methods.training_methods import train_model
 
-from ui_components.models import InternalAIModelObject, InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject
+from ui_components.models import InternalAIModelObject
 from utils.common_utils import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
 
 
 def custom_models_page(project_uuid):
     data_repo = DataRepo()
-    project: InternalProjectObject = data_repo.get_project_from_uuid(
-        project_uuid)
-    
-    app_setting: InternalAppSettingObject = data_repo.get_app_setting_from_uuid()
 
-    with st.expander("Existing models"):
+    with st.expander("Existing models", expanded=True):
 
         st.subheader("Existing Models:")
 
         # TODO: the list should only show models trained by the user (not the default ones)
         current_user_uuid = get_current_user_uuid()
         model_list: List[InternalAIModelObject] = data_repo.get_all_ai_model_list(\
-            model_type_list=[AIModelType.DREAMBOOTH.value, AIModelType.LORA.value], \
+            model_category_list=[AIModelCategory.DREAMBOOTH.value, AIModelCategory.LORA.value], \
                 user_id=current_user_uuid, custom_trained=True)
         if model_list == []:
             st.info("You don't have any models yet. Train a new model below.")
@@ -67,14 +60,14 @@ def custom_models_page(project_uuid):
                         st.image(model.training_image_list[2].location)
                 st.markdown("***")
 
-    with st.expander("Train a new model"):
+    with st.expander("Train a new model", expanded=True):
         st.subheader("Train a new model:")
 
-        type_of_model = st.selectbox("Type of model:", [AIModelType.DREAMBOOTH.value, AIModelType.LORA.value], help="If you'd like to use other methods for model training, let us know - or implement it yourself :)")
+        type_of_model = st.selectbox("Type of model:", [AIModelCategory.DREAMBOOTH.value, AIModelCategory.LORA.value], help="If you'd like to use other methods for model training, let us know - or implement it yourself :)")
         model_name = st.text_input(
             "Model name:", value="", help="No spaces or special characters please")
 
-        if type_of_model == AIModelType.DREAMBOOTH.value:
+        if type_of_model == AIModelCategory.DREAMBOOTH.value:
             instance_prompt = st.text_input(
                 "Trigger word:", value="", help="This is the word that will trigger the model")
             class_prompt = st.text_input("Describe what your prompts depict generally:",
@@ -85,8 +78,9 @@ def custom_models_page(project_uuid):
             resolution = ""
             controller_type = st.selectbox("What ControlNet controller would you like to use?", [
                                            "normal", "canny", "hed", "scribble", "seg", "openpose", "depth", "mlsd"])
+            model_type_list = json.dumps([AIModelType.TXT2IMG.value])
 
-        elif type_of_model == AIModelType.LORA.value:
+        elif type_of_model == AIModelCategory.LORA.value:
             type_of_task = st.selectbox(
                 "Type of task:", ["Face", "Object", "Style"]).lower()
             resolution = st.selectbox("Resolution:", [
@@ -95,6 +89,8 @@ def custom_models_page(project_uuid):
             class_prompt = ""
             max_train_steps = ""
             controller_type = ""
+            model_type_list = json.dumps([AIModelType.TXT2IMG.value])
+
         uploaded_files = st.file_uploader("Images you'd like to train the model based on:", type=[
                                           'png', 'jpg', 'jpeg'], key="prompt_file", accept_multiple_files=True)
         if uploaded_files is not None:
@@ -134,7 +130,7 @@ def custom_models_page(project_uuid):
                 #         f.write(image.getbuffer())
                 #         images_for_model.append(image.name)
                 model_status = train_model(uploaded_files, instance_prompt, class_prompt, max_train_steps,
-                                           model_name, type_of_model, type_of_task, resolution, controller_type)
+                                           model_name, type_of_model, type_of_task, resolution, controller_type, model_type_list)
                 st.success(model_status)
 
     # with st.expander("Add model from internet"):
@@ -176,4 +172,4 @@ def custom_models_page(project_uuid):
     #             st.success(
     #                 f"Successfully uploaded - the model '{model_name}' is now available for use!")
     #             time.sleep(1.5)
-    #             st.experimental_rerun()
+    #             st.rerun()
