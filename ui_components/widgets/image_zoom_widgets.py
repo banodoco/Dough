@@ -10,27 +10,29 @@ from utils.data_repo.data_repo import DataRepo
 
 def zoom_inputs(position='in-frame', horizontal=False):
     if horizontal:
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3, col4, col5, col6 = st.columns(6)
     else:
-        col1 = col2 = col3 = col4 = st
+        col1 = col2 = col3 = col4 = col5 = col6 = st
 
-    zoom_level_input = col1.number_input(
-        "Zoom Level (%)", min_value=10, max_value=1000, step=10, key=f"zoom_level_input_key_{position}", value=st.session_state.get('zoom_level_input', 100))
+    col1.number_input(
+        "Zoom In/Out", min_value=10, max_value=1000, step=10, key=f"zoom_level_input_{position}", value=100)
     
-    rotation_angle_input = col2.number_input(
-        "Rotation Angle", min_value=-360, max_value=360, step=5, key=f"rotation_angle_input_key_{position}", value=st.session_state.get('rotation_angle_input', 0))
+    col2.number_input(
+        "Rotate Clockwise/Counterclockwise", min_value=-360, max_value=360, step=5, key=f"rotation_angle_input_{position}", value=0)
     
-    x_shift = col3.number_input(
-        "Shift Left/Right", min_value=-1000, max_value=1000, step=5, key=f"x_shift_key_{position}", value=st.session_state.get('x_shift', 0))
+    col3.number_input(
+        "Shift Left/Right", min_value=-1000, max_value=1000, step=5, key=f"x_shift_{position}", value=0)
     
-    y_shift = col4.number_input(
-        "Shift Up/Down", min_value=-1000, max_value=1000, step=5, key=f"y_shift_key_{position}", value=st.session_state.get('y_shift', 0))
+    col4.number_input(
+        "Shift Down/Up", min_value=-1000, max_value=1000, step=5, key=f"y_shift_{position}", value=0)
 
-    # Assign values to st.session_state
-    st.session_state['zoom_level_input'] = zoom_level_input
-    st.session_state['rotation_angle_input'] = rotation_angle_input
-    st.session_state['x_shift'] = x_shift
-    st.session_state['y_shift'] = y_shift
+    col5.checkbox(
+        "Flip Vertically", key=f"flip_vertically_{position}", value=False)
+
+    col6.checkbox(
+        "Flip Horizontally", key=f"flip_horizontally_{position}", value=False)
+
+    
 
 def save_zoomed_image(image, timing_uuid, stage, promote=False):
     data_repo = DataRepo()

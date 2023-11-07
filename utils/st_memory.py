@@ -93,6 +93,20 @@ def toggle(label, value=True,key=None, help=None, on_change=None, disabled=False
     return selection
 
 
+def checkbox(label, value=True,key=None, help=None, on_change=None, disabled=False, label_visibility="visible"):
+
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+    selection = st.checkbox(label=label, value=st.session_state[key], help=help, on_change=on_change, disabled=disabled, label_visibility=label_visibility, key=f"{key}_value")
+
+    if selection != st.session_state[key]:
+        st.session_state[key] = selection
+        st.rerun()
+
+    return selection
+
+
 def menu(menu_title,options, icons=None, menu_icon=None, default_index=0, key=None, help=None, on_change=None, disabled=False, orientation="horizontal", default_value=0, styles=None):    
     
     if key not in st.session_state:        
@@ -118,4 +132,5 @@ def text_area(label, value='', height=None, max_chars=None, key=None, help=None,
         st.rerun()
 
     return selection
+
 

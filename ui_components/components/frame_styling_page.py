@@ -57,7 +57,7 @@ def frame_styling_page(shot_uuid: str):
     else:
         if st.session_state['page'] == "Key Frames":
             st.markdown(
-                f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{st.session_state['page']}] > :blue[Frame #{st.session_state['current_frame_index']}]")
+                f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{shot.name}] > :blue[Frame #{st.session_state['current_frame_index']}]")
         else:
             st.markdown(f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{st.session_state['page']}] > :blue[{shot.name}]")
 

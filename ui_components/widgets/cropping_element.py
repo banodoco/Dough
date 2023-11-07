@@ -21,9 +21,11 @@ from utils import st_memory
 def cropping_selector_element(shot_uuid):
     selector1, selector2, _ = st.columns([1, 1, 1])
     with selector1:
-        crop_stage = st_memory.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], key="crop_stage", horizontal=True)
-    with selector2:
+        # crop_stage = st_memory.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], key="crop_stage", horizontal=True)
+        crop_stage = "Styled Key Frame"
         how_to_crop = st_memory.radio("How to crop:", options=["Precision Cropping","Manual Cropping"], key="how_to_crop",horizontal=True)
+    
+        
                                         
     if crop_stage == "Styled Key Frame":
         stage_name = WorkflowStageType.STYLED.value
@@ -65,7 +67,7 @@ def precision_cropping_element(stage, shot_uuid):
 
         st.caption("Output Image:")
         output_image = apply_image_transformations(
-            input_image, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'])
+            input_image, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'], st.session_state['flip_vertically'], st.session_state['flip_horizontally'])
         st.image(output_image, use_column_width=True)
 
         if st.button("Save Image"):
@@ -157,32 +159,12 @@ def manual_cropping_element(stage, timing_uuid):
 
             cropbtn1, cropbtn2 = st.columns(2)
             with cropbtn1:
-                if st.button("Save Cropped Image"):
-                    if stage == WorkflowStageType.SOURCE.value:
-                        # resize the image to the original width and height
-                        cropped_img = cropped_img.resize(
-                            (width, height), Image.ANTIALIAS)
-                        # generate a random filename and save it to /temp
-                        file_path = f"videos/temp/{uuid.uuid4()}.png"
-                        hosted_url = save_or_host_file(cropped_img, file_path)
-                        
-                        file_data = {
-                            "name": str(uuid.uuid4()),
-                            "type": InternalFileType.IMAGE.value,
-                            "project_id": project_uuid
-                        }
-
-                        if hosted_url:
-                            file_data.update({'hosted_url': hosted_url})
-                        else:
-                            file_data.update({'local_path': file_path})
-                        cropped_image: InternalFileObject = data_repo.create_file(**file_data)
-
-                        st.success("Cropped Image Saved Successfully")
-                        data_repo.update_specific_timing(
-                            st.session_state['current_frame_uuid'], source_image_id=cropped_image.uuid)
-                        time.sleep(1)
+                if st.button("Save Cropped Image"):                    
+                    save_zoomed_image(cropped_img, st.session_state['current_frame_uuid'], stage, promote=True)                        
+                    st.success("Image saved successfully!")
+                    time.sleep(0.5)
                     st.rerun()
+                
             with cropbtn2:
                 st.warning("Warning: This will overwrite the original image")
 

@@ -53,7 +53,7 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
 
     if stages.index(st.session_state["transformation_stage"]) != st.session_state[f'frame_styling_stage_index_{append_to_item_name}']:
         st.session_state[f'frame_styling_stage_index_{append_to_item_name}'] = stages.index(st.session_state["transformation_stage"])
-        st.rerun()
+        # st.rerun()
 
     
     # -------------------- Model Selection -------------------- #
