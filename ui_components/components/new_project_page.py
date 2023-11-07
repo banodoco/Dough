@@ -1,6 +1,6 @@
 import streamlit as st
 from banodoco_settings import create_new_project
-from ui_components.common_methods import save_audio_file,create_timings_row_at_frame_number, save_uploaded_image
+from ui_components.methods.common_methods import save_audio_file,create_frame_inside_shot, save_and_promote_image
 from utils.common_utils import get_current_user_uuid, reset_project_state
 from utils.data_repo.data_repo import DataRepo
 import time
@@ -43,16 +43,26 @@ def new_project_page():
             st.success(f"The dimensions of the image are {img_width} x {img_height}")
 
     # Prompt user for video dimension specifications
-    video_width_column, video_height_column, video_info_column = st.columns(3)
-
-    frame_sizes = ["512", "704", "768", "896", "1024"]
-    with video_width_column:
-        width = int(st.selectbox("Select video width:", options=frame_sizes, key="video_width"))
-    with video_height_column:
-        height = int(st.selectbox("Select video height:", options=frame_sizes, key="video_height"))
-    with video_info_column:
+    v1, v2 = st.columns(2)
+        
+    frame_sizes = ["512x512", "768x512", "512x768"]
+    with v1:
+        frame_size = st.selectbox("Select frame size:", options=frame_sizes, key="frame_size")
+        if frame_size == "512x512":
+            width = 512
+            height = 512
+        elif frame_size == "768x512":
+            width = 768
+            height = 512
+        elif frame_size == "512x768":
+            width = 512
+            height = 768
+    with v2:
+        st.write("")
+        st.write("")
         st.info("Uploaded images will be resized to the selected dimensions.")
-    
+
+
     # Prompt user for audio preferences
     audio = st.radio("Audio:", ["No audio", "Attach new audio"], key="audio", horizontal=True)
 
@@ -78,21 +88,20 @@ def new_project_page():
             new_project_name = new_project_name.replace(" ", "_")
             current_user = data_repo.get_first_active_user()
 
-            try:
-                new_project = create_new_project(current_user, new_project_name, width, height, "Images", "Interpolation")
-                new_timing = create_timings_row_at_frame_number(new_project.uuid, 0)
-            except Exception as e:
-                st.error(f"Failed to create the new project due to {str(e)}")
-
+            new_project, shot = create_new_project(current_user, new_project_name, width, height, "Images", "Interpolation")
+            new_timing = create_frame_inside_shot(shot.uuid, 0)
+            
             if starting_image:
                 try:
-                    save_uploaded_image(starting_image, new_project.uuid, new_timing.uuid, "source")
-                    save_uploaded_image(starting_image, new_project.uuid, new_timing.uuid, "styled")
+                    save_and_promote_image(starting_image, shot.uuid, new_timing.uuid, "source")
+                    save_and_promote_image(starting_image, shot.uuid, new_timing.uuid, "styled")
                 except Exception as e:
                     st.error(f"Failed to save the uploaded image due to {str(e)}")
 
-            # remvoing the initial frame which moved to the 1st position
-            initial_frame = data_repo.get_timing_from_frame_number(new_project.uuid, 1)
+            # remvoing the initial frame which moved to the 1st position 
+            # (since creating new project also creates a frame)
+            shot = data_repo.get_shot_from_number(new_project.uuid, 0)
+            initial_frame = data_repo.get_timing_from_frame_number(shot.uuid, 0)
             data_repo.delete_timing_from_uuid(initial_frame.uuid)
             
             if uploaded_audio:
@@ -109,8 +118,8 @@ def new_project_page():
             st.session_state["project_uuid"] = new_project.uuid
             project_list = data_repo.get_all_project_list(user_id=get_current_user_uuid())            
             st.session_state["index_of_project_name"] = len(project_list) - 1
-            st.session_state["section"] = "Open Project"
-            st.session_state['change_section'] = True 
+            st.session_state["main_view_type"] = "Creative Process"
+            st.session_state['app_settings'] = 0 
             st.success("Project created successfully!")
             time.sleep(1)     
-            st.experimental_rerun()
+            st.rerun()

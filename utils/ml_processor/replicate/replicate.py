@@ -1,8 +1,13 @@
+import asyncio
 import io
 import time
-from shared.constants import REPLICATE_USER
+import uuid
+from shared.constants import InferenceParamType
 from shared.file_upload.s3 import upload_file
-from utils.common_utils import get_current_user_uuid
+from shared.logging.constants import LoggingType
+from shared.logging.logging import AppLogger
+from ui_components.methods.file_methods import convert_file_to_base64
+from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import MachineLearningProcessor
 import replicate
@@ -13,17 +18,16 @@ import zipfile
 from PIL import Image
 
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
-from repository.data_logger import log_model_inference
-import utils.local_storage.local_storage as local_storage
-from utils.ml_processor.replicate.utils import check_user_credits
+from ui_components.methods.data_logger import log_model_inference
+from utils.ml_processor.replicate.utils import check_user_credits, get_model_params_from_query_obj
 
 
 class ReplicateProcessor(MachineLearningProcessor):
     def __init__(self):
         data_repo = DataRepo()
-        self.app_settings = data_repo.get_app_secrets_from_user_uuid(uuid=get_current_user_uuid())
+        self.app_settings = data_repo.get_app_secrets_from_user_uuid()
 
-        self.logger = None
+        self.logger = AppLogger()
         try:
             os.environ["REPLICATE_API_TOKEN"] = self.app_settings['replicate_key']
         except Exception as e:
@@ -51,20 +55,136 @@ class ReplicateProcessor(MachineLearningProcessor):
         model_version = model.versions.get(model_version) if model_version else model
         return model_version
     
+    # it converts the standardized query_obj into params required by replicate
+    def predict_model_output_standardized(self, model: ReplicateModel, query_obj: MLQueryObject, queue_inference=False):
+        params = get_model_params_from_query_obj(model, query_obj)
+        params[InferenceParamType.QUERY_DICT.value] = query_obj.to_json()
+        return self.predict_model_output(model, **params) if not queue_inference else self.queue_prediction(model, **params)
+    
     @check_user_credits
-    def predict_model_output(self, model: ReplicateModel, **kwargs):
-        model_version = self.get_model(model)
+    def predict_model_output(self, replicate_model: ReplicateModel, **kwargs):
+        # TODO: make unified interface for directing to queue_prediction
+        queue_inference = kwargs.get('queue_inference', False)
+        if queue_inference:
+            return self.queue_prediction(replicate_model, **kwargs)
+        
+        model_version = self.get_model(replicate_model)
+        
+        if 'query_dict' in kwargs:
+            del kwargs['query_dict']
+        keys_to_delete = []
+        for k, _ in kwargs.items():
+            if kwargs[k] == None:
+                keys_to_delete.append(k)
+        
+        for k in keys_to_delete:
+            del kwargs[k]
+        
         start_time = time.time()
         output = model_version.predict(**kwargs)
         end_time = time.time()
-        log_model_inference(model, end_time - start_time, **kwargs)
+
+        # hackish fix for now, will update replicate model later
+        if 'model' in kwargs:
+            kwargs['inf_model'] = kwargs['model']
+            del kwargs['model']
+
+        log = log_model_inference(replicate_model, end_time - start_time, **kwargs)
         self._update_usage_credits(end_time - start_time)
 
-        return output
+        if replicate_model == REPLICATE_MODEL.clip_interrogator:
+            output = output     # adding this for organisation purpose
+        else:
+            output = [output[-1]] if isinstance(output, list) else output
+
+        return output, log
+    
+    @check_user_credits
+    def queue_prediction(self, replicate_model: ReplicateModel, **kwargs):
+        url = "https://api.replicate.com/v1/predictions"
+        headers = {
+            "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),
+            "Content-Type": "application/json"
+        }
+
+        if 'query_dict' in kwargs:
+            del kwargs['query_dict']
+        
+        keys_to_delete = []
+        for k, _ in kwargs.items():
+            if kwargs[k] == None:
+                keys_to_delete.append(k)
+        
+        for k in keys_to_delete:
+            del kwargs[k]
+
+        data = {
+            "version": replicate_model.version,
+            "input": dict(kwargs)
+        }
+
+        # converting io buffers to base64 format
+        for k, v in data['input'].items():
+            if not isinstance(v, (int, str, list, dict, float)):
+                data['input'][k] = convert_file_to_base64(v)
+
+        response = r.post(url, headers=headers, json=data)
+
+        if response.status_code in [200, 201]:
+            result = response.json()
+            data = {
+                "prediction_id": result['id'],
+                "error": result['error'],
+                "status": result['status'],
+                "created_at": result['created_at'],
+                "urls": result['urls'],     # these contain "cancel" and "get" urls
+            }
+
+            kwargs[InferenceParamType.REPLICATE_INFERENCE.value] = data
+
+            # hackish fix for now, will update replicate model later
+            if 'model' in kwargs:
+                kwargs['inf_model'] = kwargs['model']
+                del kwargs['model']
+
+            log = log_model_inference(replicate_model, None, **kwargs)
+            return None, log
+        else:
+            self.logger.log(LoggingType.ERROR, f"Error in creating prediction: {response.content}")
+    
+    @check_user_credits
+    def predict_model_output_async(self, replicate_model: ReplicateModel, **kwargs):
+        res = asyncio.run(self._multi_async_prediction(replicate_model, **kwargs))
+
+        output_list = []
+        for (output, time_taken) in  res:
+            # hackish fix for now, will update replicate model later
+            if 'model' in kwargs:
+                kwargs['inf_model'] = kwargs['model']
+                del kwargs['model']
+                
+            log = log_model_inference(replicate_model, time_taken, **kwargs)
+            self._update_usage_credits(time_taken)
+            output_list.append((output, log))
+
+        return output_list
+    
+    async def _multi_async_prediction(self, replicate_model: ReplicateModel, **kwargs):
+        variant_count = kwargs['variant_count'] if ('variant_count' in kwargs and kwargs['variant_count']) else 1
+        res = await asyncio.gather(*[self._async_model_prediction(replicate_model, **kwargs) for _ in range(variant_count)])
+        return res
+    
+    async def _async_model_prediction(self, replicate_model: ReplicateModel, **kwargs):
+        model_version = self.get_model(replicate_model)
+        start_time = time.time()
+        output = await asyncio.to_thread(model_version.predict, **kwargs)
+        end_time = time.time()
+        time_taken = end_time - start_time
+        return output, time_taken
 
     @check_user_credits
     def inpainting(self, video_name, input_image, prompt, negative_prompt):
-        model = self.get_model(REPLICATE_MODEL.andreas_sd_inpainting)
+        model = self.get_model(REPLICATE_MODEL.sdxl_inpainting)
         
         mask = "mask.png"
         mask = upload_file("mask.png", self.app_settings['aws_access_key'], self.app_settings['aws_secret_key'])
@@ -75,10 +195,10 @@ class ReplicateProcessor(MachineLearningProcessor):
         start_time = time.time()
         output = model.predict(mask=mask, image=input_image,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)    
         end_time = time.time()
-        log_model_inference(model, end_time - start_time, prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)
+        log = log_model_inference(model, end_time - start_time, prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)
         self._update_usage_credits(end_time - start_time)
 
-        return output[0]
+        return output[0], log
     
     # TODO: separate image compression from this function
     @check_user_credits
@@ -138,7 +258,7 @@ class ReplicateProcessor(MachineLearningProcessor):
     # TODO: figure how to resolve model location setting, right now it's hardcoded to peter942/modnet
     @check_user_credits
     def dreambooth_training(self, training_file_url, instance_prompt, \
-                            class_prompt, max_train_steps, model_name, controller_type, image_len):
+                            class_prompt, max_train_steps, model_name, controller_type, image_len, replicate_user):
         if controller_type == "normal":
             template_version = "b65d36e378a01ef81d81ba49be7deb127e9bb8b74a28af3aa0eaca16b9bcd0eb"
         elif controller_type == "canny":
@@ -167,7 +287,7 @@ class ReplicateProcessor(MachineLearningProcessor):
                 "instance_data": training_file_url,
                 "max_train_steps": max_train_steps
             },
-            "model": REPLICATE_USER + "/" + str(model_name),
+            "model": replicate_user + "/" + str(model_name),
             "trainer_version": "cd3f925f7ab21afaef7d45224790eedbb837eeac40d22e8fefe015489ab644aa",
             "template_version": template_version,
             "webhook_completed": "https://example.com/dreambooth-webhook"
@@ -181,20 +301,6 @@ class ReplicateProcessor(MachineLearningProcessor):
         self._update_usage_credits(time_taken)
 
         return response
-    
-    @check_user_credits
-    def remove_background(self, project_name, input_image):
-        if not input_image.startswith("http"):        
-            input_image = open(input_image, "rb")
-
-        model = self.get_model(REPLICATE_MODEL.pollination_modnet)
-        start_time = time.time()
-        output = model.predict(image=input_image)
-        end_time = time.time()
-        log_model_inference(model, end_time - start_time, image=input_image)
-        self._update_usage_credits(end_time - start_time)
-
-        return output
     
     def get_model_version_from_id(self, model_id):
         api_key = os.environ.get("REPLICATE_API_TOKEN")

@@ -1,12 +1,9 @@
 # this repo serves as a middlerware between API backend and the frontend
-import threading
-from shared.constants import InternalFileType, InternalResponse
-from backend.db_repo import DBRepo
+import json
+from shared.constants import InferenceParamType, InternalFileType, InternalResponse
 from shared.constants import SERVER, ServerType
-from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalUserObject
+from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalShotObject, InternalUserObject
 from utils.cache.cache_methods import cache_data
-from utils.common_decorators import count_calls
-import streamlit as st
 import wrapt
 
 from utils.data_repo.api_repo import APIRepo
@@ -25,6 +22,7 @@ class DataRepo:
     def __init__(self):
         if not self._initialized:
             if SERVER == ServerType.DEVELOPMENT.value:
+                from backend.db_repo import DBRepo
                 self.db_repo = DBRepo()
             else:
                 self.db_repo = APIRepo()
@@ -76,17 +74,20 @@ class DataRepo:
         file = self.db_repo.get_file_from_uuid(uuid).data['data']
         return InternalFileObject(**file) if file else None
     
-    def get_all_file_list(self, file_type: InternalFileType, tag = None, project_id = None):
-        filter_data = {"type": file_type}
-        if tag:
-            filter_data['tag'] = tag
-        if project_id:
-            filter_data['project_id'] = project_id
+    def get_file_list_from_log_uuid_list(self, log_uuid_list):
+        res = self.db_repo.get_file_list_from_log_uuid_list(log_uuid_list)
+        file_list = res.data['data'] if res.status else []
+        return [InternalFileObject(**file) for file in file_list]
+    
+    # kwargs -  file_type: InternalFileType, tag = None, project_id = None, page=None, data_per_page=None, sort_order=None
+    def get_all_file_list(self, **kwargs):
+        kwargs["type"] = kwargs['file_type']
+        del kwargs['file_type']
 
-        res = self.db_repo.get_all_file_list(**filter_data)
+        res = self.db_repo.get_all_file_list(**kwargs)
         file_list = res.data['data'] if res.status else None
         
-        return [InternalFileObject(**file) for file in file_list] if file_list else []
+        return ([InternalFileObject(**file) for file in file_list] if file_list else [], res.data)
     
     def create_or_update_file(self, uuid, type=InternalFileType.IMAGE.value, **kwargs):
         file = self.db_repo.create_or_update_file(uuid, type, **kwargs).data['data']
@@ -105,7 +106,13 @@ class DataRepo:
 
         res = self.db_repo.create_file(**kwargs)
         file = res.data['data'] if res.status else None
-        return InternalFileObject(**file) if file else None
+        file = InternalFileObject(**file) if file else None
+
+        if file and file.type == InternalFileType.IMAGE.value:
+            from ui_components.methods.file_methods import normalize_size_internal_file_obj
+            file = normalize_size_internal_file_obj(file, **kwargs)
+        
+        return file
     
     def delete_file_from_uuid(self, uuid):
         res = self.db_repo.delete_file_from_uuid(uuid)
@@ -156,7 +163,8 @@ class DataRepo:
         return InternalAIModelObject(**model) if model else None
     
     def get_ai_model_from_name(self, name):
-        model = self.db_repo.get_ai_model_from_name(name).data['data']
+        res = self.db_repo.get_ai_model_from_name(name)
+        model = res.data['data'] if res.status else None
         return InternalAIModelObject(**model) if model else None
     
     def get_all_ai_model_list(self, model_category_list=None, user_id=None, custom_trained=None, model_type_list=None):
@@ -182,20 +190,41 @@ class DataRepo:
 
     # inference log
     def get_inference_log_from_uuid(self, uuid):
-        log = self.db_repo.get_inference_log_from_uuid(uuid).data['data']
+        res = self.db_repo.get_inference_log_from_uuid(uuid)
+        log = res.data['data'] if res else None
         return InferenceLogObject(**log) if log else None
     
-    def get_all_inference_log_list(self, project_id=None):
-        log_list = self.db_repo.get_all_inference_log_list(project_id).data['data']
-        return [InferenceLogObject(**log) for log in log_list] if log_list else None
+    def get_all_inference_log_list(self, **kwargs):
+        res = self.db_repo.get_all_inference_log_list(**kwargs)
+        log_list = res.data['data'] if res.status else None
+        total_page_count = res.data['total_pages'] if res.status else None
+
+        return ([InferenceLogObject(**log) for log in log_list] if log_list else None, total_page_count)
+    
     
     def create_inference_log(self, **kwargs):
-        log = self.db_repo.create_inference_log(**kwargs).data['data']
+        res = self.db_repo.create_inference_log(**kwargs)
+        log = res.data['data'] if res else None
         return InferenceLogObject(**log) if log else None
     
     def delete_inference_log_from_uuid(self, uuid):
         res = self.db_repo.delete_inference_log_from_uuid(uuid)
         return res.status
+    
+    def update_inference_log(self, uuid, **kwargs):
+        res = self.db_repo.update_inference_log(uuid, **kwargs)
+        return res.status
+    
+    def update_inference_log_origin_data(self, uuid, **kwargs):
+        res = self.get_inference_log_from_uuid(uuid)
+        if not res:
+            return False
+        
+        input_params_data = json.loads(res.input_params)
+        input_params_data[InferenceParamType.ORIGIN_DATA.value] = dict(kwargs)
+
+        status = self.update_inference_log(uuid, input_params=json.dumps(input_params_data))
+        return status
     
 
     # ai model param map
@@ -214,12 +243,12 @@ class DataRepo:
     
 
     # timing
-    def get_timing_from_uuid(self, uuid):
+    def get_timing_from_uuid(self, uuid, **kwargs):
         timing = self.db_repo.get_timing_from_uuid(uuid).data['data']
         return InternalFrameTimingObject(**timing) if timing else None
     
-    def get_timing_from_frame_number(self, project_uuid, frame_number):
-        res = self.db_repo.get_timing_from_frame_number(project_uuid, frame_number)
+    def get_timing_from_frame_number(self, shot_uuid, frame_number):
+        res = self.db_repo.get_timing_from_frame_number(shot_uuid, frame_number)
         timing = res.data['data'] if res.status else None
         return InternalFrameTimingObject(**timing) if timing else None
     
@@ -235,6 +264,11 @@ class DataRepo:
     
     def get_timing_list_from_project(self, project_uuid=None):
         res = self.db_repo.get_timing_list_from_project(project_uuid)
+        timing_list = res.data['data'] if res.status else None
+        return [InternalFrameTimingObject(**timing) for timing in timing_list] if timing_list else []
+    
+    def get_timing_list_from_shot(self, shot_uuid=None):
+        res = self.db_repo.get_timing_list_from_shot(shot_uuid)
         timing_list = res.data['data'] if res.status else None
         return [InternalFrameTimingObject(**timing) for timing in timing_list] if timing_list else []
     
@@ -262,10 +296,6 @@ class DataRepo:
     
     def remove_source_image(self, timing_uuid):
         res = self.db_repo.remove_source_image(timing_uuid)
-        return res.status
-
-    def move_frame_one_step_forward(self, project_uuid, index_of_frame):
-        res = self.db_repo.move_frame_one_step_forward(project_uuid, index_of_frame)
         return res.status
     
 
@@ -348,9 +378,55 @@ class DataRepo:
     # update user credits - updates the credit of the user calling the API
     def update_usage_credits(self, credits_to_add):
         user = self.update_user(user_id=None, credits_to_add=credits_to_add)
-        return True if user else None
+        return user
     
     def generate_payment_link(self, amount):
         res = self.db_repo.generate_payment_link(amount)
         link = res.data['data'] if res.status else None
         return link
+    
+    # lock
+    def acquire_lock(self, key):
+        res = self.db_repo.acquire_lock(key)
+        return res.data['data'] if res.status else None
+    
+    def release_lock(self, key):
+        res = self.db_repo.release_lock(key)
+        return res.status
+    
+    # shot
+    def get_shot_from_uuid(self, shot_uuid):
+        res = self.db_repo.get_shot_from_uuid(shot_uuid)
+        shot = res.data['data'] if res.status else None
+        return InternalShotObject(**shot) if shot else None
+    
+    def get_shot_from_number(self, project_uuid, shot_number=0):
+        res = self.db_repo.get_shot_from_number(project_uuid, shot_number)
+        shot = res.data['data'] if res.status else None
+        return InternalShotObject(**shot) if shot else None
+
+    def get_shot_list(self, project_uuid):
+        res = self.db_repo.get_shot_list(project_uuid)
+        shot_list = res.data['data'] if res.status else None
+        return [InternalShotObject(**shot) for shot in shot_list] if shot_list else []
+
+    def create_shot(self, project_uuid, duration, name="", meta_data="", desc=""):
+        res = self.db_repo.create_shot(project_uuid, duration, name, meta_data, desc)
+        shot = res.data['data'] if res.status else None
+        return InternalShotObject(**shot) if shot else None
+    
+    def update_shot(self, shot_uuid, shot_idx=None, name=None, duration=None, meta_data=None, desc=None, main_clip_id=None):
+        res = self.db_repo.update_shot(shot_uuid, shot_idx=shot_idx, name=name, duration=duration, meta_data=meta_data, desc=desc, main_clip_id=main_clip_id)
+        return res.status
+
+    def delete_shot(self, shot_uuid):
+        res = self.db_repo.delete_shot(shot_uuid)
+        return res.status
+    
+    def duplicate_shot(self, shot_uuid):
+        res = self.db_repo.duplicate_shot(shot_uuid)
+        return res.status
+
+    def add_interpolated_clip(self, shot_uuid, **kwargs):
+        res = self.db_repo.add_interpolated_clip(shot_uuid, **kwargs)
+        return res.status

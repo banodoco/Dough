@@ -27,4 +27,4 @@ def get_google_auth_url():
     client: GoogleOAuth2 = GoogleOAuth2(GOOGLE_AUTH_CLIENT_ID, GOOGLE_SECRET)
     authorization_url = asyncio.run(
         get_authorization_url(client, REDIRECT_URI))
-    return f"""<a target='_self' href='{authorization_url}'> Google login </a>"""
+    return f"""<a target='_self' href='{authorization_url}'> Google login -> </a>"""

@@ -1,106 +1,64 @@
-from io import BytesIO
-import cv2, os
-
-import requests
+import os
 import tempfile
-from utils.common_utils import generate_temp_file
+from moviepy.editor import VideoFileClip, vfx
 
-from utils.data_repo.data_repo import DataRepo
+class VideoProcessor:
+    @staticmethod
+    def update_video_speed(video_location, desired_duration):
+        clip = VideoFileClip(video_location)
 
-def resize_video(input_video_uuid, width, height, crop_type=None, output_format='mp4'):
-    data_repo = DataRepo()
-    temp_file = None
-    input_video = data_repo.get_file_from_uuid(input_video_uuid)
-    input_path = input_video.location
+        return VideoProcessor.update_clip_speed(clip, desired_duration)
 
-    if input_path.contains('http'):
-        temp_file = generate_temp_file(input_path)
-        input_video = cv2.VideoCapture(temp_file.name)
-    else:
-        input_video = cv2.VideoCapture(input_path)
-    
-    if not input_video.isOpened():
-        raise ValueError(f"Could not open the video file: {input_path}")
+    @staticmethod
+    def update_video_bytes_speed(video_bytes, desired_duration):
+        # video_io = BytesIO(video_bytes)
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
+        with open(temp_file.name, 'wb') as out_file:
+            out_file.write(video_bytes)
 
-    # Get source video properties
-    src_width = int(input_video.get(cv2.CAP_PROP_FRAME_WIDTH))
-    src_height = int(input_video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = int(input_video.get(cv2.CAP_PROP_FPS))
-    num_frames = int(input_video.get(cv2.CAP_PROP_FRAME_COUNT))
-
-    # Calculate aspect ratios
-    src_aspect_ratio = src_width / src_height
-    target_aspect_ratio = width / height
-
-    if target_aspect_ratio > src_aspect_ratio:
-        # Scale to target width, maintaining aspect ratio
-        new_width = width
-        new_height = int(src_height * (width / src_width))
-    else:
-        # Scale to target height, maintaining aspect ratio
-        new_width = int(src_width * (height / src_height))
-        new_height = height
-
-    # Determine the crop type based on the input dimensions, if not provided
-    if crop_type is None:
-        width_diff = abs(src_width - width) / src_width
-        height_diff = abs(src_height - height) / src_height
-        crop_type = 'top_bottom' if height_diff > width_diff else 'left_right'
-
-    # Calculate crop dimensions
-    if crop_type == 'top_bottom':
-        crop_top = (new_height - height) // 2
-        crop_bottom = new_height - crop_top
-        crop_left = 0
-        crop_right = new_width
-    elif crop_type == 'left_right':
-        crop_top = 0
-        crop_bottom = new_height
-        crop_left = (new_width - width) // 2
-        crop_right = new_width - crop_left
-    else:
-        raise ValueError("Invalid crop_type. Must be 'top_bottom' or 'left_right'.")
-
-    # Create output video
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    
-    # delete the video at the input_path
-    os.remove(input_path)
-    if temp_file:
+        clip = VideoFileClip(temp_file.name)
         os.remove(temp_file.name)
+        return VideoProcessor.update_clip_speed(clip, desired_duration)
 
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
-    output_video = cv2.VideoWriter(temp_file.name, fourcc, fps, (width, height))
+    @staticmethod
+    def update_clip_speed(clip: VideoFileClip, desired_duration):
+        temp_output_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb')
 
-    for _ in range(num_frames):
-        ret, frame = input_video.read()
-        if not ret:
-            break
+        # if animation_style == AnimationStyleType.DIRECT_MORPHING.value:
+        #     clip = clip.set_fps(120)
 
-        # Resize frame
-        frame = cv2.resize(frame, (new_width, new_height))
+        #     # Calculate the number of frames to keep
+        #     input_duration = clip.duration
+        #     total_frames = len(list(clip.iter_frames()))
+        #     target_frames = int(total_frames * (desired_duration / input_duration))
 
-        # Crop frame
-        frame = frame[crop_top:crop_bottom, crop_left:crop_right]
+        #     # Determine which frames to keep
+        #     keep_every_n_frames = total_frames / target_frames
+        #     frames_to_keep = [int(i * keep_every_n_frames)
+        #                     for i in range(target_frames)]
 
-        # Write frame to output video
-        output_video.write(frame)
+        #     # Create a new video clip with the selected frames
+        #     output_clip = concatenate_videoclips(
+        #         [clip.subclip(i/clip.fps, (i+1)/clip.fps) for i in frames_to_keep])
 
+        #     output_clip.write_videofile(filename=temp_output_file.name, codec="libx265")
 
-    # Release resources
-    input_video.release()
-    output_video.release()
-    file_bytes = BytesIO()
+        # changing the video speed
+        input_video_duration = clip.duration
+        desired_speed_change = float(
+            input_video_duration) / float(desired_duration)
 
-    with open(temp_file.name, 'rb') as f:
-        file_bytes.write(f.read())
-    os.remove(temp_file.name)
+        print("Desired Speed Change: " + str(desired_speed_change))
 
-    file_bytes.seek(0)
+        # Apply the speed change using moviepy
+        output_clip = clip.fx(vfx.speedx, desired_speed_change)
+        
+        output_clip.write_videofile(filename=temp_output_file.name, codec="libx264", preset="fast")
+        
+        with open(temp_output_file.name, 'rb') as f:
+            video_bytes = f.read()
 
-    # Upload the video file to the specified data repository
-    data_repo = DataRepo()
-    uploaded_url = data_repo.upload_file(file_bytes)
+        if temp_output_file:
+            os.remove(temp_output_file.name)
 
-    data_repo.update_file(input_video.uuid, hosted_url=uploaded_url)
-    cv2.destroyAllWindows()
+        return video_bytes

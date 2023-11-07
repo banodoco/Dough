@@ -2,7 +2,7 @@ import json
 from typing import List
 import streamlit as st
 from shared.constants import AIModelCategory, AIModelType
-from ui_components.common_methods import train_model
+from ui_components.methods.training_methods import train_model
 
 from ui_components.models import InternalAIModelObject
 from utils.common_utils import get_current_user_uuid
@@ -12,7 +12,7 @@ from utils.data_repo.data_repo import DataRepo
 def custom_models_page(project_uuid):
     data_repo = DataRepo()
 
-    with st.expander("Existing models"):
+    with st.expander("Existing models", expanded=True):
 
         st.subheader("Existing Models:")
 
@@ -60,7 +60,7 @@ def custom_models_page(project_uuid):
                         st.image(model.training_image_list[2].location)
                 st.markdown("***")
 
-    with st.expander("Train a new model"):
+    with st.expander("Train a new model", expanded=True):
         st.subheader("Train a new model:")
 
         type_of_model = st.selectbox("Type of model:", [AIModelCategory.DREAMBOOTH.value, AIModelCategory.LORA.value], help="If you'd like to use other methods for model training, let us know - or implement it yourself :)")
@@ -172,4 +172,4 @@ def custom_models_page(project_uuid):
     #             st.success(
     #                 f"Successfully uploaded - the model '{model_name}' is now available for use!")
     #             time.sleep(1.5)
-    #             st.experimental_rerun()
+    #             st.rerun()

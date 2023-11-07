@@ -3,22 +3,21 @@ import uuid
 import streamlit as st
 
 from PIL import Image
-from shared.constants import SERVER, AIModelCategory, AIModelType, GuidanceType, InternalFileType, ServerType
+from shared.constants import SERVER, AIModelCategory, GuidanceType, InternalFileType, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from shared.constants import AnimationStyleType
-from ui_components.common_methods import add_image_variant
+from ui_components.methods.common_methods import add_image_variant
+from ui_components.methods.file_methods import save_or_host_file
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalUserObject
-from utils.common_utils import copy_sample_assets, create_working_assets, save_or_host_file
-from utils.constants import ImageStage
+from utils.common_utils import create_working_assets
+from utils.constants import ML_MODEL_LIST
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.replicate.constants import REPLICATE_MODEL
-
-ENCRYPTION_KEY = 'J2684nBgNUYa_K0a6oBr5H8MpSRW0EJ52Qmq7jExE-w='
 
 logger = AppLogger()
 
 def project_init():
+    from utils.data_repo.data_repo import DataRepo
     data_repo = DataRepo()
 
     # db initialization takes some time
@@ -74,8 +73,7 @@ def create_new_user_data(user: InternalUserObject):
     create_new_project(user, 'my_first_project')
 
 
-def create_new_project(user: InternalUserObject, project_name: str, width=512, height=512,\
-                        guidance_type=GuidanceType.DRAWING.value, animation_style=AnimationStyleType.INTERPOLATION.value):
+def create_new_project(user: InternalUserObject, project_name: str, width=512, height=512):
     data_repo = DataRepo()
 
     # creating a new project for this user
@@ -87,16 +85,26 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     }
     project: InternalProjectObject = data_repo.create_project(**project_data)
 
+    # create a default first shot
+    shot_data = {
+        "project_uuid": project.uuid,
+        "desc": "",
+        "duration": 2
+    }
+
+    shot = data_repo.create_shot(**shot_data)
+
     # create a sample timing frame
     st.session_state["project_uuid"] = project.uuid
     sample_file_location = "sample_assets/sample_images/v.jpeg"
     img = Image.open(sample_file_location)
     img = img.resize((width, height))
-    hosted_url = save_or_host_file(img, sample_file_location)
+    hosted_url = save_or_host_file(img, sample_file_location, mime_type='image/png', dim=(width, height))
     file_data = {
         "name": str(uuid.uuid4()),
         "type": InternalFileType.IMAGE.value,
-        "project_id": project.uuid
+        "project_id": project.uuid,
+        "dim": (width, height),
     }
 
     if hosted_url:
@@ -107,11 +115,10 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     source_image = data_repo.create_file(**file_data)
 
     timing_data = {
-        "project_id": project.uuid,
         "frame_time": 0.0,
-        "animation_style": animation_style,
         "aux_frame_index": 0,
-        "source_image_id": source_image.uuid
+        "source_image_id": source_image.uuid,
+        "shot_id": shot.uuid,
     }
     timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
 
@@ -124,131 +131,28 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     project_setting_data = {
         "project_id" : project.uuid,
         "input_type" : "video",
-        "default_strength": 1,
-        "extraction_type" : "Extract manually",
         "width" : width,
         "height" : height,
-        "default_prompt": "an oil painting",
-        "default_model_id": model_list[0].uuid,
-        "default_negative_prompt" : "",
-        "default_guidance_scale" : 7.5,
-        "default_seed" : 1234,
-        "default_num_inference_steps" : 30,
-        "default_stage" : ImageStage.SOURCE_IMAGE.value,
-        "default_custom_model_id_list" : "[]",
-        "default_adapter_type" : "N",
-        "guidance_type" : guidance_type,
-        "default_animation_style" : animation_style,
-        "default_low_threshold" : 0,
-        "default_high_threshold" : 0
+        "default_model_id": model_list[0].uuid
     }
 
-    project_setting = data_repo.create_project_setting(**project_setting_data)
+    _ = data_repo.create_project_setting(**project_setting_data)
 
     create_working_assets(project.uuid)
 
-    return project
+    return project, shot
     
 
 def create_predefined_models(user):
     data_repo = DataRepo()
 
     # create predefined models
-    data = [
-        {
-            "name" : 'stable-diffusion-img2img-v2.1',
-            "user_id" : user.uuid,
-            "version": REPLICATE_MODEL.img2img_sd_2_1.version,
-            "replicate_url" : REPLICATE_MODEL.img2img_sd_2_1.name,
-            "category" : AIModelCategory.BASE_SD.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'depth2img',
-            "user_id" : user.uuid,
-            "version": REPLICATE_MODEL.jagilley_controlnet_depth2img.version,
-            "replicate_url" : REPLICATE_MODEL.jagilley_controlnet_depth2img.name,
-            "category" : AIModelCategory.BASE_SD.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'pix2pix',
-            "user_id" : user.uuid,
-            "version": REPLICATE_MODEL.arielreplicate.version,
-            "replicate_url" : REPLICATE_MODEL.arielreplicate.name,
-            "category" : AIModelCategory.BASE_SD.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'controlnet',
-            "user_id" : user.uuid,
-            "category" : AIModelCategory.CONTROLNET.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'Dreambooth',
-            "user_id" : user.uuid,
-            "category" : AIModelCategory.DREAMBOOTH.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'LoRA',
-            "user_id" : user.uuid,
-            "category" : AIModelCategory.LORA.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'StyleGAN-NADA',
-            "user_id" : user.uuid,
-            "version": REPLICATE_MODEL.stylegan_nada.version,
-            "replicate_url" : REPLICATE_MODEL.stylegan_nada.name,
-            "category" : AIModelCategory.BASE_SD.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'real-esrgan-upscaling',
-            "user_id" : user.uuid,
-            "version": REPLICATE_MODEL.real_esrgan_upscale.version,
-            "replicate_url" : REPLICATE_MODEL.real_esrgan_upscale.name,
-            "category" : AIModelCategory.BASE_SD.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'controlnet_1_1_x_realistic_vision_v2_0',
-            "user_id" : user.uuid,
-            "version": REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0.version,
-            "replicate_url" : REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0.name,
-            "category" : AIModelCategory.BASE_SD.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name" : 'urpm-v1.3',
-            "user_id" : user.uuid,
-            "version": REPLICATE_MODEL.urpm.version,
-            "replicate_url" : REPLICATE_MODEL.urpm.name,
-            "category" : AIModelCategory.BASE_SD.value,
-            "keyword" : "",
-            "model_type": json.dumps([AIModelType.IMG2IMG.value])
-        },
-        {
-            "name": "stable_diffusion_xl",
-            "user_id": user.uuid,
-            "version": REPLICATE_MODEL.sdxl.version,
-            "replicate_url": REPLICATE_MODEL.sdxl.name,
-            "category": AIModelCategory.BASE_SD.value,
-            "keyword": "",
-            "model_type": json.dumps([AIModelType.TXT2IMG.value])
-        }
-    ]
+    data = []
+    for model in ML_MODEL_LIST:
+        if model['enabled']:
+            del model['enabled']
+            model['user_id'] = user.uuid
+            data.append(model)
 
     # only creating pre-defined models for the first time
     available_models = data_repo.get_all_ai_model_list(\

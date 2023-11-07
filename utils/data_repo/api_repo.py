@@ -8,7 +8,7 @@ import streamlit as st
 from shared.constants import SERVER, InternalFileType, InternalResponse, ServerType
 from utils.common_decorators import log_time
 
-from utils.constants import AUTH_TOKEN, AUTH_TOKEN, LOGGED_USER
+from utils.constants import AUTH_TOKEN, AUTH_TOKEN
 from utils.local_storage.url_storage import delete_url_param, get_url_param
 
 
@@ -77,9 +77,18 @@ class APIRepo:
         # payment
         self.STRIPE_PAYMENT_URL = '/v1/payment/stripe-link'
 
+        # lock
+        self.LOCK_URL = '/v1/data/lock'
+
+        # shot
+        self.SHOT_URL = '/v1/data/shot'
+        self.SHOT_LIST_URL = '/v1/data/shot/list'
+        self.SHOT_INTERPOLATED_CLIP = '/v1/data/shot/interpolated-clip'
+        self.SHOT_DUPLICATE_URL = '/v1/data/shot/duplicate'
+
     def logout(self):
         delete_url_param(AUTH_TOKEN)
-        st.experimental_rerun()
+        st.rerun()
 
     ################### base http methods
     def _get_headers(self, content_type="application/json"):
@@ -176,14 +185,12 @@ class APIRepo:
         res = self.http_get(self.FILE_URL, params={'uuid': uuid})
         return InternalResponse(res['payload'], 'success', res['status'])
     
-    def get_all_file_list(self, type: InternalFileType, tag = None, project_id = None):
-        filter_data = {"type": type}
-        if tag:
-            filter_data['tag'] = tag
-        if project_id:
-            filter_data['project_id'] = project_id
-
-        res = self.http_get(self.FILE_LIST_URL, params=filter_data)
+    def get_file_list_from_log_uuid_list(self, log_uuid_list):
+        res = self.http_post(self.FILE_UUID_LIST_URL, data={'log_uuid_list': log_uuid_list})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def get_all_file_list(self, **kwargs):
+        res = self.http_get(self.FILE_LIST_URL, params=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
     
     def create_or_update_file(self, uuid, type=InternalFileType.IMAGE.value, **kwargs):
@@ -242,7 +249,7 @@ class APIRepo:
     
     # TODO: remove this method from everywhere
     def get_ai_model_from_name(self, name):
-        res = self.http_get(self.MODEL_URL, params={'name': name})
+        res = self.http_get(self.MODEL_URL, params={'replicate_url': name})
         return InternalResponse(res['payload'], 'success', res['status'])
 
     
@@ -272,8 +279,8 @@ class APIRepo:
         res = self.http_get(self.LOG_URL, params={'uuid': uuid})
         return InternalResponse(res['payload'], 'success', res['status'])
     
-    def get_all_inference_log_list(self, project_id=None, model_id=None):
-        res = self.http_get(self.LOG_LIST_URL, params={'project_id': project_id, 'model_id': model_id})
+    def get_all_inference_log_list(self, **kwargs):
+        res = self.http_get(self.LOG_LIST_URL, params=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
     
     def create_inference_log(self, **kwargs):
@@ -284,7 +291,12 @@ class APIRepo:
         res = self.db_repo.delete_inference_log_from_uuid(uuid)
         return InternalResponse(res['payload'], 'success', res['status']).status
     
-    # TODO: complete this
+    def update_inference_log(self, uuid, **kwargs):
+        kwargs['uuid'] = uuid
+        res = self.http_put(url=self.LOG_URL, data=kwargs)
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    # TODO: complete this: backend
     def get_ai_model_param_map_from_uuid(self, uuid):
         pass
     
@@ -303,8 +315,8 @@ class APIRepo:
        res = self.http_get(self.TIMING_URL, params={'uuid': uuid})
        return InternalResponse(res['payload'], 'success', res['status'])
     
-    def get_timing_from_frame_number(self, project_uuid, frame_number):
-        res = self.http_get(self.PROJECT_TIMING_URL, params={'project_id': project_uuid, 'frame_number': frame_number})
+    def get_timing_from_frame_number(self, shot_uuid, frame_number):
+        res = self.http_get(self.PROJECT_TIMING_URL, params={'project_id': shot_uuid, 'frame_number': frame_number})
         return InternalResponse(res['payload'], 'success', res['status']) 
     
     # this is based on the aux_frame_index and not the order in the db
@@ -318,6 +330,10 @@ class APIRepo:
     
     def get_timing_list_from_project(self, project_uuid=None):
         res = self.http_get(self.TIMING_LIST_URL, params={'project_id': project_uuid, 'page': 1})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def get_timing_list_from_shot(self, shot_uuid=None):
+        res = self.http_get(self.TIMING_LIST_URL, params={'shot_id': shot_uuid, 'page': 1})
         return InternalResponse(res['payload'], 'success', res['status'])
     
     def create_timing(self, **kwargs):
@@ -354,16 +370,7 @@ class APIRepo:
         res = self.http_put(self.TIMING_URL, data=update_data)
         return InternalResponse(res['payload'], 'success', res['status'])
 
-    def move_frame_one_step_forward(self, project_uuid, index_of_frame):
-        data = {
-            "project_id": project_uuid,
-            "index_of_frame": index_of_frame
-        }
-        
-        res = self.http_post(self.SHIFT_TIMING_URL, data=data)
-        return InternalResponse(res['payload'], 'success', res['status'])
     
-
     # app setting
     def get_app_setting_from_uuid(self, uuid=None):
         res = self.http_get(self.APP_SETTING_URL, params={'uuid': uuid})
@@ -438,4 +445,53 @@ class APIRepo:
     # payment link
     def generate_payment_link(self, amount):
         res = self.http_get(self.STRIPE_PAYMENT_URL, params={'total_amount': amount})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    # lock
+    def acquire_lock(self, key):
+        res = self.http_get(self.LOCK_URL, params={'key': key, 'action': 'acquire'})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def release_lock(self, key):
+        res = self.http_get(self.LOCK_URL, params={'key': key, 'action': 'release'})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    # shot
+    def get_shot_from_uuid(self, shot_uuid):
+        res = self.http_get(self.SHOT_URL, params={'uuid': shot_uuid})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def get_shot_from_number(self, project_uuid, shot_number=0):
+        res = self.http_get(self.SHOT_URL, params={'project_id': project_uuid, 'shot_idx': shot_number})
+        return InternalResponse(res['payload'], 'success', res['status'])
+
+    def get_shot_list(self, project_uuid):
+        res = self.http_get(self.SHOT_LIST_URL, params={'project_id': project_uuid})
+        return InternalResponse(res['payload'], 'success', res['status'])
+
+    def create_shot(self, project_uuid, duration, name, meta_data="", desc=""):
+        data = {
+            'project_id': project_uuid,
+            'name': name,
+            'duration': duration,
+            'meta_data': meta_data,
+            'desc': desc
+        }
+        res = self.http_post(self.SHOT_URL, data=data)
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def update_shot(self, shot_uuid, **kwargs):
+        res = self.http_put(self.SHOT_URL, data=kwargs)
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def duplicate_shot(self, shot_uuid):
+        res = self.http_post(self.SHOT_DUPLICATE_URL, params={'uuid': shot_uuid})
+        return InternalResponse(res['payload'], 'success', res['status'])
+
+    def delete_shot(self, shot_uuid):
+        res = self.http_delete(self.SHOT_URL, params={'uuid': shot_uuid})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def add_interpolated_clip(self, shot_uuid, **kwargs):
+        res = self.http_post(self.SHOT_INTERPOLATED_CLIP, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
