@@ -189,14 +189,8 @@ class APIRepo:
         res = self.http_post(self.FILE_UUID_LIST_URL, data={'log_uuid_list': log_uuid_list})
         return InternalResponse(res['payload'], 'success', res['status'])
     
-    def get_all_file_list(self, type: InternalFileType, tag = None, project_id = None):
-        filter_data = {"type": type}
-        if tag:
-            filter_data['tag'] = tag
-        if project_id:
-            filter_data['project_id'] = project_id
-
-        res = self.http_get(self.FILE_LIST_URL, params=filter_data)
+    def get_all_file_list(self, **kwargs):
+        res = self.http_get(self.FILE_LIST_URL, params=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
     
     def create_or_update_file(self, uuid, type=InternalFileType.IMAGE.value, **kwargs):
@@ -285,8 +279,8 @@ class APIRepo:
         res = self.http_get(self.LOG_URL, params={'uuid': uuid})
         return InternalResponse(res['payload'], 'success', res['status'])
     
-    def get_all_inference_log_list(self, project_id=None, model_id=None):
-        res = self.http_get(self.LOG_LIST_URL, params={'project_id': project_id, 'model_id': model_id})
+    def get_all_inference_log_list(self, **kwargs):
+        res = self.http_get(self.LOG_LIST_URL, params=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
     
     def create_inference_log(self, **kwargs):
