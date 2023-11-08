@@ -259,7 +259,7 @@ class InferenceLogObject:
         self.output_details = kwargs['output_details'] if key_present('output_details', kwargs) else None
         self.total_inference_time = kwargs['total_inference_time'] if key_present('total_inference_time', kwargs) else None
         self.status = kwargs['status'] if key_present('status', kwargs) else None
-        self.updated_on = datetime.datetime.fromisoformat(kwargs['updated_on']) if key_present('updated_on', kwargs) else None
+        self.updated_on = datetime.datetime.fromisoformat(kwargs['updated_on'][:26]) if key_present('updated_on', kwargs) else None
 
 
 def key_present(key, dict):
