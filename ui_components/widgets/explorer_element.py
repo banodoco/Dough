@@ -212,7 +212,7 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                             data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
                                             st.rerun()
                             else:
-                                st.warning("No data found")
+                                st.warning("No inference data")
                         else:
                             st.warning("No data found")
                                                     

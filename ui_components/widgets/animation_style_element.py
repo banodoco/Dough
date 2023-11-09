@@ -11,16 +11,13 @@ from ui_components.models import InternalFrameTimingObject, InternalShotObject
 def animation_style_element(shot_uuid):
     motion_modules = AnimateDiffCheckpoint.get_name_list()
     variant_count = 1
-    # current_animation_style = AnimationStyleType.INTERPOLATION.value    # setting a default value
+    current_animation_style = AnimationStyleType.INTERPOLATION.value    # setting a default value
     data_repo = DataRepo()
 
-
     # if current_animation_style == AnimationStyleType.INTERPOLATION.value:
-
     animation_type = st.radio("Animation Interpolation:", options=['Creative Interpolation', "Video To Video"], key="animation_tool", horizontal=True, disabled=True)
-    
-    if animation_type == "Creative Interpolation":
 
+    if animation_type == "Creative Interpolation":
         st.markdown("***")
         
         shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
@@ -111,8 +108,6 @@ def animation_style_element(shot_uuid):
         )
     
     elif animation_type == "Image To Video":
-        
-            
         st.info("For image to video, you can select one or more prompts, and how many frames you want to generate for each prompt - it'll attempt to travel from one prompt to the next.")
         which_motion_module = st.selectbox("Which motion module would you like to use?", options=motion_modules, key="which_motion_module")
 
