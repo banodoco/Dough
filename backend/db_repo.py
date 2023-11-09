@@ -452,8 +452,12 @@ class DBRepo:
         
         return InternalResponse(payload, 'ai_model fetched', True)
     
-    def get_ai_model_from_name(self, name):
-        ai_model = AIModel.objects.filter(replicate_url=name, is_disabled=False).first()
+    def get_ai_model_from_name(self, name, user_id):
+        user = User.objects.filter(uuid=user_id, is_disabled=False).first()
+        if not user:
+            return InternalResponse({}, 'invalid user', False)
+        
+        ai_model = AIModel.objects.filter(replicate_url=name, user_id=user.id, is_disabled=False).first()
         if not ai_model:
             return InternalResponse({}, 'invalid ai model name', False)
 

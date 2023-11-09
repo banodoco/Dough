@@ -10,11 +10,13 @@ from urllib.parse import urlparse
 from PIL import Image
 import numpy as np
 import uuid
+from dotenv import set_key, get_key
 import requests
 import streamlit as st
 from shared.constants import SERVER, InternalFileType, ServerType
 from ui_components.models import InternalFileObject
 from utils.data_repo.data_repo import DataRepo
+
 
 # depending on the environment it will either save or host the PIL image object
 def save_or_host_file(file, path, mime_type='image/png', dim=None):
@@ -208,3 +210,11 @@ def convert_file_to_base64(fh: io.IOBase) -> str:
         mime_type = "application/octet-stream"
     s = encoded_body.decode("utf-8")
     return f"data:{mime_type};base64,{s}"
+
+ENV_FILE_PATH = '.env'
+def save_to_env(key, value):
+    set_key(dotenv_path=ENV_FILE_PATH, key_to_set=key, value_to_set=value)
+
+def load_from_env(key):
+    val = get_key(dotenv_path=ENV_FILE_PATH, key_to_get=key)
+    return val
