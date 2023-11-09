@@ -5,14 +5,15 @@ import requests
 import setproctitle
 from dotenv import load_dotenv
 import django
-from shared.constants import InferenceParamType, InferenceStatus, InferenceType, ProjectMetaData
+from shared.constants import InferenceParamType, InferenceStatus, InferenceType, ProjectMetaData, HOSTED_BACKGROUND_RUNNER_MODE
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
+from ui_components.methods.file_methods import load_from_env, save_to_env
 from utils.common_utils import acquire_lock, release_lock
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.replicate.constants import replicate_status_map
 
-from utils.constants import RUNNER_PROCESS_NAME
+from utils.constants import RUNNER_PROCESS_NAME, AUTH_TOKEN, REFRESH_AUTH_TOKEN
 
 
 load_dotenv()
@@ -26,23 +27,59 @@ REFRESH_FREQUENCY = 2   # refresh every 2 seconds
 MAX_APP_RETRY_CHECK = 3  # if the app is not running after 3 retries then the script will stop
 
 def main():
-    if SERVER != 'development':
+    if SERVER != 'development' and not HOSTED_BACKGROUND_RUNNER_MODE:
         return
     
     retries = MAX_APP_RETRY_CHECK
     
     print('runner running')
     while True:
-        if not is_app_running():
-            if retries <=  0:
-                print('runner stopped')
-                return
-            retries -= 1
-        else:
-            retries = min(retries + 1, MAX_APP_RETRY_CHECK)
+        if SERVER == 'development':
+            if not is_app_running():
+                if retries <=  0:
+                    print('runner stopped')
+                    return
+                retries -= 1
+            else:
+                retries = min(retries + 1, MAX_APP_RETRY_CHECK)
         
         time.sleep(REFRESH_FREQUENCY)
+        if HOSTED_BACKGROUND_RUNNER_MODE:
+            validate_admin_auth_token()
         check_and_update_db()
+
+# creates a 
+def validate_admin_auth_token():
+    data_repo = DataRepo()
+    # check if a valid token is present
+    auth_token = load_from_env(AUTH_TOKEN)
+    refresh_token = load_from_env(REFRESH_AUTH_TOKEN)
+    user, token = None, None
+    if auth_token and valid_token(auth_token):
+        return
+
+    # check if a valid refresh_token is present
+    elif refresh_token:
+        user, token, refresh_token = data_repo.refresh_auth_token(refresh_token)
+
+    # fetch fresh token and refresh_token
+    if not (user and token):
+        email = os.getenv('admin_email', '')
+        password = os.getenv('admin_password')
+        user, token, refresh_token = data_repo.user_password_login({'email': email, 'password': password})
+
+    save_to_env(AUTH_TOKEN, token)
+    save_to_env(REFRESH_AUTH_TOKEN, refresh_token)
+
+def valid_token(token):
+    data_repo = DataRepo()
+    try:
+        user = data_repo.get_first_active_user()
+    except Exception as e:
+        print("invalid token: ", str(e))
+        return False
+
+    return True if user else False
 
 def is_app_running():
     url = 'http://localhost:5500/healthz'
@@ -59,6 +96,7 @@ def is_app_running():
         return False
 
 def check_and_update_db():
+    print("updating logs")
     from backend.models import InferenceLog, AppSetting
     
     app_logger = AppLogger()
@@ -85,45 +123,51 @@ def check_and_update_db():
 
             response = requests.get(url, headers=headers)
             if response.status_code in [200, 201]:
+                print("response: ", response)
                 result = response.json()
                 log_status = replicate_status_map[result['status']] if result['status'] in replicate_status_map else InferenceStatus.IN_PROGRESS.value
                 output_details = json.loads(log.output_details)
                 
                 if log_status == InferenceStatus.COMPLETED.value:
-                    output_details['output'] = result['output'] if (output_details['version'] == \
-                        "a4a8bafd6089e1716b06057c42b19378250d008b80fe87caa5cd36d40c1eda90" or \
-                            isinstance(result['output'], str)) else [result['output'][-1]]
-                
-                InferenceLog.objects.filter(id=log.id).update(status=log_status, output_details=json.dumps(output_details))
-                origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
-                if origin_data and log_status == InferenceStatus.COMPLETED.value:
-                    from ui_components.methods.common_methods import process_inference_output
-
-                    try:
-                        origin_data['output'] = output_details['output']
-                        origin_data['log_uuid'] = log.uuid
-                        print("processing inference output")
-                        process_inference_output(**origin_data)
-
-                        if origin_data['inference_type'] in [InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value, \
-                                                            InferenceType.FRAME_INPAINTING.value]:
-                            if str(log.project.uuid) not in timing_update_list:
-                                timing_update_list[str(log.project.uuid)] = []
-                            timing_update_list[str(log.project.uuid)].append(origin_data['timing_uuid'])
-
-                        elif origin_data['inference_type'] == InferenceType.GALLERY_IMAGE_GENERATION.value:
-                            gallery_update_list[str(log.project.uuid)] = True
+                    if 'output' in result and result['output']:
+                        output_details['output'] = result['output'] if (output_details['version'] == \
+                            "a4a8bafd6089e1716b06057c42b19378250d008b80fe87caa5cd36d40c1eda90" or \
+                                isinstance(result['output'], str)) else [result['output'][-1]]
                         
-                        elif origin_data['inference_type'] == InferenceType.FRAME_INTERPOLATION.value:
-                            if str(log.project.uuid) not in shot_update_list:
-                                shot_update_list[str(log.project.uuid)] = []
-                            shot_update_list[str(log.project.uuid)].append(origin_data['shot_uuid'])
+                        InferenceLog.objects.filter(id=log.id).update(status=log_status, output_details=json.dumps(output_details))
+                        origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
+                        if origin_data and log_status == InferenceStatus.COMPLETED.value:
+                            from ui_components.methods.common_methods import process_inference_output
 
-                    except Exception as e:
-                        app_logger.log(LoggingType.ERROR, f"Error: {e}")
-                        output_details['error'] = str(e)
-                        InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.FAILED.value, output_details=json.dumps(output_details))
+                            try:
+                                origin_data['output'] = output_details['output']
+                                origin_data['log_uuid'] = log.uuid
+                                print("processing inference output")
+                                process_inference_output(**origin_data)
 
+                                if origin_data['inference_type'] in [InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value, \
+                                                                    InferenceType.FRAME_INPAINTING.value]:
+                                    if str(log.project.uuid) not in timing_update_list:
+                                        timing_update_list[str(log.project.uuid)] = []
+                                    timing_update_list[str(log.project.uuid)].append(origin_data['timing_uuid'])
+
+                                elif origin_data['inference_type'] == InferenceType.GALLERY_IMAGE_GENERATION.value:
+                                    gallery_update_list[str(log.project.uuid)] = True
+                                
+                                elif origin_data['inference_type'] == InferenceType.FRAME_INTERPOLATION.value:
+                                    if str(log.project.uuid) not in shot_update_list:
+                                        shot_update_list[str(log.project.uuid)] = []
+                                    shot_update_list[str(log.project.uuid)].append(origin_data['shot_uuid'])
+
+                            except Exception as e:
+                                app_logger.log(LoggingType.ERROR, f"Error: {e}")
+                                output_details['error'] = str(e)
+                                InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.FAILED.value, output_details=json.dumps(output_details))
+
+                    else:
+                        log_status = InferenceStatus.FAILED.value
+                        InferenceLog.objects.filter(id=log.id).update(status=log_status, output_details=json.dumps(output_details))
+                
             else:
                 app_logger.log(LoggingType.DEBUG, f"Error: {response.content}")
         else:
