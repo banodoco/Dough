@@ -13,13 +13,13 @@ from shared.constants import HOSTED_BACKGROUND_RUNNER_MODE, LOCAL_DATABASE_NAME,
 load_dotenv()
 
 if SERVER == ServerType.DEVELOPMENT.value:
-    DB_LOCATION = LOCAL_DATABASE_NAME
+    DB_LOCATION = '../banodoco-backend/db.sqlite3' #LOCAL_DATABASE_NAME
 else:
-    DB_LOCATION = ''
+    DB_LOCATION = '../../banodoco-backend/db.sqlite3'
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-if not HOSTED_BACKGROUND_RUNNER_MODE:
+if True: #not HOSTED_BACKGROUND_RUNNER_MODE:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',

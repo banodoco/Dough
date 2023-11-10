@@ -41,8 +41,8 @@ sentry_sdk.init(
 )
 
 def start_runner():
-    if SERVER != ServerType.DEVELOPMENT.value:
-        return
+    # if SERVER != ServerType.DEVELOPMENT.value:
+    #     return
     
     with server_state_lock["runner"]:
         app_logger = AppLogger()

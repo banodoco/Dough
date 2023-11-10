@@ -372,7 +372,7 @@ class APIRepo:
 
     def delete_timing_from_uuid(self, uuid):
         res = self.http_delete(self.TIMING_URL, params={'uuid': uuid})
-        return InternalResponse(res['payload'], 'success', res['status']).status
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     # removes all timing frames from the project
     def remove_existing_timing(self, project_uuid):
@@ -505,7 +505,7 @@ class APIRepo:
         res = self.http_post(self.SHOT_URL, data=data)
         return InternalResponse(res['payload'], 'success', res['status'])
     
-    def update_shot(self, shot_uuid, **kwargs):
+    def update_shot(self, **kwargs):
         res = self.http_put(self.SHOT_URL, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
     
@@ -518,5 +518,6 @@ class APIRepo:
         return InternalResponse(res['payload'], 'success', res['status'])
     
     def add_interpolated_clip(self, shot_uuid, **kwargs):
+        kwargs['uuid'] = shot_uuid
         res = self.http_post(self.SHOT_INTERPOLATED_CLIP, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])

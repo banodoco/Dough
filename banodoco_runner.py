@@ -66,10 +66,11 @@ def validate_admin_auth_token():
     if not (user and token):
         email = os.getenv('admin_email', '')
         password = os.getenv('admin_password')
-        user, token, refresh_token = data_repo.user_password_login({'email': email, 'password': password})
+        user, token, refresh_token = data_repo.user_password_login(email=email, password=password)
 
-    save_to_env(AUTH_TOKEN, token)
-    save_to_env(REFRESH_AUTH_TOKEN, refresh_token)
+    if token:
+        save_to_env(AUTH_TOKEN, token)
+        save_to_env(REFRESH_AUTH_TOKEN, refresh_token)
 
 def valid_token(token):
     data_repo = DataRepo()

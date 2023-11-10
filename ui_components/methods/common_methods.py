@@ -333,7 +333,7 @@ def promote_video_variant(shot_uuid, variant_uuid):
         if hosted_url:
             data_repo.update_file(video.uuid, hosted_url=hosted_url)
 
-    data_repo.update_shot(shot.uuid, main_clip_id=variant_to_promote.uuid)
+    data_repo.update_shot(uuid=shot.uuid, main_clip_id=variant_to_promote.uuid)
 
 
 def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_threshold=150) -> InternalFileObject:
@@ -553,7 +553,7 @@ def create_frame_inside_shot(shot_uuid, aux_frame_index):
     
     timing_data = {
         "shot_id": shot_uuid,
-        "animation_style": AnimationStyleType.INTERPOLATION.value,
+        "animation_style": AnimationStyleType.CREATIVE_INTERPOLATION.value,
         "aux_frame_index": aux_frame_index
     }
     timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
@@ -802,7 +802,7 @@ def process_inference_output(**kwargs):
             data_repo.add_interpolated_clip(shot_uuid, interpolated_clip_id=video.uuid)
             if not shot.main_clip:
                 output_video = update_speed_of_video_clip(video, shot.duration)
-                data_repo.update_shot(shot_uuid, main_clip_id=output_video.uuid)
+                data_repo.update_shot(uuid=shot_uuid, main_clip_id=output_video.uuid)
         
         else:
             del kwargs['log_uuid']
