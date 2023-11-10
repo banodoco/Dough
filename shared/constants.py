@@ -113,7 +113,7 @@ AWS_S3_REGION = 'ap-south-1'    # TODO: discuss this
 OFFLINE_MODE = os.getenv('OFFLINE_MODE', False)     # for picking up secrets and file storage
 
 LOCAL_DATABASE_NAME = 'banodoco_local.db'
-ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', 'ibag_iDhusq5a3vN-dS7_J0xxkUQd5blV3k1Ll28RJE=') #'J2684nBgNUYa_K0a6oBr5H8MpSRW0EJ52Qmq7jExE-w=')
+ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', 'J2684nBgNUYa_K0a6oBr5H8MpSRW0EJ52Qmq7jExE-w=')
 
 QUEUE_INFERENCE_QUERIES = True
-HOSTED_BACKGROUND_RUNNER_MODE = True
+HOSTED_BACKGROUND_RUNNER_MODE = False
