@@ -133,8 +133,6 @@ def frame_styling_page(shot_uuid: str):
                                         lora_model_3_url=st.session_state['lora_model_3_url'] if ('lora_model_3_url' in st.session_state and st.session_state['lora_model_3_url']) else None,
                                     )
                                 st.rerun()
-
-
                         style_cloning_element(timing_list)
                                     
                 with st.expander("🔍 Prompt Finder"):
@@ -160,9 +158,6 @@ def frame_styling_page(shot_uuid: str):
 
     # -------------------- TIMELINE VIEW --------------------------       
     elif st.session_state['frame_styling_view_type'] == "Timeline":
-
-        
-
         if st.session_state['page'] == "Key Frames":
 
             with st.sidebar:

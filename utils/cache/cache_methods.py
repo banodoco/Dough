@@ -144,7 +144,8 @@ def cache_data(cls):
             original_func = getattr(cls, '_original_get_file_list_from_log_uuid_list')
             res = original_func(self, not_found_list, **kwargs)
             for file in res:
-                found_list[file.inference_log.uuid] = file
+                if file.inference_log:
+                    found_list[file.inference_log.uuid] = file
 
         res = []
         if found_list:

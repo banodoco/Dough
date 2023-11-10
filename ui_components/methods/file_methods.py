@@ -10,11 +10,13 @@ from urllib.parse import urlparse
 from PIL import Image
 import numpy as np
 import uuid
+from dotenv import set_key, get_key
 import requests
 import streamlit as st
 from shared.constants import SERVER, InternalFileType, ServerType
 from ui_components.models import InternalFileObject
 from utils.data_repo.data_repo import DataRepo
+
 
 # depending on the environment it will either save or host the PIL image object
 def save_or_host_file(file, path, mime_type='image/png', dim=None):
@@ -181,9 +183,11 @@ def convert_bytes_to_file(file_location_to_save, mime_type, file_bytes, project_
         "name": str(uuid.uuid4()) + "." + mime_type.split("/")[1] if not filename else filename,
         "type": InternalFileType.VIDEO.value if 'video' in mime_type else (InternalFileType.AUDIO.value if 'audio' in mime_type else InternalFileType.IMAGE.value),
         "project_id": project_uuid,
-        "inference_log_id": str(inference_log_id),
         "tag": tag
     }
+
+    if inference_log_id:
+        file_data.update({'inference_log_id': str(inference_log_id)})
 
     if hosted_url:
         file_data.update({'hosted_url': hosted_url})
@@ -208,3 +212,11 @@ def convert_file_to_base64(fh: io.IOBase) -> str:
         mime_type = "application/octet-stream"
     s = encoded_body.decode("utf-8")
     return f"data:{mime_type};base64,{s}"
+
+ENV_FILE_PATH = '.env'
+def save_to_env(key, value):
+    set_key(dotenv_path=ENV_FILE_PATH, key_to_set=key, value_to_set=value)
+
+def load_from_env(key):
+    val = get_key(dotenv_path=ENV_FILE_PATH, key_to_get=key)
+    return val

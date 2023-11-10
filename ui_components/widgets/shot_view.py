@@ -68,7 +68,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                             if idx == len(timing_list):
                                 if st.session_state["open_shot"] == shot.uuid:
                                     st.info("**Add new frame to shot**")
-                                    selected_image, inherit_styling_settings, _  =  add_key_frame_section(shot_uuid, False)                           
+                                    selected_image, inherit_styling_settings =  add_key_frame_section(shot_uuid, False)                           
                                     if st.button(f"Add key frame",type="primary",use_container_width=True):
                                         add_key_frame(selected_image, "No", shot_uuid)
                                         st.rerun()                         
@@ -101,7 +101,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                 with move1:
                     if st.button("⬆️", key=f'shot_up_movement_{shot.uuid}', help="Move shot up", use_container_width=True):
                         if shot.shot_idx > 0:
-                            data_repo.update_shot(shot_uuid, shot_idx=shot.shot_idx-1)
+                            data_repo.update_shot(uuid=shot_uuid, shot_idx=shot.shot_idx-1)
                         else:
                             st.error("This is the first shot")
                             time.sleep(0.3)
@@ -110,7 +110,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                     if st.button("⬇️", key=f'shot_down_movement_{shot.uuid}', help="Move shot down", use_container_width=True):
                         shot_list = data_repo.get_shot_list(shot.project.uuid)
                         if shot.shot_idx < len(shot_list):
-                            data_repo.update_shot(shot_uuid, shot_idx=shot.shot_idx+1)
+                            data_repo.update_shot(uuid=shot_uuid, shot_idx=shot.shot_idx+1)
                         else:
                             st.error("This is the last shot")
                             time.sleep(0.3)
@@ -141,7 +141,7 @@ def update_shot_name(shot_uuid):
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     name = st.text_input("Name:", value=shot.name, max_chars=25)
     if name != shot.name:
-        data_repo.update_shot(shot.uuid, name=name)
+        data_repo.update_shot(uuid=shot.uuid, name=name)
         st.success("Name updated!")
         time.sleep(0.3)
         st.rerun()
@@ -151,7 +151,7 @@ def update_shot_duration(shot_uuid):
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     duration = st.number_input("Duration:", value=shot.duration)
     if duration != shot.duration:
-        data_repo.update_shot(shot.uuid, duration=duration)
+        data_repo.update_shot(uuid=shot.uuid, duration=duration)
         st.success("Duration updated!")
         time.sleep(0.3)
         st.rerun()

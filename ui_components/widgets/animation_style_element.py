@@ -11,16 +11,14 @@ from ui_components.models import InternalFrameTimingObject, InternalShotObject
 def animation_style_element(shot_uuid):
     motion_modules = AnimateDiffCheckpoint.get_name_list()
     variant_count = 1
-    # current_animation_style = AnimationStyleType.INTERPOLATION.value    # setting a default value
+    current_animation_style = AnimationStyleType.CREATIVE_INTERPOLATION.value    # setting a default value
     data_repo = DataRepo()
 
+    animation_type = st.radio("Animation Interpolation:", \
+                              options=[AnimationStyleType.CREATIVE_INTERPOLATION.value, AnimationStyleType.IMAGE_TO_VIDEO.value], \
+                                key="animation_tool", horizontal=True, disabled=True)
 
-    # if current_animation_style == AnimationStyleType.INTERPOLATION.value:
-
-    animation_type = st.radio("Animation Interpolation:", options=['Creative Interpolation', "Video To Video"], key="animation_tool", horizontal=True, disabled=True)
-    
-    if animation_type == "Creative Interpolation":
-
+    if animation_type == AnimationStyleType.CREATIVE_INTERPOLATION.value:
         st.markdown("***")
         
         shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
@@ -46,7 +44,7 @@ def animation_style_element(shot_uuid):
         video_resolution = None
 
         settings = {
-            "animation_tool": animation_type
+            'animation_tool': AnimationToolType.ANIMATEDIFF.value,
         }
 
         st.markdown("#### Overall Settings")        
@@ -102,7 +100,7 @@ def animation_style_element(shot_uuid):
 
         settings.update(
             # positive_prompt=positive_prompt,
-            # negative_prompt=negative_prompt,
+            negative_prompt="bad image, worst quality",     # default value, change this to something else
             image_dimension=img_dimension,
             sampling_steps=30,
             motion_module=motion_module,
@@ -110,9 +108,7 @@ def animation_style_element(shot_uuid):
             normalise_speed=normalise_speed
         )
     
-    elif animation_type == "Image To Video":
-        
-            
+    elif animation_type == AnimationStyleType.IMAGE_TO_VIDEO.value:
         st.info("For image to video, you can select one or more prompts, and how many frames you want to generate for each prompt - it'll attempt to travel from one prompt to the next.")
         which_motion_module = st.selectbox("Which motion module would you like to use?", options=motion_modules, key="which_motion_module")
 

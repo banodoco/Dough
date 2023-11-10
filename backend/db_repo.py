@@ -452,8 +452,12 @@ class DBRepo:
         
         return InternalResponse(payload, 'ai_model fetched', True)
     
-    def get_ai_model_from_name(self, name):
-        ai_model = AIModel.objects.filter(replicate_url=name, is_disabled=False).first()
+    def get_ai_model_from_name(self, name, user_id):
+        user = User.objects.filter(uuid=user_id, is_disabled=False).first()
+        if not user:
+            return InternalResponse({}, 'invalid user', False)
+        
+        ai_model = AIModel.objects.filter(replicate_url=name, user_id=user.id, is_disabled=False).first()
         if not ai_model:
             return InternalResponse({}, 'invalid ai model name', False)
 
@@ -1481,33 +1485,25 @@ class DBRepo:
 
         return InternalResponse(payload, 'shot created successfully', True)
     
-    def update_shot(self, shot_uuid, shot_idx=None, name=None, duration=None, meta_data=None, desc=None, main_clip_id=None):
-        shot: Shot = Shot.objects.filter(uuid=shot_uuid, is_disabled=False).first()
+    def update_shot(self, **kwargs):
+        shot: Shot = Shot.objects.filter(uuid=kwargs['uuid'], is_disabled=False).first()
         if not shot:
             return InternalResponse({}, 'invalid shot uuid', False)
         
-        update_data = {}
-        if name != None:
+        if 'name' in kwargs:
+            name = kwargs['name']
             prev_shot = Shot.objects.filter(project_id=shot.project.id, name=name, is_disabled=False).first()
             if prev_shot:
                 return InternalResponse({}, 'shot name already exists', False)
             
-            update_data['name'] = name
+            kwargs['name'] = name
 
-        if duration != None:
-            update_data['duration'] = duration
-        if meta_data != None:
-            update_data['meta_data'] = meta_data
-        if desc != None:
-            update_data['desc'] = desc
-        if shot_idx != None:
-            update_data['shot_idx'] = shot_idx
-        if main_clip_id != None:
-            file = InternalFileObject.objects.filter(uuid=main_clip_id, is_disabled=False).first()
+        if 'main_clip_id' in kwargs:
+            file = InternalFileObject.objects.filter(uuid=kwargs['main_clip_id'], is_disabled=False).first()
             if file:
-                update_data['main_clip_id'] = file.id
+                kwargs['main_clip_id'] = file.id
 
-        for k,v in update_data.items():
+        for k,v in kwargs.items():
             setattr(shot, k, v)
 
         shot.save()

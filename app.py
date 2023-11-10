@@ -31,18 +31,18 @@ else:
     import boto3
     ssm = boto3.client("ssm", region_name="ap-south-1")
 
-    # SENTRY_ENV = ssm.get_parameter(Name='/banodoco-fe/sentry/environment')['Parameter']['Value']
-    # SENTRY_DSN = ssm.get_parameter(Name='/banodoco-fe/sentry/dsn')['Parameter']['Value']
+    SENTRY_ENV = ssm.get_parameter(Name='/banodoco-fe/sentry/environment')['Parameter']['Value']
+    SENTRY_DSN = ssm.get_parameter(Name='/banodoco-fe/sentry/dsn')['Parameter']['Value']
 
-# sentry_sdk.init(
-#     environment=SENTRY_ENV,
-#     dsn=SENTRY_DSN,
-#     traces_sample_rate=0
-# )
+sentry_sdk.init(
+    environment=SENTRY_ENV,
+    dsn=SENTRY_DSN,
+    traces_sample_rate=0
+)
 
 def start_runner():
-    if SERVER != ServerType.DEVELOPMENT.value:
-        return
+    # if SERVER != ServerType.DEVELOPMENT.value:
+    #     return
     
     with server_state_lock["runner"]:
         app_logger = AppLogger()
@@ -93,6 +93,6 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as e:
-        # sentry_sdk.capture_exception(e)
+        sentry_sdk.capture_exception(e)
         raise e
 

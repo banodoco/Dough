@@ -28,7 +28,21 @@ class DataRepo:
                 self.db_repo = APIRepo()
             
             self._initialized = True
+
+    def refresh_auth_token(self, refresh_token):
+        data = self.db_repo.refresh_auth_token(refresh_token).data['data']
+        user = InternalUserObject(**data['user']) if data and data['user'] else None
+        token = data['token'] if data and data['token'] else None
+        refresh_token = data['refresh_token'] if data and data['refresh_token'] else None
+        return user, token, refresh_token
     
+    def user_password_login(self, **kwargs):
+        data = self.db_repo.user_password_login(**kwargs).data['data']
+        user = InternalUserObject(**data['user']) if data and data['user'] else None
+        token = data['token'] if data and data['token'] else None
+        refresh_token = data['refresh_token'] if data and data['refresh_token'] else None
+        return user, token, refresh_token
+
     def google_user_login(self, **kwargs):
         data = self.db_repo.google_user_login(**kwargs).data['data']
         user = InternalUserObject(**data['user']) if data and data['user'] else None
@@ -162,8 +176,8 @@ class DataRepo:
         model = res.data['data'] if res.status else None
         return InternalAIModelObject(**model) if model else None
     
-    def get_ai_model_from_name(self, name):
-        res = self.db_repo.get_ai_model_from_name(name)
+    def get_ai_model_from_name(self, name, user_id):
+        res = self.db_repo.get_ai_model_from_name(name, user_id)
         model = res.data['data'] if res.status else None
         return InternalAIModelObject(**model) if model else None
     
@@ -415,8 +429,9 @@ class DataRepo:
         shot = res.data['data'] if res.status else None
         return InternalShotObject(**shot) if shot else None
     
-    def update_shot(self, shot_uuid, shot_idx=None, name=None, duration=None, meta_data=None, desc=None, main_clip_id=None):
-        res = self.db_repo.update_shot(shot_uuid, shot_idx=shot_idx, name=name, duration=duration, meta_data=meta_data, desc=desc, main_clip_id=main_clip_id)
+    # shot_uuid, shot_idx, name, duration, meta_data, desc, main_clip_id
+    def update_shot(self, **kwargs):
+        res = self.db_repo.update_shot(**kwargs)
         return res.status
 
     def delete_shot(self, shot_uuid):

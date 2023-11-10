@@ -30,7 +30,7 @@ class DefaultTimingStyleParams:
     transformation_stage = ImageStage.SOURCE_IMAGE.value
     custom_model_id_list = []
     animation_tool = AnimationToolType.G_FILM.value
-    animation_style = AnimationStyleType.INTERPOLATION.value
+    animation_style = AnimationStyleType.CREATIVE_INTERPOLATION.value
     model = None
 
 class DefaultProjectSettingParams:
@@ -47,7 +47,7 @@ class DefaultProjectSettingParams:
     batch_transformation_stage = ImageStage.SOURCE_IMAGE.value
     batch_custom_model_id_list = []
     batch_animation_tool = AnimationToolType.G_FILM.value
-    batch_animation_style = AnimationStyleType.INTERPOLATION.value
+    batch_animation_style = AnimationStyleType.CREATIVE_INTERPOLATION.value
     batch_model = None
     total_log_pages = 1
     total_gallery_pages = 1
