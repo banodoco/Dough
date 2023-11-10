@@ -1,4 +1,5 @@
 import os
+import time
 import cv2
 import streamlit as st
 import requests as r
@@ -38,7 +39,7 @@ class VideoInterpolator:
         if not animation_style:
             animation_style = DefaultTimingStyleParams.animation_style
 
-        if animation_style == AnimationStyleType.INTERPOLATION.value:
+        if animation_style == AnimationStyleType.CREATIVE_INTERPOLATION.value:
             return VideoInterpolator.video_through_frame_interpolation(
                 img_location_list,
                 settings,
@@ -56,7 +57,12 @@ class VideoInterpolator:
     # returns a video bytes generated through interpolating frames between the given list of frames
     @staticmethod
     def video_through_frame_interpolation(img_location_list, settings, variant_count, queue_inference=False):
-        # TODO: extend this for more than two images
+        # TODO: remove this check with newer workflows
+        if len(img_location_list) != 3:
+            st.error("Please provide exactly 3 images for interpolation")
+            time.sleep(0.6)
+            st.rerun()
+        
         img1 = img_location_list[0]
         img2 = img_location_list[1]
         img3 = img_location_list[2]
@@ -107,7 +113,7 @@ class VideoInterpolator:
                     "motion_module" : settings['motion_module'],
                     "model" : settings['model'],
                     "img_1_latent_cn_weights" : "0=1.00,1=0.82,2=0.74,3=0.56,4=0.47,5=0.41,6=0.38,7=0.33,8=0.30,9=0.28,10=0.25,11=0.24,12=0.20,13=0.17,14=0.15,15=0.13,16=0.13,17=0.11,18=0.11,19=0.11,20=0.11,21=0.11,22=0.10,23=0.09,24=0.06,25=0.04,26=0.03,27=0.01,28=0.00,29=0.00,30=0.00,31=0.00,32=0.00,33=0.00,34=0.00,35=0.00,36=0.00,37=0.00,38=0.00,39=0.00,40=0.00,41=0.00,42=0.00,43=0.00,44=0.00,45=0.00,46=0.00,47=0.00",
-                    "img_2_latent_cn_weights" : "0=0.09,1=0.10,2=0.11,3=0.11,4=0.11,5=0.11,6=0.11,7=0.13,8=0.13,9=0.15,10=0.17,11=0.20,12=0.24,13=0.25,14=0.28,15=0.30,16=0.33,17=0.38,18=0.41,19=0.47,20=0.56,21=0.74,22=0.82,23=1.00,24=1.00,25=0.82,26=0.74,27=0.56,28=0.47,29=0.41,30=0.38,31=0.33,32=0.30,33=0.28,34=0.25,35=0.24,36=0.20,37=0.17,38=0.15,39=0.13,40=0.13,41=0.11,42=0.11,43=0.11,44=0.11,45=0.11,46=0.10,47=0.09\n\n\n\n",
+                    "img_2_latent_cn_weights" : "0=0.09,1=0.10,2=0.11,3=0.11,4=0.11,5=0.11,6=0.11,7=0.13,8=0.13,9=0.15,10=0.17,11=0.20,12=0.24,13=0.25,14=0.28,15=0.30,16=0.33,17=0.38,18=0.41,19=0.47,20=0.56,21=0.74,22=0.82,23=1.00,24=1.00,25=0.82,26=0.74,27=0.56,28=0.47,29=0.41,30=0.38,31=0.33,32=0.30,33=0.28,34=0.25,35=0.24,36=0.20,37=0.17,38=0.15,39=0.13,40=0.13,41=0.11,42=0.11,43=0.11,44=0.11,45=0.11,46=0.10,47=0.09",
                     "img_3_latent_cn_weights" : "0=0.00,1=0.00,2=0.00,3=0.00,4=0.00,5=0.00,6=0.00,7=0.00,8=0.00,9=0.00,10=0.00,11=0.00,12=0.00,13=0.00,14=0.00,15=0.00,16=0.00,17=0.00,18=0.00,19=0.00,20=0.01,21=0.03,22=0.04,23=0.06,24=0.09,25=0.10,26=0.11,27=0.11,28=0.11,29=0.11,30=0.11,31=0.13,32=0.13,33=0.15,34=0.17,35=0.20,36=0.24,37=0.25,38=0.28,39=0.30,40=0.33,41=0.38,42=0.41,43=0.47,44=0.56,45=0.74,46=0.82,47=1.00",
                     "ip_adapter_weight" : 0.4,
                     "ip_adapter_noise" : 0.5,

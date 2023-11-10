@@ -57,8 +57,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     end = min(start + items_to_show, len(variants))
 
     next_col = 1
-    for i in range(end - 1, start - 1, -1):
-        variant_index = i
+    for variant_index in range(end - 1, start - 1, -1):
         if variant_index != current_variant:
             with cols[next_col]:
                 if stage == CreativeProcessType.MOTION.value:

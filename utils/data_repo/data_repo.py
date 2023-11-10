@@ -429,8 +429,9 @@ class DataRepo:
         shot = res.data['data'] if res.status else None
         return InternalShotObject(**shot) if shot else None
     
-    def update_shot(self, shot_uuid, shot_idx=None, name=None, duration=None, meta_data=None, desc=None, main_clip_id=None):
-        res = self.db_repo.update_shot(shot_uuid, shot_idx=shot_idx, name=name, duration=duration, meta_data=meta_data, desc=desc, main_clip_id=main_clip_id)
+    # shot_uuid, shot_idx, name, duration, meta_data, desc, main_clip_id
+    def update_shot(self, **kwargs):
+        res = self.db_repo.update_shot(**kwargs)
         return res.status
 
     def delete_shot(self, shot_uuid):

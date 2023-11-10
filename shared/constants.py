@@ -63,7 +63,7 @@ class InternalFileTag(ExtendedEnum):
     SHORTLISTED_GALLERY_IMAGE = 'shortlisted_gallery_image'
 
 class AnimationStyleType(ExtendedEnum):
-    INTERPOLATION = "Interpolate to next"
+    CREATIVE_INTERPOLATION = "Creative Interpolation"
     IMAGE_TO_VIDEO = "Image to video"
     DIRECT_MORPHING = "None"
 

@@ -66,10 +66,11 @@ def validate_admin_auth_token():
     if not (user and token):
         email = os.getenv('admin_email', '')
         password = os.getenv('admin_password')
-        user, token, refresh_token = data_repo.user_password_login({'email': email, 'password': password})
+        user, token, refresh_token = data_repo.user_password_login(email=email, password=password)
 
-    save_to_env(AUTH_TOKEN, token)
-    save_to_env(REFRESH_AUTH_TOKEN, refresh_token)
+    if token:
+        save_to_env(AUTH_TOKEN, token)
+        save_to_env(REFRESH_AUTH_TOKEN, refresh_token)
 
 def valid_token(token):
     data_repo = DataRepo()
@@ -96,7 +97,7 @@ def is_app_running():
         return False
 
 def check_and_update_db():
-    print("updating logs")
+    # print("updating logs")
     from backend.models import InferenceLog, AppSetting
     
     app_logger = AppLogger()
@@ -123,7 +124,7 @@ def check_and_update_db():
 
             response = requests.get(url, headers=headers)
             if response.status_code in [200, 201]:
-                print("response: ", response)
+                # print("response: ", response)
                 result = response.json()
                 log_status = replicate_status_map[result['status']] if result['status'] in replicate_status_map else InferenceStatus.IN_PROGRESS.value
                 output_details = json.loads(log.output_details)
