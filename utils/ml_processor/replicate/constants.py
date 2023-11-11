@@ -50,6 +50,9 @@ class REPLICATE_MODEL:
     # addition 17/10/2023
     llama_2_7b = ReplicateModel("meta/llama-2-7b", "527827021d8756c7ab79fde0abbfaac885c37a3ed5fe23c7465093f0878d55ef")
 
+    # addition 11/11/2023
+    sdxl_controlnet_openpose = ReplicateModel("lucataco/sdxl-controlnet-openpose", "d63e0b238b2d963d90348e2dad19830fbe372a7a43d90d234b2b63cae76d4397")
+
     @staticmethod
     def get_model_by_db_obj(model_db_obj):
         for model in REPLICATE_MODEL.__dict__.values():
