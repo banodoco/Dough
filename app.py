@@ -77,7 +77,10 @@ def main():
                 st.rerun()
             else:
                 delete_url_param(AUTH_TOKEN)
-                st.error("please login again")
+                st.error("Make sure you are added in the invite list and please login again")
+                st.text("Join our discord to request access")
+                discord_url = "<a target='_self' href='https://discord.gg/zGgpH9JEw4'> Banodoco Discord </a>"
+                st.markdown(discord_url, unsafe_allow_html=True)
         else:
             st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
             st.subheader("Login with Google to proceed")
