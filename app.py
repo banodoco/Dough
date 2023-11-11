@@ -5,7 +5,7 @@ from moviepy.editor import *
 import subprocess
 import os
 import django
-from shared.constants import OFFLINE_MODE, SERVER, ServerType
+from shared.constants import HOSTED_BACKGROUND_RUNNER_MODE, OFFLINE_MODE, SERVER, ServerType
 import sentry_sdk
 from shared.logging.logging import AppLogger
 from utils.common_utils import is_process_active
@@ -41,8 +41,8 @@ sentry_sdk.init(
 )
 
 def start_runner():
-    # if SERVER != ServerType.DEVELOPMENT.value:
-    #     return
+    if SERVER != ServerType.DEVELOPMENT.value and not HOSTED_BACKGROUND_RUNNER_MODE:
+        return
     
     with server_state_lock["runner"]:
         app_logger = AppLogger()
@@ -62,14 +62,10 @@ def main():
     auth_details = get_url_param(AUTH_TOKEN)
     if (not auth_details or auth_details == 'None')\
         and SERVER != ServerType.DEVELOPMENT.value:
-        st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
-        st.subheader("Login with Google to proceed")
- 
-        auth_url = get_google_auth_url()
-        st.markdown(auth_url, unsafe_allow_html=True)
-        
         params = st.experimental_get_query_params()
+        
         if params and 'code' in params:
+            st.subheader("Logging you in, please wait")
             # st.write(params['code'])
             data = {
                 "id_token": params['code'][0]
@@ -82,6 +78,12 @@ def main():
             else:
                 delete_url_param(AUTH_TOKEN)
                 st.error("please login again")
+        else:
+            st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
+            st.subheader("Login with Google to proceed")
+    
+            auth_url = get_google_auth_url()
+            st.markdown(auth_url, unsafe_allow_html=True)
     else:
         start_runner()
         project_init()
