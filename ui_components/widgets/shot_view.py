@@ -1,5 +1,11 @@
 import time
 from typing import List
+import os
+import zipfile
+import shutil
+from PIL import Image
+import requests
+from io import BytesIO
 import streamlit as st
 from ui_components.constants import WorkflowStageType
 from ui_components.methods.file_methods import generate_pil_image
@@ -86,16 +92,26 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
 
         if st.session_state["open_shot"] == shot.uuid:
             st.markdown("##### Admin stuff:")
-            bottom1, bottom2, bottom3, _ = st.columns([1,1,1,3])
+            bottom1, bottom2, bottom3, bottom4,_ = st.columns([1,1,1,1,2])
             with bottom1:    
                 st.error("Delete:")
                 delete_shot_button(shot.uuid)
                                 
             with bottom2:
                 st.warning("Duplicate:")
-                duplicate_shot_button(shot.uuid)       
-            
+                duplicate_shot_button(shot.uuid)     
+
             with bottom3:
+                st.success("Download Images:")
+                data = download_all_images(shot.uuid)
+                st.download_button(
+                    label="Download all images",
+                    data=data,
+                    file_name=f"{shot.name}.zip",
+                    mime="application/zip"
+                )
+                        
+            with bottom4:
                 st.info("Move:")
                 move1, move2 = st.columns(2)
                 with move1:
@@ -116,6 +132,47 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                             time.sleep(0.3)
                         st.rerun()
 
+
+def download_all_images(shot_uuid):
+    #@peter4piyush, you may neeed to do this in a different way to interact properly with the db etc.
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    timing_list = shot.timing_list
+
+    # Create a directory for the images
+    if not os.path.exists(shot.name):
+        os.makedirs(shot.name)
+
+    # Download and save each image
+    for idx, timing in enumerate(timing_list):
+        if timing.primary_image and timing.primary_image.location:
+            location = timing.primary_image.location
+            if location.startswith('http'):
+                # Remote image
+                response = requests.get(location)
+                img = Image.open(BytesIO(response.content))
+                img.save(os.path.join(shot.name, f"{idx}.png"))
+            else:
+                # Local image
+                shutil.copy(location, os.path.join(shot.name, f"{idx}.png"))
+
+    # Create a zip file
+    with zipfile.ZipFile(f"{shot.name}.zip", "w") as zipf:
+        for file in os.listdir(shot.name):
+            zipf.write(os.path.join(shot.name, file), arcname=file)
+
+    # Read the zip file in binary mode
+    with open(f"{shot.name}.zip", "rb") as file:
+        data = file.read()
+
+    # Delete the directory and zip file
+    for file in os.listdir(shot.name):
+        os.remove(os.path.join(shot.name, file))
+    os.rmdir(shot.name)
+    os.remove(f"{shot.name}.zip")
+
+    return data
+
 def duplicate_shot_button(shot_uuid):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
@@ -128,7 +185,7 @@ def duplicate_shot_button(shot_uuid):
 def delete_shot_button(shot_uuid):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
-    confirm_delete = st.checkbox("I know that this will delete all the frames and videos within")    
+    confirm_delete = st.checkbox("This will delete all the frames & videos within")    
     help_text = "Check the box above to enable the delete button." if not confirm_delete else "This will this shot and all the frames and videos within."
     if st.button("Delete shot", disabled=(not confirm_delete), help=help_text, key=shot.uuid, use_container_width=True):
         data_repo.delete_shot(shot.uuid)

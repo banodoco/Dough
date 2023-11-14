@@ -9,9 +9,13 @@ from utils.data_repo.data_repo import DataRepo
 from shared.constants import AIModelType, InferenceType, InternalFileTag, InternalFileType, SortOrder
 from utils import st_memory
 import time
-
 from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
+from PIL import Image, ImageFilter
+import io
+import cv2
+import numpy as np
+
 
 
 
@@ -21,91 +25,150 @@ def explorer_element(project_uuid):
     data_repo = DataRepo()
     shot_list = data_repo.get_shot_list(project_uuid)
     project_settings = data_repo.get_project_setting(project_uuid)
-
-    _, a2, a3,_= st.columns([0.5, 1, 0.5,0.5])   
-    with a2:
-        prompt = st_memory.text_area("What's your base prompt?", key="explorer_base_prompt", help="This will be included at the beginning of each prompt")
-    with a3:
-        st.write("")
-        base_prompt_position = st_memory.radio("Where would you like to place the base prompt?", options=["Beginning", "End"], key="base_prompt_position", help="This will be included at the beginning of each prompt")
-
-
-    _, b2, b3, b4, b5, _ = st.columns([0.5, 1, 1, 1, 1, 0.5])    
-    character_instructions = create_variate_option(b2, "character")  
-    styling_instructions = create_variate_option(b3, "styling")          
-    action_instructions = create_variate_option(b4, "action")    
-    scene_instructions = create_variate_option(b5, "scene")
-
-    model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)
-    model_dict = {}
-    for m in model_list:
-        model_dict[m.name] = m
-
-    model_name_list = list(model_dict.keys())
     
-    _, c2, _ = st.columns([0.25, 1, 0.25])
-    with c2:
-        models_to_use = st.multiselect("Which models would you like to use?", model_name_list, key="models_to_use", default=[model_name_list[0]], help="It'll rotate through the models you select.")
+    z1, z2 = st.columns([1,1])   
+    with z1:
+        with st.expander("Prompt Settings", expanded=True):
+                                        
+            a1, a2 = st.columns([1,1])   
+            with a1:
+                prompt = st_memory.text_area("What's your base prompt?", key="explorer_base_prompt", help="This exact text will be included in each prompt.")
+                
+            with a2:        
+                magic_prompt = st_memory.text_area("What's your magic prompt?", key="explorer_magic_prompt", help="A prompt will be generated based on this text.")
+            y1,y2 = st.columns([1,1])            
+            with y1:            
+                base_prompt_position = st_memory.radio("Which would you like to put first:", options=["Base Prompt", "Magic Prompt"], key="base_prompt_position", help="This will be included at the beginning of each prompt", horizontal=True)
+            with y2:
+                if magic_prompt != "":
+                    chaos_level = st_memory.slider("How much chaos would you like to add to the magic prompt?", min_value=0, max_value=100, value=20, step=1, key="chaos_level", help="This will determine how random the generated prompt will be.")                    
+                    temperature = chaos_level / 20                    
+    with z2:                
+            with st.expander("Input Image Settings", expanded=True):
+                use_input_image = st_memory.checkbox("Use input image", key="use_input_image")
+                if use_input_image:
+                    a_1_1, a_1_2 = st.columns([1, 1])
+                    with a_1_1:                    
+                        input_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"], key="explorer_input_image", help="This will be the base image for the generation.")
+                        type_of_transformation = st_memory.radio("What type of transformation would you like to do?", options=["Evolve Image", "Maintain Structure"], key="type_of_transformation", help="Style Transfer will transfer the style of the image to the target image. Image Generation will generate an image based on the target image.", horizontal=True)
+                    with a_1_2:                                        
+                        if type_of_transformation == "Evolve Image":
+                            strength_of_current_image = st_memory.slider("How much of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_current_image", help="This will determine how much of the current image will be kept in the final image.")
+                            # prompt_strength should be 1 - strength_of_current_image
+                            prompt_strength = 1 - (strength_of_current_image / 100)
 
-    _, d2, _ = st.columns([0.75, 1, 0.75])
+                            if input_image is not None:                                
+                                input_image_bytes = input_image.getvalue()
+                                
+                                pil_image = Image.open(io.BytesIO(input_image_bytes))
+                                
+                                blur_radius = (100 - strength_of_current_image) / 3  # Adjust this formula as needed
+
+                                blurred_image = pil_image.filter(ImageFilter.GaussianBlur(blur_radius))
+
+                                st.image(blurred_image, use_column_width=True)
+                        elif type_of_transformation == "Maintain Structure":
+                            strength_of_current_image = st_memory.slider("How much of the current structure would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_current_image", help="This will determine how much of the current image will be kept in the final image.")                                        
+                            condition_scale = strength_of_current_image / 10                                                
+
+                            if input_image is not None:
+                                
+                                input_image_bytes = input_image.getvalue()
+
+                                pil_image = Image.open(io.BytesIO(input_image_bytes))
+
+                                cv_image = np.array(pil_image)
+
+                                gray_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2GRAY)
+
+                                lower_threshold = (100 - strength_of_current_image) * 3
+
+                                upper_threshold = lower_threshold * 3
+                                                            
+                                edges = cv2.Canny(gray_image, lower_threshold, upper_threshold)
+                                
+                                edges_pil = Image.fromarray(edges)
+
+                                st.image(edges_pil, use_column_width=True)
+                else:
+                    input_image = None
+                    type_of_transformation = None
+                    strength_of_current_image = None
+                    prompt_strength = None
+                    condition_scale = None
+                    temperature = None
+
+    models_to_use = ["stable_diffusion_xl"]
+    _, d2,d3, _ = st.columns([0.5, 1,1, 0.5])
     with d2:        
         number_to_generate = st.slider("How many images would you like to generate?", min_value=0, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
     
-    _, e2, e3 = st.columns([0.5, 1, 0.5])
-    if e2.button("Generate images", key="generate_images", use_container_width=True, type="primary"):
-        ml_client = get_ml_client()
-        counter = 0
-        num_models = len(models_to_use)
-        num_images_per_model = number_to_generate // num_models
-        varied_text = ""
-        for _ in range(num_images_per_model):
-            for model_name in models_to_use:
-                if counter % 4 == 0 and (styling_instructions or character_instructions or action_instructions or scene_instructions):
-                    varied_prompt = create_prompt(
-                        styling_instructions=styling_instructions, 
-                        character_instructions=character_instructions, 
-                        action_instructions=action_instructions, 
-                        scene_instructions=scene_instructions
-                    )
-                    varied_text = varied_prompt
-                if base_prompt_position == "Beginning":
-                    prompt_with_variations = f"{prompt}, {varied_text}" if prompt else varied_text
-                else:  # base_prompt_position is "End"
-                    prompt_with_variations = f"{varied_text}, {prompt}" if prompt else varied_text
-                # st.write(f"Prompt: '{prompt_with_variations}'")
-                # st.write(f"Model: {model_name}")
-                counter += 1
+    with d3:
+        st.write(" ")
+        st.write(" ")        
+        if st.button("Generate images", key="generate_images", use_container_width=True, type="primary"):
+            if not input_image:
+            
+                ml_client = get_ml_client()
+                counter = 0
+                num_models = len(models_to_use)
+                num_images_per_model = number_to_generate // num_models
+                varied_text = ""
+                for _ in range(num_images_per_model):
+                    for model_name in models_to_use:
+                        if counter % 4 == 0:
+                            varied_prompt = ""
+                            varied_text = varied_prompt
+                        if base_prompt_position == "Base Prompt":
+                            prompt_with_variations = f"{prompt}, {varied_text}" if prompt else varied_text
+                        else:  # base_prompt_position is "End"
+                            prompt_with_variations = f"{varied_text}, {prompt}" if prompt else varied_text
+                        # st.write(f"Prompt: '{prompt_with_variations}'")
+                        # st.write(f"Model: {model_name}")
+                        counter += 1                    
 
-                query_obj = MLQueryObject(
-                    timing_uuid=None,
-                    model_uuid=None,
-                    guidance_scale=5,
-                    seed=-1,
-                    num_inference_steps=30,            
-                    strength=1,
-                    adapter_type=None,
-                    prompt=prompt_with_variations,
-                    negative_prompt="bad image, worst image, bad anatomy, washed out colors",
-                    height=project_settings.height,
-                    width=project_settings.width,
-                    project_uuid=project_uuid
-                )
+                        query_obj = MLQueryObject(
+                            timing_uuid=None,
+                            model_uuid=None,
+                            guidance_scale=5,
+                            seed=-1,                            
+                            num_inference_steps=30,            
+                            strength=1,
+                            adapter_type=None,
+                            prompt=prompt_with_variations,
+                            negative_prompt="bad image, worst image, bad anatomy, washed out colors",
+                            height=project_settings.height,
+                            width=project_settings.width,
+                            project_uuid=project_uuid
+                        )
 
-                replicate_model = REPLICATE_MODEL.get_model_by_db_obj(model_dict[model_name])
-                output, log = ml_client.predict_model_output_standardized(replicate_model, query_obj, queue_inference=True)
+                        model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)
+                        model_dict = {}
+                        for m in model_list:
+                            model_dict[m.name] = m
 
-                inference_data = {
-                    "inference_type": InferenceType.GALLERY_IMAGE_GENERATION.value,
-                    "output": output,
-                    "log_uuid": log.uuid,
-                    "project_uuid": project_uuid
-                }
-                process_inference_output(**inference_data)
-        e2.info("Check the Generation Log to the left for the status.")
+                        replicate_model = REPLICATE_MODEL.get_model_by_db_obj(model_dict[model_name])
+                        output, log = ml_client.predict_model_output_standardized(replicate_model, query_obj, queue_inference=True)
 
-    with e3:
-        update_max_frame_per_shot_element(project_uuid)
-    
+                        inference_data = {
+                            "inference_type": InferenceType.GALLERY_IMAGE_GENERATION.value,
+                            "output": output,
+                            "log_uuid": log.uuid,
+                            "project_uuid": project_uuid
+                        }
+                        process_inference_output(**inference_data)
+                st.info("Check the Generation Log to the left for the status.")
+            else:
+                #@peter4piyush, this is where you'll need to add your code
+                if type_of_transformation == "Evolve Image":
+                    st.info("Evolve image hasn't been implemented yet")
+                    # "Trigger SDXL Img2Img"
+                    # use prompt_strength and input_image
+                elif type_of_transformation == "Maintain Structure":
+                    st.info("Maintain structure hasn't been implemented yet")
+                    # "Trigger SDXL Canny
+                    # use condition_scale and input_image
+
     project_setting = data_repo.get_project_setting(project_uuid)
     st.markdown("***")
     
@@ -256,6 +319,7 @@ def update_max_frame_per_shot_element(project_uuid):
     data_repo = DataRepo()
     project_settings = data_repo.get_project_setting(project_uuid)
 
+    '''
     max_frames = st.number_input(label='Max frames per shot', min_value=1, value=project_settings.max_frames_per_shot)
 
     if max_frames != project_settings.max_frames_per_shot:
@@ -263,3 +327,4 @@ def update_max_frame_per_shot_element(project_uuid):
         st.success("Updated")
         time.sleep(0.3)
         st.rerun()
+    '''
