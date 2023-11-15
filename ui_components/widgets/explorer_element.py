@@ -26,7 +26,7 @@ def explorer_element(project_uuid):
     shot_list = data_repo.get_shot_list(project_uuid)
     project_settings = data_repo.get_project_setting(project_uuid)
     
-    z1, z2 = st.columns([1,1])   
+    z1, z2 = st.columns([1.3,1])   
     with z1:
         with st.expander("Prompt Settings", expanded=True):
             a1, a2 = st.columns([1,1])   
@@ -88,9 +88,6 @@ def explorer_element(project_uuid):
                     input_image = None
                     type_of_transformation = None
                     strength_of_current_image = None
-                    prompt_strength = None
-                    condition_scale = None
-                    temperature = None
 
     models_to_use = ["stable_diffusion_xl"]
     _, d2,d3, _ = st.columns([0.5, 1,1, 0.5])
