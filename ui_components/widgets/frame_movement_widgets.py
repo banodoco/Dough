@@ -153,7 +153,7 @@ def replace_image_widget(timing_uuid, stage, options=["Uploaded Frame", "Other F
     elif replace_with == "Uploaded Frame":
         btn_text = 'Upload source image' if stage == WorkflowStageType.SOURCE.value else 'Replace frame'
         uploaded_file = st.file_uploader(btn_text, type=[
-            "png", "jpeg"], accept_multiple_files=False)
+            "png", "jpeg"], accept_multiple_files=False,key=f"uploaded_file_{stage}_{timing_uuid}")
         if uploaded_file != None:
             if st.button(btn_text):
                 if uploaded_file:

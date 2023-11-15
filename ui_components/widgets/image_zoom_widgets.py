@@ -104,4 +104,6 @@ def reset_zoom_element():
     st.session_state['rotation_angle_input'] = 0
     st.session_state['x_shift'] = 0
     st.session_state['y_shift'] = 0
+    st.session_state['flip_vertically'] = False
+    st.session_state['flip_horizontally'] = False
     st.rerun()

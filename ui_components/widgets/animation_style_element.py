@@ -33,6 +33,7 @@ def animation_style_element(shot_uuid):
                     columns[idx].image(timing.primary_image.location, use_column_width=True)
                     b = timing.primary_image.inference_params
                     prompt = columns[idx].text_area(f"Prompt {idx+1}", value=(b['prompt'] if b else ""), key=f"prompt_{idx+1}")                        
+                    base_style_on_image = columns[idx].checkbox(f"Use base style image for prompt {idx+1}", key=f"base_style_image_{idx+1}",value=True)
                 else:
                     columns[idx].warning("No primary image present")
                     disable_generate = True
@@ -50,8 +51,7 @@ def animation_style_element(shot_uuid):
         st.markdown("#### Overall Settings")        
         c1, c2 = st.columns([1,1])
         with c1:
-            motion_module = st.selectbox("Which motion module would you like to use?", options=motion_modules, key="motion_module")
-        with c2:
+
             sd_model_list = [
                 "Realistic_Vision_V5.0.safetensors",
                 "Counterfeit-V3.0_fp32.safetensors",
@@ -60,28 +60,20 @@ def animation_style_element(shot_uuid):
                 "deliberate_v3.safetensors"
             ]
             sd_model = st.selectbox("Which Stable Diffusion model would you like to use?", options=sd_model_list, key="sd_model")
-            vae_list = [
-                "Baked",
-                "Standard"]
-            vae = st.selectbox("Which VAE would you like to use?", options=vae_list, key="vae_model")
-
+            
         d1, d2 = st.columns([1, 1])
 
         with d1:
-            ip_adapter_strength = st.slider("IP Adapter Strength", min_value=0.0, max_value=1.0, value=0.5, step=0.1, key="ip_adapter_strength")
-        
-        with d2:
-            ip_adapter_noise = st.slider("IP Adapter Noise", min_value=0.0, max_value=1.0, value=0.5, step=0.1, key="ip_adapter_noise")
+            ip_adapter_strength = st.slider("IP Adapter Strength", min_value=0.0, max_value=1.0, value=0.9, step=0.1, key="ip_adapter_strength")
+            frames_per_keyframe = st.number_input("Frames per Keyframe", min_value=8, max_value=36, value=16, step=1, key="frames_per_keyframe")
+            cn_strength = st.slider("CN Strength", min_value=0.0, max_value=2.0, value=0.5, step=0.1, key="cn_strength")
+            length_of_key_frame_influence = st.slider("Length of Keyframe Influence", min_value=0.0, max_value=2.0, value=1.1, step=0.1, key="length_of_key_frame_influence")
+            interpolation_style = st.selectbox("Interpolation Style", options=["ease-in-out", "ease-in", "ease-out", "linear"], key="interpolation_style")
+            motion_scale = st.slider("Motion Scale", min_value=0.0, max_value=2.0, value=1.0, step=0.1, key="motion_scale")
 
-        interpolation_style = st.selectbox("Interpolation Style", options=["Big Dipper", "Linear", "Slerp", "Custom"], key="interpolation_style")
-        if interpolation_style == "Big Dipper":
-            interpolation_settings = "0=1.0,1=0.99,2=0.97,3=0.95,4=0.92,5=0.9,6=0.86,7=0.83,8=0.79,9=0.75,10=0.71,11=0.67,12=0.62,13=0.58,14=0.53,15=0.49,16=0.44,17=0.39,18=0.35,19=0.31,20=0.26,21=0.22,22=0.19,23=0.15,24=0.12,25=0.09,26=0.06,27=0.04,28=0.02,29=0.01,30=0.0,31=0.0,32=0.0,33=0.0,34=0.0,35=0.0,36=0.0,37=0.0,38=0.0,39=0.0,40=0.0,41=0.0,42=0.0,43=0.0,44=0.0,45=0.0,46=0.0,47=0.0,48=0.0,49=0.0,50=0.0,51=0.0,52=0.0,53=0.0,54=0.0,55=0.0,56=0.0,57=0.0,58=0.0,59=0.0,60=0.0,61=0.0,62=0.0,63=0.0"
-        elif interpolation_style == "Linear":
-            interpolation_settings = "0=1.0,1=0.99,2=0.97,3=0.95,4=0.92,5=0.9,6=0.86,7=0.83,8=0.79,9=0.75,10=0.71,11=0.67,12=0.62,13=0.58,14=0.53,15=0.49,16=0.44,17=0.39,18=0.35,19=0.31,20=0.26,21=0.22,22=0.19,23=0.15,24=0.12,25=0.09,26=0.06,27=0.04,28=0.02,29=0.01,30=0.0,31=0.0,32=0.0,33=0.0,34=0.0,35=0.0,36=0.0,37=0.0,38=0.0,39=0.0,40=0.0,41=0.0,42=0.0,43=0.0,44=0.0,45=0.0,46=0.0,47=0.0,48=0.0,49=0.0,50=0.0,51=0.0,52=0.0,53=0.0,54=0.0,55=0.0,56=0.0,57=0.0,58=0.0,59=0.0,60=0.0,61=0.0,62=0.0,63=0.0"
-        elif interpolation_style == "Slerp":
-            interpolation_settings = "0=1.0,1=0.99,2=0.97,3=0.95,4=0.92,5=0.9,6=0.86,7=0.83,8=0.79,9=0.75,10=0.71,11=0.67,12=0.62,13=0.58,14=0.53,15=0.49,16=0.44,17=0.39,18=0.35,19=0.31,20=0.26,21=0.22,22=0.19,23=0.15,24=0.12,25=0.09,26=0.06,27=0.04,28=0.02,29=0.01,30=0.0,31=0.0,32=0.0,33=0.0,34=0.0,35=0.0,36=0.0,37=0.0,38=0.0,39=0.0,40=0.0,41=0.0,42=0.0,43=0.0,44=0.0,45=0.0,46=0.0,47=0.0,48=0.0,49=0.0,50=0.0,51=0.0,52=0.0,53=0.0,54=0.0,55=0.0,56=0.0,57=0.0,58=0.0,59=0.0,60=0.0,61=0.0,62=0.0,63=0.0"
-        if interpolation_style == "Custom":
-            interpolation_settings = st.text_area("Custom Interpolation Style", value="0=1.0,1=0.99,2=0.97,3=0.95,4=0.92,5=0.9,6=0.86,7=0.83,8=0.79,9=0.75,10=0.71,11=0.67,12=0.62,13=0.58,14=0.53,15=0.49,16=0.44,17=0.39,18=0.35,19=0.31,20=0.26,21=0.22,22=0.19,23=0.15,24=0.12,25=0.09,26=0.06,27=0.04,28=0.02,29=0.01,30=0.0,31=0.0,32=0.0,33=0.0,34=0.0,35=0.0,36=0.0,37=0.0,38=0.0,39=0.0,40=0.0,41=0.0,42=0.0,43=0.0,44=0.0,45=0.0,46=0.0,47=0.0,48=0.0,49=0.0,50=0.0,51=0.0,52=0.0,53=0.0,54=0.0,55=0.0,56=0.0,57=0.0,58=0.0,59=0.0,60=0.0,61=0.0,62=0.0,63=0.0", key="custom_interpolation_style")
+        negative_prompt = st.text_area("Negative Prompt", value="bad image, worst quality", key="negative_prompt")
+        
+        
 
         st.markdown("***")
         st.markdown("#### Generation Settings")
@@ -103,7 +95,7 @@ def animation_style_element(shot_uuid):
             negative_prompt="bad image, worst quality",     # default value, change this to something else
             image_dimension=img_dimension,
             sampling_steps=30,
-            motion_module=motion_module,
+            motion_module="",
             model=sd_model,
             normalise_speed=normalise_speed
         )

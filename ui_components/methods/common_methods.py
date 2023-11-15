@@ -419,7 +419,7 @@ def add_new_shot(project_uuid, name=""):
         "project_uuid": project_uuid,
         "desc": "",
         "name": name,
-        "duration": 2
+        "duration": 10
     }
 
     shot = data_repo.create_shot(**shot_data)
