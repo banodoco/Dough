@@ -29,20 +29,25 @@ def explorer_element(project_uuid):
     z1, z2 = st.columns([1,1])   
     with z1:
         with st.expander("Prompt Settings", expanded=True):
-                                        
             a1, a2 = st.columns([1,1])   
             with a1:
                 prompt = st_memory.text_area("What's your base prompt?", key="explorer_base_prompt", help="This exact text will be included in each prompt.")
-                
-            with a2:        
+            with a2:
                 magic_prompt = st_memory.text_area("What's your magic prompt?", key="explorer_magic_prompt", help="A prompt will be generated based on this text.")
+            
             y1,y2 = st.columns([1,1])            
-            with y1:            
+            with y1:
                 base_prompt_position = st_memory.radio("Which would you like to put first:", options=["Base Prompt", "Magic Prompt"], key="base_prompt_position", help="This will be included at the beginning of each prompt", horizontal=True)
             with y2:
                 if magic_prompt != "":
                     chaos_level = st_memory.slider("How much chaos would you like to add to the magic prompt?", min_value=0, max_value=100, value=20, step=1, key="chaos_level", help="This will determine how random the generated prompt will be.")                    
-                    temperature = chaos_level / 20                    
+                    temperature = chaos_level / 20
+            
+            c1, _ = st.columns([1, 1])
+            with c1:
+                negative_prompt = st_memory.text_area("Negative prompt", value="bad image, worst image, bad anatomy, washed out colors",\
+                                                       key="explorer_neg_prompt", \
+                                                        help="These are the things you wish to be excluded from the image")
     with z2:                
             with st.expander("Input Image Settings", expanded=True):
                 use_input_image = st_memory.checkbox("Use input image", key="use_input_image", value=False)
@@ -124,7 +129,7 @@ def explorer_element(project_uuid):
                             strength=1,
                             adapter_type=None,
                             prompt=prompt_with_variations,
-                            negative_prompt="bad image, worst image, bad anatomy, washed out colors",
+                            negative_prompt=negative_prompt,
                             height=project_settings.height,
                             width=project_settings.width,
                             project_uuid=project_uuid
@@ -151,7 +156,7 @@ def explorer_element(project_uuid):
                                 strength=prompt_strength,
                                 adapter_type=None,
                                 prompt=prompt,
-                                negative_prompt="bad image, worst image, bad anatomy, washed out colors",
+                                negative_prompt=negative_prompt,
                                 height=project_settings.height,
                                 width=project_settings.width,
                                 project_uuid=project_uuid
@@ -171,7 +176,7 @@ def explorer_element(project_uuid):
                                 strength=0.5,
                                 adapter_type=None,
                                 prompt=prompt,
-                                negative_prompt="bad image, worst image, bad anatomy, washed out colors",
+                                negative_prompt=negative_prompt,
                                 height=project_settings.height,
                                 width=project_settings.width,
                                 project_uuid=project_uuid,

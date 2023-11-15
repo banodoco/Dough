@@ -116,7 +116,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                 move1, move2 = st.columns(2)
                 with move1:
                     if st.button("⬆️", key=f'shot_up_movement_{shot.uuid}', help="Move shot up", use_container_width=True):
-                        if shot.shot_idx > 0:
+                        if shot.shot_idx > 1:
                             data_repo.update_shot(uuid=shot_uuid, shot_idx=shot.shot_idx-1)
                         else:
                             st.error("This is the first shot")
@@ -140,8 +140,8 @@ def download_all_images(shot_uuid):
     timing_list = shot.timing_list
 
     # Create a directory for the images
-    if not os.path.exists(shot.name):
-        os.makedirs(shot.name)
+    if not os.path.exists(shot.uuid):
+        os.makedirs(shot.uuid)
 
     # Download and save each image
     for idx, timing in enumerate(timing_list):
@@ -151,25 +151,25 @@ def download_all_images(shot_uuid):
                 # Remote image
                 response = requests.get(location)
                 img = Image.open(BytesIO(response.content))
-                img.save(os.path.join(shot.name, f"{idx}.png"))
+                img.save(os.path.join(shot.uuid, f"{idx}.png"))
             else:
                 # Local image
-                shutil.copy(location, os.path.join(shot.name, f"{idx}.png"))
+                shutil.copy(location, os.path.join(shot.uuid, f"{idx}.png"))
 
     # Create a zip file
-    with zipfile.ZipFile(f"{shot.name}.zip", "w") as zipf:
-        for file in os.listdir(shot.name):
-            zipf.write(os.path.join(shot.name, file), arcname=file)
+    with zipfile.ZipFile(f"{shot.uuid}.zip", "w") as zipf:
+        for file in os.listdir(shot.uuid):
+            zipf.write(os.path.join(shot.uuid, file), arcname=file)
 
     # Read the zip file in binary mode
-    with open(f"{shot.name}.zip", "rb") as file:
+    with open(f"{shot.uuid}.zip", "rb") as file:
         data = file.read()
 
     # Delete the directory and zip file
-    for file in os.listdir(shot.name):
-        os.remove(os.path.join(shot.name, file))
-    os.rmdir(shot.name)
-    os.remove(f"{shot.name}.zip")
+    for file in os.listdir(shot.uuid):
+        os.remove(os.path.join(shot.uuid, file))
+    os.rmdir(shot.uuid)
+    os.remove(f"{shot.uuid}.zip")
 
     return data
 
