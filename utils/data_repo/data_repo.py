@@ -1,7 +1,10 @@
 # this repo serves as a middlerware between API backend and the frontend
 import json
+import time
 from shared.constants import InferenceParamType, InternalFileType, InternalResponse
 from shared.constants import SERVER, ServerType
+from shared.logging.constants import LoggingType
+from shared.logging.logging import AppLogger
 from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalShotObject, InternalUserObject
 from utils.cache.cache_methods import cache_data
 import wrapt
@@ -239,7 +242,6 @@ class DataRepo:
 
         status = self.update_inference_log(uuid, input_params=json.dumps(input_params_data))
         return status
-    
 
     # ai model param map
     # TODO: add DTO in the output
@@ -401,8 +403,18 @@ class DataRepo:
     
     # lock
     def acquire_lock(self, key):
-        res = self.db_repo.acquire_lock(key)
-        return res.data['data'] if res.status else None
+        retry_count = 0
+        while retry_count < 3:
+            try:
+                res = self.db_repo.acquire_lock(key)
+                retry_count = 10
+            except Exception as e:
+                app_logger = AppLogger()
+                app_logger.log(LoggingType.DEBUG, 'database busy, retrying')
+                retry_count += 1
+                time.sleep(0.3)
+
+        return res.data['data'] if res and res.status else None
     
     def release_lock(self, key):
         res = self.db_repo.release_lock(key)

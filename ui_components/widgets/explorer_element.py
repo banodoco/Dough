@@ -1,12 +1,12 @@
 import json
 import streamlit as st
-from ui_components.methods.common_methods import process_inference_output,add_new_shot
+from ui_components.methods.common_methods import process_inference_output,add_new_shot, save_uploaded_image
 from ui_components.methods.file_methods import generate_pil_image
 from ui_components.methods.ml_methods import query_llama2
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
-from shared.constants import AIModelType, InferenceType, InternalFileTag, InternalFileType, SortOrder
+from shared.constants import QUEUE_INFERENCE_QUERIES, AIModelType, InferenceType, InternalFileTag, InternalFileType, SortOrder
 from utils import st_memory
 import time
 from utils.ml_processor.ml_interface import get_ml_client
@@ -45,51 +45,40 @@ def explorer_element(project_uuid):
                     temperature = chaos_level / 20                    
     with z2:                
             with st.expander("Input Image Settings", expanded=True):
-                use_input_image = st_memory.checkbox("Use input image", key="use_input_image")
+                use_input_image = st_memory.checkbox("Use input image", key="use_input_image", value=False)
+                edge_pil_img = None
                 if use_input_image:
                     a_1_1, a_1_2 = st.columns([1, 1])
-                    with a_1_1:                    
+                    with a_1_1:
                         input_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"], key="explorer_input_image", help="This will be the base image for the generation.")
                         type_of_transformation = st_memory.radio("What type of transformation would you like to do?", options=["Evolve Image", "Maintain Structure"], key="type_of_transformation", help="Style Transfer will transfer the style of the image to the target image. Image Generation will generate an image based on the target image.", horizontal=True)
                     with a_1_2:                                        
                         if type_of_transformation == "Evolve Image":
                             strength_of_current_image = st_memory.slider("How much of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_current_image", help="This will determine how much of the current image will be kept in the final image.")
                             # prompt_strength should be 1 - strength_of_current_image
-                            prompt_strength = 1 - (strength_of_current_image / 100)
+                            prompt_strength = round(1 - (strength_of_current_image / 100), 2)
 
                             if input_image is not None:                                
                                 input_image_bytes = input_image.getvalue()
-                                
                                 pil_image = Image.open(io.BytesIO(input_image_bytes))
-                                
                                 blur_radius = (100 - strength_of_current_image) / 3  # Adjust this formula as needed
-
                                 blurred_image = pil_image.filter(ImageFilter.GaussianBlur(blur_radius))
-
                                 st.image(blurred_image, use_column_width=True)
+
                         elif type_of_transformation == "Maintain Structure":
                             strength_of_current_image = st_memory.slider("How much of the current structure would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_current_image", help="This will determine how much of the current image will be kept in the final image.")                                        
                             condition_scale = strength_of_current_image / 10                                                
 
                             if input_image is not None:
-                                
                                 input_image_bytes = input_image.getvalue()
-
                                 pil_image = Image.open(io.BytesIO(input_image_bytes))
-
                                 cv_image = np.array(pil_image)
-
                                 gray_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2GRAY)
-
                                 lower_threshold = (100 - strength_of_current_image) * 3
-
                                 upper_threshold = lower_threshold * 3
-                                                            
                                 edges = cv2.Canny(gray_image, lower_threshold, upper_threshold)
-                                
-                                edges_pil = Image.fromarray(edges)
-
-                                st.image(edges_pil, use_column_width=True)
+                                edge_pil_img = Image.fromarray(edges)
+                                st.image(edge_pil_img, use_column_width=True)
                 else:
                     input_image = None
                     type_of_transformation = None
@@ -107,26 +96,25 @@ def explorer_element(project_uuid):
         st.write(" ")
         st.write(" ")        
         if st.button("Generate images", key="generate_images", use_container_width=True, type="primary"):
-            if not input_image:
-            
-                ml_client = get_ml_client()
-                counter = 0
-                num_models = len(models_to_use)
-                num_images_per_model = number_to_generate // num_models
-                varied_text = ""
-                for _ in range(num_images_per_model):
-                    for model_name in models_to_use:
-                        if counter % 4 == 0:
-                            varied_prompt = ""
-                            varied_text = varied_prompt
-                        if base_prompt_position == "Base Prompt":
-                            prompt_with_variations = f"{prompt}, {varied_text}" if prompt else varied_text
-                        else:  # base_prompt_position is "End"
-                            prompt_with_variations = f"{varied_text}, {prompt}" if prompt else varied_text
-                        # st.write(f"Prompt: '{prompt_with_variations}'")
-                        # st.write(f"Model: {model_name}")
-                        counter += 1                    
-
+            ml_client = get_ml_client()
+            counter = 0
+            num_models = len(models_to_use)
+            num_images_per_model = number_to_generate // num_models
+            varied_text = ""
+            for _ in range(num_images_per_model):
+                for model_name in models_to_use:
+                    if counter % 4 == 0:
+                        varied_prompt = ""
+                        varied_text = varied_prompt
+                    if base_prompt_position == "Base Prompt":
+                        prompt_with_variations = f"{prompt}, {varied_text}" if prompt else varied_text
+                    else:  # base_prompt_position is "End"
+                        prompt_with_variations = f"{varied_text}, {prompt}" if prompt else varied_text
+                    # st.write(f"Prompt: '{prompt_with_variations}'")
+                    # st.write(f"Model: {model_name}")
+                    counter += 1
+                    log = None
+                    if not input_image:
                         query_obj = MLQueryObject(
                             timing_uuid=None,
                             model_uuid=None,
@@ -148,8 +136,51 @@ def explorer_element(project_uuid):
                             model_dict[m.name] = m
 
                         replicate_model = REPLICATE_MODEL.get_model_by_db_obj(model_dict[model_name])
-                        output, log = ml_client.predict_model_output_standardized(replicate_model, query_obj, queue_inference=True)
+                        output, log = ml_client.predict_model_output_standardized(replicate_model, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
+                    else:
+                        if type_of_transformation == "Evolve Image":
+                            input_image_file = save_uploaded_image(input_image, project_uuid)
+                            query_obj = MLQueryObject(
+                                timing_uuid=None,
+                                model_uuid=None,
+                                image_uuid=input_image_file.uuid,
+                                guidance_scale=5,
+                                seed=-1,
+                                num_inference_steps=30,
+                                strength=prompt_strength,
+                                adapter_type=None,
+                                prompt=prompt,
+                                negative_prompt="bad image, worst image, bad anatomy, washed out colors",
+                                height=project_settings.height,
+                                width=project_settings.width,
+                                project_uuid=project_uuid
+                            )
+
+                            output, log = ml_client.predict_model_output_standardized(REPLICATE_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+
+                        elif type_of_transformation == "Maintain Structure":
+                            input_image_file = save_uploaded_image(edge_pil_img, project_uuid)
+                            query_obj = MLQueryObject(
+                                timing_uuid=None,
+                                model_uuid=None,
+                                image_uuid=input_image_file.uuid,
+                                guidance_scale=5,
+                                seed=-1,
+                                num_inference_steps=30,
+                                strength=0.5,
+                                adapter_type=None,
+                                prompt=prompt,
+                                negative_prompt="bad image, worst image, bad anatomy, washed out colors",
+                                height=project_settings.height,
+                                width=project_settings.width,
+                                project_uuid=project_uuid,
+                                data={'condition_scale': condition_scale}
+                            )
+
+                            output, log = ml_client.predict_model_output_standardized(REPLICATE_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+
+                    if log:
                         inference_data = {
                             "inference_type": InferenceType.GALLERY_IMAGE_GENERATION.value,
                             "output": output,
@@ -157,17 +188,8 @@ def explorer_element(project_uuid):
                             "project_uuid": project_uuid
                         }
                         process_inference_output(**inference_data)
-                st.info("Check the Generation Log to the left for the status.")
-            else:
-                #@peter4piyush, this is where you'll need to add your code
-                if type_of_transformation == "Evolve Image":
-                    st.info("Evolve image hasn't been implemented yet")
-                    # "Trigger SDXL Img2Img"
-                    # use prompt_strength and input_image
-                elif type_of_transformation == "Maintain Structure":
-                    st.info("Maintain structure hasn't been implemented yet")
-                    # "Trigger SDXL Canny
-                    # use condition_scale and input_image
+
+            st.info("Check the Generation Log to the left for the status.")
 
     project_setting = data_repo.get_project_setting(project_uuid)
     st.markdown("***")

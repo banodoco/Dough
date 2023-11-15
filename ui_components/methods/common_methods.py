@@ -55,9 +55,8 @@ def clone_styling_settings(source_frame_number, target_frame_uuid):
             target_timing.model = model
 
 # TODO: image format is assumed to be PNG, change this later
-def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], shot_uuid) -> InternalFileObject:
+def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project_uuid) -> InternalFileObject:
     data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
     img = generate_pil_image(img)
     
     file_name = str(uuid.uuid4()) + ".png"
@@ -68,7 +67,7 @@ def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], shot_uu
     file_data = {
         "name": str(uuid.uuid4()) + ".png",
         "type": InternalFileType.IMAGE.value,
-        "project_id": shot.project.uuid
+        "project_id": project_uuid
     }
 
     if hosted_url:
@@ -81,9 +80,10 @@ def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], shot_uu
 
 def save_and_promote_image(image, shot_uuid, timing_uuid, stage):
     data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
 
     try:
-        saved_image = save_new_image(image, shot_uuid)
+        saved_image = save_new_image(image, shot.project.uuid)
         # Update records based on stage
         if stage == WorkflowStageType.SOURCE.value:
             data_repo.update_specific_timing(timing_uuid, source_image_id=saved_image.uuid)
@@ -259,7 +259,7 @@ def rotate_image(location, degree):
     return rotated_image
 
 
-def save_uploaded_image(image: Union[Image.Image, str, np.ndarray, io.BytesIO, InternalFileObject], shot_uuid, frame_uuid, stage_type):
+def save_uploaded_image(image: Union[Image.Image, str, np.ndarray, io.BytesIO, InternalFileObject], project_uuid, frame_uuid=None, stage_type=None):
     '''
     saves the image file (which can be a PIL, arr, InternalFileObject or url) into the project, without
     any tags or logs. then adds that file as the source_image/primary_image, depending
@@ -271,7 +271,7 @@ def save_uploaded_image(image: Union[Image.Image, str, np.ndarray, io.BytesIO, I
         if isinstance(image, InternalFileObject):
             saved_image = image
         else:
-            saved_image = save_new_image(image, shot_uuid)
+            saved_image = save_new_image(image, project_uuid)
         
         # Update records based on stage_type
         if stage_type ==  WorkflowStageType.SOURCE.value:
@@ -574,6 +574,7 @@ def save_audio_file(uploaded_file, project_uuid):
         "name": str(uuid.uuid4()) + ".mp3",
         "type": InternalFileType.AUDIO.value,
         "project_id": project_uuid
+
     }
 
     if hosted_url:
