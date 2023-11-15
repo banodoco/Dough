@@ -26,7 +26,7 @@ def explorer_element(project_uuid):
     shot_list = data_repo.get_shot_list(project_uuid)
     project_settings = data_repo.get_project_setting(project_uuid)
     
-    z1, z2 = st.columns([1,1])   
+    z1, z2 = st.columns([1.3,1])   
     with z1:
         with st.expander("Prompt Settings", expanded=True):
                                         
@@ -47,7 +47,7 @@ def explorer_element(project_uuid):
             with st.expander("Input Image Settings", expanded=True):
                 use_input_image = st_memory.checkbox("Use input image", key="use_input_image")
                 if use_input_image:
-                    a_1_1, a_1_2 = st.columns([1, 1])
+                    a_1_1, a_1_2 = st.columns([1.5, 1])
                     with a_1_1:                    
                         input_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"], key="explorer_input_image", help="This will be the base image for the generation.")
                         type_of_transformation = st_memory.radio("What type of transformation would you like to do?", options=["Evolve Image", "Maintain Structure"], key="type_of_transformation", help="Style Transfer will transfer the style of the image to the target image. Image Generation will generate an image based on the target image.", horizontal=True)
@@ -94,9 +94,6 @@ def explorer_element(project_uuid):
                     input_image = None
                     type_of_transformation = None
                     strength_of_current_image = None
-                    prompt_strength = None
-                    condition_scale = None
-                    temperature = None
 
     models_to_use = ["stable_diffusion_xl"]
     _, d2,d3, _ = st.columns([0.5, 1,1, 0.5])
