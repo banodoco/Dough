@@ -431,7 +431,7 @@ class DataRepo:
         shot = res.data['data'] if res.status else None
         return InternalShotObject(**shot) if shot else None
 
-    def get_shot_list(self, project_uuid):
+    def get_shot_list(self, project_uuid, invalidate_cache=False):
         res = self.db_repo.get_shot_list(project_uuid)
         shot_list = res.data['data'] if res.status else None
         return [InternalShotObject(**shot) for shot in shot_list] if shot_list else []

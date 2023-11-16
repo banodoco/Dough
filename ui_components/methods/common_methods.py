@@ -800,10 +800,12 @@ def process_inference_output(**kwargs):
                 inference_log_id=log_uuid
             )
 
-            data_repo.add_interpolated_clip(shot_uuid, interpolated_clip_id=video.uuid)
             if not shot.main_clip:
                 output_video = update_speed_of_video_clip(video, shot.duration)
                 data_repo.update_shot(uuid=shot_uuid, main_clip_id=output_video.uuid)
+                data_repo.add_interpolated_clip(shot_uuid, interpolated_clip_id=output_video.uuid)
+            else:
+                data_repo.add_interpolated_clip(shot_uuid, interpolated_clip_id=video.uuid)
         
         else:
             del kwargs['log_uuid']
@@ -875,16 +877,27 @@ def check_project_meta_data(project_uuid):
         project = data_repo.get_project_from_uuid(project_uuid)
         timing_update_data = json.loads(project.meta_data).\
             get(ProjectMetaData.DATA_UPDATE.value, None) if project.meta_data else None
-        if timing_update_data:
+        if timing_update_data and len(timing_update_data):
             for timing_uuid in timing_update_data:
                 _ = data_repo.get_timing_from_uuid(timing_uuid, invalidate_cache=True)
-            
-            # removing the metadata after processing
-            data_repo.update_project(uuid=project.uuid, meta_data=json.dumps({ProjectMetaData.DATA_UPDATE.value: []}))
 
         gallery_update_data = json.loads(project.meta_data).\
             get(ProjectMetaData.GALLERY_UPDATE.value, False) if project.meta_data else False
         if gallery_update_data:
             pass
+
+        shot_update_data = json.loads(project.meta_data).\
+            get(ProjectMetaData.SHOT_VIDEO_UPDATE.value, []) if project.meta_data else []
+        if shot_update_data and len(shot_update_data):
+            for shot_uuid in shot_update_data:
+                _ = data_repo.get_shot_list(shot_uuid, invalidate_cache=True)
+        
+        # clearing update data from cache
+        meta_data = {
+            ProjectMetaData.DATA_UPDATE.value: [],
+            ProjectMetaData.GALLERY_UPDATE.value: False,
+            ProjectMetaData.SHOT_VIDEO_UPDATE.value: []
+        }
+        data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
         
         release_lock(key)
