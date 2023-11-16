@@ -1,3 +1,4 @@
+import json
 import time
 from typing import List
 import os
@@ -7,6 +8,7 @@ from PIL import Image
 import requests
 from io import BytesIO
 import streamlit as st
+from shared.constants import InferenceParamType
 from ui_components.constants import WorkflowStageType
 from ui_components.methods.file_methods import generate_pil_image
 

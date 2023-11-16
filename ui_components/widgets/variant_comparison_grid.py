@@ -1,6 +1,9 @@
+import json
 import streamlit as st
+from shared.constants import InferenceParamType
 from ui_components.constants import CreativeProcessType
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
+from ui_components.models import InternalFileObject
 from utils.data_repo.data_repo import DataRepo
 
 
@@ -51,6 +54,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             st.video(variants[current_variant].location, format='mp4', start_time=0) if (current_variant != -1 and variants[current_variant]) else st.error("No video present")
         else:
             st.image(variants[current_variant].location, use_column_width=True)
+        
+        inference_detail_element(variants[current_variant])
         st.success("**Main variant**")
 
     start = (page - 1) * items_to_show
@@ -64,7 +69,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                     st.video(variants[variant_index].location, format='mp4', start_time=0) if variants[variant_index] else st.error("No video present")
                 else:
                     st.image(variants[variant_index].location, use_column_width=True) if variants[variant_index] else st.error("No image present")
-                
+                inference_detail_element(variants[variant_index])
+
                 if st.button(f"Promote Variant #{variant_index + 1}", key=f"Promote Variant #{variant_index + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
                     if stage == CreativeProcessType.MOTION.value:
                         promote_video_variant(shot.uuid, variants[variant_index].uuid)
@@ -78,3 +84,22 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         if next_col >= num_columns:
             cols = st.columns(num_columns)
             next_col = 0  # Reset column counter
+
+
+def inference_detail_element(file: InternalFileObject):
+    if not file:
+        return
+    
+    not_found_msg = 'no generate data'
+    with st.expander(label='Inference details', expanded=False):
+        inf_data = None
+        # NOTE: generated videos also have other params stored inside origin_data > settings
+        if file.inference_log and file.inference_log.input_params:
+            inf_data = json.loads(file.inference_log.input_params)
+            for data_type in InferenceParamType.value_list():
+                if data_type in inf_data:
+                    del inf_data[data_type]
+        
+        inf_data = inf_data or not_found_msg
+        st.write(inf_data)
+        
