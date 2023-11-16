@@ -4,6 +4,8 @@ import io
 import json
 import os
 import mimetypes
+import random
+import string
 import tempfile
 from typing import Union
 from urllib.parse import urlparse
@@ -235,3 +237,33 @@ def zip_images(image_locations, zip_filename='images.zip'):
                 zip_file.write(image_location, image_name)
 
     return zip_filename
+
+
+def create_duplicate_file(file: InternalFileObject, project_uuid=None) -> InternalFileObject:
+    data_repo = DataRepo()
+
+    unique_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5)) + ".mp4"
+    file_data = {
+        "name": unique_id + '_' + file.name,
+        "type": file.type,
+    }
+
+    if file.hosted_url:
+        file_data.update({'hosted_url': file.hosted_url})
+    
+    if file.local_path:
+        file_data.update({'local_path': file.local_path})
+
+    if file.project:
+        file_data.update({'project_id': file.project.uuid})
+    elif project_uuid:
+        file_data.update({'project_id': project_uuid})
+
+    if file.tag:
+        file_data.update({'tag': file.tag})
+
+    if file.inference_log:
+        file_data.update({'inference_log_id': str(file.inference_log.uuid)})
+
+    new_file = data_repo.create_file(**file_data)
+    return new_file

@@ -209,7 +209,7 @@ def explorer_element(project_uuid):
         gallery_image_view(project_uuid, page_number, num_items_per_page, open_detailed_view_for_all, False, num_columns)
     with tab2:
         k1,k2 = st.columns([5,1])
-        shortlist_page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True, key="shortlist_gallery")
+        shortlist_page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
         with k2:
             open_detailed_view_for_all = st_memory.toggle("Open prompt details for all:", key='shortlist_gallery_toggle')
         gallery_image_view(project_uuid, shortlist_page_number, num_items_per_page, open_detailed_view_for_all, True, num_columns)
@@ -224,7 +224,7 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
         file_type=InternalFileType.IMAGE.value, 
         tag=InternalFileTag.GALLERY_IMAGE.value if not shortlist else InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value, 
         project_id=project_uuid,
-        page=page_number,
+        page=page_number or 1,
         data_per_page=num_items_per_page,
         sort_order=SortOrder.DESCENDING.value 
     )
