@@ -23,6 +23,7 @@ def animation_style_element(shot_uuid):
         st.markdown("***")
         
         shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
+        st.session_state['project_uuid'] = str(shot.project.uuid)
         timing_list: List[InternalFrameTimingObject] = shot.timing_list
         st.markdown("#### Keyframe Settings")
         if timing_list and len(timing_list):
@@ -33,7 +34,7 @@ def animation_style_element(shot_uuid):
                 if timing.primary_image and timing.primary_image.location:
                     columns[idx].image(timing.primary_image.location, use_column_width=True)
                     b = timing.primary_image.inference_params
-                    prompt = columns[idx].text_area(f"Prompt {idx+1}", value=(b['prompt'] if b else ""), key=f"prompt_{idx+1}")                        
+                    prompt = columns[idx].text_area(f"Prompt {idx+1}", value=(b['prompt'] if b else ""), key=f"prompt_{idx+1}")
                     # base_style_on_image = columns[idx].checkbox(f"Use base style image for prompt {idx+1}", key=f"base_style_image_{idx+1}",value=True)
                 else:
                     columns[idx].warning("No primary image present")
@@ -53,14 +54,12 @@ def animation_style_element(shot_uuid):
         st.markdown("#### Keyframe Influence Settings")
         d1, d2 = st.columns([1, 1])
 
-        with d1:            
-            
+        with d1:
             frames_per_keyframe = st_memory.number_input("Frames per Keyframe", min_value=8, max_value=36, value=16, step=1, key="frames_per_keyframe")
             cn_strength = st_memory.slider("CN Strength", min_value=0.0, max_value=1.0, value=0.5, step=0.1, key="cn_strength")
             length_of_key_frame_influence = st_memory.slider("Length of Keyframe Influence", min_value=0.0, max_value=2.0, value=1.1, step=0.1, key="length_of_key_frame_influence")
             interpolation_style = st_memory.selectbox("Interpolation Style", options=["ease-in-out", "ease-in", "ease-out", "linear"], key="interpolation_style")                                    
             motion_scale = st_memory.slider("Motion Scale", min_value=0.0, max_value=2.0, value=1.1, step=0.1, key="motion_scale")
-
 
         with d2:
             import numpy as np
@@ -168,13 +167,9 @@ def animation_style_element(shot_uuid):
             ]
 
             # remove .safe tensors from the end of each model name
-
-            sd_model_list = [model_name.replace(".safetensors", "") for model_name in sd_model_list]
-
-            
             sd_model = st_memory.selectbox("Which model would you like to use?", options=sd_model_list, key="sd_model")
             negative_prompt = st_memory.text_area("What would you like to avoid in the videos?", value="bad image, worst quality", key="negative_prompt")
-            ip_adapter_strength = st_memory.slider("How tightly would you like the style to adhere to the input images?", min_value=0.0, max_value=1.0, value=0.66, step=0.1, key="ip_adapter_strength")
+            ip_adapter_weight = st_memory.slider("How tightly would you like the style to adhere to the input images?", min_value=0.0, max_value=1.0, value=0.66, step=0.1, key="ip_adapter_weight")
             soft_scaled_cn_weights_multipler = st_memory.slider("How much would you like to scale the CN weights?", min_value=0.0, max_value=10.0, value=0.85, step=0.1, key="soft_scaled_cn_weights_multipler")
         
         
@@ -189,19 +184,25 @@ def animation_style_element(shot_uuid):
             project_settings = data_repo.get_project_setting(shot.project.uuid)
             width = project_settings.width
             height = project_settings.height
-            img_dimension = f"{width}x{height}"                
+            img_dimension = f"{width}x{height}"
             variant_count = st.number_input("How many variants?", min_value=1, max_value=100, value=1, step=1, key="variant_count")
         normalise_speed = True
         # normalise_speed = st.checkbox("Normalise Speed", value=True, key="normalise_speed")
 
         settings.update(
-            # positive_prompt=positive_prompt,
-            negative_prompt="bad image, worst quality",     # default value, change this to something else
+            negative_prompt=negative_prompt,
             image_dimension=img_dimension,
+            ip_adapter_weight=ip_adapter_weight,
+            soft_scaled_cn_weights_multipler=soft_scaled_cn_weights_multipler,
             sampling_steps=30,
             motion_module="",
             model=sd_model,
-            normalise_speed=normalise_speed
+            normalise_speed=normalise_speed,
+            motion_scale=motion_scale,
+            cn_strength=cn_strength,
+            interpolation_style=interpolation_style,
+            frames_per_keyframe=frames_per_keyframe,
+            length_of_key_frame_influence=length_of_key_frame_influence
         )
     
     elif animation_type == AnimationStyleType.IMAGE_TO_VIDEO.value:
@@ -251,6 +252,22 @@ def animation_style_element(shot_uuid):
         vid_quality = "full" if video_resolution == "Full Resolution" else "preview"
         st.write("Generating animation clip...")
         settings.update(animation_style=current_animation_style)
+        
+        if animation_type == AnimationStyleType.CREATIVE_INTERPOLATION.value:
+            positive_prompt = ""
+            for idx, timing in enumerate(timing_list):
+                if timing.primary_image and timing.primary_image.location:
+                    b = timing.primary_image.inference_params
+                    prompt = b['prompt'] if b else ""
+                    frame_prompt = f"{idx * frames_per_keyframe}_" + prompt
+                    positive_prompt +=  ":" + frame_prompt if positive_prompt else frame_prompt
+                else:
+                    st.error("Please generate primary images")
+                    time.sleep(0.5)
+                    st.rerun()
+
+            settings.update(positive_prompt=positive_prompt)
+
         create_single_interpolated_clip(
             shot_uuid,
             vid_quality,

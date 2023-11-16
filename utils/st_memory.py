@@ -35,11 +35,21 @@ def selectbox(label, options, index=0, key=None, help=None, on_change=None, disa
 
 
 def number_input(label, min_value=None, max_value=None, step=None, format=None, key=None, help=None, on_change=None, args=None, kwargs=None, *, disabled=False, label_visibility="visible",value=1):
-
     if key not in st.session_state:
         st.session_state[key] = value
 
-    selection = st.number_input(label, min_value, max_value, st.session_state[key], step, format, help, on_change, disabled, label_visibility)
+    selection = st.number_input(
+        label=label,
+        min_value=min_value,
+        max_value=max_value,
+        value=st.session_state[key],
+        step=step,
+        format=format,
+        help=help,
+        on_change=on_change,
+        disabled=disabled,
+        label_visibility=label_visibility
+    )
 
     if selection != st.session_state[key]:
         st.session_state[key] = selection

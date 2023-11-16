@@ -45,7 +45,7 @@ class REPLICATE_MODEL:
     epicrealism_v5 = ReplicateModel("pagebrain/epicrealism-v5", "222465e57e4d9812207f14133c9499d47d706ecc41a8bf400120285b2f030b42")
     sdxl_controlnet = ReplicateModel("lucataco/sdxl-controlnet", "db2ffdbdc7f6cb4d6dab512434679ee3366ae7ab84f89750f8947d5594b79a47")
     realistic_vision_v5_img2img = ReplicateModel("lucataco/realistic-vision-v5-img2img", "82bbb4595458d6be142450fc6d8c4d79c936b92bd184dd2d6dd71d0796159819")
-    ad_interpolation = ReplicateModel("piyushk52/ad_3_img_smooth", "c3395c9373ac64cf9618ce51c8a4ae0da9d570649820cfcba93b58a3b3bee045")
+    ad_interpolation = ReplicateModel("piyushk52/ad_infinite", "2cd433928abb9b4402f2c1a53b65060b30ab20ceb6e2745c053568f18be6b34a")
 
     # addition 17/10/2023
     llama_2_7b = ReplicateModel("meta/llama-2-7b", "527827021d8756c7ab79fde0abbfaac885c37a3ed5fe23c7465093f0878d55ef")

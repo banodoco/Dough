@@ -7,6 +7,7 @@ import mimetypes
 import tempfile
 from typing import Union
 from urllib.parse import urlparse
+import zipfile
 from PIL import Image
 import numpy as np
 import uuid
@@ -220,3 +221,17 @@ def save_to_env(key, value):
 def load_from_env(key):
     val = get_key(dotenv_path=ENV_FILE_PATH, key_to_get=key)
     return val
+
+def zip_images(image_locations, zip_filename='images.zip'):
+    with zipfile.ZipFile(zip_filename, 'w') as zip_file:
+        for image_location in image_locations:
+            if image_location.startswith('http'):
+                response = requests.get(image_location)
+                image_data = response.content
+                image_name = os.path.basename(image_location)
+                zip_file.writestr(image_name, image_data)
+            else:
+                image_name = os.path.basename(image_location)
+                zip_file.write(image_location, image_name)
+
+    return zip_filename
