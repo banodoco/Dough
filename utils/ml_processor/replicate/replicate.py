@@ -200,17 +200,8 @@ class ReplicateProcessor(MachineLearningProcessor):
 
         return output[0], log
     
-    # TODO: separate image compression from this function
     @check_user_credits
-    def upload_training_data(self, images_list):
-        # compressing images in zip file
-        for i in range(len(images_list)):
-            images_list[i] = 'videos/training_data/' + images_list[i]
-
-        with zipfile.ZipFile('images.zip', 'w') as zip:
-            for image in images_list:
-                zip.write(image, arcname=os.path.basename(image))
-
+    def upload_training_data(self, zip_file_name, delete_after_upload=False):
         headers = {
             "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),
             "Content-Type": "application/zip"
@@ -220,40 +211,14 @@ class ReplicateProcessor(MachineLearningProcessor):
             raise Exception(str(response.content))
         upload_url = response.json()["upload_url"]  # this is where data will be uploaded
         serving_url = response.json()["serving_url"]    # this is where the data will be available
-        with open("images.zip", 'rb') as f:
+        with open(zip_file_name, 'rb') as f:
             r.put(upload_url, data=f, headers=headers)
         
-        os.remove('images.zip')
+        if delete_after_upload:
+            os.remove(zip_file_name)
+            
         return serving_url
-    
-    # for uploading temp files
-    @check_user_credits
-    def upload_training_data(self, images_list):
-        with zipfile.ZipFile('images.zip', 'w') as zip_file:
-            for i, image in enumerate(images_list):
-                image = Image.open(image)
-                image_bytes = io.BytesIO()
-                image.save(image_bytes, format='PNG')
-                image_bytes.seek(0)
 
-                filename = f'image_{i}.png'
-
-                zip_file.writestr(filename, image_bytes.read())
-
-        headers = {
-            "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),
-            "Content-Type": "application/zip"
-        }
-        response = r.post(self.training_data_upload_url, headers=headers)
-        if response.status_code != 200:
-            raise Exception(str(response.content))
-        upload_url = response.json()["upload_url"]  # this is where data will be uploaded
-        serving_url = response.json()["serving_url"]    # this is where the data will be available
-        with open("images.zip", 'rb') as f:
-            r.put(upload_url, data=f, headers=headers)
-        
-        os.remove('images.zip')
-        return serving_url
     
     # TODO: figure how to resolve model location setting, right now it's hardcoded to peter942/modnet
     @check_user_credits

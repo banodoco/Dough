@@ -1,6 +1,12 @@
+import json
+import time
 import streamlit as st
+from shared.constants import InferenceParamType, InternalFileTag
 from ui_components.constants import CreativeProcessType
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
+from ui_components.methods.file_methods import create_duplicate_file
+from ui_components.models import InternalFileObject
+from ui_components.widgets.add_key_frame_element import add_key_frame
 from utils.data_repo.data_repo import DataRepo
 
 
@@ -11,15 +17,17 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     '''
     data_repo = DataRepo()
 
-    timing_uuid, shot_uuid = None, None
+    timing_uuid, shot_uuid, project_uuid = None, None, None
     if stage == CreativeProcessType.MOTION.value:
         shot_uuid = ele_uuid
         shot = data_repo.get_shot_from_uuid(shot_uuid)
         variants = shot.interpolated_clip_list
+        project_uuid = shot.project.uuid
     else:
         timing_uuid = ele_uuid
         timing = data_repo.get_timing_from_uuid(timing_uuid)
         variants = timing.alternative_images_list
+        project_uuid = timing.shot.project.uuid
 
     st.markdown("***")
 
@@ -51,6 +59,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             st.video(variants[current_variant].location, format='mp4', start_time=0) if (current_variant != -1 and variants[current_variant]) else st.error("No video present")
         else:
             st.image(variants[current_variant].location, use_column_width=True)
+        
+        inference_detail_element(variants[current_variant])
         st.success("**Main variant**")
 
     start = (page - 1) * items_to_show
@@ -65,6 +75,12 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 else:
                     st.image(variants[variant_index].location, use_column_width=True) if variants[variant_index] else st.error("No image present")
                 
+                inference_detail_element(variants[variant_index])
+
+                if stage != CreativeProcessType.MOTION.value:
+                    add_variant_to_shortlist_element(variants[variant_index], project_uuid)
+                    add_variant_to_shot_element(variants[variant_index], project_uuid)
+
                 if st.button(f"Promote Variant #{variant_index + 1}", key=f"Promote Variant #{variant_index + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
                     if stage == CreativeProcessType.MOTION.value:
                         promote_video_variant(shot.uuid, variants[variant_index].uuid)
@@ -78,3 +94,49 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         if next_col >= num_columns:
             cols = st.columns(num_columns)
             next_col = 0  # Reset column counter
+
+
+def inference_detail_element(file: InternalFileObject):
+    if not file:
+        return
+    
+    not_found_msg = 'no generate data'
+    with st.expander(label='Inference details', expanded=False):
+        inf_data = None
+        # NOTE: generated videos also have other params stored inside origin_data > settings
+        if file.inference_log and file.inference_log.input_params:
+            inf_data = json.loads(file.inference_log.input_params)
+            for data_type in InferenceParamType.value_list():
+                if data_type in inf_data:
+                    del inf_data[data_type]
+        
+        inf_data = inf_data or not_found_msg
+        st.write(inf_data)
+
+
+def add_variant_to_shortlist_element(file: InternalFileObject, project_uuid):
+    data_repo = DataRepo()
+    
+    if st.button("Add to shortlist ➕", key=f"shortlist_{file.uuid}",use_container_width=True, help="Add to shortlist"):
+        duplicate_file = create_duplicate_file(file, project_uuid)
+        data_repo.update_file(duplicate_file.uuid, tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value)
+        st.success("Added To Shortlist")
+        time.sleep(0.3)
+        st.rerun()
+
+
+def add_variant_to_shot_element(file: InternalFileObject, project_uuid):
+    data_repo = DataRepo()
+
+    shot_list = data_repo.get_shot_list(project_uuid)
+    shot_names = [s.name for s in shot_list]
+    
+    shot_name = st.selectbox('Add to shot:', shot_names, key=f"current_shot_variant_{file.uuid}")
+    if shot_name:
+        if st.button(f"Add to shot", key=f"add_{file.uuid}", help="Promote this variant to the primary image", use_container_width=True):
+            shot_number = shot_names.index(shot_name)
+            shot_uuid = shot_list[shot_number].uuid
+
+            duplicate_file = create_duplicate_file(file, project_uuid)
+            add_key_frame(duplicate_file, False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
+            st.rerun()

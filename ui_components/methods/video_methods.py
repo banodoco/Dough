@@ -80,7 +80,8 @@ def update_speed_of_video_clip(video_file: InternalFileObject, duration) -> Inte
         new_file_location,
         "video/mp4",
         video_bytes,
-        video_file.project.uuid
+        video_file.project.uuid,
+        video_file.inference_log.uuid
     )
 
     if temp_video_file:

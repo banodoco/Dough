@@ -163,6 +163,17 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
 
         if input_image:
             data['image'] = input_image
+    
+    elif model == REPLICATE_MODEL.sdxl_controlnet_openpose:
+        data = {
+            'prompt': query_obj.prompt,
+            'negative_prompt': query_obj.negative_prompt,
+            'num_inference_steps': query_obj.num_inference_steps,
+            'guidance_scale': query_obj.guidance_scale,
+        }
+
+        if input_image:
+            data['image'] = input_image
 
     elif model == REPLICATE_MODEL.realistic_vision_v5_img2img:
         data = {

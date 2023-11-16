@@ -4,9 +4,12 @@ import io
 import json
 import os
 import mimetypes
+import random
+import string
 import tempfile
 from typing import Union
 from urllib.parse import urlparse
+import zipfile
 from PIL import Image
 import numpy as np
 import uuid
@@ -220,3 +223,47 @@ def save_to_env(key, value):
 def load_from_env(key):
     val = get_key(dotenv_path=ENV_FILE_PATH, key_to_get=key)
     return val
+
+def zip_images(image_locations, zip_filename='images.zip'):
+    with zipfile.ZipFile(zip_filename, 'w') as zip_file:
+        for image_location in image_locations:
+            if image_location.startswith('http'):
+                response = requests.get(image_location)
+                image_data = response.content
+                image_name = os.path.basename(image_location)
+                zip_file.writestr(image_name, image_data)
+            else:
+                image_name = os.path.basename(image_location)
+                zip_file.write(image_location, image_name)
+
+    return zip_filename
+
+
+def create_duplicate_file(file: InternalFileObject, project_uuid=None) -> InternalFileObject:
+    data_repo = DataRepo()
+
+    unique_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5)) + ".mp4"
+    file_data = {
+        "name": unique_id + '_' + file.name,
+        "type": file.type,
+    }
+
+    if file.hosted_url:
+        file_data.update({'hosted_url': file.hosted_url})
+    
+    if file.local_path:
+        file_data.update({'local_path': file.local_path})
+
+    if file.project:
+        file_data.update({'project_id': file.project.uuid})
+    elif project_uuid:
+        file_data.update({'project_id': project_uuid})
+
+    if file.tag:
+        file_data.update({'tag': file.tag})
+
+    if file.inference_log:
+        file_data.update({'inference_log_id': str(file.inference_log.uuid)})
+
+    new_file = data_repo.create_file(**file_data)
+    return new_file

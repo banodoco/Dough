@@ -169,6 +169,8 @@ def check_and_update_db():
                         log_status = InferenceStatus.FAILED.value
                         InferenceLog.objects.filter(id=log.id).update(status=log_status, output_details=json.dumps(output_details))
                 
+                else:
+                    InferenceLog.objects.filter(id=log.id).update(status=log_status)
             else:
                 app_logger.log(LoggingType.DEBUG, f"Error: {response.content}")
         else:
