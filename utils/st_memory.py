@@ -144,3 +144,15 @@ def text_area(label, value='', height=None, max_chars=None, key=None, help=None,
     return selection
 
 
+def text_input(label, value='', max_chars=None, key=None, help=None, on_change=None, args=None, kwargs=None, *, disabled=False, label_visibility="visible"):
+    
+    if key not in st.session_state:
+        st.session_state[key] = value
+
+    selection = st.text_input(label=label, value=st.session_state[key], max_chars=max_chars, help=help, on_change=on_change, disabled=disabled, label_visibility=label_visibility)
+
+    if selection != st.session_state[key]:
+        st.session_state[key] = selection
+        st.rerun()
+
+    return selection

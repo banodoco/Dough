@@ -15,6 +15,7 @@ from PIL import Image, ImageFilter
 import io
 import cv2
 import numpy as np
+from utils import st_memory
 
 
 
@@ -45,7 +46,7 @@ def explorer_element(project_uuid):
             
             c1, _ = st.columns([1, 1])
             with c1:
-                negative_prompt = st_memory.text_area("Negative prompt", value="bad image, worst image, bad anatomy, washed out colors",\
+                negative_prompt = st_memory.text_input("Negative prompt", value="bad image, worst image, bad anatomy, washed out colors",\
                                                        key="explorer_neg_prompt", \
                                                         help="These are the things you wish to be excluded from the image")
     with z2:                
@@ -196,18 +197,33 @@ def explorer_element(project_uuid):
     project_setting = data_repo.get_project_setting(project_uuid)
     st.markdown("***")
     
-    f1,f2 = st.columns([1, 1])
-    num_columns = f1.slider('Number of columns:', min_value=3, max_value=7, value=5)
-    num_items_per_page = f2.slider('Items per page:', min_value=10, max_value=50, value=20)
+    f1, f2 = st.columns([1, 1])
+    with f1:
+        num_columns = st_memory.slider('Number of columns:', min_value=3, max_value=7, value=4,key="num_columns_explorer")
+    with f2:
+        num_items_per_page = st_memory.slider('Items per page:', min_value=10, max_value=50, value=16, key="num_items_per_page_explorer")
     st.markdown("***")
 
-    tab1, tab2 = st.tabs(["Explorations", "Shortlist"])
-    with tab1:
+    st.session_state['explorer_view'] = st_memory.menu(
+        '',
+        ["Explorations", "Shortlist"],
+        icons=['airplane', 'grid-3x3', "paint-bucket", 'pencil'],
+        menu_icon="cast",
+        default_index=0,
+        key="explorer_view_selector",
+        orientation="horizontal",
+        styles={
+            "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"},
+            "nav-link-selected": {"background-color": "#66A9BE"}
+        }
+    )
+    # tab1, tab2 = st.tabs(["Explorations", "Shortlist"])
+    if st.session_state['explorer_view'] == "Explorations":
         k1,k2 = st.columns([5,1])
         page_number = k1.radio("Select page", options=range(1, project_setting.total_gallery_pages + 1), horizontal=True, key="main_gallery")
         open_detailed_view_for_all = k2.toggle("Open detailed view for all:", key='main_gallery_toggle')
         gallery_image_view(project_uuid, page_number, num_items_per_page, open_detailed_view_for_all, False, num_columns)
-    with tab2:
+    elif st.session_state['explorer_view'] == "Shortlist":
         k1,k2 = st.columns([5,1])
         shortlist_page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
         with k2:

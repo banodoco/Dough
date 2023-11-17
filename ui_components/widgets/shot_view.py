@@ -42,6 +42,15 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
             with header_col_1:   
                 update_shot_duration(shot.uuid)
 
+            with header_col_2:
+                st.write("")
+                st.write("")
+                if st.button("Jump to Individual Shot View", key=f"jump_to_shot_{shot.uuid}", help=f"This will jump to the individual shot view for '{shot.name}'", use_container_width=True):
+                    st.session_state["shot_uuid"] = shot.uuid
+                    st.session_state["frame_styling_view_type_manual_select"] = 2
+                    st.session_state["manual_select"] = 1
+                    
+                    st.rerun()
             with header_col_3:
                 col2, col3, col4 = st.columns(3)
     
