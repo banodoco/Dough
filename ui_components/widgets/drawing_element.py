@@ -16,17 +16,12 @@ from utils import st_memory
 
 
 def drawing_element(timing_details,project_settings,project_uuid,stage=WorkflowStageType.STYLED.value):
-    drawing_stage = st_memory.radio("Which stage to work on?", ["Styled Image", "Guidance Image"], horizontal=True, key="drawing_stage")
-
-    if drawing_stage == "Styled Image":
-        stage=WorkflowStageType.STYLED.value
-    elif drawing_stage == "Guidance Image":
-        stage=WorkflowStageType.SOURCE.value
-
-    if stage == WorkflowStageType.SOURCE.value:
-        image_path = timing_details[st.session_state['current_frame_index'] - 1].source_image.location 
-    elif stage == WorkflowStageType.STYLED.value:
-        image_path = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
+    
+    drawing_stage = "Styled Image"
+    
+    stage=WorkflowStageType.STYLED.value
+    
+    image_path = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
     data_repo = DataRepo()
 
     canvas1, canvas2 = st.columns([1, 1.5])
@@ -110,13 +105,9 @@ def drawing_element(timing_details,project_settings,project_uuid,stage=WorkflowS
             st.session_state['canny_image'] = None
 
         if st.button("Extract Canny From image"):
-            if stage == WorkflowStageType.SOURCE.value:
-                image_path = timing_details[st.session_state['current_frame_index'] - 1].source_image.location 
-        
-            elif stage == WorkflowStageType.STYLED.value:
-                image_path = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
-            
-            
+
+            image_path = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
+                        
             canny_image = extract_canny_lines(
                     image_path, project_uuid, low_threshold, high_threshold)
             
@@ -174,34 +165,19 @@ def drawing_element(timing_details,project_settings,project_uuid,stage=WorkflowS
             else:                
                 if st.button("Save New Image", key="save_canvas_active",type="primary"):
                     if canvas_result.image_data is not None:
-                        # overlay the canvas image on top of the canny image and save the result
-                        # if canny image is from a url, then we need to download it first
-                        if stage == WorkflowStageType.SOURCE.value:
-                            if timing.source_image and timing.source_image.location:
-                                if timing.source_image.location.startswith("http"):
-                                    canny_image = r.get(
-                                        timing.source_image.location)
-                                    canny_image = Image.open(
-                                        BytesIO(canny_image.content))
-                                else:
-                                    canny_image = Image.open(
-                                        timing.source_image.location)
+
+                        if timing.primary_image_location:
+                            if timing.primary_image_location.startswith("http"):
+                                canny_image = r.get(
+                                    timing.primary_image_location)
+                                canny_image = Image.open(
+                                    BytesIO(canny_image.content))
                             else:
-                                canny_image = Image.new(
-                                    "RGB", (width, height), "white")
-                        elif stage == WorkflowStageType.STYLED.value:
-                            if timing.primary_image_location:
-                                if timing.primary_image_location.startswith("http"):
-                                    canny_image = r.get(
-                                        timing.primary_image_location)
-                                    canny_image = Image.open(
-                                        BytesIO(canny_image.content))
-                                else:
-                                    canny_image = Image.open(
-                                        timing.primary_image_location)
-                            else:
-                                canny_image = Image.new(
-                                    "RGB", (width, height), "white")
+                                canny_image = Image.open(
+                                    timing.primary_image_location)
+                        else:
+                            canny_image = Image.new(
+                                "RGB", (width, height), "white")
 
                         canny_image = canny_image.convert("RGBA")
                         # canvas_image = canvas_image.convert("RGBA")
@@ -239,13 +215,9 @@ def drawing_element(timing_details,project_settings,project_uuid,stage=WorkflowS
 
                         canny_image = data_repo.create_file(
                             **file_data)
-                        if stage == WorkflowStageType.SOURCE.value:
-                            data_repo.update_specific_timing(
-                                st.session_state['current_frame_uuid'], source_image_id=canny_image.uuid)
-                        elif stage == WorkflowStageType.STYLED.value:
-                            data_repo.update_specific_timing(
-                                st.session_state['current_frame_uuid'], primary_image_id=canny_image.uuid)
 
+                        data_repo.update_specific_timing(
+                            st.session_state['current_frame_uuid'], primary_image_id=canny_image.uuid)
                        
                         st.success("New Canny Image Saved")
                         st.session_state['reset_canvas'] = True

@@ -18,6 +18,8 @@ def styling_element(timing_uuid, view_type=ViewType.SINGLE.value):
 
     # -------------------- Transfomation Stage -------------------- #
     stages = ImageStage.value_list()
+    # remove the first item from the list
+    stages.pop(0)
     if view_type == ViewType.SINGLE.value:
         append_to_item_name = f"{timing_uuid}"
     elif view_type == ViewType.LIST.value:

@@ -59,12 +59,13 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             st.video(variants[current_variant].location, format='mp4', start_time=0) if (current_variant != -1 and variants[current_variant]) else st.error("No video present")
         else:
             st.image(variants[current_variant].location, use_column_width=True)
-        
-        inference_detail_element(variants[current_variant])
+        with st.expander("Inference details"):
+            st.markdown(f"Details:")
+            inference_detail_element(variants[current_variant])
         st.success("**Main variant**")
 
     start = (page - 1) * items_to_show
-    end = min(start + items_to_show, len(variants))
+    end = min(start + items_to_show-1, len(variants))
 
     next_col = 1
     for variant_index in range(end - 1, start - 1, -1):
@@ -75,11 +76,16 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 else:
                     st.image(variants[variant_index].location, use_column_width=True) if variants[variant_index] else st.error("No image present")
                 
-                inference_detail_element(variants[variant_index])
-
-                if stage != CreativeProcessType.MOTION.value:
-                    add_variant_to_shortlist_element(variants[variant_index], project_uuid)
-                    add_variant_to_shot_element(variants[variant_index], project_uuid)
+                with st.expander("Inference details"):
+                    st.markdown(f"Details:")
+                    inference_detail_element(variants[variant_index])
+                    if stage != CreativeProcessType.MOTION.value:
+                        h1, h2 = st.columns([1, 1])
+                        with h1:
+                            st.markdown(f"Add to shortlist:")
+                            add_variant_to_shortlist_element(variants[variant_index], project_uuid)
+                        with h2:
+                            add_variant_to_shot_element(variants[variant_index], project_uuid)                                                            
 
                 if st.button(f"Promote Variant #{variant_index + 1}", key=f"Promote Variant #{variant_index + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
                     if stage == CreativeProcessType.MOTION.value:
@@ -100,18 +106,17 @@ def inference_detail_element(file: InternalFileObject):
     if not file:
         return
     
-    not_found_msg = 'no generate data'
-    with st.expander(label='Inference details', expanded=False):
-        inf_data = None
-        # NOTE: generated videos also have other params stored inside origin_data > settings
-        if file.inference_log and file.inference_log.input_params:
-            inf_data = json.loads(file.inference_log.input_params)
-            for data_type in InferenceParamType.value_list():
-                if data_type in inf_data:
-                    del inf_data[data_type]
-        
-        inf_data = inf_data or not_found_msg
-        st.write(inf_data)
+    not_found_msg = 'No data available.'    
+    inf_data = None
+    # NOTE: generated videos also have other params stored inside origin_data > settings
+    if file.inference_log and file.inference_log.input_params:
+        inf_data = json.loads(file.inference_log.input_params)
+        for data_type in InferenceParamType.value_list():
+            if data_type in inf_data:
+                del inf_data[data_type]
+    
+    inf_data = inf_data or not_found_msg
+    st.write(inf_data)
 
 
 def add_variant_to_shortlist_element(file: InternalFileObject, project_uuid):
