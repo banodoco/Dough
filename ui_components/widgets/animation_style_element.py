@@ -294,7 +294,7 @@ def animation_style_element(shot_uuid):
     st.write(f"context_stride: {context_stride}")
     st.write(f"context_overlap: {context_overlap}")
     if type_of_frame_distribution == "linear":
-        batch_size = (len(timing_list) * linear_frame_distribution_value) + buffer
+        batch_size = ((len(timing_list)-1) * linear_frame_distribution_value) + buffer
         
     elif type_of_frame_distribution == "dynamic":
         batch_size = int(dynamic_frame_distribution_values.split(',')[-1]) + buffer
