@@ -45,8 +45,9 @@ def animation_style_element(shot_uuid):
                 help = "You can't generate a video because one of your keyframes is missing an image."
     else:
         st.warning("No keyframes present")
-    '''
+    
     st.markdown("***")
+    '''
     video_resolution = None
 
     settings = {
@@ -113,11 +114,11 @@ def animation_style_element(shot_uuid):
                     dynamic_frame_distribution_values.append(frame_position)
                 if type_of_key_frame_influence == "dynamic":
                     linear_key_frame_influence_value = ""
-                    dynamic_key_frame_influence_individual_value = columns[idx].slider(f"Length of Keyframe Influence {idx+1}", min_value=0.0, max_value=5.0, value=(b['dynamic_key_frame_influence_values'] if 'dynamic_key_frame_influence_values' in b else 1.1), step=0.1, key=f"dynamic_key_frame_influence_values_{idx+1}")
+                    dynamic_key_frame_influence_individual_value = columns[idx].slider(f"Length of Keyframe Influence {idx+1}", min_value=0.0, max_value=5.0, value=(b['dynamic_key_frame_influence_values'] if b and 'dynamic_key_frame_influence_values' in b else 1.1), step=0.1, key=f"dynamic_key_frame_influence_values_{idx+1}")
                     dynamic_key_frame_influence_values.append(str(dynamic_key_frame_influence_individual_value))
                 if type_of_cn_strength_distribution == "dynamic":
-                    linear_cn_strength_value = ""
-                    dynamic_cn_strength_individual_value = columns[idx].slider(f"CN Strength {idx+1}", min_value=0.0, max_value=1.0, value=(b['dynamic_cn_strength_values'] if 'dynamic_cn_strength_values' in b else 0.5), step=0.1, key=f"dynamic_cn_strength_values_{idx+1}")
+                    linear_cn_strength_value = ""                   
+                    dynamic_cn_strength_individual_value = columns[idx].slider(f"CN Strength {idx+1}", min_value=0.0, max_value=1.0, value=(b['dynamic_cn_strength_values'] if b and 'dynamic_cn_strength_values' in b else 0.5), step=0.1, key=f"dynamic_cn_strength_values_{idx+1}")
                     dynamic_cn_strength_values.append(str(dynamic_cn_strength_individual_value))
 
         # Convert lists to strings
@@ -160,9 +161,10 @@ def animation_style_element(shot_uuid):
         def extract_keyframe_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value):
             if type_of_key_frame_influence == "dynamic":
                 # Parse the dynamic key frame influence values without sorting
+                
                 return [float(influence.strip()) for influence in dynamic_key_frame_influence_values.split(',')]
             else:
-                # Create a list with the linear_key_frame_influence_value for each keyframe
+                # Create a list w gbith the linear_key_frame_influence_value for each keyframe
                 return [linear_key_frame_influence_value for _ in keyframe_positions]
         
         def calculate_weights_and_plot(influence_ranges, interpolation, strengths):
@@ -173,6 +175,7 @@ def animation_style_element(shot_uuid):
             for i, (range_start, range_end) in enumerate(influence_ranges):
                 strength = float(strengths[i])  # Get the corresponding strength value
                 if i == 0:
+                    
                     strength_from = 1.0
                     strength_to = 0.0
                     revert_direction_at_midpoint = False
@@ -227,16 +230,8 @@ def animation_style_element(shot_uuid):
         cn_strength_values = extract_keyframe_values(type_of_cn_strength_distribution, dynamic_cn_strength_values, keyframe_positions, linear_cn_strength_value)
         
         key_frame_influence_values = extract_keyframe_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value)    
-        
-        # st.markdown("Key Frame Positions")
-        # st.markdown(keyframe_positions)
-        # st.markdown("Key Frame Influence Values")
-        # st.markdown(key_frame_influence_values)
-        # st.markdown("CN Strength Values")
-        # st.markdown(cn_strength_values)
                 
-        influence_ranges = calculate_dynamic_influence_ranges(keyframe_positions,key_frame_influence_values)
-                                                                        
+        influence_ranges = calculate_dynamic_influence_ranges(keyframe_positions,key_frame_influence_values)        
         calculate_weights_and_plot(influence_ranges, interpolation_style, cn_strength_values)
                     
         st.set_option('deprecation.showPyplotGlobalUse', False)
