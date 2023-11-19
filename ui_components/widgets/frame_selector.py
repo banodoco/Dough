@@ -69,10 +69,6 @@ def frame_selector_widget():
                 with a1:
                     st.success(f"Main Key Frame:")
                     display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
-
-
-                    # st.warning(f"Guidance Image:")
-                    # display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
                 with a2:
                     st.caption("Replace styled image")
                     replace_image_widget(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value)
