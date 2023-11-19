@@ -119,7 +119,8 @@ def shot_keyframe_element(shot_uuid, items_per_row, **kwargs):
                     label="Download all images",
                     data=data,
                     file_name=f"{shot.name}.zip",
-                    mime="application/zip"
+                    mime="application/zip",
+                    use_container_width=True
                 )
                         
             with bottom4:
