@@ -7,6 +7,7 @@ from ui_components.widgets.add_key_frame_element import add_key_frame, add_key_f
 from ui_components.widgets.timeline_view import timeline_view
 from ui_components.widgets.explorer_element import generate_images_element
 from ui_components.widgets.animation_style_element import animation_style_element
+from ui_components.widgets.video_cropping_element import video_cropping_element
 from ui_components.widgets.inpainting_element import inpainting_element
 from ui_components.widgets.drawing_element import drawing_element
 from ui_components.widgets.sidebar_logger import sidebar_logger
@@ -71,9 +72,20 @@ def frame_styling_page(shot_uuid: str):
         if st.session_state['page'] == CreativeProcessType.MOTION.value:
             variant_comparison_grid(shot_uuid, stage=CreativeProcessType.MOTION.value)
 
-            st.markdown("***")
-            with st.expander("🎬 Choose Animation Style & Create Variants", expanded=True):
-                animation_style_element(shot_uuid)
+            st.session_state['shot_view'] = st_memory.menu('',\
+                        ["Animate Frames", "Basic Cropping"], \
+                            icons=['film', 'crop', "paint-bucket", 'pencil'], \
+                                menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), \
+                                    key="styling_view_selector", orientation="horizontal", \
+                                        styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "#66A9BE"}})
+
+            if st.session_state['shot_view'] == "Animate Frames":
+                with st.expander("🎬 Choose Animation Style & Create Variants", expanded=True):
+                    animation_style_element(shot_uuid)
+
+            elif st.session_state['shot_view'] == "Basic Cropping":
+                with st.expander("🤏 Crop, Move & Rotate Image", expanded=True):
+                    video_cropping_element(shot_uuid)
 
         elif st.session_state['page'] == CreativeProcessType.STYLING.value:
 
@@ -104,7 +116,7 @@ def frame_styling_page(shot_uuid: str):
             elif st.session_state['styling_view'] == "Draw On Image":
                 with st.expander("📝 Draw On Image", expanded=True):
                     drawing_element(timing_list,project_settings, shot_uuid)
-                                        
+            st.markdown("***")                       
             with st.expander("➕ Add Key Frame", expanded=True):
                 selected_image, inherit_styling_settings  = add_key_frame_element(shot_uuid)
                 if st.button(f"Add key frame",type="primary",use_container_width=True):

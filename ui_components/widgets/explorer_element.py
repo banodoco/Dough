@@ -103,17 +103,20 @@ def generate_images_element(project_uuid,data_repo, position='explorer'):
                                                 help="These are the things you wish to be excluded from the image")
     if position=='explorer':                   
         b0,b1, b2, b3,b4 = st.columns([0.1,1.25,2,2,0.1])
-        c0,c1, c2, c3 = st.columns([1,2,2,1])
+        c0,c1, c2, c3 = st.columns([1,2,2,1])        
     else:
         b1, b2, b3 = st.columns([1,2,1])
         c1, c2, c3 = st.columns([2,2,2])
+        
 
     with b1:
         use_input_image = st_memory.checkbox("Use input image", key="use_input_image", value=False)
     if use_input_image:            
         with b2:
             type_of_transformation = st_memory.radio("What type of transformation would you like to do?", options=["Evolve Image", "Maintain Structure"], key="type_of_transformation_key", help="Evolve Image will evolve the image based on the prompt, while Maintain Structure will keep the structure of the image and change the style.",horizontal=True)    
-        with c1:                       
+        with c1:           
+            if 'input_image' not in st.session_state:
+                st.session_state['input_image'] = None            
             input_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"], key="explorer_input_image", help="This will be the base image for the generation.")                                        
             if st.button("Upload", use_container_width=True):
                 st.session_state['input_image'] = input_image                  
