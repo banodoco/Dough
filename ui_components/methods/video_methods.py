@@ -48,16 +48,21 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
         QUEUE_INFERENCE_QUERIES
     )
 
-    for (output, log) in res:
-        inference_data = {
-            "inference_type": InferenceType.FRAME_INTERPOLATION.value,
-            "output": output,
-            "log_uuid": log.uuid,
-            "settings": settings,
-            "shot_uuid": str(shot_uuid)
-        }
+    if res:
+        for (output, log) in res:
+            inference_data = {
+                "inference_type": InferenceType.FRAME_INTERPOLATION.value,
+                "output": output,
+                "log_uuid": log.uuid,
+                "settings": settings,
+                "shot_uuid": str(shot_uuid)
+            }
 
-        process_inference_output(**inference_data)
+            process_inference_output(**inference_data)
+    else:
+        st.error("Failed to create interpolated clip")
+        time.sleep(0.5)
+        st.rerun()
 
 def update_speed_of_video_clip(video_file: InternalFileObject, duration) -> InternalFileObject:
     from ui_components.methods.file_methods import generate_temp_file, convert_bytes_to_file

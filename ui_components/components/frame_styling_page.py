@@ -131,7 +131,7 @@ def frame_styling_page(shot_uuid: str):
                 with st.expander("📋 Explorer Shortlist",expanded=True):
                     if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
                         project_setting = data_repo.get_project_setting(shot.project.uuid)
-                        page_number = st.radio("Select page", options=range(1, project_setting.total_gallery_pages), horizontal=True)
+                        page_number = st.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)
                         gallery_image_view(shot.project.uuid, page_number=page_number, num_items_per_page=10, open_detailed_view_for_all=False, shortlist=True, num_columns=2,view="sidebar")
                                 
             timeline_view(shot_uuid, "Key Frames")

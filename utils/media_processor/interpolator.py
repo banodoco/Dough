@@ -81,21 +81,26 @@ class VideoInterpolator:
             if True:
 
                 data = {
-                    "ckpt": settings['model'],
+                    "ckpt": settings['ckpt'],
+                    "buffer": settings['buffer'],
                     "image_list": zip_url,
-                    "cn_strength": settings['cn_strength'],
                     "motion_scale": settings['motion_scale'],
-                    "output_format": "video/h264-mp4",
-                    "image_dimension": settings['image_dimension'],
-                    "negative_prompt": settings['negative_prompt'],
-                    "image_prompt_list": settings['positive_prompt'],
-                    "interpolation_type": settings['interpolation_style'],
-                    "stmfnet_multiplier": 2,
-                    "frames_per_keyframe": settings['frames_per_keyframe'],
-                    "ip_adapter_model_weight": settings['ip_adapter_weight'],
-                    "soft_scaled_cn_multiplier": settings['soft_scaled_cn_weights_multipler'],
-                    "length_of_keyframe_influence": settings['length_of_key_frame_influence'],
-                    "queue_inference": queue_inference
+                    "output_format": settings['output_format'],
+                    "image_dimension": settings["image_dimension"],
+                    "negative_prompt": settings["negative_prompt"],
+                    "image_prompt_list": settings["image_prompt_list"],
+                    "interpolation_type": settings["interpolation_type"],
+                    "stmfnet_multiplier": settings["stmfnet_multiplier"],
+                    "ip_adapter_model_weight": settings["ip_adapter_model_weight"],
+                    "soft_scaled_cn_multiplier": settings["soft_scaled_cn_multiplier"],
+                    "dynamic_cn_strength_values": settings["dynamic_cn_strength_values"],
+                    "linear_frames_per_keyframe": settings["linear_frames_per_keyframe"],
+                    "type_of_frame_distribution": settings["type_of_frame_distribution"],
+                    "dynamic_frames_per_keyframe": settings["dynamic_frames_per_keyframe"],
+                    "type_of_key_frame_influence": settings["type_of_key_frame_influence"],
+                    "linear_key_frame_influence_value": settings["linear_key_frame_influence_value"],
+                    "dynamic_key_frame_influence_value": settings["dynamic_key_frame_influence_value"],
+                    "queue_inference": True
                 }
 
                 res = ml_client.predict_model_output(REPLICATE_MODEL.ad_interpolation, **data)
