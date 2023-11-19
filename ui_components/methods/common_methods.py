@@ -37,21 +37,22 @@ def clone_styling_settings(source_frame_number, target_frame_uuid):
     timing_list = data_repo.get_timing_list_from_shot(
         target_timing.shot.uuid)
     
-    params = timing_list[source_frame_number].primary_image.inference_params
+    source_timing = timing_list[source_frame_number]
+    params = source_timing.primary_image.inference_params
 
     if params:
-        target_timing.prompt = params.prompt
-        target_timing.negative_prompt = params.negative_prompt
-        target_timing.guidance_scale = params.guidance_scale
-        target_timing.seed = params.seed
-        target_timing.num_inference_steps = params.num_inference_steps
-        target_timing.strength = params.strength
-        target_timing.adapter_type = params.adapter_type
-        target_timing.low_threshold = params.low_threshold
-        target_timing.high_threshold = params.high_threshold
+        target_timing.prompt = params['prompt'] if 'prompt' in params else source_timing.prompt
+        target_timing.negative_prompt = params['negative_prompt'] if 'negative_prompt' in params else source_timing.negative_prompt
+        target_timing.guidance_scale = params['guidance_scale'] if 'guidance_scale' in params else source_timing.guidance_scale
+        target_timing.seed = params['seed'] if 'seed' in params else source_timing.seed
+        target_timing.num_inference_steps = params['num_inference_steps'] if 'num_inference_steps' in params else source_timing.num_inference_steps
+        target_timing.strength = params['strength'] if 'strength' in params else source_timing.strength
+        target_timing.adapter_type = params['adapter_type'] if 'adapter_type' in params else source_timing.adapter_type
+        target_timing.low_threshold = params['low_threshold'] if 'low_threshold' in params else source_timing.low_threshold
+        target_timing.high_threshold = params['high_threshold'] if 'high_threshold' in params else source_timing.high_threshold
     
-        if params.model_uuid:
-            model = data_repo.get_ai_model_from_uuid(params.model_uuid)
+        if 'model_uuid' in params and params['model_uuid']:
+            model = data_repo.get_ai_model_from_uuid(params['model_uuid'])
             target_timing.model = model
 
 # TODO: image format is assumed to be PNG, change this later

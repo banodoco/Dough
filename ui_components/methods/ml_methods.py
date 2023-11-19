@@ -192,7 +192,8 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, mask_in_p
     if mask_in_project == False:
         mask = timing.mask.location
     else:
-        mask = timing.shot.project.get_temp_mask_file(TEMP_MASK_FILE).location
+        project = data_repo.get_project_from_uuid(timing.shot.project.uuid)
+        mask = project.get_temp_mask_file(TEMP_MASK_FILE).location
 
     if not mask.startswith("http"):
         mask = open(mask, "rb")
@@ -209,7 +210,7 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, mask_in_p
         negative_prompt=negative_prompt, 
         num_inference_steps=25, 
         strength=1.0,
-        queue_inference=True
+        queue_inference=QUEUE_INFERENCE_QUERIES
     )
 
     return output, log

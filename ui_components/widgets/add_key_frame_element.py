@@ -22,7 +22,7 @@ def add_key_frame_section(shot_uuid, individual_view=True):
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
     len_shot_timing_list = len(timing_list) if len(timing_list) > 0 else 0
     selected_image_location = ""
-    source_of_starting_image = st.radio("Starting image:", ["None","Uploaded image", "Existing Frame"], key="source_of_starting_image")
+    source_of_starting_image = st.radio("Starting image:", ["Uploaded image", "Existing Frame"], key="source_of_starting_image")
     
     if source_of_starting_image == "Existing Frame":                
         image_idx = st.number_input("Which frame would you like to use?", min_value=1, max_value=max(1, len(timing_list)), value=len_shot_timing_list, step=1, key="image_idx")
