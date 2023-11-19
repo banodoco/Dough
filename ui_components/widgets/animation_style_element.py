@@ -22,7 +22,7 @@ def animation_style_element(shot_uuid):
        #                         key="animation_tool", horizontal=True, disabled=True)
 
     
-    st.markdown("***")
+    
     
     shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
     st.session_state['project_uuid'] = str(shot.project.uuid)

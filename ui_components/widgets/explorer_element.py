@@ -22,82 +22,148 @@ from utils import st_memory
 
 
 def explorer_element(project_uuid):
+
     st.markdown("***")
+        
+    data_repo = DataRepo()
+    
+    z1, z2, z3 = st.columns([0.25,2,0.25])   
+    with z2:        
+        with st.expander("Prompt Settings", expanded=True):
+            generate_images_element(project_uuid,data_repo, position='explorer')
+
+    project_setting = data_repo.get_project_setting(project_uuid)
+    st.markdown("***")
+    
+    f1, f2 = st.columns([1, 1])
+    with f1:
+        num_columns = st_memory.slider('Number of columns:', min_value=3, max_value=7, value=4,key="num_columns_explorer")
+    with f2:
+        num_items_per_page = st_memory.slider('Items per page:', min_value=10, max_value=50, value=16, key="num_items_per_page_explorer")
+    st.markdown("***")
+
+    st.session_state['explorer_view'] = st_memory.menu(
+        '',
+        ["Explorations", "Shortlist"],
+        icons=['airplane', 'grid-3x3', "paint-bucket", 'pencil'],
+        menu_icon="cast",
+        default_index=0,
+        key="explorer_view_selector",
+        orientation="horizontal",
+        styles={
+            "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"},
+            "nav-link-selected": {"background-color": "#66A9BE"}
+        }
+    )
+    # tab1, tab2 = st.tabs(["Explorations", "Shortlist"])
+    if st.session_state['explorer_view'] == "Explorations":
+        k1,k2 = st.columns([5,1])
+        page_number = k1.radio("Select page", options=range(1, project_setting.total_gallery_pages + 1), horizontal=True, key="main_gallery")
+        open_detailed_view_for_all = k2.toggle("Open detailed view for all:", key='main_gallery_toggle')
+        gallery_image_view(project_uuid, page_number, num_items_per_page, open_detailed_view_for_all, False, num_columns)
+    elif st.session_state['explorer_view'] == "Shortlist":
+        k1,k2 = st.columns([5,1])
+        shortlist_page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
+        with k2:
+            open_detailed_view_for_all = st_memory.toggle("Open prompt details for all:", key='shortlist_gallery_toggle')
+        gallery_image_view(project_uuid, shortlist_page_number, num_items_per_page, open_detailed_view_for_all, True, num_columns)
+
+
+def generate_images_element(project_uuid,data_repo, position='explorer'):
     data_repo = DataRepo()
     shot_list = data_repo.get_shot_list(project_uuid)
     project_settings = data_repo.get_project_setting(project_uuid)
+    # st.select_slider("Select shot:", options=[s.name for s in shot_list], key="explorer_shot_selector", value=shot_list[0].name)
+
     
-    z1, z2 = st.columns([1.3,1])   
-    with z1:
-        with st.expander("Prompt Settings", expanded=True):
-            a1, a2 = st.columns([1,1])   
-            with a1:
-                prompt = st_memory.text_area("What's your base prompt?", key="explorer_base_prompt", help="This exact text will be included in each prompt.")
-            with a2:
-                magic_prompt = st_memory.text_area("What's your magic prompt?", key="explorer_magic_prompt", help="A prompt will be generated based on this text.")
+    help_input='''This will generate a specific prompt based on your input.\n\n For example, "Sad scene of old Russian man, dreary style" might result in "Boris Karloff, 80 year old man wearing a suit, standing at funeral, dark blue watercolour."'''
+    a1, a2, a3 = st.columns([1,1,0.3])   
+
+    with a1 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a2:
+        base_prompt = st_memory.text_area("What's your base prompt?", key="explorer_base_prompt", help="This exact text will be included for each generation.")
+
+    with a2 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a1:
+        magic_prompt = st_memory.text_area("What's your magic prompt?", key="explorer_magic_prompt", help=help_input)
+        if magic_prompt != "":
+            chaos_level = st_memory.slider("How much chaos would you like to add to the magic prompt?", min_value=0, max_value=100, value=20, step=1, key="chaos_level", help="This will determine how random the generated prompt will be.")                    
+            temperature = chaos_level / 20
+
+    with a3:
+        st.write("")
+        st.write("")
+        st.write("")
+        if st.button("🔄", key="switch_prompt_position_button", use_container_width=True, help="This will switch the order the prompt and magic prompt are used - earlier items gets more attention."):
+            st.session_state['switch_prompt_position'] = not st.session_state.get('switch_prompt_position', False)
+            st.experimental_rerun()
+
+    neg1, neg2 = st.columns([1.5,1])
+    with neg1:
+        negative_prompt = st_memory.text_input("Negative prompt", value="bad image, worst image, bad anatomy, washed out colors",\
+                                            key="explorer_neg_prompt", \
+                                                help="These are the things you wish to be excluded from the image")
+    if position=='explorer':                   
+        b0,b1, b2, b3,b4 = st.columns([0.1,1.25,2,2,0.1])
+        c0,c1, c2, c3 = st.columns([1,2,2,1])        
+    else:
+        b1, b2, b3 = st.columns([1,2,1])
+        c1, c2, c3 = st.columns([2,2,2])
+        
+
+    with b1:
+        use_input_image = st_memory.checkbox("Use input image", key="use_input_image", value=False)
+    if use_input_image:            
+        with b2:
+            type_of_transformation = st_memory.radio("What type of transformation would you like to do?", options=["Evolve Image", "Maintain Structure"], key="type_of_transformation_key", help="Evolve Image will evolve the image based on the prompt, while Maintain Structure will keep the structure of the image and change the style.",horizontal=True)    
+        with c1:           
+            if 'input_image' not in st.session_state:
+                st.session_state['input_image'] = None            
+            input_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"], key="explorer_input_image", help="This will be the base image for the generation.")                                        
+            if st.button("Upload", use_container_width=True):
+                st.session_state['input_image'] = input_image                  
+        with b3:
+            edge_pil_img = None
+            strength_of_current_image = st_memory.slider("What % of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_current_image_key", help="This will determine how much of the current image will be kept in the final image.")            
+            if type_of_transformation == "Evolve Image":                                            
+                prompt_strength = round(1 - (strength_of_current_image / 100), 2)
+                with c2:                                                        
+                    if st.session_state['input_image'] is not None:                                
+                        input_image_bytes = st.session_state['input_image'].getvalue()
+                        pil_image = Image.open(io.BytesIO(input_image_bytes))
+                        blur_radius = (100 - strength_of_current_image) / 3  # Adjust this formula as needed
+                        blurred_image = pil_image.filter(ImageFilter.GaussianBlur(blur_radius))
+                        st.image(blurred_image, use_column_width=True)
+
+            elif type_of_transformation == "Maintain Structure":                        
+                condition_scale = strength_of_current_image / 10                                                
+                with c2:                            
+                    if st.session_state['input_image'] is not None:                                
+                        input_image_bytes = st.session_state['input_image'] .getvalue()
+                        pil_image = Image.open(io.BytesIO(input_image_bytes))
+                        cv_image = np.array(pil_image)
+                        gray_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2GRAY)
+                        lower_threshold = (100 - strength_of_current_image) * 3
+                        upper_threshold = lower_threshold * 3
+                        edges = cv2.Canny(gray_image, lower_threshold, upper_threshold)
+                        edge_pil_img = Image.fromarray(edges)
+                        st.image(edge_pil_img, use_column_width=True)
+        st.markdown("***")
+
             
-            y1,y2 = st.columns([1,1])            
-            with y1:
-                base_prompt_position = st_memory.radio("Which would you like to put first:", options=["Base Prompt", "Magic Prompt"], key="base_prompt_position", help="This will be included at the beginning of each prompt", horizontal=True)
-            with y2:
-                if magic_prompt != "":
-                    chaos_level = st_memory.slider("How much chaos would you like to add to the magic prompt?", min_value=0, max_value=100, value=20, step=1, key="chaos_level", help="This will determine how random the generated prompt will be.")                    
-                    temperature = chaos_level / 20
-            
-            c1, _ = st.columns([1, 1])
-            with c1:
-                negative_prompt = st_memory.text_input("Negative prompt", value="bad image, worst image, bad anatomy, washed out colors",\
-                                                       key="explorer_neg_prompt", \
-                                                        help="These are the things you wish to be excluded from the image")
-    with z2:                
-            with st.expander("Input Image Settings", expanded=True):
-                use_input_image = st_memory.checkbox("Use input image", key="use_input_image", value=False)
-                edge_pil_img = None
-                if use_input_image:
-                    a_1_1, a_1_2 = st.columns([1, 1])
-                    with a_1_1:
-                        input_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"], key="explorer_input_image", help="This will be the base image for the generation.")
-                        type_of_transformation = st_memory.radio("What type of transformation would you like to do?", options=["Evolve Image", "Maintain Structure"], key="type_of_transformation", help="Style Transfer will transfer the style of the image to the target image. Image Generation will generate an image based on the target image.", horizontal=True)
-                    with a_1_2:                                        
-                        if type_of_transformation == "Evolve Image":
-                            strength_of_current_image = st_memory.slider("How much of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_current_image", help="This will determine how much of the current image will be kept in the final image.")
-                            # prompt_strength should be 1 - strength_of_current_image
-                            prompt_strength = round(1 - (strength_of_current_image / 100), 2)
-
-                            if input_image is not None:                                
-                                input_image_bytes = input_image.getvalue()
-                                pil_image = Image.open(io.BytesIO(input_image_bytes))
-                                blur_radius = (100 - strength_of_current_image) / 3  # Adjust this formula as needed
-                                blurred_image = pil_image.filter(ImageFilter.GaussianBlur(blur_radius))
-                                st.image(blurred_image, use_column_width=True)
-
-                        elif type_of_transformation == "Maintain Structure":
-                            strength_of_current_image = st_memory.slider("How much of the current structure would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_current_image", help="This will determine how much of the current image will be kept in the final image.")                                        
-                            condition_scale = strength_of_current_image / 10                                                
-
-                            if input_image is not None:
-                                input_image_bytes = input_image.getvalue()
-                                pil_image = Image.open(io.BytesIO(input_image_bytes))
-                                cv_image = np.array(pil_image)
-                                gray_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2GRAY)
-                                lower_threshold = (100 - strength_of_current_image) * 3
-                                upper_threshold = lower_threshold * 3
-                                edges = cv2.Canny(gray_image, lower_threshold, upper_threshold)
-                                edge_pil_img = Image.fromarray(edges)
-                                st.image(edge_pil_img, use_column_width=True)
-                else:
-                    input_image = None
-                    type_of_transformation = None
-                    strength_of_current_image = None
-
+    else:
+        input_image = None
+        type_of_transformation = None
+        strength_of_current_image = None
+    # st.markdown("***")
     models_to_use = ["stable_diffusion_xl"]
-    _, d2,d3, _ = st.columns([0.5, 1,1, 0.5])
+    if position=='explorer':
+        _, d2,d3, _ = st.columns([0.25, 1,1, 0.25])
+    else:
+        d2,d3 = st.columns([1,1])
     with d2:        
         number_to_generate = st.slider("How many images would you like to generate?", min_value=0, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
     
     with d3:
-        st.write(" ")
-        st.write(" ")        
+        st.write(" ")                
         if st.button("Generate images", key="generate_images", use_container_width=True, type="primary"):
             ml_client = get_ml_client()
             counter = 0
@@ -109,9 +175,9 @@ def explorer_element(project_uuid):
                     if counter % 4 == 0:
                         varied_prompt = ""
                         varied_text = varied_prompt
-                    if base_prompt_position == "Base Prompt":
+                    if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False:
                         prompt_with_variations = f"{prompt}, {varied_text}" if prompt else varied_text
-                    else:  # base_prompt_position is "End"
+                    else:  # switch_prompt_position is True
                         prompt_with_variations = f"{varied_text}, {prompt}" if prompt else varied_text
                     # st.write(f"Prompt: '{prompt_with_variations}'")
                     # st.write(f"Model: {model_name}")
@@ -194,41 +260,7 @@ def explorer_element(project_uuid):
 
             st.info("Check the Generation Log to the left for the status.")
 
-    project_setting = data_repo.get_project_setting(project_uuid)
-    st.markdown("***")
-    
-    f1, f2 = st.columns([1, 1])
-    with f1:
-        num_columns = st_memory.slider('Number of columns:', min_value=3, max_value=7, value=4,key="num_columns_explorer")
-    with f2:
-        num_items_per_page = st_memory.slider('Items per page:', min_value=10, max_value=50, value=16, key="num_items_per_page_explorer")
-    st.markdown("***")
 
-    st.session_state['explorer_view'] = st_memory.menu(
-        '',
-        ["Explorations", "Shortlist"],
-        icons=['airplane', 'grid-3x3', "paint-bucket", 'pencil'],
-        menu_icon="cast",
-        default_index=0,
-        key="explorer_view_selector",
-        orientation="horizontal",
-        styles={
-            "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"},
-            "nav-link-selected": {"background-color": "#66A9BE"}
-        }
-    )
-    # tab1, tab2 = st.tabs(["Explorations", "Shortlist"])
-    if st.session_state['explorer_view'] == "Explorations":
-        k1,k2 = st.columns([5,1])
-        page_number = k1.radio("Select page", options=range(1, project_setting.total_gallery_pages + 1), horizontal=True, key="main_gallery")
-        open_detailed_view_for_all = k2.toggle("Open detailed view for all:", key='main_gallery_toggle')
-        gallery_image_view(project_uuid, page_number, num_items_per_page, open_detailed_view_for_all, False, num_columns)
-    elif st.session_state['explorer_view'] == "Shortlist":
-        k1,k2 = st.columns([5,1])
-        shortlist_page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
-        with k2:
-            open_detailed_view_for_all = st_memory.toggle("Open prompt details for all:", key='shortlist_gallery_toggle')
-        gallery_image_view(project_uuid, shortlist_page_number, num_items_per_page, open_detailed_view_for_all, True, num_columns)
 
 def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_detailed_view_for_all=False, shortlist=False, num_columns=2, view="main"):
     data_repo = DataRepo()
