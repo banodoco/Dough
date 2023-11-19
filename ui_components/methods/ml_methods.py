@@ -41,14 +41,14 @@ def trigger_restyling_process(timing_uuid, update_inference_settings, \
         prompt = prompt.replace(",", ".")
         prompt = prompt.replace("\n", "")
 
-        project_settings.batch_prompt = prompt,
-        project_settings.batch_strength = query_obj.strength,
-        project_settings.batch_negative_prompt = query_obj.negative_prompt,
-        project_settings.batch_guidance_scale = query_obj.guidance_scale,
-        project_settings.batch_seed = query_obj.seed,
-        project_settings.batch_num_inference_steps = query_obj.num_inference_steps,
+        project_settings.batch_prompt = prompt
+        project_settings.batch_strength = query_obj.strength
+        project_settings.batch_negative_prompt = query_obj.negative_prompt
+        project_settings.batch_guidance_scale = query_obj.guidance_scale
+        project_settings.batch_seed = query_obj.seed
+        project_settings.batch_num_inference_steps = query_obj.num_inference_steps
         # project_settings.batch_custom_models = query_obj.data.get('custom_models', []),
-        project_settings.batch_adapter_type = query_obj.adapter_type,
+        project_settings.batch_adapter_type = query_obj.adapter_type
         # project_settings.batch_add_image_in_params = st.session_state['add_image_in_params'],
 
     query_obj.prompt = dynamic_prompting(prompt, source_image)

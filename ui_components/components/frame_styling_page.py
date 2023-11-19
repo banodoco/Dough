@@ -102,8 +102,7 @@ def frame_styling_page(shot_uuid: str):
 
             if st.session_state['styling_view'] == "Generate Variants":
                 with st.expander("🛠️ Generate Variants + Prompt Settings", expanded=True):
-                
-                    generate_images_element(shot.project.uuid,data_repo, position='individual')
+                    generate_images_element(position='individual', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
                                                 
             elif st.session_state['styling_view'] == "Crop, Move & Rotate Image":
                 with st.expander("🤏 Crop, Move & Rotate Image", expanded=True):                    
@@ -116,6 +115,7 @@ def frame_styling_page(shot_uuid: str):
             elif st.session_state['styling_view'] == "Draw On Image":
                 with st.expander("📝 Draw On Image", expanded=True):
                     drawing_element(timing_list,project_settings, shot_uuid)
+            
             st.markdown("***")                       
             with st.expander("➕ Add Key Frame", expanded=True):
                 selected_image, inherit_styling_settings  = add_key_frame_element(shot_uuid)

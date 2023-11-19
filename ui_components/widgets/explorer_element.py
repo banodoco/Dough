@@ -9,6 +9,7 @@ from utils.data_repo.data_repo import DataRepo
 from shared.constants import QUEUE_INFERENCE_QUERIES, AIModelType, InferenceType, InternalFileTag, InternalFileType, SortOrder
 from utils import st_memory
 import time
+from utils.enum import ExtendedEnum
 from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL
 from PIL import Image, ImageFilter
@@ -18,6 +19,9 @@ import numpy as np
 from utils import st_memory
 
 
+class InputImageStyling(ExtendedEnum):
+    EVOLVE_IMAGE = "Evolve Image"
+    MAINTAIN_STRUCTURE = "Maintain Structure"
 
 
 
@@ -30,7 +34,7 @@ def explorer_element(project_uuid):
     z1, z2, z3 = st.columns([0.25,2,0.25])   
     with z2:        
         with st.expander("Prompt Settings", expanded=True):
-            generate_images_element(project_uuid,data_repo, position='explorer')
+            generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None)
 
     project_setting = data_repo.get_project_setting(project_uuid)
     st.markdown("***")
@@ -69,18 +73,14 @@ def explorer_element(project_uuid):
         gallery_image_view(project_uuid, shortlist_page_number, num_items_per_page, open_detailed_view_for_all, True, num_columns)
 
 
-def generate_images_element(project_uuid,data_repo, position='explorer'):
+def generate_images_element(position='explorer', project_uuid=None, timing_uuid=None):
     data_repo = DataRepo()
-    shot_list = data_repo.get_shot_list(project_uuid)
     project_settings = data_repo.get_project_setting(project_uuid)
-    # st.select_slider("Select shot:", options=[s.name for s in shot_list], key="explorer_shot_selector", value=shot_list[0].name)
-
-    
     help_input='''This will generate a specific prompt based on your input.\n\n For example, "Sad scene of old Russian man, dreary style" might result in "Boris Karloff, 80 year old man wearing a suit, standing at funeral, dark blue watercolour."'''
     a1, a2, a3 = st.columns([1,1,0.3])   
 
     with a1 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a2:
-        base_prompt = st_memory.text_area("What's your base prompt?", key="explorer_base_prompt", help="This exact text will be included for each generation.")
+        prompt = st_memory.text_area("What's your base prompt?", key="explorer_base_prompt", help="This exact text will be included for each generation.")
 
     with a2 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a1:
         magic_prompt = st_memory.text_area("What's your magic prompt?", key="explorer_magic_prompt", help=help_input)
@@ -96,48 +96,53 @@ def generate_images_element(project_uuid,data_repo, position='explorer'):
             st.session_state['switch_prompt_position'] = not st.session_state.get('switch_prompt_position', False)
             st.experimental_rerun()
 
-    neg1, neg2 = st.columns([1.5,1])
+    neg1, _ = st.columns([1.5,1])
     with neg1:
         negative_prompt = st_memory.text_input("Negative prompt", value="bad image, worst image, bad anatomy, washed out colors",\
                                             key="explorer_neg_prompt", \
                                                 help="These are the things you wish to be excluded from the image")
     if position=='explorer':                   
-        b0,b1, b2, b3,b4 = st.columns([0.1,1.25,2,2,0.1])
-        c0,c1, c2, c3 = st.columns([1,2,2,1])        
+        _, b1, b2, b3, _ = st.columns([0.1,1.25,2,2,0.1])
+        _, c1, c2, _ = st.columns([1,2,2,1])        
     else:
         b1, b2, b3 = st.columns([1,2,1])
-        c1, c2, c3 = st.columns([2,2,2])
+        c1, c2, _ = st.columns([2,2,2])
         
 
     with b1:
         use_input_image = st_memory.checkbox("Use input image", key="use_input_image", value=False)
+    
     if use_input_image:            
         with b2:
-            type_of_transformation = st_memory.radio("What type of transformation would you like to do?", options=["Evolve Image", "Maintain Structure"], key="type_of_transformation_key", help="Evolve Image will evolve the image based on the prompt, while Maintain Structure will keep the structure of the image and change the style.",horizontal=True)    
-        with c1:           
-            if 'input_image' not in st.session_state:
-                st.session_state['input_image'] = None            
+            type_of_transformation = st_memory.radio("What type of transformation would you like to do?", options=InputImageStyling.value_list(), key="type_of_transformation_key", help="Evolve Image will evolve the image based on the prompt, while Maintain Structure will keep the structure of the image and change the style.",horizontal=True)    
+
+        with c1:
+            input_image_key = f"input_image_{position}"
+            if input_image_key not in st.session_state:
+                st.session_state[input_image_key] = None
+
             input_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"], key="explorer_input_image", help="This will be the base image for the generation.")                                        
             if st.button("Upload", use_container_width=True):
-                st.session_state['input_image'] = input_image                  
+                st.session_state[input_image_key] = input_image
+
         with b3:
             edge_pil_img = None
             strength_of_current_image = st_memory.slider("What % of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_current_image_key", help="This will determine how much of the current image will be kept in the final image.")            
-            if type_of_transformation == "Evolve Image":                                            
+            if type_of_transformation == InputImageStyling.EVOLVE_IMAGE.value:                                            
                 prompt_strength = round(1 - (strength_of_current_image / 100), 2)
                 with c2:                                                        
-                    if st.session_state['input_image'] is not None:                                
-                        input_image_bytes = st.session_state['input_image'].getvalue()
+                    if st.session_state[input_image_key] is not None:                                
+                        input_image_bytes = st.session_state[input_image_key].getvalue()
                         pil_image = Image.open(io.BytesIO(input_image_bytes))
                         blur_radius = (100 - strength_of_current_image) / 3  # Adjust this formula as needed
                         blurred_image = pil_image.filter(ImageFilter.GaussianBlur(blur_radius))
                         st.image(blurred_image, use_column_width=True)
 
-            elif type_of_transformation == "Maintain Structure":                        
+            elif type_of_transformation == InputImageStyling.MAINTAIN_STRUCTURE.value:                        
                 condition_scale = strength_of_current_image / 10                                                
                 with c2:                            
-                    if st.session_state['input_image'] is not None:                                
-                        input_image_bytes = st.session_state['input_image'] .getvalue()
+                    if st.session_state[input_image_key] is not None:                                
+                        input_image_bytes = st.session_state[input_image_key] .getvalue()
                         pil_image = Image.open(io.BytesIO(input_image_bytes))
                         cv_image = np.array(pil_image)
                         gray_image = cv2.cvtColor(cv_image, cv2.COLOR_RGB2GRAY)
@@ -208,7 +213,7 @@ def generate_images_element(project_uuid,data_repo, position='explorer'):
                         output, log = ml_client.predict_model_output_standardized(replicate_model, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                     else:
-                        if type_of_transformation == "Evolve Image":
+                        if type_of_transformation == InputImageStyling.EVOLVE_IMAGE.value:
                             input_image_file = save_uploaded_image(input_image, project_uuid)
                             query_obj = MLQueryObject(
                                 timing_uuid=None,
@@ -228,7 +233,7 @@ def generate_images_element(project_uuid,data_repo, position='explorer'):
 
                             output, log = ml_client.predict_model_output_standardized(REPLICATE_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
-                        elif type_of_transformation == "Maintain Structure":
+                        elif type_of_transformation == InputImageStyling.MAINTAIN_STRUCTURE.value:
                             input_image_file = save_uploaded_image(edge_pil_img, project_uuid)
                             query_obj = MLQueryObject(
                                 timing_uuid=None,
@@ -251,10 +256,12 @@ def generate_images_element(project_uuid,data_repo, position='explorer'):
 
                     if log:
                         inference_data = {
-                            "inference_type": InferenceType.GALLERY_IMAGE_GENERATION.value,
+                            "inference_type": InferenceType.GALLERY_IMAGE_GENERATION.value if position == 'explorer' else InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
                             "output": output,
                             "log_uuid": log.uuid,
-                            "project_uuid": project_uuid
+                            "project_uuid": project_uuid,
+                            "timing_uuid": timing_uuid,
+                            "promote_new_generation": False
                         }
                         process_inference_output(**inference_data)
 
