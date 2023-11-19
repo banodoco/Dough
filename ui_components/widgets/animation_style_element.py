@@ -8,6 +8,8 @@ from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.motion_module import AnimateDiffCheckpoint
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from utils import st_memory
+import numpy as np
+import matplotlib.pyplot as plt
 
 def animation_style_element(shot_uuid):
     motion_modules = AnimateDiffCheckpoint.get_name_list()
@@ -25,6 +27,7 @@ def animation_style_element(shot_uuid):
     shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
     st.session_state['project_uuid'] = str(shot.project.uuid)
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
+    '''
     st.markdown("#### Keyframe Settings")
     if timing_list and len(timing_list):
         columns = st.columns(len(timing_list)) 
@@ -42,7 +45,7 @@ def animation_style_element(shot_uuid):
                 help = "You can't generate a video because one of your keyframes is missing an image."
     else:
         st.warning("No keyframes present")
-
+    '''
     st.markdown("***")
     video_resolution = None
 
@@ -52,7 +55,7 @@ def animation_style_element(shot_uuid):
 
 
     st.markdown("#### Keyframe Influence Settings")
-    d1, d2 = st.columns([1, 4])
+    d1, d2 = st.columns([1.5, 4])
 
     with d1:
         setting_a_1, setting_a_2 = st.columns([1, 1])
@@ -67,7 +70,7 @@ def animation_style_element(shot_uuid):
             type_of_key_frame_influence = st_memory.radio("Type of Keyframe Influence", options=["Linear", "Dynamic"], key="type_of_key_frame_influence").lower()
         if type_of_key_frame_influence == "linear":
             with setting_b_2:
-                linear_key_frame_influence_value = st_memory.number_input("Length of Keyframe Influence", min_value=0.0, max_value=2.0, value=1.1, step=0.1, key="length_of_key_frame_influence")
+                linear_key_frame_influence_value = st_memory.slider("Length of Keyframe Influence", min_value=0.0, max_value=2.0, value=1.1, step=0.1, key="length_of_key_frame_influence")
                 dynamic_key_frame_influence_values = ""
         setting_c_1, setting_c_2 = st.columns([1, 1])
         with setting_c_1:
@@ -83,9 +86,8 @@ def animation_style_element(shot_uuid):
         motion_scale = st_memory.slider("Motion Scale", min_value=0.0, max_value=2.0, value=1.1, step=0.1, key="motion_scale")
 
     with d2:
-        import numpy as np
-        import matplotlib.pyplot as plt
-        columns = st.columns(len(timing_list)) 
+
+        columns = st.columns(max(5, len(timing_list))) 
         disable_generate = False
         help = ""            
         dynamic_frame_distribution_values = []
@@ -111,7 +113,7 @@ def animation_style_element(shot_uuid):
                     dynamic_frame_distribution_values.append(frame_position)
                 if type_of_key_frame_influence == "dynamic":
                     linear_key_frame_influence_value = ""
-                    dynamic_key_frame_influence_individual_value = columns[idx].number_input(f"Length of Keyframe Influence {idx+1}", min_value=0.0, max_value=5.0, value=(b['dynamic_key_frame_influence_values'] if 'dynamic_key_frame_influence_values' in b else 1.1), step=0.1, key=f"dynamic_key_frame_influence_values_{idx+1}")
+                    dynamic_key_frame_influence_individual_value = columns[idx].slider(f"Length of Keyframe Influence {idx+1}", min_value=0.0, max_value=5.0, value=(b['dynamic_key_frame_influence_values'] if 'dynamic_key_frame_influence_values' in b else 1.1), step=0.1, key=f"dynamic_key_frame_influence_values_{idx+1}")
                     dynamic_key_frame_influence_values.append(str(dynamic_key_frame_influence_individual_value))
                 if type_of_cn_strength_distribution == "dynamic":
                     linear_cn_strength_value = ""
@@ -261,18 +263,8 @@ def animation_style_element(shot_uuid):
         soft_scaled_cn_weights_multipler = st_memory.slider("How much would you like to scale the CN weights?", min_value=0.0, max_value=10.0, value=0.85, step=0.1, key="soft_scaled_cn_weights_multipler")
             
     st.markdown("***")
-    st.markdown("#### Generation Settings")
-    animate_col_1, _, _ = st.columns([1, 1, 2])
+        
 
-    with animate_col_1:
-        # img_dimension_list = ["512x512", "512x768", "768x512"]
-        # img_dimension = st.selectbox("Image Dimension:", options=img_dimension_list, key="img_dimension")  
-        project_settings = data_repo.get_project_setting(shot.project.uuid)
-        width = project_settings.width
-        height = project_settings.height
-        img_dimension = f"{width}x{height}"
-        variant_count = st.number_input("How many variants?", min_value=1, max_value=100, value=1, step=1, key="variant_count")
-    
     normalise_speed = True
     context_length = 16
     context_stride = 2
@@ -301,6 +293,7 @@ def animation_style_element(shot_uuid):
         
     st.write(f"batch_size: {batch_size}")
 
+    '''
 
     settings.update(
         negative_prompt=negative_prompt,
@@ -312,41 +305,71 @@ def animation_style_element(shot_uuid):
         model=sd_model,
         normalise_speed=normalise_speed,
         motion_scale=motion_scale,
-        cn_strength=cn_strength,
+        cn_strength="cn_strength",
         interpolation_style=interpolation_style,
         frames_per_keyframe=frames_per_keyframe,
         length_of_key_frame_influence=length_of_key_frame_influence
     )
 
 
+    '''
+    st.markdown("***")
+    st.markdown("#### Generation Settings")
+    where_to_generate = st_memory.radio("Where would you like to generate the video?", options=["Cloud", "Local"], key="where_to_generate", horizontal=True)
+    if where_to_generate == "Cloud":
+        animate_col_1, animate_col_2, _ = st.columns([1, 1, 2])
+        with animate_col_1:
+            # img_dimension_list = ["512x512", "512x768", "768x512"]
+            # img_dimension = st.selectbox("Image Dimension:", options=img_dimension_list, key="img_dimension")  
+            project_settings = data_repo.get_project_setting(shot.project.uuid)
+            width = project_settings.width
+            height = project_settings.height
+            img_dimension = f"{width}x{height}"
+            variant_count = st.number_input("How many variants?", min_value=1, max_value=100, value=1, step=1, key="variant_count")
+            
+            if st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help):
+                vid_quality = "full" if video_resolution == "Full Resolution" else "preview"
+                st.write("Generating animation clip...")
+                settings.update(animation_style=current_animation_style)
+                
+                if animation_type == AnimationStyleType.CREATIVE_INTERPOLATION.value:
+                    positive_prompt = ""
+                    for idx, timing in enumerate(timing_list):
+                        if timing.primary_image and timing.primary_image.location:
+                            b = timing.primary_image.inference_params
+                            prompt = b['prompt'] if b else ""
+                            frame_prompt = f"{idx * frames_per_keyframe}_" + prompt
+                            positive_prompt +=  ":" + frame_prompt if positive_prompt else frame_prompt
+                        else:
+                            st.error("Please generate primary images")
+                            time.sleep(0.5)
+                            st.rerun()
 
+                    settings.update(positive_prompt=positive_prompt)
 
+                create_single_interpolated_clip(
+                    shot_uuid,
+                    vid_quality,
+                    settings,
+                    variant_count
+                )
+                st.rerun()
+        with animate_col_2:
+            number_of_frames = len(timing_list)
+            
+            if height==width:
+                cost_per_frame = 0.07
+            else:
+                cost_per_frame = 0.09
+
+            cost_per_generation = cost_per_frame * number_of_frames * variant_count
+            
+            st.info(f"Generating a video with {number_of_frames} frames in the cloud will cost c. ${cost_per_generation:.2f} USD.")
     
-    if st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help):
-        vid_quality = "full" if video_resolution == "Full Resolution" else "preview"
-        st.write("Generating animation clip...")
-        settings.update(animation_style=current_animation_style)
+    elif where_to_generate == "Local":
+        h1,h2 = st.columns([1,1])
+        with h1:
+            st.info("You can run this locally in ComfyUI but you'll need at least 16GB VRAM. To get started, you can follow the instructions [here]() and download the workflow and images below.")
+        st.button("Download workflow and images")
         
-        if animation_type == AnimationStyleType.CREATIVE_INTERPOLATION.value:
-            positive_prompt = ""
-            for idx, timing in enumerate(timing_list):
-                if timing.primary_image and timing.primary_image.location:
-                    b = timing.primary_image.inference_params
-                    prompt = b['prompt'] if b else ""
-                    frame_prompt = f"{idx * frames_per_keyframe}_" + prompt
-                    positive_prompt +=  ":" + frame_prompt if positive_prompt else frame_prompt
-                else:
-                    st.error("Please generate primary images")
-                    time.sleep(0.5)
-                    st.rerun()
-
-            settings.update(positive_prompt=positive_prompt)
-
-        create_single_interpolated_clip(
-            shot_uuid,
-            vid_quality,
-            settings,
-            variant_count
-        )
-        st.rerun()
-    
+        

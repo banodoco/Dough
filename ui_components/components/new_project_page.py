@@ -43,11 +43,11 @@ def new_project_page():
             st.success(f"The dimensions of the image are {img_width} x {img_height}")
 
     # Prompt user for video dimension specifications
-    v1, v2 = st.columns(2)
+    v1, v2, v3 = st.columns([4,1,7])
         
     frame_sizes = ["512x512", "768x512", "512x768"]
     with v1:
-        frame_size = st.selectbox("Select frame size:", options=frame_sizes, key="frame_size")
+        frame_size = st.radio("Select frame size:", options=frame_sizes, key="frame_size",horizontal=True)
         if frame_size == "512x512":
             width = 512
             height = 512
@@ -57,10 +57,10 @@ def new_project_page():
         elif frame_size == "512x768":
             width = 512
             height = 768
-    with v2:
-        st.write("")
-        st.write("")
-        st.info("Uploaded images will be resized to the selected dimensions.")
+    with v2:        
+        img = Image.new('RGB', (width, height), color = (73, 109, 137))
+        st.image(img, use_column_width=True)        
+        # st.info("Uploaded images will be resized to the selected dimensions.")
 
 
     # Prompt user for audio preferences
