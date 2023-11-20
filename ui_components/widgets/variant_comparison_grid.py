@@ -66,10 +66,10 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         st.success("**Main variant**")
 
     start = (page - 1) * items_to_show
-    end = min(start + items_to_show-1, len(variants))
+    end = min(start + items_to_show-1, len(variants) - 1)
 
     next_col = 1
-    for variant_index in range(end - 1, start - 1, -1):
+    for variant_index in range(end, start - 1, -1):
         if variant_index != current_variant:
             with cols[next_col]:
                 if stage == CreativeProcessType.MOTION.value:
@@ -98,7 +98,12 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
                 if stage == CreativeProcessType.MOTION.value:
                     if st.button("Sync audio/duration", key=f"{variants[variant_index].uuid}", help="Updates video length and the attached audio", use_container_width=True):
-                        sync_audio_and_duration(variants[variant_index], shot_uuid)
+                        synced_file = sync_audio_and_duration(variants[variant_index], shot_uuid)
+                        data_repo.update_file(variants[variant_index].uuid, hosted_url=synced_file.hosted_url, local_path=synced_file.local_path)
+                        _ = data_repo.get_shot_list(project_uuid, invalidate_cache=True)
+                        st.success("Video synced")
+                        time.sleep(0.3)
+                        st.rerun()
 
             next_col += 1
 

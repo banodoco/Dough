@@ -65,4 +65,4 @@ def video_rendering_page(project_uuid):
 
                     st.rerun()
             else:
-                st.button(f"Delete {video}", disabled=True)
+                st.button(f"Delete {video.name}", disabled=True)

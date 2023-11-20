@@ -81,12 +81,13 @@ def update_speed_of_video_clip(video_file: InternalFileObject, duration) -> Inte
         duration
     )
 
+    args = ()
     video_file = convert_bytes_to_file(
         new_file_location,
         "video/mp4",
         video_bytes,
         video_file.project.uuid,
-        video_file.inference_log.uuid
+        video_file.inference_log.uuid if video_file.inference_log else None,
     )
 
     if temp_video_file:
@@ -122,13 +123,13 @@ def add_audio_to_video_slice(video_file, audio_bytes):
     # Rename the output file to have the same name as the original video file
     os.rename("output_with_audio.mp4", video_location)
 
-def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid):
+def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_sync_required=False):
     from ui_components.methods.file_methods import convert_bytes_to_file, generate_temp_file
 
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
     shot_list = data_repo.get_shot_list(shot.project.uuid)
-    project_settings = data_repo.get_project_settings(shot.project.uuid)
+    project_settings = data_repo.get_project_setting(shot.project.uuid)
 
     # --------- update video duration
     output_video = update_speed_of_video_clip(video_file, shot.duration)
@@ -139,7 +140,10 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid):
 
     if not project_settings.audio:
         print("no audio to sync")
-        return output_video
+        if not audio_sync_required:
+            return output_video
+        else:
+            return None
     
     if 'http' in project_settings.audio.location:
         temp_audio_file = generate_temp_file(project_settings.audio.location, '.mp4')
@@ -168,8 +172,9 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid):
         return None
 
     # writing the video to the temp file
+    output_temp_video_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     video_clip.write_videofile(
-        video_location,
+        output_temp_video_file.name,
         fps=60,  # or 60 if your original video is 60fps
         audio_bitrate="128k",
         bitrate="5000k",
@@ -177,11 +182,12 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid):
         audio_codec="aac"
     )
 
-    temp_video_file.close()
+    output_temp_video_file.close()
     video_bytes = None
-    with open(video_location, "rb") as f:
+    with open(output_temp_video_file.name, "rb") as f:
         video_bytes = f.read()
 
+    temp_file_list.append(output_temp_video_file)
     unique_name = str(uuid.uuid4())
     output_video_file = f"videos/{shot.project.uuid}/assets/videos/0_raw/{unique_name}.mp4"
     output_file = convert_bytes_to_file(
@@ -218,15 +224,15 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
 
     # combining all the main_clip of shots in finalclip, and keeping track of temp video files
     # in temp_file_list
-    shot_list: List[InternalShotObject] = data_repo.get_shot_list_from_project(project_uuid)
+    shot_list: List[InternalShotObject] = data_repo.get_shot_list(project_uuid)
     for shot in shot_list:
         if not shot.main_clip:
             st.error("Please generate all videos")
             time.sleep(0.3)
             return
         
-        shot_video = sync_audio_and_duration(shot.main_clip, shot.uuid)
-        if not file:
+        shot_video = sync_audio_and_duration(shot.main_clip, shot.uuid, audio_sync_required=True)
+        if not shot_video:
             st.error("Audio sync failed")
             time.sleep(0.3)
             return

@@ -320,6 +320,8 @@ class DBRepo:
         if not file:
             return InternalResponse({}, 'invalid file uuid', False)
         
+        file.is_disabled = True
+        file.save()
         return InternalResponse({}, 'file deleted successfully', True)
     
     def get_image_list_from_uuid_list(self, uuid_list, file_type=InternalFileType.IMAGE.value):

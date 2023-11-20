@@ -113,11 +113,11 @@ def animation_style_element(shot_uuid):
                     st.session_state[f"frame_{idx+1}"] = frame_position
                     dynamic_frame_distribution_values.append(frame_position)
                 if type_of_key_frame_influence == "dynamic":
-                    linear_key_frame_influence_value = 16
+                    linear_key_frame_influence_value = 1.1
                     dynamic_key_frame_influence_individual_value = columns[idx].slider(f"Length of Keyframe Influence {idx+1}", min_value=0.0, max_value=5.0, value=(b['dynamic_key_frame_influence_values'] if b and 'dynamic_key_frame_influence_values' in b else 1.1), step=0.1, key=f"dynamic_key_frame_influence_values_{idx+1}")
                     dynamic_key_frame_influence_values.append(str(dynamic_key_frame_influence_individual_value))
                 if type_of_cn_strength_distribution == "dynamic":
-                    linear_cn_strength_value = 16
+                    linear_cn_strength_value = 1
                     dynamic_cn_strength_individual_value = columns[idx].slider(f"CN Strength {idx+1}", min_value=0.0, max_value=1.0, value=(b['dynamic_cn_strength_values'] if b and 'dynamic_cn_strength_values' in b else 0.5), step=0.1, key=f"dynamic_cn_strength_values_{idx+1}")
                     dynamic_cn_strength_values.append(str(dynamic_cn_strength_individual_value))
 
