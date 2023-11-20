@@ -226,14 +226,14 @@ def load_from_env(key):
 
 def zip_images(image_locations, zip_filename='images.zip'):
     with zipfile.ZipFile(zip_filename, 'w') as zip_file:
-        for image_location in image_locations:
+        for idx, image_location in enumerate(image_locations):
+            # image_name = os.path.basename(image_location)
+            image_name = f"{idx}.png"
             if image_location.startswith('http'):
                 response = requests.get(image_location)
                 image_data = response.content
-                image_name = os.path.basename(image_location)
                 zip_file.writestr(image_name, image_data)
             else:
-                image_name = os.path.basename(image_location)
                 zip_file.write(image_location, image_name)
 
     return zip_filename
