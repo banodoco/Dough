@@ -69,10 +69,6 @@ def frame_selector_widget():
                 with a1:
                     st.success(f"Main Key Frame:")
                     display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value, clickable=False)
-
-
-                    # st.warning(f"Guidance Image:")
-                    # display_image(st.session_state['current_frame_uuid'], stage=WorkflowStageType.SOURCE.value, clickable=False)
                 with a2:
                     st.caption("Replace styled image")
                     replace_image_widget(st.session_state['current_frame_uuid'], stage=WorkflowStageType.STYLED.value)
@@ -168,6 +164,6 @@ def display_shot_frames(timing_list: List[InternalFrameTimingObject], show_butto
                                     jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}")
                             else:
                                 st.warning("No primary image present")
-            st.markdown("***")
+            
     else:
         st.warning("No keyframes present")

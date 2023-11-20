@@ -22,7 +22,7 @@ def add_key_frame_section(shot_uuid, individual_view=True):
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
     len_shot_timing_list = len(timing_list) if len(timing_list) > 0 else 0
     selected_image_location = ""
-    source_of_starting_image = st.radio("Starting image:", ["None","Uploaded image", "Existing Frame"], key="source_of_starting_image")
+    source_of_starting_image = st.radio("Starting image:", ["Uploaded image", "Existing Frame"], key="source_of_starting_image")
     
     if source_of_starting_image == "Existing Frame":                
         image_idx = st.number_input("Which frame would you like to use?", min_value=1, max_value=max(1, len(timing_list)), value=len_shot_timing_list, step=1, key="image_idx")
@@ -77,7 +77,7 @@ def add_key_frame_element(shot_uuid):
     return selected_image, inherit_styling_settings
 
 
-def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inherit_styling_settings, shot_uuid, target_frame_position=None, refresh_state=True):
+def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inherit_styling_settings, shot_uuid, target_frame_position=None, refresh_state=True, update_cur_frame_idx=True):
     '''
     either a pil image or a internalfileobject can be passed to this method, for adding it inside a shot
     '''
@@ -100,22 +100,24 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
 
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
     # updating the newly created frame timing
-    save_uploaded_image(selected_image, shot_uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.SOURCE.value)
-    save_uploaded_image(selected_image, shot_uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.STYLED.value)
+    save_uploaded_image(selected_image, shot.project.uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.SOURCE.value)
+    save_uploaded_image(selected_image, shot.project.uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.STYLED.value)
 
-    if inherit_styling_settings == "Yes" and st.session_state['current_frame_index']:    
-        clone_styling_settings(st.session_state['current_frame_index'] - 1, timing_list[target_aux_frame_index-1].uuid)
+    if update_cur_frame_idx:
+        # this part of code updates current_frame_index when a new keyframe is added
+        if inherit_styling_settings == "Yes" and st.session_state['current_frame_index']:    
+            clone_styling_settings(st.session_state['current_frame_index'] - 1, timing_list[target_aux_frame_index-1].uuid)
 
-    if len(timing_list) == 1:
-        st.session_state['current_frame_index'] = 1
-        st.session_state['current_frame_uuid'] = timing_list[0].uuid
-    else:
-        st.session_state['prev_frame_index'] = min(len(timing_list), target_aux_frame_index + 1)
-        st.session_state['current_frame_index'] = min(len(timing_list), target_aux_frame_index + 1)
-        st.session_state['current_frame_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].uuid
+        if len(timing_list) == 1:
+            st.session_state['current_frame_index'] = 1
+            st.session_state['current_frame_uuid'] = timing_list[0].uuid
+        else:
+            st.session_state['prev_frame_index'] = min(len(timing_list), target_aux_frame_index + 1)
+            st.session_state['current_frame_index'] = min(len(timing_list), target_aux_frame_index + 1)
+            st.session_state['current_frame_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].uuid
 
-    st.session_state['page'] = CreativeProcessType.STYLING.value
-    st.session_state['section_index'] = 0
+        st.session_state['page'] = CreativeProcessType.STYLING.value
+        st.session_state['section_index'] = 0
     
     if refresh_state:
         st.rerun()

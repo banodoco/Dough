@@ -10,7 +10,7 @@ import requests as r
 from PIL import Image, ImageOps
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
-from shared.constants import InferenceType, InternalFileType, ProjectMetaData
+from shared.constants import InferenceType, InternalFileTag, InternalFileType, ProjectMetaData
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE, DefaultProjectSettingParams, WorkflowStageType
 from ui_components.methods.file_methods import add_temp_file_to_project, save_or_host_file
 from utils.data_repo.data_repo import DataRepo
@@ -23,12 +23,9 @@ from streamlit_image_comparison import image_comparison
 
 
 def inpainting_element(timing_uuid):
-    inpainting_stage = st_memory.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], horizontal=True, key="inpainting_stage")
-    
-    if inpainting_stage == "Styled Key Frame":
-        stage = WorkflowStageType.STYLED.value
-    elif inpainting_stage == "Unedited Key Frame":
-        stage = WorkflowStageType.SOURCE.value
+
+    stage = WorkflowStageType.STYLED.value
+
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
     timing_details: List[InternalFrameTimingObject] = data_repo.get_timing_list_from_shot(
@@ -56,14 +53,12 @@ def inpainting_element(timing_uuid):
         if "edited_image" not in st.session_state:
             st.session_state.edited_image = ""
 
-        if stage == WorkflowStageType.STYLED.value and len(timing.alternative_images_list) == 0:
+        if len(timing.alternative_images_list) == 0:
             st.info("You need to add a style first in the Style Selection section.")
         else:
-            if stage == WorkflowStageType.SOURCE.value:
-                editing_image = timing.source_image.location if timing.source_image is not None else ""
-            elif stage == WorkflowStageType.STYLED.value:
-                variants = timing.alternative_images_list
-                editing_image = timing.primary_image_location if timing.primary_image_location is not None else ""
+            
+            variants = timing.alternative_images_list
+            editing_image = timing.primary_image_location if timing.primary_image_location is not None else ""
 
             width = int(project_settings.width)
             height = int(project_settings.height)
@@ -75,23 +70,8 @@ def inpainting_element(timing_uuid):
                 with main_col_1:
                     if 'index_of_type_of_mask_selection' not in st.session_state:
                         st.session_state['index_of_type_of_mask_selection'] = 0
-                    mask_selection_options = ["Manual Background Selection", "Automated Background Selection",
-                                              "Automated Layer Selection", "Re-Use Previous Mask", "Invert Previous Mask"]
-                    type_of_mask_selection = st.radio("How would you like to select what to edit?", mask_selection_options,
-                                                      horizontal=True, index=st.session_state['index_of_type_of_mask_selection'])
-                    if st.session_state['index_of_type_of_mask_selection'] != mask_selection_options.index(type_of_mask_selection):
-                        st.session_state['index_of_type_of_mask_selection'] = mask_selection_options.index(
-                            type_of_mask_selection)
-                        st.rerun()
 
-                    if "which_layer" not in st.session_state:
-                        st.session_state['which_layer'] = "Background"
-                        st.session_state['which_layer_index'] = 0
-
-                    if type_of_mask_selection == "Automated Layer Selection":
-                        layers = ["Background", "Middleground", "Foreground"]
-                        st.session_state['which_layer'] = st.multiselect(
-                            "Which layers would you like to replace?", layers)
+                    type_of_mask_selection = "Manual Background Selection"
 
                 if type_of_mask_selection == "Manual Background Selection":
                     if st.session_state['edited_image'] == "":
@@ -104,13 +84,12 @@ def inpainting_element(timing_uuid):
                                 canvas_image = Image.open(editing_image)
                             if 'drawing_input' not in st.session_state:
                                 st.session_state['drawing_input'] = 'Magic shapes 🪄'
-                            col1, col2 = st.columns([6, 3])
+                            col1, col2 = st.columns([8, 3])
 
                             with col1:
                                 st.session_state['drawing_input'] = st.radio(
                                     "Drawing tool:",
-                                    ("Make shapes 🪄", "Move shapes 🏋🏾‍♂️", "Make squares □", "Draw lines ✏️"), horizontal=True,
-                                )
+                                    ("Make shapes 🪄", "Move shapes 🏋🏾‍♂️", "Make squares □", "Draw lines ✏️"), horizontal=True)
 
                             if st.session_state['drawing_input'] == "Move shapes 🏋🏾‍♂️":
                                 drawing_mode = "transform"
@@ -171,136 +150,18 @@ def inpainting_element(timing_uuid):
                             st.session_state['edited_image'] = ""
                             st.rerun()
 
-                elif type_of_mask_selection == "Automated Background Selection" or type_of_mask_selection == "Automated Layer Selection" or type_of_mask_selection == "Re-Use Previous Mask" or type_of_mask_selection == "Invert Previous Mask":
-                    with main_col_1:
-                        if type_of_mask_selection in ["Re-Use Previous Mask", "Invert Previous Mask"]:
-                            if not timing_details[st.session_state['current_frame_index'] - 1].mask:
-                                st.info(
-                                    "You don't have a previous mask to re-use.")
-                            else:
-                                mask1, mask2 = st.columns([2, 1])
-                                with mask1:
-                                    if type_of_mask_selection == "Re-Use Previous Mask":
-                                        st.info(
-                                            "This will update the **black pixels** in the mask with the pixels from the image you are editing.")
-                                    elif type_of_mask_selection == "Invert Previous Mask":
-                                        st.info(
-                                            "This will update the **white pixels** in the mask with the pixels from the image you are editing.")
-                                    st.image(
-                                        timing_details[st.session_state['current_frame_index'] - 1].mask.location, use_column_width=True)
-
-                    with main_col_2:
-                        if st.session_state['edited_image'] == "":
-                            st.image(editing_image, use_column_width=True)
-                        else:
-                            image_file = data_repo.get_file_from_uuid(st.session_state['edited_image'])
-                            image_comparison(
-                                img1=editing_image,
-                                img2=image_file.location, starting_position=5, label1="Original", label2="Edited")
-                            if st.button("Reset Canvas"):
-                                st.session_state['edited_image'] = ""
-                                st.rerun()
 
                 with main_col_1:
-                    types_of_mask_replacement = [
-                        "Inpainting", "Replace With Image"]
-                    st.session_state["type_of_mask_replacement"] = st.radio(
-                        "Select type of edit", types_of_mask_replacement, horizontal=True, index=st.session_state["index_of_type_of_mask_replacement"])
-
-                    if st.session_state["index_of_type_of_mask_replacement"] != types_of_mask_replacement.index(st.session_state["type_of_mask_replacement"]):
-                        st.session_state["index_of_type_of_mask_replacement"] = types_of_mask_replacement.index(
-                            st.session_state["type_of_mask_replacement"])
-                        st.rerun()
-
-                    if st.session_state["type_of_mask_replacement"] == "Replace With Image":
-                        data_repo = DataRepo()
-                        project: InternalProjectObject = data_repo.get_project_from_uuid(timing.shot.project.uuid)
-
-                        prompt = ""
-                        negative_prompt = ""
-                        background_image_list = project.get_background_image_list()
-                        sources_of_images = ["Uploaded", "From Other Frame"]
-                        if 'index_of_source_of_image' not in st.session_state:
-                            st.session_state['index_of_source_of_image'] = 0
-                        
-                        source_of_image = st.radio("Select type of image", sources_of_images,
-                                                   horizontal=True, index=st.session_state['index_of_source_of_image'])
-
-                        if st.session_state['index_of_source_of_image'] != sources_of_images.index(source_of_image):
-                            st.session_state['index_of_source_of_image'] = sources_of_images.index(source_of_image)
-                            st.rerun()
-
-                        if source_of_image == "Uploaded":
-                            btn1, btn2 = st.columns([1, 1])
-                            with btn1:
-                                uploaded_files = st.file_uploader("Add more background images here", accept_multiple_files=True)
-                                if st.button("Upload Backgrounds"):
-                                    file_upload_uuid_list = []
-                                    for uploaded_file in uploaded_files:
-                                        if uploaded_file is not None:
-                                            image = Image.open(uploaded_file)
-                                            name = ''.join(random.choices(string.ascii_lowercase + string.digits, k=4)) + ".png"
-                                            file_location = f"videos/{project.uuid}/assets/frames/1_selected/" + name
-                                            hosted_url = save_or_host_file(image, file_location)
-                                            file_data = {
-                                                "name": name,
-                                                "type": InternalFileType.IMAGE.value,
-                                                "project_id": project.uuid
-                                            }
-
-                                            if hosted_url:
-                                                file_data.update({'hosted_url': hosted_url})
-                                            else:
-                                                file_data.update({'local_path': file_location})
-
-                                            new_image = data_repo.create_file(**file_data)
-                                            file_upload_uuid_list.append(str(new_image.uuid))
-
-                                    # adding the new uploaded images
-                                    project_meta_data = json.loads(project.meta_data)
-                                    curr_background_img_list = project_meta_data.get(ProjectMetaData.BACKGROUND_IMG_LIST.value, [])
-                                    curr_background_img_list.extend(file_upload_uuid_list)
-                                    project_meta_data[ProjectMetaData.BACKGROUND_IMG_LIST.value] = curr_background_img_list 
-                                    data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(project_meta_data))
-                                    st.success("Your backgrounds are uploaded file - they should appear in the dropdown.")
-                                    uploaded_files = []
-                                    time.sleep(0.3)
-                                    st.rerun()
-
-                            with btn2:
-                                background_name_list = [f.name for f in background_image_list]
-                                background_selection = st.selectbox("Range background", background_name_list)
-                                
-                                if len(background_name_list):
-                                    selected_model_index = next((i for i, obj in \
-                                                    enumerate(background_image_list) if getattr(obj, 'name') == background_selection), -1)
-                                    
-                                    background_image = background_image_list[selected_model_index]
-                                    if selected_model_index >= 0:
-                                        st.image(background_image.location, use_column_width=True)
-
-                        elif source_of_image == "From Other Frame":
-                            btn1, btn2 = st.columns([1, 1])
-                            with btn1:
-                                inpainting_other_frame_stage = st.radio("Select stage to use:", WorkflowStageType.value_list())
-                                which_image_to_use = st.number_input("Select image to use:", min_value=0, max_value=len(timing_details)-1, value=0)
-                                
-                                if inpainting_other_frame_stage == WorkflowStageType.SOURCE.value:
-                                    background_image = timing_details[which_image_to_use].source_image
-                                elif inpainting_other_frame_stage == WorkflowStageType.STYLED.value:
-                                    background_image = timing_details[which_image_to_use].primary_image
-                            
-                            with btn2:
-                                st.image(background_image.location, use_column_width=True)
-
-                    elif st.session_state["type_of_mask_replacement"] == "Inpainting":
-                        btn1, btn2 = st.columns([1, 1])
-                        with btn1:
-                            prompt = st.text_area("Prompt:", help="Describe the whole image, but focus on the details you want changed!",
-                                                  value=DefaultProjectSettingParams.batch_prompt)
-                        with btn2:
-                            negative_prompt = st.text_area(
-                                "Negative Prompt:", help="Enter any things you want to make the model avoid!", value=DefaultProjectSettingParams.batch_negative_prompt)
+         
+                    st.session_state["type_of_mask_replacement"] = "Inpainting"
+                    
+                    btn1, btn2 = st.columns([1, 1])
+                    with btn1:
+                        prompt = st.text_area("Prompt:", help="Describe the whole image, but focus on the details you want changed!",
+                                                value=DefaultProjectSettingParams.batch_prompt)
+                    with btn2:
+                        negative_prompt = st.text_area(
+                            "Negative Prompt:", help="Enter any things you want to make the model avoid!", value=DefaultProjectSettingParams.batch_negative_prompt)
 
                     edit1, edit2 = st.columns(2)
 
@@ -321,33 +182,8 @@ def inpainting_element(timing_uuid):
 
                                 process_inference_output(**inference_data)
 
-                            elif st.session_state["type_of_mask_replacement"] == "Replace With Image":
-                                edited_image, log = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
-                                                                  background_image.location, editing_image, "", "", width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
-                                replace_with_image(stage, edited_image, st.session_state['current_frame_uuid'])
+     
 
-                    with edit2:
-                        if st.button("Run Edit & Promote"):
-                            if st.session_state["type_of_mask_replacement"] == "Inpainting":
-                                edited_image, log = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
-                                                                    "", editing_image, prompt, negative_prompt, width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
-
-                                inference_data = {
-                                    "inference_type": InferenceType.FRAME_INPAINTING.value,
-                                    "output": edited_image,
-                                    "log_uuid": log.uuid,
-                                    "timing_uuid": st.session_state['current_frame_uuid'],
-                                    "promote_generation": True,
-                                    "stage": stage
-                                }
-
-                                process_inference_output(**inference_data)
-
-                            elif st.session_state["type_of_mask_replacement"] == "Replace With Image":
-                                edited_image, log = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
-                                                                    background_image.location, editing_image, "", "", width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
-                                replace_with_image(stage, edited_image, st.session_state['current_frame_uuid'], promote=True)
-                            
 
 def replace_with_image(stage, output_file, current_frame_uuid, promote=False):
     data_repo = DataRepo()
@@ -371,14 +207,13 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
 
     st.markdown("##### Inpaint in black space:")
 
-    inpaint_prompt = st.text_area(
-        "Prompt", value=DefaultProjectSettingParams.batch_prompt)
+    inpaint_prompt = st.text_area("Prompt", value=DefaultProjectSettingParams.batch_prompt)
     inpaint_negative_prompt = st.text_input(
         "Negative Prompt", value='edge,branches, frame, fractals, text' + DefaultProjectSettingParams.batch_negative_prompt)
     if 'precision_cropping_inpainted_image_uuid' not in st.session_state:
         st.session_state['precision_cropping_inpainted_image_uuid'] = ""
 
-    if st.button("Inpaint"):
+    def inpaint(promote=False):
         width = int(project_settings.width)
         height = int(project_settings.height)
 
@@ -386,74 +221,53 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
             (width, height), Image.ANTIALIAS)
         
         hosted_cropped_img_path = save_or_host_file(saved_cropped_img, CROPPED_IMG_LOCAL_PATH)
-
-        # Convert image to grayscale
-        # Create a new image with the same size as the cropped image
         mask = Image.new('RGB', cropped_img.size)
-
-        # Get the width and height of the image
         width, height = cropped_img.size
-
         for x in range(width):
             for y in range(height):
-                # Get the RGB values of the pixel
                 pixel = cropped_img.getpixel((x, y))
-
-                # If the image is RGB, unpack the pixel into r, g, and b
                 if cropped_img.mode == 'RGB':
                     r, g, b = pixel
-                # If the image is RGBA, unpack the pixel into r, g, b, and a
                 elif cropped_img.mode == 'RGBA':
                     r, g, b, a = pixel
-                # If the image is grayscale ('L' for luminosity), there's only one channel
                 elif cropped_img.mode == 'L':
                     brightness = pixel
                 else:
                     raise ValueError(
                         f'Unsupported image mode: {cropped_img.mode}')
 
-                # If the pixel is black, set it and its adjacent pixels to black in the new image
                 if r == 0 and g == 0 and b == 0:
                     mask.putpixel((x, y), (0, 0, 0))  # Black
-                    # Adjust these values to change the range of adjacent pixels
                     for i in range(-2, 3):
                         for j in range(-2, 3):
-                            # Check that the pixel is within the image boundaries
                             if 0 <= x + i < width and 0 <= y + j < height:
                                 mask.putpixel((x + i, y + j),
                                               (0, 0, 0))  # Black
-                # Otherwise, make the pixel white in the new image
                 else:
                     mask.putpixel((x, y), (255, 255, 255))  # White
 
-        # Save the mask image
+        mask = ImageOps.invert(mask)
         hosted_url = save_or_host_file(mask, MASK_IMG_LOCAL_PATH)
         add_temp_file_to_project(project_uuid, TEMP_MASK_FILE, hosted_url or MASK_IMG_LOCAL_PATH)
 
         cropped_img_path = hosted_cropped_img_path if hosted_cropped_img_path else CROPPED_IMG_LOCAL_PATH
-        inpainted_file = inpainting(cropped_img_path, inpaint_prompt,
-                                    inpaint_negative_prompt, st.session_state['current_frame_uuid'], True, pass_mask=True)
+        output, log = inpainting(cropped_img_path, inpaint_prompt,
+                                    inpaint_negative_prompt, st.session_state['current_frame_uuid'], True)
+        
+        inference_data = {
+            "inference_type": InferenceType.FRAME_INPAINTING.value,
+            "output": output,
+            "log_uuid": log.uuid,
+            "timing_uuid": st.session_state['current_frame_uuid'],
+            "promote_generation": promote,
+            "stage": stage
+        }
 
-        st.session_state['precision_cropping_inpainted_image_uuid'] = inpainted_file.uuid
+        process_inference_output(**inference_data)
 
-    if st.session_state['precision_cropping_inpainted_image_uuid']:
-        img_file = data_repo.get_file_from_uuid(
-            st.session_state['precision_cropping_inpainted_image_uuid'])
-        st.image(img_file.location, caption="Inpainted Image",
-                 use_column_width=True, width=200)
 
-        if stage == WorkflowStageType.SOURCE.value:
-            if st.button("Make Source Image"):
-                data_repo.update_specific_timing(
-                    st.session_state['current_frame_uuid'], source_image_id=img_file.uuid)
-                st.session_state['precision_cropping_inpainted_image_uuid'] = ""
-                st.rerun()
-
-        elif stage == WorkflowStageType.STYLED.value:
-            if st.button("Save + Promote Image"):
-                number_of_image_variants = add_image_variant(
-                    st.session_state['precision_cropping_inpainted_image_uuid'], st.session_state['current_frame_uuid'])
-                promote_image_variant(
-                    st.session_state['current_frame_uuid'], number_of_image_variants - 1)
-                st.session_state['precision_cropping_inpainted_image_uuid'] = ""
-                st.rerun()
+    if st.button("Inpaint"):
+        inpaint(promote=False)
+    
+    if st.button("Inpaint and Promote"):
+        inpaint(promote=True)

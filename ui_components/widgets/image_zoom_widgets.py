@@ -15,22 +15,22 @@ def zoom_inputs(position='in-frame', horizontal=False):
         col1 = col2 = col3 = col4 = col5 = col6 = st
 
     col1.number_input(
-        "Zoom In/Out", min_value=10, max_value=1000, step=10, key=f"zoom_level_input_{position}", value=100)
+        "Zoom In/Out", min_value=10, max_value=1000, step=10, key=f"zoom_level_input", value=100)
     
     col2.number_input(
-        "Rotate Clockwise/Counterclockwise", min_value=-360, max_value=360, step=5, key=f"rotation_angle_input_{position}", value=0)
+        "Rotate Clockwise/Counterclockwise", min_value=-360, max_value=360, step=5, key="rotation_angle_input", value=0)
     
     col3.number_input(
-        "Shift Left/Right", min_value=-1000, max_value=1000, step=5, key=f"x_shift_{position}", value=0)
+        "Shift Left/Right", min_value=-1000, max_value=1000, step=5, key=f"x_shift", value=0)
     
     col4.number_input(
-        "Shift Down/Up", min_value=-1000, max_value=1000, step=5, key=f"y_shift_{position}", value=0)
+        "Shift Down/Up", min_value=-1000, max_value=1000, step=5, key=f"y_shift", value=0)
 
     col5.checkbox(
-        "Flip Vertically", key=f"flip_vertically_{position}", value=False)
+        "Flip Vertically", key=f"flip_vertically", value=False)
 
     col6.checkbox(
-        "Flip Horizontally", key=f"flip_horizontally_{position}", value=False)
+        "Flip Horizontally", key=f"flip_horizontally", value=False)
 
     
 
@@ -104,4 +104,6 @@ def reset_zoom_element():
     st.session_state['rotation_angle_input'] = 0
     st.session_state['x_shift'] = 0
     st.session_state['y_shift'] = 0
+    st.session_state['flip_vertically'] = False
+    st.session_state['flip_horizontally'] = False
     st.rerun()
