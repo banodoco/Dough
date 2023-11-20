@@ -200,6 +200,12 @@ def delete_shot_button(shot_uuid):
     confirm_delete = st.checkbox("This will delete all the frames & videos within")    
     help_text = "Check the box above to enable the delete button." if not confirm_delete else "This will this shot and all the frames and videos within."
     if st.button("Delete shot", disabled=(not confirm_delete), help=help_text, key=shot.uuid, use_container_width=True):
+        if st.session_state['shot_uuid'] == str(shot.uuid):
+            shot_list = data_repo.get_shot_list(shot.project.uuid)
+            for s in shot_list:
+                if str(s.uuid) != shot.uuid:
+                    st.session_state['shot_uuid'] = s.uuid
+        
         data_repo.delete_shot(shot.uuid)
         st.success("Shot deleted successfully")
         time.sleep(0.3)

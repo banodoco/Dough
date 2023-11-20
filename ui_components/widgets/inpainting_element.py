@@ -10,7 +10,7 @@ import requests as r
 from PIL import Image, ImageOps
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
-from shared.constants import InferenceType, InternalFileType, ProjectMetaData
+from shared.constants import InferenceType, InternalFileTag, InternalFileType, ProjectMetaData
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE, DefaultProjectSettingParams, WorkflowStageType
 from ui_components.methods.file_methods import add_temp_file_to_project, save_or_host_file
 from utils.data_repo.data_repo import DataRepo
@@ -207,14 +207,13 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
 
     st.markdown("##### Inpaint in black space:")
 
-    inpaint_prompt = st.text_area(
-        "Prompt", value=DefaultProjectSettingParams.batch_prompt)
+    inpaint_prompt = st.text_area("Prompt", value=DefaultProjectSettingParams.batch_prompt)
     inpaint_negative_prompt = st.text_input(
         "Negative Prompt", value='edge,branches, frame, fractals, text' + DefaultProjectSettingParams.batch_negative_prompt)
     if 'precision_cropping_inpainted_image_uuid' not in st.session_state:
         st.session_state['precision_cropping_inpainted_image_uuid'] = ""
 
-    if st.button("Inpaint"):
+    def inpaint(promote=False):
         width = int(project_settings.width)
         height = int(project_settings.height)
 
@@ -222,74 +221,53 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
             (width, height), Image.ANTIALIAS)
         
         hosted_cropped_img_path = save_or_host_file(saved_cropped_img, CROPPED_IMG_LOCAL_PATH)
-
-        # Convert image to grayscale
-        # Create a new image with the same size as the cropped image
         mask = Image.new('RGB', cropped_img.size)
-
-        # Get the width and height of the image
         width, height = cropped_img.size
-
         for x in range(width):
             for y in range(height):
-                # Get the RGB values of the pixel
                 pixel = cropped_img.getpixel((x, y))
-
-                # If the image is RGB, unpack the pixel into r, g, and b
                 if cropped_img.mode == 'RGB':
                     r, g, b = pixel
-                # If the image is RGBA, unpack the pixel into r, g, b, and a
                 elif cropped_img.mode == 'RGBA':
                     r, g, b, a = pixel
-                # If the image is grayscale ('L' for luminosity), there's only one channel
                 elif cropped_img.mode == 'L':
                     brightness = pixel
                 else:
                     raise ValueError(
                         f'Unsupported image mode: {cropped_img.mode}')
 
-                # If the pixel is black, set it and its adjacent pixels to black in the new image
                 if r == 0 and g == 0 and b == 0:
                     mask.putpixel((x, y), (0, 0, 0))  # Black
-                    # Adjust these values to change the range of adjacent pixels
                     for i in range(-2, 3):
                         for j in range(-2, 3):
-                            # Check that the pixel is within the image boundaries
                             if 0 <= x + i < width and 0 <= y + j < height:
                                 mask.putpixel((x + i, y + j),
                                               (0, 0, 0))  # Black
-                # Otherwise, make the pixel white in the new image
                 else:
                     mask.putpixel((x, y), (255, 255, 255))  # White
 
-        # Save the mask image
+        mask = ImageOps.invert(mask)
         hosted_url = save_or_host_file(mask, MASK_IMG_LOCAL_PATH)
         add_temp_file_to_project(project_uuid, TEMP_MASK_FILE, hosted_url or MASK_IMG_LOCAL_PATH)
 
         cropped_img_path = hosted_cropped_img_path if hosted_cropped_img_path else CROPPED_IMG_LOCAL_PATH
-        inpainted_file = inpainting(cropped_img_path, inpaint_prompt,
-                                    inpaint_negative_prompt, st.session_state['current_frame_uuid'], False)
+        output, log = inpainting(cropped_img_path, inpaint_prompt,
+                                    inpaint_negative_prompt, st.session_state['current_frame_uuid'], True)
         
-        st.session_state['precision_cropping_inpainted_image_uuid'] = inpainted_file.uuid
+        inference_data = {
+            "inference_type": InferenceType.FRAME_INPAINTING.value,
+            "output": output,
+            "log_uuid": log.uuid,
+            "timing_uuid": st.session_state['current_frame_uuid'],
+            "promote_generation": promote,
+            "stage": stage
+        }
 
-    if st.session_state['precision_cropping_inpainted_image_uuid']:
-        img_file = data_repo.get_file_from_uuid(
-            st.session_state['precision_cropping_inpainted_image_uuid'])
-        st.image(img_file.location, caption="Inpainted Image",
-                 use_column_width=True, width=200)
+        process_inference_output(**inference_data)
 
-        if stage == WorkflowStageType.SOURCE.value:
-            if st.button("Make Source Image"):
-                data_repo.update_specific_timing(
-                    st.session_state['current_frame_uuid'], source_image_id=img_file.uuid)
-                st.session_state['precision_cropping_inpainted_image_uuid'] = ""
-                st.rerun()
 
-        elif stage == WorkflowStageType.STYLED.value:
-            if st.button("Save + Promote Image"):
-                number_of_image_variants = add_image_variant(
-                    st.session_state['precision_cropping_inpainted_image_uuid'], st.session_state['current_frame_uuid'])
-                promote_image_variant(
-                    st.session_state['current_frame_uuid'], number_of_image_variants - 1)
-                st.session_state['precision_cropping_inpainted_image_uuid'] = ""
-                st.rerun()
+    if st.button("Inpaint"):
+        inpaint(promote=False)
+    
+    if st.button("Inpaint and Promote"):
+        inpaint(promote=True)

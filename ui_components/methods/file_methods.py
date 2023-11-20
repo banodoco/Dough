@@ -178,7 +178,7 @@ def generate_temp_file_from_uploaded_file(uploaded_file):
             return temp_file
 
 
-def convert_bytes_to_file(file_location_to_save, mime_type, file_bytes, project_uuid, inference_log_id=None, filename=None, tag=""):
+def convert_bytes_to_file(file_location_to_save, mime_type, file_bytes, project_uuid, inference_log_id=None, filename=None, tag="") -> InternalFileObject:
     data_repo = DataRepo()
 
     hosted_url = save_or_host_file_bytes(file_bytes, file_location_to_save, "." + mime_type.split("/")[1])

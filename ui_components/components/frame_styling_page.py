@@ -102,8 +102,7 @@ def frame_styling_page(shot_uuid: str):
 
             if st.session_state['styling_view'] == "Generate Variants":
                 with st.expander("🛠️ Generate Variants + Prompt Settings", expanded=True):
-                
-                    generate_images_element(shot.project.uuid,data_repo, position='individual')
+                    generate_images_element(position='individual', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
                                                 
             elif st.session_state['styling_view'] == "Crop, Move & Rotate Image":
                 with st.expander("🤏 Crop, Move & Rotate Image", expanded=True):                    
@@ -116,6 +115,7 @@ def frame_styling_page(shot_uuid: str):
             elif st.session_state['styling_view'] == "Draw On Image":
                 with st.expander("📝 Draw On Image", expanded=True):
                     drawing_element(timing_list,project_settings, shot_uuid)
+            
             st.markdown("***")                       
             with st.expander("➕ Add Key Frame", expanded=True):
                 selected_image, inherit_styling_settings  = add_key_frame_element(shot_uuid)
@@ -131,7 +131,7 @@ def frame_styling_page(shot_uuid: str):
                 with st.expander("📋 Explorer Shortlist",expanded=True):
                     if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
                         project_setting = data_repo.get_project_setting(shot.project.uuid)
-                        page_number = st.radio("Select page", options=range(1, project_setting.total_gallery_pages), horizontal=True)
+                        page_number = st.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)
                         gallery_image_view(shot.project.uuid, page_number=page_number, num_items_per_page=10, open_detailed_view_for_all=False, shortlist=True, num_columns=2,view="sidebar")
                                 
             timeline_view(shot_uuid, "Key Frames")

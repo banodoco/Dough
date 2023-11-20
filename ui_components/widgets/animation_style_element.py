@@ -61,25 +61,25 @@ def animation_style_element(shot_uuid):
     with d1:
         setting_a_1, setting_a_2 = st.columns([1, 1])
         with setting_a_1:
-            type_of_frame_distribution = st_memory.radio("Type of Frame Distribution", options=["Linear", "Dynamic"], key="type_of_frame_distribution").lower()                        
+            type_of_frame_distribution = st_memory.radio("Type of Frame Distribution", options=["linear", "dynamic"], key="type_of_frame_distribution").lower()                        
         if type_of_frame_distribution == "linear":
             with setting_a_2:
                 linear_frame_distribution_value = st_memory.number_input("Frames per Keyframe", min_value=8, max_value=36, value=16, step=1, key="frames_per_keyframe")
-                dynamic_frame_distribution_values = ""
+                dynamic_frame_distribution_values = []
         setting_b_1, setting_b_2 = st.columns([1, 1])
         with setting_b_1:
-            type_of_key_frame_influence = st_memory.radio("Type of Keyframe Influence", options=["Linear", "Dynamic"], key="type_of_key_frame_influence").lower()
+            type_of_key_frame_influence = st_memory.radio("Type of Keyframe Influence", options=["linear", "dynamic"], key="type_of_key_frame_influence").lower()
         if type_of_key_frame_influence == "linear":
             with setting_b_2:
                 linear_key_frame_influence_value = st_memory.slider("Length of Keyframe Influence", min_value=0.0, max_value=2.0, value=1.1, step=0.1, key="length_of_key_frame_influence")
-                dynamic_key_frame_influence_values = ""
+                dynamic_key_frame_influence_values = []
         setting_c_1, setting_c_2 = st.columns([1, 1])
         with setting_c_1:
-            type_of_cn_strength_distribution = st_memory.radio("Type of CN Strength Distribution", options=["Linear", "Dynamic"], key="type_of_cn_strength_distribution").lower()
+            type_of_cn_strength_distribution = st_memory.radio("Type of CN Strength Distribution", options=["linear", "dynamic"], key="type_of_cn_strength_distribution").lower()
         if type_of_cn_strength_distribution == "linear":
             with setting_c_2:
                 linear_cn_strength_value = st_memory.slider("CN Strength", min_value=0.0, max_value=1.0, value=0.5, step=0.1, key="linear_cn_strength_value")
-                dynamic_cn_strength_values = ""
+                dynamic_cn_strength_values = []
 
         
         # length_of_key_frame_influence = st_memory.slider("Length of Keyframe Influence", min_value=0.0, max_value=2.0, value=1.1, step=0.1, key="length_of_key_frame_influence")
@@ -102,7 +102,7 @@ def animation_style_element(shot_uuid):
                     columns[idx].image(timing.primary_image.location, use_column_width=True)
                     b = timing.primary_image.inference_params
                 if type_of_frame_distribution == "dynamic":
-                    linear_frame_distribution_value = ""                        
+                    linear_frame_distribution_value = 16
                     if f"frame_{idx+1}" not in st.session_state:
                         st.session_state[f"frame_{idx+1}"] = idx * 16  # Default values in increments of 16
                     if idx == 0:  # For the first frame, position is locked to 0
@@ -113,11 +113,11 @@ def animation_style_element(shot_uuid):
                     st.session_state[f"frame_{idx+1}"] = frame_position
                     dynamic_frame_distribution_values.append(frame_position)
                 if type_of_key_frame_influence == "dynamic":
-                    linear_key_frame_influence_value = ""
+                    linear_key_frame_influence_value = 1.1
                     dynamic_key_frame_influence_individual_value = columns[idx].slider(f"Length of Keyframe Influence {idx+1}", min_value=0.0, max_value=5.0, value=(b['dynamic_key_frame_influence_values'] if b and 'dynamic_key_frame_influence_values' in b else 1.1), step=0.1, key=f"dynamic_key_frame_influence_values_{idx+1}")
                     dynamic_key_frame_influence_values.append(str(dynamic_key_frame_influence_individual_value))
                 if type_of_cn_strength_distribution == "dynamic":
-                    linear_cn_strength_value = ""                   
+                    linear_cn_strength_value = 1
                     dynamic_cn_strength_individual_value = columns[idx].slider(f"CN Strength {idx+1}", min_value=0.0, max_value=1.0, value=(b['dynamic_cn_strength_values'] if b and 'dynamic_cn_strength_values' in b else 0.5), step=0.1, key=f"dynamic_cn_strength_values_{idx+1}")
                     dynamic_cn_strength_values.append(str(dynamic_cn_strength_individual_value))
 
@@ -134,15 +134,11 @@ def animation_style_element(shot_uuid):
             influence_ranges = []
             for i, position in enumerate(keyframe_positions):
                 influence_factor = key_frame_influence_values[i]
-
-                # Calculate the base range size
                 range_size = influence_factor * (keyframe_positions[-1] - keyframe_positions[0]) / (len(keyframe_positions) - 1) / 2
 
-                # Calculate symmetric start and end influence
                 start_influence = position - range_size
                 end_influence = position + range_size
 
-                # Adjust start and end influence to not exceed previous and next keyframes
                 start_influence = max(start_influence, keyframe_positions[i - 1] if i > 0 else 0)
                 end_influence = min(end_influence, keyframe_positions[i + 1] if i < len(keyframe_positions) - 1 else keyframe_positions[-1])
 
@@ -152,25 +148,19 @@ def animation_style_element(shot_uuid):
         
         def get_keyframe_positions(type_of_frame_distribution, dynamic_frame_distribution_values, images, linear_frame_distribution_value):
             if type_of_frame_distribution == "dynamic":
-                # Sort the keyframe positions in numerical order
                 return sorted([int(kf.strip()) for kf in dynamic_frame_distribution_values.split(',')])
             else:
-                # Calculate the number of keyframes based on the total duration and linear_frames_per_keyframe
                 return [i * linear_frame_distribution_value for i in range(len(images))]
         
         def extract_keyframe_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value):
             if type_of_key_frame_influence == "dynamic":
-                # Parse the dynamic key frame influence values without sorting
-                
                 return [float(influence.strip()) for influence in dynamic_key_frame_influence_values.split(',')]
             else:
-                # Create a list w gbith the linear_key_frame_influence_value for each keyframe
                 return [linear_key_frame_influence_value for _ in keyframe_positions]
         
         def calculate_weights_and_plot(influence_ranges, interpolation, strengths):
             plt.figure(figsize=(12, 6))
 
-            # Automatically generate frame names
             frame_names = [f'Frame {i+1}' for i in range(len(influence_ranges))]
             for i, (range_start, range_end) in enumerate(influence_ranges):
                 strength = float(strengths[i])  # Get the corresponding strength value
@@ -196,7 +186,6 @@ def animation_style_element(shot_uuid):
                 else:
                     index = np.linspace(0, 1, steps)
 
-                # Applying different interpolation styles
                 if interpolation == "linear":
                     weights = np.linspace(strength_from, strength_to, len(index))
                 elif interpolation == "ease-in":
@@ -226,16 +215,12 @@ def animation_style_element(shot_uuid):
         
         
         keyframe_positions = get_keyframe_positions(type_of_frame_distribution, dynamic_frame_distribution_values, timing_list, linear_frame_distribution_value)
-
         cn_strength_values = extract_keyframe_values(type_of_cn_strength_distribution, dynamic_cn_strength_values, keyframe_positions, linear_cn_strength_value)
-        
         key_frame_influence_values = extract_keyframe_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value)    
-                
         influence_ranges = calculate_dynamic_influence_ranges(keyframe_positions,key_frame_influence_values)        
+        
         calculate_weights_and_plot(influence_ranges, interpolation_style, cn_strength_values)
-                    
         st.set_option('deprecation.showPyplotGlobalUse', False)
-
         st.pyplot()
     
     st.markdown("***")
@@ -257,65 +242,52 @@ def animation_style_element(shot_uuid):
         ip_adapter_weight = st_memory.slider("How tightly would you like the style to adhere to the input images?", min_value=0.0, max_value=1.0, value=0.66, step=0.1, key="ip_adapter_weight")
         soft_scaled_cn_weights_multipler = st_memory.slider("How much would you like to scale the CN weights?", min_value=0.0, max_value=10.0, value=0.85, step=0.1, key="soft_scaled_cn_weights_multipler")
             
-    st.markdown("***")
-        
-
-    normalise_speed = True
-    context_length = 16
-    context_stride = 2
-    context_overlap = 2
-    buffer = 4
-    # normalise_speed = st.checkbox("Normalise Speed", value=True, key="normalise_speed")
+    normalise_speed = st.checkbox("Normalise Speed", value=True, key="normalise_speed")
     
-    st.write(f"type_of_frame_distribution: {type_of_frame_distribution}")
-    st.write(f"dynamic_frame_distribution_values: {dynamic_frame_distribution_values}")
-    st.write(f"linear_frame_distribution_value: {linear_frame_distribution_value}")
-    st.write(f"type_of_key_frame_influence: {type_of_key_frame_influence}")
-    st.write(f"linear_key_frame_influence_value: {linear_key_frame_influence_value}")
-    st.write(f"dynamic_key_frame_influence_values: {dynamic_key_frame_influence_values}")
-    st.write(f"type_of_cn_strength_distribution: {type_of_cn_strength_distribution}")
-    st.write(f"dynamic_cn_strength_values: {dynamic_cn_strength_values}")
-    st.write(f"linear_cn_strength_value: {linear_cn_strength_value}")
-    st.write(f"buffer: {buffer}")
-    st.write(f"context_length: {context_length}")
-    st.write(f"context_stride: {context_stride}")
-    st.write(f"context_overlap: {context_overlap}")
-    if type_of_frame_distribution == "linear":
-        batch_size = ((len(timing_list)-1) * linear_frame_distribution_value) + buffer
-        
-    elif type_of_frame_distribution == "dynamic":
-        batch_size = int(dynamic_frame_distribution_values.split(',')[-1]) + buffer
-        
-    st.write(f"batch_size: {batch_size}")
+    # st.write(f"type_of_frame_distribution: {type_of_frame_distribution}")
+    # st.write(f"dynamic_frame_distribution_values: {dynamic_frame_distribution_values}")
+    # st.write(f"linear_frame_distribution_value: {linear_frame_distribution_value}")
+    # st.write(f"type_of_key_frame_influence: {type_of_key_frame_influence}")
+    # st.write(f"linear_key_frame_influence_value: {linear_key_frame_influence_value}")
+    # st.write(f"dynamic_key_frame_influence_values: {dynamic_key_frame_influence_values}")
+    # st.write(f"type_of_cn_strength_distribution: {type_of_cn_strength_distribution}")
+    # st.write(f"dynamic_cn_strength_values: {dynamic_cn_strength_values}")
+    # st.write(f"linear_cn_strength_value: {linear_cn_strength_value}")
+    # st.write(f"buffer: {buffer}")
+    # st.write(f"context_length: {context_length}")
+    # st.write(f"context_stride: {context_stride}")
+    # st.write(f"context_overlap: {context_overlap}")
 
-    '''
-
+    # TODO: add type of cn strength distribution
     settings.update(
-        negative_prompt=negative_prompt,
-        image_dimension=img_dimension,
-        ip_adapter_weight=ip_adapter_weight,
-        soft_scaled_cn_weights_multipler=soft_scaled_cn_weights_multipler,
-        sampling_steps=30,
-        motion_module="",
-        model=sd_model,
-        normalise_speed=normalise_speed,
+        ckpt=sd_model,
+        buffer=4,
         motion_scale=motion_scale,
-        cn_strength="cn_strength",
-        interpolation_style=interpolation_style,
-        frames_per_keyframe=frames_per_keyframe,
-        length_of_key_frame_influence=length_of_key_frame_influence
+        output_format="video/h264-mp4",
+        negative_prompt=negative_prompt,
+        interpolation_type=interpolation_style,
+        stmfnet_multiplier=2,
+        ip_adapter_model_weight=ip_adapter_weight,
+        soft_scaled_cn_multiplier=soft_scaled_cn_weights_multipler,
+        type_of_cn_strength_distribution=type_of_cn_strength_distribution,
+        linear_cn_strength_value=linear_cn_strength_value,
+        dynamic_cn_strength_values=dynamic_cn_strength_values,
+        type_of_frame_distribution=type_of_frame_distribution,
+        linear_frames_per_keyframe=linear_frame_distribution_value,
+        dynamic_frames_per_keyframe=dynamic_frame_distribution_values,
+        type_of_key_frame_influence=type_of_key_frame_influence,
+        linear_key_frame_influence_value=int(linear_key_frame_influence_value),
+        dynamic_key_frame_influence_value=dynamic_key_frame_influence_values,
+        normalise_speed=normalise_speed,
+        animation_style=AnimationStyleType.CREATIVE_INTERPOLATION.value
     )
-
-
-    '''
+    
     st.markdown("***")
     st.markdown("#### Generation Settings")
     where_to_generate = st_memory.radio("Where would you like to generate the video?", options=["Cloud", "Local"], key="where_to_generate", horizontal=True)
     if where_to_generate == "Cloud":
         animate_col_1, animate_col_2, _ = st.columns([1, 1, 2])
         with animate_col_1:
-            # img_dimension_list = ["512x512", "512x768", "768x512"]
-            # img_dimension = st.selectbox("Image Dimension:", options=img_dimension_list, key="img_dimension")  
             project_settings = data_repo.get_project_setting(shot.project.uuid)
             width = project_settings.width
             height = project_settings.height
@@ -325,22 +297,24 @@ def animation_style_element(shot_uuid):
             if st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help):
                 vid_quality = "full" if video_resolution == "Full Resolution" else "preview"
                 st.write("Generating animation clip...")
-                settings.update(animation_style=current_animation_style)
-                
-                if animation_type == AnimationStyleType.CREATIVE_INTERPOLATION.value:
-                    positive_prompt = ""
-                    for idx, timing in enumerate(timing_list):
-                        if timing.primary_image and timing.primary_image.location:
-                            b = timing.primary_image.inference_params
-                            prompt = b['prompt'] if b else ""
-                            frame_prompt = f"{idx * frames_per_keyframe}_" + prompt
-                            positive_prompt +=  ":" + frame_prompt if positive_prompt else frame_prompt
-                        else:
-                            st.error("Please generate primary images")
-                            time.sleep(0.5)
-                            st.rerun()
 
-                    settings.update(positive_prompt=positive_prompt)
+                positive_prompt = ""
+                for idx, timing in enumerate(timing_list):
+                    if timing.primary_image and timing.primary_image.location:
+                        b = timing.primary_image.inference_params
+                        prompt = b['prompt'] if b else ""
+                        frame_prompt = f"{idx * linear_frame_distribution_value}_" + prompt
+                        positive_prompt +=  ":" + frame_prompt if positive_prompt else frame_prompt
+                    else:
+                        st.error("Please generate primary images")
+                        time.sleep(0.5)
+                        st.rerun()
+
+                settings.update(
+                    image_prompt_list=positive_prompt,
+                    animation_stype=current_animation_style,
+                    image_dimension=img_dimension,
+                )
 
                 create_single_interpolated_clip(
                     shot_uuid,
@@ -349,6 +323,7 @@ def animation_style_element(shot_uuid):
                     variant_count
                 )
                 st.rerun()
+
         with animate_col_2:
             number_of_frames = len(timing_list)
             
@@ -358,7 +333,6 @@ def animation_style_element(shot_uuid):
                 cost_per_frame = 0.09
 
             cost_per_generation = cost_per_frame * number_of_frames * variant_count
-            
             st.info(f"Generating a video with {number_of_frames} frames in the cloud will cost c. ${cost_per_generation:.2f} USD.")
     
     elif where_to_generate == "Local":

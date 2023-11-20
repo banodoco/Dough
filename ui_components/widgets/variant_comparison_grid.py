@@ -5,6 +5,7 @@ from shared.constants import InferenceParamType, InternalFileTag
 from ui_components.constants import CreativeProcessType
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
 from ui_components.methods.file_methods import create_duplicate_file
+from ui_components.methods.video_methods import sync_audio_and_duration
 from ui_components.models import InternalFileObject
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from utils.data_repo.data_repo import DataRepo
@@ -65,10 +66,10 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         st.success("**Main variant**")
 
     start = (page - 1) * items_to_show
-    end = min(start + items_to_show-1, len(variants))
+    end = min(start + items_to_show-1, len(variants) - 1)
 
     next_col = 1
-    for variant_index in range(end - 1, start - 1, -1):
+    for variant_index in range(end, start - 1, -1):
         if variant_index != current_variant:
             with cols[next_col]:
                 if stage == CreativeProcessType.MOTION.value:
@@ -94,6 +95,15 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                         promote_image_variant(timing.uuid, variant_index)
                     
                     st.rerun()
+
+                if stage == CreativeProcessType.MOTION.value:
+                    if st.button("Sync audio/duration", key=f"{variants[variant_index].uuid}", help="Updates video length and the attached audio", use_container_width=True):
+                        synced_file = sync_audio_and_duration(variants[variant_index], shot_uuid)
+                        data_repo.update_file(variants[variant_index].uuid, hosted_url=synced_file.hosted_url, local_path=synced_file.local_path)
+                        _ = data_repo.get_shot_list(project_uuid, invalidate_cache=True)
+                        st.success("Video synced")
+                        time.sleep(0.3)
+                        st.rerun()
 
             next_col += 1
 
