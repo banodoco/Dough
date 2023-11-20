@@ -93,6 +93,8 @@ class VideoInterpolator:
                     "stmfnet_multiplier": settings["stmfnet_multiplier"],
                     "ip_adapter_model_weight": settings["ip_adapter_model_weight"],
                     "soft_scaled_cn_multiplier": settings["soft_scaled_cn_multiplier"],
+                    "type_of_cn_strength_distribution": settings["type_of_cn_strength_distribution"],
+                    "linear_cn_strength_value": settings["linear_cn_strength_value"],
                     "dynamic_cn_strength_values": settings["dynamic_cn_strength_values"],
                     "linear_frames_per_keyframe": settings["linear_frames_per_keyframe"],
                     "type_of_frame_distribution": settings["type_of_frame_distribution"],

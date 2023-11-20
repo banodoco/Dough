@@ -27,7 +27,7 @@ def video_rendering_page(project_uuid):
     if st.button("Render New Video"):
         render_video(final_video_name, project_uuid, InternalFileTag.COMPLETE_GENERATED_VIDEO.value)
         st.success("Video rendered!")
-        time.sleep(1.5)
+        time.sleep(0.5)
         st.rerun()
 
     st.markdown("***")

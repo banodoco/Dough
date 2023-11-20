@@ -5,6 +5,7 @@ from shared.constants import InferenceParamType, InternalFileTag
 from ui_components.constants import CreativeProcessType
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
 from ui_components.methods.file_methods import create_duplicate_file
+from ui_components.methods.video_methods import sync_audio_and_duration
 from ui_components.models import InternalFileObject
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from utils.data_repo.data_repo import DataRepo
@@ -94,6 +95,10 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                         promote_image_variant(timing.uuid, variant_index)
                     
                     st.rerun()
+
+                if stage == CreativeProcessType.MOTION.value:
+                    if st.button("Sync audio/duration", key=f"{variants[variant_index].uuid}", help="Updates video length and the attached audio", use_container_width=True):
+                        sync_audio_and_duration(variants[variant_index], shot_uuid)
 
             next_col += 1
 

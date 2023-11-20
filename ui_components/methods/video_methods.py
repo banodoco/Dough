@@ -4,14 +4,14 @@ import string
 import tempfile
 import time
 from typing import List
+import uuid
 import ffmpeg
 import streamlit as st
 from moviepy.editor import concatenate_videoclips, VideoFileClip, AudioFileClip
 
-from backend.models import InternalFileObject
 from shared.constants import InferenceType, InternalFileTag
 from shared.file_upload.s3 import is_s3_image_url
-from ui_components.models import InternalFrameTimingObject, InternalShotObject
+from ui_components.models import InternalFileObject, InternalFrameTimingObject, InternalShotObject
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.interpolator import VideoInterpolator
 from utils.media_processor.video import VideoProcessor
@@ -122,6 +122,82 @@ def add_audio_to_video_slice(video_file, audio_bytes):
     # Rename the output file to have the same name as the original video file
     os.rename("output_with_audio.mp4", video_location)
 
+def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid):
+    from ui_components.methods.file_methods import convert_bytes_to_file, generate_temp_file
+
+    data_repo = DataRepo()
+    shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
+    shot_list = data_repo.get_shot_list(shot.project.uuid)
+    project_settings = data_repo.get_project_settings(shot.project.uuid)
+
+    # --------- update video duration
+    output_video = update_speed_of_video_clip(video_file, shot.duration)
+
+    # --------- add audio
+    temp_file_list = []
+    temp_audio_file = None
+
+    if not project_settings.audio:
+        print("no audio to sync")
+        return output_video
+    
+    if 'http' in project_settings.audio.location:
+        temp_audio_file = generate_temp_file(project_settings.audio.location, '.mp4')
+        temp_file_list.append(temp_audio_file)
+
+    audio_location = temp_audio_file.name if temp_audio_file else project_settings.audio.location
+    
+    temp_video_file = None
+    if output_video.hosted_url:
+        temp_video_file = generate_temp_file(output_video.hosted_url, '.mp4')
+        temp_file_list.append(temp_video_file)
+
+    video_location = temp_video_file.name if temp_video_file else output_video.local_path
+
+    audio_clip = AudioFileClip(audio_location)
+    video_clip = VideoFileClip(video_location)
+
+    start_timestamp = 0
+    for i in range(1, shot.shot_idx):
+        start_timestamp += round(shot_list[i - 1].duration, 2)
+
+    if audio_clip.duration >= video_clip.duration and start_timestamp + video_clip.duration <= audio_clip.duration:
+        trimmed_audio_clip = audio_clip.subclip(start_timestamp, start_timestamp + video_clip.duration)
+        video_clip = video_clip.set_audio(trimmed_audio_clip)
+    else:
+        return None
+
+    # writing the video to the temp file
+    video_clip.write_videofile(
+        video_location,
+        fps=60,  # or 60 if your original video is 60fps
+        audio_bitrate="128k",
+        bitrate="5000k",
+        codec="libx264",
+        audio_codec="aac"
+    )
+
+    temp_video_file.close()
+    video_bytes = None
+    with open(video_location, "rb") as f:
+        video_bytes = f.read()
+
+    unique_name = str(uuid.uuid4())
+    output_video_file = f"videos/{shot.project.uuid}/assets/videos/0_raw/{unique_name}.mp4"
+    output_file = convert_bytes_to_file(
+        file_location_to_save=output_video_file,
+        mime_type="video/mp4",
+        file_bytes=video_bytes,
+        project_uuid=shot.project.uuid,
+        inference_log_id=None,
+        filename=unique_name
+    )
+
+    for file in temp_file_list:
+        os.remove(file.name)
+
+    return output_file
+
 
 def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERATED_VIDEO.value):
     '''
@@ -149,6 +225,15 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
             time.sleep(0.3)
             return
         
+        shot_video = sync_audio_and_duration(shot.main_clip, shot.uuid)
+        if not file:
+            st.error("Audio sync failed")
+            time.sleep(0.3)
+            return
+        
+        data_repo.update_shot(uuid=shot.uuid, main_clip_id=shot_video.uuid)
+        data_repo.add_interpolated_clip(shot.uuid, interpolated_clip_id=shot_video.uuid)
+
         temp_video_file = None
         if shot.main_clip.hosted_url:
             temp_video_file = generate_temp_file(shot.main_clip.hosted_url, '.mp4')
@@ -159,21 +244,21 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
 
     finalclip = concatenate_videoclips([VideoFileClip(v) for v in video_list])
 
-    # attaching audio to finalclip
-    project_settings = data_repo.get_project_settings_from_uuid(project_uuid)
-    output_video_file = f"videos/{project_uuid}/assets/videos/2_completed/{final_video_name}.mp4"
-    if project_settings.audio:
-        temp_audio_file = None
-        if 'http' in project_settings.audio.location:
-            temp_audio_file = generate_temp_file(project_settings.audio.location, '.mp4')
-            temp_file_list.append(temp_audio_file)
+    # # attaching audio to finalclip
+    # project_settings = data_repo.get_project_settings_from_uuid(project_uuid)
+    # if project_settings.audio:
+    #     temp_audio_file = None
+    #     if 'http' in project_settings.audio.location:
+    #         temp_audio_file = generate_temp_file(project_settings.audio.location, '.mp4')
+    #         temp_file_list.append(temp_audio_file)
 
-        audio_location = temp_audio_file.name if temp_audio_file else project_settings.audio.location
+    #     audio_location = temp_audio_file.name if temp_audio_file else project_settings.audio.location
         
-        audio_clip = AudioFileClip(audio_location)
-        finalclip = finalclip.set_audio(audio_clip)
+    #     audio_clip = AudioFileClip(audio_location)
+    #     finalclip = finalclip.set_audio(audio_clip)
 
     # writing the video to the temp file
+    output_video_file = f"videos/{project_uuid}/assets/videos/2_completed/{final_video_name}.mp4"
     temp_video_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     finalclip.write_videofile(
         temp_video_file.name,

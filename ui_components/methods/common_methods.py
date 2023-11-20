@@ -17,7 +17,7 @@ from pydub import AudioSegment
 from backend.models import InternalFileObject
 from ui_components.constants import SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, WorkflowStageType
 from ui_components.methods.file_methods import add_temp_file_to_project, convert_bytes_to_file, generate_pil_image, generate_temp_file, save_or_host_file, save_or_host_file_bytes
-from ui_components.methods.video_methods import update_speed_of_video_clip
+from ui_components.methods.video_methods import sync_audio_and_duration, update_speed_of_video_clip
 from ui_components.models import InternalFrameTimingObject, InternalSettingObject
 from utils.common_utils import acquire_lock, release_lock
 from utils.data_repo.data_repo import DataRepo
@@ -802,7 +802,7 @@ def process_inference_output(**kwargs):
             )
 
             if not shot.main_clip:
-                output_video = update_speed_of_video_clip(video, shot.duration)
+                output_video = sync_audio_and_duration(video, shot_uuid)
                 data_repo.update_shot(uuid=shot_uuid, main_clip_id=output_video.uuid)
                 data_repo.add_interpolated_clip(shot_uuid, interpolated_clip_id=output_video.uuid)
             else:

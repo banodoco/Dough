@@ -61,21 +61,21 @@ def animation_style_element(shot_uuid):
     with d1:
         setting_a_1, setting_a_2 = st.columns([1, 1])
         with setting_a_1:
-            type_of_frame_distribution = st_memory.radio("Type of Frame Distribution", options=["Linear", "Dynamic"], key="type_of_frame_distribution").lower()                        
+            type_of_frame_distribution = st_memory.radio("Type of Frame Distribution", options=["linear", "dynamic"], key="type_of_frame_distribution").lower()                        
         if type_of_frame_distribution == "linear":
             with setting_a_2:
                 linear_frame_distribution_value = st_memory.number_input("Frames per Keyframe", min_value=8, max_value=36, value=16, step=1, key="frames_per_keyframe")
                 dynamic_frame_distribution_values = []
         setting_b_1, setting_b_2 = st.columns([1, 1])
         with setting_b_1:
-            type_of_key_frame_influence = st_memory.radio("Type of Keyframe Influence", options=["Linear", "Dynamic"], key="type_of_key_frame_influence").lower()
+            type_of_key_frame_influence = st_memory.radio("Type of Keyframe Influence", options=["linear", "dynamic"], key="type_of_key_frame_influence").lower()
         if type_of_key_frame_influence == "linear":
             with setting_b_2:
                 linear_key_frame_influence_value = st_memory.slider("Length of Keyframe Influence", min_value=0.0, max_value=2.0, value=1.1, step=0.1, key="length_of_key_frame_influence")
                 dynamic_key_frame_influence_values = []
         setting_c_1, setting_c_2 = st.columns([1, 1])
         with setting_c_1:
-            type_of_cn_strength_distribution = st_memory.radio("Type of CN Strength Distribution", options=["Dynamic"], key="type_of_cn_strength_distribution").lower()
+            type_of_cn_strength_distribution = st_memory.radio("Type of CN Strength Distribution", options=["linear", "dynamic"], key="type_of_cn_strength_distribution").lower()
         if type_of_cn_strength_distribution == "linear":
             with setting_c_2:
                 linear_cn_strength_value = st_memory.slider("CN Strength", min_value=0.0, max_value=1.0, value=0.5, step=0.1, key="linear_cn_strength_value")
@@ -269,6 +269,8 @@ def animation_style_element(shot_uuid):
         stmfnet_multiplier=2,
         ip_adapter_model_weight=ip_adapter_weight,
         soft_scaled_cn_multiplier=soft_scaled_cn_weights_multipler,
+        type_of_cn_strength_distribution=type_of_cn_strength_distribution,
+        linear_cn_strength_value=linear_cn_strength_value,
         dynamic_cn_strength_values=dynamic_cn_strength_values,
         type_of_frame_distribution=type_of_frame_distribution,
         linear_frames_per_keyframe=linear_frame_distribution_value,
