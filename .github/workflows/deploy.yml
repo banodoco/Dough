@@ -80,5 +80,7 @@ jobs:
 
       - name: Restart runner
         run: |
-          pkill -f "banodoco_runner"
+          if pkill -0 -f "banodoco_runner"; then
+            pkill -f "banodoco_runner"
+          fi
           . venv/bin/activate && nohup python banodoco_runner.py > script_output.log 2>&1 &
