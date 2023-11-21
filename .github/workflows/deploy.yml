@@ -67,15 +67,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
-        with:
-          path: '../../../../banodoco'
+
+      - name: Create and activate virtual environment
+        run: |
+          python -m venv venv
+          source venv/bin/activate
 
       - name: Install dependencies
         run: |
-          source ../../../../banodoco/venv/bin/activate
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Restart runner
         run: |
-          ../../../../stop_process.sh
-          ../../../../run_hosted_runner.sh
+          process_name="banodoco_runner"
+          pkill -f "$process_name"
+          . venv/bin/activate && nohup python banodoco_runner.py > script_output.log 2>&1 &
