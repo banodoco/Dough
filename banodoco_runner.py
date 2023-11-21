@@ -1,5 +1,7 @@
 import json
 import os
+import signal
+import sys
 import time
 import requests
 import setproctitle
@@ -26,6 +28,15 @@ SERVER = os.getenv('SERVER', 'development')
 REFRESH_FREQUENCY = 2   # refresh every 2 seconds
 MAX_APP_RETRY_CHECK = 3  # if the app is not running after 3 retries then the script will stop
 
+TERMINATE_SCRIPT = False
+
+def handle_termination(signal, frame):
+    print("Received termination signal. Cleaning up...")
+    TERMINATE_SCRIPT = True
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, handle_termination)
+
 def main():
     if SERVER != 'development' and not HOSTED_BACKGROUND_RUNNER_MODE:
         return
@@ -34,6 +45,9 @@ def main():
     
     print('runner running')
     while True:
+        if TERMINATE_SCRIPT:
+            return
+
         if SERVER == 'development':
             if not is_app_running():
                 if retries <=  0:
