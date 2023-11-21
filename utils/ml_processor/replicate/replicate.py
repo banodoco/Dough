@@ -40,9 +40,9 @@ class ReplicateProcessor(MachineLearningProcessor):
         self.training_data_upload_url = "https://dreambooth-api-experimental.replicate.com/v1/upload/data.zip"
         self.model_version_url = "https://api.replicate.com/v1/models"
 
-    def _update_usage_credits(self, time_taken):
+    def update_usage_credits(self, time_taken):
         data_repo = DataRepo()
-        cost = round((time_taken / 60) * 0.17, 3)
+        cost = round(time_taken * 0.004, 3)
         data_repo.update_usage_credits(-cost)
 
     def get_model(self, input_model: ReplicateModel):
@@ -90,7 +90,7 @@ class ReplicateProcessor(MachineLearningProcessor):
             del kwargs['model']
 
         log = log_model_inference(replicate_model, end_time - start_time, **kwargs)
-        self._update_usage_credits(end_time - start_time)
+        self.update_usage_credits(end_time - start_time)
 
         if replicate_model == REPLICATE_MODEL.clip_interrogator:
             output = output     # adding this for organisation purpose
@@ -164,7 +164,7 @@ class ReplicateProcessor(MachineLearningProcessor):
                 del kwargs['model']
                 
             log = log_model_inference(replicate_model, time_taken, **kwargs)
-            self._update_usage_credits(time_taken)
+            self.update_usage_credits(time_taken)
             output_list.append((output, log))
 
         return output_list
@@ -196,7 +196,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         output = model.predict(mask=mask, image=input_image,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)    
         end_time = time.time()
         log = log_model_inference(model, end_time - start_time, prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)
-        self._update_usage_credits(end_time - start_time)
+        self.update_usage_credits(end_time - start_time)
 
         return output[0], log
     
@@ -263,7 +263,7 @@ class ReplicateProcessor(MachineLearningProcessor):
 
         # TODO: currently approximating total credit cost of training based on image len, will fix this in the future
         time_taken = image_len * 3 * 60 # per image 3 mins
-        self._update_usage_credits(time_taken)
+        self.update_usage_credits(time_taken)
 
         return response
     

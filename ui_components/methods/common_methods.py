@@ -730,6 +730,7 @@ def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
 def process_inference_output(**kwargs):
     data_repo = DataRepo()
 
+    inference_time = 0.0
     inference_type = kwargs.get('inference_type')
     # ------------------- FRAME TIMING IMAGE INFERENCE -------------------
     if inference_type == InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value:
@@ -745,6 +746,9 @@ def process_inference_output(**kwargs):
             filename = str(uuid.uuid4()) + ".png"
             log_uuid = kwargs.get('log_uuid')
             log = data_repo.get_inference_log_from_uuid(log_uuid)
+            if log and log.total_inference_time:
+                inference_time = log.total_inference_time
+
             output_file = data_repo.create_file(
                 name=filename, 
                 type=InternalFileType.IMAGE.value,
@@ -807,7 +811,10 @@ def process_inference_output(**kwargs):
                 data_repo.add_interpolated_clip(shot_uuid, interpolated_clip_id=output_video.uuid)
             else:
                 data_repo.add_interpolated_clip(shot_uuid, interpolated_clip_id=video.uuid)
-        
+
+            log = data_repo.get_inference_log_from_uuid(log_uuid)
+            if log and log.total_inference_time:
+                inference_time = log.total_inference_time
         else:
             del kwargs['log_uuid']
             data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
@@ -820,6 +827,9 @@ def process_inference_output(**kwargs):
             log_uuid = kwargs.get('log_uuid')
             project_uuid = kwargs.get('project_uuid')
             log = data_repo.get_inference_log_from_uuid(log_uuid)
+            if log and log.total_inference_time:
+                inference_time = log.total_inference_time
+
             filename = str(uuid.uuid4()) + ".png"
             output_file = data_repo.create_file(
                 name=filename, 
@@ -860,9 +870,18 @@ def process_inference_output(**kwargs):
                 number_of_image_variants = add_image_variant(output_file.uuid, current_frame_uuid)
                 if promote:
                     promote_image_variant(current_frame_uuid, number_of_image_variants - 1)
+            
+            log = data_repo.get_inference_log_from_uuid(log_uuid)
+            if log and log.total_inference_time:
+                inference_time = log.total_inference_time
         else:
             del kwargs['log_uuid']
             data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
+
+    if inference_time:
+        credits_used = round(inference_time * 0.004, 3)     # make this more granular for different models
+        data_repo.update_usage_credits(-credits_used)
+
     return True
 
 
