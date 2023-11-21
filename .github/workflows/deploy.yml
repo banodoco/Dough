@@ -76,7 +76,7 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip
-          pip install -r requirements.txt
+          source venv/bin/activate && pip install -r requirements.txt
 
       - name: Restart runner
         run: |
