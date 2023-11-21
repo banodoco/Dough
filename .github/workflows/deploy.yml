@@ -78,6 +78,15 @@ jobs:
           python3 -m pip install --upgrade pip
           source venv/bin/activate && pip install -r requirements.txt
 
+      - name: Create .env file
+        run: |
+          echo "SERVER=production" > .env
+          echo "SERVER_URL=https://api.banodoco.ai" >> .env
+          echo "HOSTED_BACKGROUND_RUNNER_MODE=True" >> .env
+          echo "admin_email=${{ secrets.ADMIN_EMAIL }}" >> .env
+          echo "admin_password=${{ secrets.ADMIN_PASSWORD }}" >> .env
+        working-directory: path/to/your/repo
+
       - name: Restart runner
         run: |
           if pkill -0 -f "banodoco_runner"; then
