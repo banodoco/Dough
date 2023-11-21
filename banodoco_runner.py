@@ -98,10 +98,12 @@ def is_app_running():
 
 def check_and_update_db():
     # print("updating logs")
-    from backend.models import InferenceLog, AppSetting
+    from backend.models import InferenceLog, AppSetting, User
     
     app_logger = AppLogger()
-    app_setting = AppSetting.objects.filter(is_disabled=False).first()
+
+    user = User.objects.filter(is_disabled=False).first()
+    app_setting = AppSetting.objects.filter(user_id=user.id, is_disabled=False).first()
     replicate_key = app_setting.replicate_key_decrypted
     log_list = InferenceLog.objects.filter(status__in=[InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
                                            is_disabled=False).all()
@@ -135,7 +137,14 @@ def check_and_update_db():
                             "a4a8bafd6089e1716b06057c42b19378250d008b80fe87caa5cd36d40c1eda90" or \
                                 isinstance(result['output'], str)) else [result['output'][-1]]
                         
-                        InferenceLog.objects.filter(id=log.id).update(status=log_status, output_details=json.dumps(output_details))
+                        update_data = {
+                            "status" : log_status,
+                            "output_details" : json.dumps(output_details)
+                        }
+                        if 'metrics' in result and result['metrics'] and 'predict_time' in result['metrics']:
+                            update_data['total_inference_time'] = float(result['metrics']['predict_time'])
+
+                        InferenceLog.objects.filter(id=log.id).update(**update_data)
                         origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
                         if origin_data and log_status == InferenceStatus.COMPLETED.value:
                             from ui_components.methods.common_methods import process_inference_output
