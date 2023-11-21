@@ -98,10 +98,12 @@ def is_app_running():
 
 def check_and_update_db():
     # print("updating logs")
-    from backend.models import InferenceLog, AppSetting
+    from backend.models import InferenceLog, AppSetting, User
     
     app_logger = AppLogger()
-    app_setting = AppSetting.objects.filter(is_disabled=False).first()
+
+    user = User.objects.filter(is_disabled=False).first()
+    app_setting = AppSetting.objects.filter(user_id=user.id, is_disabled=False).first()
     replicate_key = app_setting.replicate_key_decrypted
     log_list = InferenceLog.objects.filter(status__in=[InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
                                            is_disabled=False).all()
