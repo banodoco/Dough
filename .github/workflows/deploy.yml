@@ -68,14 +68,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
         with:
-          path: 'home/ubuntu/banodoco'
+          path: '../../../../banodoco'
 
       - name: Install dependencies
         run: |
-          source home/ubuntu/banodoco/venv/bin/activate
+          source ../../../../banodoco/venv/bin/activate
           pip install -r requirements.txt
 
       - name: Restart runner
         run: |
-          home/ubuntu/stop_process.sh
-          home/ubuntu/run_hosted_runner.sh
+          ../../../../stop_process.sh
+          ../../../../run_hosted_runner.sh
