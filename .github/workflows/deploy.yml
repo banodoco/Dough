@@ -86,6 +86,7 @@ jobs:
           echo "HOSTED_BACKGROUND_RUNNER_MODE=True" >> .env
           echo "admin_email=${{ secrets.ADMIN_EMAIL }}" >> .env
           echo "admin_password=${{ secrets.ADMIN_PASSWORD }}" >> .env
+          echo "ENCRYPTION_KEY=${{ secrets.FERNET_ENCRYPTION_KEY }}" >> .env
 
       - name: Restart runner
         run: |
