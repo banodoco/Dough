@@ -141,7 +141,7 @@ class APIRepo:
         headers = {}
         headers["Authorization"] = f"Bearer {refresh_token}"
         headers["Content-Type"] = "application/json"
-        res = requests.get(self.base_url + self.AUTH_OP_URL, headers=headers)
+        res = requests.get(self.base_url + self.AUTH_REFRESH_URL, headers=headers)
         payload = { 'data': None }
         res_json = json.loads(res._content)
         if res.status_code == 200 and res_json['status']:
