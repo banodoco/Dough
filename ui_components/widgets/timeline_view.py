@@ -21,9 +21,18 @@ def timeline_view(shot_uuid, stage):
         for shot in shot_list:
             shot_keyframe_element(shot.uuid, items_per_row)
             st.markdown("***")
-        if st.button('Add new shot', type="primary"):
-            add_new_shot(shot.project.uuid)
-            st.rerun()
+        st.markdown("### Add new shot")
+        shot1,shot2,shot3 = st.columns([1,1,3])
+        with shot1:
+            new_shot_name = st.text_input("Shot Name:",max_chars=25)
+        with shot2:
+            st.write("")
+            st.write("")
+            if st.button('Add new shot', type="primary"):
+                new_shot = add_new_shot(shot.project.uuid)                
+                if new_shot_name != "":
+                    data_repo.update_shot(uuid=new_shot.uuid, name=new_shot_name)                                        
+                st.rerun()
         
     else:
         grid = st.columns(items_per_row)

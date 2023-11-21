@@ -5,7 +5,7 @@ from moviepy.editor import *
 import subprocess
 import os
 import django
-from shared.constants import OFFLINE_MODE, SERVER, ServerType
+from shared.constants import HOSTED_BACKGROUND_RUNNER_MODE, OFFLINE_MODE, SERVER, ServerType
 import sentry_sdk
 from shared.logging.logging import AppLogger
 from utils.common_utils import is_process_active
@@ -31,17 +31,17 @@ else:
     import boto3
     ssm = boto3.client("ssm", region_name="ap-south-1")
 
-    # SENTRY_ENV = ssm.get_parameter(Name='/banodoco-fe/sentry/environment')['Parameter']['Value']
-    # SENTRY_DSN = ssm.get_parameter(Name='/banodoco-fe/sentry/dsn')['Parameter']['Value']
+    SENTRY_ENV = ssm.get_parameter(Name='/banodoco-fe/sentry/environment')['Parameter']['Value']
+    SENTRY_DSN = ssm.get_parameter(Name='/banodoco-fe/sentry/dsn')['Parameter']['Value']
 
-# sentry_sdk.init(
-#     environment=SENTRY_ENV,
-#     dsn=SENTRY_DSN,
-#     traces_sample_rate=0
-# )
+sentry_sdk.init(
+    environment=SENTRY_ENV,
+    dsn=SENTRY_DSN,
+    traces_sample_rate=0
+)
 
 def start_runner():
-    if SERVER != ServerType.DEVELOPMENT.value:
+    if SERVER != ServerType.DEVELOPMENT.value and not HOSTED_BACKGROUND_RUNNER_MODE:
         return
     
     with server_state_lock["runner"]:
@@ -62,14 +62,10 @@ def main():
     auth_details = get_url_param(AUTH_TOKEN)
     if (not auth_details or auth_details == 'None')\
         and SERVER != ServerType.DEVELOPMENT.value:
-        st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
-        st.subheader("Login with Google to proceed")
- 
-        auth_url = get_google_auth_url()
-        st.markdown(auth_url, unsafe_allow_html=True)
-        
         params = st.experimental_get_query_params()
+        
         if params and 'code' in params:
+            st.subheader("Logging you in, please wait")
             # st.write(params['code'])
             data = {
                 "id_token": params['code'][0]
@@ -81,7 +77,16 @@ def main():
                 st.rerun()
             else:
                 delete_url_param(AUTH_TOKEN)
-                st.error("please login again")
+                st.error("Make sure you are added in the invite list and please login again")
+                st.text("Join our discord to request access")
+                discord_url = "<a target='_self' href='https://discord.gg/zGgpH9JEw4'> Banodoco Discord </a>"
+                st.markdown(discord_url, unsafe_allow_html=True)
+        else:
+            st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
+            st.subheader("Login with Google to proceed")
+    
+            auth_url = get_google_auth_url()
+            st.markdown(auth_url, unsafe_allow_html=True)
     else:
         start_runner()
         project_init()
@@ -93,6 +98,6 @@ if __name__ == '__main__':
     try:
         main()
     except Exception as e:
-        # sentry_sdk.capture_exception(e)
+        sentry_sdk.capture_exception(e)
         raise e
 

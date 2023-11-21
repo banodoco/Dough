@@ -42,6 +42,14 @@ def precision_cropping_element(stage, shot_uuid):
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     input_image = fetch_image_by_stage(shot_uuid, stage, st.session_state['current_frame_index'] - 1)
 
+    if 'zoom_level_input' not in st.session_state:
+        st.session_state['zoom_level_input'] = 100
+        st.session_state['rotation_angle_input'] = 0
+        st.session_state['x_shift'] = 0
+        st.session_state['y_shift'] = 0
+        st.session_state['flip_vertically'] = False
+        st.session_state['flip_horizontally'] = False
+
     # TODO: CORRECT-CODE check if this code works
     if not input_image:
         st.error("Please select a source image before cropping")

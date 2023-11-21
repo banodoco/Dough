@@ -7,6 +7,7 @@ import streamlit as st
 
 
 AUTH_TOKEN = 'auth_details'
+REFRESH_AUTH_TOKEN = 'refresh_auth_details'
 RUNNER_PROCESS_NAME = 'banodoco_runner'
 
 class ImageStage(ExtendedEnum):
@@ -128,7 +129,7 @@ ML_MODEL_LIST = [
             "category" : AIModelCategory.BASE_SD.value,
             "keyword" : "",
             "model_type": json.dumps([AIModelType.IMG2IMG.value]),
-            "enabled": True
+            "enabled": False
         },
         {
             "name" : 'controlnet_1_1_x_realistic_vision_v2_0',
@@ -137,7 +138,7 @@ ML_MODEL_LIST = [
             "category" : AIModelCategory.BASE_SD.value,
             "keyword" : "",
             "model_type": json.dumps([AIModelType.IMG2IMG.value]),
-            "enabled": True
+            "enabled": False
         },
         {
             "name" : 'urpm-v1.3',
@@ -197,6 +198,15 @@ ML_MODEL_LIST = [
             "name": "sdxl_controlnet",
             "version": REPLICATE_MODEL.sdxl_controlnet.version,
             "replicate_url": REPLICATE_MODEL.sdxl_controlnet.name,
+            "category": AIModelCategory.BASE_SD.value,
+            "keyword": "",
+            "model_type": json.dumps([AIModelType.IMG2IMG.value]),
+            "enabled": True
+        },
+        {
+            "name": "sdxl_controlnet_openpose",
+            "version": REPLICATE_MODEL.sdxl_controlnet_openpose.version,
+            "replicate_url": REPLICATE_MODEL.sdxl_controlnet_openpose.name,
             "category": AIModelCategory.BASE_SD.value,
             "keyword": "",
             "model_type": json.dumps([AIModelType.IMG2IMG.value]),

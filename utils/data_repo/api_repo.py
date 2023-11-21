@@ -5,10 +5,10 @@ import socket
 
 import requests
 import streamlit as st
-from shared.constants import SERVER, InternalFileType, InternalResponse, ServerType
+from shared.constants import HOSTED_BACKGROUND_RUNNER_MODE, SERVER, InternalFileType, InternalResponse, ServerType
 from utils.common_decorators import log_time
 
-from utils.constants import AUTH_TOKEN, AUTH_TOKEN
+from utils.constants import AUTH_TOKEN
 from utils.local_storage.url_storage import delete_url_param, get_url_param
 
 
@@ -94,7 +94,11 @@ class APIRepo:
     def _get_headers(self, content_type="application/json"):
         auth_token = get_url_param(AUTH_TOKEN)
         if not auth_token and SERVER != ServerType.DEVELOPMENT.value:
-            self.logout()
+            if not HOSTED_BACKGROUND_RUNNER_MODE:
+                self.logout()
+            else:
+                from ui_components.methods.file_methods import load_from_env
+                auth_token = load_from_env(AUTH_TOKEN)      # hackish sol, will fix later
 
         headers = {}
         headers["Authorization"] = f"Bearer {auth_token}"
@@ -133,6 +137,27 @@ class APIRepo:
         return res.json()
 
     #########################################
+    def refresh_auth_token(self, refresh_token):
+        headers = {}
+        headers["Authorization"] = f"Bearer {refresh_token}"
+        headers["Content-Type"] = "application/json"
+        res = requests.get(self.base_url + self.AUTH_OP_URL, headers=headers)
+        payload = { 'data': None }
+        res_json = json.loads(res._content)
+        if res.status_code == 200 and res_json['status']:
+            payload = { 'data': res_json['payload']}
+        return InternalResponse(payload, 'user login successfully', res_json['status'])
+
+    def user_password_login(self, **kwargs):
+        headers = {}
+        headers["Content-Type"] = "application/json"
+        res = requests.post(self.base_url + self.AUTH_OP_URL, json=kwargs, headers=headers)
+        payload = { 'data': None }
+        res_json = json.loads(res._content)
+        if res.status_code == 200 and res_json['status']:
+            payload = { 'data': res_json['payload']}
+        return InternalResponse(payload, 'user login successfully', res_json['status'])
+
     def google_user_login(self, **kwargs):
         headers = {}
         headers["Content-Type"] = "application/json"
@@ -248,8 +273,8 @@ class APIRepo:
         return InternalResponse(res['payload'], 'success', res['status'])
     
     # TODO: remove this method from everywhere
-    def get_ai_model_from_name(self, name):
-        res = self.http_get(self.MODEL_URL, params={'replicate_url': name})
+    def get_ai_model_from_name(self, name, user_id):
+        res = self.http_get(self.MODEL_URL, params={'replicate_url': name, 'user_id': user_id})
         return InternalResponse(res['payload'], 'success', res['status'])
 
     
@@ -347,7 +372,7 @@ class APIRepo:
 
     def delete_timing_from_uuid(self, uuid):
         res = self.http_delete(self.TIMING_URL, params={'uuid': uuid})
-        return InternalResponse(res['payload'], 'success', res['status']).status
+        return InternalResponse(res['payload'], 'success', res['status'])
     
     # removes all timing frames from the project
     def remove_existing_timing(self, project_uuid):
@@ -480,7 +505,7 @@ class APIRepo:
         res = self.http_post(self.SHOT_URL, data=data)
         return InternalResponse(res['payload'], 'success', res['status'])
     
-    def update_shot(self, shot_uuid, **kwargs):
+    def update_shot(self, **kwargs):
         res = self.http_put(self.SHOT_URL, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
     
@@ -493,5 +518,6 @@ class APIRepo:
         return InternalResponse(res['payload'], 'success', res['status'])
     
     def add_interpolated_clip(self, shot_uuid, **kwargs):
+        kwargs['uuid'] = shot_uuid
         res = self.http_post(self.SHOT_INTERPOLATED_CLIP, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])

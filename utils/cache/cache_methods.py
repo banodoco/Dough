@@ -144,7 +144,8 @@ def cache_data(cls):
             original_func = getattr(cls, '_original_get_file_list_from_log_uuid_list')
             res = original_func(self, not_found_list, **kwargs)
             for file in res:
-                found_list[file.inference_log.uuid] = file
+                if file.inference_log:
+                    found_list[file.inference_log.uuid] = file
 
         res = []
         if found_list:
@@ -589,14 +590,17 @@ def cache_data(cls):
     setattr(cls, "get_shot_from_number", _cache_get_shot_from_number)
 
     def _cache_get_shot_list(self, *args, **kwargs):
-        shot_list = StCache.get_all(CacheKey.SHOT.value)
-        if shot_list and len(shot_list):
-            res = []
-            for shot in shot_list:
-                if shot.project.uuid == args[0]:
-                    res.append(shot)
-            if len(res):
-                return res
+        if not kwargs.get('invalidate_cache', False):
+            shot_list = StCache.get_all(CacheKey.SHOT.value)
+            if shot_list and len(shot_list):
+                res = []
+                for shot in shot_list:
+                    if shot.project.uuid == args[0]:
+                        res.append(shot)
+                if len(res):
+                    return res
+        else:
+            StCache.delete_all(CacheKey.SHOT.value)
         
         original_func = getattr(cls, '_original_get_shot_list')
         shot_list = original_func(self, *args, **kwargs)

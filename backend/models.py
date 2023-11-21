@@ -1,7 +1,10 @@
 from django.db import models
 import uuid
 import json
+import requests
 from django.db.models import F
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 import urllib
 
 from shared.constants import SERVER, ServerType
@@ -110,13 +113,22 @@ class InternalFileObject(BaseModel):
                 video = self.project.uuid
 
             file_location = "videos/" + str(video) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".png"
-            try:
-                urllib.request.urlretrieve(self.hosted_url, file_location)
-                self.local_path = file_location
-            except Exception as e:
-                print(e)
+            self.download_and_save_file(file_location)
             
         super(InternalFileObject, self).save(*args, **kwargs)
+
+
+    def download_and_save_file(self, file_location):
+        try:
+            response = requests.get(self.hosted_url)
+            response.raise_for_status()
+
+            content = ContentFile(response.content)
+            default_storage.save(file_location, content)
+            self.local_path = file_location
+        except Exception as e:
+            print(e)
+
 
     @property
     def location(self):
@@ -180,13 +192,15 @@ class Shot(BaseModel):
     def save(self, *args, **kwargs):
         # --------------- handling shot_idx change --------------
         # if the shot is being deleted (disabled)
-        if self.old_is_disabled != self.is_disabled and self.is_disabled:
-            shot_list = Shot.objects.filter(project_id=self.project_id, is_disabled=False).order_by('shot_idx')
+        if self.old_is_disabled != self.is_disabled:
+            shot_list = Shot.objects.filter(project_id=self.project_id, is_disabled=False).all()
 
             # if this is disabled then shifting every shot backwards one step
             if self.is_disabled:
+                shot_list = shot_list.filter(shot_idx__gt=self.shot_idx).order_by('shot_idx')
                 shot_list.update(shot_idx=F('shot_idx') - 1)
             else:
+                shot_list = shot_list.filter(shot_idx__gte=self.shot_idx).order_by('shot_idx')
                 shot_list.update(shot_idx=F('shot_idx') + 1)
 
         # if this is a newly created shot or assigned new shot_idx (and not disabled)

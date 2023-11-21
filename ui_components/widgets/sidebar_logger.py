@@ -96,7 +96,7 @@ def sidebar_logger(shot_uuid):
                 elif log.status == InferenceStatus.CANCELED.value:
                     st.warning("Canceled")
                 
-                if output_url and 'timing_uuid' in origin_data:
+                if output_url and origin_data and 'timing_uuid' in origin_data and origin_data['timing_uuid']:
                     timing = data_repo.get_timing_from_uuid(origin_data['timing_uuid'])
                     if timing and st.session_state['frame_styling_view_type'] != "Timeline":
                         jump_to_single_frame_view_button(timing.aux_frame_index + 1, timing_list, 'sidebar_'+str(log.uuid))     

@@ -1,7 +1,10 @@
 # this repo serves as a middlerware between API backend and the frontend
 import json
+import time
 from shared.constants import InferenceParamType, InternalFileType, InternalResponse
 from shared.constants import SERVER, ServerType
+from shared.logging.constants import LoggingType
+from shared.logging.logging import AppLogger
 from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalShotObject, InternalUserObject
 from utils.cache.cache_methods import cache_data
 import wrapt
@@ -28,7 +31,21 @@ class DataRepo:
                 self.db_repo = APIRepo()
             
             self._initialized = True
+
+    def refresh_auth_token(self, refresh_token):
+        data = self.db_repo.refresh_auth_token(refresh_token).data['data']
+        user = InternalUserObject(**data['user']) if data and data['user'] else None
+        token = data['token'] if data and data['token'] else None
+        refresh_token = data['refresh_token'] if data and data['refresh_token'] else None
+        return user, token, refresh_token
     
+    def user_password_login(self, **kwargs):
+        data = self.db_repo.user_password_login(**kwargs).data['data']
+        user = InternalUserObject(**data['user']) if data and data['user'] else None
+        token = data['token'] if data and data['token'] else None
+        refresh_token = data['refresh_token'] if data and data['refresh_token'] else None
+        return user, token, refresh_token
+
     def google_user_login(self, **kwargs):
         data = self.db_repo.google_user_login(**kwargs).data['data']
         user = InternalUserObject(**data['user']) if data and data['user'] else None
@@ -98,7 +115,7 @@ class DataRepo:
         file_url = res.data['data'] if res.status else None
         return file_url
 
-    def create_file(self, **kwargs):
+    def create_file(self, **kwargs) -> InternalFileObject:
         if 'hosted_url' not in kwargs and SERVER != ServerType.DEVELOPMENT.value:
             file_content = ('file', open(kwargs['local_path'], 'rb'))
             uploaded_file_url = self.upload_file(file_content)
@@ -162,8 +179,8 @@ class DataRepo:
         model = res.data['data'] if res.status else None
         return InternalAIModelObject(**model) if model else None
     
-    def get_ai_model_from_name(self, name):
-        res = self.db_repo.get_ai_model_from_name(name)
+    def get_ai_model_from_name(self, name, user_id):
+        res = self.db_repo.get_ai_model_from_name(name, user_id)
         model = res.data['data'] if res.status else None
         return InternalAIModelObject(**model) if model else None
     
@@ -225,7 +242,6 @@ class DataRepo:
 
         status = self.update_inference_log(uuid, input_params=json.dumps(input_params_data))
         return status
-    
 
     # ai model param map
     # TODO: add DTO in the output
@@ -387,8 +403,18 @@ class DataRepo:
     
     # lock
     def acquire_lock(self, key):
-        res = self.db_repo.acquire_lock(key)
-        return res.data['data'] if res.status else None
+        retry_count = 0
+        while retry_count < 3:
+            try:
+                res = self.db_repo.acquire_lock(key)
+                retry_count = 10
+            except Exception as e:
+                app_logger = AppLogger()
+                app_logger.log(LoggingType.DEBUG, 'database busy, retrying')
+                retry_count += 1
+                time.sleep(0.3)
+
+        return res.data['data'] if res and res.status else None
     
     def release_lock(self, key):
         res = self.db_repo.release_lock(key)
@@ -405,7 +431,7 @@ class DataRepo:
         shot = res.data['data'] if res.status else None
         return InternalShotObject(**shot) if shot else None
 
-    def get_shot_list(self, project_uuid):
+    def get_shot_list(self, project_uuid, invalidate_cache=False):
         res = self.db_repo.get_shot_list(project_uuid)
         shot_list = res.data['data'] if res.status else None
         return [InternalShotObject(**shot) for shot in shot_list] if shot_list else []
@@ -415,8 +441,9 @@ class DataRepo:
         shot = res.data['data'] if res.status else None
         return InternalShotObject(**shot) if shot else None
     
-    def update_shot(self, shot_uuid, shot_idx=None, name=None, duration=None, meta_data=None, desc=None, main_clip_id=None):
-        res = self.db_repo.update_shot(shot_uuid, shot_idx=shot_idx, name=name, duration=duration, meta_data=meta_data, desc=desc, main_clip_id=main_clip_id)
+    # shot_uuid, shot_idx, name, duration, meta_data, desc, main_clip_id
+    def update_shot(self, **kwargs):
+        res = self.db_repo.update_shot(**kwargs)
         return res.status
 
     def delete_shot(self, shot_uuid):

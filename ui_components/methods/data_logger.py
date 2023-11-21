@@ -4,6 +4,7 @@ import time
 from shared.constants import InferenceStatus
 from shared.logging.constants import LoggingPayload, LoggingType
 from shared.logging.logging import AppLogger
+from utils.common_utils import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
 
 from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
@@ -36,11 +37,12 @@ def log_model_inference(model: ReplicateModel, time_taken, **kwargs):
 
     # storing the log in db
     data_repo = DataRepo()
-    ai_model = data_repo.get_ai_model_from_name(model.name)
+    user_id = get_current_user_uuid()
+    ai_model = data_repo.get_ai_model_from_name(model.name, user_id)
 
     # hackish sol for insuring that inpainting logs don't have an empty model field
     if ai_model is None and model.name in [REPLICATE_MODEL.sdxl_inpainting.name, REPLICATE_MODEL.ad_interpolation.name]:
-        ai_model = data_repo.get_ai_model_from_name(REPLICATE_MODEL.sdxl.name)
+        ai_model = data_repo.get_ai_model_from_name(REPLICATE_MODEL.sdxl.name, user_id)
 
     log_data = {
         "project_id" : st.session_state["project_uuid"],
