@@ -80,6 +80,7 @@ jobs:
 
       - name: Create .env file
         run: |
+          touch .env
           echo "SERVER=production" > .env
           echo "SERVER_URL=https://api.banodoco.ai" >> .env
           echo "HOSTED_BACKGROUND_RUNNER_MODE=True" >> .env
