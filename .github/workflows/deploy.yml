@@ -86,7 +86,6 @@ jobs:
           echo "HOSTED_BACKGROUND_RUNNER_MODE=True" >> .env
           echo "admin_email=${{ secrets.ADMIN_EMAIL }}" >> .env
           echo "admin_password=${{ secrets.ADMIN_PASSWORD }}" >> .env
-        working-directory: path/to/your/repo
 
       - name: Restart runner
         run: |
