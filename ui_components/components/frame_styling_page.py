@@ -75,8 +75,8 @@ def frame_styling_page(shot_uuid: str):
             st.session_state['shot_view'] = st_memory.menu('',\
                         ["Animate Frames", "Basic Cropping"], \
                             icons=['film', 'crop', "paint-bucket", 'pencil'], \
-                                menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), \
-                                    key="styling_view_selector", orientation="horizontal", \
+                                menu_icon="cast", default_index=st.session_state.get('animation_view_index', 0), \
+                                    key="animation_view_selector", orientation="horizontal", \
                                         styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "#66A9BE"}})
 
             if st.session_state['shot_view'] == "Animate Frames":

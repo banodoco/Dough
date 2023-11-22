@@ -323,7 +323,7 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                 st.rerun()
                                                 
                         if gallery_image_list[i + j].inference_log:
-                            log = data_repo.get_inference_log_from_uuid(gallery_image_list[i + j].inference_log.uuid)
+                            log = gallery_image_list[i + j].inference_log # data_repo.get_inference_log_from_uuid(gallery_image_list[i + j].inference_log.uuid)
                             if log:
                                 input_params = json.loads(log.input_params)
                                 prompt = input_params.get('prompt', 'No prompt found')
