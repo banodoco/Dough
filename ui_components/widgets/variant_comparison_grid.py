@@ -8,6 +8,7 @@ from ui_components.methods.file_methods import create_duplicate_file
 from ui_components.methods.video_methods import sync_audio_and_duration
 from ui_components.models import InternalFileObject
 from ui_components.widgets.add_key_frame_element import add_key_frame
+from ui_components.widgets.animation_style_element import update_interpolation_settings
 from utils.data_repo.data_repo import DataRepo
 
 
@@ -17,6 +18,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     and for videos it has to be shot_uuid.
     '''
     data_repo = DataRepo()
+    
 
     timing_uuid, shot_uuid, project_uuid = None, None, None
     if stage == CreativeProcessType.MOTION.value:
@@ -24,12 +26,16 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         shot = data_repo.get_shot_from_uuid(shot_uuid)
         variants = shot.interpolated_clip_list
         project_uuid = shot.project.uuid
+        timing_list = data_repo.get_timing_list_from_shot(shot.uuid)
     else:
         timing_uuid = ele_uuid
         timing = data_repo.get_timing_from_uuid(timing_uuid)
         variants = timing.alternative_images_list
         project_uuid = timing.shot.project.uuid
+        timing_list =""
+        
 
+    
     st.markdown("***")
 
     col1, col2 = st.columns([1, 1])
@@ -54,6 +60,39 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
     st.markdown("***")
 
+
+
+    def process_variant(variant, stage, project_uuid, timing_list=""):          
+        st.markdown(f"Details:")
+        inf_data = fetch_inference_data(variant)
+        if 'image_prompt_list' in inf_data:
+            del inf_data['image_prompt_list']
+            del inf_data['image_list']
+            del inf_data['output_format']
+        st.write(inf_data)        
+        if stage != CreativeProcessType.MOTION.value:
+            h1, h2 = st.columns([1, 1])
+            with h1:
+                st.markdown(f"Add to shortlist:")
+                add_variant_to_shortlist_element(variant, project_uuid)
+            with h2:
+                add_variant_to_shot_element(variant, project_uuid)  
+        if stage == CreativeProcessType.MOTION.value:
+            if st.button("Load up settings from this variant", key=f"{variant.name}", help="This will enter the settings from this variant into the inputs below - you can also use them on other shots", use_container_width=True):
+                new_data = prepare_values(fetch_inference_data(variant),timing_list)
+                update_interpolation_settings(values=new_data,timing_list=timing_list)                        
+                st.success("Settings loaded - scroll down to run them.")                                                          
+                st.rerun()
+            if st.button("Sync audio/duration", key=f"{variant.uuid}", help="Updates video length and the attached audio", use_container_width=True):
+                data_repo = DataRepo()
+                shot_uuid = variant.shot.uuid
+                synced_file = sync_audio_and_duration(variant, shot_uuid)
+                data_repo.update_file(variant.uuid, hosted_url=synced_file.hosted_url, local_path=synced_file.local_path)
+                _ = data_repo.get_shot_list(project_uuid, invalidate_cache=True)
+                st.success("Video synced")
+                time.sleep(0.3)
+                st.rerun()
+
     cols = st.columns(num_columns)
     with cols[0]:
         if stage == CreativeProcessType.MOTION.value:
@@ -61,12 +100,15 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         else:
             st.image(variants[current_variant].location, use_column_width=True)
         with st.expander("Inference details"):
-            st.markdown(f"Details:")
-            inference_detail_element(variants[current_variant])
+            process_variant(variants[current_variant], stage, project_uuid, timing_list)
+        
         st.success("**Main variant**")
 
+        
+    
     start = (page - 1) * items_to_show
     end = min(start + items_to_show-1, len(variants) - 1)
+
 
     next_col = 1
     for variant_index in range(end, start - 1, -1):
@@ -75,34 +117,20 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 if stage == CreativeProcessType.MOTION.value:
                     st.video(variants[variant_index].location, format='mp4', start_time=0) if variants[variant_index] else st.error("No video present")
                 else:
-                    st.image(variants[variant_index].location, use_column_width=True) if variants[variant_index] else st.error("No image present")
-                
-                with st.expander("Inference details"):
-                    st.markdown(f"Details:")
-                    inference_detail_element(variants[variant_index])
-                    if stage != CreativeProcessType.MOTION.value:
-                        h1, h2 = st.columns([1, 1])
-                        with h1:
-                            st.markdown(f"Add to shortlist:")
-                            add_variant_to_shortlist_element(variants[variant_index], project_uuid)
-                        with h2:
-                            add_variant_to_shot_element(variants[variant_index], project_uuid)                                                            
+                    st.image(variants[variant_index].location, use_column_width=True) if variants[variant_index] else st.error("No image present")                
+                with st.expander("Inference details"):                         
 
+                    process_variant(variants[variant_index], stage, project_uuid, timing_list)
                 if st.button(f"Promote Variant #{variant_index + 1}", key=f"Promote Variant #{variant_index + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
                     if stage == CreativeProcessType.MOTION.value:
                         promote_video_variant(shot.uuid, variants[variant_index].uuid)
                     else:
-                        promote_image_variant(timing.uuid, variant_index)
-                    
+                        promote_image_variant(timing.uuid, variant_index)                    
                     st.rerun()
 
-                if stage == CreativeProcessType.MOTION.value:
-                    if st.button("Sync audio/duration", key=f"{variants[variant_index].uuid}", help="Updates video length and the attached audio", use_container_width=True):
-                        _ = sync_audio_and_duration(variants[variant_index], shot_uuid)
-                        _ = data_repo.get_shot_list(project_uuid, invalidate_cache=True)
-                        st.success("Video synced")
-                        time.sleep(0.3)
-                        st.rerun()
+
+
+
 
             next_col += 1
 
@@ -111,7 +139,47 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             next_col = 0  # Reset column counter
 
 
-def inference_detail_element(file: InternalFileObject):
+def prepare_values(inf_data, timing_list):
+    settings = inf_data
+            # Map interpolation_type to indices
+    interpolation_style_map = {
+        'ease-in-out': 0,
+        'ease-in': 1,
+        'ease-out': 2,
+        'linear': 3
+    }
+        
+        
+    values = {
+        'type_of_frame_distribution': 1 if settings.get('type_of_frame_distribution') == 'dynamic' else 0,
+        'frames_per_keyframe': settings.get('linear_frames_per_keyframe', None),
+        'type_of_key_frame_influence': 1 if settings.get('type_of_key_frame_influence') == 'dynamic' else 0,
+        'length_of_key_frame_influence': float(settings.get('linear_key_frame_influence_value')) if settings.get('linear_key_frame_influence_value') else None,
+        'type_of_cn_strength_distribution': 1 if settings.get('type_of_cn_strength_distribution') == 'dynamic' else 0,
+        'linear_cn_strength_value': float(settings.get('linear_cn_strength_value')) or None,
+        'interpolation_style': interpolation_style_map[settings.get('interpolation_type')] if settings.get('interpolation_type') in interpolation_style_map else None,
+        'motion_scale': settings.get('motion_scale') or None,            
+        'negative_prompt_video': settings.get('negative_prompt') or None,
+        'ip_adapter_weight_video': settings.get('ip_adapter_model_weight') or None,
+        'soft_scaled_cn_weights_multiple_video': settings.get('soft_scaled_cn_multiplier') or None
+    }
+
+    # Add dynamic values
+    dynamic_frame_distribution_values = settings['dynamic_frames_per_keyframe'].split(',') if settings['dynamic_frames_per_keyframe'] else []
+    dynamic_key_frame_influence_values = settings['dynamic_key_frame_influence_value'].split(',') if settings['dynamic_key_frame_influence_value'] else []
+    dynamic_cn_strength_values = settings['dynamic_cn_strength_values'].split(',') if settings['dynamic_cn_strength_values'] else []
+
+    min_length = min(len(timing_list), len(dynamic_frame_distribution_values), len(dynamic_key_frame_influence_values), len(dynamic_cn_strength_values))
+
+    for idx in range(1, min_length + 1):
+        values[f'dynamic_frame_distribution_values_{idx}'] = int(dynamic_frame_distribution_values[idx - 1]) if dynamic_frame_distribution_values[idx - 1] and dynamic_frame_distribution_values[idx - 1].strip() else None
+        values[f'dynamic_key_frame_influence_values_{idx}'] = float(dynamic_key_frame_influence_values[idx - 1]) if dynamic_key_frame_influence_values[idx - 1] and dynamic_key_frame_influence_values[idx - 1].strip() else None
+        values[f'dynamic_cn_strength_values_{idx}'] = float(dynamic_cn_strength_values[idx - 1]) if dynamic_cn_strength_values[idx - 1] and dynamic_cn_strength_values[idx - 1].strip() else None
+
+    return values
+
+
+def fetch_inference_data(file: InternalFileObject):
     if not file:
         return
     
@@ -125,7 +193,9 @@ def inference_detail_element(file: InternalFileObject):
                 del inf_data[data_type]
     
     inf_data = inf_data or not_found_msg
-    st.write(inf_data)
+
+    return inf_data
+    
 
 
 def add_variant_to_shortlist_element(file: InternalFileObject, project_uuid):
