@@ -1,3 +1,4 @@
+import time
 import streamlit as st
 import webbrowser
 from shared.constants import SERVER, ServerType
@@ -17,6 +18,7 @@ def app_settings_page():
     if SERVER != ServerType.DEVELOPMENT.value:
         with st.expander("Purchase Credits", expanded=True):
             user_credits = get_current_user().total_credits
+            user_credits = round(user_credits, 2) if user_credits else 0
             st.write(f"Total Credits: {user_credits}")
             c1, c2 = st.columns([1,1])
             with c1:
@@ -29,6 +31,11 @@ def app_settings_page():
                     st.rerun()
 
                 if st.button("Generate payment link"):
-                    payment_link = data_repo.generate_payment_link(credits)
-                    payment_link = f"""<a target='_self' href='{payment_link}'> PAYMENT LINK </a>"""
-                    st.markdown(payment_link, unsafe_allow_html=True)
+                    if credits < 10:
+                        st.error("Minimum credit value should be atleast 10")
+                        time.sleep(0.7)
+                        st.rerun()
+                    else:
+                        payment_link = data_repo.generate_payment_link(credits)
+                        payment_link = f"""<a target='_self' href='{payment_link}'> PAYMENT LINK </a>"""
+                        st.markdown(payment_link, unsafe_allow_html=True)

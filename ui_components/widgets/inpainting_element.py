@@ -168,8 +168,18 @@ def inpainting_element(timing_uuid):
                     with edit1:
                         if st.button(f'Run Edit On Current Image'):
                             if st.session_state["type_of_mask_replacement"] == "Inpainting":
-                                edited_image, log = execute_image_edit(type_of_mask_selection, st.session_state["type_of_mask_replacement"],
-                                                                  "", editing_image, prompt, negative_prompt, width, height, st.session_state['which_layer'], st.session_state['current_frame_uuid'])
+                                edited_image, log = execute_image_edit(
+                                                        type_of_mask_selection, 
+                                                        st.session_state["type_of_mask_replacement"],
+                                                        "", 
+                                                        editing_image, 
+                                                        prompt, 
+                                                        negative_prompt, 
+                                                        width, 
+                                                        height, 
+                                                        'Foreground', 
+                                                        st.session_state['current_frame_uuid']
+                                                    )
                                 
                                 inference_data = {
                                     "inference_type": InferenceType.FRAME_INPAINTING.value,
