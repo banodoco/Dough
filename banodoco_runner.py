@@ -38,7 +38,7 @@ def handle_termination(signal, frame):
 signal.signal(signal.SIGTERM, handle_termination)
 
 def main():
-    if SERVER != 'development' and not HOSTED_BACKGROUND_RUNNER_MODE:
+    if SERVER != 'development' and HOSTED_BACKGROUND_RUNNER_MODE in [False, 'False']:
         return
     
     retries = MAX_APP_RETRY_CHECK
@@ -58,7 +58,7 @@ def main():
                 retries = min(retries + 1, MAX_APP_RETRY_CHECK)
         
         time.sleep(REFRESH_FREQUENCY)
-        if HOSTED_BACKGROUND_RUNNER_MODE:
+        if HOSTED_BACKGROUND_RUNNER_MODE not in [False, 'False']:
             validate_admin_auth_token()
         check_and_update_db()
 
@@ -119,6 +119,10 @@ def check_and_update_db():
     user = User.objects.filter(is_disabled=False).first()
     app_setting = AppSetting.objects.filter(user_id=user.id, is_disabled=False).first()
     replicate_key = app_setting.replicate_key_decrypted
+    if not replicate_key:
+        app_logger.log(LoggingType.ERROR, "Replicate key not found")
+        return
+    
     log_list = InferenceLog.objects.filter(status__in=[InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
                                            is_disabled=False).all()
     

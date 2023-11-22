@@ -11,13 +11,8 @@ def app_settings_page():
     app_secrets = data_repo.get_app_secrets_from_user_uuid()
             
     if SERVER == ServerType.DEVELOPMENT.value:
-        with st.expander("Replicate API Keys:", expanded=True):
-            replicate_username = st.text_input("replicate_username", value = app_secrets["replicate_username"])
-            replicate_key = st.text_input("replicate_key", value = app_secrets["replicate_key"])
-            if st.button("Save Settings"):
-                data_repo.update_app_setting(replicate_username=replicate_username)
-                data_repo.update_app_setting(replicate_key=replicate_key)
-                st.rerun()
+        st.subheader("Purchase Credits")
+        st.write("This feature is only available in production")
 
     if SERVER != ServerType.DEVELOPMENT.value:
         with st.expander("Purchase Credits", expanded=True):

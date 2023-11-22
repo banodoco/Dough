@@ -1,3 +1,4 @@
+import uuid
 from shared.logging.logging import AppLogger
 from utils.cache.cache import CacheKey, StCache
 
@@ -399,6 +400,22 @@ def cache_data(cls):
     
     setattr(cls, '_original_get_app_setting_from_uuid', cls.get_app_setting_from_uuid)
     setattr(cls, "get_app_setting_from_uuid", _cache_get_app_setting_from_uuid)
+    
+    def _cache_get_app_secrets_from_user_uuid(self, *args, **kwargs):
+        app_secret = StCache.get_all(CacheKey.APP_SECRET.value)
+        if len(app_secret):
+            return app_secret[0]
+        
+        original_func = getattr(cls, '_original_get_app_secrets_from_user_uuid')
+        app_secret = original_func(self, *args, **kwargs)
+        if app_secret:
+            app_secret['uuid'] = str(uuid.uuid4())      # dummy uuid
+            StCache.add(app_secret, CacheKey.APP_SECRET.value)
+        
+        return app_secret
+    
+    setattr(cls, '_original_get_app_secrets_from_user_uuid', cls.get_app_secrets_from_user_uuid)
+    setattr(cls, "get_app_secrets_from_user_uuid", _cache_get_app_secrets_from_user_uuid)
 
     def _cache_get_all_app_setting_list(self, *args, **kwargs):
         app_setting_list = StCache.get_all(CacheKey.APP_SETTING.value)
