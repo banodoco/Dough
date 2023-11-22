@@ -929,7 +929,7 @@ def update_app_setting_keys():
     data_repo = DataRepo()
     app_logger = AppLogger()
 
-    if SERVER == ServerType.DEVELOPMENT.value:
+    if True or SERVER == ServerType.DEVELOPMENT.value:
         key = os.getenv('REPLICATE_KEY', None)
     else:
         import boto3

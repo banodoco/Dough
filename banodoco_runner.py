@@ -38,7 +38,7 @@ def handle_termination(signal, frame):
 signal.signal(signal.SIGTERM, handle_termination)
 
 def main():
-    if SERVER != 'development' and not HOSTED_BACKGROUND_RUNNER_MODE:
+    if SERVER != 'development' and HOSTED_BACKGROUND_RUNNER_MODE in [False, 'False']:
         return
     
     retries = MAX_APP_RETRY_CHECK
@@ -58,7 +58,7 @@ def main():
                 retries = min(retries + 1, MAX_APP_RETRY_CHECK)
         
         time.sleep(REFRESH_FREQUENCY)
-        if HOSTED_BACKGROUND_RUNNER_MODE:
+        if HOSTED_BACKGROUND_RUNNER_MODE not in [False, 'False']:
             validate_admin_auth_token()
         check_and_update_db()
 

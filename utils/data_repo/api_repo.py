@@ -94,7 +94,7 @@ class APIRepo:
     def _get_headers(self, content_type="application/json"):
         auth_token = get_url_param(AUTH_TOKEN)
         if not auth_token and SERVER != ServerType.DEVELOPMENT.value:
-            if not HOSTED_BACKGROUND_RUNNER_MODE:
+            if HOSTED_BACKGROUND_RUNNER_MODE in [False, 'False']:
                 self.logout()
             else:
                 from ui_components.methods.file_methods import load_from_env
