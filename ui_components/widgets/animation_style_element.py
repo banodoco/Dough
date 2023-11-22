@@ -368,8 +368,8 @@ def zip_shot_data(shot_uuid, settings):
         if timing.primary_image and timing.primary_image.location:
             b = timing.primary_image.inference_params
         prompt = b['prompt'] if b else ""
-        frame_prompt = f"{idx * settings['linear_frames_per_keyframe']}_" + prompt
-        positive_prompt +=  ":" + frame_prompt if positive_prompt else frame_prompt
+        frame_prompt = f"{idx * settings['linear_frames_per_keyframe']}:" + prompt + ("," if idx != len(shot.timing_list) - 1 else "")
+        positive_prompt +=  frame_prompt
     
     settings['image_prompt_list'] = positive_prompt
 
@@ -432,32 +432,44 @@ def create_workflow_json(image_locations, settings):
         batch_size = int(settings['dynamic_frames_per_keyframe'].split(',')[-1]) + int(buffer)
 
     img_width, img_height = image_dimension.split("x")
-    json_data["189"]["inputs"]["width"] = int(img_width)
-    json_data["189"]["inputs"]["height"] = int(img_height)
-    json_data["189"]["inputs"]["ckpt_name"] = ckpt
-    json_data["189"]["inputs"]["batch_size"] = batch_size
-    
-    json_data["187"]["inputs"]["motion_scale"] = motion_scale
-    
-    json_data["347"]["inputs"]["text"] = image_prompt_list
-    json_data["352"]["inputs"]["text"] = negative_prompt
 
-    json_data["365"]["inputs"]["type_of_frame_distribution"] = type_of_frame_distribution
-    json_data["365"]["inputs"]["linear_frame_distribution_value"] = linear_frames_per_keyframe
-    json_data["365"]["inputs"]["dynamic_frame_distribution_values"] = dynamic_frames_per_keyframe
-    json_data["365"]["inputs"]["type_of_key_frame_influence"] = type_of_key_frame_influence
-    json_data["365"]["inputs"]["linear_key_frame_influence_value"] = linear_key_frame_influence_value
-    json_data["365"]["inputs"]["dynamic_key_frame_influence_values"] = dynamic_key_frame_influence_values
-    json_data["365"]["inputs"]["type_of_cn_strength_distribution"] = type_of_cn_strength_distribution
-    json_data["365"]["inputs"]["linear_cn_strength_value"] = linear_cn_strength_value
-    json_data["365"]["inputs"]["dynamic_cn_strength_values"] = dynamic_cn_strength_values
-    json_data["365"]["inputs"]["buffer"] = buffer
-    json_data["365"]["inputs"]["interpolation"] = interpolation_type
-    json_data["365"]["inputs"]["soft_scaled_cn_weights_multiplier"] = soft_scaled_cn_multiplier
+    for node in json_data['nodes']:
+        if node['id'] == '189':
+            node['widgets_values'][-3] = int(img_width)
+            node['widgets_values'][-2] = int(img_height)
+            node['widgets_values'][0] = ckpt
+            node['widgets_values'][-1] = batch_size
+        
+        elif node['id'] == '187':
+            json_data["widgets_values"][-2] = motion_scale
+
+        elif node['id'] == '347':
+            json_data["widgets_values"][0] = image_prompt_list
+        
+        elif node['id'] == '352':
+            json_data["widgets_values"] = [negative_prompt]
+
+        elif node['id'] == '365':
+            json_data["widgets_values"][1] = type_of_frame_distribution
+            json_data["widgets_values"][2] = linear_frames_per_keyframe
+            json_data["widgets_values"][3] = dynamic_frames_per_keyframe
+            json_data["widgets_values"][4] = type_of_key_frame_influence
+            json_data["widgets_values"][5] = linear_key_frame_influence_value
+            json_data["widgets_values"][6] = dynamic_key_frame_influence_values
+            json_data["widgets_values"][7] = type_of_cn_strength_distribution
+            json_data["widgets_values"][8] = linear_cn_strength_value
+            json_data["widgets_values"][9] = dynamic_cn_strength_values
+            json_data["widgets_values"][-1] = buffer
+            json_data["widgets_values"][-2] = interpolation_type
+            json_data["widgets_values"][-3] = soft_scaled_cn_multiplier
+
+        elif node['id'] == '292':
+            json_data["widgets_values"][-2] = stmfnet_multiplier
+
+        elif node['id'] == '301':
+            json_data["widgets_values"] = [ip_adapter_model_weight]
     
-    json_data["292"]["inputs"]["multiplier"] = stmfnet_multiplier
-    
-    json_data["301"]["inputs"]["weight"] = ip_adapter_model_weight
-    json_data["281"]["inputs"]["format"] = output_format
+        elif node['id'] == '281':
+            json_data["widgets_values"][3] = output_format
 
     return json_data

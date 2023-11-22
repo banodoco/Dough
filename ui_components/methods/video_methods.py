@@ -169,7 +169,7 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
         trimmed_audio_clip = audio_clip.subclip(start_timestamp, start_timestamp + video_clip.duration)
         video_clip = video_clip.set_audio(trimmed_audio_clip)
     else:
-        return None
+        return None if audio_sync_required else output_video
 
     # writing the video to the temp file
     output_temp_video_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
@@ -212,7 +212,7 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
     if not final_video_name:
         st.error("Please enter a video name")
         time.sleep(0.3)
-        return
+        return False
 
     video_list = []
     temp_file_list = []
@@ -224,13 +224,13 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
         if not shot.main_clip:
             st.error("Please generate all videos")
             time.sleep(0.3)
-            return
+            return False
         
         shot_video = sync_audio_and_duration(shot.main_clip, shot.uuid, audio_sync_required=True)
         if not shot_video:
-            st.error("Audio sync failed")
-            time.sleep(0.3)
-            return
+            st.error("Audio sync failed. Length mismatch")
+            time.sleep(0.7)
+            return False
         
         data_repo.update_shot(uuid=shot.uuid, main_clip_id=shot_video.uuid)
         data_repo.add_interpolated_clip(shot.uuid, interpolated_clip_id=shot_video.uuid)
@@ -244,19 +244,6 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
         video_list.append(file_path)
 
     finalclip = concatenate_videoclips([VideoFileClip(v) for v in video_list])
-
-    # # attaching audio to finalclip
-    # project_settings = data_repo.get_project_settings_from_uuid(project_uuid)
-    # if project_settings.audio:
-    #     temp_audio_file = None
-    #     if 'http' in project_settings.audio.location:
-    #         temp_audio_file = generate_temp_file(project_settings.audio.location, '.mp4')
-    #         temp_file_list.append(temp_audio_file)
-
-    #     audio_location = temp_audio_file.name if temp_audio_file else project_settings.audio.location
-        
-    #     audio_clip = AudioFileClip(audio_location)
-    #     finalclip = finalclip.set_audio(audio_clip)
 
     # writing the video to the temp file
     output_video_file = f"videos/{project_uuid}/assets/videos/2_completed/{final_video_name}.mp4"
@@ -287,3 +274,5 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
 
     for file in temp_file_list:
         os.remove(file.name)
+
+    return True
