@@ -12,9 +12,11 @@ import uuid
 from io import BytesIO
 import numpy as np
 import urllib3
-from shared.constants import InferenceType, InternalFileTag, InternalFileType, ProjectMetaData
+from shared.constants import SERVER, InferenceType, InternalFileTag, InternalFileType, ProjectMetaData, ServerType
 from pydub import AudioSegment
 from backend.models import InternalFileObject
+from shared.logging.constants import LoggingType
+from shared.logging.logging import AppLogger
 from ui_components.constants import SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, WorkflowStageType
 from ui_components.methods.file_methods import add_temp_file_to_project, convert_bytes_to_file, generate_pil_image, generate_temp_file, save_or_host_file, save_or_host_file_bytes
 from ui_components.methods.video_methods import sync_audio_and_duration, update_speed_of_video_clip
@@ -921,3 +923,23 @@ def check_project_meta_data(project_uuid):
         data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
         
         release_lock(key)
+
+
+def update_app_setting_keys():
+    data_repo = DataRepo()
+    app_logger = AppLogger()
+
+    if SERVER == ServerType.DEVELOPMENT.value:
+        key = os.getenv('REPLICATE_KEY', None)
+    else:
+        import boto3
+        ssm = boto3.client("ssm", region_name="ap-south-1")
+        key = ssm.get_parameter(Name='/backend/banodoco/replicate/key')['Parameter']['Value']
+
+    app_setting = data_repo.get_app_secrets_from_user_uuid()
+    if app_setting and app_setting['replicate_key'] == key:
+        return
+
+    app_logger.log(LoggingType.DEBUG, 'setting keys', None)
+    data_repo.update_app_setting(replicate_username='bn')
+    data_repo.update_app_setting(replicate_key=key)    

@@ -11,6 +11,7 @@ from moviepy.editor import concatenate_videoclips, VideoFileClip, AudioFileClip
 
 from shared.constants import InferenceType, InternalFileTag
 from shared.file_upload.s3 import is_s3_image_url
+from ui_components.methods.file_methods import save_or_host_file_bytes
 from ui_components.models import InternalFileObject, InternalFrameTimingObject, InternalShotObject
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.interpolator import VideoInterpolator
@@ -81,14 +82,12 @@ def update_speed_of_video_clip(video_file: InternalFileObject, duration) -> Inte
         duration
     )
 
-    args = ()
-    video_file = convert_bytes_to_file(
-        new_file_location,
-        "video/mp4",
-        video_bytes,
-        video_file.project.uuid,
-        video_file.inference_log.uuid if video_file.inference_log else None,
-    )
+    hosted_url = save_or_host_file_bytes(video_bytes, new_file_location, '.mp4')
+    data_repo = DataRepo()
+    if hosted_url:
+        data_repo.update_file(video_file.uuid, hosted_url=hosted_url)
+    else:
+        data_repo.update_file(video_file.uuid, local_path=new_file_location)
 
     if temp_video_file:
         os.remove(temp_video_file.name)
@@ -165,6 +164,7 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
     for i in range(1, shot.shot_idx):
         start_timestamp += round(shot_list[i - 1].duration, 2)
 
+    trimmed_audio_clip = None
     if audio_clip.duration >= video_clip.duration and start_timestamp + video_clip.duration <= audio_clip.duration:
         trimmed_audio_clip = audio_clip.subclip(start_timestamp, start_timestamp + video_clip.duration)
         video_clip = video_clip.set_audio(trimmed_audio_clip)
@@ -175,10 +175,8 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
     output_temp_video_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
     video_clip.write_videofile(
         output_temp_video_file.name,
-        fps=60,  # or 60 if your original video is 60fps
-        audio_bitrate="128k",
-        bitrate="5000k",
         codec="libx264",
+        audio=True,
         audio_codec="aac"
     )
 
@@ -190,19 +188,16 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
     temp_file_list.append(output_temp_video_file)
     unique_name = str(uuid.uuid4())
     output_video_file = f"videos/{shot.project.uuid}/assets/videos/0_raw/{unique_name}.mp4"
-    output_file = convert_bytes_to_file(
-        file_location_to_save=output_video_file,
-        mime_type="video/mp4",
-        file_bytes=video_bytes,
-        project_uuid=shot.project.uuid,
-        inference_log_id=None,
-        filename=unique_name
-    )
+    hosted_url = save_or_host_file_bytes(video_bytes, output_video_file, ext=".mp4")
+    if hosted_url:
+        data_repo.update_file(output_video.uuid, hosted_url=hosted_url)
+    else:
+        data_repo.update_file(output_video.uuid, local_path=output_video_file)
 
     for file in temp_file_list:
         os.remove(file.name)
 
-    return output_file
+    return output_video
 
 
 def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERATED_VIDEO.value):

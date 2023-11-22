@@ -11,7 +11,7 @@ from ui_components.components.project_settings_page import project_settings_page
 from ui_components.components.video_rendering_page import video_rendering_page
 from streamlit_option_menu import option_menu
 from ui_components.constants import CreativeProcessType
-from ui_components.methods.common_methods import check_project_meta_data
+from ui_components.methods.common_methods import check_project_meta_data, update_app_setting_keys
 from ui_components.models import InternalAppSettingObject
 from utils.common_utils import create_working_assets, get_current_user, get_current_user_uuid, reset_project_state
 from utils import st_memory
@@ -81,6 +81,7 @@ def setup_app_ui():
         
         st.session_state["project_uuid"] = project_list[selected_index].uuid
         check_project_meta_data(st.session_state["project_uuid"])
+        update_app_setting_keys()
 
         if 'shot_uuid' not in st.session_state:
             shot_list = data_repo.get_shot_list(st.session_state["project_uuid"])

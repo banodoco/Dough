@@ -98,8 +98,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
                 if stage == CreativeProcessType.MOTION.value:
                     if st.button("Sync audio/duration", key=f"{variants[variant_index].uuid}", help="Updates video length and the attached audio", use_container_width=True):
-                        synced_file = sync_audio_and_duration(variants[variant_index], shot_uuid)
-                        data_repo.update_file(variants[variant_index].uuid, hosted_url=synced_file.hosted_url, local_path=synced_file.local_path)
+                        _ = sync_audio_and_duration(variants[variant_index], shot_uuid)
                         _ = data_repo.get_shot_list(project_uuid, invalidate_cache=True)
                         st.success("Video synced")
                         time.sleep(0.3)
