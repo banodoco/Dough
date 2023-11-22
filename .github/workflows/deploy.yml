@@ -8,7 +8,6 @@ on:
 jobs:
   
   build:
-    
     name: Build Image
     runs-on: ubuntu-latest
 
@@ -60,3 +59,38 @@ jobs:
         service: ${{ env.ECS_SERVICE }}
         cluster: ${{ env.ECS_CLUSTER }}
         wait-for-service-stability: true
+
+  update-runner:
+    name: Update Background Runner
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Create and activate virtual environment
+        run: |
+          python3 -m venv venv
+          source venv/bin/activate
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          source venv/bin/activate && pip install -r requirements.txt
+
+      - name: Create .env file
+        run: |
+          touch .env
+          echo "SERVER=production" > .env
+          echo "SERVER_URL=https://api.banodoco.ai" >> .env
+          echo "HOSTED_BACKGROUND_RUNNER_MODE=True" >> .env
+          echo "admin_email=${{ secrets.ADMIN_EMAIL }}" >> .env
+          echo "admin_password=${{ secrets.ADMIN_PASSWORD }}" >> .env
+          echo "ENCRYPTION_KEY=${{ secrets.FERNET_ENCRYPTION_KEY }}" >> .env
+
+      - name: Restart runner
+        run: |
+          if pkill -0 -f "banodoco_runner"; then
+            pkill -f "banodoco_runner"
+          fi
+          . venv/bin/activate && nohup python banodoco_runner.py > script_output.log 2>&1 &

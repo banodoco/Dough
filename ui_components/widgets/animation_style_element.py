@@ -1,3 +1,4 @@
+import json
 import time
 import streamlit as st
 from typing import List
@@ -259,10 +260,16 @@ def animation_style_element(shot_uuid):
     # st.write(f"context_overlap: {context_overlap}")
 
     # TODO: add type of cn strength distribution
+    project_settings = data_repo.get_project_setting(shot.project.uuid)
+    width = project_settings.width
+    height = project_settings.height
+    img_dimension = f"{width}x{height}"
+
     settings.update(
         ckpt=sd_model,
         buffer=4,
         motion_scale=motion_scale,
+        image_dimension=img_dimension,
         output_format="video/h264-mp4",
         negative_prompt=negative_prompt,
         interpolation_type=interpolation_style,
@@ -288,10 +295,6 @@ def animation_style_element(shot_uuid):
     if where_to_generate == "Cloud":
         animate_col_1, animate_col_2, _ = st.columns([1, 1, 2])
         with animate_col_1:
-            project_settings = data_repo.get_project_setting(shot.project.uuid)
-            width = project_settings.width
-            height = project_settings.height
-            img_dimension = f"{width}x{height}"
             variant_count = st.number_input("How many variants?", min_value=1, max_value=100, value=1, step=1, key="variant_count")
             
             if st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help):
@@ -313,7 +316,6 @@ def animation_style_element(shot_uuid):
                 settings.update(
                     image_prompt_list=positive_prompt,
                     animation_stype=current_animation_style,
-                    image_dimension=img_dimension,
                 )
 
                 create_single_interpolated_clip(
@@ -336,9 +338,138 @@ def animation_style_element(shot_uuid):
             st.info(f"Generating a video with {number_of_frames} frames in the cloud will cost c. ${cost_per_generation:.2f} USD.")
     
     elif where_to_generate == "Local":
-        h1,h2 = st.columns([1,1])
+        h1, _ = st.columns([1,1])
         with h1:
             st.info("You can run this locally in ComfyUI but you'll need at least 16GB VRAM. To get started, you can follow the instructions [here]() and download the workflow and images below.")
-        st.button("Download workflow and images")
         
+        # NOTE: this is a streamlit limitation (double btn click to download)
+        if st.button("Generate zip", key="download_workflow_and_images"):
+            zip_data = zip_shot_data(shot_uuid, settings)
+            st.download_button(
+                label="Download zip",
+                data=zip_data,
+                file_name='data.zip'
+            )
+
+
+def zip_shot_data(shot_uuid, settings):
+    import io
+    import zipfile
+    import requests
+
+    data_repo = DataRepo()
+    buffer = io.BytesIO()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    image_locations = [t.primary_image.location if t.primary_image else None for t in shot.timing_list]
+
+    positive_prompt = ""
+    for idx, timing in enumerate(shot.timing_list):
+        b = None
+        if timing.primary_image and timing.primary_image.location:
+            b = timing.primary_image.inference_params
+        prompt = b['prompt'] if b else ""
+        frame_prompt = f"{idx * settings['linear_frames_per_keyframe']}:" + prompt + ("," if idx != len(shot.timing_list) - 1 else "")
+        positive_prompt +=  frame_prompt
+    
+    settings['image_prompt_list'] = positive_prompt
+
+    with zipfile.ZipFile(buffer, 'w') as zip_file:
+        for idx, image_location in enumerate(image_locations):
+            if not image_location:
+                continue
+            
+            image_name = f"{idx}.png"
+            if image_location.startswith('http'):
+                response = requests.get(image_location)
+                image_data = response.content
+                zip_file.writestr(image_name, image_data)
+            else:
+                zip_file.write(image_location, image_name)
+
+        workflow_data = create_workflow_json(image_locations, settings)
+        zip_file.writestr("workflow.json", json.dumps(workflow_data))
+
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def create_workflow_json(image_locations, settings):
+    import os
+
+    # get the current working directory
+    current_working_directory = os.getcwd()
+
+    # print output to the console
+    print(current_working_directory)
+
+    with open('./sample_assets/interpolation_workflow.json', 'r') as json_file:
+        json_data = json.load(json_file)
+
+    image_prompt_list = settings['image_prompt_list']
+    negative_prompt = settings['negative_prompt']
+    type_of_frame_distribution = settings['type_of_frame_distribution']
+    linear_frames_per_keyframe = settings['linear_frames_per_keyframe']
+    dynamic_frames_per_keyframe = settings['dynamic_frames_per_keyframe']
+    type_of_key_frame_influence = settings['type_of_key_frame_influence']
+    linear_key_frame_influence_value = settings['linear_key_frame_influence_value']
+    dynamic_key_frame_influence_values = settings['dynamic_key_frame_influence_value']
+    type_of_cn_strength_distribution=settings['type_of_cn_strength_distribution']
+    linear_cn_strength_value=settings['linear_cn_strength_value']
+    buffer = settings['buffer']
+    dynamic_cn_strength_values = settings['dynamic_cn_strength_values']
+    interpolation_type = settings['interpolation_type']
+    ckpt = settings['ckpt']
+    motion_scale = settings['motion_scale']
+    ip_adapter_model_weight = settings['ip_adapter_model_weight']
+    image_dimension = settings['image_dimension']
+    output_format = settings['output_format']
+    soft_scaled_cn_multiplier = settings['soft_scaled_cn_multiplier']
+    stmfnet_multiplier = settings['stmfnet_multiplier']
+    
+    if settings['type_of_frame_distribution'] == 'linear':
+        batch_size = (len(image_locations) - 1) * settings['linear_frames_per_keyframe'] + int(buffer)
+    else:
+        batch_size = int(settings['dynamic_frames_per_keyframe'].split(',')[-1]) + int(buffer)
+
+    img_width, img_height = image_dimension.split("x")
+
+    for node in json_data['nodes']:
+        if node['id'] == '189':
+            node['widgets_values'][-3] = int(img_width)
+            node['widgets_values'][-2] = int(img_height)
+            node['widgets_values'][0] = ckpt
+            node['widgets_values'][-1] = batch_size
         
+        elif node['id'] == '187':
+            json_data["widgets_values"][-2] = motion_scale
+
+        elif node['id'] == '347':
+            json_data["widgets_values"][0] = image_prompt_list
+        
+        elif node['id'] == '352':
+            json_data["widgets_values"] = [negative_prompt]
+
+        elif node['id'] == '365':
+            json_data["widgets_values"][1] = type_of_frame_distribution
+            json_data["widgets_values"][2] = linear_frames_per_keyframe
+            json_data["widgets_values"][3] = dynamic_frames_per_keyframe
+            json_data["widgets_values"][4] = type_of_key_frame_influence
+            json_data["widgets_values"][5] = linear_key_frame_influence_value
+            json_data["widgets_values"][6] = dynamic_key_frame_influence_values
+            json_data["widgets_values"][7] = type_of_cn_strength_distribution
+            json_data["widgets_values"][8] = linear_cn_strength_value
+            json_data["widgets_values"][9] = dynamic_cn_strength_values
+            json_data["widgets_values"][-1] = buffer
+            json_data["widgets_values"][-2] = interpolation_type
+            json_data["widgets_values"][-3] = soft_scaled_cn_multiplier
+
+        elif node['id'] == '292':
+            json_data["widgets_values"][-2] = stmfnet_multiplier
+
+        elif node['id'] == '301':
+            json_data["widgets_values"] = [ip_adapter_model_weight]
+    
+        elif node['id'] == '281':
+            json_data["widgets_values"][3] = output_format
+
+    return json_data

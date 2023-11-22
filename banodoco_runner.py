@@ -1,5 +1,7 @@
 import json
 import os
+import signal
+import sys
 import time
 import requests
 import setproctitle
@@ -26,14 +28,26 @@ SERVER = os.getenv('SERVER', 'development')
 REFRESH_FREQUENCY = 2   # refresh every 2 seconds
 MAX_APP_RETRY_CHECK = 3  # if the app is not running after 3 retries then the script will stop
 
+TERMINATE_SCRIPT = False
+
+def handle_termination(signal, frame):
+    print("Received termination signal. Cleaning up...")
+    TERMINATE_SCRIPT = True
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, handle_termination)
+
 def main():
-    if SERVER != 'development' and not HOSTED_BACKGROUND_RUNNER_MODE:
+    if SERVER != 'development' and HOSTED_BACKGROUND_RUNNER_MODE in [False, 'False']:
         return
     
     retries = MAX_APP_RETRY_CHECK
     
     print('runner running')
     while True:
+        if TERMINATE_SCRIPT:
+            return
+
         if SERVER == 'development':
             if not is_app_running():
                 if retries <=  0:
@@ -44,7 +58,7 @@ def main():
                 retries = min(retries + 1, MAX_APP_RETRY_CHECK)
         
         time.sleep(REFRESH_FREQUENCY)
-        if HOSTED_BACKGROUND_RUNNER_MODE:
+        if HOSTED_BACKGROUND_RUNNER_MODE not in [False, 'False']:
             validate_admin_auth_token()
         check_and_update_db()
 
@@ -105,6 +119,10 @@ def check_and_update_db():
     user = User.objects.filter(is_disabled=False).first()
     app_setting = AppSetting.objects.filter(user_id=user.id, is_disabled=False).first()
     replicate_key = app_setting.replicate_key_decrypted
+    if not replicate_key:
+        app_logger.log(LoggingType.ERROR, "Replicate key not found")
+        return
+    
     log_list = InferenceLog.objects.filter(status__in=[InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
                                            is_disabled=False).all()
     

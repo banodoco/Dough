@@ -41,7 +41,7 @@ sentry_sdk.init(
 )
 
 def start_runner():
-    if SERVER != ServerType.DEVELOPMENT.value and not HOSTED_BACKGROUND_RUNNER_MODE:
+    if SERVER != ServerType.DEVELOPMENT.value and HOSTED_BACKGROUND_RUNNER_MODE in [False, 'False']:
         return
     
     with server_state_lock["runner"]:

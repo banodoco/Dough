@@ -19,7 +19,7 @@ else:
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-if not HOSTED_BACKGROUND_RUNNER_MODE:
+if HOSTED_BACKGROUND_RUNNER_MODE in [False, 'False']:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
