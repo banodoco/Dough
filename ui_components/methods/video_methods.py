@@ -7,7 +7,8 @@ from typing import List
 import uuid
 import ffmpeg
 import streamlit as st
-from moviepy.editor import concatenate_videoclips, VideoFileClip, AudioFileClip
+from moviepy.editor import concatenate_videoclips, concatenate_audioclips, VideoFileClip, AudioFileClip, CompositeVideoClip
+from pydub import AudioSegment
 
 from shared.constants import InferenceType, InternalFileTag
 from shared.file_upload.s3 import is_s3_image_url
@@ -123,6 +124,9 @@ def add_audio_to_video_slice(video_file, audio_bytes):
     os.rename("output_with_audio.mp4", video_location)
 
 def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_sync_required=False):
+    '''
+    audio_sync_required: this ensures that entire video clip is filled with proper audio
+    '''
     from ui_components.methods.file_methods import convert_bytes_to_file, generate_temp_file
 
     data_repo = DataRepo()
@@ -165,11 +169,32 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
         start_timestamp += round(shot_list[i - 1].duration, 2)
 
     trimmed_audio_clip = None
-    if audio_clip.duration >= video_clip.duration and start_timestamp + video_clip.duration <= audio_clip.duration:
-        trimmed_audio_clip = audio_clip.subclip(start_timestamp, start_timestamp + video_clip.duration)
-        video_clip = video_clip.set_audio(trimmed_audio_clip)
+    audio_len_overlap = 0   # length of audio that can be added to the video clip
+    if audio_clip.duration >= start_timestamp:
+        audio_len_overlap = round(min(video_clip.duration, audio_clip.duration - start_timestamp), 2)
+        
+
+    # audio doesn't fit the video clip
+    if audio_len_overlap < video_clip.duration and audio_sync_required:
+        return None
+    
+    if audio_len_overlap:
+        trimmed_audio_clip = audio_clip.subclip(start_timestamp, start_timestamp + audio_len_overlap)
+        trimmed_audio_clip_duration = round(trimmed_audio_clip.duration, 2)
+        if trimmed_audio_clip_duration < video_clip.duration:
+            video_with_sound = video_clip.subclip(0, trimmed_audio_clip_duration)
+            video_with_sound = video_with_sound.copy()
+            video_without_sound = video_clip.subclip(trimmed_audio_clip_duration)
+            video_without_sound = video_without_sound.copy()
+            video_with_sound = video_with_sound.set_audio(trimmed_audio_clip)
+            video_clip = concatenate_videoclips([video_with_sound, video_without_sound])
+        else:
+            video_clip = video_clip.set_audio(trimmed_audio_clip)
     else:
-        return None if audio_sync_required else output_video
+        for file in temp_file_list:
+            os.remove(file.name)
+        
+        return output_video
 
     # writing the video to the temp file
     output_temp_video_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
@@ -197,6 +222,8 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
     for file in temp_file_list:
         os.remove(file.name)
 
+    output_video = data_repo.get_file_from_uuid(output_video.uuid)
+    _  = data_repo.get_shot_list(shot.project.uuid, invalidate_cache=True)
     return output_video
 
 
@@ -226,7 +253,7 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
             time.sleep(0.3)
             return False
         
-        shot_video = sync_audio_and_duration(shot.main_clip, shot.uuid, audio_sync_required=True)
+        shot_video = sync_audio_and_duration(shot.main_clip, shot.uuid, audio_sync_required=False)
         if not shot_video:
             st.error("Audio sync failed. Length mismatch")
             time.sleep(0.7)
@@ -236,11 +263,11 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
         data_repo.add_interpolated_clip(shot.uuid, interpolated_clip_id=shot_video.uuid)
 
         temp_video_file = None
-        if shot.main_clip.hosted_url:
-            temp_video_file = generate_temp_file(shot.main_clip.hosted_url, '.mp4')
+        if shot_video.hosted_url:
+            temp_video_file = generate_temp_file(shot_video.hosted_url, '.mp4')
             temp_file_list.append(temp_video_file)
 
-        file_path = temp_video_file.name if temp_video_file else shot.main_clip.local_path
+        file_path = temp_video_file.name if temp_video_file else shot_video.local_path
         video_list.append(file_path)
 
     finalclip = concatenate_videoclips([VideoFileClip(v) for v in video_list])

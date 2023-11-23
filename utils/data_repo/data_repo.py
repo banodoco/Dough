@@ -1,7 +1,7 @@
 # this repo serves as a middlerware between API backend and the frontend
 import json
 import time
-from shared.constants import InferenceParamType, InternalFileType, InternalResponse
+from shared.constants import SECRET_ACCESS_TOKEN, InferenceParamType, InternalFileType, InternalResponse
 from shared.constants import SERVER, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
@@ -327,7 +327,8 @@ class DataRepo:
         if not uuid:
             uuid = get_current_user_uuid()
         
-        app_secrets = self.db_repo.get_app_secrets_from_user_uuid(uuid).data['data']
+        app_secrets = self.db_repo.get_app_secrets_from_user_uuid(uuid, \
+            secret_access=SECRET_ACCESS_TOKEN).data['data']
         return app_secrets
     
     def get_all_app_setting_list(self):
@@ -392,8 +393,13 @@ class DataRepo:
         return res.status
     
     # update user credits - updates the credit of the user calling the API
-    def update_usage_credits(self, credits_to_add):
-        user = self.update_user(user_id=None, credits_to_add=credits_to_add)
+    def update_usage_credits(self, credits_to_add, log_uuid=None):
+        user_id = None
+        if log_uuid:
+            log = self.get_inference_log_from_uuid(log_uuid)
+            user_id = log.project.user_uuid
+
+        user = self.update_user(user_id=user_id, credits_to_add=credits_to_add)
         return user
     
     def generate_payment_link(self, amount):

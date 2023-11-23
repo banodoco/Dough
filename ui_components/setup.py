@@ -172,7 +172,7 @@ def setup_app_ui():
 
             elif st.session_state["main_view_type"] == "Tools & Settings":
                 with st.sidebar:
-                    tool_pages = ["Query Logger", "Custom Models", "Project Settings"]
+                    tool_pages = ["Query Logger", "Project Settings"]
 
                     if st.session_state["page"] not in tool_pages:
                         st.session_state["page"] = tool_pages[0]

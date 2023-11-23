@@ -1,4 +1,4 @@
-import json
+import copy
 import uuid
 import streamlit as st
 
@@ -89,7 +89,7 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     shot_data = {
         "project_uuid": project.uuid,
         "desc": "",
-        "duration": 2
+        "duration": 10
     }
 
     shot = data_repo.create_shot(**shot_data)
@@ -99,7 +99,10 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     sample_file_location = "sample_assets/sample_images/v.jpeg"
     img = Image.open(sample_file_location)
     img = img.resize((width, height))
-    hosted_url = save_or_host_file(img, sample_file_location, mime_type='image/png', dim=(width, height))
+
+    unique_file_name = f"{str(uuid.uuid4())}.png"
+    file_location = f"videos/{project.uuid}/resources/prompt_images/{unique_file_name}"
+    hosted_url = save_or_host_file(img, file_location, mime_type='image/png', dim=(width, height))
     file_data = {
         "name": str(uuid.uuid4()),
         "type": InternalFileType.IMAGE.value,
@@ -110,7 +113,7 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     if hosted_url:
         file_data.update({'hosted_url': hosted_url})
     else:
-        file_data.update({'local_path': sample_file_location})
+        file_data.update({'local_path': file_location})
 
     source_image = data_repo.create_file(**file_data)
 
@@ -148,11 +151,12 @@ def create_predefined_models(user):
 
     # create predefined models
     data = []
-    for model in ML_MODEL_LIST:
-        if model['enabled']:
-            del model['enabled']
-            model['user_id'] = user.uuid
-            data.append(model)
+    predefined_model_list = copy.deepcopy(ML_MODEL_LIST)
+    for m in predefined_model_list:
+        if 'enabled' in m and m['enabled']:
+            del m['enabled']
+            m['user_id'] = user.uuid
+            data.append(m)
 
     # only creating pre-defined models for the first time
     available_models = data_repo.get_all_ai_model_list(\

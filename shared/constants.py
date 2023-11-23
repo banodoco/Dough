@@ -117,3 +117,11 @@ ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', 'J2684nBgNUYa_K0a6oBr5H8MpSRW0EJ52Q
 
 QUEUE_INFERENCE_QUERIES = True
 HOSTED_BACKGROUND_RUNNER_MODE = os.getenv('HOSTED_BACKGROUND_RUNNER_MODE', False)
+
+if OFFLINE_MODE:
+    SECRET_ACCESS_TOKEN = os.getenv('SECRET_ACCESS_TOKEN', None)
+else:
+    import boto3
+    ssm = boto3.client("ssm", region_name="ap-south-1")
+
+    SECRET_ACCESS_TOKEN = ssm.get_parameter(Name='/backend/banodoco/secret-access-token')['Parameter']['Value']

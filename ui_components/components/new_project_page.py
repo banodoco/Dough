@@ -88,7 +88,7 @@ def new_project_page():
             new_project_name = new_project_name.replace(" ", "_")
             current_user = data_repo.get_first_active_user()
 
-            new_project, shot = create_new_project(current_user, new_project_name, width, height, "Images", "Interpolation")
+            new_project, shot = create_new_project(current_user, new_project_name, width, height)
             new_timing = create_frame_inside_shot(shot.uuid, 0)
             
             if starting_image:
@@ -100,7 +100,7 @@ def new_project_page():
 
             # remvoing the initial frame which moved to the 1st position 
             # (since creating new project also creates a frame)
-            shot = data_repo.get_shot_from_number(new_project.uuid, 0)
+            shot = data_repo.get_shot_from_number(new_project.uuid, 1)
             initial_frame = data_repo.get_timing_from_frame_number(shot.uuid, 0)
             data_repo.delete_timing_from_uuid(initial_frame.uuid)
             
