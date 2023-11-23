@@ -184,9 +184,10 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
         if trimmed_audio_clip_duration < video_clip.duration:
             video_with_sound = video_clip.subclip(0, trimmed_audio_clip_duration)
             video_with_sound = video_with_sound.copy()
-            video_without_sound = video_clip.subclip(trimmed_audio_clip_duration, video_clip.duration)
+            video_without_sound = video_clip.subclip(trimmed_audio_clip_duration)
+            video_without_sound = video_without_sound.copy()
             video_with_sound = video_with_sound.set_audio(trimmed_audio_clip)
-            video_clip = CompositeVideoClip([video_with_sound, video_without_sound])
+            video_clip = concatenate_videoclips([video_with_sound, video_without_sound])
         else:
             video_clip = video_clip.set_audio(trimmed_audio_clip)
     else:
@@ -221,6 +222,8 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
     for file in temp_file_list:
         os.remove(file.name)
 
+    output_video = data_repo.get_file_from_uuid(output_video.uuid)
+    _  = data_repo.get_shot_list(shot.project.uuid, invalidate_cache=True)
     return output_video
 
 
@@ -260,11 +263,11 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
         data_repo.add_interpolated_clip(shot.uuid, interpolated_clip_id=shot_video.uuid)
 
         temp_video_file = None
-        if shot.main_clip.hosted_url:
-            temp_video_file = generate_temp_file(shot.main_clip.hosted_url, '.mp4')
+        if shot_video.hosted_url:
+            temp_video_file = generate_temp_file(shot_video.hosted_url, '.mp4')
             temp_file_list.append(temp_video_file)
 
-        file_path = temp_video_file.name if temp_video_file else shot.main_clip.local_path
+        file_path = temp_video_file.name if temp_video_file else shot_video.local_path
         video_list.append(file_path)
 
     finalclip = concatenate_videoclips([VideoFileClip(v) for v in video_list])
