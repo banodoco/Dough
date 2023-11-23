@@ -7,7 +7,8 @@ from typing import List
 import uuid
 import ffmpeg
 import streamlit as st
-from moviepy.editor import concatenate_videoclips, VideoFileClip, AudioFileClip
+from moviepy.editor import concatenate_videoclips, concatenate_audioclips, VideoFileClip, AudioFileClip, CompositeVideoClip
+from pydub import AudioSegment
 
 from shared.constants import InferenceType, InternalFileTag
 from shared.file_upload.s3 import is_s3_image_url
@@ -169,8 +170,8 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
 
     trimmed_audio_clip = None
     audio_len_overlap = 0   # length of audio that can be added to the video clip
-    if audio_clip.duration >= start_timestamp and start_timestamp + video_clip.duration <= audio_clip.duration:
-        audio_len_overlap = min(video_clip.duration, audio_clip.duration - start_timestamp)
+    if audio_clip.duration >= start_timestamp:
+        audio_len_overlap = round(min(video_clip.duration, audio_clip.duration - start_timestamp), 2)
         
 
     # audio doesn't fit the video clip
@@ -179,7 +180,15 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
     
     if audio_len_overlap:
         trimmed_audio_clip = audio_clip.subclip(start_timestamp, start_timestamp + audio_len_overlap)
-        video_clip = video_clip.set_audio(trimmed_audio_clip)
+        trimmed_audio_clip_duration = round(trimmed_audio_clip.duration, 2)
+        if trimmed_audio_clip_duration < video_clip.duration:
+            video_with_sound = video_clip.subclip(0, trimmed_audio_clip_duration)
+            video_with_sound = video_with_sound.copy()
+            video_without_sound = video_clip.subclip(trimmed_audio_clip_duration, video_clip.duration)
+            video_with_sound = video_with_sound.set_audio(trimmed_audio_clip)
+            video_clip = CompositeVideoClip([video_with_sound, video_without_sound])
+        else:
+            video_clip = video_clip.set_audio(trimmed_audio_clip)
     else:
         for file in temp_file_list:
             os.remove(file.name)

@@ -29,6 +29,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         timing_uuid = ele_uuid
         timing = data_repo.get_timing_from_uuid(timing_uuid)
         variants = timing.alternative_images_list
+        shot_uuid = timing.shot.uuid
         timing_list =""
 
     st.markdown("***")

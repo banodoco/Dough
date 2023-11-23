@@ -314,8 +314,8 @@ def animation_style_element(shot_uuid):
         ip_adapter_model_weight=ip_adapter_weight,
         soft_scaled_cn_multiplier=soft_scaled_cn_weights_multipler,
         type_of_cn_strength_distribution=type_of_cn_strength_distribution,
-        linear_cn_strength_value=linear_cn_strength_value,
-        dynamic_cn_strength_values=dynamic_cn_strength_values,
+        linear_cn_strength_value=str(linear_cn_strength_value),
+        dynamic_cn_strength_values=str(dynamic_cn_strength_values),
         type_of_frame_distribution=type_of_frame_distribution,
         linear_frames_per_keyframe=linear_frame_distribution_value,
         dynamic_frames_per_keyframe=dynamic_frame_distribution_values,
@@ -354,8 +354,7 @@ def animation_style_element(shot_uuid):
                     image_prompt_list=positive_prompt,
                     animation_stype=current_animation_style,
                 )
-                for i in settings:
-                    print(f"{i}: {settings[i]}")
+
                 create_single_interpolated_clip(
                     shot_uuid,
                     vid_quality,
