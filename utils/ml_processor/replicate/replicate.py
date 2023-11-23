@@ -125,7 +125,7 @@ class ReplicateProcessor(MachineLearningProcessor):
 
         # converting io buffers to base64 format
         for k, v in data['input'].items():
-            if not isinstance(v, (int, str, list, dict, float)):
+            if not isinstance(v, (int, str, list, dict, float, tuple)):
                 data['input'][k] = convert_file_to_base64(v)
 
         response = r.post(url, headers=headers, json=data)

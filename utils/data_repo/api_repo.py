@@ -401,8 +401,8 @@ class APIRepo:
         res = self.http_get(self.APP_SETTING_URL, params={'uuid': uuid})
         return InternalResponse(res['payload'], 'success', res['status'])
     
-    def get_app_secrets_from_user_uuid(self, uuid=None):
-        res = self.http_get(self.APP_SECRET_URL)
+    def get_app_secrets_from_user_uuid(self, uuid=None, secret_access=None):
+        res = self.http_post(self.APP_SECRET_URL, data={'secret_access': secret_access})
         return InternalResponse(res['payload'], 'success', res['status'])
     
     # TODO: complete this code

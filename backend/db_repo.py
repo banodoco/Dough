@@ -1029,7 +1029,7 @@ class DBRepo:
         return InternalResponse({}, 'app_setting updated successfully', True)
 
     
-    def get_app_secrets_from_user_uuid(self, user_uuid):
+    def get_app_secrets_from_user_uuid(self, user_uuid, secret_access=None):
         if user_uuid:
             user: User = User.objects.filter(uuid=user_uuid, is_disabled=False).first()
             if not user:
@@ -1412,7 +1412,11 @@ class DBRepo:
     
     # shot
     def get_shot_from_number(self, project_uuid, shot_number=0):
-        shot: Shot = Shot.objects.filter(project_id=project_uuid, shot_idx=shot_number, is_disabled=False).first()
+        project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        if not project:
+            return InternalResponse({}, 'invalid project uuid', False)
+        
+        shot: Shot = Shot.objects.filter(project_id=project.id, shot_idx=shot_number, is_disabled=False).first()
         if not shot:
             return InternalResponse({}, 'invalid shot number', False)
         

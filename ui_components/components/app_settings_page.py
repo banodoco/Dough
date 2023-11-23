@@ -9,7 +9,6 @@ from utils.data_repo.data_repo import DataRepo
 
 def app_settings_page():
     data_repo = DataRepo()
-    app_secrets = data_repo.get_app_secrets_from_user_uuid()
             
     if SERVER == ServerType.DEVELOPMENT.value:
         st.subheader("Purchase Credits")

@@ -12,7 +12,7 @@ import uuid
 from io import BytesIO
 import numpy as np
 import urllib3
-from shared.constants import SERVER, InferenceType, InternalFileTag, InternalFileType, ProjectMetaData, ServerType
+from shared.constants import OFFLINE_MODE, SERVER, InferenceType, InternalFileTag, InternalFileType, ProjectMetaData, ServerType
 from pydub import AudioSegment
 from backend.models import InternalFileObject
 from shared.logging.constants import LoggingType
@@ -734,6 +734,7 @@ def process_inference_output(**kwargs):
 
     inference_time = 0.0
     inference_type = kwargs.get('inference_type')
+    log_uuid = None
     # ------------------- FRAME TIMING IMAGE INFERENCE -------------------
     if inference_type == InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value:
         output = kwargs.get('output')
@@ -882,7 +883,7 @@ def process_inference_output(**kwargs):
 
     if inference_time:
         credits_used = round(inference_time * 0.004, 3)     # make this more granular for different models
-        data_repo.update_usage_credits(-credits_used)
+        data_repo.update_usage_credits(-credits_used, log_uuid)
 
     return True
 
@@ -929,7 +930,7 @@ def update_app_setting_keys():
     data_repo = DataRepo()
     app_logger = AppLogger()
 
-    if True or SERVER == ServerType.DEVELOPMENT.value:
+    if OFFLINE_MODE:
         key = os.getenv('REPLICATE_KEY', None)
     else:
         import boto3
