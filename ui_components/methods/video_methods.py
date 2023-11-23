@@ -123,6 +123,9 @@ def add_audio_to_video_slice(video_file, audio_bytes):
     os.rename("output_with_audio.mp4", video_location)
 
 def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_sync_required=False):
+    '''
+    audio_sync_required: this ensures that entire video clip is filled with proper audio
+    '''
     from ui_components.methods.file_methods import convert_bytes_to_file, generate_temp_file
 
     data_repo = DataRepo()
@@ -165,11 +168,23 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
         start_timestamp += round(shot_list[i - 1].duration, 2)
 
     trimmed_audio_clip = None
-    if audio_clip.duration >= video_clip.duration and start_timestamp + video_clip.duration <= audio_clip.duration:
-        trimmed_audio_clip = audio_clip.subclip(start_timestamp, start_timestamp + video_clip.duration)
+    audio_len_overlap = 0   # length of audio that can be added to the video clip
+    if audio_clip.duration >= start_timestamp and start_timestamp + video_clip.duration <= audio_clip.duration:
+        audio_len_overlap = min(video_clip.duration, audio_clip.duration - start_timestamp)
+        
+
+    # audio doesn't fit the video clip
+    if audio_len_overlap < video_clip.duration and audio_sync_required:
+        return None
+    
+    if audio_len_overlap:
+        trimmed_audio_clip = audio_clip.subclip(start_timestamp, start_timestamp + audio_len_overlap)
         video_clip = video_clip.set_audio(trimmed_audio_clip)
     else:
-        return None if audio_sync_required else output_video
+        for file in temp_file_list:
+            os.remove(file.name)
+        
+        return output_video
 
     # writing the video to the temp file
     output_temp_video_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
@@ -226,7 +241,7 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
             time.sleep(0.3)
             return False
         
-        shot_video = sync_audio_and_duration(shot.main_clip, shot.uuid, audio_sync_required=True)
+        shot_video = sync_audio_and_duration(shot.main_clip, shot.uuid, audio_sync_required=False)
         if not shot_video:
             st.error("Audio sync failed. Length mismatch")
             time.sleep(0.7)

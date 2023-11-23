@@ -392,8 +392,13 @@ class DataRepo:
         return res.status
     
     # update user credits - updates the credit of the user calling the API
-    def update_usage_credits(self, credits_to_add):
-        user = self.update_user(user_id=None, credits_to_add=credits_to_add)
+    def update_usage_credits(self, credits_to_add, log_uuid=None):
+        user_id = None
+        if log_uuid:
+            log = self.get_inference_log_from_uuid(log_uuid)
+            user_id = log.project.user_uuid
+
+        user = self.update_user(user_id=user_id, credits_to_add=credits_to_add)
         return user
     
     def generate_payment_link(self, amount):

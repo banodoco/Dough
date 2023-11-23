@@ -734,6 +734,7 @@ def process_inference_output(**kwargs):
 
     inference_time = 0.0
     inference_type = kwargs.get('inference_type')
+    log_uuid = None
     # ------------------- FRAME TIMING IMAGE INFERENCE -------------------
     if inference_type == InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value:
         output = kwargs.get('output')
@@ -882,7 +883,7 @@ def process_inference_output(**kwargs):
 
     if inference_time:
         credits_used = round(inference_time * 0.004, 3)     # make this more granular for different models
-        data_repo.update_usage_credits(-credits_used)
+        data_repo.update_usage_credits(-credits_used, log_uuid)
 
     return True
 

@@ -19,18 +19,16 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     '''
     data_repo = DataRepo()
 
-    timing_uuid, shot_uuid, project_uuid = None, None, None
+    timing_uuid, shot_uuid = None, None
     if stage == CreativeProcessType.MOTION.value:
         shot_uuid = ele_uuid
         shot = data_repo.get_shot_from_uuid(shot_uuid)
         variants = shot.interpolated_clip_list
-        project_uuid = shot.project.uuid
         timing_list = data_repo.get_timing_list_from_shot(shot.uuid)
     else:
         timing_uuid = ele_uuid
         timing = data_repo.get_timing_from_uuid(timing_uuid)
         variants = timing.alternative_images_list
-        project_uuid = timing.shot.project.uuid
         timing_list =""
 
     st.markdown("***")
@@ -63,7 +61,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         else:
             st.image(variants[current_variant].location, use_column_width=True)
         with st.expander("Inference details"):
-            variant_inference_detail_element(variants[current_variant], stage, project_uuid, timing_list)
+            variant_inference_detail_element(variants[current_variant], stage, shot_uuid, timing_list)
         
         st.success("**Main variant**")
 
@@ -80,7 +78,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                     st.image(variants[variant_index].location, use_column_width=True) if variants[variant_index] else st.error("No image present")                
                 with st.expander("Inference details"):                         
 
-                    variant_inference_detail_element(variants[variant_index], stage, project_uuid, timing_list)
+                    variant_inference_detail_element(variants[variant_index], stage, shot_uuid, timing_list)
                 if st.button(f"Promote Variant #{variant_index + 1}", key=f"Promote Variant #{variant_index + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
                     if stage == CreativeProcessType.MOTION.value:
                         promote_video_variant(shot.uuid, variants[variant_index].uuid)
@@ -95,21 +93,27 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             next_col = 0  # Reset column counter
 
 
-def variant_inference_detail_element(variant, stage, project_uuid, timing_list=""):          
+def variant_inference_detail_element(variant, stage, shot_uuid, timing_list=""):
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+
     st.markdown(f"Details:")
     inf_data = fetch_inference_data(variant)
     if 'image_prompt_list' in inf_data:
         del inf_data['image_prompt_list']
         del inf_data['image_list']
         del inf_data['output_format']
-    st.write(inf_data)        
+    
+    st.write(inf_data)
+
     if stage != CreativeProcessType.MOTION.value:
         h1, h2 = st.columns([1, 1])
         with h1:
             st.markdown(f"Add to shortlist:")
-            add_variant_to_shortlist_element(variant, project_uuid)
+            add_variant_to_shortlist_element(variant, shot.project.uuid)
         with h2:
-            add_variant_to_shot_element(variant, project_uuid)  
+            add_variant_to_shot_element(variant, shot.project.uuid)
+
     if stage == CreativeProcessType.MOTION.value:
         if st.button("Load up settings from this variant", key=f"{variant.name}", help="This will enter the settings from this variant into the inputs below - you can also use them on other shots", use_container_width=True):
             new_data = prepare_values(fetch_inference_data(variant), timing_list)
@@ -118,9 +122,8 @@ def variant_inference_detail_element(variant, stage, project_uuid, timing_list="
             st.rerun()
         if st.button("Sync audio/duration", key=f"{variant.uuid}", help="Updates video length and the attached audio", use_container_width=True):
             data_repo = DataRepo()
-            shot_uuid = variant.shot.uuid
             _ = sync_audio_and_duration(variant, shot_uuid)
-            _ = data_repo.get_shot_list(project_uuid, invalidate_cache=True)
+            _ = data_repo.get_shot_list(shot.project.uuid, invalidate_cache=True)
             st.success("Video synced")
             time.sleep(0.3)
             st.rerun()
