@@ -55,10 +55,10 @@ def animation_style_element(shot_uuid):
         setting_d_1, setting_d_2 = st.columns([1, 1])
 
         with setting_d_1:
-            type_of_cn_strength_distribution = st_memory.radio("Type of key frame strength control:", options=["Linear", "Dynamic"], key="type_of_starting_endpoint").lower()
+            type_of_cn_strength_distribution = st_memory.radio("Type of key frame strength control:", options=["Linear", "Dynamic"], key="type_of_cn_strength_distribution").lower()
         if type_of_cn_strength_distribution == "linear":
             with setting_d_2:
-                linear_cn_strength_value = st_memory.slider("Range of strength:", min_value=0.0, max_value=1.0, value=0.7, step=0.1, key="linear_starting_endpoint_value")                
+                linear_cn_strength_value = st_memory.slider("Range of strength:", min_value=0.0, max_value=1.0, value=0.7, step=0.1, key="linear_cn_strength_value")                
                 dynamic_cn_strength_values = []
         
         st.markdown("***")
@@ -70,7 +70,7 @@ def animation_style_element(shot_uuid):
         st.markdown("***")
         if st.button("Reset to default settings", key="reset_animation_style"):
             update_interpolation_settings(timing_list=timing_list)
-            st.experimental_rerun()
+            st.rerun()
 
     with d2:
         columns = st.columns(max(7, len(timing_list))) 
@@ -129,7 +129,7 @@ def animation_style_element(shot_uuid):
                     label_texts = [f"#{idx+1} end -> start:", f"#{idx+1} start -> end:", f"#{idx+1} start -> peak:"]
                     help_text = help_texts[0] if idx == 0 else help_texts[1] if idx == len(timing_list) - 1 else help_texts[2]
                     label_text = label_texts[0] if idx == 0 else label_texts[1] if idx == len(timing_list) - 1 else label_texts[2]
-                    dynamic_cn_strength_individual_value = st_memory.slider(label_text, min_value=0.0, max_value=1.0, value=(0.0,1.0), step=0.1, key=f"dynamic_start_and_endpoint_values_{idx}",help=help_text)
+                    dynamic_cn_strength_individual_value = st_memory.slider(label_text, min_value=0.0, max_value=1.0, value=(0.0,1.0), step=0.1, key=f"dynamic_cn_strength_values_{idx}",help=help_text)
                 dynamic_cn_strength_values.append(str(dynamic_cn_strength_individual_value))
 
         # Convert lists to strings
@@ -517,7 +517,7 @@ def update_interpolation_settings(values=None, timing_list=None):
         'type_of_key_frame_influence': 0,
         'length_of_key_frame_influence': 1.0,
         'type_of_cn_strength_distribution': 0,
-        'linear_cn_strength_value': 0.5,
+        'linear_cn_strength_value': (0.0,0.7),
         'interpolation_style': 0,
         'motion_scale': 1.0,            
         'negative_prompt_video': 'bad image, worst quality',
@@ -528,7 +528,7 @@ def update_interpolation_settings(values=None, timing_list=None):
     for idx in range(1, len(timing_list) + 1):
         default_values[f'dynamic_frame_distribution_values_{idx}'] = (idx - 1) * 16
         default_values[f'dynamic_key_frame_influence_values_{idx}'] = 1.0
-        default_values[f'dynamic_cn_strength_values_{idx}'] = 0.5
+        default_values[f'dynamic_cn_strength_values_{idx}'] = (0.0,0.7)
 
     for key, default_value in default_values.items():
         st.session_state[key] = values.get(key, default_value) if values and values.get(key) is not None else default_value

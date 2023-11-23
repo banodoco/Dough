@@ -88,7 +88,7 @@ def new_project_page():
             new_project_name = new_project_name.replace(" ", "_")
             current_user = data_repo.get_first_active_user()
 
-            new_project, shot = create_new_project(current_user, new_project_name, width, height, "Images", "Interpolation")
+            new_project, shot = create_new_project(current_user, new_project_name, width, height)
             new_timing = create_frame_inside_shot(shot.uuid, 0)
             
             if starting_image:
