@@ -100,7 +100,7 @@ def new_project_page():
 
             # remvoing the initial frame which moved to the 1st position 
             # (since creating new project also creates a frame)
-            shot = data_repo.get_shot_from_number(new_project.uuid, 0)
+            shot = data_repo.get_shot_from_number(new_project.uuid, 1)
             initial_frame = data_repo.get_timing_from_frame_number(shot.uuid, 0)
             data_repo.delete_timing_from_uuid(initial_frame.uuid)
             
