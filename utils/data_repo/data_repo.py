@@ -1,7 +1,7 @@
 # this repo serves as a middlerware between API backend and the frontend
 import json
 import time
-from shared.constants import InferenceParamType, InternalFileType, InternalResponse
+from shared.constants import SECRET_ACCESS_TOKEN, InferenceParamType, InternalFileType, InternalResponse
 from shared.constants import SERVER, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
@@ -327,7 +327,8 @@ class DataRepo:
         if not uuid:
             uuid = get_current_user_uuid()
         
-        app_secrets = self.db_repo.get_app_secrets_from_user_uuid(uuid).data['data']
+        app_secrets = self.db_repo.get_app_secrets_from_user_uuid(uuid, \
+            secret_access=SECRET_ACCESS_TOKEN).data['data']
         return app_secrets
     
     def get_all_app_setting_list(self):

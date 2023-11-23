@@ -12,7 +12,7 @@ import uuid
 from io import BytesIO
 import numpy as np
 import urllib3
-from shared.constants import SERVER, InferenceType, InternalFileTag, InternalFileType, ProjectMetaData, ServerType
+from shared.constants import OFFLINE_MODE, SERVER, InferenceType, InternalFileTag, InternalFileType, ProjectMetaData, ServerType
 from pydub import AudioSegment
 from backend.models import InternalFileObject
 from shared.logging.constants import LoggingType
@@ -930,7 +930,7 @@ def update_app_setting_keys():
     data_repo = DataRepo()
     app_logger = AppLogger()
 
-    if True or SERVER == ServerType.DEVELOPMENT.value:
+    if OFFLINE_MODE:
         key = os.getenv('REPLICATE_KEY', None)
     else:
         import boto3

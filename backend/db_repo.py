@@ -1029,7 +1029,7 @@ class DBRepo:
         return InternalResponse({}, 'app_setting updated successfully', True)
 
     
-    def get_app_secrets_from_user_uuid(self, user_uuid):
+    def get_app_secrets_from_user_uuid(self, user_uuid, secret_access=None):
         if user_uuid:
             user: User = User.objects.filter(uuid=user_uuid, is_disabled=False).first()
             if not user:
