@@ -58,7 +58,7 @@ def animation_style_element(shot_uuid):
             type_of_cn_strength_distribution = st_memory.radio("Type of key frame strength control:", options=["Linear", "Dynamic"], key="type_of_cn_strength_distribution").lower()
         if type_of_cn_strength_distribution == "linear":
             with setting_d_2:
-                linear_cn_strength_value = st_memory.slider("Range of strength:", min_value=0.0, max_value=1.0, value=0.7, step=0.1, key="linear_cn_strength_value")                
+                linear_cn_strength_value = st_memory.slider("Range of strength:", min_value=0.0, max_value=1.0, value=(0.0,0.7), step=0.1, key="linear_cn_strength_value")                
                 dynamic_cn_strength_values = []
         
         st.markdown("***")
@@ -129,7 +129,7 @@ def animation_style_element(shot_uuid):
                     label_texts = [f"#{idx+1} end -> start:", f"#{idx+1} start -> end:", f"#{idx+1} start -> peak:"]
                     help_text = help_texts[0] if idx == 0 else help_texts[1] if idx == len(timing_list) - 1 else help_texts[2]
                     label_text = label_texts[0] if idx == 0 else label_texts[1] if idx == len(timing_list) - 1 else label_texts[2]
-                    dynamic_cn_strength_individual_value = st_memory.slider(label_text, min_value=0.0, max_value=1.0, value=(0.0,1.0), step=0.1, key=f"dynamic_cn_strength_values_{idx}",help=help_text)
+                    dynamic_cn_strength_individual_value = st_memory.slider(label_text, min_value=0.0, max_value=1.0, value=(0.0,0.7), step=0.1, key=f"dynamic_cn_strength_values_{idx}",help=help_text)
                 dynamic_cn_strength_values.append(str(dynamic_cn_strength_individual_value))
 
         # Convert lists to strings
@@ -354,7 +354,8 @@ def animation_style_element(shot_uuid):
                     image_prompt_list=positive_prompt,
                     animation_stype=current_animation_style,
                 )
-
+                for i in settings:
+                    print(f"{i}: {settings[i]}")
                 create_single_interpolated_clip(
                     shot_uuid,
                     vid_quality,
@@ -525,7 +526,7 @@ def update_interpolation_settings(values=None, timing_list=None):
         'soft_scaled_cn_weights_multiple_video': 0.85
     }
 
-    for idx in range(1, len(timing_list) + 1):
+    for idx in range(0, len(timing_list)):
         default_values[f'dynamic_frame_distribution_values_{idx}'] = (idx - 1) * 16
         default_values[f'dynamic_key_frame_influence_values_{idx}'] = 1.0
         default_values[f'dynamic_cn_strength_values_{idx}'] = (0.0,0.7)
