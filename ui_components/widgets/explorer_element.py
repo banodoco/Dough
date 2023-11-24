@@ -159,7 +159,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
         type_of_transformation = None
         strength_of_current_image = None
     # st.markdown("***")
-    models_to_use = ["stable_diffusion_xl"]
+    model_name = "stable_diffusion_xl"
     if position=='explorer':
         _, d2,d3, _ = st.columns([0.25, 1,1, 0.25])
     else:
@@ -172,98 +172,101 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
         if st.button("Generate images", key="generate_images", use_container_width=True, type="primary"):
             ml_client = get_ml_client()
             counter = 0
-            num_models = len(models_to_use)
-            num_images_per_model = number_to_generate // num_models
-            varied_text = ""
-            for _ in range(num_images_per_model):
-                for model_name in models_to_use:
-                    if counter % 4 == 0:
-                        varied_prompt = ""
-                        varied_text = varied_prompt
-                    if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False:
-                        prompt_with_variations = f"{prompt}, {varied_text}" if prompt else varied_text
-                    else:  # switch_prompt_position is True
-                        prompt_with_variations = f"{varied_text}, {prompt}" if prompt else varied_text
-                    # st.write(f"Prompt: '{prompt_with_variations}'")
-                    # st.write(f"Model: {model_name}")
-                    counter += 1
-                    log = None
-                    if not input_image:
+            for _ in range(number_to_generate):
+                
+                if counter % 4 == 0:
+                    if magic_prompt != "":
+                        input_text = "I want to flesh the following user input out - could you make it such that it retains the original meaning but is more specific and descriptive:\n\nfloral background|array of colorful wildflowers and green foliage forms a vibrant, natural backdrop.\nfancy old man|Barnaby Jasper Hawthorne, a dignified gentleman in his late seventies\ncomic book style|illustration style of a 1960s superhero comic book\nsky with diamonds|night sky filled with twinkling stars like diamonds on velvet\n20 y/o indian guy|Piyush Ahuja, a twenty-year-old Indian software engineer\ndark fantasy|a dark, gothic style similar to an Edgar Allen Poe novel\nfuturistic world|set in a 22nd century off-world colony called Ajita Iyera\nbeautiful lake|the crystal clear waters of a luminous blue alpine mountain lake\nminimalistic illustration|simple illustration with solid colors and basic geometrical shapes and figures\nmale blacksmith|Arun Thakkar, a Black country village blacksmith\ndesert sunrise|reddish orange sky at sunrise somewhere out in the Arabia desert\nforest|dense forest of Swedish pine trees\ngreece landscape|bright cyan sky meets turquoise on Santorini\nspace|shifting nebula clouds across the endless expanse of deep space\nwizard orcs|Poljak Ardell, a half-orc warlock\ntropical island|Palm tree-lined tropical paradise beach near Corfu\ncyberpunk cityscape  |Neon holo displays reflect from steel surfaces of buildings in Cairo Cyberspace\njapanese garden & pond|peaceful asian zen koi fishpond surrounded by bonsai trees\nattractive young african woman|Chimene Nkasa, young Congolese social media star\ninsane style|wild and unpredictable artwork like Salvador Dali’s Persistence Of Memory painting\n30s european women|Francisca Sampere, 31 year old Spanish woman\nlighthouse|iconic green New England coastal lighthouse against grey sky\ngirl in hat|Dora Alamanni dressed up with straw boater hat\nretro poster design|stunning vintage 80s movie poster reminiscent of Blade Runner\nabstract color combinations|a modernist splatter painting with overlapping colors\nnordic style |simple line drawing of white on dark blue with clean geometrical figures and shapes\nyoung asian woman, abstract style|Kaya Suzuki's face rendered in bright, expressive brush strokes\nblue monster|large cobalt blue cartoonish creature similar to a yeti\nman at work|portrait sketch of business man working late night in the office\nunderwater sunbeams|aquatic creatures swimming through waves of refracting ocean sunlight\nhappy cat on table|tabby kitten sitting alert in anticipation on kitchen counter\ntop​\nold timey train robber|Wiley Hollister, mid-thirties outlaw\nchinese landscape|Mt. Taihang surrounded by clouds\nancient ruins, sci fi style|deserted ancient civilization under stormy ominous sky full of mysterious UFOs\nanime art|classic anime, in the style of Akira Toriyama\nold man, sad scene|Seneca Hawkins, older gentleman slumped forlorn on street bench in early autumn evening\ncathedral|interior view of Gothic church in Vienna\ndreamlike|spellbinding dreamlike atmosphere, work called Pookanaut\nbird on lake, evening time|grizzled kingfisher sitting regally facing towards beautiful ripple-reflected setting orange pink sum\nyoung female character, cutsey style|Aoife Delaney dressed up as Candyflud, cheerful child adventurer\ninteresting style|stunning cubist abstract geometrical block\nevil woman|Luisa Schultze, frightening murderess\nfashion model|Ishita Chaudry, an Indian fashionista with unique dress sense\ncastle, moody scene|grand Renaissance Palace in Prague against twilight mist filled with crows\ntropical paradise island|Pristine white sand beach with palm trees at Ile du Mariasi, Reunion\npoverty stricken village|simple shack-based settlement in rural Niger\ngothic horror creature|wretchedly deformed and hideous tatter-clad creature like Caliban from Shakespeare ’s Tempes\nlots of color|rainbow colored Dutch flower field\nattractive woman on holidays|Siena Chen in her best little black dress, walking down a glamorous Las Vegas Boulevard\nItalian city scene|Duomo di Milano on dark rainy night sky behind it\nhappy dog outdoor|bouncy Irish Setter frolickling around green grass in summer sun\nmedieval fantasy world|illustration work for Eye Of The Titan - novel by Rania D’Allara\nperson relaxing|Alejandro Gonzalez sitting crosslegged in elegant peacock blue kurta while reading book\nretro sci fi robot|Vintage, cartoonish android reminiscent of the Bender Futurama character. Named Clyde Frost.\ngeometric style|geometric abstract style based on 1960 Russian poster design by Alexander Rodchenk \nbeautiful girl face, vaporwave style|Rayna Vratasky, looking all pink and purple retro\nspooking |horrifying Chupacabra-like being staring intensely to camera\nbrazilian woman having fun|Analia Santos, playing puzzle game with friends\nfemale elf warrior|Finnula Thalas, an Eladrin paladin wielding two great warblades\nlsd trip scene|kaleidoscopic colorscape, filled with ephemerally shifting forms\nyoung african man headshot|Roger Mwafulo looking sharp with big lush smile\nsad or dying person|elderly beggar Jeon Hagopian slumped against trash can bin corner\nart |neurologically inspired psychedelian artwork like David Normal's “Sentient Energy ” series\nattractive german woman|Johanna Hecker, blonde beauty with long hair wrapped in braid ties\nladybug|Cute ladybug perched on red sunset flower petals on summery meadow backdrop\nbeautiful asian women |Chiraya Phetlue, Thai-French model standing front view wearing white dress\nmindblowing style|trippy space illustration that could be cover for a book by Koyu Azumi\nmoody|forest full of thorn trees stretching into the horizon at dusk\nhappy family, abstract style|illustration work of mother, father and child from 2017 children’s picture book The Gifts Of Motherhood By Michelle Sparks\n"
+                        output_magic_prompt=query_llama2(f"{input_text}{magic_prompt}|", temperature=temperature)
+                    else:
+                        output_magic_prompt = ""                                        
+                if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False:                
+                    prompt_with_variations = f"{prompt}, {output_magic_prompt}" if prompt else output_magic_prompt
+                    
+                else:  # switch_prompt_position is True
+                    prompt_with_variations = f"{output_magic_prompt}, {prompt}" if prompt else output_magic_prompt
+                    
+                # st.write(f"Prompt: '{prompt_with_variations}'")
+                # st.write(f"Model: {model_name}")
+                print("prompt_with_variations", prompt_with_variations)
+                counter += 1
+                log = None
+                if not input_image:
+                    query_obj = MLQueryObject(
+                        timing_uuid=None,
+                        model_uuid=None,
+                        guidance_scale=5,
+                        seed=-1,                            
+                        num_inference_steps=30,            
+                        strength=1,
+                        adapter_type=None,
+                        prompt=prompt_with_variations,
+                        negative_prompt=negative_prompt,
+                        height=project_settings.height,
+                        width=project_settings.width,
+                        project_uuid=project_uuid
+                    )
+
+                    model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)
+                    model_dict = {}
+                    for m in model_list:
+                        model_dict[m.name] = m
+
+                    replicate_model = REPLICATE_MODEL.get_model_by_db_obj(model_dict[model_name])
+                    output, log = ml_client.predict_model_output_standardized(replicate_model, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+
+                else:
+                    if type_of_transformation == InputImageStyling.EVOLVE_IMAGE.value:
+                        input_image_file = save_uploaded_image(input_image, project_uuid)
                         query_obj = MLQueryObject(
                             timing_uuid=None,
                             model_uuid=None,
+                            image_uuid=input_image_file.uuid,
                             guidance_scale=5,
-                            seed=-1,                            
-                            num_inference_steps=30,            
-                            strength=1,
+                            seed=-1,
+                            num_inference_steps=30,
+                            strength=prompt_strength,
                             adapter_type=None,
-                            prompt=prompt_with_variations,
+                            prompt=prompt,
                             negative_prompt=negative_prompt,
                             height=project_settings.height,
                             width=project_settings.width,
                             project_uuid=project_uuid
                         )
 
-                        model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)
-                        model_dict = {}
-                        for m in model_list:
-                            model_dict[m.name] = m
+                        output, log = ml_client.predict_model_output_standardized(REPLICATE_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
-                        replicate_model = REPLICATE_MODEL.get_model_by_db_obj(model_dict[model_name])
-                        output, log = ml_client.predict_model_output_standardized(replicate_model, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                    elif type_of_transformation == InputImageStyling.MAINTAIN_STRUCTURE.value:
+                        input_image_file = save_uploaded_image(edge_pil_img, project_uuid)
+                        query_obj = MLQueryObject(
+                            timing_uuid=None,
+                            model_uuid=None,
+                            image_uuid=input_image_file.uuid,
+                            guidance_scale=5,
+                            seed=-1,
+                            num_inference_steps=30,
+                            strength=0.5,
+                            adapter_type=None,
+                            prompt=prompt,
+                            negative_prompt=negative_prompt,
+                            height=project_settings.height,
+                            width=project_settings.width,
+                            project_uuid=project_uuid,
+                            data={'condition_scale': condition_scale}
+                        )
 
-                    else:
-                        if type_of_transformation == InputImageStyling.EVOLVE_IMAGE.value:
-                            input_image_file = save_uploaded_image(input_image, project_uuid)
-                            query_obj = MLQueryObject(
-                                timing_uuid=None,
-                                model_uuid=None,
-                                image_uuid=input_image_file.uuid,
-                                guidance_scale=5,
-                                seed=-1,
-                                num_inference_steps=30,
-                                strength=prompt_strength,
-                                adapter_type=None,
-                                prompt=prompt,
-                                negative_prompt=negative_prompt,
-                                height=project_settings.height,
-                                width=project_settings.width,
-                                project_uuid=project_uuid
-                            )
+                        output, log = ml_client.predict_model_output_standardized(REPLICATE_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
-                            output, log = ml_client.predict_model_output_standardized(REPLICATE_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
-
-                        elif type_of_transformation == InputImageStyling.MAINTAIN_STRUCTURE.value:
-                            input_image_file = save_uploaded_image(edge_pil_img, project_uuid)
-                            query_obj = MLQueryObject(
-                                timing_uuid=None,
-                                model_uuid=None,
-                                image_uuid=input_image_file.uuid,
-                                guidance_scale=5,
-                                seed=-1,
-                                num_inference_steps=30,
-                                strength=0.5,
-                                adapter_type=None,
-                                prompt=prompt,
-                                negative_prompt=negative_prompt,
-                                height=project_settings.height,
-                                width=project_settings.width,
-                                project_uuid=project_uuid,
-                                data={'condition_scale': condition_scale}
-                            )
-
-                            output, log = ml_client.predict_model_output_standardized(REPLICATE_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
-
-                    if log:
-                        inference_data = {
-                            "inference_type": InferenceType.GALLERY_IMAGE_GENERATION.value if position == 'explorer' else InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
-                            "output": output,
-                            "log_uuid": log.uuid,
-                            "project_uuid": project_uuid,
-                            "timing_uuid": timing_uuid,
-                            "promote_new_generation": False
-                        }
-                        process_inference_output(**inference_data)
+                if log:
+                    inference_data = {
+                        "inference_type": InferenceType.GALLERY_IMAGE_GENERATION.value if position == 'explorer' else InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
+                        "output": output,
+                        "log_uuid": log.uuid,
+                        "project_uuid": project_uuid,
+                        "timing_uuid": timing_uuid,
+                        "promote_new_generation": False
+                    }
+                    process_inference_output(**inference_data)
 
             st.info("Check the Generation Log to the left for the status.")
 
@@ -387,7 +390,7 @@ def create_prompt(**kwargs):
         for instruction_type in order:
             user_instruction = kwargs.get(instruction_type)
             if user_instruction and instruction_type in system_instruction_template_list:
-                result = query_llama2(user_instruction, system_instruction_template_list[instruction_type])
+                result = query_llama2(user_instruction)
                 text_list.append(result)
 
         return ", ".join(text_list)

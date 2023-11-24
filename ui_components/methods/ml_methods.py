@@ -299,14 +299,14 @@ def dynamic_prompting(prompt, source_image):
 
     return prompt
 
-def query_llama2(user_instructions, system_instructions):
+def query_llama2(prompt, temperature):
     ml_client = get_ml_client()
     input={
             "debug": False,
             "top_k": 250,
             "top_p": 0.95,
-            "prompt": system_instructions + "\n" + user_instructions + "|",
-            "temperature": 0.73,
+            "prompt": prompt,
+            "temperature": temperature,
             "max_new_tokens": 30,
             "min_new_tokens": -1,
             "stop_sequences": "\n"
