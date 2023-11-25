@@ -159,6 +159,7 @@ class DataRepo:
     
     def get_all_project_list(self, user_id):
         project_list = self.db_repo.get_all_project_list(user_id).data['data']
+        project_list.sort(key=lambda x: x['created_on'])
         return [InternalProjectObject(**project) for project in project_list] if project_list else None
     
     def create_project(self, **kwargs):
