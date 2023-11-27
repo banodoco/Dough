@@ -336,7 +336,7 @@ def animation_style_element(shot_uuid):
             
             if st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help):
                 vid_quality = "full" if video_resolution == "Full Resolution" else "preview"
-                st.success("Generating clip - see status in the generation log on the left.")
+                st.success("Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update.")
 
                 positive_prompt = ""
                 for idx, timing in enumerate(timing_list):

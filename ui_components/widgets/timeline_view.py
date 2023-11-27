@@ -35,7 +35,10 @@ def timeline_view(shot_uuid, stage):
                 st.rerun()
         
     else:
-        grid = st.columns(items_per_row)
         for idx, shot in enumerate(shot_list):
-            with grid[idx%items_per_row]:
+            if idx % items_per_row == 0:
+                grid = st.columns(items_per_row)
+            with grid[idx % items_per_row]:
                 shot_video_element(shot.uuid)
+            if (idx + 1) % items_per_row == 0 or idx == len(shot_list) - 1:
+                st.markdown("***")

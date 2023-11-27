@@ -91,7 +91,7 @@ def frame_styling_page(shot_uuid: str):
 
             variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
 
-            st.markdown("***")
+            
             st.session_state['styling_view'] = st_memory.menu('',\
                                     ["Generate Variants", "Crop, Move & Rotate Image", "Inpainting & BG Removal","Draw On Image"], \
                                         icons=['magic', 'crop', "paint-bucket", 'pencil'], \

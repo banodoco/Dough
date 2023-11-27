@@ -366,34 +366,7 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
         st.warning("No images present")
 
 
-def create_variate_option(column, key):
-    label = key.replace('_', ' ').capitalize()
-    variate_option = column.checkbox(f"Vary {label.lower()}", key=f"{key}_checkbox")
-    if variate_option:
-        with column:
-            instructions = st_memory.text_area(f"How would you like to vary the {label.lower()}?", key=f"{key}_textarea", help=f"It'll write a custom {label.lower()} prompt based on your instructions.")
-    else:
-        instructions = ""
-    return instructions
 
-def create_prompt(**kwargs):
-        text_list = []
-        order = ["character_instructions", "styling_instructions", "action_instructions", "scene_instructions"]
-
-        system_instruction_template_list = {
-            "character_instructions": "Input|Character Descriptions:\nSickly old man|Francois Leger,old Russian man, beaten-down look, wearing suit\nPretty young woman|Jules van Cohen,beautiful young woman, floral dress,vibrant\nIrish boy|James McCarthy,10 year old Irish boy,red hair,pink shirt,wheezing in a small voice\nYoung thug|Hughie Banks,23 y/o English football hooligan with skinned head",
-            "styling_instructions": "Input|Style Description:\nmoody and emotion|watercolour style, dark colours and pastel tones.\nchildren's adventure|simple children's book illustration style with light colours\ngritty and realistic|Sin City style,black and white,realistic,strong lines.\nhighly abstract|abstract art style, vibrant colours and thick linework.",
-            "action_instructions": "Input|Action Description:\ngoing on an adventure|exploring old ruins,with a flashlight\nbusy day in the city|walking through downtown at rushour\nfamily time|making dinner with the family\nbeing creepy|hiding in bushes,looking in window\nworking hard|finishing homework,late at night",
-            "scene_instructions": "Input|Scene Description:\nForest|Misty woods with towering trees and glowing plants.\nFuturistic city|Skyscrapers, flying cars, neon lights in a futuristic metropolis.\nMedieval|Castle courtyard with knights, cobblestones, and a fountain.\nBeach|Golden sands, rolling waves, and a vibrant sunset.\nApocalypse|Ruined buildings and desolation in a bleak wasteland.",
-        }
-
-        for instruction_type in order:
-            user_instruction = kwargs.get(instruction_type)
-            if user_instruction and instruction_type in system_instruction_template_list:
-                result = query_llama2(user_instruction)
-                text_list.append(result)
-
-        return ", ".join(text_list)
 
 
 def update_max_frame_per_shot_element(project_uuid):
