@@ -334,8 +334,11 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                 if view == "main":
                                     with st.expander("Prompt Details", expanded=open_detailed_view_for_all):
                                         st.info(f"**Prompt:** {prompt}\n\n**Model:** {model}")
-                                                                        
-                                shot_name = st.selectbox('Add to shot:', shot_names, key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}")
+                                
+                                if "last_shot_number" not in st.session_state:
+                                    st.session_state["last_shot_number"] = 0
+
+                                shot_name = st.selectbox('Add to shot:', shot_names, key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}",index=st.session_state["last_shot_number"])
                                 
                                 if shot_name != "":
                                     if shot_name == "**Create New Shot**":
@@ -350,6 +353,7 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                     else:
                                         if st.button(f"Add to shot", key=f"add_{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
                                             shot_number = shot_names.index(shot_name) + 1
+                                            st.session_state["last_shot_number"] = shot_number - 1
                                             shot_uuid = shot_list[shot_number - 2].uuid
 
                                             add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
