@@ -19,23 +19,36 @@ def timeline_view(shot_uuid, stage):
 
     if stage == 'Key Frames':
         for shot in shot_list:
-            shot_keyframe_element(shot.uuid, items_per_row)
+            with st.expander(f"_-_-_-_", expanded=True):
+                shot_keyframe_element(shot.uuid, items_per_row)
             st.markdown("***")
         st.markdown("### Add new shot")
-        shot1,shot2,shot3 = st.columns([1,1,3])
+        shot1,shot2 = st.columns([0.75,3])
         with shot1:
-            new_shot_name = st.text_input("Shot Name:",max_chars=25)
-        with shot2:
-            st.write("")
-            st.write("")
-            if st.button('Add new shot', type="primary"):
-                new_shot = add_new_shot(shot.project.uuid)                
-                if new_shot_name != "":
-                    data_repo.update_shot(uuid=new_shot.uuid, name=new_shot_name)                                        
-                st.rerun()
+            add_new_shot_element(shot, data_repo)
         
     else:
-        grid = st.columns(items_per_row)
         for idx, shot in enumerate(shot_list):
-            with grid[idx%items_per_row]:
+            if idx % items_per_row == 0:
+                grid = st.columns(items_per_row)
+            with grid[idx % items_per_row]:
                 shot_video_element(shot.uuid)
+            if (idx + 1) % items_per_row == 0 or idx == len(shot_list) - 1:
+                st.markdown("***")
+            if idx == len(shot_list) - 1:
+                with grid[(idx + 1) % items_per_row]:
+                    st.markdown("### Add new shot")
+                    add_new_shot_element(shot, data_repo)
+
+        
+
+
+def add_new_shot_element(shot, data_repo):
+
+    new_shot_name = st.text_input("Shot Name:",max_chars=25)
+
+    if st.button('Add new shot', type="primary", key=f"add_shot_btn_{shot.uuid}"):
+        new_shot = add_new_shot(shot.project.uuid)                
+        if new_shot_name != "":
+            data_repo.update_shot(uuid=new_shot.uuid, name=new_shot_name)                                        
+        st.rerun()

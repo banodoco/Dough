@@ -1,5 +1,6 @@
 import json
 import time
+import ast
 import streamlit as st
 from shared.constants import InferenceParamType, InternalFileTag
 from ui_components.constants import CreativeProcessType
@@ -34,66 +35,75 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
     st.markdown("***")
 
-    col1, col2 = st.columns([1, 1])
-    items_to_show = col1.slider('Variants per page:', min_value=1, max_value=12, value=6)
-    num_columns = col2.slider('Number of columns:', min_value=1, max_value=6, value=3)
-    
-    num_pages = (len(variants) + 1) // items_to_show
-    if (len(variants) + 1) % items_to_show != 0:
-        num_pages += 1
+    col1, col2, col3 = st.columns([1, 1,0.5])
+    items_to_show = col2.slider('Variants per page:', min_value=1, max_value=12, value=6)
+    items_to_show -= 1    
+    num_columns = col1.slider('Number of columns:', min_value=1, max_value=6, value=3)
 
-
+    # Updated logic for pagination
+    num_pages = (len(variants) - 1) // items_to_show + ((len(variants) - 1) % items_to_show > 0)
     page = 1
+
     if num_pages > 1:
-        page = st.radio('Page:', options=list(range(1, num_pages + 1)), horizontal=True)
+        page = col3.radio('Page:', options=list(range(1, num_pages + 1)), horizontal=True)
 
     if not len(variants):
         st.info("No variants present")
-        return
+    else:
+        current_variant = shot.primary_interpolated_video_index if stage == CreativeProcessType.MOTION.value else int(timing.primary_variant_index)
 
-    current_variant = shot.primary_interpolated_video_index if stage == CreativeProcessType.MOTION.value else int(
-        timing.primary_variant_index)
+        st.markdown("***")
+        cols = st.columns(num_columns)
+        with cols[0]:
+            h1, h2 = st.columns([1, 1])
+            with h1:
+                st.info(f"###### Variant #{current_variant + 1}")
+            with h2:
+                st.success("**Main variant**")
+            # Display the main variant
+            if stage == CreativeProcessType.MOTION.value:
+                st.video(variants[current_variant].location, format='mp4', start_time=0) if (current_variant != -1 and variants[current_variant]) else st.error("No video present")
+            else:
+                st.image(variants[current_variant].location, use_column_width=True)
+            with st.expander(f"Variant #{current_variant + 1} details"):
+                variant_inference_detail_element(variants[current_variant], stage, shot_uuid, timing_list)                        
 
-    st.markdown("***")
-    cols = st.columns(num_columns)
-    with cols[0]:
-        if stage == CreativeProcessType.MOTION.value:
-            st.video(variants[current_variant].location, format='mp4', start_time=0) if (current_variant != -1 and variants[current_variant]) else st.error("No video present")
-        else:
-            st.image(variants[current_variant].location, use_column_width=True)
-        with st.expander("Inference details"):
-            variant_inference_detail_element(variants[current_variant], stage, shot_uuid, timing_list)
-        
-        st.success("**Main variant**")
+        # Determine the start and end indices for additional variants on the current page
+        additional_variants = [idx for idx in range(len(variants) - 1, -1, -1) if idx != current_variant]
+        page_start = (page - 1) * items_to_show
+        page_end = page_start + items_to_show
+        page_indices = additional_variants[page_start:page_end]
 
-    start = (page - 1) * items_to_show
-    end = min(start + items_to_show-1, len(variants) - 1)
+        next_col = 1
+        for i, variant_index in enumerate(page_indices):
 
-    next_col = 1
-    for variant_index in range(end, start - 1, -1):
-        if variant_index != current_variant:
             with cols[next_col]:
-                if stage == CreativeProcessType.MOTION.value:
+                h1, h2 = st.columns([1, 1])
+                with h1:
+                    st.info(f"###### Variant #{variant_index + 1}")
+                with h2:
+                    if st.button(f"Promote Variant #{variant_index + 1}", key=f"Promote Variant #{variant_index + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
+                        if stage == CreativeProcessType.MOTION.value:
+                            promote_video_variant(shot.uuid, variants[variant_index].uuid)
+                        else:
+                            promote_image_variant(timing.uuid, variant_index)                    
+                        st.rerun()
+
+                if stage == CreativeProcessType.MOTION.value:                    
                     st.video(variants[variant_index].location, format='mp4', start_time=0) if variants[variant_index] else st.error("No video present")
                 else:
                     st.image(variants[variant_index].location, use_column_width=True) if variants[variant_index] else st.error("No image present")                
-                with st.expander("Inference details"):                         
-
+                with st.expander(f"Variant #{variant_index + 1} details"):
                     variant_inference_detail_element(variants[variant_index], stage, shot_uuid, timing_list)
-                if st.button(f"Promote Variant #{variant_index + 1}", key=f"Promote Variant #{variant_index + 1} for {st.session_state['current_frame_index']}", help="Promote this variant to the primary image", use_container_width=True):
-                    if stage == CreativeProcessType.MOTION.value:
-                        promote_video_variant(shot.uuid, variants[variant_index].uuid)
-                    else:
-                        promote_image_variant(timing.uuid, variant_index)                    
-                    st.rerun()
 
             next_col += 1
+            if next_col >= num_columns or i == len(page_indices) - 1 or len(page_indices) == i:
+                next_col = 0  # Reset the column counter
+                st.markdown("***")  # Add markdown line
+                cols = st.columns(num_columns)  # Prepare for the next row            
+                # Add markdown line if this is not the last variant in page_indices
 
-        if next_col >= num_columns:
-            cols = st.columns(num_columns)
-            next_col = 0  # Reset column counter
-
-
+                
 def variant_inference_detail_element(variant, stage, shot_uuid, timing_list=""):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
@@ -117,9 +127,13 @@ def variant_inference_detail_element(variant, stage, shot_uuid, timing_list=""):
 
     if stage == CreativeProcessType.MOTION.value:
         if st.button("Load up settings from this variant", key=f"{variant.name}", help="This will enter the settings from this variant into the inputs below - you can also use them on other shots", use_container_width=True):
+            print("Loading settings")
+            print(len(timing_list))
             new_data = prepare_values(fetch_inference_data(variant), timing_list)
+            
             update_interpolation_settings(values=new_data, timing_list=timing_list)                        
-            st.success("Settings loaded - scroll down to run them.")                                                          
+            st.success("Settings loaded - scroll down to run them.")       
+            time.sleep(0.3)                                                               
             st.rerun()
         if st.button("Sync audio/duration", key=f"{variant.uuid}", help="Updates video length and the attached audio", use_container_width=True):
             data_repo = DataRepo()
@@ -145,7 +159,7 @@ def prepare_values(inf_data, timing_list):
         'type_of_key_frame_influence': 1 if settings.get('type_of_key_frame_influence') == 'dynamic' else 0,
         'length_of_key_frame_influence': float(settings.get('linear_key_frame_influence_value')) if settings.get('linear_key_frame_influence_value') else None,
         'type_of_cn_strength_distribution': 1 if settings.get('type_of_cn_strength_distribution') == 'dynamic' else 0,
-        'linear_cn_strength_value': float(settings.get('linear_cn_strength_value')) if settings.get('linear_cn_strength_value') else None,
+        'linear_cn_strength_value': tuple(map(float, ast.literal_eval(settings.get('linear_cn_strength_value')))) if settings.get('linear_cn_strength_value') else None,
         'interpolation_style': interpolation_style_map[settings.get('interpolation_type')] if settings.get('interpolation_type', 'ease-in-out') in interpolation_style_map else None,
         'motion_scale': settings.get('motion_scale', None),            
         'negative_prompt_video': settings.get('negative_prompt', None),
@@ -158,15 +172,38 @@ def prepare_values(inf_data, timing_list):
     dynamic_key_frame_influence_values = settings['dynamic_key_frame_influence_value'].split(',') if settings['dynamic_key_frame_influence_value'] else []
     dynamic_cn_strength_values = settings['dynamic_cn_strength_values'].split(',') if settings['dynamic_cn_strength_values'] else []
 
-    min_length = min(len(timing_list), len(dynamic_frame_distribution_values), len(dynamic_key_frame_influence_values), len(dynamic_cn_strength_values))
+    min_length = len(timing_list) if timing_list else 0
 
-    for idx in range(1, min_length + 1):
-        values[f'dynamic_frame_distribution_values_{idx}'] = int(dynamic_frame_distribution_values[idx - 1]) if dynamic_frame_distribution_values[idx - 1] and dynamic_frame_distribution_values[idx - 1].strip() else None
-        values[f'dynamic_key_frame_influence_values_{idx}'] = float(dynamic_key_frame_influence_values[idx - 1]) if dynamic_key_frame_influence_values[idx - 1] and dynamic_key_frame_influence_values[idx - 1].strip() else None
-        values[f'dynamic_cn_strength_values_{idx}'] = float(dynamic_cn_strength_values[idx - 1]) if dynamic_cn_strength_values[idx - 1] and dynamic_cn_strength_values[idx - 1].strip() else None
+    for idx in range(min_length):
+
+        # Process dynamic_frame_distribution_values
+        if dynamic_frame_distribution_values:            
+            values[f'dynamic_frame_distribution_values_{idx}'] = (
+                int(dynamic_frame_distribution_values[idx]) 
+                if dynamic_frame_distribution_values[idx] and dynamic_frame_distribution_values[idx].strip() 
+                else None
+            )        
+        # Process dynamic_key_frame_influence_values
+        if dynamic_key_frame_influence_values:            
+            values[f'dynamic_key_frame_influence_values_{idx}'] = (
+                float(dynamic_key_frame_influence_values[idx]) 
+                if dynamic_key_frame_influence_values[idx] and dynamic_key_frame_influence_values[idx].strip() 
+                else None
+            )
+        
+        # Process dynamic_cn_strength_values
+        if dynamic_cn_strength_values and idx * 2 <= len(dynamic_cn_strength_values):
+            # Since idx starts from 1, we need to adjust the index for zero-based indexing
+            adjusted_idx = idx * 2
+            # Extract the two elements that form a tuple
+            first_value = dynamic_cn_strength_values[adjusted_idx].strip('(')
+            second_value = dynamic_cn_strength_values[adjusted_idx + 1].strip(')')
+            # Convert both strings to floats and create a tuple
+            value_tuple = (float(first_value), float(second_value))
+            # Store the tuple in the dictionary with a key indicating its order
+            values[f'dynamic_cn_strength_values_{idx}'] = value_tuple
 
     return values
-
 
 def fetch_inference_data(file: InternalFileObject):
     if not file:

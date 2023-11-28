@@ -16,41 +16,37 @@ from PIL import Image
 
 
 
+import zipfile
+import os
+
 def add_key_frame_section(shot_uuid, individual_view=True):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
-    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
-    len_shot_timing_list = len(timing_list) if len(timing_list) > 0 else 0
+    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)    
     selected_image_location = ""
-    source_of_starting_image = st.radio("Starting image:", ["Uploaded image", "Existing Frame"], key="source_of_starting_image")
     
-    if source_of_starting_image == "Existing Frame":                
-        image_idx = st.number_input("Which frame would you like to use?", min_value=1, max_value=max(1, len(timing_list)), value=len_shot_timing_list, step=1, key="image_idx")
-        selected_image_location = timing_list[image_idx - 1].primary_image_location
-    elif source_of_starting_image == "Uploaded image":            
-        uploaded_image = st.file_uploader("Upload an image", type=["png", "jpg", "jpeg"])
-        if uploaded_image is not None:
+    uploaded_image = st.file_uploader("Upload an image or zipped up images:", type=["png", "jpg", "jpeg","zip"], key=f"uploaded_image_{shot_uuid}", help="You can upload a single image or a zip file containing multiple images")
+    
+    if st.button(f"Add key frame(s)",type="primary",use_container_width=True, key=f"add_key_frame_btn_{shot_uuid}"):
+        if uploaded_image.name.endswith('.zip'):
+            with zipfile.ZipFile(uploaded_image, 'r') as zip_ref:
+                zip_ref.extractall('temp_dir')
+            for filename in os.listdir('temp_dir'):
+                if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+                    continue
+                image = Image.open(os.path.join('temp_dir', filename))
+                file_location = f"videos/{shot.uuid}/assets/frames/1_selected/{filename}"
+                selected_image_location = save_or_host_file(image, file_location)
+                selected_image_location = selected_image_location or file_location
+                add_key_frame(selected_image_location, "No", shot_uuid,refresh_state=False)
+        else:
             image = Image.open(uploaded_image)
             file_location = f"videos/{shot.uuid}/assets/frames/1_selected/{uploaded_image.name}"
             selected_image_location = save_or_host_file(image, file_location)
             selected_image_location = selected_image_location or file_location
-        else:
-            selected_image_location = ""
-        image_idx = len_shot_timing_list
-
-    if individual_view:
-        radio_text = "Inherit styling settings from the " + ("current frame?" if source_of_starting_image == "Uploaded image" else "selected frame")
-        inherit_styling_settings = st_memory.radio(radio_text, ["Yes", "No"], key="inherit_styling_settings", horizontal=True)
-        
-        # apply_zoom_effects = st_memory.radio("Apply zoom effects to inputted image?", ["No","Yes"], key="apply_zoom_effects", horizontal=True)
-        
-        #if apply_zoom_effects == "Yes":
-        #     zoom_inputs(position='new', horizontal=True)
-    else:
-        inherit_styling_settings = "Yes"
-        apply_zoom_effects = "No"
-
-    return selected_image_location, inherit_styling_settings
+            add_key_frame(selected_image_location, "No", shot_uuid)
+        st.rerun()
+    
 
 def display_selected_key_frame(selected_image_location, apply_zoom_effects):
     selected_image = None

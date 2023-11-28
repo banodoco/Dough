@@ -272,7 +272,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
 
 
 
-def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_detailed_view_for_all=False, shortlist=False, num_columns=2, view="main"):
+def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_detailed_view_for_all=False, shortlist=False, num_columns=2, view="main", shot=None):
     data_repo = DataRepo()
     
     project_settings = data_repo.get_project_setting(project_uuid)
@@ -309,21 +309,21 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                 if i + j < len(gallery_image_list):
                     with cols[j]:                        
                         st.image(gallery_image_list[i + j].location, use_column_width=True)
+                        if view != "individual_shot":
+                            if shortlist:
+                                if st.button("Remove from shortlist ➖", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="Remove from shortlist"):
+                                    data_repo.update_file(gallery_image_list[i + j].uuid, tag=InternalFileTag.GALLERY_IMAGE.value)
+                                    st.success("Removed From Shortlist")
+                                    time.sleep(0.3)
+                                    st.rerun()
 
-                        if shortlist:
-                            if st.button("Remove from shortlist ➖", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="Remove from shortlist"):
-                                data_repo.update_file(gallery_image_list[i + j].uuid, tag=InternalFileTag.GALLERY_IMAGE.value)
-                                st.success("Removed From Shortlist")
-                                time.sleep(0.3)
-                                st.rerun()
+                            else:
 
-                        else:
-
-                            if st.button("Add to shortlist ➕", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="Add to shortlist"):
-                                data_repo.update_file(gallery_image_list[i + j].uuid, tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value)
-                                st.success("Added To Shortlist")
-                                time.sleep(0.3)
-                                st.rerun()
+                                if st.button("Add to shortlist ➕", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="Add to shortlist"):
+                                    data_repo.update_file(gallery_image_list[i + j].uuid, tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value)
+                                    st.success("Added To Shortlist")
+                                    time.sleep(0.3)
+                                    st.rerun()
                                                 
                         if gallery_image_list[i + j].inference_log:
                             log = gallery_image_list[i + j].inference_log # data_repo.get_inference_log_from_uuid(gallery_image_list[i + j].inference_log.uuid)
@@ -334,8 +334,16 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                 if view == "main":
                                     with st.expander("Prompt Details", expanded=open_detailed_view_for_all):
                                         st.info(f"**Prompt:** {prompt}\n\n**Model:** {model}")
-                                                                        
-                                shot_name = st.selectbox('Add to shot:', shot_names, key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}")
+                                
+                                if "last_shot_number" not in st.session_state:
+                                    st.session_state["last_shot_number"] = 0
+
+                                if view == "individual_shot":
+                                    # find index of shot.name in shot_names
+                                    st.session_state["last_shot_number"] = shot_names.index(shot.name)
+
+
+                                shot_name = st.selectbox('Add to shot:', shot_names, key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}",index=st.session_state["last_shot_number"])
                                 
                                 if shot_name != "":
                                     if shot_name == "**Create New Shot**":
@@ -350,6 +358,7 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                     else:
                                         if st.button(f"Add to shot", key=f"add_{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
                                             shot_number = shot_names.index(shot_name) + 1
+                                            st.session_state["last_shot_number"] = shot_number - 1
                                             shot_uuid = shot_list[shot_number - 2].uuid
 
                                             add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
@@ -366,34 +375,7 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
         st.warning("No images present")
 
 
-def create_variate_option(column, key):
-    label = key.replace('_', ' ').capitalize()
-    variate_option = column.checkbox(f"Vary {label.lower()}", key=f"{key}_checkbox")
-    if variate_option:
-        with column:
-            instructions = st_memory.text_area(f"How would you like to vary the {label.lower()}?", key=f"{key}_textarea", help=f"It'll write a custom {label.lower()} prompt based on your instructions.")
-    else:
-        instructions = ""
-    return instructions
 
-def create_prompt(**kwargs):
-        text_list = []
-        order = ["character_instructions", "styling_instructions", "action_instructions", "scene_instructions"]
-
-        system_instruction_template_list = {
-            "character_instructions": "Input|Character Descriptions:\nSickly old man|Francois Leger,old Russian man, beaten-down look, wearing suit\nPretty young woman|Jules van Cohen,beautiful young woman, floral dress,vibrant\nIrish boy|James McCarthy,10 year old Irish boy,red hair,pink shirt,wheezing in a small voice\nYoung thug|Hughie Banks,23 y/o English football hooligan with skinned head",
-            "styling_instructions": "Input|Style Description:\nmoody and emotion|watercolour style, dark colours and pastel tones.\nchildren's adventure|simple children's book illustration style with light colours\ngritty and realistic|Sin City style,black and white,realistic,strong lines.\nhighly abstract|abstract art style, vibrant colours and thick linework.",
-            "action_instructions": "Input|Action Description:\ngoing on an adventure|exploring old ruins,with a flashlight\nbusy day in the city|walking through downtown at rushour\nfamily time|making dinner with the family\nbeing creepy|hiding in bushes,looking in window\nworking hard|finishing homework,late at night",
-            "scene_instructions": "Input|Scene Description:\nForest|Misty woods with towering trees and glowing plants.\nFuturistic city|Skyscrapers, flying cars, neon lights in a futuristic metropolis.\nMedieval|Castle courtyard with knights, cobblestones, and a fountain.\nBeach|Golden sands, rolling waves, and a vibrant sunset.\nApocalypse|Ruined buildings and desolation in a bleak wasteland.",
-        }
-
-        for instruction_type in order:
-            user_instruction = kwargs.get(instruction_type)
-            if user_instruction and instruction_type in system_instruction_template_list:
-                result = query_llama2(user_instruction)
-                text_list.append(result)
-
-        return ", ".join(text_list)
 
 
 def update_max_frame_per_shot_element(project_uuid):

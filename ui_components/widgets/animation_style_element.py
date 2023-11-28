@@ -336,7 +336,7 @@ def animation_style_element(shot_uuid):
             
             if st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help):
                 vid_quality = "full" if video_resolution == "Full Resolution" else "preview"
-                st.success("Generating clip - see status in the generation log on the left.")
+                st.success("Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update.")
 
                 positive_prompt = ""
                 for idx, timing in enumerate(timing_list):
@@ -367,35 +367,35 @@ def animation_style_element(shot_uuid):
             number_of_frames = len(timing_list)
             
             if height==width:
-                cost_per_frame = 0.07
+                cost_per_key_frame = 0.035
             else:
-                cost_per_frame = 0.09
+                cost_per_key_frame = 0.045
 
-            cost_per_generation = cost_per_frame * number_of_frames * variant_count
+            cost_per_generation = cost_per_key_frame * number_of_frames * variant_count
             st.info(f"Generating a video with {number_of_frames} frames in the cloud will cost c. ${cost_per_generation:.2f} USD.")
     
     elif where_to_generate == "Local":
         h1,h2 = st.columns([1,1])
         with h1:
-            st.info("You can run this locally in ComfyUI but you'll need at least 16GB VRAM. To get started, you can follow the instructions [here]() and download the workflow and images below.")
-            if st.button("Generate zip", key="download_workflow_and_images"):
-                zip_data = zip_shot_data(shot_uuid, settings)
+            st.info("You can run this locally in ComfyUI but you'll need at least 16GB VRAM. To get started, you can follow the instructions [here](https://github.com/peteromallet/steerable-motion) and download the workflow and images below.")
+
+            btn1, btn2 = st.columns([1,1])
+            with btn1:
                 st.download_button(
-                    label="Download zip",
-                    data=zip_data,
+                    label="Download workflow JSON",
+                    data=json.dumps(prepare_workflow_json(shot_uuid, settings)),
+                    file_name='workflow.json'
+                )
+            with btn2:
+                st.download_button(
+                    label="Download images",
+                    data=prepare_workflow_images(shot_uuid),
                     file_name='data.zip'
                 )
 
-
-def zip_shot_data(shot_uuid, settings):
-    import io
-    import zipfile
-    import requests
-
+def prepare_workflow_json(shot_uuid, settings):
     data_repo = DataRepo()
-    buffer = io.BytesIO()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
-    image_locations = [t.primary_image.location if t.primary_image else None for t in shot.timing_list]
 
     positive_prompt = ""
     for idx, timing in enumerate(shot.timing_list):
@@ -403,11 +403,24 @@ def zip_shot_data(shot_uuid, settings):
         if timing.primary_image and timing.primary_image.location:
             b = timing.primary_image.inference_params
         prompt = b['prompt'] if b else ""
-        frame_prompt = f"{idx * settings['linear_frames_per_keyframe']}:" + prompt + ("," if idx != len(shot.timing_list) - 1 else "")
+        frame_prompt = f'"{idx * settings["linear_frames_per_keyframe"]}":"{prompt}"' + ("," if idx != len(shot.timing_list) - 1 else "")
         positive_prompt +=  frame_prompt
 
     settings['image_prompt_list'] = positive_prompt
+    workflow_data = create_workflow_json(shot.timing_list, settings)
 
+    return workflow_data
+
+def prepare_workflow_images(shot_uuid):
+    import requests
+    import io
+    import zipfile
+
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    image_locations = [t.primary_image.location if t.primary_image else None for t in shot.timing_list]
+
+    buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, 'w') as zip_file:
         for idx, image_location in enumerate(image_locations):
             if not image_location:
@@ -420,9 +433,6 @@ def zip_shot_data(shot_uuid, settings):
                 zip_file.writestr(image_name, image_data)
             else:
                 zip_file.write(image_location, image_name)
-
-        workflow_data = create_workflow_json(image_locations, settings)
-        zip_file.writestr("workflow.json", json.dumps(workflow_data))
 
     buffer.seek(0)
     return buffer.getvalue()
@@ -467,47 +477,52 @@ def create_workflow_json(image_locations, settings):
         batch_size = int(settings['dynamic_frames_per_keyframe'].split(',')[-1]) + int(buffer)
 
     img_width, img_height = image_dimension.split("x")
-
+        
+    
+        
     for node in json_data['nodes']:
-        if node['id'] == '189':
+        if node['id'] == 189:
             node['widgets_values'][-3] = int(img_width)
             node['widgets_values'][-2] = int(img_height)
             node['widgets_values'][0] = ckpt
             node['widgets_values'][-1] = batch_size
 
-        elif node['id'] == '187':
-            json_data["widgets_values"][-2] = motion_scale
+        elif node['id'] == 187:
+            node['widgets_values'][-2] = motion_scale
 
-        elif node['id'] == '347':
-            json_data["widgets_values"][0] = image_prompt_list
+        elif node['id'] == 347:
+            node['widgets_values'][0] = image_prompt_list
 
-        elif node['id'] == '352':
-            json_data["widgets_values"] = [negative_prompt]
+        elif node['id'] == 352:
+            node['widgets_values'] = [negative_prompt]
 
-        elif node['id'] == '365':
-            json_data["widgets_values"][1] = type_of_frame_distribution
-            json_data["widgets_values"][2] = linear_frames_per_keyframe
-            json_data["widgets_values"][3] = dynamic_frames_per_keyframe
-            json_data["widgets_values"][4] = type_of_key_frame_influence
-            json_data["widgets_values"][5] = linear_key_frame_influence_value
-            json_data["widgets_values"][6] = dynamic_key_frame_influence_values
-            json_data["widgets_values"][7] = type_of_cn_strength_distribution
-            json_data["widgets_values"][8] = linear_cn_strength_value
-            json_data["widgets_values"][9] = dynamic_cn_strength_values
-            json_data["widgets_values"][-1] = buffer
-            json_data["widgets_values"][-2] = interpolation_type
-            json_data["widgets_values"][-3] = soft_scaled_cn_multiplier
+        elif node['id'] == 365:
+            node['widgets_values'][1] = type_of_frame_distribution
+            node['widgets_values'][2] = linear_frames_per_keyframe
+            node['widgets_values'][3] = dynamic_frames_per_keyframe
+            node['widgets_values'][4] = type_of_key_frame_influence
+            node['widgets_values'][5] = linear_key_frame_influence_value
+            node['widgets_values'][6] = dynamic_key_frame_influence_values
+            node['widgets_values'][7] = type_of_cn_strength_distribution
+            node['widgets_values'][8] = linear_cn_strength_value
+            node['widgets_values'][9] = dynamic_cn_strength_values
+            node['widgets_values'][-1] = buffer
+            node['widgets_values'][-2] = interpolation_type
+            node['widgets_values'][-3] = soft_scaled_cn_multiplier
 
-        elif node['id'] == '292':
-            json_data["widgets_values"][-2] = stmfnet_multiplier
+        elif node['id'] == 292:
+            node['widgets_values'][-2] = stmfnet_multiplier
 
-        elif node['id'] == '301':
-            json_data["widgets_values"] = [ip_adapter_model_weight]
+        elif node['id'] == 301:
+            node['widgets_values'] = [ip_adapter_model_weight]
 
-        elif node['id'] == '281':
-            json_data["widgets_values"][3] = output_format
-
-        return json_data
+        elif node['id'] == 281:
+            # Special case: 'widgets_values' is a dictionary for this node
+            node['widgets_values']['output_format'] = output_format
+        
+        # st.write(json_data)
+    
+    return json_data
             
 
 def update_interpolation_settings(values=None, timing_list=None):
