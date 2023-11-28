@@ -272,7 +272,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
 
 
 
-def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_detailed_view_for_all=False, shortlist=False, num_columns=2, view="main"):
+def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_detailed_view_for_all=False, shortlist=False, num_columns=2, view="main", shot=None):
     data_repo = DataRepo()
     
     project_settings = data_repo.get_project_setting(project_uuid)
@@ -309,21 +309,21 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                 if i + j < len(gallery_image_list):
                     with cols[j]:                        
                         st.image(gallery_image_list[i + j].location, use_column_width=True)
+                        if view != "individual_shot":
+                            if shortlist:
+                                if st.button("Remove from shortlist ➖", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="Remove from shortlist"):
+                                    data_repo.update_file(gallery_image_list[i + j].uuid, tag=InternalFileTag.GALLERY_IMAGE.value)
+                                    st.success("Removed From Shortlist")
+                                    time.sleep(0.3)
+                                    st.rerun()
 
-                        if shortlist:
-                            if st.button("Remove from shortlist ➖", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="Remove from shortlist"):
-                                data_repo.update_file(gallery_image_list[i + j].uuid, tag=InternalFileTag.GALLERY_IMAGE.value)
-                                st.success("Removed From Shortlist")
-                                time.sleep(0.3)
-                                st.rerun()
+                            else:
 
-                        else:
-
-                            if st.button("Add to shortlist ➕", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="Add to shortlist"):
-                                data_repo.update_file(gallery_image_list[i + j].uuid, tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value)
-                                st.success("Added To Shortlist")
-                                time.sleep(0.3)
-                                st.rerun()
+                                if st.button("Add to shortlist ➕", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="Add to shortlist"):
+                                    data_repo.update_file(gallery_image_list[i + j].uuid, tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value)
+                                    st.success("Added To Shortlist")
+                                    time.sleep(0.3)
+                                    st.rerun()
                                                 
                         if gallery_image_list[i + j].inference_log:
                             log = gallery_image_list[i + j].inference_log # data_repo.get_inference_log_from_uuid(gallery_image_list[i + j].inference_log.uuid)
@@ -337,6 +337,11 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                 
                                 if "last_shot_number" not in st.session_state:
                                     st.session_state["last_shot_number"] = 0
+
+                                if view == "individual_shot":
+                                    # find index of shot.name in shot_names
+                                    st.session_state["last_shot_number"] = shot_names.index(shot.name)
+
 
                                 shot_name = st.selectbox('Add to shot:', shot_names, key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}",index=st.session_state["last_shot_number"])
                                 

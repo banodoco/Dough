@@ -105,7 +105,7 @@ def frame_selector_widget():
 
                 timing_list: List[InternalFrameTimingObject] = shot.timing_list
 
-                display_shot_frames(timing_list, True)
+                display_shot_frames(timing_list, False)
 
                 st.markdown("---")
 

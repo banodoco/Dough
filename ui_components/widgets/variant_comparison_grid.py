@@ -35,16 +35,17 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
     st.markdown("***")
 
-    col1, col2 = st.columns([1, 1])
-    items_to_show = col1.slider('Variants per page:', min_value=1, max_value=12, value=6)
-    items_to_show -= 1
-    num_columns = col2.slider('Number of columns:', min_value=1, max_value=6, value=3)
+    col1, col2, col3 = st.columns([1, 1,0.5])
+    items_to_show = col2.slider('Variants per page:', min_value=1, max_value=12, value=6)
+    items_to_show -= 1    
+    num_columns = col1.slider('Number of columns:', min_value=1, max_value=6, value=3)
 
     # Updated logic for pagination
     num_pages = (len(variants) - 1) // items_to_show + ((len(variants) - 1) % items_to_show > 0)
     page = 1
+
     if num_pages > 1:
-        page = st.radio('Page:', options=list(range(1, num_pages + 1)), horizontal=True)
+        page = col3.radio('Page:', options=list(range(1, num_pages + 1)), horizontal=True)
 
     if not len(variants):
         st.info("No variants present")
@@ -96,7 +97,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                     variant_inference_detail_element(variants[variant_index], stage, shot_uuid, timing_list)
 
             next_col += 1
-            if next_col >= num_columns or i == len(page_indices) - 1:
+            if next_col >= num_columns or i == len(page_indices) - 1 or len(page_indices) == i:
                 next_col = 0  # Reset the column counter
                 st.markdown("***")  # Add markdown line
                 cols = st.columns(num_columns)  # Prepare for the next row            
