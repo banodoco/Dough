@@ -29,6 +29,14 @@ def setup_app_ui():
         user_credits = current_user.total_credits if (current_user and current_user.total_credits > 0) else 0
         if user_credits < 0.5:
             st.error(f"You have {user_credits} credits left - please go to App Settings to add more credits")
+    
+    hide_img = '''
+        <style>
+        button[title="View fullscreen"]{
+            display: none;}
+        </style>
+        '''
+    st.markdown(hide_img, unsafe_allow_html=True)
 
     with st.sidebar:
         h1, h2 = st.columns([1, 3])
@@ -133,7 +141,7 @@ def setup_app_ui():
                     else:
                         st.session_state['frame_styling_view_type_index'] = None
 
-                    # Option menu
+                    
                     st.session_state['frame_styling_view_type'] = option_menu(
                         None,
                         view_types,
@@ -153,6 +161,10 @@ def setup_app_ui():
                         pages = CreativeProcessType.value_list()
                     else:
                         pages = ["Key Frames"]
+
+                        if st.session_state['page'] != "Key Frames":                            
+                            st.session_state["manual_select"] = 0
+                            st.session_state['page'] = "Key Frames"
                     
                     if 'page' not in st.session_state:
                         st.session_state["page"] = pages[0]
