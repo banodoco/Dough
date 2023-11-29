@@ -65,7 +65,7 @@ def main():
         params = st.experimental_get_query_params()
         
         if params and 'code' in params:
-            st.subheader("Logging you in, please wait")
+            st.markdown("#### Logging you in, please wait...")
             # st.write(params['code'])
             data = {
                 "id_token": params['code'][0]
@@ -83,10 +83,11 @@ def main():
                 st.markdown(discord_url, unsafe_allow_html=True)
         else:
             st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
-            st.subheader("Login with Google to proceed")
+            st.markdown("#### Login with Google to proceed")
     
             auth_url = get_google_auth_url()
-            st.markdown(auth_url, unsafe_allow_html=True)
+            st.link_button("Login with Google", auth_url)
+            
     else:
         start_runner()
         project_init()

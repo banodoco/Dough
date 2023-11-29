@@ -13,6 +13,7 @@ venv
 app_settings.csv
 videos
 videos/*
+temp_dir/
 /temp/
 training_data
 inference_log/*

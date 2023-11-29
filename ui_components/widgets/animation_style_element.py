@@ -79,20 +79,13 @@ def animation_style_element(shot_uuid):
         dynamic_frame_distribution_values = []
         dynamic_key_frame_influence_values = []
         dynamic_cn_strength_values = []         
-        mpl_colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
-        color_mapping = {
-            '#1f77b4': 'blue', '#ff7f0e': 'orange', '#2ca02c': 'green',
-            '#d62728': 'red', '#9467bd': 'purple', '#8c564b': 'brown',
-            '#e377c2': 'pink', '#7f7f7f': 'gray', '#bcbd22': 'olive',
-            '#17becf': 'cyan'
-        }
-        
-        streamlit_color_names = [color_mapping.get(color, 'black') for color in mpl_colors]
 
         for idx, timing in enumerate(timing_list):
+            # Use modulus to cycle through colors
+            # color = color_names[idx % len(color_names)]
             # Only create markdown text for the current index
-            markdown_text = f'##### :{streamlit_color_names[idx]}[**Frame {idx + 1}** ___]'
+            markdown_text = f'##### **Frame {idx + 1}** ___'
 
             with columns[idx]:
                 st.markdown(markdown_text)

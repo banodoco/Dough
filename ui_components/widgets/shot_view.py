@@ -31,27 +31,33 @@ def shot_keyframe_element(shot_uuid, items_per_row, position="Timeline", **kwarg
         
         
     if position == "Timeline":
-        header_col_0, header_col_1, header_col_2, header_col_3, header_col_4= st.columns([1.75,1,1,1,2])
-        with header_col_2:                
-            if st.button("Jump to shot animation view", key=f"jump_to_shot_animation_{shot.uuid}", help=f"This will jump to the individual shot view for '{shot.name}'", use_container_width=True):
-                st.session_state["shot_uuid"] = shot.uuid
-                st.session_state["frame_styling_view_type_manual_select"] = 2
-                st.session_state["manual_select"] = 1       
-                st.session_state['shot_view_manual_select'] = 0       
-                st.session_state['shot_view_index'] = 0
-                st.rerun() 
-        with header_col_3:
-            if st.button("Jump to shot adjustment view", key=f"jump_to_shot_adjustment_{shot.uuid}", help=f"This will jump to the individual shot view for '{shot.name}'", use_container_width=True):
-                st.session_state["shot_uuid"] = shot.uuid
-                st.session_state["frame_styling_view_type_manual_select"] = 2
-                st.session_state["manual_select"] = 1          
-                st.session_state['shot_view_manual_select'] = 1  
-                st.session_state['shot_view_index'] = 1  
-                st.rerun()
+
+        header_col_0, header_col_1, header_col_2, header_col_3, header_col_4= st.columns([1.75,1,2,0.25,0.25])
+
         
     
         with header_col_0:
-            update_shot_name(shot.uuid)                
+            update_shot_name(shot.uuid)     
+            footer_col_1, footer_col_2, _ = st.columns([0.35,0.35,1])
+            with footer_col_1:      
+
+                if st.button("🔧", key=f"jump_to_shot_adjustment_{shot.uuid}", help=f"Shot adjustment view for '{shot.name}'", use_container_width=True):
+                    st.session_state["shot_uuid"] = shot.uuid
+                    st.session_state["frame_styling_view_type_manual_select"] = 2
+                    st.session_state["manual_select"] = 1          
+                    st.session_state['shot_view_manual_select'] = 1  
+                    st.session_state['shot_view_index'] = 1  
+                    st.rerun() 
+
+            with footer_col_2:                                
+                if st.button("🎞️", key=f"jump_to_shot_animation_{shot.uuid}", help=f"Shot animation view for '{shot.name}'", use_container_width=True):
+                    st.session_state["shot_uuid"] = shot.uuid
+                    st.session_state["frame_styling_view_type_manual_select"] = 2
+                    st.session_state["manual_select"] = 1       
+                    st.session_state['shot_view_manual_select'] = 0       
+                    st.session_state['shot_view_index'] = 0
+                    st.rerun()     
+                
 
                 
         with header_col_1:   
@@ -91,7 +97,8 @@ def shot_keyframe_element(shot_uuid, items_per_row, position="Timeline", **kwarg
                             if timing.primary_image and timing.primary_image.location:
                                 st.image(timing.primary_image.location, use_column_width=True)
                             else:                        
-                                st.warning("No primary image present")        
+                                st.warning("No primary image present.")       
+                                jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}",uuid=shot.uuid)
                             if position != "Timeline":
                                 timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_frame_toggle, move_frames_toggle,delete_frames_toggle, change_shot_toggle)
             if (i < len(timing_list) - 1) or (st.session_state["open_shot"] == shot.uuid) or (len(timing_list) % items_per_row != 0 and st.session_state["open_shot"] != shot.uuid):

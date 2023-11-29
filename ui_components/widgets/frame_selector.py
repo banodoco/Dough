@@ -42,11 +42,11 @@ def frame_selector_widget():
     if st.session_state['page'] == "Key Frames":
         if st.session_state['current_frame_index'] > len_timing_list:
             update_current_frame_index(len_timing_list)
-        st.progress(st.session_state['current_frame_index'] / len_timing_list)
+        # st.progress(st.session_state['current_frame_index'] / len_timing_list)
     elif st.session_state['page'] == "Shots":
         if st.session_state['current_shot_index'] > len(shot_list):
             update_current_shot_index(len(shot_list))
-        st.progress(st.session_state['current_shot_index'] / len(shot_list))
+        # st.progress(st.session_state['current_shot_index'] / len(shot_list))
     if st.session_state['page'] == "Key Frames":
 
         if len(timing_list):
@@ -164,6 +164,8 @@ def display_shot_frames(timing_list: List[InternalFrameTimingObject], show_butto
                                     jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}")
                             else:
                                 st.warning("No primary image present")
+                                jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}")
+                                
             
     else:
         st.warning("No keyframes present")

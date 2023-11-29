@@ -16,37 +16,28 @@ from PIL import Image
 
 
 
-import zipfile
-import os
-
 def add_key_frame_section(shot_uuid, individual_view=True):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)    
     selected_image_location = ""
     
-    uploaded_image = st.file_uploader("Upload an image or zipped up images:", type=["png", "jpg", "jpeg","zip"], key=f"uploaded_image_{shot_uuid}", help="You can upload a single image or a zip file containing multiple images")
+    uploaded_images = st.file_uploader("Upload images:", type=["png", "jpg", "jpeg"], key=f"uploaded_image_{shot_uuid}", help="You can upload multiple images", accept_multiple_files=True)
     
     if st.button(f"Add key frame(s)",type="primary",use_container_width=True, key=f"add_key_frame_btn_{shot_uuid}"):
-        if uploaded_image.name.endswith('.zip'):
-            with zipfile.ZipFile(uploaded_image, 'r') as zip_ref:
-                zip_ref.extractall('temp_dir')
-            for filename in os.listdir('temp_dir'):
-                if not filename.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    continue
-                image = Image.open(os.path.join('temp_dir', filename))
-                file_location = f"videos/{shot.uuid}/assets/frames/1_selected/{filename}"
+        if uploaded_images:
+            progress_bar = st.progress(0)
+            for i, uploaded_image in enumerate(uploaded_images):
+                image = Image.open(uploaded_image)
+                file_location = f"videos/{shot.uuid}/assets/frames/1_selected/{uploaded_image.name}"
                 selected_image_location = save_or_host_file(image, file_location)
                 selected_image_location = selected_image_location or file_location
                 add_key_frame(selected_image_location, "No", shot_uuid,refresh_state=False)
+                progress_bar.progress((i + 1) / len(uploaded_images))
         else:
-            image = Image.open(uploaded_image)
-            file_location = f"videos/{shot.uuid}/assets/frames/1_selected/{uploaded_image.name}"
-            selected_image_location = save_or_host_file(image, file_location)
-            selected_image_location = selected_image_location or file_location
-            add_key_frame(selected_image_location, "No", shot_uuid)
+            # Add a frame with no image or a default image
+            add_key_frame(None, "No", shot_uuid,refresh_state=False)
         st.rerun()
-    
 
 def display_selected_key_frame(selected_image_location, apply_zoom_effects):
     selected_image = None
@@ -96,6 +87,7 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
 
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
     # updating the newly created frame timing
+    
     save_uploaded_image(selected_image, shot.project.uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.SOURCE.value)
     save_uploaded_image(selected_image, shot.project.uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.STYLED.value)
 

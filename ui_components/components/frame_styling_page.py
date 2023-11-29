@@ -50,16 +50,31 @@ def frame_styling_page(shot_uuid: str):
 
     if st.session_state['change_view_type'] == True:  
         st.session_state['change_view_type'] = False
+
+    if "explorer_view" not in st.session_state:
+        st.session_state['explorer_view'] = "Explorations"
+        st.session_state['explorer_view_index'] = 0
+
+    if "shot_view" not in st.session_state:
+        st.session_state['shot_view'] = "Animate Frames"
+        st.session_state['shot_view_index'] = 0
     
-    if st.session_state['frame_styling_view_type'] == "Timeline" or st.session_state['frame_styling_view_type'] == "Explorer":
+    if "styling_view" not in st.session_state:
+        st.session_state['styling_view'] = "Generate"
+        st.session_state['styling_view_index'] = 0
+    
+    if st.session_state['frame_styling_view_type'] == "Explorer":
+        st.markdown(
+            f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[Explorer] > :blue[{st.session_state['explorer_view']}]")
+    elif st.session_state['frame_styling_view_type'] == "Timeline":
         st.markdown(
             f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{st.session_state['page']}]")
     else:
         if st.session_state['page'] == "Key Frames":
             st.markdown(
-                f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{shot.name}] > :blue[Frame #{st.session_state['current_frame_index']}]")
+                f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{shot.name}] > :blue[{st.session_state['styling_view']}] > {shot.name} > #{st.session_state['current_frame_index']}")
         else:
-            st.markdown(f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{st.session_state['page']}] > :blue[{shot.name}]")
+            st.markdown(f"#### :red[{st.session_state['main_view_type']}] > **:green[{st.session_state['frame_styling_view_type']}]** > :orange[{st.session_state['page']}] > :blue[{st.session_state['shot_view']}] > {shot.name}")
 
     project_settings = data_repo.get_project_setting(shot.project.uuid)
 
@@ -69,36 +84,36 @@ def frame_styling_page(shot_uuid: str):
 
     # -------------------- INDIVIDUAL VIEW ----------------------
     elif st.session_state['frame_styling_view_type'] == "Individual":
-        with st.sidebar:
-            frame_selector_widget()
+
                 
         if st.session_state['page'] == CreativeProcessType.MOTION.value:
             
-            
-            if 'shot_view_manual_select' not in st.session_state:
-                st.session_state['shot_view_manual_select'] = None
+            with st.sidebar:
+                if 'shot_view_manual_select' not in st.session_state:
+                    st.session_state['shot_view_manual_select'] = None
 
-            if 'shot_view_index' not in st.session_state:
-                st.session_state['shot_view_index'] = 0
+                if 'shot_view_index' not in st.session_state:
+                    st.session_state['shot_view_index'] = 0
 
-            shot_views = ["Animate Frames", "Adjust Frames"]
-
-            st.session_state['shot_view'] = option_menu('',
-                        shot_views, 
-                            icons=['film', 'crop', "paint-bucket", 'pencil'],
-                                menu_icon="cast", default_index=st.session_state['shot_view_index'],
-                                    key="animation_view_selector", orientation="horizontal",
-                                        styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "#66A9BE"}},
-                                            manual_select=st.session_state['shot_view_manual_select'])
-            
-            if st.session_state['shot_view_manual_select'] != None:
-                st.session_state['shot_view_manual_select'] = None
-                        
-            if shot_views.index(st.session_state['shot_view']) != st.session_state['shot_view_index']:
-                st.session_state['shot_view_index'] = shot_views.index(st.session_state['shot_view'])
-                st.rerun()
+                shot_views = ["Animate Frames", "Adjust Frames"]
+                # with st.sidebar:
+                st.session_state['shot_view'] = option_menu('',
+                            shot_views, 
+                                icons=['film', 'crop', "paint-bucket", 'pencil'],
+                                    menu_icon="cast", default_index=st.session_state['shot_view_index'],
+                                        key="animation_view_selector", orientation="horizontal",
+                                            styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "#0068c9"}},
+                                                manual_select=st.session_state['shot_view_manual_select'])
                 
-                                
+                if st.session_state['shot_view_manual_select'] != None:
+                    st.session_state['shot_view_manual_select'] = None
+                            
+                if shot_views.index(st.session_state['shot_view']) != st.session_state['shot_view_index']:
+                    st.session_state['shot_view_index'] = shot_views.index(st.session_state['shot_view'])
+                    st.rerun()
+                
+            
+                              
                 
             if st.session_state['shot_view'] == "Animate Frames":
                 variant_comparison_grid(shot_uuid, stage=CreativeProcessType.MOTION.value)
@@ -119,22 +134,23 @@ def frame_styling_page(shot_uuid: str):
 
         elif st.session_state['page'] == CreativeProcessType.STYLING.value:
 
-            variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
-
             
-            st.session_state['styling_view'] = st_memory.menu('',\
-                                    ["Generate Variants", "Crop, Move & Rotate", "Inpainting","Draw On Image"], \
-                                        icons=['magic', 'crop', "paint-bucket", 'pencil'], \
-                                            menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), \
-                                                key="styling_view_selector", orientation="horizontal", \
-                                                    styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "#66A9BE"}})
 
-
-            if st.session_state['styling_view'] == "Generate Variants":
+            with st.sidebar:                                    
+                st.session_state['styling_view'] = st_memory.menu('',\
+                                        ["Generate", "Crop/Move", "Inpainting","Scribbling"], \
+                                            icons=['magic', 'crop', "paint-bucket", 'pencil'], \
+                                                menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), \
+                                                    key="styling_view_selector", orientation="horizontal", \
+                                                        styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "#0068c9"}})
+                frame_selector_widget()   
+                
+            if st.session_state['styling_view'] == "Generate":
+                variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
                 with st.expander("🛠️ Generate Variants + Prompt Settings", expanded=True):
                     generate_images_element(position='individual', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
                                                 
-            elif st.session_state['styling_view'] == "Crop, Move & Rotate":
+            elif st.session_state['styling_view'] == "Crop/Move":
                 with st.expander("🤏 Crop, Move & Rotate", expanded=True):                    
                     cropping_selector_element(shot_uuid)
 
@@ -142,20 +158,11 @@ def frame_styling_page(shot_uuid: str):
                 with st.expander("🌌 Inpainting", expanded=True):
                     inpainting_element(st.session_state['current_frame_uuid'])
 
-            elif st.session_state['styling_view'] == "Draw On Image":
+            elif st.session_state['styling_view'] == "Scribbling":
                 with st.expander("📝 Draw On Image", expanded=True):
                     drawing_element(timing_list,project_settings, shot_uuid)
             
-            st.markdown("***")                       
-            with st.expander("➕ Add Key Frame", expanded=True):
-                uploaded_image = st.file_uploader("Upload an image or images:", type=["png", "jpg", "jpeg"], accept_multiple_files=False)                
-                if st.button(f"Add key frame",type="primary",use_container_width=True):
-                    image = Image.open(uploaded_image)
-                    file_location = f"videos/{shot.uuid}/assets/frames/1_selected/{uploaded_image.name}"
-                    selected_image_location = save_or_host_file(image, file_location)
-                    selected_image_location = selected_image_location or file_location
-                    add_key_frame(selected_image_location, "Yes", shot_uuid)
-                    st.rerun()
+
 
     # -------------------- TIMELINE VIEW --------------------------       
     elif st.session_state['frame_styling_view_type'] == "Timeline":
