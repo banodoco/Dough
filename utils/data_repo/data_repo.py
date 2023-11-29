@@ -149,7 +149,8 @@ class DataRepo:
             uploaded_file_url = self.upload_file(file_content)
             kwargs.update({'hosted_url':uploaded_file_url})
 
-        file = self.db_repo.update_file(uuid=file_uuid, **kwargs).data['data']
+        res = self.db_repo.update_file(uuid=file_uuid, **kwargs)
+        file = res.data['data'] if res.status else None
         return InternalFileObject(**file) if file else None
     
     # project
