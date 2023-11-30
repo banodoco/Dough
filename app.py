@@ -86,7 +86,7 @@ def main():
             st.markdown("#### Login with Google to proceed")
     
             auth_url = get_google_auth_url()
-            st.link_button("Login with Google", auth_url)
+            st.markdown(auth_url, unsafe_allow_html=True)
             
     else:
         start_runner()
