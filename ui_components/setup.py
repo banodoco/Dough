@@ -157,6 +157,10 @@ def setup_app_ui():
                     if st.session_state['frame_styling_view_type_manual_select'] != None:
                         st.session_state['frame_styling_view_type_manual_select'] = None
 
+                    if 'page' not in st.session_state:
+                        st.session_state["page"] = CreativeProcessType.value_list()[0]
+                        st.session_state["manual_select"] = None
+
                     if st.session_state['frame_styling_view_type'] != "Explorer":
                         pages = CreativeProcessType.value_list()
                     else:
@@ -165,10 +169,6 @@ def setup_app_ui():
                         if st.session_state['page'] != "Key Frames":                            
                             st.session_state["manual_select"] = 0
                             st.session_state['page'] = "Key Frames"
-                    
-                    if 'page' not in st.session_state:
-                        st.session_state["page"] = pages[0]
-                        st.session_state["manual_select"] = None
 
                     if st.session_state["page"] not in pages:
                         st.session_state["page"] = pages[0]

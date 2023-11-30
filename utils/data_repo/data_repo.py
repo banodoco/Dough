@@ -88,7 +88,8 @@ class DataRepo:
         return InternalFileObject(**file) if file else None
 
     def get_file_from_uuid(self, uuid):
-        file = self.db_repo.get_file_from_uuid(uuid).data['data']
+        res = self.db_repo.get_file_from_uuid(uuid)
+        file = res.data['data'] if res.status else None
         return InternalFileObject(**file) if file else None
     
     def get_file_list_from_log_uuid_list(self, log_uuid_list):
