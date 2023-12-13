@@ -141,9 +141,9 @@ def drawing_element(timing_details, project_settings, shot_uuid, stage=WorkflowS
 
         if canvas_result is not None:            
             if canvas_result.json_data is not None and not canvas_result.json_data.get('objects'):
-                st.button("Save and Promote", key="save_canvas", disabled=True, help="Draw something first")
+                st.button("Save new image", key="save_canvas", disabled=True, help="Draw something first")
             else:                
-                if st.button("Save and Promote", key="save_canvas_active",type="primary"):
+                if st.button("Save new image", key="save_canvas_active",type="primary"):
                     
                     if canvas_result.image_data is not None:
                         if timing.primary_image_location:
@@ -196,7 +196,7 @@ def drawing_element(timing_details, project_settings, shot_uuid, stage=WorkflowS
                         number_of_image_variants = add_image_variant(canny_image.uuid, st.session_state['current_frame_uuid'])
                         promote_image_variant(st.session_state['current_frame_uuid'], number_of_image_variants - 1)
                        
-                        st.success("New Canny Image Saved")
+                        st.success("Saved")
                         st.session_state['reset_canvas'] = True
                         time.sleep(1)
                         st.rerun()

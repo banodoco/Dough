@@ -166,7 +166,7 @@ def inpainting_element(timing_uuid):
                     edit1, edit2 = st.columns(2)
 
                     with edit1:
-                        if st.button(f'Run Edit On Current Image'):
+                        if st.button(f'Run Edit'):
                             if st.session_state["type_of_mask_replacement"] == "Inpainting":
                                 edited_image, log = execute_image_edit(
                                                         type_of_mask_selection, 
@@ -191,6 +191,7 @@ def inpainting_element(timing_uuid):
                                 }
 
                                 process_inference_output(**inference_data)
+                                st.success("Generating image - see status in the Generation Log in the sidebar. Press 'Refresh log' to update.")
 
      
 
@@ -278,6 +279,7 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
 
     if st.button("Inpaint"):
         inpaint(promote=False)
+        
     
     if st.button("Inpaint and Promote"):
         inpaint(promote=True)

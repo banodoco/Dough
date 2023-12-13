@@ -57,7 +57,7 @@ class DataRepo:
         user = self.db_repo.create_user(**kwargs).data['data']
         return InternalUserObject(**user) if user else None
     
-    def get_first_active_user(self):
+    def get_first_active_user(self, invalidate_cache=False):
         res: InternalResponse = self.db_repo.get_first_active_user()
         user = res.data['data'] if res.status else None
         return InternalUserObject(**user) if user else None
@@ -88,7 +88,8 @@ class DataRepo:
         return InternalFileObject(**file) if file else None
 
     def get_file_from_uuid(self, uuid):
-        file = self.db_repo.get_file_from_uuid(uuid).data['data']
+        res = self.db_repo.get_file_from_uuid(uuid)
+        file = res.data['data'] if res.status else None
         return InternalFileObject(**file) if file else None
     
     def get_file_list_from_log_uuid_list(self, log_uuid_list):
@@ -149,7 +150,8 @@ class DataRepo:
             uploaded_file_url = self.upload_file(file_content)
             kwargs.update({'hosted_url':uploaded_file_url})
 
-        file = self.db_repo.update_file(uuid=file_uuid, **kwargs).data['data']
+        res = self.db_repo.update_file(uuid=file_uuid, **kwargs)
+        file = res.data['data'] if res.status else None
         return InternalFileObject(**file) if file else None
     
     # project

@@ -121,7 +121,7 @@ def menu(menu_title,options, icons=None, menu_icon=None, default_index=0, key=No
     
     if key not in st.session_state:        
         st.session_state[key] = default_value                
-
+    # st.write(styles)
     selection = option_menu(menu_title,options=options, icons=icons, menu_icon=menu_icon, orientation=orientation, default_index=st.session_state[key], styles=styles)
 
     if options.index(selection) != st.session_state[key]:

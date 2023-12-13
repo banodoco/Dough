@@ -16,7 +16,7 @@ def app_settings_page():
 
     if SERVER != ServerType.DEVELOPMENT.value:
         with st.expander("Purchase Credits", expanded=True):
-            user_credits = get_current_user().total_credits
+            user_credits = get_current_user(invalidate_cache=True).total_credits
             user_credits = round(user_credits, 2) if user_credits else 0
             st.write(f"Total Credits: {user_credits}")
             c1, c2 = st.columns([1,1])

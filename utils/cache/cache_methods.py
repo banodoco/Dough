@@ -539,9 +539,11 @@ def cache_data(cls):
     setattr(cls, "update_user", _cache_update_user)
 
     def _cache_get_first_active_user(self, *args, **kwargs):
-        logged_user_list = StCache.get_all(CacheKey.LOGGED_USER.value)
-        if logged_user_list and len(logged_user_list):
-            return logged_user_list[0]
+        invalidate_cache = kwargs.get('invalidate_cache', False)
+        if not invalidate_cache:
+            logged_user_list = StCache.get_all(CacheKey.LOGGED_USER.value)
+            if logged_user_list and len(logged_user_list):
+                return logged_user_list[0]
 
         original_func = getattr(cls, '_original_get_first_active_user')
         user = original_func(self, *args, **kwargs)
