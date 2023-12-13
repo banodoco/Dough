@@ -66,9 +66,9 @@ def truncate_decimal(num: float, n: int = 2) -> float:
     return int(num * 10 ** n) / 10 ** n
 
 
-def get_current_user() -> InternalUserObject:
+def get_current_user(invalidate_cache=False) -> InternalUserObject:
     data_repo = DataRepo()
-    user = data_repo.get_first_active_user()
+    user = data_repo.get_first_active_user(invalidate_cache=invalidate_cache)
     return user
 
 def user_credits_available():
