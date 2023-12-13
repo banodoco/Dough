@@ -57,7 +57,7 @@ class DataRepo:
         user = self.db_repo.create_user(**kwargs).data['data']
         return InternalUserObject(**user) if user else None
     
-    def get_first_active_user(self):
+    def get_first_active_user(self, invalidate_cache=False):
         res: InternalResponse = self.db_repo.get_first_active_user()
         user = res.data['data'] if res.status else None
         return InternalUserObject(**user) if user else None

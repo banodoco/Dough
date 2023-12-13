@@ -510,7 +510,7 @@ class APIRepo:
         return InternalResponse(res['payload'], 'success', res['status'])
     
     def duplicate_shot(self, shot_uuid):
-        res = self.http_post(self.SHOT_DUPLICATE_URL, params={'uuid': shot_uuid})
+        res = self.http_post(self.SHOT_DUPLICATE_URL, data={'uuid': shot_uuid})
         return InternalResponse(res['payload'], 'success', res['status'])
 
     def delete_shot(self, shot_uuid):
