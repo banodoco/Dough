@@ -4,10 +4,11 @@ import signal
 import sys
 import time
 import requests
+import sentry_sdk
 import setproctitle
 from dotenv import load_dotenv
 import django
-from shared.constants import InferenceParamType, InferenceStatus, InferenceType, ProjectMetaData, HOSTED_BACKGROUND_RUNNER_MODE
+from shared.constants import OFFLINE_MODE, InferenceParamType, InferenceStatus, InferenceType, ProjectMetaData, HOSTED_BACKGROUND_RUNNER_MODE
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from ui_components.methods.file_methods import load_from_env, save_to_env
@@ -29,6 +30,23 @@ REFRESH_FREQUENCY = 2   # refresh every 2 seconds
 MAX_APP_RETRY_CHECK = 3  # if the app is not running after 3 retries then the script will stop
 
 TERMINATE_SCRIPT = False
+
+# sentry init
+if OFFLINE_MODE:
+    SENTRY_DSN = os.getenv('SENTRY_DSN', '')
+    SENTRY_ENV = os.getenv('SENTRY_ENV', '')
+else:
+    import boto3
+    ssm = boto3.client("ssm", region_name="ap-south-1")
+
+    SENTRY_ENV = ssm.get_parameter(Name='/banodoco-fe/sentry/environment')['Parameter']['Value']
+    SENTRY_DSN = ssm.get_parameter(Name='/banodoco-fe/sentry/dsn')['Parameter']['Value']
+
+sentry_sdk.init(
+    environment=SENTRY_ENV,
+    dsn=SENTRY_DSN,
+    traces_sample_rate=0
+)
 
 def handle_termination(signal, frame):
     print("Received termination signal. Cleaning up...")
@@ -142,8 +160,13 @@ def check_and_update_db():
                 "Authorization": f"Token {replicate_key}"
             }
 
-            response = requests.get(url, headers=headers)
-            if response.status_code in [200, 201]:
+            try:
+                response = requests.get(url, headers=headers)
+            except Exception as e:
+                sentry_sdk.capture_exception(e)
+                response = None
+
+            if response and response.status_code in [200, 201]:
                 # print("response: ", response)
                 result = response.json()
                 log_status = replicate_status_map[result['status']] if result['status'] in replicate_status_map else InferenceStatus.IN_PROGRESS.value
@@ -191,6 +214,7 @@ def check_and_update_db():
                                 app_logger.log(LoggingType.ERROR, f"Error: {e}")
                                 output_details['error'] = str(e)
                                 InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.FAILED.value, output_details=json.dumps(output_details))
+                                raise Exception(str(e))
 
                     else:
                         log_status = InferenceStatus.FAILED.value
@@ -199,7 +223,9 @@ def check_and_update_db():
                 else:
                     InferenceLog.objects.filter(id=log.id).update(status=log_status)
             else:
-                app_logger.log(LoggingType.DEBUG, f"Error: {response.content}")
+                if response:
+                    app_logger.log(LoggingType.DEBUG, f"Error: {response.content}")
+                    sentry_sdk.capture_exception(response.content)
         else:
             # if not replicate data is present then removing the status
             InferenceLog.objects.filter(id=log.id).update(status="")
