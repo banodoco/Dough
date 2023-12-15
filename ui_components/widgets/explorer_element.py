@@ -342,8 +342,7 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                 if view not in ["explorer", "shortlist"]:
                                     if view == "individual_shot":
                                         shot_name = shot.name
-                                    else:                                    
-
+                                    else:
                                         shot_name = st.selectbox('Add to shot:', shot_names, key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}",index=st.session_state["last_shot_number"])
                                     
                                     if shot_name != "":
