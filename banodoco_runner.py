@@ -214,7 +214,7 @@ def check_and_update_db():
                                 app_logger.log(LoggingType.ERROR, f"Error: {e}")
                                 output_details['error'] = str(e)
                                 InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.FAILED.value, output_details=json.dumps(output_details))
-                                raise Exception(str(e))
+                                sentry_sdk.capture_exception(e)
 
                     else:
                         log_status = InferenceStatus.FAILED.value
