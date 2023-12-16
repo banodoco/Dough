@@ -155,7 +155,7 @@ def prepare_values(inf_data, timing_list):
 
     values = {
         'type_of_frame_distribution': 1 if settings.get('type_of_frame_distribution') == 'dynamic' else 0,
-        'frames_per_keyframe': settings.get('linear_frames_per_keyframe', None),
+        'linear_frame_distribution_value': settings.get('linear_frame_distribution_value', None),
         'type_of_key_frame_influence': 1 if settings.get('type_of_key_frame_influence') == 'dynamic' else 0,
         'length_of_key_frame_influence': float(settings.get('linear_key_frame_influence_value')) if settings.get('linear_key_frame_influence_value') else None,
         'type_of_cn_strength_distribution': 1 if settings.get('type_of_cn_strength_distribution') == 'dynamic' else 0,
@@ -163,13 +163,14 @@ def prepare_values(inf_data, timing_list):
         'interpolation_style': interpolation_style_map[settings.get('interpolation_type')] if settings.get('interpolation_type', 'ease-in-out') in interpolation_style_map else None,
         'motion_scale': settings.get('motion_scale', None),            
         'negative_prompt_video': settings.get('negative_prompt', None),
-        'ip_adapter_weight_video': settings.get('ip_adapter_model_weight', None),
-        'soft_scaled_cn_weights_multiple_video': settings.get('soft_scaled_cn_multiplier', None)
+        'relative_ipadapter_strength': settings.get('relative_ipadapter_strength', None),
+        'relative_ipadapter_influence': settings.get('relative_ipadapter_influence', None),        
+        'soft_scaled_cn_weights_multiple_video': settings.get('soft_scaled_cn_weights_multiplier', None)
     }
 
     # Add dynamic values
-    dynamic_frame_distribution_values = settings['dynamic_frames_per_keyframe'].split(',') if settings['dynamic_frames_per_keyframe'] else []
-    dynamic_key_frame_influence_values = settings['dynamic_key_frame_influence_value'].split(',') if settings['dynamic_key_frame_influence_value'] else []
+    dynamic_frame_distribution_values = settings['dynamic_frame_distribution_values'].split(',') if settings['dynamic_frame_distribution_values'] else []
+    dynamic_key_frame_influence_values = settings['dynamic_key_frame_influence_values'].split(',') if settings['dynamic_key_frame_influence_values'] else []
     dynamic_cn_strength_values = settings['dynamic_cn_strength_values'].split(',') if settings['dynamic_cn_strength_values'] else []
 
     min_length = len(timing_list) if timing_list else 0
