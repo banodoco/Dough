@@ -89,6 +89,7 @@ def frame_styling_page(shot_uuid: str):
         if st.session_state['page'] == CreativeProcessType.MOTION.value:
             
             with st.sidebar:
+                
                 if 'shot_view_manual_select' not in st.session_state:
                     st.session_state['shot_view_manual_select'] = None
 
@@ -131,19 +132,23 @@ def frame_styling_page(shot_uuid: str):
                     gallery_image_view(shot.project.uuid, page_number=page_number, num_items_per_page=8, open_detailed_view_for_all=False, shortlist=True, num_columns=4,view="individual_shot", shot=shot)
                 #with st.expander("🤏 Crop, Move & Rotate Image", expanded=True):
                     # video_cropping_element(shot_uuid)
-
+          
         elif st.session_state['page'] == CreativeProcessType.STYLING.value:
 
             
+            
 
-            with st.sidebar:                                    
+            
+
+            with st.sidebar:     
+                                                
                 st.session_state['styling_view'] = st_memory.menu('',\
                                         ["Generate", "Crop/Move", "Inpainting","Scribbling"], \
                                             icons=['magic', 'crop', "paint-bucket", 'pencil'], \
                                                 menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), \
                                                     key="styling_view_selector", orientation="horizontal", \
                                                         styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "#0068c9"}})
-                frame_selector_widget()   
+                
                 
             if st.session_state['styling_view'] == "Generate":
                 variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
@@ -161,8 +166,9 @@ def frame_styling_page(shot_uuid: str):
             elif st.session_state['styling_view'] == "Scribbling":
                 with st.expander("📝 Draw On Image", expanded=True):
                     drawing_element(timing_list,project_settings, shot_uuid)
-            
-
+        with st.sidebar:
+            frame_selector_widget()   
+            st.markdown("***")
 
     # -------------------- TIMELINE VIEW --------------------------       
     elif st.session_state['frame_styling_view_type'] == "Timeline":

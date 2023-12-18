@@ -13,6 +13,7 @@ from utils import st_memory
 def frame_selector_widget():
     data_repo = DataRepo()
     time1, time2 = st.columns([1,1])
+    st.markdown("***")
 
     timing_list = data_repo.get_timing_list_from_shot(st.session_state["shot_uuid"])
     shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
@@ -40,10 +41,10 @@ def frame_selector_widget():
         
 
     if st.session_state['page'] == "Key Frames":
-        if st.session_state['current_frame_index'] > len_timing_list:
+        if st.session_state['current_frame_index'] > len_timing_list:            
             update_current_frame_index(len_timing_list)
         # st.progress(st.session_state['current_frame_index'] / len_timing_list)
-    elif st.session_state['page'] == "Shots":
+    elif st.session_state['page'] == "Shots":        
         if st.session_state['current_shot_index'] > len(shot_list):
             update_current_shot_index(len(shot_list))
         # st.progress(st.session_state['current_shot_index'] / len(shot_list))
@@ -61,8 +62,7 @@ def frame_selector_widget():
                 update_current_frame_index(st.session_state['current_frame_index'])
         else:
             with time2:
-                st.error("No frames present")
-        
+                st.error("No frames present")        
         with st.expander(f"🖼️ Frame #{st.session_state['current_frame_index']} Details", expanded=True):
             if st_memory.toggle("Open", value=True, key="frame_toggle"):
                 a1, a2 = st.columns([3,2])
