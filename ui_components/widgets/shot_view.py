@@ -239,9 +239,33 @@ def shot_video_element(shot_uuid):
         shot_animation_button(shot)
 
 
-    move_shot_buttons(shot, "side")
+    with st.expander("Details", expanded=False):
 
-    delete_shot_button(shot.uuid)
+        move_shot_buttons(shot, "side")
+
+        delete_shot_button(shot.uuid)
+
+
+        if shot.main_clip and shot.main_clip.location:
+            video_location = shot.main_clip.location            
+            if video_location.startswith('http'):  # cloud file
+                response = requests.get(video_location)
+                st.download_button(
+                    label="Download video",
+                    data=response.content,
+                    file_name=f'{shot.name}.mp4',
+                    mime='video/mp4',
+                    use_container_width=True
+                )
+            else:  # local file
+                with open(video_location, 'rb') as file:
+                    st.download_button(
+                        label="Download video",
+                        data=file,
+                        file_name=f'{shot.name}.mp4',
+                        mime='video/mp4',
+                        use_container_width=True
+                    )
 
     
 def shot_adjustment_button(shot):

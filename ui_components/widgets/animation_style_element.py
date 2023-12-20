@@ -48,7 +48,7 @@ def animation_style_element(shot_uuid):
             type_of_key_frame_influence = st_memory.radio("Type of key frame length influence:", options=["Linear", "Dynamic"], key="type_of_key_frame_influence").lower()
         if type_of_key_frame_influence == "linear":
             with setting_b_2:
-                linear_key_frame_influence_value = st_memory.slider("Length of key frame influence:", min_value=0.1, max_value=5.0, value=1.0, step=0.1, key="length_of_key_frame_influence")
+                linear_key_frame_influence_value = st_memory.slider("Length of key frame influence:", min_value=0.1, max_value=5.0, value=1.0, step=0.01, key="length_of_key_frame_influence")
                 dynamic_key_frame_influence_values = []
         st.markdown("***")
 
@@ -58,7 +58,7 @@ def animation_style_element(shot_uuid):
             type_of_cn_strength_distribution = st_memory.radio("Type of key frame strength control:", options=["Linear", "Dynamic"], key="type_of_cn_strength_distribution").lower()
         if type_of_cn_strength_distribution == "linear":
             with setting_d_2:
-                linear_cn_strength_value = st_memory.slider("Range of strength:", min_value=0.0, max_value=1.0, value=(0.0,0.7), step=0.1, key="linear_cn_strength_value")                
+                linear_cn_strength_value = st_memory.slider("Range of strength:", min_value=0.0, max_value=1.0, value=(0.0,0.7), step=0.01, key="linear_cn_strength_value")                
                 dynamic_cn_strength_values = []
         
         st.markdown("***")
@@ -529,6 +529,8 @@ def update_interpolation_settings(values=None, timing_list=None):
         'length_of_key_frame_influence': 1.0,
         'type_of_cn_strength_distribution': 0,
         'linear_cn_strength_value': (0.0,0.7),
+        'linear_frame_distribution_value': 16,
+        'linear_key_frame_influence_value': 1.0,
         'interpolation_style': 0,
         'motion_scale': 1.0,            
         'negative_prompt_video': 'bad image, worst quality',        

@@ -786,6 +786,7 @@ class DBRepo:
         return InternalResponse(payload, 'timing list fetched', True)
 
     def get_timing_list_from_shot(self, shot_uuid):
+
         shot: Shot = Shot.objects.filter(uuid=shot_uuid, is_disabled=False).first()
         if not shot:
             return InternalResponse({}, 'invalid shot', False)

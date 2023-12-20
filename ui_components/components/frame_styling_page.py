@@ -24,9 +24,12 @@ from utils.data_repo.data_repo import DataRepo
 
 
 def frame_styling_page(shot_uuid: str):
+
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
+
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
+
     project_settings = data_repo.get_project_setting(shot.project.uuid)
 
     if "strength" not in st.session_state:
@@ -39,7 +42,7 @@ def frame_styling_page(shot_uuid: str):
         st.session_state['num_inference_steps'] = DefaultProjectSettingParams.batch_num_inference_steps
         st.session_state['transformation_stage'] = DefaultProjectSettingParams.batch_transformation_stage
         
-    if "current_frame_uuid" not in st.session_state:        
+    if "current_frame_uuid" not in st.session_state and len(timing_list) > 0:
         timing = data_repo.get_timing_list_from_shot(shot_uuid)[0]
         st.session_state['current_frame_uuid'] = timing.uuid
         st.session_state['current_frame_index'] = timing.aux_frame_index + 1
@@ -168,7 +171,7 @@ def frame_styling_page(shot_uuid: str):
                     drawing_element(timing_list,project_settings, shot_uuid)
         with st.sidebar:
             frame_selector_widget()   
-            st.markdown("***")
+            
 
     # -------------------- TIMELINE VIEW --------------------------       
     elif st.session_state['frame_styling_view_type'] == "Timeline":
