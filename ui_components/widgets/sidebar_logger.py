@@ -16,7 +16,7 @@ def sidebar_logger(shot_uuid):
     a1, _, a3 = st.columns([1, 0.2, 1])
 
     refresh_disabled = False # not any(log.status in [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value] for log in log_list)
-    if a1.button("Refresh log", disabled=refresh_disabled): st.rerun()
+    if a1.button("Refresh log", disabled=refresh_disabled, help="You can also press 'r' on your keyboard to refresh."): st.rerun()
 
     status_option = st.radio("Statuses to display:", options=["All", "In Progress", "Succeeded", "Failed"], key="status_option", index=0, horizontal=True)
 

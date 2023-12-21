@@ -285,8 +285,8 @@ def animation_style_element(shot_uuid):
         # remove .safe tensors from the end of each model name
         sd_model = st_memory.selectbox("Which model would you like to use?", options=sd_model_list, key="sd_model_video")
         negative_prompt = st_memory.text_area("What would you like to avoid in the videos?", value="bad image, worst quality", key="negative_prompt_video")
-        relative_ipadapter_strength = st_memory.slider("How much would you like to influence the style?", min_value=0.0, max_value=5.0, value=1.0, step=0.1, key="ip_adapter_strength")
-        relative_ipadapter_influence = st_memory.slider("For how long would you like to influence the style?", min_value=0.0, max_value=5.0, value=1.0, step=0.1, key="ip_adapter_influence")
+        relative_ipadapter_strength = st_memory.slider("How much would you like to influence the style?", min_value=0.0, max_value=5.0, value=1.1, step=0.1, key="ip_adapter_strength")
+        relative_ipadapter_influence = st_memory.slider("For how long would you like to influence the style?", min_value=0.0, max_value=5.0, value=1.1, step=0.1, key="ip_adapter_influence")
         soft_scaled_cn_weights_multipler = st_memory.slider("How much would you like to scale the CN weights?", min_value=0.0, max_value=10.0, value=0.85, step=0.1, key="soft_scaled_cn_weights_multiple_video")
             
     normalise_speed = True

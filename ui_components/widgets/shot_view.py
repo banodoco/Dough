@@ -93,7 +93,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, position="Timeline", **kwarg
     # st.markdown("***")
 
     if position == "Timeline":      
-        st.markdown("***")      
+        # st.markdown("***")      
         bottom1, bottom2, bottom3, bottom4,_ = st.columns([1,1,1,1,2])
         with bottom1:            
             delete_shot_button(shot.uuid)
@@ -245,29 +245,34 @@ def shot_video_element(shot_uuid):
 
         delete_shot_button(shot.uuid)
 
+        create_video_download_button(shot.main_clip.location)
 
-        if shot.main_clip and shot.main_clip.location:
-            video_location = shot.main_clip.location            
-            if video_location.startswith('http'):  # cloud file
-                response = requests.get(video_location)
-                st.download_button(
-                    label="Download video",
-                    data=response.content,
-                    file_name=f'{shot.name}.mp4',
-                    mime='video/mp4',
-                    use_container_width=True
-                )
-            else:  # local file
-                with open(video_location, 'rb') as file:
-                    st.download_button(
-                        label="Download video",
-                        data=file,
-                        file_name=f'{shot.name}.mp4',
-                        mime='video/mp4',
-                        use_container_width=True
-                    )
 
-    
+
+def create_video_download_button(video_location):
+    # Extract the file name from the video location
+    file_name = os.path.basename(video_location)
+
+    if video_location.startswith('http'):  # cloud file
+        response = requests.get(video_location)
+        st.download_button(
+            label="Download video",
+            data=response.content,
+            file_name=file_name,
+            mime='video/mp4',
+            key=file_name,
+            use_container_width=True
+        )
+    else:  # local file
+        with open(video_location, 'rb') as file:
+            st.download_button(
+                label="Download video",
+                data=file,
+                file_name=file_name,
+                mime='video/mp4',
+                key=file_name,
+                use_container_width=True
+            )
 def shot_adjustment_button(shot):
     if st.button("🔧", key=f"jump_to_shot_adjustment_{shot.uuid}", help=f"Shot adjustment view for '{shot.name}'", use_container_width=True):
         st.session_state["shot_uuid"] = shot.uuid

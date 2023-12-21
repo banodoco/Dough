@@ -7,10 +7,12 @@ from ui_components.constants import CreativeProcessType
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
 from ui_components.methods.file_methods import create_duplicate_file
 from ui_components.methods.video_methods import sync_audio_and_duration
+from ui_components.widgets.shot_view import create_video_download_button
 from ui_components.models import InternalFileObject
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.animation_style_element import update_interpolation_settings
 from utils.data_repo.data_repo import DataRepo
+
 
 
 def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
@@ -66,6 +68,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             else:
                 st.image(variants[current_variant].location, use_column_width=True)
             with st.expander(f"Variant #{current_variant + 1} details"):
+                create_video_download_button(variants[current_variant].location)
                 variant_inference_detail_element(variants[current_variant], stage, shot_uuid, timing_list)                        
 
         # Determine the start and end indices for additional variants on the current page
@@ -94,6 +97,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 else:
                     st.image(variants[variant_index].location, use_column_width=True) if variants[variant_index] else st.error("No image present")                
                 with st.expander(f"Variant #{variant_index + 1} details"):
+                    create_video_download_button(variants[variant_index].location)
+                                        
                     variant_inference_detail_element(variants[variant_index], stage, shot_uuid, timing_list)
 
             next_col += 1

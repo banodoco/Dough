@@ -93,6 +93,7 @@ def frame_selector_widget():
     else:
         shot_list = data_repo.get_shot_list(shot.project.uuid)
         shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
+        
         with st.expander(f"🎬 {shot.name} Details",expanded=True):
             if st_memory.toggle("Open", value=True, key="shot_details_toggle"):
                 a1,a2 = st.columns([2,2])

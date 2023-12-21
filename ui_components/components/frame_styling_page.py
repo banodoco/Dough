@@ -127,12 +127,24 @@ def frame_styling_page(shot_uuid: str):
             elif st.session_state['shot_view'] == "Adjust Frames":
                 st.markdown("***")
                 shot_keyframe_element(shot_uuid, 4, position="Individual")
-                with st.expander("📋 Explorer Shortlist",expanded=True):
-                    
+                # with st.expander("📋 Explorer Shortlist",expanded=True):
+                shot_explorer_view = st_memory.menu('',["Shortlist", "Explore"],                        
+                    icons=['grid-3x3','airplane'],
+                    menu_icon="cast", 
+                    default_index=st.session_state.get('shot_explorer_view', 0),
+                    key="shot_explorer_view", orientation="horizontal",
+                    styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "#868c91"}})
+                st.markdown("***")
+                if shot_explorer_view == "Shortlist":                    
                     project_setting = data_repo.get_project_setting(shot.project.uuid)
-                    page_number = st.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)
-                    
+                    page_number = st.radio("Select page:", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)                        
                     gallery_image_view(shot.project.uuid, page_number=page_number, num_items_per_page=8, open_detailed_view_for_all=False, shortlist=True, num_columns=4,view="individual_shot", shot=shot)
+                elif shot_explorer_view == "Explore":
+                    project_setting = data_repo.get_project_setting(shot.project.uuid)
+                    page_number = st.radio("Select page:", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)
+                    generate_images_element(position='explorer', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
+                    st.markdown("***")
+                    gallery_image_view(shot.project.uuid, page_number=page_number, num_items_per_page=8, open_detailed_view_for_all=False, shortlist=False, num_columns=4,view="individual_shot", shot=shot)
                 #with st.expander("🤏 Crop, Move & Rotate Image", expanded=True):
                     # video_cropping_element(shot_uuid)
           
@@ -179,9 +191,10 @@ def frame_styling_page(shot_uuid: str):
 
             with st.sidebar:
                 with st.expander("📋 Explorer Shortlist",expanded=True):
+
                     if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
                         project_setting = data_repo.get_project_setting(shot.project.uuid)
-                        page_number = st.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)
+                        page_number = st.radio("Select page:", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)
                         gallery_image_view(shot.project.uuid, page_number=page_number, num_items_per_page=10, open_detailed_view_for_all=False, shortlist=True, num_columns=2,view="sidebar")
                                 
             timeline_view(shot_uuid, "Key Frames")
@@ -191,7 +204,7 @@ def frame_styling_page(shot_uuid: str):
     # -------------------- SIDEBAR NAVIGATION --------------------------
     with st.sidebar:
 
-        
+
         with st.expander("🔍 Generation Log", expanded=True):
             if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
                 sidebar_logger(shot_uuid)
