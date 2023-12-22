@@ -295,13 +295,15 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
         if project_settings.total_shortlist_gallery_pages != res_payload['total_pages']:
             project_settings.total_shortlist_gallery_pages = res_payload['total_pages']
             st.rerun()
-    def is_image_truncated(image_path):
-        try:
-            img = Image.open(image_path)
-            img.verify()  # verify that it is, in fact an image
-        except (IOError, SyntaxError) as e:
-            return True
-        return False
+
+    # def is_image_truncated(image_path):
+    #     try:
+    #         img = Image.open(image_path)
+    #         img.verify()  # verify that it is, in fact an image
+    #     except (IOError, SyntaxError) as e:
+    #         return True
+    #     return False
+    
     total_image_count = res_payload['count']
     if gallery_image_list and len(gallery_image_list):
         start_index = 0
@@ -314,10 +316,9 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
             for j in range(num_columns):
                 if i + j < len(gallery_image_list):
                     with cols[j]:                        
-                        if not is_image_truncated(gallery_image_list[i + j].location):
-                            st.image(gallery_image_list[i + j].location, use_column_width=True)
-                        else:
-                            st.error("The image is truncated and cannot be displayed.")
+                        st.image(gallery_image_list[i + j].location, use_column_width=True)
+                        # else:
+                        #     st.error("The image is truncated and cannot be displayed.")
                         if view in ["explorer", "shortlist"]:
                             if shortlist:
                                 if st.button("Remove from shortlist ➖", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="Remove from shortlist"):

@@ -68,8 +68,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             else:
                 st.image(variants[current_variant].location, use_column_width=True)
             with st.expander(f"Variant #{current_variant + 1} details"):
-                create_video_download_button(variants[current_variant].location)
-                variant_inference_detail_element(variants[current_variant], stage, shot_uuid, timing_list)                        
+                create_video_download_button(variants[current_variant].location, tag="var_compare")
+                variant_inference_detail_element(variants[current_variant], stage, shot_uuid, timing_list, tag="var_compare")                        
 
         # Determine the start and end indices for additional variants on the current page
         additional_variants = [idx for idx in range(len(variants) - 1, -1, -1) if idx != current_variant]
@@ -97,9 +97,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 else:
                     st.image(variants[variant_index].location, use_column_width=True) if variants[variant_index] else st.error("No image present")                
                 with st.expander(f"Variant #{variant_index + 1} details"):
-                    create_video_download_button(variants[variant_index].location)
-                                        
-                    variant_inference_detail_element(variants[variant_index], stage, shot_uuid, timing_list)
+                    create_video_download_button(variants[variant_index].location, tag="var_details")
+                    variant_inference_detail_element(variants[variant_index], stage, shot_uuid, timing_list, tag="var_details")
 
             next_col += 1
             if next_col >= num_columns or i == len(page_indices) - 1 or len(page_indices) == i:
@@ -109,7 +108,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 # Add markdown line if this is not the last variant in page_indices
 
                 
-def variant_inference_detail_element(variant, stage, shot_uuid, timing_list=""):
+def variant_inference_detail_element(variant, stage, shot_uuid, timing_list="", tag="temp"):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
 
@@ -131,7 +130,7 @@ def variant_inference_detail_element(variant, stage, shot_uuid, timing_list=""):
             add_variant_to_shot_element(variant, shot.project.uuid)
 
     if stage == CreativeProcessType.MOTION.value:
-        if st.button("Load up settings from this variant", key=f"{variant.name}", help="This will enter the settings from this variant into the inputs below - you can also use them on other shots", use_container_width=True):
+        if st.button("Load up settings from this variant", key=f"{tag}_{variant.name}", help="This will enter the settings from this variant into the inputs below - you can also use them on other shots", use_container_width=True):
             print("Loading settings")
             print(len(timing_list))
             new_data = prepare_values(fetch_inference_data(variant), timing_list)
@@ -140,7 +139,7 @@ def variant_inference_detail_element(variant, stage, shot_uuid, timing_list=""):
             st.success("Settings loaded - scroll down to run them.")       
             time.sleep(0.3)                                                               
             st.rerun()
-        if st.button("Sync audio/duration", key=f"{variant.uuid}", help="Updates video length and the attached audio", use_container_width=True):
+        if st.button("Sync audio/duration", key=f"{tag}_{variant.uuid}", help="Updates video length and the attached audio", use_container_width=True):
             data_repo = DataRepo()
             _ = sync_audio_and_duration(variant, shot_uuid)
             _ = data_repo.get_shot_list(shot.project.uuid, invalidate_cache=True)
