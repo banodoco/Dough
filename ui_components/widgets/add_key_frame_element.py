@@ -1,8 +1,9 @@
 import time
 from typing import Union
 import streamlit as st
+from shared.constants import AnimationStyleType
 from ui_components.constants import CreativeProcessType, WorkflowStageType
-from ui_components.models import InternalFileObject
+from ui_components.models import InternalFileObject, InternalFrameTimingObject
 from ui_components.widgets.image_zoom_widgets import zoom_inputs
 
 from utils import st_memory
@@ -11,7 +12,7 @@ from utils.data_repo.data_repo import DataRepo
 
 from utils.constants import ImageStage
 from ui_components.methods.file_methods import generate_pil_image,save_or_host_file
-from ui_components.methods.common_methods import apply_image_transformations, clone_styling_settings, create_frame_inside_shot, save_uploaded_image
+from ui_components.methods.common_methods import add_image_variant, apply_image_transformations, clone_styling_settings, create_frame_inside_shot, save_new_image, save_uploaded_image
 from PIL import Image
 
 
@@ -83,20 +84,30 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
     len_shot_timing_list = len(timing_list) if len(timing_list) > 0 else 0
     target_frame_position = len_shot_timing_list if target_frame_position is None else target_frame_position
     target_aux_frame_index = min(len(timing_list), target_frame_position)
-    _ = create_frame_inside_shot(shot_uuid, target_aux_frame_index)
+
+    if isinstance(selected_image, InternalFileObject):
+        saved_image = selected_image
+    else:
+        saved_image = save_new_image(selected_image, shot.project.uuid)
+
+    timing_data = {
+        "shot_id": shot_uuid,
+        "animation_style": AnimationStyleType.CREATIVE_INTERPOLATION.value,
+        "aux_frame_index": target_aux_frame_index,
+        "source_image_id": saved_image.uuid,
+        "primary_image_id": saved_image.uuid,
+    }
+    timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
+
+    add_image_variant(saved_image.uuid, timing.uuid)
 
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
-    # updating the newly created frame timing
-    
-    save_uploaded_image(selected_image, shot.project.uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.SOURCE.value)
-    save_uploaded_image(selected_image, shot.project.uuid, timing_list[target_aux_frame_index].uuid, WorkflowStageType.STYLED.value)
-
     if update_cur_frame_idx:
         # this part of code updates current_frame_index when a new keyframe is added
         if inherit_styling_settings == "Yes" and st.session_state['current_frame_index']:    
             clone_styling_settings(st.session_state['current_frame_index'] - 1, timing_list[target_aux_frame_index-1].uuid)
 
-        if len(timing_list) == 1:
+        if len(timing_list) <= 1:
             st.session_state['current_frame_index'] = 1
             st.session_state['current_frame_uuid'] = timing_list[0].uuid
         else:

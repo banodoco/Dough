@@ -92,8 +92,10 @@ def setup_app_ui():
         update_app_setting_keys()
 
         if 'shot_uuid' not in st.session_state:
-            shot_list = data_repo.get_shot_list(st.session_state["project_uuid"])
+            shot_list = data_repo.get_shot_list(st.session_state["project_uuid"])    
             st.session_state['shot_uuid'] = shot_list[0].uuid
+                
+        # print uuids of shots
 
         if "current_frame_index" not in st.session_state:
             st.session_state['current_frame_index'] = 1
@@ -179,7 +181,7 @@ def setup_app_ui():
                     
                     if st.session_state["manual_select"] != None:
                         st.session_state["manual_select"] = None
-
+                
                 frame_styling_page(st.session_state["shot_uuid"])
 
             elif st.session_state["main_view_type"] == "Tools & Settings":

@@ -308,10 +308,16 @@ def cache_data(cls):
         timing_func = getattr(cls, '_original_get_timing_from_uuid')
         timing = timing_func(self, args[0])
         if timing and timing.shot.project:
-            original_func = getattr(cls, '_original_get_timing_list_from_project')
-            timing_list = original_func(self, timing.shot.project.uuid)
-            if timing_list and len(timing_list):
-                StCache.add_all(timing_list, CacheKey.TIMING_DETAILS.value)
+            # original_func = getattr(cls, '_original_get_timing_list_from_project')
+            # timing_list = original_func(self, timing.shot.project.uuid)
+            # if timing_list and len(timing_list):
+            #     StCache.add_all(timing_list, CacheKey.TIMING_DETAILS.value)
+
+            # updating shot list
+            original_func = getattr(cls, '_original_get_shot_list')
+            shot_list = original_func(self, timing.shot.project.uuid)
+            if shot_list:
+                StCache.add_all(shot_list, CacheKey.SHOT.value)
     
     setattr(cls, '_original_update_specific_timing', cls.update_specific_timing)
     setattr(cls, "update_specific_timing", _cache_update_specific_timing)

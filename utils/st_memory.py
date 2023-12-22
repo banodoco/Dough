@@ -25,7 +25,7 @@ def selectbox(label, options, index=0, key=None, help=None, on_change=None, disa
     if key not in st.session_state:        
         st.session_state[key] = index                
 
-    selection = st.selectbox(label=label, options=options, index=st.session_state[key], format_func=format_func)
+    selection = st.selectbox(label=label, options=options, index=st.session_state[key], format_func=format_func, help=help, on_change=on_change, disabled=disabled)
 
     if options.index(selection) != st.session_state[key]:
         st.session_state[key] = options.index(selection)
@@ -122,7 +122,7 @@ def menu(menu_title,options, icons=None, menu_icon=None, default_index=0, key=No
     if key not in st.session_state:        
         st.session_state[key] = default_value                
     # st.write(styles)
-    selection = option_menu(menu_title,options=options, icons=icons, menu_icon=menu_icon, orientation=orientation, default_index=st.session_state[key], styles=styles)
+    selection = option_menu(menu_title,options=options, icons=icons, menu_icon=menu_icon, orientation=orientation, default_index=int(st.session_state[key]), styles=styles)
 
     if options.index(selection) != st.session_state[key]:
         st.session_state[key] = options.index(selection)
