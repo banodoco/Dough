@@ -756,7 +756,8 @@ def process_inference_output(**kwargs):
                 name=filename, 
                 type=InternalFileType.IMAGE.value,
                 hosted_url=output[0] if isinstance(output, list) else output, 
-                inference_log_id=log.uuid
+                inference_log_id=log.uuid,
+                project_id=timing.shot.project.uuid,
             )
             
             add_image_variant(output_file.uuid, timing_uuid)

@@ -40,23 +40,10 @@ def shot_keyframe_element(shot_uuid, items_per_row, position="Timeline", **kwarg
             update_shot_name(shot.uuid)     
             footer_col_1, footer_col_2, _ = st.columns([0.35,0.35,1])
             with footer_col_1:      
-
-                if st.button("🔧", key=f"jump_to_shot_adjustment_{shot.uuid}", help=f"Shot adjustment view for '{shot.name}'", use_container_width=True):
-                    st.session_state["shot_uuid"] = shot.uuid
-                    st.session_state["frame_styling_view_type_manual_select"] = 2
-                    st.session_state["manual_select"] = 1          
-                    st.session_state['shot_view_manual_select'] = 1  
-                    st.session_state['shot_view_index'] = 1  
-                    st.rerun() 
+                shot_adjustment_button(shot)
 
             with footer_col_2:                                
-                if st.button("🎞️", key=f"jump_to_shot_animation_{shot.uuid}", help=f"Shot animation view for '{shot.name}'", use_container_width=True):
-                    st.session_state["shot_uuid"] = shot.uuid
-                    st.session_state["frame_styling_view_type_manual_select"] = 2
-                    st.session_state["manual_select"] = 1       
-                    st.session_state['shot_view_manual_select'] = 0       
-                    st.session_state['shot_view_index'] = 0
-                    st.rerun()     
+                shot_animation_button(shot)
                 
 
                 
@@ -106,7 +93,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, position="Timeline", **kwarg
     # st.markdown("***")
 
     if position == "Timeline":      
-        st.markdown("***")      
+        # st.markdown("***")      
         bottom1, bottom2, bottom3, bottom4,_ = st.columns([1,1,1,1,2])
         with bottom1:            
             delete_shot_button(shot.uuid)
@@ -245,14 +232,61 @@ def shot_video_element(shot_uuid):
     else:
         st.warning('''No video present''')
 
-    if st.button(f"Jump to shot", key=f"btn_{shot_uuid}", use_container_width=True):
+    switch1,switch2 = st.columns([1,1])
+    with switch1:
+        shot_adjustment_button(shot)
+    with switch2:
+        shot_animation_button(shot)
+
+    with st.expander("Details", expanded=False):
+        move_shot_buttons(shot, "side")
+        delete_shot_button(shot.uuid)
+        if shot.main_clip:
+            create_video_download_button(shot.main_clip.location)
+
+
+
+def create_video_download_button(video_location):
+    # Extract the file name from the video location
+    file_name = os.path.basename(video_location)
+
+    if video_location.startswith('http'):  # cloud file
+        response = requests.get(video_location)
+        st.download_button(
+            label="Download video",
+            data=response.content,
+            file_name=file_name,
+            mime='video/mp4',
+            key=file_name,
+            use_container_width=True
+        )
+    else:  # local file
+        with open(video_location, 'rb') as file:
+            st.download_button(
+                label="Download video",
+                data=file,
+                file_name=file_name,
+                mime='video/mp4',
+                key=file_name,
+                use_container_width=True
+            )
+def shot_adjustment_button(shot):
+    if st.button("🔧", key=f"jump_to_shot_adjustment_{shot.uuid}", help=f"Shot adjustment view for '{shot.name}'", use_container_width=True):
         st.session_state["shot_uuid"] = shot.uuid
         st.session_state["frame_styling_view_type_manual_select"] = 2
-        st.rerun()
-    move_shot_buttons(shot, "side")
+        st.session_state["manual_select"] = 1          
+        st.session_state['shot_view_manual_select'] = 1  
+        st.session_state['shot_view_index'] = 1  
+        st.rerun() 
 
-    
-    
+def shot_animation_button(shot):
+    if st.button("🎞️", key=f"jump_to_shot_animation_{shot.uuid}", help=f"Shot animation view for '{shot.name}'", use_container_width=True):
+        st.session_state["shot_uuid"] = shot.uuid
+        st.session_state["frame_styling_view_type_manual_select"] = 2
+        st.session_state["manual_select"] = 1       
+        st.session_state['shot_view_manual_select'] = 0       
+        st.session_state['shot_view_index'] = 0
+        st.rerun() 
 
         
 

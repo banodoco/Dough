@@ -158,10 +158,10 @@ def inpainting_element(timing_uuid):
                     btn1, btn2 = st.columns([1, 1])
                     with btn1:
                         prompt = st.text_area("Prompt:", help="Describe the whole image, but focus on the details you want changed!",
-                                                value=DefaultProjectSettingParams.batch_prompt)
+                                                value=st.session_state['explorer_base_prompt'], height=150)
                     with btn2:
                         negative_prompt = st.text_area(
-                            "Negative Prompt:", help="Enter any things you want to make the model avoid!", value=DefaultProjectSettingParams.batch_negative_prompt)
+                            "Negative Prompt:", help="Enter any things you want to make the model avoid!", value=DefaultProjectSettingParams.batch_negative_prompt, height=150)
 
                     edit1, edit2 = st.columns(2)
 

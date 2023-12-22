@@ -62,7 +62,7 @@ def explorer_element(project_uuid):
                 generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None)
 
         k1,k2 = st.columns([5,1])
-        page_number = k1.radio("Select page", options=range(1, project_setting.total_gallery_pages + 1), horizontal=True, key="main_gallery")
+        page_number = k1.radio("Select page:", options=range(1, project_setting.total_gallery_pages + 1), horizontal=True, key="main_gallery")
         open_detailed_view_for_all = k2.toggle("Open detailed view for all:", key='main_gallery_toggle')
         gallery_image_view(project_uuid, page_number, num_items_per_page, open_detailed_view_for_all, False, num_columns,view="explorer")
     elif st.session_state['explorer_view'] == "Shortlist":
@@ -188,9 +188,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                 else:  # switch_prompt_position is True
                     prompt_with_variations = f"{output_magic_prompt}, {prompt}" if prompt else output_magic_prompt
                     
-                # st.write(f"Prompt: '{prompt_with_variations}'")
-                # st.write(f"Model: {model_name}")
-                print("prompt_with_variations", prompt_with_variations)
+
                 counter += 1
                 log = None
                 if not input_image:
@@ -297,7 +295,13 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
         if project_settings.total_shortlist_gallery_pages != res_payload['total_pages']:
             project_settings.total_shortlist_gallery_pages = res_payload['total_pages']
             st.rerun()
-
+    def is_image_truncated(image_path):
+        try:
+            img = Image.open(image_path)
+            img.verify()  # verify that it is, in fact an image
+        except (IOError, SyntaxError) as e:
+            return True
+        return False
     total_image_count = res_payload['count']
     if gallery_image_list and len(gallery_image_list):
         start_index = 0
@@ -310,7 +314,10 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
             for j in range(num_columns):
                 if i + j < len(gallery_image_list):
                     with cols[j]:                        
-                        st.image(gallery_image_list[i + j].location, use_column_width=True)
+                        if not is_image_truncated(gallery_image_list[i + j].location):
+                            st.image(gallery_image_list[i + j].location, use_column_width=True)
+                        else:
+                            st.error("The image is truncated and cannot be displayed.")
                         if view in ["explorer", "shortlist"]:
                             if shortlist:
                                 if st.button("Remove from shortlist ➖", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="Remove from shortlist"):
@@ -333,7 +340,7 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                 input_params = json.loads(log.input_params)
                                 prompt = input_params.get('prompt', 'No prompt found')
                                 model = json.loads(log.output_details)['model_name'].split('/')[-1]
-                                if view in ["explorer", "shortlist"]:
+                                if view in ["explorer", "shortlist","individual_shot"]:
                                     with st.expander("Prompt Details", expanded=open_detailed_view_for_all):
                                         st.info(f"**Prompt:** {prompt}\n\n**Model:** {model}")
                                 

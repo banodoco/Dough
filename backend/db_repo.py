@@ -786,6 +786,7 @@ class DBRepo:
         return InternalResponse(payload, 'timing list fetched', True)
 
     def get_timing_list_from_shot(self, shot_uuid):
+
         shot: Shot = Shot.objects.filter(uuid=shot_uuid, is_disabled=False).first()
         if not shot:
             return InternalResponse({}, 'invalid shot', False)
@@ -847,13 +848,13 @@ class DBRepo:
                 
                 attributes._data['canny_image_id'] = canny_image.id
 
-        if 'primay_image_id' in attributes.data:
-            if attributes.data['primay_image_id'] != None:
-                primay_image: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['primay_image_id'], is_disabled=False).first()
+        if 'primary_image_id' in attributes.data:
+            if attributes.data['primary_image_id'] != None:
+                primay_image: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['primary_image_id'], is_disabled=False).first()
                 if not primay_image:
                     return InternalResponse({}, 'invalid primary image uuid', False)
                 
-                attributes._data['primay_image_id'] = primay_image.id
+                attributes._data['primary_image_id'] = primay_image.id
         
         timing = Timing.objects.create(**attributes.data)
         payload = {

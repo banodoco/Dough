@@ -7,10 +7,12 @@ from ui_components.constants import CreativeProcessType
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
 from ui_components.methods.file_methods import create_duplicate_file
 from ui_components.methods.video_methods import sync_audio_and_duration
+from ui_components.widgets.shot_view import create_video_download_button
 from ui_components.models import InternalFileObject
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.animation_style_element import update_interpolation_settings
 from utils.data_repo.data_repo import DataRepo
+
 
 
 def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
@@ -66,6 +68,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             else:
                 st.image(variants[current_variant].location, use_column_width=True)
             with st.expander(f"Variant #{current_variant + 1} details"):
+                create_video_download_button(variants[current_variant].location)
                 variant_inference_detail_element(variants[current_variant], stage, shot_uuid, timing_list)                        
 
         # Determine the start and end indices for additional variants on the current page
@@ -94,6 +97,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 else:
                     st.image(variants[variant_index].location, use_column_width=True) if variants[variant_index] else st.error("No image present")                
                 with st.expander(f"Variant #{variant_index + 1} details"):
+                    create_video_download_button(variants[variant_index].location)
+                                        
                     variant_inference_detail_element(variants[variant_index], stage, shot_uuid, timing_list)
 
             next_col += 1
@@ -155,7 +160,7 @@ def prepare_values(inf_data, timing_list):
 
     values = {
         'type_of_frame_distribution': 1 if settings.get('type_of_frame_distribution') == 'dynamic' else 0,
-        'frames_per_keyframe': settings.get('linear_frames_per_keyframe', None),
+        'linear_frame_distribution_value': settings.get('linear_frame_distribution_value', None),
         'type_of_key_frame_influence': 1 if settings.get('type_of_key_frame_influence') == 'dynamic' else 0,
         'length_of_key_frame_influence': float(settings.get('linear_key_frame_influence_value')) if settings.get('linear_key_frame_influence_value') else None,
         'type_of_cn_strength_distribution': 1 if settings.get('type_of_cn_strength_distribution') == 'dynamic' else 0,
@@ -163,13 +168,14 @@ def prepare_values(inf_data, timing_list):
         'interpolation_style': interpolation_style_map[settings.get('interpolation_type')] if settings.get('interpolation_type', 'ease-in-out') in interpolation_style_map else None,
         'motion_scale': settings.get('motion_scale', None),            
         'negative_prompt_video': settings.get('negative_prompt', None),
-        'ip_adapter_weight_video': settings.get('ip_adapter_model_weight', None),
-        'soft_scaled_cn_weights_multiple_video': settings.get('soft_scaled_cn_multiplier', None)
+        'relative_ipadapter_strength': settings.get('relative_ipadapter_strength', None),
+        'relative_ipadapter_influence': settings.get('relative_ipadapter_influence', None),        
+        'soft_scaled_cn_weights_multiple_video': settings.get('soft_scaled_cn_weights_multiplier', None)
     }
 
     # Add dynamic values
-    dynamic_frame_distribution_values = settings['dynamic_frames_per_keyframe'].split(',') if settings['dynamic_frames_per_keyframe'] else []
-    dynamic_key_frame_influence_values = settings['dynamic_key_frame_influence_value'].split(',') if settings['dynamic_key_frame_influence_value'] else []
+    dynamic_frame_distribution_values = settings['dynamic_frame_distribution_values'].split(',') if settings['dynamic_frame_distribution_values'] else []
+    dynamic_key_frame_influence_values = settings['dynamic_key_frame_influence_values'].split(',') if settings['dynamic_key_frame_influence_values'] else []
     dynamic_cn_strength_values = settings['dynamic_cn_strength_values'].split(',') if settings['dynamic_cn_strength_values'] else []
 
     min_length = len(timing_list) if timing_list else 0

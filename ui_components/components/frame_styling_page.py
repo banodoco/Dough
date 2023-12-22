@@ -24,9 +24,12 @@ from utils.data_repo.data_repo import DataRepo
 
 
 def frame_styling_page(shot_uuid: str):
+
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
+
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
+
     project_settings = data_repo.get_project_setting(shot.project.uuid)
 
     if "strength" not in st.session_state:
@@ -39,7 +42,7 @@ def frame_styling_page(shot_uuid: str):
         st.session_state['num_inference_steps'] = DefaultProjectSettingParams.batch_num_inference_steps
         st.session_state['transformation_stage'] = DefaultProjectSettingParams.batch_transformation_stage
         
-    if "current_frame_uuid" not in st.session_state:        
+    if "current_frame_uuid" not in st.session_state and len(timing_list) > 0:
         timing = data_repo.get_timing_list_from_shot(shot_uuid)[0]
         st.session_state['current_frame_uuid'] = timing.uuid
         st.session_state['current_frame_index'] = timing.aux_frame_index + 1
@@ -89,6 +92,7 @@ def frame_styling_page(shot_uuid: str):
         if st.session_state['page'] == CreativeProcessType.MOTION.value:
             
             with st.sidebar:
+                
                 if 'shot_view_manual_select' not in st.session_state:
                     st.session_state['shot_view_manual_select'] = None
 
@@ -123,27 +127,43 @@ def frame_styling_page(shot_uuid: str):
             elif st.session_state['shot_view'] == "Adjust Frames":
                 st.markdown("***")
                 shot_keyframe_element(shot_uuid, 4, position="Individual")
-                with st.expander("📋 Explorer Shortlist",expanded=True):
-                    
+                # with st.expander("📋 Explorer Shortlist",expanded=True):
+                shot_explorer_view = st_memory.menu('',["Shortlist", "Explore"],                        
+                    icons=['grid-3x3','airplane'],
+                    menu_icon="cast", 
+                    default_index=st.session_state.get('shot_explorer_view', 0),
+                    key="shot_explorer_view", orientation="horizontal",
+                    styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "#868c91"}})
+                st.markdown("***")
+                if shot_explorer_view == "Shortlist":                    
                     project_setting = data_repo.get_project_setting(shot.project.uuid)
-                    page_number = st.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)
-                    
+                    page_number = st.radio("Select page:", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)                        
                     gallery_image_view(shot.project.uuid, page_number=page_number, num_items_per_page=8, open_detailed_view_for_all=False, shortlist=True, num_columns=4,view="individual_shot", shot=shot)
+                elif shot_explorer_view == "Explore":
+                    project_setting = data_repo.get_project_setting(shot.project.uuid)
+                    page_number = st.radio("Select page:", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)
+                    generate_images_element(position='explorer', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
+                    st.markdown("***")
+                    gallery_image_view(shot.project.uuid, page_number=page_number, num_items_per_page=8, open_detailed_view_for_all=False, shortlist=False, num_columns=4,view="individual_shot", shot=shot)
                 #with st.expander("🤏 Crop, Move & Rotate Image", expanded=True):
                     # video_cropping_element(shot_uuid)
-
+          
         elif st.session_state['page'] == CreativeProcessType.STYLING.value:
 
             
+            
 
-            with st.sidebar:                                    
+            
+
+            with st.sidebar:     
+                                                
                 st.session_state['styling_view'] = st_memory.menu('',\
                                         ["Generate", "Crop/Move", "Inpainting","Scribbling"], \
                                             icons=['magic', 'crop', "paint-bucket", 'pencil'], \
                                                 menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), \
                                                     key="styling_view_selector", orientation="horizontal", \
                                                         styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "#0068c9"}})
-                frame_selector_widget()   
+                
                 
             if st.session_state['styling_view'] == "Generate":
                 variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
@@ -161,8 +181,9 @@ def frame_styling_page(shot_uuid: str):
             elif st.session_state['styling_view'] == "Scribbling":
                 with st.expander("📝 Draw On Image", expanded=True):
                     drawing_element(timing_list,project_settings, shot_uuid)
+        with st.sidebar:
+            frame_selector_widget()   
             
-
 
     # -------------------- TIMELINE VIEW --------------------------       
     elif st.session_state['frame_styling_view_type'] == "Timeline":
@@ -170,9 +191,10 @@ def frame_styling_page(shot_uuid: str):
 
             with st.sidebar:
                 with st.expander("📋 Explorer Shortlist",expanded=True):
+
                     if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
                         project_setting = data_repo.get_project_setting(shot.project.uuid)
-                        page_number = st.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)
+                        page_number = st.radio("Select page:", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)
                         gallery_image_view(shot.project.uuid, page_number=page_number, num_items_per_page=10, open_detailed_view_for_all=False, shortlist=True, num_columns=2,view="sidebar")
                                 
             timeline_view(shot_uuid, "Key Frames")
@@ -182,7 +204,7 @@ def frame_styling_page(shot_uuid: str):
     # -------------------- SIDEBAR NAVIGATION --------------------------
     with st.sidebar:
 
-        
+
         with st.expander("🔍 Generation Log", expanded=True):
             if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
                 sidebar_logger(shot_uuid)

@@ -48,7 +48,7 @@ def animation_style_element(shot_uuid):
             type_of_key_frame_influence = st_memory.radio("Type of key frame length influence:", options=["Linear", "Dynamic"], key="type_of_key_frame_influence").lower()
         if type_of_key_frame_influence == "linear":
             with setting_b_2:
-                linear_key_frame_influence_value = st_memory.slider("Length of key frame influence:", min_value=0.1, max_value=5.0, value=1.0, step=0.1, key="length_of_key_frame_influence")
+                linear_key_frame_influence_value = st_memory.slider("Length of key frame influence:", min_value=0.1, max_value=5.0, value=1.0, step=0.01, key="length_of_key_frame_influence")
                 dynamic_key_frame_influence_values = []
         st.markdown("***")
 
@@ -58,7 +58,7 @@ def animation_style_element(shot_uuid):
             type_of_cn_strength_distribution = st_memory.radio("Type of key frame strength control:", options=["Linear", "Dynamic"], key="type_of_cn_strength_distribution").lower()
         if type_of_cn_strength_distribution == "linear":
             with setting_d_2:
-                linear_cn_strength_value = st_memory.slider("Range of strength:", min_value=0.0, max_value=1.0, value=(0.0,0.7), step=0.1, key="linear_cn_strength_value")                
+                linear_cn_strength_value = st_memory.slider("Range of strength:", min_value=0.0, max_value=1.0, value=(0.0,0.7), step=0.01, key="linear_cn_strength_value")                
                 dynamic_cn_strength_values = []
         
         st.markdown("***")
@@ -285,7 +285,8 @@ def animation_style_element(shot_uuid):
         # remove .safe tensors from the end of each model name
         sd_model = st_memory.selectbox("Which model would you like to use?", options=sd_model_list, key="sd_model_video")
         negative_prompt = st_memory.text_area("What would you like to avoid in the videos?", value="bad image, worst quality", key="negative_prompt_video")
-        ip_adapter_weight = st_memory.slider("How tightly would you like the style to adhere to the input images?", min_value=0.0, max_value=1.0, value=0.66, step=0.1, key="ip_adapter_weight_video")
+        relative_ipadapter_strength = st_memory.slider("How much would you like to influence the style?", min_value=0.0, max_value=5.0, value=1.1, step=0.1, key="ip_adapter_strength")
+        relative_ipadapter_influence = st_memory.slider("For how long would you like to influence the style?", min_value=0.0, max_value=5.0, value=1.1, step=0.1, key="ip_adapter_influence")
         soft_scaled_cn_weights_multipler = st_memory.slider("How much would you like to scale the CN weights?", min_value=0.0, max_value=10.0, value=0.85, step=0.1, key="soft_scaled_cn_weights_multiple_video")
             
     normalise_speed = True
@@ -304,17 +305,18 @@ def animation_style_element(shot_uuid):
         negative_prompt=negative_prompt,
         interpolation_type=interpolation_style,
         stmfnet_multiplier=2,
-        ip_adapter_model_weight=ip_adapter_weight,
-        soft_scaled_cn_multiplier=soft_scaled_cn_weights_multipler,
+        relative_ipadapter_strength=relative_ipadapter_strength,
+        relative_ipadapter_influence=relative_ipadapter_influence,
+        soft_scaled_cn_weights_multiplier=soft_scaled_cn_weights_multipler,
         type_of_cn_strength_distribution=type_of_cn_strength_distribution,
         linear_cn_strength_value=str(linear_cn_strength_value),
         dynamic_cn_strength_values=str(dynamic_cn_strength_values),
         type_of_frame_distribution=type_of_frame_distribution,
-        linear_frames_per_keyframe=linear_frame_distribution_value,
-        dynamic_frames_per_keyframe=dynamic_frame_distribution_values,
+        linear_frame_distribution_value=linear_frame_distribution_value,
+        dynamic_frame_distribution_values=dynamic_frame_distribution_values,
         type_of_key_frame_influence=type_of_key_frame_influence,
-        linear_key_frame_influence_value=int(linear_key_frame_influence_value),
-        dynamic_key_frame_influence_value=dynamic_key_frame_influence_values,
+        linear_key_frame_influence_value=float(linear_key_frame_influence_value),
+        dynamic_key_frame_influence_values=dynamic_key_frame_influence_values,
         normalise_speed=normalise_speed,
         animation_style=AnimationStyleType.CREATIVE_INTERPOLATION.value
     )
@@ -396,7 +398,7 @@ def prepare_workflow_json(shot_uuid, settings):
         if timing.primary_image and timing.primary_image.location:
             b = timing.primary_image.inference_params
         prompt = b['prompt'] if b else ""
-        frame_prompt = f'"{idx * settings["linear_frames_per_keyframe"]}":"{prompt}"' + ("," if idx != len(shot.timing_list) - 1 else "")
+        frame_prompt = f'"{idx * settings["linear_frame_distribution_value"]}":"{prompt}"' + ("," if idx != len(shot.timing_list) - 1 else "")
         positive_prompt +=  frame_prompt
 
     settings['image_prompt_list'] = positive_prompt
@@ -446,28 +448,29 @@ def create_workflow_json(image_locations, settings):
     image_prompt_list = settings['image_prompt_list']
     negative_prompt = settings['negative_prompt']
     type_of_frame_distribution = settings['type_of_frame_distribution']
-    linear_frames_per_keyframe = settings['linear_frames_per_keyframe']
-    dynamic_frames_per_keyframe = settings['dynamic_frames_per_keyframe']
+    linear_frame_distribution_value = settings['linear_frame_distribution_value']
+    dynamic_frame_distribution_values = settings['dynamic_frame_distribution_values']
     type_of_key_frame_influence = settings['type_of_key_frame_influence']
     linear_key_frame_influence_value = settings['linear_key_frame_influence_value']
-    dynamic_key_frame_influence_values = settings['dynamic_key_frame_influence_value']
+    dynamic_key_frame_influence_values = settings['dynamic_key_frame_influence_values']
     type_of_cn_strength_distribution=settings['type_of_cn_strength_distribution']
     linear_cn_strength_value=settings['linear_cn_strength_value']
     buffer = settings['buffer']
     dynamic_cn_strength_values = settings['dynamic_cn_strength_values']
     interpolation_type = settings['interpolation_type']
     ckpt = settings['ckpt']
-    motion_scale = settings['motion_scale']
-    ip_adapter_model_weight = settings['ip_adapter_model_weight']
+    motion_scale = settings['motion_scale']    
+    relative_ipadapter_strength = settings['relative_ipadapter_strength']
+    relative_ipadapter_influence = settings['relative_ipadapter_influence']
     image_dimension = settings['image_dimension']
     output_format = settings['output_format']
-    soft_scaled_cn_multiplier = settings['soft_scaled_cn_multiplier']
+    soft_scaled_cn_weights_multiplier = settings['soft_scaled_cn_weights_multiplier']
     stmfnet_multiplier = settings['stmfnet_multiplier']
 
     if settings['type_of_frame_distribution'] == 'linear':
-        batch_size = (len(image_locations) - 1) * settings['linear_frames_per_keyframe'] + int(buffer)
+        batch_size = (len(image_locations) - 1) * settings['linear_frame_distribution_value'] + int(buffer)
     else:
-        batch_size = int(settings['dynamic_frames_per_keyframe'].split(',')[-1]) + int(buffer)
+        batch_size = int(settings['dynamic_frame_distribution_values'].split(',')[-1]) + int(buffer)
 
     img_width, img_height = image_dimension.split("x")
         
@@ -491,8 +494,8 @@ def create_workflow_json(image_locations, settings):
 
         elif node['id'] == 365:
             node['widgets_values'][1] = type_of_frame_distribution
-            node['widgets_values'][2] = linear_frames_per_keyframe
-            node['widgets_values'][3] = dynamic_frames_per_keyframe
+            node['widgets_values'][2] = linear_frame_distribution_value
+            node['widgets_values'][3] = dynamic_frame_distribution_values
             node['widgets_values'][4] = type_of_key_frame_influence
             node['widgets_values'][5] = linear_key_frame_influence_value
             node['widgets_values'][6] = dynamic_key_frame_influence_values
@@ -501,7 +504,7 @@ def create_workflow_json(image_locations, settings):
             node['widgets_values'][9] = dynamic_cn_strength_values
             node['widgets_values'][-1] = buffer
             node['widgets_values'][-2] = interpolation_type
-            node['widgets_values'][-3] = soft_scaled_cn_multiplier
+            node['widgets_values'][-3] = soft_scaled_cn_weights_multiplier
 
         elif node['id'] == 292:
             node['widgets_values'][-2] = stmfnet_multiplier
@@ -526,10 +529,13 @@ def update_interpolation_settings(values=None, timing_list=None):
         'length_of_key_frame_influence': 1.0,
         'type_of_cn_strength_distribution': 0,
         'linear_cn_strength_value': (0.0,0.7),
+        'linear_frame_distribution_value': 16,
+        'linear_key_frame_influence_value': 1.0,
         'interpolation_style': 0,
         'motion_scale': 1.0,            
-        'negative_prompt_video': 'bad image, worst quality',
-        'ip_adapter_weight_video': 0.66,
+        'negative_prompt_video': 'bad image, worst quality',        
+        'ip_adapter_strength': 1.0,
+        'ip_adapter_influence': 1.0,
         'soft_scaled_cn_weights_multiple_video': 0.85
     }
 

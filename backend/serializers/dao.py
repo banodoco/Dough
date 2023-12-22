@@ -80,7 +80,7 @@ class CreateTimingDao(serializers.Serializer):
     mask_id = serializers.CharField(max_length=100, required=False)
     canny_image_id = serializers.CharField(max_length=100, required=False)
     shot_id = serializers.CharField(max_length=100)
-    primary_image = serializers.CharField(max_length=100, required=False)
+    primary_image_id = serializers.CharField(max_length=100, required=False)
     alternative_images = serializers.CharField(max_length=100, required=False)
     notes = serializers.CharField(max_length=1024, required=False)
     aux_frame_index = serializers.IntegerField(required=False)
