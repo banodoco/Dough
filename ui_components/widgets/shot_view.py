@@ -238,14 +238,11 @@ def shot_video_element(shot_uuid):
     with switch2:
         shot_animation_button(shot)
 
-
     with st.expander("Details", expanded=False):
-
         move_shot_buttons(shot, "side")
-
         delete_shot_button(shot.uuid)
-
-        create_video_download_button(shot.main_clip.location)
+        if shot.main_clip:
+            create_video_download_button(shot.main_clip.location)
 
 
 
