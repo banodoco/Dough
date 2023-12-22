@@ -242,11 +242,11 @@ def shot_video_element(shot_uuid):
         move_shot_buttons(shot, "side")
         delete_shot_button(shot.uuid)
         if shot.main_clip:
-            create_video_download_button(shot.main_clip.location)
+            create_video_download_button(shot.main_clip.location, tag="main_clip")
 
 
 
-def create_video_download_button(video_location):
+def create_video_download_button(video_location, tag="temp"):
     # Extract the file name from the video location
     file_name = os.path.basename(video_location)
 
@@ -257,7 +257,7 @@ def create_video_download_button(video_location):
             data=response.content,
             file_name=file_name,
             mime='video/mp4',
-            key=file_name,
+            key=tag + str(file_name),
             use_container_width=True
         )
     else:  # local file
@@ -267,7 +267,7 @@ def create_video_download_button(video_location):
                 data=file,
                 file_name=file_name,
                 mime='video/mp4',
-                key=file_name,
+                key=tag + str(file_name),
                 use_container_width=True
             )
 def shot_adjustment_button(shot):
