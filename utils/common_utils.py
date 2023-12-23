@@ -15,7 +15,7 @@ from ui_components.constants import CreativeProcessType, DefaultProjectSettingPa
 def set_default_values(timing_list, shot_uuid, data_repo):
 
     if "page" not in st.session_state:
-        st.session_state['strength'] 
+        st.session_state['page'] = "Explore"
 
     if "strength" not in st.session_state:
         st.session_state['strength'] = DefaultProjectSettingParams.batch_strength
@@ -36,8 +36,6 @@ def set_default_values(timing_list, shot_uuid, data_repo):
         st.session_state['frame_styling_view_type'] = "Generate"
         st.session_state['frame_styling_view_type_index'] = 0
 
-    if st.session_state['change_view_type'] == True:  
-        st.session_state['change_view_type'] = False
 
     if "explorer_view" not in st.session_state:
         st.session_state['explorer_view'] = "Explorations"
