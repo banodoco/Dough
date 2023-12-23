@@ -136,21 +136,13 @@ def setup_app_ui():
                                                                     "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "red"}})
 
             if st.session_state["main_view_type"] == "Creative Process":
-
-                data_repo = DataRepo()
-                shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
-                timing_list = data_repo.get_timing_list_from_shot(st.session_state["shot_uuid"])
-                project_settings = data_repo.get_project_setting(shot.project.uuid)
-                set_default_values(timing_list,shot.uuid, data_repo)
+                set_default_values(st.session_state["shot_uuid"])
 
                 with st.sidebar:
-
                     creative_process_pages = ["Explore", "Shortlist", "Timeline", "Adjust Shot", "Adjust Frame", "Animate Shot"]
-                    
                     if 'creative_process_manual_select' not in st.session_state:
                         st.session_state['creative_process_manual_select'] = 0
                         st.session_state['page'] = creative_process_pages[0]
-                        
 
                     h1,h2 = st.columns([1.5,1])
                     with h1:
@@ -179,27 +171,22 @@ def setup_app_ui():
                     shortlist_page(st.session_state["project_uuid"])
 
                 elif st.session_state['page'] == "Timeline":
-                    timeline_view_page(st.session_state["shot_uuid"],h2,data_repo,shot,timing_list, project_settings)
+                    timeline_view_page(st.session_state["shot_uuid"], h2)
 
                 elif st.session_state['page'] == "Adjust Frame":                                            
-                    frame_styling_page(st.session_state["shot_uuid"],h2,data_repo,shot,timing_list, project_settings)
+                    frame_styling_page(st.session_state["shot_uuid"], h2)
 
                 elif st.session_state['page'] == "Adjust Shot":
-                    adjust_shot_page(st.session_state["shot_uuid"], h2,data_repo,shot,timing_list, project_settings)
+                    adjust_shot_page(st.session_state["shot_uuid"], h2)
                 
                 elif st.session_state['page'] == "Animate Shot":
-                    animate_shot_page(st.session_state["shot_uuid"],h2,data_repo,shot,timing_list, project_settings)
+                    animate_shot_page(st.session_state["shot_uuid"], h2)
 
                 with st.sidebar:
-
                     with st.expander("🔍 Generation Log", expanded=True):
                         if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
                             sidebar_logger(st.session_state["shot_uuid"])
                     st.markdown("***")
-
-
-                
-            # frame_styling_page(st.session_state["shot_uuid"])
 
             elif st.session_state["main_view_type"] == "Tools & Settings":
                 with st.sidebar:

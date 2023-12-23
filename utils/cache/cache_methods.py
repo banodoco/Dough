@@ -593,6 +593,13 @@ def cache_data(cls):
         
         original_func = getattr(cls, '_original_get_shot_from_uuid')
         shot = original_func(self, *args, **kwargs)
+
+        if shot and not (shot_list and len(shot_list)):
+            original_func = getattr(cls, '_original_get_shot_list')
+            shot_list = original_func(self, shot.project.uuid)
+            if shot_list:
+                StCache.delete_all(CacheKey.SHOT.value)
+                StCache.add_all(shot_list, CacheKey.SHOT.value)
         
         return shot
 

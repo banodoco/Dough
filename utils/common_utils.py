@@ -10,9 +10,11 @@ from shared.constants import SERVER, ServerType
 from ui_components.models import InternalUserObject
 from utils.cache.cache import StCache
 from utils.data_repo.data_repo import DataRepo
-from ui_components.constants import CreativeProcessType, DefaultProjectSettingParams, DefaultTimingStyleParams
+from ui_components.constants import DefaultProjectSettingParams
 
-def set_default_values(timing_list, shot_uuid, data_repo):
+def set_default_values(shot_uuid):
+    data_repo = DataRepo()
+    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
 
     if "page" not in st.session_state:
         st.session_state['page'] = "Explore"
@@ -28,14 +30,13 @@ def set_default_values(timing_list, shot_uuid, data_repo):
         st.session_state['transformation_stage'] = DefaultProjectSettingParams.batch_transformation_stage
         
     if "current_frame_uuid" not in st.session_state and len(timing_list) > 0:
-        timing = data_repo.get_timing_list_from_shot(shot_uuid)[0]
+        timing = timing_list[0]
         st.session_state['current_frame_uuid'] = timing.uuid
         st.session_state['current_frame_index'] = timing.aux_frame_index + 1
     
     if 'frame_styling_view_type' not in st.session_state:
         st.session_state['frame_styling_view_type'] = "Generate"
         st.session_state['frame_styling_view_type_index'] = 0
-
 
     if "explorer_view" not in st.session_state:
         st.session_state['explorer_view'] = "Explorations"
@@ -48,6 +49,7 @@ def set_default_values(timing_list, shot_uuid, data_repo):
     if "styling_view" not in st.session_state:
         st.session_state['styling_view'] = "Generate"
         st.session_state['styling_view_index'] = 0
+
 
 def copy_sample_assets(project_uuid):
     import shutil
