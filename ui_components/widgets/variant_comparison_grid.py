@@ -29,13 +29,13 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         variants = shot.interpolated_clip_list
         timing_list = data_repo.get_timing_list_from_shot(shot.uuid)
     else:
-        timing_uuid = ele_uuid
+        timing_uuid = ele_uuid        
         timing = data_repo.get_timing_from_uuid(timing_uuid)
         variants = timing.alternative_images_list
         shot_uuid = timing.shot.uuid
         timing_list =""
 
-    st.markdown("***")
+    
 
     col1, col2, col3 = st.columns([1, 1,0.5])
     items_to_show = col2.slider('Variants per page:', min_value=1, max_value=12, value=6)
@@ -112,23 +112,6 @@ def variant_inference_detail_element(variant, stage, shot_uuid, timing_list="", 
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
 
-    st.markdown(f"Details:")
-    inf_data = fetch_inference_data(variant)
-    if 'image_prompt_list' in inf_data:
-        del inf_data['image_prompt_list']
-        del inf_data['image_list']
-        del inf_data['output_format']
-    
-    st.write(inf_data)
-
-    if stage != CreativeProcessType.MOTION.value:
-        h1, h2 = st.columns([1, 1])
-        with h1:
-            st.markdown(f"Add to shortlist:")
-            add_variant_to_shortlist_element(variant, shot.project.uuid)
-        with h2:
-            add_variant_to_shot_element(variant, shot.project.uuid)
-
     if stage == CreativeProcessType.MOTION.value:
         if st.button("Load up settings from this variant", key=f"{tag}_{variant.name}", help="This will enter the settings from this variant into the inputs below - you can also use them on other shots", use_container_width=True):
             print("Loading settings")
@@ -146,6 +129,25 @@ def variant_inference_detail_element(variant, stage, shot_uuid, timing_list="", 
             st.success("Video synced")
             time.sleep(0.3)
             st.rerun()
+
+    st.markdown(f"Details:")
+    inf_data = fetch_inference_data(variant)
+    if 'image_prompt_list' in inf_data:
+        del inf_data['image_prompt_list']
+        del inf_data['image_list']
+        del inf_data['output_format']
+    
+    st.write(inf_data)
+
+    if stage != CreativeProcessType.MOTION.value:
+        h1, h2 = st.columns([1, 1])
+        with h1:
+            st.markdown(f"Add to shortlist:")
+            add_variant_to_shortlist_element(variant, shot.project.uuid)
+        with h2:
+            add_variant_to_shot_element(variant, shot.project.uuid)
+
+
 
 
 def prepare_values(inf_data, timing_list):

@@ -10,6 +10,46 @@ from shared.constants import SERVER, ServerType
 from ui_components.models import InternalUserObject
 from utils.cache.cache import StCache
 from utils.data_repo.data_repo import DataRepo
+from ui_components.constants import CreativeProcessType, DefaultProjectSettingParams, DefaultTimingStyleParams
+
+def set_default_values(timing_list, shot_uuid, data_repo):
+
+    if "page" not in st.session_state:
+        st.session_state['strength'] 
+
+    if "strength" not in st.session_state:
+        st.session_state['strength'] = DefaultProjectSettingParams.batch_strength
+        st.session_state['prompt_value'] = DefaultProjectSettingParams.batch_prompt
+        st.session_state['model'] = None
+        st.session_state['negative_prompt_value'] = DefaultProjectSettingParams.batch_negative_prompt
+        st.session_state['guidance_scale'] = DefaultProjectSettingParams.batch_guidance_scale
+        st.session_state['seed'] = DefaultProjectSettingParams.batch_seed
+        st.session_state['num_inference_steps'] = DefaultProjectSettingParams.batch_num_inference_steps
+        st.session_state['transformation_stage'] = DefaultProjectSettingParams.batch_transformation_stage
+        
+    if "current_frame_uuid" not in st.session_state and len(timing_list) > 0:
+        timing = data_repo.get_timing_list_from_shot(shot_uuid)[0]
+        st.session_state['current_frame_uuid'] = timing.uuid
+        st.session_state['current_frame_index'] = timing.aux_frame_index + 1
+    
+    if 'frame_styling_view_type' not in st.session_state:
+        st.session_state['frame_styling_view_type'] = "Generate"
+        st.session_state['frame_styling_view_type_index'] = 0
+
+    if st.session_state['change_view_type'] == True:  
+        st.session_state['change_view_type'] = False
+
+    if "explorer_view" not in st.session_state:
+        st.session_state['explorer_view'] = "Explorations"
+        st.session_state['explorer_view_index'] = 0
+
+    if "shot_view" not in st.session_state:
+        st.session_state['shot_view'] = "Animate Frames"
+        st.session_state['shot_view_index'] = 0
+    
+    if "styling_view" not in st.session_state:
+        st.session_state['styling_view'] = "Generate"
+        st.session_state['styling_view_index'] = 0
 
 def copy_sample_assets(project_uuid):
     import shutil
