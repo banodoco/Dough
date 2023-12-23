@@ -29,13 +29,13 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         variants = shot.interpolated_clip_list
         timing_list = data_repo.get_timing_list_from_shot(shot.uuid)
     else:
-        timing_uuid = ele_uuid
+        timing_uuid = ele_uuid        
         timing = data_repo.get_timing_from_uuid(timing_uuid)
         variants = timing.alternative_images_list
         shot_uuid = timing.shot.uuid
         timing_list =""
 
-    st.markdown("***")
+    
 
     col1, col2, col3 = st.columns([1, 1,0.5])
     items_to_show = col2.slider('Variants per page:', min_value=1, max_value=12, value=6)
