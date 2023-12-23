@@ -99,11 +99,11 @@ def animation_style_element(shot_uuid):
                     st.session_state[f"frame_{idx+1}"] = idx * 16  # Default values in increments of 16
                 if idx == 0:  # For the first frame, position is locked to 0
                     with columns[idx]:
-                        frame_position = st_memory.number_input(f"{idx+1} frame Position", min_value=0, max_value=0, value=0, step=1, key=f"dynamic_frame_distribution_values_{idx+1}", disabled=True)
+                        frame_position = st_memory.number_input(f"{idx+1} frame Position", min_value=0, max_value=0, value=0, step=1, key=f"dynamic_frame_distribution_values_{idx}", disabled=True)
                 else:                        
                     min_value = st.session_state[f"frame_{idx}"] + 1
                     with columns[idx]:
-                        frame_position = st_memory.number_input(f"#{idx+1} position:", min_value=min_value, value=st.session_state[f"frame_{idx+1}"], step=1, key=f"dynamic_frame_distribution_values_{idx+1}")
+                        frame_position = st_memory.number_input(f"#{idx+1} position:", min_value=min_value, value=st.session_state[f"frame_{idx+1}"], step=1, key=f"dynamic_frame_distribution_values_{idx}")
                 # st.session_state[f"frame_{idx+1}"] = frame_position
                 dynamic_frame_distribution_values.append(frame_position)
 
@@ -546,3 +546,4 @@ def update_interpolation_settings(values=None, timing_list=None):
 
     for key, default_value in default_values.items():
         st.session_state[key] = values.get(key, default_value) if values and values.get(key) is not None else default_value
+        # print(f"{key}: {st.session_state[key]}")
