@@ -2,6 +2,7 @@ import streamlit as st
 import os
 from moviepy.editor import *
 from shared.constants import SERVER, ServerType
+from ui_components.components.query_logger_page import query_logger_page
 # from ui_components.components.explorer_page import explorer_element,shortlist_element
 from ui_components.widgets.timeline_view import timeline_view
 from ui_components.widgets.sidebar_logger import sidebar_logger
@@ -199,7 +200,7 @@ def setup_app_ui():
                     st.session_state['page'] = option_menu(None, tool_pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
                                                             "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "green"}}, manual_select=st.session_state["manual_select"])
                 if st.session_state["page"] == "Query Logger":
-                    st.info("Query Logger will appear here.")
+                    query_logger_page()
                 if st.session_state["page"] == "Custom Models":
                     custom_models_page(st.session_state["project_uuid"])                
                 elif st.session_state["page"] == "Project Settings":
