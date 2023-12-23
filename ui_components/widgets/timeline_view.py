@@ -5,7 +5,7 @@ from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
 
 
-def timeline_view(shot_uuid, stage, show_frame_upload=True):
+def timeline_view(shot_uuid, stage):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     shot_list = data_repo.get_shot_list(shot.project.uuid)
@@ -34,11 +34,11 @@ def timeline_view(shot_uuid, stage, show_frame_upload=True):
                 shot_video_element(shot.uuid)
             if (idx + 1) % items_per_row == 0 or idx == len(shot_list) - 1:
                 st.markdown("***")
-            if show_frame_upload == True:
-                if idx == len(shot_list) - 1:
-                    with grid[(idx + 1) % items_per_row]:
-                        st.markdown("### Add new shot")
-                        add_new_shot_element(shot, data_repo)
+            # if stage isn't 
+            if idx == len(shot_list) - 1:
+                with grid[(idx + 1) % items_per_row]:
+                    st.markdown("### Add new shot")
+                    add_new_shot_element(shot, data_repo)
 
         
 

@@ -108,7 +108,7 @@ def sidebar_logger(shot_uuid):
                                 st.session_state['main_view_type'] = "Creative Process"
                                 st.session_state['frame_styling_view_type_index'] = 0
                                 st.session_state['frame_styling_view_type'] = "Explorer"
-                                st.session_state['change_view_type'] = False
+                                
                                 st.rerun()
                 
                 

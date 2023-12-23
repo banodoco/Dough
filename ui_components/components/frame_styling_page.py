@@ -31,7 +31,7 @@ def frame_styling_page(shot_uuid: str, h2,data_repo,shot,timing_list, project_se
         
         st.markdown("#### There are no frames present in this shot yet.")
         
-
+        
 
     
     else:
