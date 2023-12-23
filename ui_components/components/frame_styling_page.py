@@ -25,38 +25,46 @@ from utils.data_repo.data_repo import DataRepo
 
 def frame_styling_page(shot_uuid: str, h2,data_repo,shot,timing_list, project_settings):
 
-    
-
-    with st.sidebar:     
-        with h2:
-
+    if len(timing_list) == 0:
+        with h2:         
             frame_selector_widget(show=['shot_selector','frame_selector'])
-                                        
-            st.session_state['styling_view'] = st_memory.menu('',\
-                                    ["Generate", "Crop/Move", "Inpainting","Scribbling"], \
-                                        icons=['magic', 'crop', "paint-bucket", 'pencil'], \
-                                            menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), \
-                                                key="styling_view_selector", orientation="horizontal", \
-                                                    styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}})
-
-    st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['frame_styling_view_type']}] > :orange[{st.session_state['styling_view']}] > :blue[{shot.name} - #{st.session_state['current_frame_index']}]")
-
         
-    if st.session_state['styling_view'] == "Generate":
-        variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
-        with st.expander("🛠️ Generate Variants + Prompt Settings", expanded=True):
-            generate_images_element(position='individual', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
-                                        
-    elif st.session_state['styling_view'] == "Crop/Move":
-        with st.expander("🤏 Crop, Move & Rotate", expanded=True):                    
-            cropping_selector_element(shot_uuid)
-
-    elif st.session_state['styling_view'] == "Inpainting":
-        with st.expander("🌌 Inpainting", expanded=True):
-            inpainting_element(st.session_state['current_frame_uuid'])
-
-    elif st.session_state['styling_view'] == "Scribbling":
-        with st.expander("📝 Draw On Image", expanded=True):
-            drawing_element(timing_list,project_settings, shot_uuid)
-
+        st.markdown("#### There are no frames present in this shot yet.")
         
+
+
+    
+    else:
+        with st.sidebar:     
+            with h2:
+
+                frame_selector_widget(show=['shot_selector','frame_selector'])
+                                            
+                st.session_state['styling_view'] = st_memory.menu('',\
+                                        ["Generate", "Crop/Move", "Inpainting","Scribbling"], \
+                                            icons=['magic', 'crop', "paint-bucket", 'pencil'], \
+                                                menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), \
+                                                    key="styling_view_selector", orientation="horizontal", \
+                                                        styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}})
+
+        st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['frame_styling_view_type']}] > :orange[{st.session_state['styling_view']}] > :blue[{shot.name} - #{st.session_state['current_frame_index']}]")
+
+            
+        if st.session_state['styling_view'] == "Generate":
+            variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
+            with st.expander("🛠️ Generate Variants + Prompt Settings", expanded=True):
+                generate_images_element(position='individual', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
+                                            
+        elif st.session_state['styling_view'] == "Crop/Move":
+            with st.expander("🤏 Crop, Move & Rotate", expanded=True):                    
+                cropping_selector_element(shot_uuid)
+
+        elif st.session_state['styling_view'] == "Inpainting":
+            with st.expander("🌌 Inpainting", expanded=True):
+                inpainting_element(st.session_state['current_frame_uuid'])
+
+        elif st.session_state['styling_view'] == "Scribbling":
+            with st.expander("📝 Draw On Image", expanded=True):
+                drawing_element(timing_list,project_settings, shot_uuid)
+
+            
