@@ -93,7 +93,6 @@ def frame_view():
                 st.markdown("---")
 
                 delete_frame_button(st.session_state['current_frame_uuid'])
-
                 
 
     else:

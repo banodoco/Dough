@@ -3,7 +3,7 @@ from shared.constants import ViewType
 from streamlit_option_menu import option_menu
 
 from ui_components.widgets.cropping_element import cropping_selector_element
-from ui_components.widgets.frame_selector import frame_selector_widget
+from ui_components.widgets.frame_selector import frame_selector_widget, frame_view
 from ui_components.widgets.add_key_frame_element import add_key_frame, add_key_frame_element
 from ui_components.widgets.timeline_view import timeline_view
 from ui_components.components.explorer_page import generate_images_element
@@ -46,6 +46,8 @@ def frame_styling_page(shot_uuid: str, h2,data_repo,shot,timing_list, project_se
                                                 menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), \
                                                     key="styling_view_selector", orientation="horizontal", \
                                                         styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}})
+              
+            frame_view()
 
         st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['frame_styling_view_type']}] > :orange[{st.session_state['styling_view']}] > :blue[{shot.name} - #{st.session_state['current_frame_index']}]")
 
