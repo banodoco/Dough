@@ -11,6 +11,11 @@ class CacheKey(ExtendedEnum):
     LOGGED_USER = "logged_user"
     FILE = "file"
     SHOT = "shot"
+    # temp items (only cached for speed boost)
+    LOG = 'log'
+    LOG_PAGES = 'log_pages'
+    PROJECT = 'project'
+    USER = 'user'
 
 
 class StCache:

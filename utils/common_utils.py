@@ -8,7 +8,7 @@ import streamlit as st
 import json
 from shared.constants import SERVER, ServerType
 from ui_components.models import InternalUserObject
-from utils.cache.cache import StCache
+from utils.cache.cache import CacheKey, StCache
 from utils.data_repo.data_repo import DataRepo
 from ui_components.constants import DefaultProjectSettingParams
 
@@ -171,7 +171,8 @@ def reset_project_state():
         "seed",
         "promote_new_generation",
         "use_new_settings",
-        "shot_uuid"
+        "shot_uuid",
+        "maintain_state"
     ]
 
     for k in keys_to_delete:
@@ -242,3 +243,8 @@ def release_lock(key):
     data_repo = DataRepo()
     data_repo.release_lock(key)
     return True
+
+
+def refresh_app(maintain_state=False):
+    st.session_state['maintain_state'] = maintain_state
+    st.rerun()

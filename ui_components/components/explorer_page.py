@@ -4,6 +4,7 @@ from ui_components.methods.common_methods import process_inference_output,add_ne
 from ui_components.methods.file_methods import generate_pil_image
 from ui_components.methods.ml_methods import query_llama2
 from ui_components.widgets.add_key_frame_element import add_key_frame
+from utils.common_utils import refresh_app
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import QUEUE_INFERENCE_QUERIES, AIModelType, InferenceType, InternalFileTag, InternalFileType, SortOrder
@@ -326,7 +327,8 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                     st.success("Added To Shortlist")
                                     time.sleep(0.3)
                                     st.rerun()
-                                                
+
+                        # -------- inference details --------------          
                         if gallery_image_list[i + j].inference_log:
                             log = gallery_image_list[i + j].inference_log # data_repo.get_inference_log_from_uuid(gallery_image_list[i + j].inference_log.uuid)
                             if log:
@@ -337,38 +339,40 @@ def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_de
                                     with st.expander("Prompt Details", expanded=open_detailed_view_for_all):
                                         st.info(f"**Prompt:** {prompt}\n\n**Model:** {model}")
                                 
-                                if "last_shot_number" not in st.session_state:
-                                    st.session_state["last_shot_number"] = 0
-                                if view not in ["explorer", "shortlist"]:
-                                    if view == "individual_shot":
-                                        shot_name = shot.name
-                                    else:
-                                        shot_name = st.selectbox('Add to shot:', shot_names, key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}",index=st.session_state["last_shot_number"])
-                                    
-                                    if shot_name != "":
-                                        if shot_name == "**Create New Shot**":
-                                            shot_name = st.text_input("New shot name:", max_chars=40, key=f"shot_name_{gallery_image_list[i+j].uuid}")
-                                            if st.button("Create new shot", key=f"create_new_{gallery_image_list[i + j].uuid}", use_container_width=True):
-                                                new_shot = add_new_shot(project_uuid, name=shot_name)
-                                                add_key_frame(gallery_image_list[i + j], False, new_shot.uuid, len(data_repo.get_timing_list_from_shot(new_shot.uuid)), refresh_state=False)
-                                                # removing this from the gallery view
-                                                data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                                st.rerun()
-                                            
-                                        else:
-                                            if st.button(f"Add to shot", key=f"add_{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
-                                                shot_number = shot_names.index(shot_name) + 1
-                                                st.session_state["last_shot_number"] = shot_number - 1
-                                                shot_uuid = shot_list[shot_number - 2].uuid
-
-                                                add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
-                                                # removing this from the gallery view
-                                                data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                                st.rerun()
                             else:
                                 st.warning("No inference data")
                         else:
                             st.warning("No data found")
+
+                        # ---------- add to shot btn ---------------
+                        if "last_shot_number" not in st.session_state:
+                            st.session_state["last_shot_number"] = 0
+                        if view not in ["explorer", "shortlist"]:
+                            if view == "individual_shot":
+                                shot_name = shot.name
+                            else:
+                                shot_name = st.selectbox('Add to shot:', shot_names, key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}",index=st.session_state["last_shot_number"])
+                            
+                            if shot_name != "":
+                                if shot_name == "**Create New Shot**":
+                                    shot_name = st.text_input("New shot name:", max_chars=40, key=f"shot_name_{gallery_image_list[i+j].uuid}")
+                                    if st.button("Create new shot", key=f"create_new_{gallery_image_list[i + j].uuid}", use_container_width=True):
+                                        new_shot = add_new_shot(project_uuid, name=shot_name)
+                                        add_key_frame(gallery_image_list[i + j], False, new_shot.uuid, len(data_repo.get_timing_list_from_shot(new_shot.uuid)), refresh_state=False)
+                                        # removing this from the gallery view
+                                        data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+                                        st.rerun()
+                                    
+                                else:
+                                    if st.button(f"Add to shot", key=f"add_{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
+                                        shot_number = shot_names.index(shot_name) + 1
+                                        st.session_state["last_shot_number"] = shot_number - 1
+                                        shot_uuid = shot_list[shot_number - 2].uuid
+
+                                        add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
+                                        # removing this from the gallery view
+                                        data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+                                        refresh_app(maintain_state=True)
                                                     
             st.markdown("***")
     else:

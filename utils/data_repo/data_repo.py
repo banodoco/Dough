@@ -7,7 +7,6 @@ from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalShotObject, InternalUserObject
 from utils.cache.cache_methods import cache_data
-import wrapt
 
 from utils.data_repo.api_repo import APIRepo
 

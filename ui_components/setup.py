@@ -99,7 +99,12 @@ def setup_app_ui():
             reset_project_state()
         
         st.session_state["project_uuid"] = project_list[selected_index].uuid
-        check_project_meta_data(st.session_state["project_uuid"])
+        if 'maintain_state' not in st.session_state:
+            st.session_state["maintain_state"] = False
+
+        if not st.session_state["maintain_state"]:
+            check_project_meta_data(st.session_state["project_uuid"])
+
         update_app_setting_keys()
 
         if 'shot_uuid' not in st.session_state:

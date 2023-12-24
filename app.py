@@ -94,6 +94,8 @@ def main():
         
         from ui_components.setup import setup_app_ui
         setup_app_ui()
+
+        st.session_state['maintain_state'] = False
                                                     
 if __name__ == '__main__':
     try:
