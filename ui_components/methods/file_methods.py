@@ -224,43 +224,47 @@ def load_from_env(key):
     val = get_key(dotenv_path=ENV_FILE_PATH, key_to_get=key)
     return val
 
+import zipfile
+import os
+import requests
+from PIL import Image
+from io import BytesIO
+
 def zip_images(image_locations, zip_filename='images.zip'):
+    # Calculate the number of digits needed for padding
+    num_digits = len(str(len(image_locations) - 1))
+
     with zipfile.ZipFile(zip_filename, 'w') as zip_file:
-        # Sort the image_locations list to ensure they are added in numerical order
-        image_locations.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
-
-        # Determine the number of digits to pad based on the highest number in the list
-        padding = len(str(len(image_locations)))
-
         for idx, image_location in enumerate(image_locations):
-            # Zero-padding the file index
-            image_name = f"{str(idx).zfill(padding)}.png"
+            # Pad the index with zeros
+            padded_idx = str(idx).zfill(num_digits)
+            image_name = f"{padded_idx}.png"
 
             if image_location.startswith('http'):
-                # Fetch the image over HTTP
                 response = requests.get(image_location)
                 image_data = response.content
-                # Convert to Image object to check and convert mode
-                img = Image.open(io.BytesIO(image_data))
-                if img.mode != 'RGB':
-                    img = img.convert('RGB')
-                # Save image data to zip using BytesIO
-                img_byte_arr = io.BytesIO()
-                img.save(img_byte_arr, format='PNG')
-                img_byte_arr = img_byte_arr.getvalue()
-                zip_file.writestr(image_name, img_byte_arr)
+
+                # Open the image for inspection and possible conversion
+                with Image.open(BytesIO(image_data)) as img:
+                    if img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    
+                    # Save the potentially converted image to a byte stream
+                    with BytesIO() as output:
+                        img.save(output, format='PNG')
+                        zip_file.writestr(image_name, output.getvalue())
             else:
-                # Open the image file to check and convert mode
+                # For local files, open, possibly convert, and then add to zip
                 with Image.open(image_location) as img:
                     if img.mode != 'RGB':
                         img = img.convert('RGB')
-                    # Save image to zip
-                    img_byte_arr = io.BytesIO()
-                    img.save(img_byte_arr, format='PNG')
-                    img_byte_arr.seek(0)
-                    zip_file.writestr(image_name, img_byte_arr.read())
+                    
+                    img.save(image_name, format='PNG')
+                    zip_file.write(image_name, image_name)
+                    os.remove(image_name)  # Clean up the temporary file
 
     return zip_filename
+
 
 
 def create_duplicate_file(file: InternalFileObject, project_uuid=None) -> InternalFileObject:
