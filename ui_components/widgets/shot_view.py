@@ -15,6 +15,7 @@ from streamlit_option_menu import option_menu
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from ui_components.widgets.add_key_frame_element import add_key_frame,add_key_frame_section
 from ui_components.widgets.frame_movement_widgets import change_frame_shot, delete_frame_button, jump_to_single_frame_view_button, move_frame_back_button, move_frame_forward_button, replace_image_widget
+from utils.common_utils import refresh_app
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
 
@@ -24,46 +25,42 @@ def shot_keyframe_element(shot_uuid, items_per_row, position="Timeline", **kwarg
     
     if "open_shot" not in st.session_state:
         st.session_state["open_shot"] = None
-
-    # st.markdown(f"### {shot.name}", expanded=True)
+    
 
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
-        
-        
+                
     if position == "Timeline":
 
-        header_col_0, header_col_1, header_col_2, header_col_3, header_col_4= st.columns([1.75,1,2,0.25,0.25])
-
-        
-    
+        header_col_0, header_col_1, header_col_2, header_col_3 = st.columns([2,1,1.5,1.5])
+            
         with header_col_0:
-            update_shot_name(shot.uuid)     
-            footer_col_1, footer_col_2, _ = st.columns([0.35,0.35,1])
-            with footer_col_1:      
-                shot_adjustment_button(shot)
-
-            with footer_col_2:                                
-                shot_animation_button(shot)
-                
-
-                
+            update_shot_name(shot.uuid)                 
+                           
         with header_col_1:   
             update_shot_duration(shot.uuid)
 
-    else:
-        header_col_1,_ = st.columns([3,4])
-        with header_col_1:
-            col2, col3, col4 = st.columns(3)
+        with header_col_2:
+            st.write("")
+            shot_adjustment_button(shot, show_label=True)
+        with header_col_3:           
+            st.write("")                     
+            shot_animation_button(shot, show_label=True)   
 
-            with col2:
-                delete_frames_toggle = st_memory.toggle("Delete Frames", value=True, key="delete_frames_toggle")
-                copy_frame_toggle = st_memory.toggle("Copy Frame", value=True, key="copy_frame_toggle")
-            with col3:
-                move_frames_toggle = st_memory.toggle("Move Frames", value=True, key="move_frames_toggle")
-                replace_image_widget_toggle = st_memory.toggle("Replace Image", value=False, key="replace_image_widget_toggle")
-                
-            with col4:
-                change_shot_toggle = st_memory.toggle("Change Shot", value=False, key="change_shot_toggle")
+    else:
+
+        col1, col2, col3, col4, col5, _ = st.columns([1,1,1,1,1,3])
+
+        with col1:
+            delete_frames_toggle = st_memory.toggle("Delete Frames", value=True, key="delete_frames_toggle")
+        with col2:
+            copy_frame_toggle = st_memory.toggle("Copy Frame", value=True, key="copy_frame_toggle")
+        with col3:
+            move_frames_toggle = st_memory.toggle("Move Frames", value=True, key="move_frames_toggle")
+        with col4:
+            replace_image_widget_toggle = st_memory.toggle("Replace Image", value=False, key="replace_image_widget_toggle")
+            
+        with col5:
+            change_shot_toggle = st_memory.toggle("Change Shot", value=False, key="change_shot_toggle")
 
     st.markdown("***")
 
@@ -75,9 +72,10 @@ def shot_keyframe_element(shot_uuid, items_per_row, position="Timeline", **kwarg
                 if idx <= len(timing_list):
                     with grid[j]:
                         if idx == len(timing_list):
-                            # if position != "Timeline":
-                            st.info("**Add new frame(s) to shot**")
-                            add_key_frame_section(shot_uuid, False)                           
+                            if position != "Timeline":
+
+                                st.info("**Add new frame(s) to shot**")
+                                add_key_frame_section(shot_uuid, False)                           
              
                         else:
                             timing = timing_list[idx]
@@ -187,7 +185,7 @@ def duplicate_shot_button(shot_uuid):
 def delete_shot_button(shot_uuid):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
-    confirm_delete = st.checkbox("This will delete all the frames & videos within",key=f"confirm_delete_{shot.uuid}") 
+    confirm_delete = st.checkbox("Confirm deletion",key=f"confirm_delete_{shot.uuid}") 
     help_text = "Check the box above to enable the delete button." if not confirm_delete else "This will this shot and all the frames and videos within."
     if st.button("Delete shot", disabled=(not confirm_delete), help=help_text, key=f"delete_btn_{shot.uuid}", use_container_width=True):
         if st.session_state['shot_uuid'] == str(shot.uuid):
@@ -239,6 +237,8 @@ def shot_video_element(shot_uuid):
         shot_animation_button(shot)
 
     with st.expander("Details", expanded=False):
+        update_shot_name(shot.uuid)    
+        update_shot_duration(shot.uuid)
         move_shot_buttons(shot, "side")
         delete_shot_button(shot.uuid)
         if shot.main_clip:
@@ -270,19 +270,21 @@ def create_video_download_button(video_location, tag="temp"):
                 key=tag + str(file_name),
                 use_container_width=True
             )
-def shot_adjustment_button(shot):
-    if st.button("🔧", key=f"jump_to_shot_adjustment_{shot.uuid}", help=f"Shot adjustment view for '{shot.name}'", use_container_width=True):
+def shot_adjustment_button(shot, show_label=False):
+    button_label = "Shot Adjustment 🔧" if show_label else "🔧"
+    if st.button(button_label, key=f"jump_to_shot_adjustment_{shot.uuid}", help=f"Shot adjustment view for '{shot.name}'", use_container_width=True):
         st.session_state["shot_uuid"] = shot.uuid
-        st.session_state["frame_styling_view_type_manual_select"] = 2
+        st.session_state['creative_process_manual_select'] = 3
         st.session_state["manual_select"] = 1          
         st.session_state['shot_view_manual_select'] = 1  
         st.session_state['shot_view_index'] = 1  
         st.rerun() 
 
-def shot_animation_button(shot):
-    if st.button("🎞️", key=f"jump_to_shot_animation_{shot.uuid}", help=f"Shot animation view for '{shot.name}'", use_container_width=True):
+def shot_animation_button(shot, show_label=False):
+    button_label = "Shot Animation 🎞️" if show_label else "🎞️"
+    if st.button(button_label, key=f"jump_to_shot_animation_{shot.uuid}", help=f"Shot animation view for '{shot.name}'", use_container_width=True):
         st.session_state["shot_uuid"] = shot.uuid
-        st.session_state["frame_styling_view_type_manual_select"] = 2
+        st.session_state['creative_process_manual_select'] = 5
         st.session_state["manual_select"] = 1       
         st.session_state['shot_view_manual_select'] = 0       
         st.session_state['shot_view_index'] = 0
@@ -311,7 +313,7 @@ def timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_fram
             if st.button("🔁", key=f"copy_frame_{timing_list[idx].uuid}", use_container_width=True):
                 pil_image = generate_pil_image(timing_list[idx].primary_image.location)
                 add_key_frame(pil_image, False, st.session_state['shot_uuid'], timing_list[idx].aux_frame_index+1, refresh_state=False)
-                st.rerun()
+                refresh_app(maintain_state=True)
 
     if delete_frames_toggle:
         with btn4:

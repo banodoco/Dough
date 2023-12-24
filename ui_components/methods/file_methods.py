@@ -224,19 +224,47 @@ def load_from_env(key):
     val = get_key(dotenv_path=ENV_FILE_PATH, key_to_get=key)
     return val
 
+import zipfile
+import os
+import requests
+from PIL import Image
+from io import BytesIO
+
 def zip_images(image_locations, zip_filename='images.zip'):
+    # Calculate the number of digits needed for padding
+    num_digits = len(str(len(image_locations) - 1))
+
     with zipfile.ZipFile(zip_filename, 'w') as zip_file:
         for idx, image_location in enumerate(image_locations):
-            # image_name = os.path.basename(image_location)
-            image_name = f"{idx}.png"
+            # Pad the index with zeros
+            padded_idx = str(idx).zfill(num_digits)
+            image_name = f"{padded_idx}.png"
+
             if image_location.startswith('http'):
                 response = requests.get(image_location)
                 image_data = response.content
-                zip_file.writestr(image_name, image_data)
+
+                # Open the image for inspection and possible conversion
+                with Image.open(BytesIO(image_data)) as img:
+                    if img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    
+                    # Save the potentially converted image to a byte stream
+                    with BytesIO() as output:
+                        img.save(output, format='PNG')
+                        zip_file.writestr(image_name, output.getvalue())
             else:
-                zip_file.write(image_location, image_name)
+                # For local files, open, possibly convert, and then add to zip
+                with Image.open(image_location) as img:
+                    if img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    
+                    img.save(image_name, format='PNG')
+                    zip_file.write(image_name, image_name)
+                    os.remove(image_name)  # Clean up the temporary file
 
     return zip_filename
+
 
 
 def create_duplicate_file(file: InternalFileObject, project_uuid=None) -> InternalFileObject:

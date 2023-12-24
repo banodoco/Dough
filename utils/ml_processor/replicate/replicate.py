@@ -193,7 +193,7 @@ class ReplicateProcessor(MachineLearningProcessor):
             input_image = open(input_image, "rb")
 
         start_time = time.time()
-        output = model.predict(mask=mask, image=input_image,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)    
+        output = model.predict(mask=mask, image=input_image,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25, strength=0.99)    
         end_time = time.time()
         log = log_model_inference(model, end_time - start_time, prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)
         self.update_usage_credits(end_time - start_time)

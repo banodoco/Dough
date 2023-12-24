@@ -40,7 +40,7 @@ def animation_style_element(shot_uuid):
             type_of_frame_distribution = st_memory.radio("Type of key frame distribution:", options=["Linear", "Dynamic"], key="type_of_frame_distribution").lower()                                    
         if type_of_frame_distribution == "linear":
             with setting_a_2:
-                linear_frame_distribution_value = st_memory.number_input("Frames per key frame:", min_value=8, max_value=36, value=16, step=1, key="frames_per_keyframe")
+                linear_frame_distribution_value = st_memory.number_input("Frames per key frame:", min_value=8, max_value=36, value=16, step=1, key="linear_frame_distribution_value")
                 dynamic_frame_distribution_values = []
         st.markdown("***")
         setting_b_1, setting_b_2 = st.columns([1, 1])
@@ -48,7 +48,7 @@ def animation_style_element(shot_uuid):
             type_of_key_frame_influence = st_memory.radio("Type of key frame length influence:", options=["Linear", "Dynamic"], key="type_of_key_frame_influence").lower()
         if type_of_key_frame_influence == "linear":
             with setting_b_2:
-                linear_key_frame_influence_value = st_memory.slider("Length of key frame influence:", min_value=0.1, max_value=5.0, value=1.0, step=0.01, key="length_of_key_frame_influence")
+                linear_key_frame_influence_value = st_memory.number_input("Length of key frame influence:", min_value=0.1, max_value=5.0, value=1.0, step=0.01, key="linear_key_frame_influence_value")
                 dynamic_key_frame_influence_values = []
         st.markdown("***")
 
@@ -99,11 +99,11 @@ def animation_style_element(shot_uuid):
                     st.session_state[f"frame_{idx+1}"] = idx * 16  # Default values in increments of 16
                 if idx == 0:  # For the first frame, position is locked to 0
                     with columns[idx]:
-                        frame_position = st_memory.number_input(f"{idx+1} frame Position", min_value=0, max_value=0, value=0, step=1, key=f"dynamic_frame_distribution_values_{idx+1}", disabled=True)
+                        frame_position = st_memory.number_input(f"{idx+1} frame Position", min_value=0, max_value=0, value=0, step=1, key=f"dynamic_frame_distribution_values_{idx}", disabled=True)
                 else:                        
                     min_value = st.session_state[f"frame_{idx}"] + 1
                     with columns[idx]:
-                        frame_position = st_memory.number_input(f"#{idx+1} position:", min_value=min_value, value=st.session_state[f"frame_{idx+1}"], step=1, key=f"dynamic_frame_distribution_values_{idx+1}")
+                        frame_position = st_memory.number_input(f"#{idx+1} position:", min_value=min_value, value=st.session_state[f"frame_{idx+1}"], step=1, key=f"dynamic_frame_distribution_values_{idx}")
                 # st.session_state[f"frame_{idx+1}"] = frame_position
                 dynamic_frame_distribution_values.append(frame_position)
 
@@ -540,9 +540,10 @@ def update_interpolation_settings(values=None, timing_list=None):
     }
 
     for idx in range(0, len(timing_list)):
-        default_values[f'dynamic_frame_distribution_values_{idx}'] = (idx - 1) * 16
+        default_values[f'dynamic_frame_distribution_values_{idx}'] = (idx ) * 16
         default_values[f'dynamic_key_frame_influence_values_{idx}'] = 1.0
         default_values[f'dynamic_cn_strength_values_{idx}'] = (0.0,0.7)
 
     for key, default_value in default_values.items():
         st.session_state[key] = values.get(key, default_value) if values and values.get(key) is not None else default_value
+        # print(f"{key}: {st.session_state[key]}")

@@ -7,6 +7,7 @@ from ui_components.models import InternalFileObject, InternalFrameTimingObject
 from ui_components.widgets.image_zoom_widgets import zoom_inputs
 
 from utils import st_memory
+from utils.common_utils import refresh_app
 
 from utils.data_repo.data_repo import DataRepo
 
@@ -119,4 +120,4 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
         st.session_state['section_index'] = 0
     
     if refresh_state:
-        st.rerun()
+        refresh_app(maintain_state=True)

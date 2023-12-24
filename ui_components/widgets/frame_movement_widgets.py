@@ -3,6 +3,7 @@ import streamlit as st
 from ui_components.constants import WorkflowStageType
 from ui_components.methods.common_methods import add_image_variant, promote_image_variant, save_and_promote_image
 from ui_components.models import InternalFrameTimingObject
+from utils.common_utils import refresh_app
 from utils.constants import ImageStage
 
 from utils.data_repo.data_repo import DataRepo
@@ -60,7 +61,7 @@ def move_frame_back_button(timing_uuid, orientation):
         arrow = "⬆️"        
     if st.button(arrow, key=f"move_frame_back_{timing_uuid}", help="Move frame back", use_container_width=True):
         move_frame(direction, timing_uuid)
-        st.rerun()
+        refresh_app(maintain_state=True)
 
 
 def move_frame_forward_button(timing_uuid, orientation):
@@ -72,7 +73,7 @@ def move_frame_forward_button(timing_uuid, orientation):
 
     if st.button(arrow, key=f"move_frame_forward_{timing_uuid}", help="Move frame forward", use_container_width=True):
         move_frame(direction, timing_uuid)
-        st.rerun()
+        refresh_app(maintain_state=True)
 
 
 def delete_frame_button(timing_uuid, show_label=False):
@@ -168,12 +169,11 @@ def jump_to_single_frame_view_button(display_number, timing_list, src,uuid=None)
     
     if st.button(f"Jump to #{display_number}", key=f"{src}_{uuid}", use_container_width=True):
         st.session_state['prev_frame_index'] = st.session_state['current_frame_index'] = display_number
-        st.session_state['current_frame_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].uuid
-        st.session_state['frame_styling_view_type'] = "Individual"
-        st.session_state['change_view_type'] = True
+        st.session_state['current_frame_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].uuid                
         st.session_state['frame_styling_view_type_manual_select'] = 2
         st.session_state['shot_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].shot.uuid
         st.session_state['prev_shot_index'] = st.session_state['current_shot_index'] = timing_list[st.session_state['current_frame_index'] - 1].shot.shot_idx
-        st.session_state["manual_select"] = 0
+        st.session_state["creative_process_manual_select"] = 4
+        st.session_state["styling_view_selector_manual_select"] = 0
         st.session_state['page'] = "Key Frames"
         st.rerun()

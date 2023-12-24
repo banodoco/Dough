@@ -9,8 +9,7 @@ def timeline_view(shot_uuid, stage):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     shot_list = data_repo.get_shot_list(shot.project.uuid)
-    
-    st.markdown("***")
+        
     
     _, header_col_2 = st.columns([5.5,1.5])
             
@@ -35,6 +34,7 @@ def timeline_view(shot_uuid, stage):
                 shot_video_element(shot.uuid)
             if (idx + 1) % items_per_row == 0 or idx == len(shot_list) - 1:
                 st.markdown("***")
+            # if stage isn't 
             if idx == len(shot_list) - 1:
                 with grid[(idx + 1) % items_per_row]:
                     st.markdown("### Add new shot")

@@ -1,30 +1,27 @@
 from io import BytesIO
 import uuid
-import json
 import time
 import requests
 import streamlit as st
 from PIL import Image
 from streamlit_drawable_canvas import st_canvas
-from ui_components.constants import WorkflowStageType
 from utils.data_repo.data_repo import DataRepo
 from ui_components.methods.common_methods import add_image_variant, extract_canny_lines, promote_image_variant
 from shared.constants import InternalFileType
 from ui_components.methods.file_methods import save_or_host_file
 
 
-from utils import st_memory
-
-
-def drawing_element(timing_details, project_settings, shot_uuid, stage=WorkflowStageType.STYLED.value):
+def drawing_element(shot_uuid):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     project_uuid = shot.project.uuid
+    project_settings = data_repo.get_project_setting(project_uuid)
+    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
     
     canvas1, canvas2 = st.columns([1, 1.5])
     timing = data_repo.get_timing_from_uuid(st.session_state['current_frame_uuid'])
 
-    image_path = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
+    image_path = timing_list[st.session_state['current_frame_index'] - 1].primary_image_location
     with canvas1:
         width = int(project_settings.width)
         height = int(project_settings.height)
@@ -90,7 +87,7 @@ def drawing_element(timing_details, project_settings, shot_uuid, stage=WorkflowS
             st.session_state['canny_image'] = None
 
         if st.button("Extract Canny From image"):
-            image_path = timing_details[st.session_state['current_frame_index'] - 1].primary_image_location
+            image_path = timing_list[st.session_state['current_frame_index'] - 1].primary_image_location
             canny_image = extract_canny_lines(
                     image_path, project_uuid, low_threshold, high_threshold)
             st.session_state['canny_image'] = canny_image.uuid
