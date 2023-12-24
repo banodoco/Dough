@@ -5,10 +5,13 @@ from ui_components.widgets.timeline_view import timeline_view
 from ui_components.components.explorer_page import gallery_image_view
 from streamlit_option_menu import option_menu
 from utils import st_memory
+from utils.data_repo.data_repo import DataRepo
 
-def timeline_view_page(shot_uuid: str, h2,data_repo,shot,timing_list, project_settings):
+def timeline_view_page(shot_uuid: str, h2):
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+
     with st.sidebar:
-        
         views = CreativeProcessType.value_list()
 
         if "view" not in st.session_state:

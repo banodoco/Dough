@@ -60,17 +60,17 @@ def frame_selector_widget(show: List[str]):
         else:
             st.error("No frames present")       
 
-def frame_view():
+def frame_view(view="Key Frame"):
     data_repo = DataRepo()
     # time1, time2 = st.columns([1,1])
     st.markdown("***")
 
     timing_list = data_repo.get_timing_list_from_shot(st.session_state["shot_uuid"])
     shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])    
-    if st.session_state['page'] == "Key Frames":
+    if view == "Key Frame":
 
         with st.expander(f"🖼️ Frame #{st.session_state['current_frame_index']} Details", expanded=True):
-            if st_memory.toggle("Open", value=True, key="frame_toggle"):
+            if st_memory.toggle("Open", value=True, key="frame_toggle"):                
                 a1, a2 = st.columns([3,2])
                 with a1:
                     st.success(f"Main Key Frame:")
@@ -93,7 +93,6 @@ def frame_view():
                 st.markdown("---")
 
                 delete_frame_button(st.session_state['current_frame_uuid'])
-
                 
 
     else:

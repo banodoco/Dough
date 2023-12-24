@@ -2,6 +2,7 @@ import streamlit as st
 import os
 from moviepy.editor import *
 from shared.constants import SERVER, ServerType
+from ui_components.components.query_logger_page import query_logger_page
 # from ui_components.components.explorer_page import explorer_element,shortlist_element
 from ui_components.widgets.timeline_view import timeline_view
 from ui_components.widgets.sidebar_logger import sidebar_logger
@@ -98,7 +99,12 @@ def setup_app_ui():
             reset_project_state()
         
         st.session_state["project_uuid"] = project_list[selected_index].uuid
-        check_project_meta_data(st.session_state["project_uuid"])
+        if 'maintain_state' not in st.session_state:
+            st.session_state["maintain_state"] = False
+
+        if not st.session_state["maintain_state"]:
+            check_project_meta_data(st.session_state["project_uuid"])
+
         update_app_setting_keys()
 
         if 'shot_uuid' not in st.session_state:
@@ -136,21 +142,13 @@ def setup_app_ui():
                                                                     "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "red"}})
 
             if st.session_state["main_view_type"] == "Creative Process":
-
-                data_repo = DataRepo()
-                shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
-                timing_list = data_repo.get_timing_list_from_shot(st.session_state["shot_uuid"])
-                project_settings = data_repo.get_project_setting(shot.project.uuid)
-                set_default_values(timing_list,shot.uuid, data_repo)
+                set_default_values(st.session_state["shot_uuid"])
 
                 with st.sidebar:
-
                     creative_process_pages = ["Explore", "Shortlist", "Timeline", "Adjust Shot", "Adjust Frame", "Animate Shot"]
-                    
                     if 'creative_process_manual_select' not in st.session_state:
                         st.session_state['creative_process_manual_select'] = 0
                         st.session_state['page'] = creative_process_pages[0]
-                        
 
                     h1,h2 = st.columns([1.5,1])
                     with h1:
@@ -179,27 +177,22 @@ def setup_app_ui():
                     shortlist_page(st.session_state["project_uuid"])
 
                 elif st.session_state['page'] == "Timeline":
-                    timeline_view_page(st.session_state["shot_uuid"],h2,data_repo,shot,timing_list, project_settings)
+                    timeline_view_page(st.session_state["shot_uuid"], h2)
 
                 elif st.session_state['page'] == "Adjust Frame":                                            
-                    frame_styling_page(st.session_state["shot_uuid"],h2,data_repo,shot,timing_list, project_settings)
+                    frame_styling_page(st.session_state["shot_uuid"], h2)
 
                 elif st.session_state['page'] == "Adjust Shot":
-                    adjust_shot_page(st.session_state["shot_uuid"], h2,data_repo,shot,timing_list, project_settings)
+                    adjust_shot_page(st.session_state["shot_uuid"], h2)
                 
                 elif st.session_state['page'] == "Animate Shot":
-                    animate_shot_page(st.session_state["shot_uuid"],h2,data_repo,shot,timing_list, project_settings)
+                    animate_shot_page(st.session_state["shot_uuid"], h2)
 
                 with st.sidebar:
-
                     with st.expander("🔍 Generation Log", expanded=True):
                         if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
                             sidebar_logger(st.session_state["shot_uuid"])
                     st.markdown("***")
-
-
-                
-            # frame_styling_page(st.session_state["shot_uuid"])
 
             elif st.session_state["main_view_type"] == "Tools & Settings":
                 with st.sidebar:
@@ -212,7 +205,7 @@ def setup_app_ui():
                     st.session_state['page'] = option_menu(None, tool_pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
                                                             "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "green"}}, manual_select=st.session_state["manual_select"])
                 if st.session_state["page"] == "Query Logger":
-                    st.info("Query Logger will appear here.")
+                    query_logger_page()
                 if st.session_state["page"] == "Custom Models":
                     custom_models_page(st.session_state["project_uuid"])                
                 elif st.session_state["page"] == "Project Settings":

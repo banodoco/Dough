@@ -2,18 +2,25 @@ import streamlit as st
 from ui_components.widgets.shot_view import shot_keyframe_element
 from ui_components.components.explorer_page import gallery_image_view
 from ui_components.components.explorer_page import generate_images_element
-from ui_components.widgets.frame_selector import frame_selector_widget
+from ui_components.widgets.frame_selector import frame_selector_widget, frame_view
 from utils import st_memory
+from utils.data_repo.data_repo import DataRepo
 
 
 
-def adjust_shot_page(shot_uuid: str, h2,data_repo,shot,timing_list, project_settings):
+def adjust_shot_page(shot_uuid: str, h2):
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+
     with h2:
         frame_selector_widget(show=['shot_selector'])
 
     st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}] > :orange[{shot.name}]")
 
     st.markdown("***")
+
+    with st.sidebar:
+        frame_view(view='Video')
 
     shot_keyframe_element(st.session_state["shot_uuid"], 4, position="Individual")
     # with st.expander("📋 Explorer Shortlist",expanded=True):

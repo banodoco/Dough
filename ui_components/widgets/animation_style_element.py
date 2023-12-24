@@ -40,7 +40,7 @@ def animation_style_element(shot_uuid):
             type_of_frame_distribution = st_memory.radio("Type of key frame distribution:", options=["Linear", "Dynamic"], key="type_of_frame_distribution").lower()                                    
         if type_of_frame_distribution == "linear":
             with setting_a_2:
-                linear_frame_distribution_value = st_memory.number_input("Frames per key frame:", min_value=8, max_value=36, value=16, step=1, key="frames_per_keyframe")
+                linear_frame_distribution_value = st_memory.number_input("Frames per key frame:", min_value=8, max_value=36, value=16, step=1, key="linear_frame_distribution_value")
                 dynamic_frame_distribution_values = []
         st.markdown("***")
         setting_b_1, setting_b_2 = st.columns([1, 1])
@@ -48,7 +48,7 @@ def animation_style_element(shot_uuid):
             type_of_key_frame_influence = st_memory.radio("Type of key frame length influence:", options=["Linear", "Dynamic"], key="type_of_key_frame_influence").lower()
         if type_of_key_frame_influence == "linear":
             with setting_b_2:
-                linear_key_frame_influence_value = st_memory.slider("Length of key frame influence:", min_value=0.1, max_value=5.0, value=1.0, step=0.01, key="length_of_key_frame_influence")
+                linear_key_frame_influence_value = st_memory.number_input("Length of key frame influence:", min_value=0.1, max_value=5.0, value=1.0, step=0.01, key="linear_key_frame_influence_value")
                 dynamic_key_frame_influence_values = []
         st.markdown("***")
 
@@ -540,7 +540,7 @@ def update_interpolation_settings(values=None, timing_list=None):
     }
 
     for idx in range(0, len(timing_list)):
-        default_values[f'dynamic_frame_distribution_values_{idx}'] = (idx - 1) * 16
+        default_values[f'dynamic_frame_distribution_values_{idx}'] = (idx ) * 16
         default_values[f'dynamic_key_frame_influence_values_{idx}'] = 1.0
         default_values[f'dynamic_cn_strength_values_{idx}'] = (0.0,0.7)
 

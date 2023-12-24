@@ -32,6 +32,7 @@ class DefaultTimingStyleParams:
     animation_tool = AnimationToolType.G_FILM.value
     animation_style = AnimationStyleType.CREATIVE_INTERPOLATION.value
     model = None
+    total_log_table_pages = 1
 
 class DefaultProjectSettingParams:
     batch_prompt = ""
