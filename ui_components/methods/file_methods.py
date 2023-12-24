@@ -226,15 +226,39 @@ def load_from_env(key):
 
 def zip_images(image_locations, zip_filename='images.zip'):
     with zipfile.ZipFile(zip_filename, 'w') as zip_file:
+        # Sort the image_locations list to ensure they are added in numerical order
+        image_locations.sort(key=lambda x: int(os.path.splitext(os.path.basename(x))[0]))
+
+        # Determine the number of digits to pad based on the highest number in the list
+        padding = len(str(len(image_locations)))
+
         for idx, image_location in enumerate(image_locations):
-            # image_name = os.path.basename(image_location)
-            image_name = f"{idx}.png"
+            # Zero-padding the file index
+            image_name = f"{str(idx).zfill(padding)}.png"
+
             if image_location.startswith('http'):
+                # Fetch the image over HTTP
                 response = requests.get(image_location)
                 image_data = response.content
-                zip_file.writestr(image_name, image_data)
+                # Convert to Image object to check and convert mode
+                img = Image.open(io.BytesIO(image_data))
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                # Save image data to zip using BytesIO
+                img_byte_arr = io.BytesIO()
+                img.save(img_byte_arr, format='PNG')
+                img_byte_arr = img_byte_arr.getvalue()
+                zip_file.writestr(image_name, img_byte_arr)
             else:
-                zip_file.write(image_location, image_name)
+                # Open the image file to check and convert mode
+                with Image.open(image_location) as img:
+                    if img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    # Save image to zip
+                    img_byte_arr = io.BytesIO()
+                    img.save(img_byte_arr, format='PNG')
+                    img_byte_arr.seek(0)
+                    zip_file.writestr(image_name, img_byte_arr.read())
 
     return zip_filename
 

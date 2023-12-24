@@ -27,9 +27,9 @@ class InputImageStyling(ExtendedEnum):
 def columnn_selecter():
     f1, f2 = st.columns([1, 1])
     with f1:
-        st_memory.slider('Number of columns:', min_value=3, max_value=7, value=4,key="num_columns_explorer")
+        st_memory.number_input('Number of columns:', min_value=3, max_value=7, value=4,key="num_columns_explorer")
     with f2:
-        st_memory.slider('Items per page:', min_value=10, max_value=50, value=16, key="num_items_per_page_explorer")
+        st_memory.number_input('Items per page:', min_value=10, max_value=50, value=16, key="num_items_per_page_explorer")
 
 def explorer_page(project_uuid):
             
@@ -121,7 +121,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
 
         with b3:
             edge_pil_img = None
-            strength_of_current_image = st_memory.slider("What % of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_current_image_key", help="This will determine how much of the current image will be kept in the final image.")            
+            strength_of_current_image = st_memory.number_input("What % of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_current_image_key", help="This will determine how much of the current image will be kept in the final image.")            
             if type_of_transformation == InputImageStyling.EVOLVE_IMAGE.value:                                            
                 prompt_strength = round(1 - (strength_of_current_image / 100), 2)
                 with c2:                                                        

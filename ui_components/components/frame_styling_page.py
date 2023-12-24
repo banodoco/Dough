@@ -39,13 +39,15 @@ def frame_styling_page(shot_uuid: str, h2):
                                                     key="styling_view_selector", orientation="horizontal", \
                                                         styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}})
               
-            frame_view()
+            frame_view(view="Key Frame")
 
         st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['frame_styling_view_type']}] > :orange[{st.session_state['styling_view']}] > :blue[{shot.name} - #{st.session_state['current_frame_index']}]")
 
-            
+        variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)    
+
+        st.markdown("***")
         if st.session_state['styling_view'] == "Generate":
-            variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)
+            
             with st.expander("🛠️ Generate Variants + Prompt Settings", expanded=True):
                 generate_images_element(position='individual', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
                                             

@@ -20,7 +20,7 @@ def adjust_shot_page(shot_uuid: str, h2):
     st.markdown("***")
 
     with st.sidebar:
-        frame_view()
+        frame_view(view='Video')
 
     shot_keyframe_element(st.session_state["shot_uuid"], 4, position="Individual")
     # with st.expander("📋 Explorer Shortlist",expanded=True):

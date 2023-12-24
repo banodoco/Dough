@@ -209,7 +209,7 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, mask_in_p
         prompt=prompt, 
         negative_prompt=negative_prompt, 
         num_inference_steps=25, 
-        strength=1.0,
+        strength=0.99,
         queue_inference=QUEUE_INFERENCE_QUERIES
     )
 

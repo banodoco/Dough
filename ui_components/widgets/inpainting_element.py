@@ -218,7 +218,7 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
 
     st.markdown("##### Inpaint in black space:")
 
-    inpaint_prompt = st.text_area("Prompt", value=DefaultProjectSettingParams.batch_prompt)
+    inpaint_prompt = st.text_area("Prompt", value=st.session_state['explorer_base_prompt'])
     inpaint_negative_prompt = st.text_input(
         "Negative Prompt", value='edge,branches, frame, fractals, text' + DefaultProjectSettingParams.batch_negative_prompt)
     if 'precision_cropping_inpainted_image_uuid' not in st.session_state:
