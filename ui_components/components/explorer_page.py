@@ -33,9 +33,7 @@ def columnn_selecter():
         st_memory.number_input('Items per page:', min_value=10, max_value=50, value=16, key="num_items_per_page_explorer")
 
 def explorer_page(project_uuid):
-            
     data_repo = DataRepo()
-    
     project_setting = data_repo.get_project_setting(project_uuid)        
 
     st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}]")

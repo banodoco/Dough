@@ -15,6 +15,7 @@ from streamlit_option_menu import option_menu
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from ui_components.widgets.add_key_frame_element import add_key_frame,add_key_frame_section
 from ui_components.widgets.frame_movement_widgets import change_frame_shot, delete_frame_button, jump_to_single_frame_view_button, move_frame_back_button, move_frame_forward_button, replace_image_widget
+from utils.common_utils import refresh_app
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
 
@@ -312,7 +313,7 @@ def timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_fram
             if st.button("🔁", key=f"copy_frame_{timing_list[idx].uuid}", use_container_width=True):
                 pil_image = generate_pil_image(timing_list[idx].primary_image.location)
                 add_key_frame(pil_image, False, st.session_state['shot_uuid'], timing_list[idx].aux_frame_index+1, refresh_state=False)
-                st.rerun()
+                refresh_app(maintain_state=True)
 
     if delete_frames_toggle:
         with btn4:
