@@ -134,7 +134,9 @@ def variant_inference_detail_element(variant, stage, shot_uuid, timing_list="", 
     inf_data = fetch_inference_data(variant)
     if 'image_prompt_list' in inf_data:
         del inf_data['image_prompt_list']
+    if 'image_list' in inf_data:
         del inf_data['image_list']
+    if 'output_format' in inf_data:
         del inf_data['output_format']
     
     st.write(inf_data)
@@ -221,9 +223,12 @@ def fetch_inference_data(file: InternalFileObject):
     # NOTE: generated videos also have other params stored inside origin_data > settings
     if file.inference_log and file.inference_log.input_params:
         inf_data = json.loads(file.inference_log.input_params)
-        for data_type in InferenceParamType.value_list():
-            if data_type in inf_data:
-                del inf_data[data_type]
+        if 'origin_data' in inf_data and inf_data['origin_data']['inference_type'] == 'frame_interpolation':
+            inf_data = inf_data['origin_data']['settings']
+        else:
+            for data_type in InferenceParamType.value_list():
+                if data_type in inf_data:
+                    del inf_data[data_type]
     
     inf_data = inf_data or not_found_msg
 
