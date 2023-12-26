@@ -162,7 +162,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
     
     with d3:
         st.write(" ")                
-        if st.session_state.get('generate_images'):
+        if st.session_state.get(position + '_generate_inference'):
             ml_client = get_ml_client()
             counter = 0
             for _ in range(number_to_generate):
@@ -260,12 +260,17 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     process_inference_output(**inference_data)
 
             st.info("Check the Generation Log to the left for the status.")
+            toggle_generate_inference(position)
             st.rerun()
 
         # ----------- generate btn --------------
-        st.button("Generate images", key="generate_images", use_container_width=True, type="primary")
+        st.button("Generate images", key="generate_images", use_container_width=True, type="primary", on_click=lambda: toggle_generate_inference(position))
             
-
+def toggle_generate_inference(position):
+    if position + '_generate_inference' not in st.session_state:
+        st.session_state[position + '_generate_inference'] = True
+    else:
+        st.session_state[position + '_generate_inference'] = not st.session_state[position + '_generate_inference']
 
 
 def gallery_image_view(project_uuid,page_number=1,num_items_per_page=20, open_detailed_view_for_all=False, shortlist=False, num_columns=2, view="main", shot=None):
