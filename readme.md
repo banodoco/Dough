@@ -1,41 +1,24 @@
+# ** Work in progress **
+
 # Welcome to Banodoco
 
-Banodoco is a simple but powerful open source animation tool build on top of Stable Diffusion, Google FILM, and various other online machine models.
+Banodoco is a simple but powerful open-source animation tool built on top of Stable Diffusion, AnimateDiff, SVD and other OS AI models/tools. The app is in early phases and many tools and workflows are yet to be integrated (check the roadmap below).
 
-## 1) Test It Out
+<img src="sample_assets/sample_images/main.png">
 
-You can test out a preview version of Banodoco <a href="https://banodoco-0-2.streamlit.app/" target="_blank">here</a>.
 
-While the buttons and queries won't work and some things won't display properly, it should give you a good idea of what to expect. 
+## Installation
+You can check the hosted preview version of Banodoco <a href="https://app.banodoco.ai/" target="_blank">here</a>. Support for local inference is in progress and will soon be updated.
 
-## 2) Download The Repo
 
-If you're comfortable with Git, you can pull this repo as normal. If you're not and don't want to figure that out, you can click "Code" in the top right, then click Download Zip to download all the files. 
+## Roadmap
+Below is the product roadmap. Please reach out to us in our [discord](https://discord.com/invite/8Wx9dFu5tP) if you have suggestions/requests or want to contribute in its development.
 
-## 3) Open Terminal
-
-Open your terminal and navigate to the folder where you downloaded the repo.
-
-To do this quick, you can type `cd` and then drag the folder into the terminal and press enter.
-
-## 4) Install Dependencies
-
-To install the dependencies, you can run the following command in your open terminal window:
-
-`pip install -r requirements.txt`
-
-If you're a developer, you'll probably want to install these in a virtual environment.
-
-## 5) Run The App
-
-To run the app, you can run the following command in your terminal window:
-
-`streamlit run app.py --runner.fastReruns false`
-
-This should open a new tab in your browser with the app running. If it doesn't, you can copy and paste the link that is printed in your terminal window.
-
-> Note: if you encounter issues, I'd suggest that you paste the error messages you get in terminal into ChatGPT and follow its suggestions. It this doesn't work, message in Discord!
-
-## 6) Follow The Setup Guide
-
-Once you have the app running, you can follow the setup guide inside the app to get started!
+- [x] Basic scene generation
+- [x] AnimateDiff animation workflow
+- [x] Third-party inference support (Replicate)
+- [x] Hosted version
+- [ ] Consistent scene/character generation
+- [ ] SVD animation workflow with motion controlnets
+- [ ] Local GPU inference
+- [ ] Comfy toolformer
