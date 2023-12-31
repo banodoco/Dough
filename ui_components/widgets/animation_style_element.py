@@ -65,7 +65,7 @@ def animation_style_element(shot_uuid):
         footer1, _ = st.columns([2, 1])
         with footer1:
             interpolation_style = 'ease-in-out'
-            motion_scale = st_memory.slider("Motion scale:", min_value=0.0, max_value=2.0, value=1.0, step=0.1, key="motion_scale")
+            motion_scale = st_memory.slider("Motion scale:", min_value=0.0, max_value=2.0, value=1.0, step=0.01, key="motion_scale")
         
         st.markdown("***")
         if st.button("Reset to default settings", key="reset_animation_style"):
@@ -288,6 +288,7 @@ def animation_style_element(shot_uuid):
         relative_ipadapter_strength = st_memory.slider("How much would you like to influence the style?", min_value=0.0, max_value=5.0, value=1.1, step=0.1, key="ip_adapter_strength")
         relative_ipadapter_influence = st_memory.slider("For how long would you like to influence the style?", min_value=0.0, max_value=5.0, value=1.1, step=0.1, key="ip_adapter_influence")
         soft_scaled_cn_weights_multipler = st_memory.slider("How much would you like to scale the CN weights?", min_value=0.0, max_value=10.0, value=0.85, step=0.1, key="soft_scaled_cn_weights_multiple_video")
+        append_to_prompt = st_memory.text_input("What would you like to append to the prompts?", key="append_to_prompt")
             
     normalise_speed = True
     
@@ -338,8 +339,9 @@ def animation_style_element(shot_uuid):
                     if timing.primary_image and timing.primary_image.location:
                         b = timing.primary_image.inference_params
                         prompt = b['prompt'] if b else ""
+                        prompt += append_to_prompt  # Appending the text to each prompt
                         frame_prompt = f"{idx * linear_frame_distribution_value}_" + prompt
-                        positive_prompt +=  ":" + frame_prompt if positive_prompt else frame_prompt
+                        positive_prompt += ":" + frame_prompt if positive_prompt else frame_prompt
                     else:
                         st.error("Please generate primary images")
                         time.sleep(0.7)
@@ -540,7 +542,7 @@ def update_interpolation_settings(values=None, timing_list=None):
     }
 
     for idx in range(0, len(timing_list)):
-        default_values[f'dynamic_frame_distribution_values_{idx}'] = (idx ) * 16
+        default_values[f'dynamic_frame_distribution_values_{idx}'] = (idx) * 16
         default_values[f'dynamic_key_frame_influence_values_{idx}'] = 1.0
         default_values[f'dynamic_cn_strength_values_{idx}'] = (0.0,0.7)
 
