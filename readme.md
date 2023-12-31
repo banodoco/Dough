@@ -1,41 +1,13 @@
-# Welcome to Banodoco
+# Welcome to Banodoco v. 0.5
 
-Banodoco is a simple but powerful open source animation tool build on top of Stable Diffusion, Google FILM, and various other online machine models.
+Banodoco v. 0.5 is intended to act as a demo of one approach to building a creative tool on top of open-source AI models - empowering users to create videos via creative interpolation using [Steerable Motion](https://github.com/banodoco/steerable-motion) to fill in the gaps between generated keyframes:
 
-## 1) Test It Out
+<img src="sample_assets/sample_images/main_example.gif">
 
-You can test out a preview version of Banodoco <a href="https://banodoco-0-2.streamlit.app/" target="_blank">here</a>.
+## Access the web app or contribute to the project
 
-While the buttons and queries won't work and some things won't display properly, it should give you a good idea of what to expect. 
+The web app is currently in beta. If you want access it, please reach out to POM in our [Discord](https://discord.com/invite/8Wx9dFu5tP) with some examples of stuff you've made before. If you'd like to contribute, please also get in touch with examples of previous projects.
 
-## 2) Download The Repo
+## Coming soon - local inference
 
-If you're comfortable with Git, you can pull this repo as normal. If you're not and don't want to figure that out, you can click "Code" in the top right, then click Download Zip to download all the files. 
-
-## 3) Open Terminal
-
-Open your terminal and navigate to the folder where you downloaded the repo.
-
-To do this quick, you can type `cd` and then drag the folder into the terminal and press enter.
-
-## 4) Install Dependencies
-
-To install the dependencies, you can run the following command in your open terminal window:
-
-`pip install -r requirements.txt`
-
-If you're a developer, you'll probably want to install these in a virtual environment.
-
-## 5) Run The App
-
-To run the app, you can run the following command in your terminal window:
-
-`streamlit run app.py --runner.fastReruns false`
-
-This should open a new tab in your browser with the app running. If it doesn't, you can copy and paste the link that is printed in your terminal window.
-
-> Note: if you encounter issues, I'd suggest that you paste the error messages you get in terminal into ChatGPT and follow its suggestions. It this doesn't work, message in Discord!
-
-## 6) Follow The Setup Guide
-
-Once you have the app running, you can follow the setup guide inside the app to get started!
+We're working on a local inference version of Banodoco, which will be available soon. This will allow you to run the app locally on your own machine, without needing to pay for cloud compute.
