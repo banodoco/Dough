@@ -34,8 +34,7 @@ def animation_style_element(shot_uuid):
     interpolation_style = 'ease-in-out'
     st.markdown("#### Key Frame Settings")
     type_of_setting = st_memory.radio("Type of key frame settings:", options=["Individual", "Bulk"], key="type_of_setting", horizontal=True)
-    if type_of_setting == "Individual":
-        st.write("You can set the key frame settings individually for each frame.")
+    if type_of_setting == "Individual":        
         items_per_row = 4
         strength_of_frames = []
         distances_to_next_frames = []
@@ -43,34 +42,35 @@ def animation_style_element(shot_uuid):
         movements_between_frames = []
         for i in range(0, len(timing_list) , items_per_row):
             with st.container():
-                grid = st.columns(items_per_row)
+                grid = st.columns([2 if j%2==0 else 1 for j in range(2*items_per_row)])  # Adjust the column widths
                 for j in range(items_per_row):
                     idx = i + j
                     if idx < len(timing_list):
-                        with grid[j]:
-                           
+                        
+                        with grid[2*j]:  # Adjust the index for image column
                             timing = timing_list[idx]
                             if timing.primary_image and timing.primary_image.location:
+                                st.info(f"Frame {idx + 1}")
                                 st.image(timing.primary_image.location, use_column_width=True)
                                 # if not the last frame                                
-                                acol1, acol2 = st.columns([1, 1])
-                                with acol1:
-                                    strength_of_frame = st.slider("Strength of this frame:", min_value=0.25, max_value=1.0, value=0.5, step=0.01, key=f"strength_of_frame_{idx}_{timing.uuid}")
-                                    strength_of_frames.append(strength_of_frame)                                    
-                                if idx < len(timing_list) - 1:
-                                    with acol2:
-                                        distance_to_next_frame = st.slider("Distance to next frame:", min_value=4, max_value=32, value=16, step=1, key=f"distance_to_next_frame_{idx}_{timing.uuid}")
-                                        distances_to_next_frames.append(distance_to_next_frame)                                                              
-                                    bcol1, bcol2 = st.columns([1, 1])
-                                    with bcol1:                                        
-                                        speed_of_transition = st.slider("Speed of transition to next frame:", min_value=0.2, max_value=0.7, value=0.5, step=0.01, key=f"speed_of_transition_{idx}_{timing.uuid}")                                    
-                                        speeds_of_transitions.append(speed_of_transition)      
-                                    with bcol2:
-                                        movement_between_frames = st.slider("Motion between frames:", min_value=0.2, max_value=0.8, value=0.5, step=0.01, key=f"movement_between_frames_{idx}_{timing.uuid}")                                                                
-                                        movements_between_frames.append(movement_between_frames)
+                                
+                                strength_of_frame = st.slider("Strength of current frame:", min_value=0.25, max_value=1.0, value=0.5, step=0.01, key=f"strength_of_frame_{idx}_{timing.uuid}")
+                                strength_of_frames.append(strength_of_frame)                                    
+
                             else:                        
-                                st.warning("No primary image present.")       
-                           
+                                st.warning("No primary image present.")     
+                        with grid[2*j+1]:  # Add the new column after the image column
+                            if idx < len(timing_list) - 1:                                                                       
+                                st.write("")                             
+                                distance_to_next_frame = st.slider("Distance to next frame:", min_value=4, max_value=32, value=16, step=1, key=f"distance_to_next_frame_{idx}_{timing.uuid}")
+                                distances_to_next_frames.append(distance_to_next_frame)                                                              
+                                                
+                                speed_of_transition = st.slider("Speed of transition:", min_value=0.2, max_value=0.7, value=0.5, step=0.01, key=f"speed_of_transition_{idx}_{timing.uuid}")                                    
+                                speeds_of_transitions.append(speed_of_transition)      
+                            
+                                movement_between_frames = st.slider("Motion between frames:", min_value=0.2, max_value=0.8, value=0.5, step=0.01, key=f"movement_between_frames_{idx}_{timing.uuid}")                                                                
+                                movements_between_frames.append(movement_between_frames)
+                                    
 
                 if (i < len(timing_list) - 1) or (st.session_state["open_shot"] == shot.uuid) or (len(timing_list) % items_per_row != 0 and st.session_state["open_shot"] != shot.uuid):
                     st.markdown("***")
