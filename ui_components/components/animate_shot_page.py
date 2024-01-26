@@ -9,9 +9,9 @@ def animate_shot_page(shot_uuid: str, h2):
     shot = data_repo.get_shot_from_uuid(shot_uuid)
 
     with h2:
-        frame_selector_widget(show=['shot_selector'])
+        frame_selector_widget(show_frame_selector=False)
     with st.sidebar:
-        frame_view()
+        frame_view(view='Video')
 
     st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}] > :orange[{shot.name}]")
     st.markdown("***")

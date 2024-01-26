@@ -153,7 +153,7 @@ def setup_app_ui():
                     h1,h2 = st.columns([1.5,1])
                     with h1:
                         # view_types = ["Explorer","Timeline","Individual"]
-                        creative_process_pages = ["Explore", "Shortlist", "Timeline", "Adjust Shot", "Adjust Frame", "Animate Shot"]
+                        creative_process_pages = ["Explore", "Shortlist", "Timeline", "Adjust Shot", "Animate Shot"]
                         st.session_state['page'] = option_menu(
                             None,
                             creative_process_pages,
@@ -178,9 +178,6 @@ def setup_app_ui():
 
                 elif st.session_state['page'] == "Timeline":
                     timeline_view_page(st.session_state["shot_uuid"], h2)
-
-                elif st.session_state['page'] == "Adjust Frame":                                            
-                    frame_styling_page(st.session_state["shot_uuid"], h2)
 
                 elif st.session_state['page'] == "Adjust Shot":
                     adjust_shot_page(st.session_state["shot_uuid"], h2)

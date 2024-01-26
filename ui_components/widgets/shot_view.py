@@ -57,10 +57,11 @@ def shot_keyframe_element(shot_uuid, items_per_row, position="Timeline", **kwarg
         with col3:
             move_frames_toggle = st_memory.toggle("Move Frames", value=True, key="move_frames_toggle")
         with col4:
-            replace_image_widget_toggle = st_memory.toggle("Replace Image", value=False, key="replace_image_widget_toggle")
-            
-        with col5:
             change_shot_toggle = st_memory.toggle("Change Shot", value=False, key="change_shot_toggle")
+            # replace_image_widget_toggle = st_memory.toggle("Replace Image", value=False, key="replace_image_widget_toggle")
+            
+        
+            
 
     st.markdown("***")
 
@@ -85,7 +86,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, position="Timeline", **kwarg
                                 st.warning("No primary image present.")       
                                 jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}",uuid=shot.uuid)
                             if position != "Timeline":
-                                timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_frame_toggle, move_frames_toggle,delete_frames_toggle, change_shot_toggle)
+                                timeline_view_buttons(idx, shot_uuid, copy_frame_toggle, move_frames_toggle,delete_frames_toggle, change_shot_toggle)
             if (i < len(timing_list) - 1) or (st.session_state["open_shot"] == shot.uuid) or (len(timing_list) % items_per_row != 0 and st.session_state["open_shot"] != shot.uuid):
                 st.markdown("***")
     # st.markdown("***")
@@ -224,25 +225,12 @@ def shot_video_element(shot_uuid):
     
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
     
-    st.info(f"##### {shot.name}")
+    
     if shot.main_clip and shot.main_clip.location:
         st.video(shot.main_clip.location)
     else:
         st.warning('''No video present''')
 
-    switch1,switch2 = st.columns([1,1])
-    with switch1:
-        shot_adjustment_button(shot)
-    with switch2:
-        shot_animation_button(shot)
-
-    with st.expander("Details", expanded=False):
-        update_shot_name(shot.uuid)    
-        update_shot_duration(shot.uuid)
-        move_shot_buttons(shot, "side")
-        delete_shot_button(shot.uuid)
-        if shot.main_clip:
-            create_video_download_button(shot.main_clip.location, tag="main_clip")
 
 
 
@@ -292,13 +280,11 @@ def shot_animation_button(shot, show_label=False):
 
         
 
-def timeline_view_buttons(idx, shot_uuid, replace_image_widget_toggle, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_shot_toggle):
+def timeline_view_buttons(idx, shot_uuid, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_shot_toggle):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     timing_list = shot.timing_list
 
-    if replace_image_widget_toggle:
-        replace_image_widget(timing_list[idx].uuid, stage=WorkflowStageType.STYLED.value, options=["Uploaded Frame"])
     
     btn1, btn2, btn3, btn4 = st.columns([1, 1, 1, 1])
     

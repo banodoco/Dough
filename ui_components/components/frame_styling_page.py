@@ -21,16 +21,13 @@ def frame_styling_page(shot_uuid: str, h2):
 
 
     if len(timing_list) == 0:
-        with h2:         
-            frame_selector_widget(show=['shot_selector','frame_selector'])
-
+  
         st.markdown("#### There are no frames present in this shot yet.")
 
     else:
         with st.sidebar:     
             with h2:
-
-                frame_selector_widget(show=['shot_selector','frame_selector'])
+                
                                             
                 st.session_state['styling_view'] = st_memory.menu('',\
                                         ["Generate", "Crop/Move", "Inpainting","Scribbling"], \
