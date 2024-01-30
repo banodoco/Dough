@@ -65,7 +65,7 @@ def animation_style_element(shot_uuid):
                                 distance_to_next_frame = st.slider("Distance to next frame:", min_value=4, max_value=32, value=16, step=1, key=f"distance_to_next_frame_{idx}_{timing.uuid}")
                                 distances_to_next_frames.append(distance_to_next_frame)                                                              
                                                 
-                                speed_of_transition = st.slider("Speed of transition:", min_value=0.2, max_value=0.7, value=0.5, step=0.01, key=f"speed_of_transition_{idx}_{timing.uuid}")                                    
+                                speed_of_transition = st.slider("Speed of transition:", min_value=0.45, max_value=0.7, value=0.5, step=0.01, key=f"speed_of_transition_{idx}_{timing.uuid}")                                    
                                 speeds_of_transitions.append(speed_of_transition)      
                             
                                 movement_between_frames = st.slider("Motion between frames:", min_value=0.2, max_value=0.8, value=0.5, step=0.01, key=f"movement_between_frames_{idx}_{timing.uuid}")                                                                
@@ -77,6 +77,11 @@ def animation_style_element(shot_uuid):
 
 
         def transform_data(strength_of_frames, movements_between_frames, speeds_of_transitions, distances_to_next_frames):
+            st.markdown(strength_of_frames)
+            st.markdown(movements_between_frames)
+            st.markdown(speeds_of_transitions)
+            st.markdown(distances_to_next_frames)
+            
             def adjust_and_invert_relative_value(middle_value, relative_value):
                 if relative_value is not None:
                     adjusted_value = middle_value * relative_value
@@ -116,6 +121,14 @@ def animation_style_element(shot_uuid):
             for distance in distances_to_next_frames:
                 cumulative_distances.append(cumulative_distances[-1] + distance)
 
+            # write strength without first and last characters
+            st.markdown(output_strength[1:-1])
+            st.markdown(output_speeds[1:-1])
+            st.markdown(cumulative_distances[1:-1])
+            
+            
+            
+
             return output_strength, output_speeds, cumulative_distances
         
         dynamic_strength_values, dynamic_key_frame_influence_values, dynamic_frame_distribution_values = transform_data(strength_of_frames, movements_between_frames, speeds_of_transitions, distances_to_next_frames)
@@ -125,7 +138,7 @@ def animation_style_element(shot_uuid):
         linear_frame_distribution_value = 16
         linear_key_frame_influence_value = 1.0
         linear_cn_strength_value = 1.0
-        if st.button("Visualise motion graph"):
+        if st.toggle("Visualise motion graph"):
             columns = st.columns(max(7, len(timing_list))) 
             for idx, timing in enumerate(timing_list):
                 # Use modulus to cycle through colors
@@ -149,6 +162,22 @@ def animation_style_element(shot_uuid):
             # calculate_weights(keyframe_positions, strength_values, buffer, key_frame_influence_values):
             weights_list, frame_numbers_list = calculate_weights(keyframe_positions, strength_values, 4, key_frame_influence_values,last_key_frame_position)            
             plot_weights(weights_list, frame_numbers_list)
+
+            # drop all the first values in each list
+            keyframe_positions = keyframe_positions[1:]
+            strength_values = strength_values[1:]
+            key_frame_influence_values = key_frame_influence_values[1:]
+
+            # shirt all the keyframe values back by 4
+            keyframe_positions = [position - 3 for position in keyframe_positions]
+
+            # make keyframe into a plain list
+            
+            # st.write(keyframe_positions)
+            # st.write(strength_values)
+            # st.write(key_frame_influence_values)
+
+
 
     elif type_of_setting == "Bulk":
         
@@ -224,6 +253,7 @@ def animation_style_element(shot_uuid):
         sd_model = st_memory.selectbox("Which model would you like to use?", options=sd_model_list, key="sd_model_video")
         positive_prompt = st_memory.text_area("What would you like to see in the videos?", value="", key="positive_prompt_video")
         negative_prompt = st_memory.text_area("What would you like to avoid in the videos?", value="bad image, worst quality", key="negative_prompt_video")
+        soft_scaled_cn_weights_multiplier =""
         # relative_ipadapter_strength = st_memory.slider("How much would you like to influence the style?", min_value=0.0, max_value=5.0, value=1.1, step=0.1, key="ip_adapter_strength")
         # relative_ipadapter_influence = st_memory.slider("For how long would you like to influence the style?", min_value=0.0, max_value=5.0, value=1.1, step=0.1, key="ip_adapter_influence")
         # soft_scaled_cn_weights_multipler = st_memory.slider("How much would you like to scale the CN weights?", min_value=0.0, max_value=10.0, value=0.85, step=0.1, key="soft_scaled_cn_weights_multiple_video")
@@ -428,7 +458,7 @@ def create_workflow_json(image_locations, settings):
     relative_ipadapter_influence = settings['relative_ipadapter_influence']
     image_dimension = settings['image_dimension']
     output_format = settings['output_format']
-    soft_scaled_cn_weights_multiplier = settings['soft_scaled_cn_weights_multiplier']
+    # soft_scaled_cn_weights_multiplier = settings['soft_scaled_cn_weights_multiplier']
     stmfnet_multiplier = settings['stmfnet_multiplier']
 
     if settings['type_of_frame_distribution'] == 'linear':
