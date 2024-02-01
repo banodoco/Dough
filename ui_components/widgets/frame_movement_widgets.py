@@ -168,6 +168,9 @@ def replace_image_widget(timing_uuid, stage, options=["Uploaded Frame", "Other F
 def jump_to_single_frame_view_button(display_number, timing_list, src,uuid=None):
     
     if st.button(f"Jump to #{display_number}", key=f"{src}_{uuid}", use_container_width=True):
+        st.session_state['current_frame_sidebar_selector'] = display_number
+        st.session_state["creative_process_manual_select"] = 3
+        '''
         st.session_state['prev_frame_index'] = st.session_state['current_frame_index'] = display_number
         st.session_state['current_frame_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].uuid                
         st.session_state['frame_styling_view_type_manual_select'] = 2
@@ -176,4 +179,5 @@ def jump_to_single_frame_view_button(display_number, timing_list, src,uuid=None)
         st.session_state["creative_process_manual_select"] = 4
         st.session_state["styling_view_selector_manual_select"] = 0
         st.session_state['page'] = "Key Frames"
+        '''
         st.rerun()

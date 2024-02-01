@@ -246,5 +246,5 @@ def release_lock(key):
 
 
 def refresh_app(maintain_state=False):
-    st.session_state['maintain_state'] = maintain_state
+    # st.session_state['maintain_state'] = maintain_state
     st.rerun()
