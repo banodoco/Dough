@@ -78,7 +78,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
             styled_image.uuid, timing_uuid)
         if promote:
             promote_image_variant(timing_uuid, number_of_image_variants - 1)
-
+    '''
     project_update_data = {
         "zoom_level": st.session_state['zoom_level_input'],
         "rotation_angle_value": st.session_state['rotation_angle_input'],
@@ -93,7 +93,9 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
         "zoom_details": f"{st.session_state['zoom_level_input']},{st.session_state['rotation_angle_input']},{st.session_state['x_shift']},{st.session_state['y_shift']}",
 
     }
+    
     data_repo.update_specific_timing(timing_uuid, **timing_update_data)
+    '''
 
 def reset_zoom_element():
     st.session_state['zoom_level_input_key'] = 100

@@ -166,6 +166,9 @@ def setup_app_ui():
                             manual_select=st.session_state['creative_process_manual_select']                        
                         )
 
+                        if st.session_state['page'] != "Adjust Shot":
+                            st.session_state['current_frame_sidebar_selector'] = 0
+
                     if st.session_state['creative_process_manual_select']  != None:
                         st.session_state['creative_process_manual_select'] = None
 

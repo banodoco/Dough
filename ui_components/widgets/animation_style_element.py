@@ -65,10 +65,10 @@ def animation_style_element(shot_uuid):
                                 distance_to_next_frame = st.slider("Distance to next frame:", min_value=4, max_value=32, value=16, step=1, key=f"distance_to_next_frame_{idx}_{timing.uuid}")
                                 distances_to_next_frames.append(distance_to_next_frame)                                                              
                                                 
-                                speed_of_transition = st.slider("Speed of transition:", min_value=0.45, max_value=0.7, value=0.5, step=0.01, key=f"speed_of_transition_{idx}_{timing.uuid}")                                    
+                                speed_of_transition = st.slider("Speed of transition:", min_value=0.45, max_value=0.7, value=0.6, step=0.01, key=f"speed_of_transition_{idx}_{timing.uuid}")                                    
                                 speeds_of_transitions.append(speed_of_transition)      
-                            
-                                movement_between_frames = st.slider("Motion between frames:", min_value=0.2, max_value=0.8, value=0.5, step=0.01, key=f"movement_between_frames_{idx}_{timing.uuid}")                                                                
+                                
+                                movement_between_frames = st.slider("Motion between frames:", min_value=0.2, max_value=0.95, value=0.5, step=0.01, key=f"movement_between_frames_{idx}_{timing.uuid}")                                                                
                                 movements_between_frames.append(movement_between_frames)
                                     
 
@@ -77,10 +77,7 @@ def animation_style_element(shot_uuid):
 
 
         def transform_data(strength_of_frames, movements_between_frames, speeds_of_transitions, distances_to_next_frames):
-            st.markdown(strength_of_frames)
-            st.markdown(movements_between_frames)
-            st.markdown(speeds_of_transitions)
-            st.markdown(distances_to_next_frames)
+
             
             def adjust_and_invert_relative_value(middle_value, relative_value):
                 if relative_value is not None:
@@ -120,15 +117,7 @@ def animation_style_element(shot_uuid):
             cumulative_distances = [0]
             for distance in distances_to_next_frames:
                 cumulative_distances.append(cumulative_distances[-1] + distance)
-
-            # write strength without first and last characters
-            st.markdown(output_strength[1:-1])
-            st.markdown(output_speeds[1:-1])
-            st.markdown(cumulative_distances[1:-1])
-            
-            
-            
-
+                                                
             return output_strength, output_speeds, cumulative_distances
         
         dynamic_strength_values, dynamic_key_frame_influence_values, dynamic_frame_distribution_values = transform_data(strength_of_frames, movements_between_frames, speeds_of_transitions, distances_to_next_frames)
@@ -138,20 +127,15 @@ def animation_style_element(shot_uuid):
         linear_frame_distribution_value = 16
         linear_key_frame_influence_value = 1.0
         linear_cn_strength_value = 1.0
-        if st.toggle("Visualise motion graph"):
+        if st.toggle("Visualise motion data"):
             columns = st.columns(max(7, len(timing_list))) 
             for idx, timing in enumerate(timing_list):
-                # Use modulus to cycle through colors
-                # color = color_names[idx % len(color_names)]
-                # Only create markdown text for the current index
+
                 markdown_text = f'##### **Frame {idx + 1}** ___'
 
                 with columns[idx]:
                     st.markdown(markdown_text)
 
-                if timing.primary_image and timing.primary_image.location:                
-                    columns[idx].image(timing.primary_image.location, use_column_width=True)
-                    b = timing.primary_image.inference_params     
             keyframe_positions = get_keyframe_positions(type_of_frame_distribution, dynamic_frame_distribution_values, timing_list, linear_frame_distribution_value)
             keyframe_positions = [position + 4 - 1 for position in keyframe_positions]
             keyframe_positions.insert(0, 0)
@@ -162,14 +146,17 @@ def animation_style_element(shot_uuid):
             # calculate_weights(keyframe_positions, strength_values, buffer, key_frame_influence_values):
             weights_list, frame_numbers_list = calculate_weights(keyframe_positions, strength_values, 4, key_frame_influence_values,last_key_frame_position)            
             plot_weights(weights_list, frame_numbers_list)
+            st.write(f"distribution: {str(dynamic_frame_distribution_values)[1:-1]}")
+            st.write(f"influence: {str(dynamic_key_frame_influence_values)[1:-1]}")
+            st.write(f"strength: {str(dynamic_strength_values)[1:-1]}")
 
             # drop all the first values in each list
-            keyframe_positions = keyframe_positions[1:]
-            strength_values = strength_values[1:]
-            key_frame_influence_values = key_frame_influence_values[1:]
+            # keyframe_positions = keyframe_positions[1:]
+            # strength_values = strength_values[1:]
+            #key_frame_influence_values = key_frame_influence_values[1:]
 
             # shirt all the keyframe values back by 4
-            keyframe_positions = [position - 3 for position in keyframe_positions]
+            # keyframe_positions = [position - 3 for position in keyframe_positions]
 
             # make keyframe into a plain list
             
@@ -209,8 +196,14 @@ def animation_style_element(shot_uuid):
         with d1:          
 
             linear_frame_distribution_value = st_memory.number_input("Frames per key frame:", min_value=8, max_value=36, value=16, step=1, key="linear_frame_distribution_value")
-            linear_key_frame_influence_value = st_memory.number_input("Length of key frame influence:", min_value=0.1, max_value=5.0, value=1.0, step=0.01, key="linear_key_frame_influence_value")
-            linear_cn_strength_value = st_memory.slider("Range of strength:", min_value=0.0, max_value=1.0, value=(0.0,0.7), step=0.01, key="linear_cn_strength_value")                
+            linear_key_frame_influence_value = st_memory.number_input("Length of key frame influence:", min_value=0.1, max_value=5.0, value=0.75, step=0.01, key="linear_key_frame_influence_value")
+            strength1, strength2 = st.columns([1, 1])
+            with strength1:
+                bottom_of_strength_range = st_memory.number_input("Bottom of strength range:", min_value=0.0, max_value=1.0, value=0.35, step=0.01, key="bottom_of_strength_range")
+            with strength2:
+                top_of_strength_range = st_memory.number_input("Top of strength range:", min_value=0.0, max_value=1.0, value=0.5, step=0.01, key="top_of_strength_range")
+            
+            linear_cn_strength_value = (bottom_of_strength_range, top_of_strength_range)
                                             
             footer1, _ = st.columns([2, 1])
             with footer1:
@@ -236,10 +229,12 @@ def animation_style_element(shot_uuid):
             plot_weights(weights_list, frame_numbers_list)
 
     st.markdown("***")
-    e1, e2 = st.columns([1, 1])
+
+    st.markdown("#### Styling Settings")
+    e1, e2, e3 = st.columns([1, 1,1])
     
     with e1:
-        st.markdown("#### Styling Settings")
+        strength_of_adherence = st_memory.slider("How much would you like to adhere to the input images?", min_value=0.0, max_value=1.0, value=0.5, step=0.01, key="stregnth_of_adherence")
         sd_model_list = [
             "Realistic_Vision_V5.0.safetensors",
             "Counterfeit-V3.0_fp32.safetensors",
@@ -249,11 +244,24 @@ def animation_style_element(shot_uuid):
         ]
 
         # remove .safe tensors from the end of each model name
-        motion_scale = st_memory.slider("Motion scale:", min_value=0.0, max_value=2.0, value=1.3, step=0.01, key="motion_scale")
+        # motion_scale = st_memory.slider("Motion scale:", min_value=0.0, max_value=2.0, value=1.3, step=0.01, key="motion_scale")
+        motion_scale = 1.3
         sd_model = st_memory.selectbox("Which model would you like to use?", options=sd_model_list, key="sd_model_video")
-        positive_prompt = st_memory.text_area("What would you like to see in the videos?", value="", key="positive_prompt_video")
-        negative_prompt = st_memory.text_area("What would you like to avoid in the videos?", value="bad image, worst quality", key="negative_prompt_video")
+    f1, f2 = st.columns([1, 1])
+    with f1:    
+        prompt1, prompt2 = st.columns([1, 1])
+        with prompt1:
+            positive_prompt = st_memory.text_area("What would you like to see in the videos?", value="", key="positive_prompt_video")
+        with prompt2:
+            negative_prompt = st_memory.text_area("What would you like to avoid in the videos?", value="bad image, worst quality", key="negative_prompt_video")
+        
         soft_scaled_cn_weights_multiplier =""
+
+    with e2:
+        st.info("Higher values may cause flickering and sudden changes in the video. Lower values may cause the video to be less influenced by the input images.")
+
+
+
         # relative_ipadapter_strength = st_memory.slider("How much would you like to influence the style?", min_value=0.0, max_value=5.0, value=1.1, step=0.1, key="ip_adapter_strength")
         # relative_ipadapter_influence = st_memory.slider("For how long would you like to influence the style?", min_value=0.0, max_value=5.0, value=1.1, step=0.1, key="ip_adapter_influence")
         # soft_scaled_cn_weights_multipler = st_memory.slider("How much would you like to scale the CN weights?", min_value=0.0, max_value=10.0, value=0.85, step=0.1, key="soft_scaled_cn_weights_multiple_video")
