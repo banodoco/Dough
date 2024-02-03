@@ -11,7 +11,7 @@ def shortlist_page(project_uuid):
     data_repo = DataRepo()
     project_setting = data_repo.get_project_setting(project_uuid)       
     # columnn_selecter()
-    k1,k2 = st.columns([5,1])
+    # k1,k2 = st.columns([5,1])
     # shortlist_page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
     # with k2:
       #  open_detailed_view_for_all = st_memory.toggle("Open prompt details for all:", key='shortlist_gallery_toggle',value=False)

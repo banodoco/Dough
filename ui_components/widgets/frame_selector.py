@@ -21,9 +21,10 @@ def frame_selector_widget(show_frame_selector=True):
     if 'prev_shot_index' not in st.session_state:
         st.session_state['prev_shot_index'] = shot.shot_idx
 
-    
-    shot_names = [s.name for s in shot_list]
-    shot_name = st.selectbox('Shot name:', shot_names, key="current_shot_sidebar_selector",index=shot_names.index(shot.name))
+    shot1, shot2 = st.columns([1, 1])
+    with shot1:
+        shot_names = [s.name for s in shot_list]
+        shot_name = st.selectbox('Shot name:', shot_names, key="current_shot_sidebar_selector",index=shot_names.index(shot.name))
     # find shot index based on shot name
     st.session_state['current_shot_index'] = shot_names.index(shot_name) + 1
 
@@ -54,8 +55,8 @@ def frame_selector_widget(show_frame_selector=True):
             frame_list = [''] + [f'{i+1}' for i in range(len(timing_list))]
 
 
-                            
-            frame_selection = st_memory.selectbox('Select a frame:', frame_list, key="current_frame_sidebar_selector")
+            with shot2:          
+                frame_selection = st_memory.selectbox('Select a frame:', frame_list, key="current_frame_sidebar_selector")
             
             # Only trigger the frame number extraction and current frame index update if a non-empty value is selected
             if frame_selection != '':
@@ -75,7 +76,8 @@ def frame_selector_widget(show_frame_selector=True):
 def frame_view(view="Key Frame"):
     data_repo = DataRepo()
     # time1, time2 = st.columns([1,1])
-    st.markdown("***")
+    # st.markdown("***")
+    st.write("")
 
     timing_list = data_repo.get_timing_list_from_shot(st.session_state["shot_uuid"])
     shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])    
