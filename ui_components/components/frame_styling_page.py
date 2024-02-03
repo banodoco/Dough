@@ -21,24 +21,19 @@ def frame_styling_page(shot_uuid: str, h2):
 
 
     if len(timing_list) == 0:
-        with h2:         
-            frame_selector_widget(show=['shot_selector','frame_selector'])
-
+  
         st.markdown("#### There are no frames present in this shot yet.")
 
     else:
         with st.sidebar:     
-            with h2:
-
-                frame_selector_widget(show=['shot_selector','frame_selector'])
-                                            
-                st.session_state['styling_view'] = st_memory.menu('',\
-                                        ["Generate", "Crop/Move", "Inpainting","Scribbling"], \
-                                            icons=['magic', 'crop', "paint-bucket", 'pencil'], \
-                                                menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), \
-                                                    key="styling_view_selector", orientation="horizontal", \
-                                                        styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}})
-              
+                                                                
+            st.session_state['styling_view'] = st_memory.menu('',\
+                                    ["Generate", "Crop", "Inpaint","Scribble"], \
+                                        icons=['magic', 'crop', "paint-bucket", 'pencil'], \
+                                            menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), \
+                                                key="styling_view_selector", orientation="horizontal", \
+                                                    styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}})
+            
             frame_view(view="Key Frame")
 
         st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['frame_styling_view_type']}] > :orange[{st.session_state['styling_view']}] > :blue[{shot.name} - #{st.session_state['current_frame_index']}]")
@@ -48,18 +43,18 @@ def frame_styling_page(shot_uuid: str, h2):
         st.markdown("***")
         if st.session_state['styling_view'] == "Generate":
             
-            with st.expander("🛠️ Generate Variants + Prompt Settings", expanded=True):
+            with st.expander("🛠️ Generate Variants", expanded=True):
                 generate_images_element(position='individual', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
                                             
-        elif st.session_state['styling_view'] == "Crop/Move":
+        elif st.session_state['styling_view'] == "Crop":
             with st.expander("🤏 Crop, Move & Rotate", expanded=True):                    
                 cropping_selector_element(shot_uuid)
 
-        elif st.session_state['styling_view'] == "Inpainting":
+        elif st.session_state['styling_view'] == "Inpaint":
             with st.expander("🌌 Inpainting", expanded=True):
                 inpainting_element(st.session_state['current_frame_uuid'])
 
-        elif st.session_state['styling_view'] == "Scribbling":
+        elif st.session_state['styling_view'] == "Scribble":
             with st.expander("📝 Draw On Image", expanded=True):
                 drawing_element(shot_uuid)
 

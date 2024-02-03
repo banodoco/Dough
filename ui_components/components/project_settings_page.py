@@ -10,9 +10,10 @@ from utils.data_repo.data_repo import DataRepo
 
 def project_settings_page(project_uuid):
     data_repo = DataRepo()
-
+    st.subheader("Project Settings")
     project_settings = data_repo.get_project_setting(project_uuid)
-    attach_audio_element(project_uuid, True)
+
+    
 
     frame_sizes = ["512x512", "768x512", "512x768"]
     current_size = f"{project_settings.width}x{project_settings.height}"
@@ -34,3 +35,6 @@ def project_settings_page(project_uuid):
                 data_repo.update_project_setting(project_uuid, width=width)
                 data_repo.update_project_setting(project_uuid, height=height)
                 st.experimental_rerun()      
+        
+    st.write("")
+    attach_audio_element(project_uuid, True)

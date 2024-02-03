@@ -10,7 +10,7 @@ from utils import st_memory
 
 
 
-def frame_selector_widget(show: List[str]):
+def frame_selector_widget(show_frame_selector=True):
     data_repo = DataRepo()
 
     timing_list = data_repo.get_timing_list_from_shot(st.session_state["shot_uuid"])
@@ -21,49 +21,63 @@ def frame_selector_widget(show: List[str]):
     if 'prev_shot_index' not in st.session_state:
         st.session_state['prev_shot_index'] = shot.shot_idx
 
-    if 'shot_selector' in show:
+    shot1, shot2 = st.columns([1, 1])
+    with shot1:
         shot_names = [s.name for s in shot_list]
         shot_name = st.selectbox('Shot name:', shot_names, key="current_shot_sidebar_selector",index=shot_names.index(shot.name))
-        # find shot index based on shot name
+    # find shot index based on shot name
+    st.session_state['current_shot_index'] = shot_names.index(shot_name) + 1
+
+    if shot_name != shot.name:
+        st.session_state["shot_uuid"] = shot_list[shot_names.index(shot_name)].uuid
+        st.rerun()
+
+    if not ('current_shot_index' in st.session_state and st.session_state['current_shot_index']):
         st.session_state['current_shot_index'] = shot_names.index(shot_name) + 1
-
-        if shot_name != shot.name:
-            st.session_state["shot_uuid"] = shot_list[shot_names.index(shot_name)].uuid
-            st.rerun()
-
-        if not ('current_shot_index' in st.session_state and st.session_state['current_shot_index']):
-            st.session_state['current_shot_index'] = shot_names.index(shot_name) + 1
-            update_current_shot_index(st.session_state['current_shot_index'])
+        update_current_shot_index(st.session_state['current_shot_index'])
     # st.write if frame_selector is present
+    
+    
+    if st.session_state['page'] == "Key Frames":
+        if st.session_state['current_frame_index'] > len_timing_list:            
+            update_current_frame_index(len_timing_list)
 
-    if 'frame_selector' in show:
-        
-        if st.session_state['page'] == "Key Frames":
-            if st.session_state['current_frame_index'] > len_timing_list:            
-                update_current_frame_index(len_timing_list)
+    elif st.session_state['page'] == "Shots":        
+        if st.session_state['current_shot_index'] > len(shot_list):
+            update_current_shot_index(len(shot_list))
 
-        elif st.session_state['page'] == "Shots":        
-            if st.session_state['current_shot_index'] > len(shot_list):
-                update_current_shot_index(len(shot_list))
-
-        
+    if show_frame_selector:
         if len(timing_list):            
             if 'prev_frame_index' not in st.session_state or st.session_state['prev_frame_index'] > len(timing_list):
-
                 st.session_state['prev_frame_index'] = 1
+
+            # Create a list of frames with a blank value as the first item
+            frame_list = [''] + [f'{i+1}' for i in range(len(timing_list))]
+
+
+            with shot2:          
+                frame_selection = st_memory.selectbox('Select a frame:', frame_list, key="current_frame_sidebar_selector")
             
-            st.session_state['current_frame_index'] = st.number_input(f"Key frame # (out of {len(timing_list)})", 1, 
-                                                                    len(timing_list), value=st.session_state['prev_frame_index'], 
-                                                                    step=1, key="current_frame_sidebar_selector")
-            
-            update_current_frame_index(st.session_state['current_frame_index'])
+            # Only trigger the frame number extraction and current frame index update if a non-empty value is selected
+            if frame_selection != '':
+
+                if st.button("Jump to shot view",use_container_width=True):
+                    st.session_state['current_frame_sidebar_selector'] = 0
+                    st.rerun()
+                # st.session_state['creative_process_manual_select']  = 4
+                st.session_state['current_frame_index'] = int(frame_selection.split(' ')[-1])
+                update_current_frame_index(st.session_state['current_frame_index'])
         else:
+            frame_selection = ""        
             st.error("No frames present")       
+
+        return frame_selection
 
 def frame_view(view="Key Frame"):
     data_repo = DataRepo()
     # time1, time2 = st.columns([1,1])
-    st.markdown("***")
+    # st.markdown("***")
+    st.write("")
 
     timing_list = data_repo.get_timing_list_from_shot(st.session_state["shot_uuid"])
     shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])    

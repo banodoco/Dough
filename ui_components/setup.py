@@ -137,7 +137,7 @@ def setup_app_ui():
                 st.session_state["index_of_page"] = 0
 
             with st.sidebar:
-                main_view_types = ["Creative Process", "Tools & Settings", "Video Rendering"]
+                main_view_types = ["Creative Process", "Project Settings", "Video Rendering"]
                 st.session_state['main_view_type'] = st_memory.menu(None, main_view_types, icons=['search-heart', 'tools', "play-circle", 'stopwatch'], menu_icon="cast", default_index=0, key="main_view_type_name", orientation="horizontal", styles={
                                                                     "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "red"}})
 
@@ -150,21 +150,23 @@ def setup_app_ui():
                         st.session_state['creative_process_manual_select'] = 0
                         st.session_state['page'] = creative_process_pages[0]
 
-                    h1,h2 = st.columns([1.5,1])
-                    with h1:
-                        # view_types = ["Explorer","Timeline","Individual"]
-                        creative_process_pages = ["Explore", "Shortlist", "Timeline", "Adjust Shot", "Adjust Frame", "Animate Shot"]
-                        st.session_state['page'] = option_menu(
-                            None,
-                            creative_process_pages,
-                            icons=['compass', 'bookshelf','aspect-ratio', "hourglass", 'stopwatch'],
-                            menu_icon="cast",
-                            orientation="vertical",
-                            key="section-selecto1r",
-                            styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#eee"},
-                                    "nav-link-selected": {"background-color": "green"}},
-                            manual_select=st.session_state['creative_process_manual_select']                        
-                        )
+                    
+                    # view_types = ["Explorer","Timeline","Individual"]
+                    creative_process_pages = ["Explore", "Shortlist", "Timeline", "Adjust Shot", "Animate Shot"]
+                    st.session_state['page'] = option_menu(
+                        None,
+                        creative_process_pages,
+                        icons=['compass', 'bookshelf','aspect-ratio', "hourglass", 'stopwatch'],
+                        menu_icon="cast",
+                        orientation="vertical",
+                        key="section-selecto1r",
+                        styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#eee"},
+                                "nav-link-selected": {"background-color": "green"}},
+                        manual_select=st.session_state['creative_process_manual_select']                        
+                    )
+
+                    if st.session_state['page'] != "Adjust Shot":
+                        st.session_state['current_frame_sidebar_selector'] = 0
 
                     if st.session_state['creative_process_manual_select']  != None:
                         st.session_state['creative_process_manual_select'] = None
@@ -179,9 +181,6 @@ def setup_app_ui():
                 elif st.session_state['page'] == "Timeline":
                     timeline_view_page(st.session_state["shot_uuid"], h2)
 
-                elif st.session_state['page'] == "Adjust Frame":                                            
-                    frame_styling_page(st.session_state["shot_uuid"], h2)
-
                 elif st.session_state['page'] == "Adjust Shot":
                     adjust_shot_page(st.session_state["shot_uuid"], h2)
                 
@@ -192,24 +191,11 @@ def setup_app_ui():
                     with st.expander("🔍 Generation Log", expanded=True):
                         if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
                             sidebar_logger(st.session_state["shot_uuid"])
-                    st.markdown("***")
+                    # st.markdown("***")
 
-            elif st.session_state["main_view_type"] == "Tools & Settings":
-                with st.sidebar:
-                    tool_pages = ["Query Logger", "Project Settings"]
+            elif st.session_state["main_view_type"] == "Project Settings":
 
-                    if st.session_state["page"] not in tool_pages:
-                        st.session_state["page"] = tool_pages[0]
-                        st.session_state["manual_select"] = None
-
-                    st.session_state['page'] = option_menu(None, tool_pages, icons=['pencil', 'palette', "hourglass", 'stopwatch'], menu_icon="cast", orientation="horizontal", key="secti2on_selector", styles={
-                                                            "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "green"}}, manual_select=st.session_state["manual_select"])
-                if st.session_state["page"] == "Query Logger":
-                    query_logger_page()
-                if st.session_state["page"] == "Custom Models":
-                    custom_models_page(st.session_state["project_uuid"])                
-                elif st.session_state["page"] == "Project Settings":
-                    project_settings_page(st.session_state["project_uuid"])
+                project_settings_page(st.session_state["project_uuid"])
 
             elif st.session_state["main_view_type"] == "Video Rendering":
                 video_rendering_page(st.session_state["project_uuid"])
