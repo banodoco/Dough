@@ -11,8 +11,10 @@ from utils.data_repo.data_repo import DataRepo
 
 def adjust_shot_page(shot_uuid: str, h2):
 
-    with h2:
+    with st.sidebar:
+        
         frame_selection = frame_selector_widget(show_frame_selector=True)
+    
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
 
@@ -25,9 +27,11 @@ def adjust_shot_page(shot_uuid: str, h2):
                 if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
                     
                     project_setting = data_repo.get_project_setting(shot.project.uuid)
-                    page_number = st.radio("Select page:", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)                        
-                    st.markdown("***")
-                    gallery_image_view(shot.project.uuid, page_number=page_number, num_items_per_page=8, open_detailed_view_for_all=False, shortlist=True, num_columns=2,view=['add_and_remove_from_shortlist','add_to_this_shot'], shot=shot)
+                    number_of_pages = project_setting.total_shortlist_gallery_pages
+                    # page_number = st.radio("Select page:", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True,key=f"main_page_number")                  
+                    # st.markdown("***")
+                    page_number = 0
+                    gallery_image_view(shot.project.uuid, shortlist=True,view=['add_and_remove_from_shortlist','add_to_this_shot'], shot=shot,sidebar=True)
 
                 
         
@@ -39,22 +43,15 @@ def adjust_shot_page(shot_uuid: str, h2):
                 
         
         shot_keyframe_element(st.session_state["shot_uuid"], 4, position="Individual")
-        '''
-        if shot_explorer_view == "Shortlist":                    
-            project_setting = data_repo.get_project_setting(shot.project.uuid)
-            page_number = st.radio("Select page:", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)                        
-            st.markdown("***")
-            gallery_image_view(shot.project.uuid, page_number=page_number, num_items_per_page=8, open_detailed_view_for_all=False, shortlist=True, num_columns=4,view="individual_shot", shot=shot)
-        '''
+
         project_setting = data_repo.get_project_setting(shot.project.uuid)
+        # st.markdown("***")
+            
+        with st.expander("✨ Generate Images", expanded=True):
+            generate_images_element(position='explorer', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
+            st.markdown("***")
+            page_number = st.radio("Select page:", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True,key=f"main_page_number_{shot.project.uuid}")
         st.markdown("***")
-        z1, z2, z3 = st.columns([0.25,2,0.25])   
-        with z2:        
-            with st.expander("Prompt Settings", expanded=True):
-                generate_images_element(position='explorer', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
-                st.markdown("***")
-                page_number = st.radio("Select page:", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True,key=f"main_page_number_{shot.project.uuid}")
-        st.markdown("***")
-        gallery_image_view(shot.project.uuid, page_number=page_number, num_items_per_page=8, open_detailed_view_for_all=False, shortlist=False, num_columns=4,view=['add_and_remove_from_shortlist','add_to_this_shot'], shot=shot)
+        gallery_image_view(shot.project.uuid, shortlist=False,view=['add_and_remove_from_shortlist','add_to_this_shot'], shot=shot)
     else:
         frame_styling_page(st.session_state["shot_uuid"], h2)

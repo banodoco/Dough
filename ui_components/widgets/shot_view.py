@@ -220,16 +220,7 @@ def update_shot_duration(shot_uuid):
         time.sleep(0.3)
         st.rerun()
 
-def shot_video_element(shot_uuid):
-    data_repo = DataRepo()
-    
-    shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
-    
-    
-    if shot.main_clip and shot.main_clip.location:
-        st.video(shot.main_clip.location)
-    else:
-        st.warning('''No video present''')
+
 
 
 
@@ -262,6 +253,7 @@ def shot_adjustment_button(shot, show_label=False):
     button_label = "Shot Adjustment 🔧" if show_label else "🔧"
     if st.button(button_label, key=f"jump_to_shot_adjustment_{shot.uuid}", help=f"Shot adjustment view for '{shot.name}'", use_container_width=True):
         st.session_state["shot_uuid"] = shot.uuid
+        st.session_state['current_frame_sidebar_selector'] = 0
         st.session_state['creative_process_manual_select'] = 3
         st.session_state["manual_select"] = 1          
         st.session_state['shot_view_manual_select'] = 1  
@@ -272,8 +264,8 @@ def shot_animation_button(shot, show_label=False):
     button_label = "Shot Animation 🎞️" if show_label else "🎞️"
     if st.button(button_label, key=f"jump_to_shot_animation_{shot.uuid}", help=f"Shot animation view for '{shot.name}'", use_container_width=True):
         st.session_state["shot_uuid"] = shot.uuid
-        st.session_state['creative_process_manual_select'] = 5
-        st.session_state["manual_select"] = 1       
+        st.session_state['creative_process_manual_select'] = 4
+        # st.session_state["manual_select"] = 1       
         st.session_state['shot_view_manual_select'] = 0       
         st.session_state['shot_view_index'] = 0
         st.rerun() 

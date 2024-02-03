@@ -1,6 +1,6 @@
 import streamlit as st
 from ui_components.methods.common_methods import add_new_shot
-from ui_components.widgets.shot_view import shot_keyframe_element, shot_video_element, shot_adjustment_button, shot_animation_button, update_shot_name, update_shot_duration, move_shot_buttons, delete_shot_button, create_video_download_button
+from ui_components.widgets.shot_view import shot_keyframe_element, shot_adjustment_button, shot_animation_button, update_shot_name, update_shot_duration, move_shot_buttons, delete_shot_button, create_video_download_button
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
 
@@ -14,8 +14,8 @@ def timeline_view(shot_uuid, stage):
     
     _, header_col_2 = st.columns([5.5,1.5])
             
-    with header_col_2:
-        items_per_row = st_memory.slider("How many frames per row?", min_value=3, max_value=7, value=5, step=1, key="items_per_row_slider")
+    #with header_col_2:
+        #items_per_row = st_memory.slider("How many frames per row?", min_value=3, max_value=7, value=5, step=1, key="items_per_row_slider")
     '''
     if stage == 'Key Frames':
         for shot in shot_list:
@@ -34,6 +34,8 @@ def timeline_view(shot_uuid, stage):
         timing_list: List[InternalFrameTimingObject] = shot.timing_list
         if idx % items_per_row == 0:
             grid = st.columns(items_per_row)
+
+            
         with grid[idx % items_per_row]:
             st.info(f"##### {shot.name}")
             if stage == "Key Frames":
@@ -41,14 +43,19 @@ def timeline_view(shot_uuid, stage):
                     if i % items_per_row == 0:
                         grid_timing = st.columns(items_per_row)
                     for j in range(items_per_row):
-                        idx = i + j
-                        if idx < len(timing_list):
+                        # idx = i + j
+                        if  i + j < len(timing_list):
                             with grid_timing[j]:
-                                timing = timing_list[idx]
+                                timing = timing_list[ i + j]
                                 if timing.primary_image and timing.primary_image.location:
                                     st.image(timing.primary_image.location, use_column_width=True)
             else:        
-                shot_video_element(shot.uuid)
+                
+                if shot.main_clip and shot.main_clip.location:
+                    st.video(shot.main_clip.location)
+                else:
+                    st.warning('''No video present''')
+
 
             switch1,switch2 = st.columns([1,1])
             with switch1:
@@ -67,7 +74,8 @@ def timeline_view(shot_uuid, stage):
 
         if (idx + 1) % items_per_row == 0 or idx == len(shot_list) - 1:
             st.markdown("***")
-        # if stage isn't 
+        
+        # st.write(idx, len(shot_list) - 1, (idx + 1) % items_per_row, idx == len(shot_list) - 1)
         if idx == len(shot_list) - 1:
             with grid[(idx + 1) % items_per_row]:
                 st.markdown("### Add new shot")

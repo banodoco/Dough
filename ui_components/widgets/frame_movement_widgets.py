@@ -118,51 +118,18 @@ def replace_image_widget(timing_uuid, stage, options=["Uploaded Frame", "Other F
     timing = data_repo.get_timing_from_uuid(timing_uuid)
     timing_list = data_repo.get_timing_list_from_shot(timing.shot.uuid)
 
-    replace_with = options[0] if len(options) == 1 else st.radio("Replace with:", options, horizontal=True, key=f"replacement_entity_{stage}_{timing_uuid}")
 
-    if replace_with == "Other Frame":
-        image_replacement_stage = st.radio(
-                        "Select stage to use:", 
-                        [ImageStage.MAIN_VARIANT.value, ImageStage.SOURCE_IMAGE.value], 
-                        key=f"image_replacement_stage_{stage}_{timing_uuid}", 
-                        horizontal=True
-                    )
-        replacement_img_number = st.number_input("Select image to use:", min_value=1, max_value=len(
-            timing_list), value=0, key=f"replacement_img_number_{stage}")
-
-        if image_replacement_stage == ImageStage.SOURCE_IMAGE.value:                                    
-            selected_image = timing_list[replacement_img_number - 1].source_image
-        elif image_replacement_stage == ImageStage.MAIN_VARIANT.value:
-            selected_image = timing_list[replacement_img_number - 1].primary_image
-
-        st.image(selected_image.location, use_column_width=True)
-
-        if st.button("Replace with selected frame", disabled=False,key=f"replace_with_selected_frame_{stage}_{timing_uuid}"):
-            if stage == WorkflowStageType.SOURCE.value:
-                data_repo.update_specific_timing(timing.uuid, source_image_id=selected_image.uuid)                                        
-                st.success("Replaced")
-                time.sleep(1)
-                st.rerun()
-            else:
-                number_of_image_variants = add_image_variant(
-                    selected_image.uuid, timing.uuid)
-                promote_image_variant(
-                    timing.uuid, number_of_image_variants - 1)
-                st.success("Replaced")
-                time.sleep(1)
-                st.rerun()
-    elif replace_with == "Uploaded Frame":
-        btn_text = 'Upload source image' if stage == WorkflowStageType.SOURCE.value else 'Replace frame'
-        uploaded_file = st.file_uploader(btn_text, type=[
-            "png", "jpeg"], accept_multiple_files=False,key=f"uploaded_file_{stage}_{timing_uuid}")
-        if uploaded_file != None:
-            if st.button(btn_text):
-                if uploaded_file:
-                    timing = data_repo.get_timing_from_uuid(timing.uuid)
-                    if save_and_promote_image(uploaded_file, timing.shot.uuid, timing.uuid, stage):
-                        st.success("Replaced")
-                        time.sleep(1.5)
-                        st.rerun()
+    btn_text = 'Upload source image' if stage == WorkflowStageType.SOURCE.value else 'Replace frame'
+    uploaded_file = st.file_uploader(btn_text, type=[
+        "png", "jpeg"], accept_multiple_files=False,key=f"uploaded_file_{stage}_{timing_uuid}")
+    if uploaded_file != None:
+        if st.button(btn_text):
+            if uploaded_file:
+                timing = data_repo.get_timing_from_uuid(timing.uuid)
+                if save_and_promote_image(uploaded_file, timing.shot.uuid, timing.uuid, stage):
+                    st.success("Replaced")
+                    time.sleep(1.5)
+                    st.rerun()
 
 
 def jump_to_single_frame_view_button(display_number, timing_list, src,uuid=None):
