@@ -10,7 +10,8 @@ from utils.data_repo.data_repo import DataRepo
 
 def project_settings_page(project_uuid):
     data_repo = DataRepo()
-    st.subheader("Project Settings")
+    st.markdown("#### Project Settings")
+    st.markdown("***")
     project_settings = data_repo.get_project_setting(project_uuid)
 
     

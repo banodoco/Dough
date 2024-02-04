@@ -387,7 +387,6 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
             open_detailed_view_for_all = False     
             st.markdown("***")
-
     else:
         project_setting = data_repo.get_project_setting(project_uuid)
         page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
@@ -418,15 +417,17 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         st.markdown("***")
         num_of_temp_gallery_images = data_repo.get_file_count_from_type(\
             file_tag=InternalFileTag.TEMP_GALLERY_IMAGE.value, project_uuid=project_uuid)
-        with fetch2:
-            st.info(f"###### {num_of_temp_gallery_images} images pending")     
-        with fetch3:
-            if num_of_temp_gallery_images:                            
-                if st.button("Check for new images", key=f"check_for_new_images_", use_container_width=True):
-                    data_repo.update_temp_gallery_images(project_uuid)
-                    st.success("New images fetched")
-                    time.sleep(0.3)
-                    st.rerun()
+        if num_of_temp_gallery_images:   
+            st.markdown("***")
+            with fetch2:                
+                st.info(f"###### {num_of_temp_gallery_images} images pending")     
+            with fetch3:
+                                        
+                    if st.button("Pull in new images", key=f"check_for_new_images_", use_container_width=True):
+                        data_repo.update_temp_gallery_images(project_uuid)
+                        st.success("New images fetched")
+                        time.sleep(0.3)
+                        st.rerun()
 
     total_image_count = res_payload['count']
     if gallery_image_list and len(gallery_image_list):
@@ -500,8 +501,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                         add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
                                         # removing this from the gallery view
                                         data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                        refresh_app(maintain_state=True)
-                                                    
+                                        refresh_app(maintain_state=True)                                                    
             st.markdown("***")
     else:
         st.warning("No images present")

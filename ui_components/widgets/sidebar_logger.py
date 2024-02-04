@@ -19,7 +19,7 @@ def sidebar_logger(shot_uuid):
     if a1.button("Refresh log", disabled=refresh_disabled, help="You can also press 'r' on your keyboard to refresh."): st.rerun()
 
     status_option = st.radio("Statuses to display:", options=["All", "In Progress", "Succeeded", "Failed"], key="status_option", index=0, horizontal=True)
-
+    
     status_list = None
     if status_option == "In Progress":
         status_list = [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value]
@@ -102,7 +102,7 @@ def sidebar_logger(shot_uuid):
                         jump_to_single_frame_view_button(timing.aux_frame_index + 1, timing_list, 'sidebar_'+str(log.uuid))     
 
                     else:
-                        if st.session_state['frame_styling_view_type'] != "Explorer":
+                        if st.session_state['page'] != "Explore":
                             if st.button(f"Jump to explorer", key=str(log.uuid)):
                                 # TODO: fix this
                                 st.session_state['main_view_type'] = "Creative Process"

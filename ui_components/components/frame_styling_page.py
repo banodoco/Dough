@@ -36,11 +36,11 @@ def frame_styling_page(shot_uuid: str, h2):
             
             frame_view(view="Key Frame")
 
-        st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['frame_styling_view_type']}] > :orange[{st.session_state['styling_view']}] > :blue[{shot.name} - #{st.session_state['current_frame_index']}]")
+        st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['frame_styling_view_type']}] > :orange[{shot.name} - #{st.session_state['current_frame_index']}] > :blue[{st.session_state['styling_view']}]")
 
         variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)    
 
-        st.markdown("***")
+        
         if st.session_state['styling_view'] == "Generate":
             
             with st.expander("🛠️ Generate Variants", expanded=True):
@@ -57,5 +57,7 @@ def frame_styling_page(shot_uuid: str, h2):
         elif st.session_state['styling_view'] == "Scribble":
             with st.expander("📝 Draw On Image", expanded=True):
                 drawing_element(shot_uuid)
+
+        st.markdown("***")
 
             

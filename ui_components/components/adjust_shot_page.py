@@ -17,14 +17,13 @@ def adjust_shot_page(shot_uuid: str, h2):
 
     if frame_selection == "":
         with st.sidebar:       
-            frame_view(view='Video')      
+            frame_view(view='Video',show_current_frames=False)
             with st.expander("📋 Explorer Shortlist",expanded=True):
                 if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
                     project_setting = data_repo.get_project_setting(shot.project.uuid)
                     number_of_pages = project_setting.total_shortlist_gallery_pages
                     page_number = 0
                     gallery_image_view(shot.project.uuid, shortlist=True,view=['add_and_remove_from_shortlist','add_to_this_shot'], shot=shot,sidebar=True)
-
         st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}] > :orange[{shot.name}]")
         st.markdown("***")
         shot_keyframe_element(st.session_state["shot_uuid"], 4, position="Individual")
@@ -33,7 +32,7 @@ def adjust_shot_page(shot_uuid: str, h2):
         with st.expander("✨ Generate Images", expanded=True):
             generate_images_element(position='explorer', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
             st.markdown("***")
-            page_number = st.radio("Select page:", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True,key=f"main_page_number_{shot.project.uuid}")
+            
         st.markdown("***")
         gallery_image_view(shot.project.uuid, shortlist=False,view=['add_and_remove_from_shortlist','add_to_this_shot'], shot=shot)
     else:

@@ -73,7 +73,7 @@ def frame_selector_widget(show_frame_selector=True):
 
         return frame_selection
 
-def frame_view(view="Key Frame"):
+def frame_view(view="Key Frame",show_current_frames=True):
     data_repo = DataRepo()
     # time1, time2 = st.columns([1,1])
     # st.markdown("***")
@@ -121,11 +121,12 @@ def frame_view(view="Key Frame"):
                 with a2:
                     update_shot_duration(shot.uuid)
                 
-                st.markdown("---")
+                if show_current_frames:
+                    st.markdown("---")
 
-                timing_list: List[InternalFrameTimingObject] = shot.timing_list
+                    timing_list: List[InternalFrameTimingObject] = shot.timing_list
 
-                display_shot_frames(timing_list, False)
+                    display_shot_frames(timing_list, False)
 
                 st.markdown("---")
 
