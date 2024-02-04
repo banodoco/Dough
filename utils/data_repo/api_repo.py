@@ -65,6 +65,7 @@ class APIRepo:
         self.FILE_LIST_URL = '/v1/data/file/list'
         self.FILE_UUID_LIST_URL = '/v1/data/file/uuid-list'
         self.FILE_UPLOAD_URL = '/v1/data/file/upload'
+        self.FILE_EXTRA_URL = '/v1/data/file/extra'      # TODO: fix url patterns
         
         # app setting
         self.APP_SETTING_URL = '/v1/data/app-setting'
@@ -244,6 +245,14 @@ class APIRepo:
     
     def update_file(self, **kwargs):
         res = self.http_put(url=self.FILE_URL, data=kwargs)
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def get_file_count_from_type(self, file_tag, project_uuid):
+        res = self.http_get(self.FILE_EXTRA_URL, params={'file_tag': file_tag, 'project_uuid': project_uuid})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def update_temp_gallery_images(self, project_uuid):
+        res = self.http_put(self.FILE_EXTRA_URL, data={'uuid': project_uuid})
         return InternalResponse(res['payload'], 'success', res['status'])
     
     # project

@@ -841,7 +841,7 @@ def process_inference_output(**kwargs):
                 hosted_url=output[0] if isinstance(output, list) else output, 
                 inference_log_id=log.uuid,
                 project_id=project_uuid,
-                tag=InternalFileTag.GALLERY_IMAGE.value
+                tag=InternalFileTag.TEMP_GALLERY_IMAGE.value        # will be updated to GALLERY_IMAGE once the user clicks 'check for new images'
             )
         else:
             log_uuid = kwargs.get('log_uuid')

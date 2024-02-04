@@ -11,7 +11,7 @@ from ui_components.models import InferenceLogObject
 
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import get_ml_client
-from utils.ml_processor.replicate.constants import REPLICATE_MODEL
+from utils.ml_processor.constants import ML_MODEL
 
 
 class VideoInterpolator:
@@ -67,7 +67,7 @@ class VideoInterpolator:
         for _ in range(variant_count):
             # if animation_tool == AnimationToolType.G_FILM.value:
             #     res = ml_client.predict_model_output(
-            #                         REPLICATE_MODEL.google_frame_interpolation, 
+            #                         ML_MODEL.google_frame_interpolation, 
             #                         frame1=img1, 
             #                         frame2=img2,
             #                         times_to_interpolate=settings['interpolation_steps'], 
@@ -109,7 +109,7 @@ class VideoInterpolator:
                     "queue_inference": True
                 }
 
-                res = ml_client.predict_model_output(REPLICATE_MODEL.ad_interpolation, **data)
+                res = ml_client.predict_model_output(ML_MODEL.ad_interpolation, **data)
 
             final_res.append(res)
 

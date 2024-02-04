@@ -1,7 +1,7 @@
 from utils.common_utils import user_credits_available
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.replicate.constants import CONTROLNET_MODELS, REPLICATE_MODEL
+from utils.ml_processor.constants import CONTROLNET_MODELS, ML_MODEL
 
 
 def check_user_credits(method):
@@ -43,7 +43,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             if not mask.startswith('http'):
                 mask = open(mask, 'rb')
 
-    if model == REPLICATE_MODEL.img2img_sd_2_1:
+    if model == ML_MODEL.img2img_sd_2_1:
         data = {
             "prompt_strength" : query_obj.strength,
             "prompt" : query_obj.prompt,
@@ -58,17 +58,17 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if input_image:
             data['image'] = input_image
 
-    elif model == REPLICATE_MODEL.real_esrgan_upscale:
+    elif model == ML_MODEL.real_esrgan_upscale:
         data = {
             "image": input_image,
             "upscale": query_obj.data.get('upscale', 2),
         }
-    elif model == REPLICATE_MODEL.stylegan_nada:
+    elif model == ML_MODEL.stylegan_nada:
         data = {
             "input": input_image,
             "output_style": query_obj.prompt
         }
-    elif model == REPLICATE_MODEL.sdxl:
+    elif model == ML_MODEL.sdxl:
         data = {
             "prompt" : query_obj.prompt,
             "negative_prompt" : query_obj.negative_prompt,
@@ -81,7 +81,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if input_image:
             data['image'] = input_image
 
-    elif model == REPLICATE_MODEL.arielreplicate:
+    elif model == ML_MODEL.arielreplicate:
         data = {
             "instruction_text" : query_obj.prompt,
             "seed" : query_obj.seed, 
@@ -93,7 +93,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if input_image:
             data['input_image'] = input_image
 
-    elif model  == REPLICATE_MODEL.urpm:
+    elif model  == ML_MODEL.urpm:
         data = {
             'prompt': query_obj.prompt,
             'negative_prompt': query_obj.negative_prompt,
@@ -107,7 +107,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if input_image:
             data['image'] = input_image
 
-    elif model == REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0:
+    elif model == ML_MODEL.controlnet_1_1_x_realistic_vision_v2_0:
         data = {
             'prompt': query_obj.prompt,
             'ddim_steps': query_obj.num_inference_steps,
@@ -119,7 +119,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if input_image:
             data['image'] = input_image
 
-    elif model == REPLICATE_MODEL.realistic_vision_v5:
+    elif model == ML_MODEL.realistic_vision_v5:
         if not (query_obj.guidance_scale >= 3.5 and query_obj.guidance_scale <= 7.0):
             raise ValueError("Guidance scale must be between 3.5 and 7.0")
 
@@ -132,7 +132,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             'steps': query_obj.num_inference_steps,
             'seed': query_obj.seed if query_obj.seed not in [-1, 0] else 0
         }
-    elif model == REPLICATE_MODEL.deliberate_v3 or model == REPLICATE_MODEL.dreamshaper_v7 or model == REPLICATE_MODEL.epicrealism_v5:
+    elif model == ML_MODEL.deliberate_v3 or model == ML_MODEL.dreamshaper_v7 or model == ML_MODEL.epicrealism_v5:
         data = {
             'prompt': query_obj.prompt,
             'negative_prompt': query_obj.negative_prompt,
@@ -153,7 +153,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if mask:
             data['mask'] = mask
 
-    elif model == REPLICATE_MODEL.sdxl_controlnet:
+    elif model == ML_MODEL.sdxl_controlnet:
         data = {
             'prompt': query_obj.prompt,
             'negative_prompt': query_obj.negative_prompt,
@@ -164,7 +164,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if input_image:
             data['image'] = input_image
     
-    elif model == REPLICATE_MODEL.sdxl_controlnet_openpose:
+    elif model == ML_MODEL.sdxl_controlnet_openpose:
         data = {
             'prompt': query_obj.prompt,
             'negative_prompt': query_obj.negative_prompt,
@@ -175,7 +175,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if input_image:
             data['image'] = input_image
 
-    elif model == REPLICATE_MODEL.realistic_vision_v5_img2img:
+    elif model == ML_MODEL.realistic_vision_v5_img2img:
         data = {
             'prompt': query_obj.prompt,
             'negative_prompt': query_obj.negative_prompt,
@@ -188,7 +188,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             data['image'] = input_image
 
     elif model in CONTROLNET_MODELS:
-        if model == REPLICATE_MODEL.jagilley_controlnet_scribble and query_obj.data.get('canny_image', None):
+        if model == ML_MODEL.jagilley_controlnet_scribble and query_obj.data.get('canny_image', None):
             input_image = data_repo.get_file_from_uuid(query_obj.data['canny_image']).location
             if not input_image.startswith('http'):
                 input_image = open(input_image, 'rb')
@@ -211,7 +211,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             'high_threshold': query_obj.high_threshold,
         }
 
-    elif model in [REPLICATE_MODEL.clones_lora_training_2]:
+    elif model in [ML_MODEL.clones_lora_training_2]:
         
         if query_obj.adapter_type:
             adapter_condition_image = input_image

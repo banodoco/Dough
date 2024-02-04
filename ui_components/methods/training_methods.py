@@ -4,7 +4,7 @@ from shared.constants import AIModelCategory
 from utils.common_utils import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import get_ml_client
-from utils.ml_processor.replicate.constants import REPLICATE_MODEL
+from utils.ml_processor.constants import ML_MODEL
 
 # NOTE: making an exception for this function, passing just the image urls instead of
 # image files
@@ -69,7 +69,7 @@ def train_lora_model(training_file_url, type_of_task, resolution, model_name, im
 
     data_repo = DataRepo()
     ml_client = get_ml_client()
-    output = ml_client.predict_model_output(REPLICATE_MODEL.clones_lora_training, instance_data=training_file_url,
+    output = ml_client.predict_model_output(ML_MODEL.clones_lora_training, instance_data=training_file_url,
                                             task=type_of_task, resolution=int(resolution))
 
     file_list = convert_image_list_to_file_list(images_list)

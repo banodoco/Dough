@@ -7,10 +7,10 @@ from shared.logging.logging import AppLogger
 from utils.common_utils import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
 
-from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
+from utils.ml_processor.constants import ML_MODEL, MLModel
 
 
-def log_model_inference(model: ReplicateModel, time_taken, **kwargs):
+def log_model_inference(model: MLModel, time_taken, **kwargs):
     kwargs_dict = dict(kwargs)
 
     # removing object like bufferedreader, image_obj ..
@@ -41,8 +41,8 @@ def log_model_inference(model: ReplicateModel, time_taken, **kwargs):
     ai_model = data_repo.get_ai_model_from_name(model.name, user_id)
 
     # hackish sol for insuring that inpainting logs don't have an empty model field
-    if ai_model is None and model.name in [REPLICATE_MODEL.sdxl_inpainting.name, REPLICATE_MODEL.ad_interpolation.name]:
-        ai_model = data_repo.get_ai_model_from_name(REPLICATE_MODEL.sdxl.name, user_id)
+    if ai_model is None and model.name in [ML_MODEL.sdxl_inpainting.name, ML_MODEL.ad_interpolation.name]:
+        ai_model = data_repo.get_ai_model_from_name(ML_MODEL.sdxl.name, user_id)
 
     log_data = {
         "project_id" : st.session_state["project_uuid"],

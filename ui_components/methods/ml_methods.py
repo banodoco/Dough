@@ -15,7 +15,7 @@ from ui_components.models import InternalAIModelObject, InternalFrameTimingObjec
 from utils.constants import ImageStage, MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import get_ml_client
-from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
+from utils.ml_processor.constants import ML_MODEL, MLModel
 
 
 def trigger_restyling_process(timing_uuid, update_inference_settings, \
@@ -70,34 +70,34 @@ def restyle_images(query_obj: MLQueryObject, queue_inference=False) -> InternalF
     db_model  = data_repo.get_ai_model_from_uuid(query_obj.model_uuid)
 
     if db_model.category == AIModelCategory.LORA.value:
-        model = REPLICATE_MODEL.clones_lora_training_2
+        model = ML_MODEL.clones_lora_training_2
         output, log = ml_client.predict_model_output_standardized(model, query_obj, queue_inference=queue_inference)
 
     elif db_model.category == AIModelCategory.CONTROLNET.value:
         adapter_type = query_obj.adapter_type
         if adapter_type == "normal":
-            model = REPLICATE_MODEL.jagilley_controlnet_normal
+            model = ML_MODEL.jagilley_controlnet_normal
         elif adapter_type == "canny":
-            model = REPLICATE_MODEL.jagilley_controlnet_canny
+            model = ML_MODEL.jagilley_controlnet_canny
         elif adapter_type == "hed":
-            model = REPLICATE_MODEL.jagilley_controlnet_hed
+            model = ML_MODEL.jagilley_controlnet_hed
         elif adapter_type == "scribble":
-            model = REPLICATE_MODEL.jagilley_controlnet_scribble 
+            model = ML_MODEL.jagilley_controlnet_scribble 
         elif adapter_type == "seg":
-            model = REPLICATE_MODEL.jagilley_controlnet_seg
+            model = ML_MODEL.jagilley_controlnet_seg
         elif adapter_type == "hough":
-            model = REPLICATE_MODEL.jagilley_controlnet_hough
+            model = ML_MODEL.jagilley_controlnet_hough
         elif adapter_type == "depth2img":
-            model = REPLICATE_MODEL.jagilley_controlnet_depth2img
+            model = ML_MODEL.jagilley_controlnet_depth2img
         elif adapter_type == "pose":
-            model = REPLICATE_MODEL.jagilley_controlnet_pose
+            model = ML_MODEL.jagilley_controlnet_pose
         output, log = ml_client.predict_model_output_standardized(model, query_obj, queue_inference=queue_inference)
 
     elif db_model.category == AIModelCategory.DREAMBOOTH.value:
         output, log = prompt_model_dreambooth(query_obj,  queue_inference=queue_inference)
 
     else:
-        model = REPLICATE_MODEL.get_model_by_db_obj(db_model)   # TODO: remove this dependency
+        model = ML_MODEL.get_model_by_db_obj(db_model)   # TODO: remove this dependency
         output, log = ml_client.predict_model_output_standardized(model, query_obj, queue_inference=queue_inference)
 
     return output, log
@@ -123,7 +123,7 @@ def prompt_model_dreambooth(query_obj: MLQueryObject, queue_inference=False):
         version = dreambooth_model.version
 
     app_setting = data_repo.get_app_setting_from_uuid()
-    model = ReplicateModel(f"{app_setting.replicate_username}/{model_name}", version)
+    model = MLModel(f"{app_setting.replicate_username}/{model_name}", version)
     output, log = ml_client.predict_model_output_standardized(model, query_obj, queue_inference=queue_inference)
 
     return output, log
@@ -140,7 +140,7 @@ def prompt_clip_interrogator(input_image, which_model, best_or_fast):
 
     ml_client = get_ml_client()
     output, _ = ml_client.predict_model_output(
-        REPLICATE_MODEL.clip_interrogator, image=input_image, clip_model_name=which_model, mode=best_or_fast)
+        ML_MODEL.clip_interrogator, image=input_image, clip_model_name=which_model, mode=best_or_fast)
 
     return output
 
@@ -150,7 +150,7 @@ def prompt_model_blip2(input_image, query):
 
     ml_client = get_ml_client()
     output, _ = ml_client.predict_model_output(
-        REPLICATE_MODEL.salesforce_blip_2, image=input_image, question=query)
+        ML_MODEL.salesforce_blip_2, image=input_image, question=query)
 
     return output
 
@@ -161,7 +161,7 @@ def facial_expression_recognition(input_image):
 
     ml_client = get_ml_client()
     output, _ = ml_client.predict_model_output(
-        REPLICATE_MODEL.phamquiluan_face_recognition, input_path=input_image)
+        ML_MODEL.phamquiluan_face_recognition, input_path=input_image)
 
     emo_label = output[0]["emo_label"]
     if emo_label == "disgust":
@@ -203,7 +203,7 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, mask_in_p
 
     ml_client = get_ml_client()
     output, log = ml_client.predict_model_output(
-        REPLICATE_MODEL.sdxl_inpainting, 
+        ML_MODEL.sdxl_inpainting, 
         mask=mask, 
         image=input_image, 
         prompt=prompt, 
@@ -221,7 +221,7 @@ def remove_background(input_image):
 
     ml_client = get_ml_client()
     output, _ = ml_client.predict_model_output(
-        REPLICATE_MODEL.pollination_modnet, image=input_image)
+        ML_MODEL.pollination_modnet, image=input_image)
     return output
 
 def create_depth_mask_image(input_image, layer, timing_uuid):
@@ -232,7 +232,7 @@ def create_depth_mask_image(input_image, layer, timing_uuid):
 
     ml_client = get_ml_client()
     output, log = ml_client.predict_model_output(
-        REPLICATE_MODEL.cjwbw_midas, image=input_image, model_type="dpt_beit_large_512")
+        ML_MODEL.cjwbw_midas, image=input_image, model_type="dpt_beit_large_512")
     try:
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png", mode='wb')
         with urllib.request.urlopen(output) as response, open(temp_file.name, 'wb') as out_file:
@@ -312,7 +312,7 @@ def query_llama2(prompt, temperature):
             "stop_sequences": "\n"
         }
     
-    output, log = ml_client.predict_model_output(REPLICATE_MODEL.llama_2_7b, **input)
+    output, log = ml_client.predict_model_output(ML_MODEL.llama_2_7b, **input)
     result = ""
     for item in output:
         result += item

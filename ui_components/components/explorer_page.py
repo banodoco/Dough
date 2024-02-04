@@ -12,7 +12,7 @@ from utils import st_memory
 import time
 from utils.enum import ExtendedEnum
 from utils.ml_processor.ml_interface import get_ml_client
-from utils.ml_processor.replicate.constants import REPLICATE_MODEL
+from utils.ml_processor.constants import ML_MODEL
 from PIL import Image, ImageFilter
 import io
 import cv2
@@ -251,7 +251,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     for m in model_list:
                         model_dict[m.name] = m
 
-                    replicate_model = REPLICATE_MODEL.get_model_by_db_obj(model_dict[model_name])
+                    replicate_model = ML_MODEL.get_model_by_db_obj(model_dict[model_name])
                     output, log = ml_client.predict_model_output_standardized(replicate_model, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                 else:
@@ -273,7 +273,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                             project_uuid=project_uuid
                         )
 
-                        output, log = ml_client.predict_model_output_standardized(REPLICATE_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                        output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                     elif InputImageStyling.value_list()[st.session_state['type_of_generation_key']] == InputImageStyling.CONTROLNET_CANNY.value:
                         input_image_file = save_uploaded_image(edge_pil_img, project_uuid)
@@ -294,7 +294,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                             data={'condition_scale': condition_scale}
                         )
 
-                        output, log = ml_client.predict_model_output_standardized(REPLICATE_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                        output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
                     
                     elif InputImageStyling.value_list()[st.session_state['type_of_generation_key']] == InputImageStyling.IPADAPTER_FACE.value:
                         st.write("Not implemented yet")
@@ -392,13 +392,18 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     if shortlist is False:
         fetch1, fetch2, fetch3, fetch4 = st.columns([0.25, 1, 1, 0.25])
         st.markdown("***")
+        num_of_temp_gallery_images = data_repo.get_file_count_from_type(\
+            file_tag=InternalFileTag.TEMP_GALLERY_IMAGE.value, project_uuid=project_uuid)
         with fetch2:
-            st.info("###### 25 images pending")     
+            st.info(f"###### {num_of_temp_gallery_images} images pending")     
         with fetch3:
-            image_pending = 8
-            if image_pending:                            
+            if num_of_temp_gallery_images:                            
                 if st.button("Check for new images", key=f"check_for_new_images_", use_container_width=True):
-                    st.write("Fetching images...")
+                    data_repo.update_temp_gallery_images(project_uuid)
+                    st.success("New images fetched")
+                    time.sleep(0.3)
+                    st.rerun()
+
                 # st.markdown("***")
     total_image_count = res_payload['count']
     if gallery_image_list and len(gallery_image_list):

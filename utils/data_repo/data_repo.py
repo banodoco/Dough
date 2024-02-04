@@ -153,6 +153,13 @@ class DataRepo:
         file = res.data['data'] if res.status else None
         return InternalFileObject(**file) if file else None
     
+    def get_file_count_from_type(self, file_tag=None, project_uuid=None):
+        return self.db_repo.get_file_count_from_type(file_tag, project_uuid).data['data']
+    
+    def update_temp_gallery_images(self, project_uuid):
+        self.db_repo.update_temp_gallery_images(project_uuid)
+        return True
+    
     # project
     def get_project_from_uuid(self, uuid):
         project = self.db_repo.get_project_from_uuid(uuid).data['data']
