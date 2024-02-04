@@ -392,13 +392,18 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     if shortlist is False:
         fetch1, fetch2, fetch3, fetch4 = st.columns([0.25, 1, 1, 0.25])
         st.markdown("***")
+        num_of_temp_gallery_images = data_repo.get_file_count_from_type(\
+            file_tag=InternalFileTag.TEMP_GALLERY_IMAGE.value, project_uuid=project_uuid)
         with fetch2:
-            st.info("###### 25 images pending")     
+            st.info(f"###### {num_of_temp_gallery_images} images pending")     
         with fetch3:
-            image_pending = 8
-            if image_pending:                            
+            if num_of_temp_gallery_images:                            
                 if st.button("Check for new images", key=f"check_for_new_images_", use_container_width=True):
-                    st.write("Fetching images...")
+                    data_repo.update_temp_gallery_images(project_uuid)
+                    st.success("New images fetched")
+                    time.sleep(0.3)
+                    st.rerun()
+
                 # st.markdown("***")
     total_image_count = res_payload['count']
     if gallery_image_list and len(gallery_image_list):

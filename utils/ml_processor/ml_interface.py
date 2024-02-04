@@ -7,7 +7,7 @@ def get_ml_client():
     from utils.ml_processor.replicate.replicate import ReplicateProcessor
     from utils.ml_processor.gpu.gpu import GPUProcessor
     
-    return ReplicateProcessor() if GPU_INFERENCE_ENABLED else GPUProcessor
+    return ReplicateProcessor() if not GPU_INFERENCE_ENABLED else GPUProcessor
 
 class MachineLearningProcessor(ABC):
     def __init__(self):

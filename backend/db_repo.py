@@ -15,7 +15,7 @@ import sqlite3
 import subprocess
 from typing import List
 import uuid
-from shared.constants import InternalFileType, SortOrder
+from shared.constants import InternalFileTag, InternalFileType, SortOrder
 from backend.serializers.dto import  AIModelDto, AppSettingDto, BackupDto, BackupListDto, InferenceLogDto, InternalFileDto, ProjectDto, SettingDto, ShotDto, TimingDto, UserDto
 
 from shared.constants import AUTOMATIC_FILE_HOSTING, LOCAL_DATABASE_NAME, SERVER, ServerType
@@ -371,6 +371,24 @@ class DBRepo:
 
         return InternalResponse(payload, 'file updated successfully', True)
     
+    def get_file_count_from_type(self, file_tag, project_uuid):
+        project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        file_count = InternalFileObject.objects.filter(tag=file_tag, project_id=project.id, is_disabled=False).count()
+        payload = {
+            'data': file_count
+        }
+
+        return InternalResponse(payload, 'file count fetched', True)
+    
+    def update_temp_gallery_images(self, project_uuid):
+        project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        InternalFileObject.objects.filter(
+            tag=InternalFileTag.TEMP_GALLERY_IMAGE.value, 
+            project_id=project.id,
+            is_disabled=False).update(tag=InternalFileTag.GALLERY_IMAGE.value)
+
+        return True
+
     # project
     def get_project_from_uuid(self, uuid):
         project = Project.objects.filter(uuid=uuid, is_disabled=False).first()

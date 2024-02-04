@@ -61,6 +61,7 @@ class InternalFileTag(ExtendedEnum):
     TEMP_IMAGE = 'temp'
     GALLERY_IMAGE = 'gallery_image'
     SHORTLISTED_GALLERY_IMAGE = 'shortlisted_gallery_image'
+    TEMP_GALLERY_IMAGE = 'temp_gallery_image'   # these generations are complete but not yet being shown in the gallery
 
 class AnimationStyleType(ExtendedEnum):
     CREATIVE_INTERPOLATION = "Creative Interpolation"
