@@ -14,6 +14,9 @@ def new_project_page():
     # Initialize data repository
     data_repo = DataRepo()
     
+    # title
+    st.markdown("#### New Project")
+    st.markdown("***")
     # Define multicolumn layout
     project_column, filler_column = st.columns(2)
     
@@ -123,3 +126,4 @@ def new_project_page():
             st.success("Project created successfully!")
             time.sleep(1)     
             st.rerun()
+    st.markdown("***")

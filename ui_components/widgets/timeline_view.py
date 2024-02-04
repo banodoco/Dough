@@ -15,20 +15,7 @@ def timeline_view(shot_uuid, stage):
     _, header_col_2 = st.columns([5.5,1.5])
             
     #with header_col_2:
-        #items_per_row = st_memory.slider("How many frames per row?", min_value=3, max_value=7, value=5, step=1, key="items_per_row_slider")
-    '''
-    if stage == 'Key Frames':
-        for shot in shot_list:
-            with st.expander(f"_-_-_-_", expanded=True):
-                shot_keyframe_element(shot.uuid, items_per_row)
-            st.markdown("***")
-        st.markdown("### Add new shot")
-        shot1,shot2 = st.columns([0.75,3])
-        with shot1:
-            add_new_shot_element(shot, data_repo)
-        
-    else:
-    '''
+
     items_per_row = 4
     for idx, shot in enumerate(shot_list):
         timing_list: List[InternalFrameTimingObject] = shot.timing_list
@@ -75,7 +62,6 @@ def timeline_view(shot_uuid, stage):
         if (idx + 1) % items_per_row == 0 or idx == len(shot_list) - 1:
             st.markdown("***")
         
-        # st.write(idx, len(shot_list) - 1, (idx + 1) % items_per_row, idx == len(shot_list) - 1)
         if idx == len(shot_list) - 1:
             with grid[(idx + 1) % items_per_row]:
                 st.markdown("### Add new shot")

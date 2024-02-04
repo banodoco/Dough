@@ -6,7 +6,7 @@ from utils.common_utils import get_current_user
 from utils.data_repo.data_repo import DataRepo
 
 def query_logger_page():
-    st.subheader("Inference Log list")
+    st.markdown("##### Inference log")
 
     data_repo = DataRepo()
     current_user = get_current_user()
@@ -46,3 +46,5 @@ def query_logger_page():
 
     
     st.table(data=data)
+
+    st.markdown("***")
