@@ -1,13 +1,22 @@
 from dataclasses import dataclass
 
 from shared.constants import InferenceStatus
+from utils.enum import ExtendedEnum
 
+
+class ComfyWorkflow(ExtendedEnum):
+    IP_ADAPTER_PLUS = "ip_adapter_plus"
+    IP_ADAPTER_FACE = "ip_adapter_face"
+    IP_ADAPTER_FACE_PLUS = "ip_adapter_face_plus"
 
 @dataclass
 class MLModel:
     # properties for replicate (result of ad-hoc coding new features :<)
     name: str
     version: str
+
+    # workflow name (as multiple workflows will be run through a common replicate endpoint)
+    workflow_name: str = None
 
 class ML_MODEL:
     sdxl_inpainting = MLModel("lucataco/sdxl-inpainting", "f03c01943bacdee38d6a5d216586bf9bfbfd799350aed263aa32980efc173f0b")
@@ -53,6 +62,11 @@ class ML_MODEL:
 
     # addition 11/11/2023
     sdxl_controlnet_openpose = MLModel("lucataco/sdxl-controlnet-openpose", "d63e0b238b2d963d90348e2dad19830fbe372a7a43d90d234b2b63cae76d4397")
+
+    # addition 05/02/2024 (workflows)
+    ipadapter_plus = MLModel("voku682/comfy_runner", "d0430f2b68b9ca1f40d848d604fb879f44b197b25785c065ef8841cad6dbec6c", ComfyWorkflow.IP_ADAPTER_PLUS)
+    ipadapter_face = MLModel("voku682/comfy_runner", "d0430f2b68b9ca1f40d848d604fb879f44b197b25785c065ef8841cad6dbec6c", ComfyWorkflow.IP_ADAPTER_FACE)
+    ipadapter_face_plus = MLModel("voku682/comfy_runner", "d0430f2b68b9ca1f40d848d604fb879f44b197b25785c065ef8841cad6dbec6c", ComfyWorkflow.IP_ADAPTER_FACE_PLUS)
 
     @staticmethod
     def get_model_by_db_obj(model_db_obj):

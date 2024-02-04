@@ -13,9 +13,6 @@ import time
 from utils.enum import ExtendedEnum
 from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.constants import ML_MODEL
-from PIL import Image, ImageFilter
-import io
-import cv2
 import numpy as np
 from utils import st_memory
 
@@ -30,29 +27,20 @@ class InputImageStyling(ExtendedEnum):
 
 
 def explorer_page(project_uuid):
-    data_repo = DataRepo()
-    project_setting = data_repo.get_project_setting(project_uuid)        
-
     st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}]")
-
     st.markdown("***")
-        
+
     with st.expander("✨ Generate Images", expanded=True):
         generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None)
     st.markdown("***")
 
-        
     gallery_image_view(project_uuid,False,view=['add_and_remove_from_shortlist','view_inference_details'])
-
-
-
 
 def generate_images_element(position='explorer', project_uuid=None, timing_uuid=None):
     data_repo = DataRepo()
     project_settings = data_repo.get_project_setting(project_uuid)
     help_input='''This will generate a specific prompt based on your input.\n\n For example, "Sad scene of old Russian man, dreary style" might result in "Boris Karloff, 80 year old man wearing a suit, standing at funeral, dark blue watercolour."'''
     a1, a2, a3 = st.columns([1,1,0.3])   
-    
 
     with a1 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a2:
         prompt = st_memory.text_area("What's your base prompt?", key="explorer_base_prompt", help="This exact text will be included for each generation.")
@@ -77,19 +65,16 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                                             key="explorer_neg_prompt", \
                                                 help="These are the things you wish to be excluded from the image")
 
-    b1, b2, b3,b4 = st.columns([1.5,1.5,1.5,1])
-    c1, c2, _ = st.columns([2,2,2])
-                     
-
+    b1, b2, b3, _ = st.columns([1.5,1.5,1.5,1])
     with b1:
         type_of_generation = st_memory.radio("How would you like to generate the image?", options=InputImageStyling.value_list(), key="type_of_generation_key", help="Evolve Image will evolve the image based on the prompt, while Maintain Structure will keep the structure of the image and change the style.",horizontal=True) 
-        
-        
+
     input_image_key = "input_image_1"
     if input_image_key not in st.session_state:
         st.session_state[input_image_key] = None
     if 'input_image_2' not in st.session_state:
         st.session_state['input_image_2'] = None
+    
     if type_of_generation != InputImageStyling.TEXT2IMAGE.value:
         with b2:
             source_of_starting_image = st_memory.radio("Image source:", options=["Upload", "From Shot"], key="source_of_starting_image", help="This will be the base image for the generation.",horizontal=True)
@@ -147,13 +132,12 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     st.info("Current image:")      
                     st.error("Please upload an image")
 
-        with b3:
             edge_pil_img = None
             # strength_of_image = st_memory.slider("What % of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_image_key", help="This will determine how much of the current image will be kept in the final image.")                    
+        
         if type_of_generation == InputImageStyling.IMAGE2IMAGE.value:      
             with b3:                                      
                 strength_of_image = st_memory.slider("How much blur would you like to add to the image?", min_value=0, max_value=100, value=50, step=1, key="strength_of_image2image", help="This will determine how much of the current image will be kept in the final image.")
-
 
         elif type_of_generation == InputImageStyling.CONTROLNET_CANNY.value:   
             with b3:
@@ -183,8 +167,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                 else:
                     st.info("IP-Adapter Plus image:")
                     st.error("Please upload an second image")
-                
-    if type_of_generation != InputImageStyling.TEXT2IMAGE.value:
         
         if st.session_state[input_image_key] is not None:
             with b3:
@@ -192,13 +174,12 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     st.session_state[input_image_key] = None
                     st.session_state['input_image_2'] = None
                     st.rerun()
-            
+
     if not st.session_state[input_image_key]:
         input_image = None
         type_of_generation = None
         strength_of_image = None
-    # st.markdown("***")
-    model_name = "stable_diffusion_xl"
+
     if position=='explorer':
         _, d2,d3, _ = st.columns([0.25, 1,1, 0.25])
     else:
@@ -224,13 +205,11 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     
                 else:  # switch_prompt_position is True
                     prompt_with_variations = f"{output_magic_prompt}, {prompt}" if prompt else output_magic_prompt
-                    
 
                 counter += 1
                 log = None
-
-                
-                if InputImageStyling.value_list()[st.session_state['type_of_generation_key']] == InputImageStyling.TEXT2IMAGE.value:
+                generation_method = InputImageStyling.value_list()[st.session_state['type_of_generation_key']]
+                if generation_method == InputImageStyling.TEXT2IMAGE.value:
                     query_obj = MLQueryObject(
                         timing_uuid=None,
                         model_uuid=None,
@@ -246,64 +225,118 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         project_uuid=project_uuid
                     )
 
-                    model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)
-                    model_dict = {}
-                    for m in model_list:
-                        model_dict[m.name] = m
+                    # NOTE: code not is use
+                    # model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)
+                    # model_dict = {}
+                    # for m in model_list:
+                    #     model_dict[m.name] = m
+                    # replicate_model = ML_MODEL.get_model_by_db_obj(model_dict[model_name])
 
-                    replicate_model = ML_MODEL.get_model_by_db_obj(model_dict[model_name])
-                    output, log = ml_client.predict_model_output_standardized(replicate_model, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                
+                elif generation_method == InputImageStyling.IMAGE2IMAGE.value:
+                    input_image_file = save_uploaded_image(input_image, project_uuid)
+                    query_obj = MLQueryObject(
+                        timing_uuid=None,
+                        model_uuid=None,
+                        image_uuid=input_image_file.uuid,
+                        guidance_scale=5,
+                        seed=-1,
+                        num_inference_steps=30,
+                        strength=0.5,
+                        adapter_type=None,
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        height=project_settings.height,
+                        width=project_settings.width,
+                        project_uuid=project_uuid
+                    )
 
-                else:
-                    if InputImageStyling.value_list()[st.session_state['type_of_generation_key']] == InputImageStyling.IMAGE2IMAGE.value:
-                        input_image_file = save_uploaded_image(input_image, project_uuid)
-                        query_obj = MLQueryObject(
-                            timing_uuid=None,
-                            model_uuid=None,
-                            image_uuid=input_image_file.uuid,
-                            guidance_scale=5,
-                            seed=-1,
-                            num_inference_steps=30,
-                            strength=prompt_strength,
-                            adapter_type=None,
-                            prompt=prompt,
-                            negative_prompt=negative_prompt,
-                            height=project_settings.height,
-                            width=project_settings.width,
-                            project_uuid=project_uuid
-                        )
+                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
-                        output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                elif generation_method == InputImageStyling.CONTROLNET_CANNY.value:
+                    input_image_file = save_uploaded_image(edge_pil_img, project_uuid)
+                    query_obj = MLQueryObject(
+                        timing_uuid=None,
+                        model_uuid=None,
+                        image_uuid=input_image_file.uuid,
+                        guidance_scale=5,
+                        seed=-1,
+                        num_inference_steps=30,
+                        strength=0.5,
+                        adapter_type=None,
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        height=project_settings.height,
+                        width=project_settings.width,
+                        project_uuid=project_uuid,
+                        data={'condition_scale': 1}
+                    )
 
-                    elif InputImageStyling.value_list()[st.session_state['type_of_generation_key']] == InputImageStyling.CONTROLNET_CANNY.value:
-                        input_image_file = save_uploaded_image(edge_pil_img, project_uuid)
-                        query_obj = MLQueryObject(
-                            timing_uuid=None,
-                            model_uuid=None,
-                            image_uuid=input_image_file.uuid,
-                            guidance_scale=5,
-                            seed=-1,
-                            num_inference_steps=30,
-                            strength=0.5,
-                            adapter_type=None,
-                            prompt=prompt,
-                            negative_prompt=negative_prompt,
-                            height=project_settings.height,
-                            width=project_settings.width,
-                            project_uuid=project_uuid,
-                            data={'condition_scale': condition_scale}
-                        )
+                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                
+                elif generation_method == InputImageStyling.IPADAPTER_FACE.value:
+                    input_image_file = save_uploaded_image(edge_pil_img, project_uuid)
+                    query_obj = MLQueryObject(
+                        timing_uuid=None,
+                        model_uuid=None,
+                        image_uuid=input_image_file.uuid,
+                        guidance_scale=5,
+                        seed=-1,
+                        num_inference_steps=30,
+                        strength=0.5,
+                        adapter_type=None,
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        height=project_settings.height,
+                        width=project_settings.width,
+                        project_uuid=project_uuid,
+                        data={'condition_scale': 1}
+                    )
 
-                        output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
-                    
-                    elif InputImageStyling.value_list()[st.session_state['type_of_generation_key']] == InputImageStyling.IPADAPTER_FACE.value:
-                        st.write("Not implemented yet")
-                    
-                    elif InputImageStyling.value_list()[st.session_state['type_of_generation_key']] == InputImageStyling.IPADAPTER_PLUS.value:
-                        st.write("Not implemented yet")
+                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_face, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                
+                elif generation_method == InputImageStyling.IPADAPTER_PLUS.value:
+                    input_image_file = save_uploaded_image(edge_pil_img, project_uuid)
+                    query_obj = MLQueryObject(
+                        timing_uuid=None,
+                        model_uuid=None,
+                        image_uuid=input_image_file.uuid,
+                        guidance_scale=5,
+                        seed=-1,
+                        num_inference_steps=30,
+                        strength=0.5,
+                        adapter_type=None,
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        height=project_settings.height,
+                        width=project_settings.width,
+                        project_uuid=project_uuid,
+                        data={'condition_scale': 1}
+                    )
 
-                    elif InputImageStyling.value_list()[st.session_state['type_of_generation_key']] == InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
-                        st.write("Not implemented yet")
+                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_plus, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+
+                elif generation_method == InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
+                    input_image_file = save_uploaded_image(edge_pil_img, project_uuid)
+                    query_obj = MLQueryObject(
+                        timing_uuid=None,
+                        model_uuid=None,
+                        image_uuid=input_image_file.uuid,
+                        guidance_scale=5,
+                        seed=-1,
+                        num_inference_steps=30,
+                        strength=0.5,
+                        adapter_type=None,
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        height=project_settings.height,
+                        width=project_settings.width,
+                        project_uuid=project_uuid,
+                        data={'condition_scale': 1}
+                    )
+
+                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_face_plus, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                 if log:
                     inference_data = {
@@ -333,10 +366,10 @@ def toggle_generate_inference(position):
 
 def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, sidebar=False):
     data_repo = DataRepo()
-    
     project_settings = data_repo.get_project_setting(project_uuid)
     shot_list = data_repo.get_shot_list(project_uuid)
     k1,k2 = st.columns([5,1])
+
     if sidebar != True:
         f1, f2 = st.columns([1, 1])
         with f1:
@@ -354,8 +387,6 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
             open_detailed_view_for_all = False     
             st.markdown("***")
-            
-            
 
     else:
         project_setting = data_repo.get_project_setting(project_uuid)
@@ -382,15 +413,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             project_settings.total_shortlist_gallery_pages = res_payload['total_pages']
             st.rerun()
 
-    # def is_image_truncated(image_path):
-    #     try:
-    #         img = Image.open(image_path)
-    #         img.verify()  # verify that it is, in fact an image
-    #     except (IOError, SyntaxError) as e:
-    #         return True
-    #     return False
     if shortlist is False:
-        fetch1, fetch2, fetch3, fetch4 = st.columns([0.25, 1, 1, 0.25])
+        _, fetch2, fetch3, _ = st.columns([0.25, 1, 1, 0.25])
         st.markdown("***")
         num_of_temp_gallery_images = data_repo.get_file_count_from_type(\
             file_tag=InternalFileTag.TEMP_GALLERY_IMAGE.value, project_uuid=project_uuid)
@@ -404,7 +428,6 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                     time.sleep(0.3)
                     st.rerun()
 
-                # st.markdown("***")
     total_image_count = res_payload['count']
     if gallery_image_list and len(gallery_image_list):
         start_index = 0
@@ -482,21 +505,3 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             st.markdown("***")
     else:
         st.warning("No images present")
-
-
-
-'''
-
-def update_max_frame_per_shot_element(project_uuid):
-    data_repo = DataRepo()
-    project_settings = data_repo.get_project_setting(project_uuid)
-
-    
-    max_frames = st.number_input(label='Max frames per shot', min_value=1, value=project_settings.max_frames_per_shot)
-
-    if max_frames != project_settings.max_frames_per_shot:
-        project_settings.max_frames_per_shot = max_frames
-        st.success("Updated")
-        time.sleep(0.3)
-        st.rerun()
-'''
