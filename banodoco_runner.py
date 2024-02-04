@@ -14,7 +14,7 @@ from shared.logging.logging import AppLogger
 from ui_components.methods.file_methods import load_from_env, save_to_env
 from utils.common_utils import acquire_lock, release_lock
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.replicate.constants import replicate_status_map
+from utils.ml_processor.constants import replicate_status_map
 
 from utils.constants import RUNNER_PROCESS_NAME, AUTH_TOKEN, REFRESH_AUTH_TOKEN
 
@@ -50,6 +50,7 @@ sentry_sdk.init(
 
 def handle_termination(signal, frame):
     print("Received termination signal. Cleaning up...")
+    global TERMINATE_SCRIPT
     TERMINATE_SCRIPT = True
     sys.exit(0)
 

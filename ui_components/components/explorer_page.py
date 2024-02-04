@@ -12,7 +12,7 @@ from utils import st_memory
 import time
 from utils.enum import ExtendedEnum
 from utils.ml_processor.ml_interface import get_ml_client
-from utils.ml_processor.replicate.constants import REPLICATE_MODEL
+from utils.ml_processor.constants import ML_MODEL
 from PIL import Image, ImageFilter
 import io
 import cv2
@@ -251,7 +251,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     for m in model_list:
                         model_dict[m.name] = m
 
-                    replicate_model = REPLICATE_MODEL.get_model_by_db_obj(model_dict[model_name])
+                    replicate_model = ML_MODEL.get_model_by_db_obj(model_dict[model_name])
                     output, log = ml_client.predict_model_output_standardized(replicate_model, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                 else:
@@ -273,7 +273,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                             project_uuid=project_uuid
                         )
 
-                        output, log = ml_client.predict_model_output_standardized(REPLICATE_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                        output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                     elif InputImageStyling.value_list()[st.session_state['type_of_generation_key']] == InputImageStyling.CONTROLNET_CANNY.value:
                         input_image_file = save_uploaded_image(edge_pil_img, project_uuid)
@@ -294,7 +294,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                             data={'condition_scale': condition_scale}
                         )
 
-                        output, log = ml_client.predict_model_output_standardized(REPLICATE_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                        output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
                     
                     elif InputImageStyling.value_list()[st.session_state['type_of_generation_key']] == InputImageStyling.IPADAPTER_FACE.value:
                         st.write("Not implemented yet")

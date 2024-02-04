@@ -7,7 +7,7 @@ import math
 from ui_components.widgets.frame_selector import update_current_frame_index
 
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.replicate.constants import REPLICATE_MODEL
+from utils.ml_processor.constants import ML_MODEL
 
 def sidebar_logger(shot_uuid):
     data_repo = DataRepo()
