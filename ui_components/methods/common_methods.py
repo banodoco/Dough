@@ -59,6 +59,9 @@ def clone_styling_settings(source_frame_number, target_frame_uuid):
 
 # TODO: image format is assumed to be PNG, change this later
 def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project_uuid) -> InternalFileObject:
+    '''
+    Saves an image into the project. The image is not added into any shot and is without tags.
+    '''
     data_repo = DataRepo()
     img = generate_pil_image(img)
     
@@ -244,7 +247,6 @@ def fetch_image_by_stage(shot_uuid, stage, frame_idx):
         return timing_list[frame_idx].primary_image
     else:
         return None
-
 
 # returns a PIL image object
 def rotate_image(location, degree):

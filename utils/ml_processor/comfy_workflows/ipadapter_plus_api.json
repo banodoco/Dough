@@ -1,0 +1,265 @@
+{
+    "3": {
+      "inputs": {
+        "seed": 287475177331274,
+        "steps": 24,
+        "cfg": 9.25,
+        "sampler_name": "ddim",
+        "scheduler": "normal",
+        "denoise": 1,
+        "model": [
+          "27",
+          0
+        ],
+        "positive": [
+          "6",
+          0
+        ],
+        "negative": [
+          "7",
+          0
+        ],
+        "latent_image": [
+          "5",
+          0
+        ]
+      },
+      "class_type": "KSampler",
+      "_meta": {
+        "title": "KSampler"
+      }
+    },
+    "4": {
+      "inputs": {
+        "ckpt_name": "sd_xl_base_1.0.safetensors"
+      },
+      "class_type": "CheckpointLoaderSimple",
+      "_meta": {
+        "title": "Load Checkpoint"
+      }
+    },
+    "5": {
+      "inputs": {
+        "width": 512,
+        "height": 512,
+        "batch_size": 1
+      },
+      "class_type": "EmptyLatentImage",
+      "_meta": {
+        "title": "Empty Latent Image"
+      }
+    },
+    "6": {
+      "inputs": {
+        "text": "man sitting on a bus, futuristic style",
+        "clip": [
+          "4",
+          1
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Prompt)"
+      }
+    },
+    "7": {
+      "inputs": {
+        "text": "photography, text, watermark, blurry, haze, low contrast, low quality, underexposed, ugly, deformed, boring, bad quality, cartoon, ((disfigured)), ((bad art)), ((deformed)), ((poorly drawn)), ((extra limbs)), ((close up)), ((b&w)), weird colors, blurry, ugly, tiling, poorly drawn hands, poorly drawn feet, poorly drawn face, out of frame, extra limbs, disfigured, deformed, body out of frame, blurry, bad anatomy, blurred, watermark, grainy, signature, cut off, draft, low detail, low quality, double face, 2 faces, cropped, ugly, low-res, tiling, grainy, cropped, ostentatious, ugly, oversaturated, grain, low resolution, disfigured, blurry, bad anatomy, disfigured, poorly drawn face, mutant, mutated, extra limb, ugly, poorly drawn hands, missing limbs, blurred, floating limbs, disjointed limbs, deformed hands, blurred, out of focus, long neck, long body, ugly, disgusting, childish, cut off cropped, distorted, imperfect, surreal, bad hands, text, error, extra digit, fewer digits, cropped , worst quality, low quality, normal quality, jpeg artifacts, signature, watermark, username, blurry, artist name, Lots of hands, extra limbs, extra fingers, conjoined fingers, deformed fingers, old, ugly eyes, imperfect eyes, skewed eyes , unnatural face, stiff face, stiff body, unbalanced body, unnatural body, lacking body, details are not clear, cluttered, details are sticky, details are low, distorted details, ugly hands, imperfect hands, (mutated hands and fingers:1.5), (long body :1.3), (mutation, poorly drawn :1.2) bad hands, fused ha nd, missing hand, disappearing arms, hands, disappearing thigh, disappearing calf, disappearing legs, ui, missing fingers",
+        "clip": [
+          "4",
+          1
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Prompt)"
+      }
+    },
+    "8": {
+      "inputs": {
+        "samples": [
+          "3",
+          0
+        ],
+        "vae": [
+          "4",
+          2
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "21": {
+      "inputs": {
+        "ipadapter_file": "ip-adapter_sdxl.safetensors"
+      },
+      "class_type": "IPAdapterModelLoader",
+      "_meta": {
+        "title": "Load IPAdapter Model"
+      }
+    },
+    "23": {
+      "inputs": {
+        "clip_name": "SDXL/pytorch_model.bin"
+      },
+      "class_type": "CLIPVisionLoader",
+      "_meta": {
+        "title": "Load CLIP Vision"
+      }
+    },
+    "24": {
+      "inputs": {
+        "image": "king_dark.png",
+        "upload": "image"
+      },
+      "class_type": "LoadImage",
+      "_meta": {
+        "title": "Load Image"
+      }
+    },
+    "26": {
+      "inputs": {
+        "ipadapter_file": "ip-adapter_sdxl.safetensors"
+      },
+      "class_type": "IPAdapterModelLoader",
+      "_meta": {
+        "title": "Load IPAdapter Model"
+      }
+    },
+    "27": {
+      "inputs": {
+        "weight": 0.65,
+        "noise": 0.3,
+        "weight_type": "original",
+        "start_at": 0,
+        "end_at": 0.396,
+        "unfold_batch": false,
+        "ipadapter": [
+          "26",
+          0
+        ],
+        "clip_vision": [
+          "23",
+          0
+        ],
+        "image": [
+          "39",
+          0
+        ],
+        "model": [
+          "4",
+          0
+        ]
+      },
+      "class_type": "IPAdapterApply",
+      "_meta": {
+        "title": "Apply IPAdapter"
+      }
+    },
+    "28": {
+      "inputs": {
+        "image": "boy_sunshine.png",
+        "upload": "image"
+      },
+      "class_type": "LoadImage",
+      "_meta": {
+        "title": "Load Image"
+      }
+    },
+    "29": {
+      "inputs": {
+        "filename_prefix": "ComfyUI",
+        "images": [
+          "8",
+          0
+        ]
+      },
+      "class_type": "SaveImage",
+      "_meta": {
+        "title": "Save Image"
+      }
+    },
+    "36": {
+      "inputs": {
+        "weight": 0.75,
+        "noise": 0.3,
+        "weight_type": "linear",
+        "start_at": 0,
+        "end_at": 1,
+        "faceid_v2": true,
+        "weight_v2": 0.75,
+        "unfold_batch": false,
+        "ipadapter": [
+          "21",
+          0
+        ],
+        "clip_vision": [
+          "41",
+          0
+        ],
+        "insightface": [
+          "37",
+          0
+        ],
+        "image": [
+          "40",
+          0
+        ]
+      },
+      "class_type": "IPAdapterApplyFaceID",
+      "_meta": {
+        "title": "Apply IPAdapter FaceID"
+      }
+    },
+    "37": {
+      "inputs": {
+        "provider": "CUDA"
+      },
+      "class_type": "InsightFaceLoader",
+      "_meta": {
+        "title": "Load InsightFace"
+      }
+    },
+    "39": {
+      "inputs": {
+        "interpolation": "LANCZOS",
+        "crop_position": "pad",
+        "sharpening": 0,
+        "image": [
+          "28",
+          0
+        ]
+      },
+      "class_type": "PrepImageForClipVision",
+      "_meta": {
+        "title": "Prepare Image For Clip Vision"
+      }
+    },
+    "40": {
+      "inputs": {
+        "crop_position": "center",
+        "sharpening": 0,
+        "pad_around": true,
+        "image": [
+          "24",
+          0
+        ]
+      },
+      "class_type": "PrepImageForInsightFace",
+      "_meta": {
+        "title": "Prepare Image For InsightFace"
+      }
+    },
+    "41": {
+      "inputs": {
+        "clip_name": "SDXL/pytorch_model.bin"
+      },
+      "class_type": "CLIPVisionLoader",
+      "_meta": {
+        "title": "Load CLIP Vision"
+      }
+    }
+  }
+  

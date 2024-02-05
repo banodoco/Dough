@@ -8,6 +8,12 @@ class ComfyWorkflow(ExtendedEnum):
     IP_ADAPTER_PLUS = "ip_adapter_plus"
     IP_ADAPTER_FACE = "ip_adapter_face"
     IP_ADAPTER_FACE_PLUS = "ip_adapter_face_plus"
+    SDXL = "sdxl"
+    SDXL_CONTROLNET = "sdxl_controlnet"
+    SDXL_CONTROLNET_OPENPOSE = "sdxl_controlnet_openpose"
+    LLAMA_2_7B = "llama_2_7b"
+    SDXL_INPAINTING = "sdxl_inpainting"
+    STEERABLE_MOTION = "steerable_motion"
 
 @dataclass
 class MLModel:
@@ -15,8 +21,13 @@ class MLModel:
     name: str
     version: str
 
-    # workflow name (as multiple workflows will be run through a common replicate endpoint)
+    # workflow name (multiple workflows can be run through a common replicate endpoint)
     workflow_name: str = None
+
+# comfy runner replicate endpoint
+class ComfyRunnerModel:
+    name = "voku682/comfy_runner"
+    version = "d0430f2b68b9ca1f40d848d604fb879f44b197b25785c065ef8841cad6dbec6c"
 
 class ML_MODEL:
     sdxl_inpainting = MLModel("lucataco/sdxl-inpainting", "f03c01943bacdee38d6a5d216586bf9bfbfd799350aed263aa32980efc173f0b")
@@ -46,27 +57,27 @@ class ML_MODEL:
     real_esrgan_upscale = MLModel("cjwbw/real-esrgan", "d0ee3d708c9b911f122a4ad90046c5d26a0293b99476d697f6bb7f2e251ce2d4")
     controlnet_1_1_x_realistic_vision_v2_0 = MLModel("usamaehsan/controlnet-1.1-x-realistic-vision-v2.0", "7fbf4c86671738f97896c9cb4922705adfcdcf54a6edab193bb8c176c6b34a69")
     urpm = MLModel("mcai/urpm-v1.3-img2img", "4df956e8dbfebf1afaf0c3ee98ad426ec58c4262d24360d054582e5eab2cb5f6")
-    sdxl = MLModel("stability-ai/sdxl", "af1a68a271597604546c09c64aabcd7782c114a63539a4a8d14d1eeda5630c33")
+    sdxl = MLModel("stability-ai/sdxl", "af1a68a271597604546c09c64aabcd7782c114a63539a4a8d14d1eeda5630c33", ComfyWorkflow.SDXL)
 
     # addition 30/9/2023
     realistic_vision_v5 = MLModel("heedster/realistic-vision-v5", "c0259010b93e7a4102a4ba946d70e06d7d0c7dc007201af443cfc8f943ab1d3c")
     deliberate_v3 = MLModel("pagebrain/deliberate-v3", "1851b62340ae657f05f8b8c8a020e3f9a46efde9fe80f273eef026c0003252ac")
     dreamshaper_v7 = MLModel("pagebrain/dreamshaper-v7", "0deba88df4e49b302585e1a7b6bd155e18962c1048966a40fe60ba05805743ff")
     epicrealism_v5 = MLModel("pagebrain/epicrealism-v5", "222465e57e4d9812207f14133c9499d47d706ecc41a8bf400120285b2f030b42")
-    sdxl_controlnet = MLModel("lucataco/sdxl-controlnet", "db2ffdbdc7f6cb4d6dab512434679ee3366ae7ab84f89750f8947d5594b79a47")
+    sdxl_controlnet = MLModel("lucataco/sdxl-controlnet", "db2ffdbdc7f6cb4d6dab512434679ee3366ae7ab84f89750f8947d5594b79a47", ComfyWorkflow.SDXL_CONTROLNET)
     realistic_vision_v5_img2img = MLModel("lucataco/realistic-vision-v5-img2img", "82bbb4595458d6be142450fc6d8c4d79c936b92bd184dd2d6dd71d0796159819")
-    ad_interpolation = MLModel("peter942/steerable-motion", "aa308181b5df669f20e56411b74ebafd7c01f82f7fe2a34a4b9382d4bd8155ba")
+    ad_interpolation = MLModel("peter942/steerable-motion", "aa308181b5df669f20e56411b74ebafd7c01f82f7fe2a34a4b9382d4bd8155ba", ComfyWorkflow.STEERABLE_MOTION)
 
     # addition 17/10/2023
-    llama_2_7b = MLModel("meta/llama-2-7b", "527827021d8756c7ab79fde0abbfaac885c37a3ed5fe23c7465093f0878d55ef")
+    llama_2_7b = MLModel("meta/llama-2-7b", "527827021d8756c7ab79fde0abbfaac885c37a3ed5fe23c7465093f0878d55ef", ComfyWorkflow.LLAMA_2_7B)
 
     # addition 11/11/2023
-    sdxl_controlnet_openpose = MLModel("lucataco/sdxl-controlnet-openpose", "d63e0b238b2d963d90348e2dad19830fbe372a7a43d90d234b2b63cae76d4397")
+    sdxl_controlnet_openpose = MLModel("lucataco/sdxl-controlnet-openpose", "d63e0b238b2d963d90348e2dad19830fbe372a7a43d90d234b2b63cae76d4397", ComfyWorkflow.SDXL_CONTROLNET_OPENPOSE)
 
     # addition 05/02/2024 (workflows)
-    ipadapter_plus = MLModel("voku682/comfy_runner", "d0430f2b68b9ca1f40d848d604fb879f44b197b25785c065ef8841cad6dbec6c", ComfyWorkflow.IP_ADAPTER_PLUS)
-    ipadapter_face = MLModel("voku682/comfy_runner", "d0430f2b68b9ca1f40d848d604fb879f44b197b25785c065ef8841cad6dbec6c", ComfyWorkflow.IP_ADAPTER_FACE)
-    ipadapter_face_plus = MLModel("voku682/comfy_runner", "d0430f2b68b9ca1f40d848d604fb879f44b197b25785c065ef8841cad6dbec6c", ComfyWorkflow.IP_ADAPTER_FACE_PLUS)
+    ipadapter_plus = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IP_ADAPTER_PLUS)
+    ipadapter_face = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IP_ADAPTER_FACE)
+    ipadapter_face_plus = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IP_ADAPTER_FACE_PLUS)
 
     @staticmethod
     def get_model_by_db_obj(model_db_obj):

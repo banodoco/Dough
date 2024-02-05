@@ -92,7 +92,6 @@ def normalize_size_internal_file_obj(file_obj: InternalFileObject, **kwargs):
     
     return file_obj
 
-
 def save_or_host_file_bytes(video_bytes, path, ext=".mp4"):
     uploaded_url = None
     if SERVER != ServerType.DEVELOPMENT.value:
@@ -130,7 +129,6 @@ def add_temp_file_to_project(project_uuid, key, file_path):
     }
     data_repo.update_project(**project_data)
 
-
 def generate_temp_file(url, ext=".mp4"):
     response = requests.get(url)
     if not response.ok:
@@ -141,7 +139,6 @@ def generate_temp_file(url, ext=".mp4"):
     temp_file.close()
 
     return temp_file
-
 
 def generate_pil_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO]):
     # Check if img is a PIL image
@@ -177,7 +174,6 @@ def generate_temp_file_from_uploaded_file(uploaded_file):
             temp_file.write(uploaded_file.read())
             return temp_file
 
-
 def convert_bytes_to_file(file_location_to_save, mime_type, file_bytes, project_uuid, inference_log_id=None, filename=None, tag="") -> InternalFileObject:
     data_repo = DataRepo()
 
@@ -200,7 +196,6 @@ def convert_bytes_to_file(file_location_to_save, mime_type, file_bytes, project_
     file = data_repo.create_file(**file_data)
 
     return file
-
 
 def convert_file_to_base64(fh: io.IOBase) -> str:
     fh.seek(0)
@@ -264,8 +259,6 @@ def zip_images(image_locations, zip_filename='images.zip'):
                     os.remove(image_name)  # Clean up the temporary file
 
     return zip_filename
-
-
 
 def create_duplicate_file(file: InternalFileObject, project_uuid=None) -> InternalFileObject:
     data_repo = DataRepo()

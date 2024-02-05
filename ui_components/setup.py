@@ -7,7 +7,6 @@ from ui_components.components.query_logger_page import query_logger_page
 from ui_components.widgets.timeline_view import timeline_view
 from ui_components.widgets.sidebar_logger import sidebar_logger
 from ui_components.components.app_settings_page import app_settings_page
-from ui_components.components.custom_models_page import custom_models_page
 from ui_components.components.frame_styling_page import frame_styling_page
 from ui_components.components.shortlist_page import shortlist_page
 from ui_components.components.timeline_view_page import timeline_view_page
