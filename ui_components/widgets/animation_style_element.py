@@ -68,7 +68,7 @@ def animation_style_element(shot_uuid):
                                 speed_of_transition = st.slider("Speed of transition:", min_value=0.45, max_value=0.7, value=0.6, step=0.01, key=f"speed_of_transition_{idx}_{timing.uuid}")                                    
                                 speeds_of_transitions.append(speed_of_transition)      
                                 
-                                movement_between_frames = st.slider("Motion between frames:", min_value=0.2, max_value=0.95, value=0.5, step=0.01, key=f"movement_between_frames_{idx}_{timing.uuid}")                                                                
+                                movement_between_frames = st.slider("Freedom between frames:", min_value=0.2, max_value=0.95, value=0.5, step=0.01, key=f"movement_between_frames_{idx}_{timing.uuid}")                                                                
                                 movements_between_frames.append(movement_between_frames)
                                     
 
@@ -234,7 +234,16 @@ def animation_style_element(shot_uuid):
     e1, e2, e3 = st.columns([1, 1,1])
     
     with e1:
-        strength_of_adherence = st_memory.slider("How much would you like to adhere to the input images?", min_value=0.0, max_value=1.0, value=0.5, step=0.01, key="stregnth_of_adherence")
+        strength_of_adherence = st_memory.slider("How much would you like to force adherence to the input images?", min_value=0.0, max_value=1.0, value=0.1, step=0.01, key="stregnth_of_adherence")
+        base_end_percent = 0.05
+        base_adapter_strength = 0.05
+        # 0.1 value = 1x multipler, 0.2 = 2x multipler, 0.3 = 3x multipler, 0.4 = 4x multipler, 0.5 = 5x multipler
+        multipled_base_end_percent = base_end_percent * (strength_of_adherence * 10)
+        multipled_base_adapter_strength = base_adapter_strength * (strength_of_adherence * 20)
+
+        st.write(f"multiplied base end percent: {multipled_base_end_percent}")
+        st.write(f"multiplied base adapter strength: {multipled_base_adapter_strength}")
+
         sd_model_list = [
             "Realistic_Vision_V5.0.safetensors",
             "Counterfeit-V3.0_fp32.safetensors",
@@ -308,7 +317,11 @@ def animation_style_element(shot_uuid):
         animate_col_1, animate_col_2, _ = st.columns([1, 1, 2])
         with animate_col_1:
             variant_count = st.number_input("How many variants?", min_value=1, max_value=5, value=1, step=1, key="variant_count")
-            
+            st.download_button(
+                    label="Download images",
+                    data=prepare_workflow_images(shot_uuid),
+                    file_name='data.zip'
+                )
             if st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help):
                 vid_quality = "full" if video_resolution == "Full Resolution" else "preview"
                 st.success("Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update.")
