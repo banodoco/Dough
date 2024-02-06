@@ -43,18 +43,23 @@ def animation_style_element(shot_uuid):
         for i in range(0, len(timing_list) , items_per_row):
             with st.container():
                 grid = st.columns([2 if j%2==0 else 1 for j in range(2*items_per_row)])  # Adjust the column widths
-                for j in range(items_per_row):
+                for j in range(items_per_row):                    
                     idx = i + j
-                    if idx < len(timing_list):
-                        
+
+                    if idx < len(timing_list):                        
                         with grid[2*j]:  # Adjust the index for image column
                             timing = timing_list[idx]
                             if timing.primary_image and timing.primary_image.location:
                                 st.info(f"Frame {idx + 1}")
                                 st.image(timing.primary_image.location, use_column_width=True)
-                                # if not the last frame                                
-                                
-                                strength_of_frame = st.slider("Strength of current frame:", min_value=0.25, max_value=1.0, value=0.5, step=0.01, key=f"strength_of_frame_{idx}_{timing.uuid}")
+                                if f'strength_of_frame_{shot.uuid}_{idx}' not in st.session_state:
+                                    st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = 0.5
+                                    st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = 16
+                                    st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'] = 0.5
+                                    st.session_state[f'movement_between_frames_{shot.uuid}_{idx}'] = 0.5
+                                                                                                                           
+                                # st.write(f"Strength of current frame: {st.session_state[f'strength_of_frame_{shot.uuid}_{idx}']}")                                                                    
+                                strength_of_frame = st.slider("Strength of current frame:", min_value=0.25, max_value=1.0, step=0.01, key=f"strength_of_frame_widget_{shot.uuid}_{idx}", value=st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'])
                                 strength_of_frames.append(strength_of_frame)                                    
 
                             else:                        
@@ -62,18 +67,21 @@ def animation_style_element(shot_uuid):
                         with grid[2*j+1]:  # Add the new column after the image column
                             if idx < len(timing_list) - 1:                                                                       
                                 st.write("")                             
-                                distance_to_next_frame = st.slider("Distance to next frame:", min_value=4, max_value=32, value=16, step=1, key=f"distance_to_next_frame_{idx}_{timing.uuid}")
+                                distance_to_next_frame = st.slider("Distance to next frame:", min_value=4, max_value=32, step=1, key=f"distance_to_next_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'])
                                 distances_to_next_frames.append(distance_to_next_frame)                                                              
                                                 
-                                speed_of_transition = st.slider("Speed of transition:", min_value=0.45, max_value=0.7, value=0.6, step=0.01, key=f"speed_of_transition_{idx}_{timing.uuid}")                                    
+                                speed_of_transition = st.slider("Speed of transition:", min_value=0.45, max_value=0.7, step=0.01, key=f"speed_of_transition_widget_{idx}_{timing.uuid}", value=st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'])
                                 speeds_of_transitions.append(speed_of_transition)      
                                 
-                                movement_between_frames = st.slider("Motion between frames:", min_value=0.2, max_value=0.95, value=0.5, step=0.01, key=f"movement_between_frames_{idx}_{timing.uuid}")                                                                
+                                movement_between_frames = st.slider("Freedom between frames:", min_value=0.2, max_value=0.95, step=0.01, key=f"movement_between_frames_widget_{idx}_{timing.uuid}", value=st.session_state[f'movement_between_frames_{shot.uuid}_{idx}'])
                                 movements_between_frames.append(movement_between_frames)
                                     
-
+                
                 if (i < len(timing_list) - 1) or (st.session_state["open_shot"] == shot.uuid) or (len(timing_list) % items_per_row != 0 and st.session_state["open_shot"] != shot.uuid):
                     st.markdown("***")
+        
+        if st.button("Save current_settings", key="save_current_settings"):
+            update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, movements_between_frames)
 
 
         def transform_data(strength_of_frames, movements_between_frames, speeds_of_transitions, distances_to_next_frames):
@@ -234,7 +242,16 @@ def animation_style_element(shot_uuid):
     e1, e2, e3 = st.columns([1, 1,1])
     
     with e1:
-        strength_of_adherence = st_memory.slider("How much would you like to adhere to the input images?", min_value=0.0, max_value=1.0, value=0.5, step=0.01, key="stregnth_of_adherence")
+        strength_of_adherence = st_memory.slider("How much would you like to force adherence to the input images?", min_value=0.0, max_value=1.0, value=0.1, step=0.01, key="stregnth_of_adherence")
+        base_end_percent = 0.05
+        base_adapter_strength = 0.05
+        # 0.1 value = 1x multipler, 0.2 = 2x multipler, 0.3 = 3x multipler, 0.4 = 4x multipler, 0.5 = 5x multipler
+        multipled_base_end_percent = base_end_percent * (strength_of_adherence * 10)
+        multipled_base_adapter_strength = base_adapter_strength * (strength_of_adherence * 20)
+
+        st.write(f"multiplied base end percent: {multipled_base_end_percent}")
+        st.write(f"multiplied base adapter strength: {multipled_base_adapter_strength}")
+
         sd_model_list = [
             "Realistic_Vision_V5.0.safetensors",
             "Counterfeit-V3.0_fp32.safetensors",
@@ -308,8 +325,13 @@ def animation_style_element(shot_uuid):
         animate_col_1, animate_col_2, _ = st.columns([1, 1, 2])
         with animate_col_1:
             variant_count = st.number_input("How many variants?", min_value=1, max_value=5, value=1, step=1, key="variant_count")
-            
+            st.download_button(
+                    label="Download images",
+                    data=prepare_workflow_images(shot_uuid),
+                    file_name='data.zip'
+                )
             if st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help):
+                update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, movements_between_frames)
                 vid_quality = "full" if video_resolution == "Full Resolution" else "preview"
                 st.success("Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update.")
 
@@ -386,6 +408,15 @@ def prepare_workflow_json(shot_uuid, settings):
     workflow_data = create_workflow_json(shot.timing_list, settings)
 
     return workflow_data
+
+def update_session_state_with_animation_details(shot_uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, movements_between_frames):
+    for idx, timing in enumerate(timing_list):
+        if idx < len(timing_list):
+            st.session_state[f'strength_of_frame_{shot_uuid}_{idx}'] = strength_of_frames[idx]
+            if idx < len(timing_list) - 1:                             
+                st.session_state[f'distance_to_next_frame_{shot_uuid}_{idx}'] = distances_to_next_frames[idx]
+                st.session_state[f'speed_of_transition_{shot_uuid}_{idx}'] = speeds_of_transitions[idx]
+                st.session_state[f'movement_between_frames_{shot_uuid}_{idx}'] = movements_between_frames[idx]
 
 def prepare_workflow_images(shot_uuid):
     import requests

@@ -20,7 +20,8 @@ def project_settings_page(project_uuid):
     current_size = f"{project_settings.width}x{project_settings.height}"
     current_index = frame_sizes.index(current_size) if current_size in frame_sizes else 0
 
-    with st.expander("Frame Size", expanded=True):
+    with st.expander("🖼️ Frame Size", expanded=True):
+        
         v1, v2, v3 = st.columns([4, 4, 2])
         with v1:
             st.write("Current Size = ", project_settings.width, "x", project_settings.height)
