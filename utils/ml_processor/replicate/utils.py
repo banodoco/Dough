@@ -1,7 +1,8 @@
 from utils.common_utils import user_credits_available
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.constants import CONTROLNET_MODELS, ML_MODEL
+from utils.ml_processor.comfy_data_transform import get_file_zip, get_model_workflow_from_query
+from utils.ml_processor.constants import CONTROLNET_MODELS, ML_MODEL, ComfyRunnerModel
 
 
 def check_user_credits(method):
@@ -27,6 +28,18 @@ def check_user_credits_async(method):
 # TODO: add data validation (like prompt can't be empty...)
 def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
     data_repo = DataRepo()
+
+    # handling comfy_runner workflows 
+    if model.name == ComfyRunnerModel.name:
+        workflow_json = get_model_workflow_from_query(model, query_obj)
+        file_zip = get_file_zip(query_obj)
+
+        data = {
+            "workflow_json": workflow_json,
+            "file_list": file_zip
+        }
+
+        return data
 
     input_image, mask = None, None
     if query_obj.image_uuid:

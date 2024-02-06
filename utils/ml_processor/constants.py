@@ -27,7 +27,7 @@ class MLModel:
 # comfy runner replicate endpoint
 class ComfyRunnerModel:
     name = "voku682/comfy_runner"
-    version = "d0430f2b68b9ca1f40d848d604fb879f44b197b25785c065ef8841cad6dbec6c"
+    version = "636f0f5788ae7f8160fdba196d1258008eedf0c72e04927718d1f9bea16bd906"
 
 class ML_MODEL:
     sdxl_inpainting = MLModel("lucataco/sdxl-inpainting", "f03c01943bacdee38d6a5d216586bf9bfbfd799350aed263aa32980efc173f0b")
