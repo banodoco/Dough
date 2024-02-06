@@ -51,6 +51,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
     if not len(variants):
         st.info("No variants present")
+        st.markdown("***")
     else:
         current_variant = shot.primary_interpolated_video_index if stage == CreativeProcessType.MOTION.value else int(timing.primary_variant_index)
 

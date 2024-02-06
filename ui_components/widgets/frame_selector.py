@@ -68,8 +68,10 @@ def frame_selector_widget(show_frame_selector=True):
                 st.session_state['current_frame_index'] = int(frame_selection.split(' ')[-1])
                 update_current_frame_index(st.session_state['current_frame_index'])
         else:
-            frame_selection = ""        
-            st.error("No frames present")       
+            frame_selection = ""     
+            with shot2:   
+                st.write("")
+                st.error("No frames present")       
 
         return frame_selection
 
