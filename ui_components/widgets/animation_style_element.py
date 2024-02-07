@@ -39,17 +39,17 @@ def animation_style_element(shot_uuid):
         st.markdown("#### Animation Settings")
     with advanced2:
         with st.expander("Bulk edit:"):
-            what_would_you_like_to_edit = st.selectbox("What would you like to edit?", options=["Strength of frames", "Distance to next frames", "Speed of transitions", "Freedom between frames", "Motion during frames"], key="what_would_you_like_to_edit")
+            what_would_you_like_to_edit = st.selectbox("What would you like to edit?", options=["Distance to next frames", "Speed of transitions", "Freedom between frames","Strength of frames",  "Motion during frames"], key="what_would_you_like_to_edit")
+            if what_would_you_like_to_edit == "Distance to next frames":
+                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=4, max_value=96, step=4, value=16, key="what_to_change_it_to")
             if what_would_you_like_to_edit == "Strength of frames":
-                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=1.0, step=0.01, key="what_to_change_it_to")
-            elif what_would_you_like_to_edit == "Distance to next frames":
-                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=4, max_value=32, step=1, key="what_to_change_it_to")
+                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=1.0, step=0.01, value=0.5, key="what_to_change_it_to")
             elif what_would_you_like_to_edit == "Speed of transitions":
-                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, key="what_to_change_it_to")
+                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, value=0.6, key="what_to_change_it_to")
             elif what_would_you_like_to_edit == "Freedom between frames":
-                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.2, max_value=0.95, step=0.01, key="what_to_change_it_to")
+                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.2, max_value=0.95, step=0.01, value=0.5, key="what_to_change_it_to")
             elif what_would_you_like_to_edit == "Motion during frames":
-                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.2, max_value=0.95, step=0.01, key="what_to_change_it_to")            
+                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.2, max_value=0.95, step=0.01, value=0.5, key="what_to_change_it_to")
             
             if st.button("Bulk edit", key="bulk_edit"):
                 if what_would_you_like_to_edit == "Strength of frames":
@@ -90,7 +90,7 @@ def animation_style_element(shot_uuid):
                         with grid[2*j]:  # Adjust the index for image column
                             timing = timing_list[idx]
                             if timing.primary_image and timing.primary_image.location:
-                                st.info(f"Frame {idx + 1}")
+                                st.info(f"**Frame {idx + 1}**")
                                 st.image(timing.primary_image.location, use_column_width=True)
                                 if f'strength_of_frame_{shot.uuid}_{idx}' not in st.session_state:
                                     st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = 0.5
@@ -105,9 +105,9 @@ def animation_style_element(shot_uuid):
                                 with st.expander("Advanced settings:"):
                                     strength_of_frame = st.slider("Strength of current frame:", min_value=0.25, max_value=1.0, step=0.01, key=f"strength_of_frame_widget_{shot.uuid}_{idx}", value=st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'])
                                     strength_of_frames.append(strength_of_frame)                                    
-                                    individual_prompt = st.text_input("What to include:", key=f"individual_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_prompt_{shot.uuid}_{idx}'])
+                                    individual_prompt = st.text_input("What to include:", key=f"individual_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_prompt_{shot.uuid}_{idx}'], help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
                                     individual_prompts.append(individual_prompt)
-                                    individual_negative_prompt = st.text_input("What to avoid:", key=f"negative_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_negative_prompt_{shot.uuid}_{idx}'])
+                                    individual_negative_prompt = st.text_input("What to avoid:", key=f"negative_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_negative_prompt_{shot.uuid}_{idx}'],help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
                                     individual_negative_prompts.append(individual_negative_prompt)
                                     motion_during_frame = st.slider("Motion during frame:", min_value=0.2, max_value=0.95, step=0.01, key=f"motion_during_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'])
                                     motions_during_frames.append(motion_during_frame)
@@ -118,8 +118,11 @@ def animation_style_element(shot_uuid):
                         with grid[2*j+1]:  # Add the new column after the image column
 
                             if idx < len(timing_list) - 1:                                                                       
-                                st.write("")                             
-                                distance_to_next_frame = st.slider("Distance to next frame:", min_value=4, max_value=32, step=1, key=f"distance_to_next_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'])
+                                st.write("")
+                                st.write("")
+                                st.write("")
+                                st.write("")                   
+                                distance_to_next_frame = st.slider("Distance to next frame:", min_value=4, max_value=96, step=4, key=f"distance_to_next_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'])
                                 distances_to_next_frames.append(distance_to_next_frame)                                                                                                              
                                 speed_of_transition = st.slider("Speed of transition:", min_value=0.45, max_value=0.7, step=0.01, key=f"speed_of_transition_widget_{idx}_{timing.uuid}", value=st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'])
                                 speeds_of_transitions.append(speed_of_transition)                                      
@@ -302,7 +305,7 @@ def animation_style_element(shot_uuid):
     e1, e2, e3 = st.columns([1, 1,1])
     
     with e1:
-        strength_of_adherence = st_memory.slider("How much would you like to force adherence to the input images?", min_value=0.0, max_value=1.0, value=0.4, step=0.01, key="stregnth_of_adherence")
+        strength_of_adherence = st_memory.slider("How much would you like to force adherence to the input images?", min_value=0.0, max_value=1.0, value=0.3, step=0.01, key="stregnth_of_adherence")
         base_end_percent = 0.05
         base_adapter_strength = 0.05
         # 0.1 value = 1x multipler, 0.2 = 2x multipler, 0.3 = 3x multipler, 0.4 = 4x multipler, 0.5 = 5x multipler
@@ -314,7 +317,7 @@ def animation_style_element(shot_uuid):
 
         sd_model_list = [
             "Realistic_Vision_V5.0.safetensors",
-            "Counterfeit-V3.0_fp32.safetensors",
+            "Counterfeit-V3.0_fp96.safetensors",
             "epic_realism.safetensors",
             "dreamshaper_v8.safetensors",
             "deliberate_v3.safetensors"
@@ -335,6 +338,7 @@ def animation_style_element(shot_uuid):
         negative_prompt = st_memory.text_area("What would you like to avoid in the videos?", value="bad image, worst quality", key="negative_prompt_video")
     
     with f3:
+        st.write("")
         st.info("Use these sparingly, as they can have a large impact on the video. You can also edit them for individual frames in the advanced settings above.")
         soft_scaled_cn_weights_multiplier =""
 
@@ -349,16 +353,16 @@ def animation_style_element(shot_uuid):
 
     st.markdown("***")
     st.markdown("#### Overall motion settings")
-    h1, h2, h3 = st.columns([1, 1.5, 1])
+    h1, h2, h3 = st.columns([0.5, 1.5, 1])
     with h1:
         type_of_motion_context = st_memory.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=False, index=1)
     with h2: 
-        st.info("This is how much the motion will be informed by the previous and next frames. High means the motion will be very influenced by the previous and next frames - this can make it smoother but increases artifacts - while lower values make the motion less smooth but removes artifacts.")
+        st.info("This is how much the motion will be informed by the previous and next frames. High means the motion will be very influenced by the previous and next frames - this can make it smoother but increase artifacts - while lower values make the motion less smooth but removes artifacts. Naturally, we recommend Standard.")
 
     if type_of_motion_context == "Low":
         context_length = 16
         context_stride = 1
-        context_overlap = 4
+        context_overlap = 2
 
     elif type_of_motion_context == "Standard":
         context_length = 16
