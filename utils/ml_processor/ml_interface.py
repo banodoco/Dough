@@ -7,16 +7,13 @@ def get_ml_client():
     from utils.ml_processor.replicate.replicate import ReplicateProcessor
     from utils.ml_processor.gpu.gpu import GPUProcessor
     
-    return ReplicateProcessor() if not GPU_INFERENCE_ENABLED else GPUProcessor
+    return ReplicateProcessor() if not GPU_INFERENCE_ENABLED else GPUProcessor()
 
 class MachineLearningProcessor(ABC):
     def __init__(self):
         pass
 
     def predict_model_output_standardized(self, *args, **kwargs):
-        pass
-
-    def get_model_version_from_id(self, *args, **kwargs):
         pass
 
     def predict_model_output(self, *args, **kwargs):

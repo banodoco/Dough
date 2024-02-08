@@ -219,7 +219,6 @@ class ReplicateProcessor(MachineLearningProcessor):
             
         return serving_url
 
-    
     # TODO: figure how to resolve model location setting, right now it's hardcoded to peter942/modnet
     @check_user_credits
     def dreambooth_training(self, training_file_url, instance_prompt, \

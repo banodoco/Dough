@@ -30,11 +30,11 @@ class ComfyDataTransform:
         json_file_path = "./utils/ml_processor/" + MODEL_PATH_DICT[model]["workflow_path"]
         with open(json_file_path) as f:
             json_data = json.load(f)
-            return json_data
+            return json_data, [MODEL_PATH_DICT[model]['output_node_id']]
 
     @staticmethod
     def transform_sdxl_workflow(query: MLQueryObject):
-        workflow = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL)
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL)
         
         # workflow params
         height, width = query.height, query.width
@@ -53,7 +53,7 @@ class ComfyDataTransform:
     @staticmethod
     def transform_sdxl_controlnet_workflow(query: MLQueryObject):
         data_repo = DataRepo()
-        workflow = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_CONTROLNET)
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_CONTROLNET)
 
         # workflow params
         height, width = query.height, query.width
@@ -77,7 +77,7 @@ class ComfyDataTransform:
     @staticmethod
     def transform_sdxl_controlnet_openpose_workflow(query: MLQueryObject):
         data_repo = DataRepo()
-        workflow = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_CONTROLNET_OPENPOSE)
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_CONTROLNET_OPENPOSE)
 
         # workflow params
         height, width = query.height, query.width
@@ -98,7 +98,7 @@ class ComfyDataTransform:
 
     @staticmethod
     def transform_llama_2_7b_workflow(query: MLQueryObject):
-        workflow = ComfyDataTransform.get_workflow_json(ComfyWorkflow.LLAMA_2_7B)
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.LLAMA_2_7B)
 
         # workflow params
         input_text = query.prompt
@@ -113,7 +113,7 @@ class ComfyDataTransform:
     @staticmethod
     def transform_sdxl_inpainting_workflow(query: MLQueryObject):
         data_repo = DataRepo()
-        workflow = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_INPAINTING)
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_INPAINTING)
 
         # workflow params
         # node 'get_img_size' automatically fetches the size
@@ -134,7 +134,7 @@ class ComfyDataTransform:
     @staticmethod
     def transform_ipadaptor_plus_workflow(query: MLQueryObject):
         data_repo = DataRepo()
-        workflow = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IP_ADAPTER_PLUS)
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IP_ADAPTER_PLUS)
 
         # workflow params
         height, width = query.height, query.width
@@ -154,7 +154,7 @@ class ComfyDataTransform:
     @staticmethod
     def transform_ipadaptor_face_workflow(query: MLQueryObject):
         data_repo = DataRepo()
-        workflow = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IP_ADAPTER_FACE)
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IP_ADAPTER_FACE)
 
         # workflow params
         height, width = query.height, query.width
@@ -173,7 +173,7 @@ class ComfyDataTransform:
     @staticmethod
     def transform_ipadaptor_face_plus_workflow(query: MLQueryObject):
         data_repo = DataRepo()
-        workflow = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IP_ADAPTER_FACE_PLUS)
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IP_ADAPTER_FACE_PLUS)
 
         # workflow params
         height, width = query.height, query.width
@@ -194,7 +194,7 @@ class ComfyDataTransform:
 
     @staticmethod
     def transform_steerable_motion_workflow(query: MLQueryObject):
-        workflow = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IP_ADAPTER_FACE)
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IP_ADAPTER_FACE)
 
         # workflow params
         steps, cfg = query.num_inference_steps, query.guidance_scale

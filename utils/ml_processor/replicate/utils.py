@@ -31,7 +31,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
 
     # handling comfy_runner workflows 
     if model.name == ComfyRunnerModel.name:
-        workflow_json = get_model_workflow_from_query(model, query_obj)
+        workflow_json, output_node_ids = get_model_workflow_from_query(model, query_obj)
         workflow_file = get_workflow_json_url(workflow_json)
         file_zip = get_file_zip_url(query_obj)
 
