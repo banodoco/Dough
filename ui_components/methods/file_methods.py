@@ -225,7 +225,7 @@ import requests
 from PIL import Image
 from io import BytesIO
 
-def zip_images(image_locations, zip_filename='images.zip'):
+def zip_images(image_locations, zip_filename='images.zip', filename_list=[]):
     # Calculate the number of digits needed for padding
     num_digits = len(str(len(image_locations) - 1))
 
@@ -233,7 +233,10 @@ def zip_images(image_locations, zip_filename='images.zip'):
         for idx, image_location in enumerate(image_locations):
             # Pad the index with zeros
             padded_idx = str(idx).zfill(num_digits)
-            image_name = f"{padded_idx}.png"
+            if filename_list and len(filename_list) > idx:
+                image_name = filename_list[idx]
+            else:
+                image_name = f"{padded_idx}.png"
 
             if image_location.startswith('http'):
                 response = requests.get(image_location)

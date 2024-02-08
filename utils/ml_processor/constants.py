@@ -27,7 +27,7 @@ class MLModel:
 # comfy runner replicate endpoint
 class ComfyRunnerModel:
     name = "voku682/comfy_runner"
-    version = "636f0f5788ae7f8160fdba196d1258008eedf0c72e04927718d1f9bea16bd906"
+    version = "36d691e7ae92a8f29194bb6ee5aa61a6ab23c77ad7fb5b2cb6f31641512ca21c"
 
 class ML_MODEL:
     sdxl_inpainting = MLModel("lucataco/sdxl-inpainting", "f03c01943bacdee38d6a5d216586bf9bfbfd799350aed263aa32980efc173f0b")
@@ -66,7 +66,7 @@ class ML_MODEL:
     epicrealism_v5 = MLModel("pagebrain/epicrealism-v5", "222465e57e4d9812207f14133c9499d47d706ecc41a8bf400120285b2f030b42")
     sdxl_controlnet = MLModel("lucataco/sdxl-controlnet", "db2ffdbdc7f6cb4d6dab512434679ee3366ae7ab84f89750f8947d5594b79a47", ComfyWorkflow.SDXL_CONTROLNET)
     realistic_vision_v5_img2img = MLModel("lucataco/realistic-vision-v5-img2img", "82bbb4595458d6be142450fc6d8c4d79c936b92bd184dd2d6dd71d0796159819")
-    ad_interpolation = MLModel("peter942/steerable-motion", "aa308181b5df669f20e56411b74ebafd7c01f82f7fe2a34a4b9382d4bd8155ba", ComfyWorkflow.STEERABLE_MOTION)
+    ad_interpolation = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.STEERABLE_MOTION)
 
     # addition 17/10/2023
     llama_2_7b = MLModel("meta/llama-2-7b", "527827021d8756c7ab79fde0abbfaac885c37a3ed5fe23c7465093f0878d55ef", ComfyWorkflow.LLAMA_2_7B)

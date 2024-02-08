@@ -3,8 +3,9 @@ from shared.logging.logging import AppLogger
 from ui_components.methods.data_logger import log_model_inference
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
+from utils.ml_processor.comfy_data_transform import get_model_workflow_from_query
 from utils.ml_processor.constants import MLModel
-from utils.ml_processor.gpu.utils import get_model_workflow_from_query, predict_gpu_output
+from utils.ml_processor.gpu.utils import predict_gpu_output
 from utils.ml_processor.ml_interface import MachineLearningProcessor
 import time
 

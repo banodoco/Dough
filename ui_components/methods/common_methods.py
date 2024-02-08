@@ -1,4 +1,5 @@
 import io
+import random
 from typing import List
 import os
 from PIL import Image, ImageDraw, ImageOps, ImageFilter
@@ -340,30 +341,27 @@ def promote_video_variant(shot_uuid, variant_uuid):
 
     data_repo.update_shot(uuid=shot.uuid, main_clip_id=variant_to_promote.uuid)
 
+def get_canny_img(img_obj, low_threshold, high_threshold):
+    if isinstance(img_obj, str):
+        if img_obj.startswith("http"):
+            response = r.get(img_obj)
+            image_data = np.frombuffer(response.content, dtype=np.uint8)
+            image = cv2.imdecode(image_data, cv2.IMREAD_GRAYSCALE)
+        else:
+            image = cv2.imread(img_obj, cv2.IMREAD_GRAYSCALE)
+    else:
+        image_data = generate_pil_image(img_obj)
+        image = np.array(image_data)
+
+    blurred_image = cv2.GaussianBlur(image, (5, 5), 0)
+    canny_edges = cv2.Canny(blurred_image, low_threshold, high_threshold)
+    inverted_canny_edges = 255 - canny_edges
+    new_canny_image = Image.fromarray(inverted_canny_edges)
+    return new_canny_image
 
 def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_threshold=150) -> InternalFileObject:
     data_repo = DataRepo()
-
-    # Check if the input is a URL
-    if image_path_or_url.startswith("http"):
-        response = r.get(image_path_or_url)
-        image_data = np.frombuffer(response.content, dtype=np.uint8)
-        image = cv2.imdecode(image_data, cv2.IMREAD_GRAYSCALE)
-    else:
-        # Read the image from a local file
-        image = cv2.imread(image_path_or_url, cv2.IMREAD_GRAYSCALE)
-
-    # Apply Gaussian blur to the image
-    blurred_image = cv2.GaussianBlur(image, (5, 5), 0)
-
-    # Apply the Canny edge detection
-    canny_edges = cv2.Canny(blurred_image, low_threshold, high_threshold)
-
-    # Reverse the colors (invert the image)
-    inverted_canny_edges = 255 - canny_edges
-
-    # Convert the inverted Canny edge result to a PIL Image
-    new_canny_image = Image.fromarray(inverted_canny_edges)
+    new_canny_image = get_canny_img(image_path_or_url, low_threshold, high_threshold)
 
     # Save the new image
     unique_file_name = str(uuid.uuid4()) + ".png"
@@ -949,4 +947,8 @@ def update_app_setting_keys():
 
     app_logger.log(LoggingType.DEBUG, 'setting keys', None)
     data_repo.update_app_setting(replicate_username='bn')
-    data_repo.update_app_setting(replicate_key=key)    
+    data_repo.update_app_setting(replicate_key=key)
+
+
+def random_seed():
+    return random.randint(10**14, 10**15 - 1)

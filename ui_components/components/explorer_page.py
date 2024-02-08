@@ -1,6 +1,6 @@
 import json
 import streamlit as st
-from ui_components.methods.common_methods import process_inference_output,add_new_shot, save_new_image, save_uploaded_image
+from ui_components.methods.common_methods import get_canny_img, process_inference_output,add_new_shot, save_new_image, save_uploaded_image
 from ui_components.methods.file_methods import generate_pil_image
 from ui_components.methods.ml_methods import query_llama2
 from ui_components.widgets.add_key_frame_element import add_key_frame
@@ -78,6 +78,9 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
     uploaded_image_1 = None
     uploaded_image_2 = None
 
+    # these require two images
+    ipadapter_types = [InputImageStyling.IPADPTER_FACE_AND_PLUS.value]
+
     # UI for image input if type_of_generation is not txt2img
     if type_of_generation != InputImageStyling.TEXT2IMAGE.value:
         # UI - Base Input
@@ -85,7 +88,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
             source_of_starting_image = st_memory.radio("Image source:", options=["Upload", "From Shot"], key="source_of_starting_image", help="This will be the base image for the generation.",horizontal=True)
             # image upload
             if source_of_starting_image == "Upload":
-                uploaded_image_1 = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key="explorer_input_image", help="This will be the base image for the generation.")                                        
+                uploaded_image_1 = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key="explorer_input_image", help="This will be the base image for the generation.")
             # taking image from shots
             else:
                 shot_list = data_repo.get_shot_list(project_uuid)
@@ -105,7 +108,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                 st.image(frame_list[timing - 1].primary_image.location, use_column_width=True)
             
             # taking a second image in the case of ip_adapter_face_plus
-            if type_of_generation == InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
+            if type_of_generation in ipadapter_types:
                 source_of_starting_image_2 = st_memory.radio("How would you like to upload the second starting image?", options=["Upload", "From Shot"], key="source_of_starting_image_2", help="This will be the base image for the generation.",horizontal=True)
                 if source_of_starting_image_2 == "Upload":
                     uploaded_image_2 = st.file_uploader("IP-Adapter Face image:", type=["png", "jpg", "jpeg"], key="explorer_input_image_2", help="This will be the base image for the generation.")
@@ -123,10 +126,8 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     st.image(frame_list[timing - 1].primary_image.location, use_column_width=True)
 
             # if type type is face and plus, then we need to make the text images
-            if type_of_generation == InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
-                button_text = "Upload Images"
-            else:
-                button_text = "Upload Image"
+            button_text = "Upload Images" if type_of_generation in ipadapter_types else "Upload Image"
+
             if st.button(button_text, use_container_width=True):                                                
                 st.session_state[input_image_1_key] = uploaded_image_1   
                 st.session_state[input_image_2_key] = uploaded_image_2   
@@ -135,12 +136,12 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
         # UI - Preview
         with b3:
             # prompt_strength = round(1 - (strength_of_image / 100), 2)
-            if type_of_generation != InputImageStyling.IPADPTER_FACE_AND_PLUS.value:                                             
+            if type_of_generation not in ipadapter_types:                                             
                 st.info("Current image:")
                 if st.session_state[input_image_1_key] is not None:
                     st.image(st.session_state[input_image_1_key], use_column_width=True)
                 else:
-                    st.error("Please upload an image")                   
+                    st.error("Please upload an image")
         
         # UI - extra input params for different generations
         if type_of_generation == InputImageStyling.IMAGE2IMAGE.value:
@@ -149,8 +150,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
 
         elif type_of_generation == InputImageStyling.CONTROLNET_CANNY.value:
             with b3:
-                strength_of_image = st_memory.slider("How much of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_controlnet_canny", help="This will determine how much of the current image will be kept in the final image.")                     
-                edge_pil_img = None
+                strength_of_image = st_memory.slider("How much of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_controlnet_canny", help="This will determine how much of the current image will be kept in the final image.")
 
         elif type_of_generation == InputImageStyling.IPADAPTER_FACE.value:
             with b3:
@@ -161,6 +161,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                 strength_of_plus = st_memory.slider("How much of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_ipadapter_plus", help="This will determine how much of the current image will be kept in the final image.")                            
 
         elif type_of_generation == InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
+            # UI - displaying uploaded images
             with b3:
                 st.info("IP-Adapter Face image:")
                 if st.session_state[input_image_1_key] is not None:    
@@ -179,7 +180,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
         # UI - clear btn
         if st.session_state[input_image_1_key] is not None:
             with b3:
-                if st.button("Clear input image", key="clear_input_image", use_container_width=True):
+                if st.button("Clear input image(s)", key="clear_input_image", use_container_width=True):
                     st.session_state[input_image_1_key] = None
                     st.session_state[input_image_2_key] = None
                     st.rerun()
@@ -189,7 +190,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
     else:
         d2, d3 = st.columns([1,1])
     with d2:        
-        number_to_generate = st.slider("How many images would you like to generate?", min_value=0, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
+        number_to_generate = st.slider("How many images would you like to generate?", min_value=0, max_value=100, value=4, step=2, key="number_to_generate", help="It'll generate 4 from each variation.")
     
     with d3:
         st.write(" ")
@@ -260,6 +261,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                 elif generation_method == InputImageStyling.CONTROLNET_CANNY.value:
+                    edge_pil_img = get_canny_img(st.session_state[input_image_1_key], low_threshold=100, high_threshold=200)
                     input_image_file = save_new_image(edge_pil_img, project_uuid)
                     query_obj = MLQueryObject(
                         timing_uuid=None,
@@ -281,6 +283,11 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
                 
                 elif generation_method == InputImageStyling.IPADAPTER_FACE.value:
+                    # validation
+                    if not (st.session_state[input_image_1_key]):
+                        st.error('Please upload an image')
+                        return
+
                     input_image_file = save_new_image(st.session_state[input_image_1_key], project_uuid)
                     query_obj = MLQueryObject(
                         timing_uuid=None,
@@ -296,7 +303,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         height=project_settings.height,
                         width=project_settings.width,
                         project_uuid=project_uuid,
-                        data={'condition_scale': 1}
+                        data={}
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_face, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
@@ -323,6 +330,11 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_plus, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                 elif generation_method == InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
+                    # validation
+                    if not (st.session_state[input_image_2_key] and st.session_state[input_image_1_key]):
+                        st.error('Please upload both images')
+                        return
+
                     plus_image_file = save_new_image(st.session_state[input_image_1_key], project_uuid)
                     face_image_file = save_new_image(st.session_state[input_image_2_key], project_uuid)
                     query_obj = MLQueryObject(
@@ -339,7 +351,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         height=project_settings.height,
                         width=project_settings.width,
                         project_uuid=project_uuid,
-                        data={'face_image_file_uuid': face_image_file.uuid}
+                        data={'file_image_2_uuid': face_image_file.uuid}
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_face_plus, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
