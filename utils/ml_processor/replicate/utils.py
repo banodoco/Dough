@@ -89,7 +89,8 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             "width" : 1024 if query_obj.width == 512 else 1024,    # 768 is the default for sdxl
             "height" : 1024 if query_obj.height == 512 else 1024,
             "prompt_strength": query_obj.strength,
-            "mask": mask
+            "mask": mask,
+            "disable_safety_checker": True,
         }
 
         if input_image:
