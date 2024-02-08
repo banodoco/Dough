@@ -4,6 +4,7 @@ import signal
 import sys
 import time
 import requests
+import traceback
 import sentry_sdk
 import setproctitle
 from dotenv import load_dotenv
@@ -233,9 +234,12 @@ def check_and_update_db():
                     app_logger.log(LoggingType.DEBUG, f"Error: {response.content}")
                     sentry_sdk.capture_exception(response.content)
         elif local_gpu_data:
+            print("here")
             data = json.loads(local_gpu_data)
+            print("data 1")
             try:
                 setup_comfy_runner()
+                print("comfy setup")
                 start_time = time.time()
                 output = predict_gpu_output(data['workflow_input'], data['file_path_list'], data['output_node_ids'])
                 end_time = time.time()
@@ -257,7 +261,9 @@ def check_and_update_db():
                 update_cache_dict(origin_data['inference_type'], log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list)
 
             except Exception as e:
-                sentry_sdk.capture_exception(e)
+                print("error occured: ", str(e))
+                # sentry_sdk.capture_exception(e)
+                traceback.print_exc()
                 InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.FAILED.value)
         else:
             # if not replicate data is present then removing the status

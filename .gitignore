@@ -22,7 +22,9 @@ test.py
 doc.py
 .env
 data.json
-comfy-runner/
+comfy_runner/
+ComfyUI/
+output/
 
 # generated file TODO: move inside videos
 depth.png

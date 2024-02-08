@@ -48,7 +48,7 @@ class ComfyDataTransform:
         workflow["7"]["inputs"]["text"] = workflow["16"]["inputs"]["text"] = negative_prompt
         workflow["10"]["inputs"]["steps"], workflow["11"]["inputs"]["cfg"] = steps, cfg
 
-        return json.dumps(workflow)
+        return json.dumps(workflow), output_node_ids
 
     @staticmethod
     def transform_sdxl_controlnet_workflow(query: MLQueryObject):
@@ -72,7 +72,7 @@ class ComfyDataTransform:
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["13"]["inputs"]["image"] = image_name
 
-        return json.dumps(workflow)
+        return json.dumps(workflow), output_node_ids
 
     @staticmethod
     def transform_sdxl_controlnet_openpose_workflow(query: MLQueryObject):
@@ -94,7 +94,7 @@ class ComfyDataTransform:
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["12"]["inputs"]["image"] = image_name
 
-        return json.dumps(workflow)
+        return json.dumps(workflow), output_node_ids
 
     @staticmethod
     def transform_llama_2_7b_workflow(query: MLQueryObject):
@@ -108,7 +108,7 @@ class ComfyDataTransform:
         workflow["15"]["inputs"]["prompt"] = input_text
         workflow["15"]["inputs"]["temperature"] = temperature
 
-        return json.dumps(workflow)
+        return json.dumps(workflow), output_node_ids
 
     @staticmethod
     def transform_sdxl_inpainting_workflow(query: MLQueryObject):
@@ -129,7 +129,7 @@ class ComfyDataTransform:
         workflow["34"]["inputs"]["text_g"] = workflow["34"]["inputs"]["text_l"] = positive_prompt
         workflow["37"]["inputs"]["text_g"] = workflow["37"]["inputs"]["text_l"] = negative_prompt
 
-        return json.dumps(workflow)
+        return json.dumps(workflow), output_node_ids
 
     @staticmethod
     def transform_ipadaptor_plus_workflow(query: MLQueryObject):
@@ -149,7 +149,7 @@ class ComfyDataTransform:
         workflow["24"]["inputs"]["image"] = image_name  # ipadapter image
         workflow["28"]["inputs"]["image"] = image_name  # dummy image
 
-        return json.dumps(workflow)
+        return json.dumps(workflow), output_node_ids
 
     @staticmethod
     def transform_ipadaptor_face_workflow(query: MLQueryObject):
@@ -168,7 +168,7 @@ class ComfyDataTransform:
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["24"]["inputs"]["image"] = image_name  # ipadapter image
 
-        return json.dumps(workflow)
+        return json.dumps(workflow), output_node_ids
 
     @staticmethod
     def transform_ipadaptor_face_plus_workflow(query: MLQueryObject):
@@ -190,7 +190,7 @@ class ComfyDataTransform:
         workflow["24"]["inputs"]["image"] = image_name  # ipadapter image
         workflow["28"]["inputs"]["image"] = image_name_2 # insight face image
 
-        return json.dumps(workflow)
+        return json.dumps(workflow), output_node_ids
 
     @staticmethod
     def transform_steerable_motion_workflow(query: MLQueryObject):
@@ -204,7 +204,7 @@ class ComfyDataTransform:
         workflow["207"]["inputs"]["noise_seed"] = random_seed()
         workflow["207"]["inputs"]["steps"], workflow["207"]["inputs"]["cfg"] = steps, cfg
 
-        return json.dumps(workflow)
+        return json.dumps(workflow), output_node_ids
 
 
 # NOTE: only populating with models currently in use
