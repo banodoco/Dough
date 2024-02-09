@@ -121,6 +121,11 @@ class DataRepo:
             uploaded_file_url = self.upload_file(file_content)
             kwargs.update({'hosted_url':uploaded_file_url})
 
+        # handling the case of local inference.. will fix later
+        if 'hosted_url' in kwargs and not kwargs['hosted_url'].startswith('http'):
+            kwargs['local_path'] = kwargs['hosted_url']
+            del kwargs['hosted_url']
+
         res = self.db_repo.create_file(**kwargs)
         file = res.data['data'] if res.status else None
         file = InternalFileObject(**file) if file else None

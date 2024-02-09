@@ -1,8 +1,10 @@
 import json
 import os
+import shutil
 import signal
 import sys
 import time
+import uuid
 import requests
 import traceback
 import sentry_sdk
@@ -11,7 +13,7 @@ from dotenv import load_dotenv
 import django
 from shared.constants import OFFLINE_MODE, InferenceParamType, InferenceStatus, InferenceType, ProjectMetaData, HOSTED_BACKGROUND_RUNNER_MODE
 from shared.logging.constants import LoggingType
-from shared.logging.logging import AppLogger
+from shared.logging.logging import app_logger
 from ui_components.methods.file_methods import load_from_env, save_to_env
 from utils.common_utils import acquire_lock, release_lock
 from utils.data_repo.data_repo import DataRepo
@@ -150,9 +152,14 @@ def check_and_update_db():
     # print("updating logs")
     from backend.models import InferenceLog, AppSetting, User
     
-    app_logger = AppLogger()
+    # returning if db creation and migrations are pending
+    try:
+        user = User.objects.filter(is_disabled=False).first()
+    except Exception as e:
+        app_logger.log(LoggingType.DEBUG, "db creation pending..")
+        time.sleep(3)
+        return
 
-    user = User.objects.filter(is_disabled=False).first()
     app_setting = AppSetting.objects.filter(user_id=user.id, is_disabled=False).first()
     replicate_key = app_setting.replicate_key_decrypted
     if not replicate_key:
@@ -244,18 +251,24 @@ def check_and_update_db():
                 output = predict_gpu_output(data['workflow_input'], data['file_path_list'], data['output_node_ids'])
                 end_time = time.time()
 
-                # TODO: copy the output inside videos folder
+                output = output[-1]     # TODO: different models can have different logic
+                destination_path = "./videos/temp/" + str(uuid.uuid4()) + "." + output.split(".")[-1]
+                shutil.copy2("./output/" + output, destination_path)
+                output_details = json.loads(log.output_details)
+                output_details['output'] = destination_path
                 update_data = {
                     "status" : InferenceStatus.COMPLETED.value,
-                    "output_details" : json.dumps(output[0]),
+                    "output_details" : json.dumps(output_details),
                     "total_inference_time" : end_time - start_time,
                 }
 
                 InferenceLog.objects.filter(id=log.id).update(**update_data)
                 origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, {})
-                origin_data['output'] = output[0]
+                origin_data['output'] = destination_path
                 origin_data['log_uuid'] = log.uuid
                 print("processing inference output")
+
+                from ui_components.methods.common_methods import process_inference_output
                 process_inference_output(**origin_data)
                 timing_uuid, shot_uuid = origin_data.get('timing_uuid', None), origin_data.get('shot_uuid', None)
                 update_cache_dict(origin_data['inference_type'], log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list)

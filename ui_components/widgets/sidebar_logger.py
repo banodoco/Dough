@@ -73,7 +73,10 @@ def sidebar_logger(shot_uuid):
                 prompt = input_params.get('prompt', 'No prompt found')                
                 st.write(f'"{prompt[:30]}..."' if len(prompt) > 30 else f'"{prompt}"')
                 st.caption(f"Model:")
-                st.write(json.loads(log.output_details)['model_name'].split('/')[-1])
+                try:
+                    st.write(json.loads(log.output_details)['model_name'].split('/')[-1])
+                except Exception as e:
+                    st.write('')
                             
             with c2:
                 if output_url:                                              

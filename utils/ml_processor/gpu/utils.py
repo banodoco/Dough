@@ -2,6 +2,7 @@ import importlib
 import os
 import sys
 import subprocess
+import time
 from git import Repo
 from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
@@ -14,6 +15,10 @@ def predict_gpu_output(workflow: str, file_path_list=[], output_node=None) -> st
     # comfy_runner = importlib.util.module_from_spec(spec)
     # spec.loader.exec_module(comfy_runner)
     
+    # hackish sol.. waiting for comfy repo to be cloned
+    while not is_comfy_runner_present():
+        time.sleep(2)
+
     sys.path.append(str(os.getcwd()) + COMFY_RUNNER_PATH[1:])
     from comfy_runner.inf import ComfyRunner
     
@@ -25,18 +30,19 @@ def predict_gpu_output(workflow: str, file_path_list=[], output_node=None) -> st
         output_node_ids=output_node
     )
 
-    return output
+    return output['file_paths']   # ignoring text output for now {"file_paths": [], "text_content": []}
 
 def is_comfy_runner_present():
     return os.path.exists(COMFY_RUNNER_PATH)     # hackish sol, will fix later
 
+# TODO: convert comfy_runner into a package for easy import
 def setup_comfy_runner():
     if is_comfy_runner_present():
         return
     
     app_logger.log(LoggingType.INFO, 'cloning comfy runner')
     comfy_repo_url = "https://github.com/piyushK52/comfy-runner"
-    Repo.clone_from(comfy_repo_url, COMFY_RUNNER_PATH[2:])
+    Repo.clone_from(comfy_repo_url, COMFY_RUNNER_PATH[2:], single_branch=True, branch='feature/package')
 
     # installing dependencies
-    subprocess.run(['pip', 'install', '-r', './comfy-runner/requirements.txt'], check=True)
+    subprocess.run(['pip', 'install', '-r', COMFY_RUNNER_PATH + '/requirements.txt'], check=True)

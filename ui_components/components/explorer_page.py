@@ -219,7 +219,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     query_obj = MLQueryObject(
                         timing_uuid=None,
                         model_uuid=None,
-                        guidance_scale=5,
+                        guidance_scale=8,
                         seed=-1,                            
                         num_inference_steps=30,            
                         strength=1,

@@ -43,7 +43,7 @@ class ComfyDataTransform:
 
         # updating params
         workflow["10"]["inputs"]["noise_seed"] = random_seed()
-        workflow["5"]["width"], workflow["5"]["height"] = width, height
+        workflow["5"]["width"], workflow["5"]["height"] = max(width, 1024), max(height, 1024)
         workflow["6"]["inputs"]["text"] = workflow["15"]["inputs"]["text"] = positive_prompt
         workflow["7"]["inputs"]["text"] = workflow["16"]["inputs"]["text"] = negative_prompt
         workflow["10"]["inputs"]["steps"], workflow["11"]["inputs"]["cfg"] = steps, cfg

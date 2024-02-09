@@ -41,6 +41,7 @@ class GPUProcessor(MachineLearningProcessor):
         }
 
         params = {
+            "prompt": query_obj.prompt,     # hackish sol
             InferenceParamType.QUERY_DICT.value: query_obj.to_json(),
             InferenceParamType.GPU_INFERENCE.value: json.dumps(data)
         }
