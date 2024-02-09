@@ -26,8 +26,6 @@ def animation_style_element(shot_uuid):
     buffer = 4
     
 
-    video_resolution = None
-
     settings = {
         'animation_tool': AnimationToolType.ANIMATEDIFF.value,
     }
@@ -67,6 +65,7 @@ def animation_style_element(shot_uuid):
                 elif what_would_you_like_to_edit == "Motion during frames":
                     for idx, timing in enumerate(timing_list):
                         st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
+    
     st.markdown("***")
     type_of_setting = "Individual"
     if type_of_setting == "Individual":        
@@ -79,19 +78,19 @@ def animation_style_element(shot_uuid):
         individual_negative_prompts =[]
         motions_during_frames = []
 
-
         for i in range(0, len(timing_list) , items_per_row):
             with st.container():
                 grid = st.columns([2 if j%2==0 else 1 for j in range(2*items_per_row)])  # Adjust the column widths
                 for j in range(items_per_row):                    
                     idx = i + j
-
                     if idx < len(timing_list):                        
                         with grid[2*j]:  # Adjust the index for image column
                             timing = timing_list[idx]
                             if timing.primary_image and timing.primary_image.location:
                                 st.info(f"**Frame {idx + 1}**")
                                 st.image(timing.primary_image.location, use_column_width=True)
+                                
+                                # setting default parameters
                                 if f'strength_of_frame_{shot.uuid}_{idx}' not in st.session_state:
                                     st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = 0.5
                                     st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = 16
@@ -101,7 +100,7 @@ def animation_style_element(shot_uuid):
                                     st.session_state[f'individual_negative_prompt_{shot.uuid}_{idx}'] = ""
                                     st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = 0.5
                                                                                                                            
-                                # st.write(f"Strength of current frame: {st.session_state[f'strength_of_frame_{shot.uuid}_{idx}']}")                                                                    
+                                # additional individual frame settings 
                                 with st.expander("Advanced settings:"):
                                     strength_of_frame = st.slider("Strength of current frame:", min_value=0.25, max_value=1.0, step=0.01, key=f"strength_of_frame_widget_{shot.uuid}_{idx}", value=st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'])
                                     strength_of_frames.append(strength_of_frame)                                    
@@ -111,12 +110,11 @@ def animation_style_element(shot_uuid):
                                     individual_negative_prompts.append(individual_negative_prompt)
                                     motion_during_frame = st.slider("Motion during frame:", min_value=0.2, max_value=0.95, step=0.01, key=f"motion_during_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'])
                                     motions_during_frames.append(motion_during_frame)
-
-
                             else:                        
-                                st.warning("No primary image present.")     
-                        with grid[2*j+1]:  # Add the new column after the image column
+                                st.warning("No primary image present.")    
 
+                        # distance, speed and freedom settings (also aggregates them into arrays)
+                        with grid[2*j+1]:  # Add the new column after the image column
                             if idx < len(timing_list) - 1:                                                                       
                                 st.write("")
                                 st.write("")
@@ -132,14 +130,10 @@ def animation_style_element(shot_uuid):
                 if (i < len(timing_list) - 1) or (st.session_state["open_shot"] == shot.uuid) or (len(timing_list) % items_per_row != 0 and st.session_state["open_shot"] != shot.uuid):
                     st.markdown("***")
 
- 
         if st.button("Save current_settings", key="save_current_settings"):
             update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts)
 
-
         def transform_data(strength_of_frames, movements_between_frames, speeds_of_transitions, distances_to_next_frames):
-
-            
             def adjust_and_invert_relative_value(middle_value, relative_value):
                 if relative_value is not None:
                     adjusted_value = middle_value * relative_value
@@ -182,17 +176,13 @@ def animation_style_element(shot_uuid):
             return output_strength, output_speeds, cumulative_distances
         
         dynamic_strength_values, dynamic_key_frame_influence_values, dynamic_frame_distribution_values = transform_data(strength_of_frames, freedoms_between_frames, speeds_of_transitions, distances_to_next_frames)
-        
-        
-        # st.write(dynamic_frame_distribution_values)
-        # st.write(individual_prompts)
-
         type_of_frame_distribution = "dynamic"
         type_of_key_frame_influence = "dynamic"
         type_of_strength_distribution = "dynamic"
         linear_frame_distribution_value = 16
         linear_key_frame_influence_value = 1.0
         linear_cn_strength_value = 1.0
+        
         if st.toggle("Visualise motion data"):
             columns = st.columns(max(7, len(timing_list))) 
             for idx, timing in enumerate(timing_list):
@@ -235,10 +225,7 @@ def animation_style_element(shot_uuid):
             # st.write(strength_values)
             # st.write(key_frame_influence_values)
 
-
-
     elif type_of_setting == "Bulk":
-        
         st.session_state['frame_position'] = 0
         type_of_frame_distribution = "linear"
         type_of_key_frame_influence = "linear"
@@ -300,14 +287,14 @@ def animation_style_element(shot_uuid):
             plot_weights(weights_list, frame_numbers_list)
 
     st.markdown("***")
-
     st.markdown("#### Overall style settings")
     e1, e2, e3 = st.columns([1, 1,1])
-    
+
     with e1:
         strength_of_adherence = st_memory.slider("How much would you like to force adherence to the input images?", min_value=0.0, max_value=1.0, value=0.3, step=0.01, key="stregnth_of_adherence")
         base_end_percent = 0.05
         base_adapter_strength = 0.05
+        
         # 0.1 value = 1x multipler, 0.2 = 2x multipler, 0.3 = 3x multipler, 0.4 = 4x multipler, 0.5 = 5x multipler
         multipled_base_end_percent = base_end_percent * (strength_of_adherence * 10)
         multipled_base_adapter_strength = base_adapter_strength * (strength_of_adherence * 20)
@@ -316,7 +303,7 @@ def animation_style_element(shot_uuid):
         # st.write(f"multiplied base adapter strength: {multipled_base_adapter_strength}")
 
         sd_model_list = [
-            "Realistic_Vision_V5.0.safetensors",
+            "Realistic_Vision_V5.1.safetensors",
             "Counterfeit-V3.0_fp96.safetensors",
             "epic_realism.safetensors",
             "dreamshaper_v8.safetensors",
@@ -331,8 +318,8 @@ def animation_style_element(shot_uuid):
         st.info("Higher values may cause flickering and sudden changes in the video. Lower values may cause the video to be less influenced by the input images.")
 
     f1, f2, f3 = st.columns([1, 1, 1])
-    with f1:    
-
+    
+    with f1:
         positive_prompt = st_memory.text_area("What would you like to see in the videos?", value="", key="positive_prompt_video")
     with f2:
         negative_prompt = st_memory.text_area("What would you like to avoid in the videos?", value="bad image, worst quality", key="negative_prompt_video")
@@ -340,10 +327,7 @@ def animation_style_element(shot_uuid):
     with f3:
         st.write("")
         st.info("Use these sparingly, as they can have a large impact on the video. You can also edit them for individual frames in the advanced settings above.")
-        soft_scaled_cn_weights_multiplier =""
-
-
-
+        soft_scaled_cn_weights_multiplier = ""
 
         # relative_ipadapter_strength = st_memory.slider("How much would you like to influence the style?", min_value=0.0, max_value=5.0, value=1.1, step=0.1, key="ip_adapter_strength")
         # relative_ipadapter_influence = st_memory.slider("For how long would you like to influence the style?", min_value=0.0, max_value=5.0, value=1.1, step=0.1, key="ip_adapter_influence")
@@ -420,17 +404,19 @@ def animation_style_element(shot_uuid):
                     data=prepare_workflow_images(shot_uuid),
                     file_name='data.zip'
                 )
+            
             if st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help):
                 update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts)
-                vid_quality = "full" if video_resolution == "Full Resolution" else "preview"
+                vid_quality = "full"    # TODO: add this if video_resolution == "Full Resolution" else "preview"
                 st.success("Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update.")
 
                 positive_prompt = ""
+                append_to_prompt = ""       # TODO: add this
                 for idx, timing in enumerate(timing_list):
                     if timing.primary_image and timing.primary_image.location:
                         b = timing.primary_image.inference_params
                         prompt = b['prompt'] if b else ""
-                        prompt += append_to_prompt  # Appending the text to each prompt
+                        prompt += append_to_prompt
                         frame_prompt = f"{idx * linear_frame_distribution_value}_" + prompt
                         positive_prompt += ":" + frame_prompt if positive_prompt else frame_prompt
                     else:
