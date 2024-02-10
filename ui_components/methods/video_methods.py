@@ -40,6 +40,7 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
 
     img_list = [t.primary_image.location for t in timing_list]
     settings.update(interpolation_steps=interpolation_steps)
+    settings.update(file_uuid_list=[t.primary_image.uuid for t in timing_list])
 
     # res is an array of tuples (video_bytes, log)
     res = VideoInterpolator.create_interpolated_clip(

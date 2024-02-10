@@ -197,15 +197,10 @@ class ComfyDataTransform:
 
     @staticmethod
     def transform_steerable_motion_workflow(query: MLQueryObject):
-        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IP_ADAPTER_FACE)
-
-        # workflow params
-        steps, cfg = query.num_inference_steps, query.guidance_scale
-        # all the images will directly be sent in the input files
-
-        # updating params
-        workflow["207"]["inputs"]["noise_seed"] = random_seed()
-        workflow["207"]["inputs"]["steps"], workflow["207"]["inputs"]["cfg"] = steps, cfg
+        # NOTE: @Peter you can access all the settings that you passed using
+        # settings = query.data.get('data', {})
+        # fill them in workflow (check the functions above to get an idea)
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.STEERABLE_MOTION)
 
         return json.dumps(workflow), output_node_ids
 

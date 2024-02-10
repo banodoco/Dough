@@ -792,13 +792,17 @@ def process_inference_output(**kwargs):
                 return False
             
             # output can also be an url
-            if isinstance(output, str) and output.startswith("http"):
-                temp_output_file = generate_temp_file(output, '.mp4')
-                output = None
-                with open(temp_output_file.name, 'rb') as f:
-                    output = f.read()
+            if isinstance(output, str):
+                if output.startswith("http"):
+                    temp_output_file = generate_temp_file(output, '.mp4')
+                    output = None
+                    with open(temp_output_file.name, 'rb') as f:
+                        output = f.read()
 
-                os.remove(temp_output_file.name)
+                    os.remove(temp_output_file.name)
+                else:
+                    with open(output, 'rb') as f:
+                        output = f.read()
 
             if 'normalise_speed' in settings and settings['normalise_speed']:
                 output = VideoProcessor.update_video_bytes_speed(output, shot.duration)

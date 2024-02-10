@@ -197,7 +197,7 @@ def animation_style_element(shot_uuid):
             keyframe_positions.insert(0, 0)
 
             last_key_frame_position = (keyframe_positions[-1] + 1)
-            strength_values = extract_strength_values(type_of_strength_distribution, dynamic_strength_values, keyframe_positions, linear_cn_strength_value)                        
+            strength_values = extract_strength_values(type_of_strength_distribution, s, keyframe_positions, linear_cn_strength_value)                        
             key_frame_influence_values = extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value)                                        
             # calculate_weights(keyframe_positions, strength_values, buffer, key_frame_influence_values):
             weights_list, frame_numbers_list = calculate_weights(keyframe_positions, strength_values, 4, key_frame_influence_values,last_key_frame_position)            
@@ -394,52 +394,49 @@ def animation_style_element(shot_uuid):
     
     st.markdown("***")
     st.markdown("#### Generation Settings")
-    where_to_generate = st_memory.radio("Where would you like to generate the video?", options=["Cloud", "Local"], key="where_to_generate", horizontal=True)
-    if where_to_generate == "Cloud":
-        animate_col_1, animate_col_2, _ = st.columns([1, 1, 2])
-        with animate_col_1:
-            variant_count = st.number_input("How many variants?", min_value=1, max_value=5, value=1, step=1, key="variant_count")
-            st.download_button(
-                    label="Download images",
-                    data=prepare_workflow_images(shot_uuid),
-                    file_name='data.zip'
-                )
-            
-            if st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help):
-                update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts)
-                vid_quality = "full"    # TODO: add this if video_resolution == "Full Resolution" else "preview"
-                st.success("Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update.")
+    animate_col_1, animate_col_2, _ = st.columns([1, 1, 2])
+    with animate_col_1:
+        variant_count = st.number_input("How many variants?", min_value=1, max_value=5, value=1, step=1, key="variant_count")
+        st.download_button(
+                label="Download images",
+                data=prepare_workflow_images(shot_uuid),
+                file_name='data.zip'
+            )
+        
+        if st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help):
+            update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts)
+            vid_quality = "full"    # TODO: add this if video_resolution == "Full Resolution" else "preview"
+            st.success("Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update.")
 
-                positive_prompt = ""
-                append_to_prompt = ""       # TODO: add this
-                for idx, timing in enumerate(timing_list):
-                    if timing.primary_image and timing.primary_image.location:
-                        b = timing.primary_image.inference_params
-                        prompt = b['prompt'] if b else ""
-                        prompt += append_to_prompt
-                        frame_prompt = f"{idx * linear_frame_distribution_value}_" + prompt
-                        positive_prompt += ":" + frame_prompt if positive_prompt else frame_prompt
-                    else:
-                        st.error("Please generate primary images")
-                        time.sleep(0.7)
-                        st.rerun()
+            positive_prompt = ""
+            append_to_prompt = ""       # TODO: add this
+            for idx, timing in enumerate(timing_list):
+                if timing.primary_image and timing.primary_image.location:
+                    b = timing.primary_image.inference_params
+                    prompt = b['prompt'] if b else ""
+                    prompt += append_to_prompt
+                    frame_prompt = f"{idx * linear_frame_distribution_value}_" + prompt
+                    positive_prompt += ":" + frame_prompt if positive_prompt else frame_prompt
+                else:
+                    st.error("Please generate primary images")
+                    time.sleep(0.7)
+                    st.rerun()
 
-                settings.update(
-                    image_prompt_list=positive_prompt,
-                    animation_stype=current_animation_style,
-                )
+            settings.update(
+                image_prompt_list=positive_prompt,
+                animation_stype=current_animation_style,
+            )
 
-                create_single_interpolated_clip(
-                    shot_uuid,
-                    vid_quality,
-                    settings,
-                    variant_count
-                )
-                st.rerun()
+            create_single_interpolated_clip(
+                shot_uuid,
+                vid_quality,
+                settings,
+                variant_count
+            )
+            st.rerun()
 
-        with animate_col_2:
+    with animate_col_2:
             number_of_frames = len(timing_list)
-            
             if height==width:
                 cost_per_key_frame = 0.035
             else:
@@ -448,25 +445,6 @@ def animation_style_element(shot_uuid):
             cost_per_generation = cost_per_key_frame * number_of_frames * variant_count
             st.info(f"Generating a video with {number_of_frames} frames in the cloud will cost c. ${cost_per_generation:.2f} USD.")
     
-    elif where_to_generate == "Local":
-        h1,h2 = st.columns([1,1])
-        with h1:
-            st.info("You can run this locally in ComfyUI but you'll need at least 16GB VRAM. To get started, you can follow the instructions [here](https://github.com/peteromallet/steerable-motion) and download the workflow and images below.")
-
-            btn1, btn2 = st.columns([1,1])
-            with btn1:
-                st.download_button(
-                    label="Download workflow JSON",
-                    data=json.dumps(prepare_workflow_json(shot_uuid, settings)),
-                    file_name='workflow.json'
-                )
-            with btn2:
-                st.download_button(
-                    label="Download images",
-                    data=prepare_workflow_images(shot_uuid),
-                    file_name='data.zip'
-                )
-
 def update_session_state_with_animation_details(shot_uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts):
     for idx, timing in enumerate(timing_list):
         if idx < len(timing_list):
@@ -596,9 +574,7 @@ def create_workflow_json(image_locations, settings):
         batch_size = int(settings['dynamic_frame_distribution_values'].split(',')[-1]) + int(buffer)
 
     img_width, img_height = image_dimension.split("x")
-        
-    
-        
+
     for node in json_data['nodes']:
         if node['id'] == 189:
             node['widgets_values'][-3] = int(img_width)
@@ -904,12 +880,9 @@ def calculate_weights(keyframe_positions, strength_values, buffer, key_frame_inf
         
         weights_list.append(weights)
         frame_numbers_list.append(frame_numbers)
-        
 
     return weights_list, frame_numbers_list
 
-
-    
 def plot_weights(weights_list, frame_numbers_list):
     plt.figure(figsize=(12, 6))
 

@@ -4,10 +4,11 @@ import cv2
 import streamlit as st
 import requests as r
 import numpy as np
-from shared.constants import AnimationStyleType, AnimationToolType
+from shared.constants import QUEUE_INFERENCE_QUERIES, AnimationStyleType, AnimationToolType
 from ui_components.constants import DefaultTimingStyleParams
 from ui_components.methods.file_methods import generate_temp_file, zip_images
 from ui_components.models import InferenceLogObject
+from utils.constants import MLQueryObject
 
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.ml_interface import get_ml_client
@@ -58,10 +59,10 @@ class VideoInterpolator:
     @staticmethod
     def video_through_frame_interpolation(img_location_list, settings, variant_count, queue_inference=False):
         ml_client = get_ml_client()
-        zip_filename = zip_images(img_location_list)
-        zip_url = ml_client.upload_training_data(zip_filename, delete_after_upload=True)
-        print("zipped file url: ", zip_url)
-        animation_tool = settings['animation_tool'] if 'animation_tool' in settings else AnimationToolType.G_FILM.value
+        # zip_filename = zip_images(img_location_list)
+        # zip_url = ml_client.upload_training_data(zip_filename, delete_after_upload=True)
+        # print("zipped file url: ", zip_url)
+        # animation_tool = settings['animation_tool'] if 'animation_tool' in settings else AnimationToolType.G_FILM.value
 
         final_res = []
         for _ in range(variant_count):
@@ -79,11 +80,10 @@ class VideoInterpolator:
 
             # defaulting to animatediff interpolation
             if True:
-
-                data = {
+                # NOTE: @Peter these are all the settings you passed in from the UI
+                sm_data = {
                     "ckpt": settings['ckpt'],
                     "buffer": settings['buffer'],
-                    "image_list": zip_url,
                     "motion_scale": settings['motion_scale'],
                     "output_format": settings['output_format'],
                     "image_dimension": settings["image_dimension"],
@@ -93,10 +93,9 @@ class VideoInterpolator:
                     "stmfnet_multiplier": settings["stmfnet_multiplier"],                    
                     "relative_ipadapter_strength": settings["relative_ipadapter_strength"],
                     "relative_ipadapter_influence": settings["relative_ipadapter_influence"],
-                    "soft_scaled_cn_weights_multiplier": settings["soft_scaled_cn_weights_multiplier"],
                     "type_of_cn_strength_distribution": settings["type_of_cn_strength_distribution"],
                     "linear_cn_strength_value": settings["linear_cn_strength_value"],
-                    "dynamic_cn_strength_values": settings["dynamic_cn_strength_values"],
+                    "dynamic_cn_strength_values": settings["dynamic_strength_values"],
                     "linear_frame_distribution_value": settings["linear_frame_distribution_value"],
                     "type_of_frame_distribution": settings["type_of_frame_distribution"],
                     "dynamic_frame_distribution_values": settings["dynamic_frame_distribution_values"],
@@ -109,7 +108,30 @@ class VideoInterpolator:
                     "queue_inference": True
                 }
 
-                res = ml_client.predict_model_output(ML_MODEL.ad_interpolation, **data)
+                # adding the input images
+                for idx, img_uuid in enumerate(settings['file_uuid_list']):
+                    sm_data["file_image_" + str(idx) + "_uuid"] = img_uuid
+
+                # NOTE: @Peter all the above settings are put in the 'data' parameter below
+                ml_query_object = MLQueryObject(
+                    prompt="SM",  # hackish fix
+                    timing_uuid=None,
+                    model_uuid=None,
+                    guidance_scale=None,
+                    seed=None,
+                    num_inference_steps=None,            
+                    strength=None,
+                    adapter_type=None,
+                    negative_prompt="",
+                    height=512,
+                    width=512,
+                    low_threshold=100,
+                    high_threshold=200,
+                    image_uuid=None,
+                    mask_uuid=None,
+                    data=sm_data
+                )
+                res = ml_client.predict_model_output_standardized(ML_MODEL.ad_interpolation, ml_query_object, QUEUE_INFERENCE_QUERIES)
 
             final_res.append(res)
 

@@ -56,7 +56,6 @@ class GPUProcessor(MachineLearningProcessor):
         output = predict_gpu_output(kwargs.get(InferenceParamType.GPU_INFERENCE.value, None))
         end_time = time.time()
 
-        # TODO: lg_complete update this method to take in the current params
         log = log_model_inference(replicate_model, end_time - start_time, **kwargs)
         return output, log
 

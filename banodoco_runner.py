@@ -279,7 +279,7 @@ def check_and_update_db():
                 traceback.print_exc()
                 InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.FAILED.value)
         else:
-            # if not replicate data is present then removing the status
+            # if replicate/gpu data is not present then removing the status
             InferenceLog.objects.filter(id=log.id).update(status="")
 
     # adding update_data in the project
