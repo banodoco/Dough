@@ -382,30 +382,20 @@ def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_
     canny_image_file = data_repo.create_file(**file_data)
     return canny_image_file
 
-def combine_mask_and_input_image(mask_path, input_image_path, overlap_color = "transparent"):
+def combine_mask_and_input_image(mask_path, input_image_path, overlap_color="transparent"):
+    # Open the input image and the mask
     input_image = Image.open(input_image_path)
     mask_image = Image.open(mask_path)
-    mask_image = mask_image.convert("RGBA")
-    result_image = Image.new("RGBA", input_image.size)
+    input_image = input_image.convert("RGBA")
 
-    result_image.paste(input_image, (0, 0))
-    result_image.paste(mask_image, (0, 0), mask_image)
+    is_white = lambda pixel, threshold=245: all(value > threshold for value in pixel[:3])
 
-    # overlap_color: the color of the overlaped region
-    if overlap_color == "green":
-        color_code = (0, 255, 0)
-    elif overlap_color == "transparent":
-        color_code = (0, 0, 0)
-    elif overlap_color == "grey":
-        color_code = (128, 128, 128)
-    else:
-        raise ValueError("Invalid color specified")
+    for x in range(mask_image.width):
+        for y in range(mask_image.height):
+            if is_white(mask_image.getpixel((x, y))):
+                input_image.putpixel((x, y), (0, 0, 0, 0))
 
-    color_rgba = color_code + (0,)  # Append 0 for transparency
-    color_image = Image.new("RGBA", input_image.size, color_rgba)
-    result_image = Image.alpha_composite(result_image, color_image)
-
-    return result_image
+    return input_image
 
 # the input image is an image created by the PIL library
 def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
