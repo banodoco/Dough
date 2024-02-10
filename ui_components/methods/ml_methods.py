@@ -203,16 +203,34 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, mask_in_p
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
 
-    ml_client = get_ml_client()
-    output, log = ml_client.predict_model_output(
-        ML_MODEL.sdxl_inpainting, 
-        mask=mask, 
-        image=input_image, 
-        prompt=prompt, 
-        negative_prompt=negative_prompt, 
-        num_inference_steps=25, 
+    # TODO: INPAINTING - add the mask over the image -> save locally -> pass in this (combined_img)
+    query_obj = MLQueryObject(
+        timing_uuid=timing_uuid,
+        model_uuid=None,
+        guidance_scale=7.5,
+        seed=-1,
+        num_inference_steps=25,            
         strength=0.99,
-        queue_inference=QUEUE_INFERENCE_QUERIES
+        adapter_type=None,
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        height=512,
+        width=512,
+        low_threshold=100,  # update these default values
+        high_threshold=200,
+        image_uuid=None,
+        mask_uuid=None,
+        data={
+            "image": input_image,
+            "mask": mask
+        }
+    )
+
+    ml_client = get_ml_client()
+    output, log = ml_client.predict_model_output_standardized(
+        ML_MODEL.sdxl_inpainting, 
+        query_obj,
+        QUEUE_INFERENCE_QUERIES
     )
 
     return output, log

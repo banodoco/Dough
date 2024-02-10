@@ -96,6 +96,21 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if input_image:
             data['image'] = input_image
 
+    # TODO: INPAINTING - test this 
+    elif model == ML_MODEL.sdxl_inpainting:
+        data = {
+            "prompt" : query_obj.prompt,
+            "negative_prompt" : query_obj.negative_prompt,
+            "width" : 1024 if query_obj.width == 512 else 1024,    # 768 is the default for sdxl
+            "height" : 1024 if query_obj.height == 512 else 1024,
+            "prompt_strength": query_obj.strength,
+            "mask": query_obj.data.get("data", {}).get("mask", None),
+            "disable_safety_checker": True,
+        }
+
+        if input_image:
+            data['image'] = query_obj.data.get("data", {}).get("image", None)
+
     elif model == ML_MODEL.arielreplicate:
         data = {
             "instruction_text" : query_obj.prompt,
