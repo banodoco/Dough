@@ -382,6 +382,31 @@ def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_
     canny_image_file = data_repo.create_file(**file_data)
     return canny_image_file
 
+def combine_mask_and_input_image(mask_path, input_image_path, overlap_color = "transparent"):
+    input_image = Image.open(input_image_path)
+    mask_image = Image.open(mask_path)
+    mask_image = mask_image.convert("RGBA")
+    result_image = Image.new("RGBA", input_image.size)
+
+    result_image.paste(input_image, (0, 0))
+    result_image.paste(mask_image, (0, 0), mask_image)
+
+    # overlap_color: the color of the overlaped region
+    if overlap_color == "green":
+        color_code = (0, 255, 0)
+    elif overlap_color == "transparent":
+        color_code = (0, 0, 0)
+    elif overlap_color == "grey":
+        color_code = (128, 128, 128)
+    else:
+        raise ValueError("Invalid color specified")
+
+    color_rgba = color_code + (0,)  # Append 0 for transparency
+    color_image = Image.new("RGBA", input_image.size, color_rgba)
+    result_image = Image.alpha_composite(result_image, color_image)
+
+    return result_image
+
 # the input image is an image created by the PIL library
 def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
     data_repo = DataRepo()
@@ -595,7 +620,7 @@ def save_audio_file(uploaded_file, project_uuid):
 def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
                        background_image, editing_image, prompt, negative_prompt,
                        width, height, layer, timing_uuid):
-    from ui_components.methods.ml_methods import inpainting, remove_background, create_depth_mask_image
+    from ui_components.methods.ml_methods import inpainting
     data_repo = DataRepo()
     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
         timing_uuid)

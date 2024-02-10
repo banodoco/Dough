@@ -160,6 +160,9 @@ def check_and_update_db():
         time.sleep(3)
         return
 
+    if not user:
+        return
+
     app_setting = AppSetting.objects.filter(user_id=user.id, is_disabled=False).first()
     replicate_key = app_setting.replicate_key_decrypted
     if not replicate_key:
@@ -241,12 +244,9 @@ def check_and_update_db():
                     app_logger.log(LoggingType.DEBUG, f"Error: {response.content}")
                     sentry_sdk.capture_exception(response.content)
         elif local_gpu_data:
-            print("here")
             data = json.loads(local_gpu_data)
-            print("data 1")
             try:
                 setup_comfy_runner()
-                print("comfy setup")
                 start_time = time.time()
                 output = predict_gpu_output(data['workflow_input'], data['file_path_list'], data['output_node_ids'])
                 end_time = time.time()

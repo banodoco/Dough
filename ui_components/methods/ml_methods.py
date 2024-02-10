@@ -8,9 +8,10 @@ from PIL import Image
 import uuid
 import urllib
 from backend.models import InternalFileObject
-from shared.constants import QUEUE_INFERENCE_QUERIES, SERVER, AIModelCategory, InferenceType, InternalFileType, ServerType
+from shared.constants import GPU_INFERENCE_ENABLED, QUEUE_INFERENCE_QUERIES, SERVER, AIModelCategory, InferenceType, InternalFileType, ServerType
 from ui_components.constants import MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE
-from ui_components.methods.common_methods import process_inference_output
+from ui_components.methods.common_methods import combine_mask_and_input_image, process_inference_output
+from ui_components.methods.file_methods import save_or_host_file
 from ui_components.models import InternalAIModelObject, InternalFrameTimingObject, InternalSettingObject
 from utils.constants import ImageStage, MLQueryObject
 from utils.data_repo.data_repo import DataRepo
@@ -203,7 +204,6 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, mask_in_p
     if not input_image.startswith("http"):
         input_image = open(input_image, "rb")
 
-    # TODO: INPAINTING - add the mask over the image -> save locally -> pass in this (combined_img)
     query_obj = MLQueryObject(
         timing_uuid=timing_uuid,
         model_uuid=None,
@@ -221,8 +221,8 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, mask_in_p
         image_uuid=None,
         mask_uuid=None,
         data={
-            "image": input_image,
-            "mask": mask
+            "input_image": input_image,
+            "mask": mask,
         }
     )
 

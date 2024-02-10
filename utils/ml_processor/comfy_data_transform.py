@@ -1,10 +1,12 @@
 import os
 import random
 import tempfile
+import uuid
+from shared.constants import InternalFileType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
-from ui_components.methods.common_methods import random_seed
-from ui_components.methods.file_methods import zip_images
+from ui_components.methods.common_methods import combine_mask_and_input_image, random_seed
+from ui_components.methods.file_methods import save_or_host_file, zip_images
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow, MLModel
@@ -122,12 +124,35 @@ class ComfyDataTransform:
         # node 'get_img_size' automatically fetches the size
         positive_prompt, negative_prompt = query.prompt, query.negative_prompt
         steps, cfg = query.num_inference_steps, query.guidance_scale
-        image = data_repo.get_file_from_uuid(query.image_uuid)
-        image_name = image.filename
+        input_image = query.data.get('data', {}).get('input_image', None)
+        mask = query.data.get('data', {}).get('mask', None)
+
+        # inpainting workflows takes in an image and inpaints the transparent area
+        combined_img = combine_mask_and_input_image(mask, input_image)
+        filename = str(uuid.uuid4()) + ".png"
+        hosted_url = save_or_host_file(combined_img, "videos/temp/" + filename)
+
+        file_data = {
+            "name": filename,
+            "type": InternalFileType.IMAGE.value,
+        }
+
+        if hosted_url:
+            file_data.update({'hosted_url': hosted_url})
+        else:
+            file_data.update({'local_path': "videos/temp/" + filename})
+        file = data_repo.create_file(**file_data)
+
+        # adding the combined image in query (and removing io buffers)
+        query.data = {
+            "data": {
+                "file_combined_img": file.uuid
+            }
+        }
 
         # updating params
         workflow["3"]["inputs"]["seed"] = random_seed()
-        workflow["20"]["inputs"]["image"] = image_name
+        workflow["20"]["inputs"]["image"] = filename
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["34"]["inputs"]["text_g"] = workflow["34"]["inputs"]["text_l"] = positive_prompt
         workflow["37"]["inputs"]["text_g"] = workflow["37"]["inputs"]["text_l"] = negative_prompt

@@ -96,7 +96,6 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if input_image:
             data['image'] = input_image
 
-    # TODO: INPAINTING - test this 
     elif model == ML_MODEL.sdxl_inpainting:
         data = {
             "prompt" : query_obj.prompt,
@@ -105,6 +104,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             "height" : 1024 if query_obj.height == 512 else 1024,
             "prompt_strength": query_obj.strength,
             "mask": query_obj.data.get("data", {}).get("mask", None),
+            "image": query_obj.data.get("data", {}).get("input_image", None),
             "disable_safety_checker": True,
         }
 
