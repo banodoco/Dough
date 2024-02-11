@@ -166,7 +166,7 @@ def check_and_update_db():
     app_setting = AppSetting.objects.filter(user_id=user.id, is_disabled=False).first()
     replicate_key = app_setting.replicate_key_decrypted
     if not replicate_key:
-        app_logger.log(LoggingType.ERROR, "Replicate key not found")
+        # app_logger.log(LoggingType.ERROR, "Replicate key not found")
         return
     
     log_list = InferenceLog.objects.filter(status__in=[InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],

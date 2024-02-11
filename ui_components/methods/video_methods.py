@@ -251,7 +251,7 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
     for shot in shot_list:
         if not shot.main_clip:
             st.error("Please generate all videos")
-            time.sleep(0.3)
+            time.sleep(0.7)
             return False
         
         shot_video = sync_audio_and_duration(shot.main_clip, shot.uuid, audio_sync_required=False)

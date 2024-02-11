@@ -304,10 +304,9 @@ def animation_style_element(shot_uuid):
 
         sd_model_list = [
             "Realistic_Vision_V5.1.safetensors",
-            "Counterfeit-V3.0_fp96.safetensors",
-            "epic_realism.safetensors",
-            "dreamshaper_v8.safetensors",
-            "deliberate_v3.safetensors"
+            "counterfeitV30_v30.safetensors",
+            "epicrealism_pureEvolutionV5.safetensors",
+            "dreamshaper_8.safetensors"
         ]
 
         # remove .safe tensors from the end of each model name
