@@ -3,7 +3,6 @@ import streamlit as st
 import time
 from shared.constants import InferenceStatus
 from shared.logging.constants import LoggingPayload, LoggingType
-from shared.logging.logging import AppLogger
 from utils.common_utils import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
 
@@ -29,11 +28,11 @@ def log_model_inference(model: MLModel, time_taken, **kwargs):
         'created_on': int(time.time())
     }
 
-    system_logger = AppLogger()
-    logging_payload = LoggingPayload(message="logging inference data", data=data)
+    # system_logger = AppLogger()
+    # logging_payload = LoggingPayload(message="logging inference data", data=data)
 
-    # logging in console
-    system_logger.log(LoggingType.INFERENCE_CALL, logging_payload)
+    # # logging in console
+    # system_logger.log(LoggingType.INFERENCE_CALL, logging_payload)
 
     # storing the log in db
     data_repo = DataRepo()

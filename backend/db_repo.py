@@ -621,8 +621,6 @@ class DBRepo:
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
         
-        print(attributes.data)
-        
         if 'project_id' in attributes.data and attributes.data['project_id']:
             project = Project.objects.filter(uuid=attributes.data['project_id'], is_disabled=False).first()
             if not project:
