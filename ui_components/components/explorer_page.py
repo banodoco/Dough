@@ -434,18 +434,21 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     if shortlist is False:
         _, fetch2, fetch3, _ = st.columns([0.25, 1, 1, 0.25])
         st.markdown("***")
-        num_of_temp_gallery_images = data_repo.get_file_count_from_type(\
-            file_tag=InternalFileTag.TEMP_GALLERY_IMAGE.value, project_uuid=project_uuid)
-        if num_of_temp_gallery_images:   
+        explorer_stats = data_repo.get_explorer_pending_stats(project_uuid=project_uuid)
+        
+        if explorer_stats['temp_image_count'] + explorer_stats['pending_image_count']:   
             st.markdown("***")
-            with fetch2:                
-                st.info(f"###### {num_of_temp_gallery_images} images pending")     
+            
+            with fetch2:
+                st.info(f"###### {explorer_stats['temp_image_count']} new images generated")     
+                st.info(f"###### {explorer_stats['pending_image_count']} images pending generation")     
+            
             with fetch3:
-                                        
                     if st.button("Pull in new images", key=f"check_for_new_images_", use_container_width=True):
-                        data_repo.update_temp_gallery_images(project_uuid)
-                        st.success("New images fetched")
-                        time.sleep(0.3)
+                        if explorer_stats['temp_image_count']:
+                            data_repo.update_temp_gallery_images(project_uuid)
+                            st.success("New images fetched")
+                            time.sleep(0.3)
                         st.rerun()
 
     total_image_count = res_payload['count']

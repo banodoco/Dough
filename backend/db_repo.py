@@ -15,7 +15,7 @@ import sqlite3
 import subprocess
 from typing import List
 import uuid
-from shared.constants import InternalFileTag, InternalFileType, SortOrder
+from shared.constants import InferenceStatus, InternalFileTag, InternalFileType, SortOrder
 from backend.serializers.dto import  AIModelDto, AppSettingDto, BackupDto, BackupListDto, InferenceLogDto, InternalFileDto, ProjectDto, SettingDto, ShotDto, TimingDto, UserDto
 
 from shared.constants import AUTOMATIC_FILE_HOSTING, LOCAL_DATABASE_NAME, SERVER, ServerType
@@ -376,6 +376,20 @@ class DBRepo:
         file_count = InternalFileObject.objects.filter(tag=file_tag, project_id=project.id, is_disabled=False).count()
         payload = {
             'data': file_count
+        }
+
+        return InternalResponse(payload, 'file count fetched', True)
+    
+    def get_explorer_pending_stats(self, project_uuid, log_status_list):
+        project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        temp_image_count = InternalFileObject.objects.filter(tag=InternalFileTag.TEMP_GALLERY_IMAGE.value,\
+                                                              project_id=project.id, is_disabled=False).count()
+        pending_image_count = InferenceLog.objects.filter(status__in=log_status_list, is_disabled=False).count()
+        payload = {
+            'data': {
+                'temp_image_count': temp_image_count,
+                'pending_image_count': pending_image_count
+            }
         }
 
         return InternalResponse(payload, 'file count fetched', True)

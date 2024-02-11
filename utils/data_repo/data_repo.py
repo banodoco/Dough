@@ -1,7 +1,7 @@
 # this repo serves as a middlerware between API backend and the frontend
 import json
 import time
-from shared.constants import SECRET_ACCESS_TOKEN, InferenceParamType, InternalFileType, InternalResponse
+from shared.constants import SECRET_ACCESS_TOKEN, InferenceParamType, InferenceStatus, InternalFileType, InternalResponse
 from shared.constants import SERVER, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
@@ -477,3 +477,11 @@ class DataRepo:
     def add_interpolated_clip(self, shot_uuid, **kwargs):
         res = self.db_repo.add_interpolated_clip(shot_uuid, **kwargs)
         return res.status
+    
+    # combined
+    # gives the count of 1. temp generated images 2. inference logs with in-progress/pending status
+    def get_explorer_pending_stats(self, project_uuid):
+        log_status_list = [InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value]
+        res = self.db_repo.get_explorer_pending_stats(project_uuid, log_status_list)
+        count_data = res.data['data'] if res.status else {"temp_image_count": 0, "pending_image_count": 0}
+        return count_data
