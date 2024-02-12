@@ -1,7 +1,7 @@
 import time
 import streamlit as st
 
-from shared.constants import InferenceParamType, InferenceStatus, InternalFileTag
+from shared.constants import InferenceParamType, InferenceStatus, InternalFileTag, InternalFileType
 from ui_components.widgets.frame_movement_widgets import jump_to_single_frame_view_button
 import json
 import math
@@ -102,7 +102,7 @@ def sidebar_logger(shot_uuid):
                 
                 log_file = log_file_dict[log.uuid] if log.uuid in log_file_dict else None
                 if log_file:
-                    if log_file.tag != InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value:
+                    if log_file.type == InternalFileType.IMAGE.value and log_file.tag != InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value:
                         if st.button("Add to shortlist ➕", key=f"sidebar_shortlist_{log_file.uuid}",use_container_width=True, help="Add to shortlist"):
                             data_repo.update_file(log_file.uuid, tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value)
                             st.success("Added To Shortlist")

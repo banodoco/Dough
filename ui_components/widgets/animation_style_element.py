@@ -3,7 +3,7 @@ import time
 import streamlit as st
 from typing import List
 from shared.constants import AnimationStyleType, AnimationToolType
-from ui_components.constants import DefaultProjectSettingParams
+from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, DefaultProjectSettingParams, ShotMetaData
 from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.motion_module import AnimateDiffCheckpoint
@@ -90,17 +90,18 @@ def animation_style_element(shot_uuid):
                                 st.info(f"**Frame {idx + 1}**")
                                 st.image(timing.primary_image.location, use_column_width=True)
                                 
-                                # setting default parameters
+                                motion_data = DEFAULT_SHOT_MOTION_VALUES
+                                # setting default parameters (fetching data from the shot if it's present)
                                 if f'strength_of_frame_{shot.uuid}_{idx}' not in st.session_state:
-                                    st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = 0.5
-                                    st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = 16
-                                    st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'] = 0.6
-                                    st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'] = 0.5
-                                    st.session_state[f'individual_prompt_{shot.uuid}_{idx}'] = ""
-                                    st.session_state[f'individual_negative_prompt_{shot.uuid}_{idx}'] = ""
-                                    st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = 0.5
+                                    shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, json.dumps({}))
+                                    timing_data = json.loads(shot_meta_data).get("timing_data", [])
+                                    if timing_data and len(timing_data) >= idx + 1:
+                                        motion_data = timing_data[idx]
+
+                                    for k, v in motion_data.items():
+                                        st.session_state[f'{k}_{shot.uuid}_{idx}'] = v
                                                                                                                            
-                                # additional individual frame settings 
+                                # settings control
                                 with st.expander("Advanced settings:"):
                                     strength_of_frame = st.slider("Strength of current frame:", min_value=0.25, max_value=1.0, step=0.01, key=f"strength_of_frame_widget_{shot.uuid}_{idx}", value=st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'])
                                     strength_of_frames.append(strength_of_frame)                                    
@@ -197,7 +198,7 @@ def animation_style_element(shot_uuid):
             keyframe_positions.insert(0, 0)
 
             last_key_frame_position = (keyframe_positions[-1] + 1)
-            strength_values = extract_strength_values(type_of_strength_distribution, s, keyframe_positions, linear_cn_strength_value)                        
+            strength_values = extract_strength_values(type_of_strength_distribution, dynamic_frame_distribution_values, keyframe_positions, linear_cn_strength_value)                        
             key_frame_influence_values = extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value)                                        
             # calculate_weights(keyframe_positions, strength_values, buffer, key_frame_influence_values):
             weights_list, frame_numbers_list = calculate_weights(keyframe_positions, strength_values, 4, key_frame_influence_values,last_key_frame_position)            
@@ -445,6 +446,10 @@ def animation_style_element(shot_uuid):
             st.info(f"Generating a video with {number_of_frames} frames in the cloud will cost c. ${cost_per_generation:.2f} USD.")
     
 def update_session_state_with_animation_details(shot_uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts):
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    meta_data = shot.meta_data_dict
+    timing_data = []
     for idx, timing in enumerate(timing_list):
         if idx < len(timing_list):
             st.session_state[f'strength_of_frame_{shot_uuid}_{idx}'] = strength_of_frames[idx]
@@ -454,8 +459,23 @@ def update_session_state_with_animation_details(shot_uuid, timing_list, strength
             if idx < len(timing_list) - 1:                             
                 st.session_state[f'distance_to_next_frame_{shot_uuid}_{idx}'] = distances_to_next_frames[idx]
                 st.session_state[f'speed_of_transition_{shot_uuid}_{idx}'] = speeds_of_transitions[idx]
-                st.session_state[f'freedoms_between_frames_{shot_uuid}_{idx}'] = freedoms_between_frames[idx]
+                st.session_state[f'freedom_between_frames_{shot_uuid}_{idx}'] = freedoms_between_frames[idx]
 
+        # adding into the meta-data
+        state_data = {
+            "strength_of_frame" : strength_of_frames[idx],
+            "individual_prompt" : individual_prompts[idx],
+            "individual_negative_prompt" : individual_negative_prompts[idx],
+            "motion_during_frame" : motions_during_frames[idx],
+            "distance_to_next_frame" : distances_to_next_frames[idx] if idx < len(timing_list) - 1 else DEFAULT_SHOT_MOTION_VALUES["distance_to_next_frame"],
+            "speed_of_transition" : speeds_of_transitions[idx] if idx < len(timing_list) - 1 else DEFAULT_SHOT_MOTION_VALUES["speed_of_transition"],
+            "freedom_between_frames" : freedoms_between_frames[idx] if idx < len(timing_list) - 1 else DEFAULT_SHOT_MOTION_VALUES["freedom_between_frames"],
+        }
+
+        timing_data.append(state_data)
+
+    meta_data.update({ShotMetaData.MOTION_DATA.value : json.dumps({"timing_data": timing_data})})
+    data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
 
 def prepare_workflow_json(shot_uuid, settings):
     data_repo = DataRepo()
@@ -510,8 +530,8 @@ def prepare_workflow_images(shot_uuid):
 
     buffer.seek(0)
     return buffer.getvalue()
-def extract_strength_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value):
 
+def extract_strength_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value):
     if type_of_key_frame_influence == "dynamic":
         # Process the dynamic_key_frame_influence_values depending on its format
         if isinstance(dynamic_key_frame_influence_values, str):
