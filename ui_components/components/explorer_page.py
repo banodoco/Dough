@@ -49,14 +49,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
        negative_prompt = st_memory.text_area("Negative prompt:", value="bad image, worst image, bad anatomy, washed out colors",\
                                             key="explorer_neg_prompt", \
                                                 help="These are the things you wish to be excluded from the image")
-    
-    # with a3:
-    #     st.write("")
-    #     st.write("")
-    #     st.write("")
-    #     if st.button("🔄", key="switch_prompt_position_button:", use_container_width=True, help="This will switch the order the prompt and magic prompt are used - earlier items gets more attention."):
-    #         st.session_state['switch_prompt_position'] = not st.session_state.get('switch_prompt_position', False)
-    #         st.experimental_rerun()
+
 
     b1, b2, b3, _ = st.columns([1.5,1.5,1.5,1])
     with b1:
@@ -193,6 +186,8 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
             counter = 0
 
             for _ in range(number_to_generate):
+
+                '''
                 if counter % 4 == 0:
                     if magic_prompt != "":
                         input_text = "I want to flesh the following user input out - could you make it such that it retains the original meaning but is more specific and descriptive:\n\nfloral background|array of colorful wildflowers and green foliage forms a vibrant, natural backdrop.\nfancy old man|Barnaby Jasper Hawthorne, a dignified gentleman in his late seventies\ncomic book style|illustration style of a 1960s superhero comic book\nsky with diamonds|night sky filled with twinkling stars like diamonds on velvet\n20 y/o indian guy|Piyush Ahuja, a twenty-year-old Indian software engineer\ndark fantasy|a dark, gothic style similar to an Edgar Allen Poe novel\nfuturistic world|set in a 22nd century off-world colony called Ajita Iyera\nbeautiful lake|the crystal clear waters of a luminous blue alpine mountain lake\nminimalistic illustration|simple illustration with solid colors and basic geometrical shapes and figures\nmale blacksmith|Arun Thakkar, a Black country village blacksmith\ndesert sunrise|reddish orange sky at sunrise somewhere out in the Arabia desert\nforest|dense forest of Swedish pine trees\ngreece landscape|bright cyan sky meets turquoise on Santorini\nspace|shifting nebula clouds across the endless expanse of deep space\nwizard orcs|Poljak Ardell, a half-orc warlock\ntropical island|Palm tree-lined tropical paradise beach near Corfu\ncyberpunk cityscape  |Neon holo displays reflect from steel surfaces of buildings in Cairo Cyberspace\njapanese garden & pond|peaceful asian zen koi fishpond surrounded by bonsai trees\nattractive young african woman|Chimene Nkasa, young Congolese social media star\ninsane style|wild and unpredictable artwork like Salvador Dali’s Persistence Of Memory painting\n30s european women|Francisca Sampere, 31 year old Spanish woman\nlighthouse|iconic green New England coastal lighthouse against grey sky\ngirl in hat|Dora Alamanni dressed up with straw boater hat\nretro poster design|stunning vintage 80s movie poster reminiscent of Blade Runner\nabstract color combinations|a modernist splatter painting with overlapping colors\nnordic style |simple line drawing of white on dark blue with clean geometrical figures and shapes\nyoung asian woman, abstract style|Kaya Suzuki's face rendered in bright, expressive brush strokes\nblue monster|large cobalt blue cartoonish creature similar to a yeti\nman at work|portrait sketch of business man working late night in the office\nunderwater sunbeams|aquatic creatures swimming through waves of refracting ocean sunlight\nhappy cat on table|tabby kitten sitting alert in anticipation on kitchen counter\ntop​\nold timey train robber|Wiley Hollister, mid-thirties outlaw\nchinese landscape|Mt. Taihang surrounded by clouds\nancient ruins, sci fi style|deserted ancient civilization under stormy ominous sky full of mysterious UFOs\nanime art|classic anime, in the style of Akira Toriyama\nold man, sad scene|Seneca Hawkins, older gentleman slumped forlorn on street bench in early autumn evening\ncathedral|interior view of Gothic church in Vienna\ndreamlike|spellbinding dreamlike atmosphere, work called Pookanaut\nbird on lake, evening time|grizzled kingfisher sitting regally facing towards beautiful ripple-reflected setting orange pink sum\nyoung female character, cutsey style|Aoife Delaney dressed up as Candyflud, cheerful child adventurer\ninteresting style|stunning cubist abstract geometrical block\nevil woman|Luisa Schultze, frightening murderess\nfashion model|Ishita Chaudry, an Indian fashionista with unique dress sense\ncastle, moody scene|grand Renaissance Palace in Prague against twilight mist filled with crows\ntropical paradise island|Pristine white sand beach with palm trees at Ile du Mariasi, Reunion\npoverty stricken village|simple shack-based settlement in rural Niger\ngothic horror creature|wretchedly deformed and hideous tatter-clad creature like Caliban from Shakespeare ’s Tempes\nlots of color|rainbow colored Dutch flower field\nattractive woman on holidays|Siena Chen in her best little black dress, walking down a glamorous Las Vegas Boulevard\nItalian city scene|Duomo di Milano on dark rainy night sky behind it\nhappy dog outdoor|bouncy Irish Setter frolickling around green grass in summer sun\nmedieval fantasy world|illustration work for Eye Of The Titan - novel by Rania D’Allara\nperson relaxing|Alejandro Gonzalez sitting crosslegged in elegant peacock blue kurta while reading book\nretro sci fi robot|Vintage, cartoonish android reminiscent of the Bender Futurama character. Named Clyde Frost.\ngeometric style|geometric abstract style based on 1960 Russian poster design by Alexander Rodchenk \nbeautiful girl face, vaporwave style|Rayna Vratasky, looking all pink and purple retro\nspooking |horrifying Chupacabra-like being staring intensely to camera\nbrazilian woman having fun|Analia Santos, playing puzzle game with friends\nfemale elf warrior|Finnula Thalas, an Eladrin paladin wielding two great warblades\nlsd trip scene|kaleidoscopic colorscape, filled with ephemerally shifting forms\nyoung african man headshot|Roger Mwafulo looking sharp with big lush smile\nsad or dying person|elderly beggar Jeon Hagopian slumped against trash can bin corner\nart |neurologically inspired psychedelian artwork like David Normal's “Sentient Energy ” series\nattractive german woman|Johanna Hecker, blonde beauty with long hair wrapped in braid ties\nladybug|Cute ladybug perched on red sunset flower petals on summery meadow backdrop\nbeautiful asian women |Chiraya Phetlue, Thai-French model standing front view wearing white dress\nmindblowing style|trippy space illustration that could be cover for a book by Koyu Azumi\nmoody|forest full of thorn trees stretching into the horizon at dusk\nhappy family, abstract style|illustration work of mother, father and child from 2017 children’s picture book The Gifts Of Motherhood By Michelle Sparks\n"
@@ -204,7 +199,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     
                 else:  # switch_prompt_position is True
                     prompt_with_variations = f"{output_magic_prompt}, {prompt}" if prompt else output_magic_prompt
-
+                '''
                 counter += 1
                 log = None
                 generation_method = InputImageStyling.value_list()[st.session_state['type_of_generation_key']]
@@ -217,7 +212,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         num_inference_steps=25,            
                         strength=1,
                         adapter_type=None,
-                        prompt=prompt_with_variations,
+                        prompt=prompt,
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
@@ -427,18 +422,20 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
 
     if shortlist is False:
         _, fetch2, fetch3, _ = st.columns([0.25, 1, 1, 0.25])
-        st.markdown("***")
+        # st.markdown("***")
         explorer_stats = data_repo.get_explorer_pending_stats(project_uuid=project_uuid)
         
-        if explorer_stats['temp_image_count'] + explorer_stats['pending_image_count']:   
+        if explorer_stats['temp_image_count'] + explorer_stats['pending_image_count']:               
             st.markdown("***")
             
             with fetch2:
-                st.info(f"###### {explorer_stats['temp_image_count']} new images generated")     
-                st.info(f"###### {explorer_stats['pending_image_count']} images pending generation")     
+                total_number_pending = explorer_stats['temp_image_count'] + explorer_stats['pending_image_count']
+                st.info(f"###### {total_number_pending} images pending generation")
+                # st.info(f"###### {explorer_stats['temp_image_count']} new images generated")     
+                # st.info(f"###### {explorer_stats['pending_image_count']} images pending generation")     
             
             with fetch3:
-                    if st.button("Pull in new images", key=f"check_for_new_images_", use_container_width=True):
+                    if st.button("Check for new images", key=f"check_for_new_images_", use_container_width=True):
                         if explorer_stats['temp_image_count']:
                             data_repo.update_temp_gallery_images(project_uuid)
                             st.success("New images fetched")

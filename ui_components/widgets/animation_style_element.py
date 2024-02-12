@@ -128,7 +128,7 @@ def animation_style_element(shot_uuid):
                                 freedom_between_frames = st.slider("Freedom between frames:", min_value=0.2, max_value=0.95, step=0.01, key=f"freedom_between_frames_widget_{idx}_{timing.uuid}", value=st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'])
                                 freedoms_between_frames.append(freedom_between_frames)
                                                
-                if (i < len(timing_list) - 1) or (st.session_state["open_shot"] == shot.uuid) or (len(timing_list) % items_per_row != 0 and st.session_state["open_shot"] != shot.uuid):
+                if (i < len(timing_list) - 1)  or (len(timing_list) % items_per_row != 0):
                     st.markdown("***")
 
         if st.button("Save current_settings", key="save_current_settings"):
@@ -198,7 +198,7 @@ def animation_style_element(shot_uuid):
             keyframe_positions.insert(0, 0)
 
             last_key_frame_position = (keyframe_positions[-1] + 1)
-            strength_values = extract_strength_values(type_of_strength_distribution, dynamic_frame_distribution_values, keyframe_positions, linear_cn_strength_value)                        
+            strength_values = extract_strength_values(type_of_strength_distribution, dynamic_strength_values, keyframe_positions, linear_cn_strength_value)
             key_frame_influence_values = extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value)                                        
             # calculate_weights(keyframe_positions, strength_values, buffer, key_frame_influence_values):
             weights_list, frame_numbers_list = calculate_weights(keyframe_positions, strength_values, 4, key_frame_influence_values,last_key_frame_position)            
@@ -532,6 +532,7 @@ def prepare_workflow_images(shot_uuid):
     return buffer.getvalue()
 
 def extract_strength_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value):
+
     if type_of_key_frame_influence == "dynamic":
         # Process the dynamic_key_frame_influence_values depending on its format
         if isinstance(dynamic_key_frame_influence_values, str):
