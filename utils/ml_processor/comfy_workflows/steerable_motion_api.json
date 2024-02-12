@@ -61,7 +61,7 @@
     "281": {
       "inputs": {
         "frame_rate": 15,
-        "loop_count": 3,
+        "loop_count": 0,
         "filename_prefix": "steerable-motion/AD_",
         "format": "video/h264-mp4",
         "pix_fmt": "yuv420p",
