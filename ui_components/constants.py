@@ -16,6 +16,9 @@ class CreativeProcessType(ExtendedEnum):
     STYLING = "Key Frames"
     MOTION = "Shots"
 
+class ShotMetaData(ExtendedEnum):
+    MOTION_DATA = "motion_data"     # {"timing_data": [...]}
+
 class DefaultTimingStyleParams:
     prompt = ""
     negative_prompt = "bad image, worst quality"
@@ -54,6 +57,16 @@ class DefaultProjectSettingParams:
     total_gallery_pages = 1
     total_shortlist_gallery_pages = 1
     max_frames_per_shot = 30
+
+DEFAULT_SHOT_MOTION_VALUES = {
+    "strength_of_frame" : 0.5,
+    "distance_to_next_frame" : 16,
+    "speed_of_transition" : 0.6,
+    "freedom_between_frames" : 0.5,
+    "individual_prompt" : "",
+    "individual_negative_prompt" : "",
+    "motion_during_frame" : 0.5,
+}
 
 # TODO: make proper paths for every file
 CROPPED_IMG_LOCAL_PATH = "videos/temp/cropped.png"

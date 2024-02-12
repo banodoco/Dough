@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-
 from shared.constants import InferenceStatus
 from utils.enum import ExtendedEnum
 
@@ -23,6 +22,17 @@ class MLModel:
 
     # workflow name (multiple workflows can be run through a common replicate endpoint)
     workflow_name: str = None
+
+    def display_name(self):
+        for model in ML_MODEL.__dict__.values():
+            if isinstance(model, MLModel):
+                if (self.workflow_name and model.workflow_name != self.workflow_name):
+                    continue
+                
+                if self.name == model.name:
+                    return model.workflow_name.value if model.workflow_name else model.name.split("/")[-1]
+        return None
+
 
 # comfy runner replicate endpoint
 class ComfyRunnerModel:

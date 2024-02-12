@@ -341,7 +341,7 @@ def promote_video_variant(shot_uuid, variant_uuid):
 
     data_repo.update_shot(uuid=shot.uuid, main_clip_id=variant_to_promote.uuid)
 
-def get_canny_img(img_obj, low_threshold, high_threshold):
+def get_canny_img(img_obj, low_threshold, high_threshold, invert_img=False):
     if isinstance(img_obj, str):
         if img_obj.startswith("http"):
             response = r.get(img_obj)
@@ -355,7 +355,7 @@ def get_canny_img(img_obj, low_threshold, high_threshold):
 
     blurred_image = cv2.GaussianBlur(image, (5, 5), 0)
     canny_edges = cv2.Canny(blurred_image, low_threshold, high_threshold)
-    inverted_canny_edges = 255 - canny_edges
+    inverted_canny_edges = 255 - canny_edges if invert_img else canny_edges
     new_canny_image = Image.fromarray(inverted_canny_edges)
     return new_canny_image
 

@@ -1,6 +1,7 @@
+import time
 import streamlit as st
 
-from shared.constants import InferenceParamType, InferenceStatus
+from shared.constants import InferenceParamType, InferenceStatus, InternalFileTag, InternalFileType
 from ui_components.widgets.frame_movement_widgets import jump_to_single_frame_view_button
 import json
 import math
@@ -99,6 +100,16 @@ def sidebar_logger(shot_uuid):
                 elif log.status == InferenceStatus.CANCELED.value:
                     st.warning("Canceled")
                 
+                log_file = log_file_dict[log.uuid] if log.uuid in log_file_dict else None
+                if log_file:
+                    if log_file.type == InternalFileType.IMAGE.value and log_file.tag != InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value:
+                        if st.button("Add to shortlist ➕", key=f"sidebar_shortlist_{log_file.uuid}",use_container_width=True, help="Add to shortlist"):
+                            data_repo.update_file(log_file.uuid, tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value)
+                            st.success("Added To Shortlist")
+                            time.sleep(0.3)
+                            st.rerun()
+
+
                 if output_url and origin_data and 'timing_uuid' in origin_data and origin_data['timing_uuid']:
                     timing = data_repo.get_timing_from_uuid(origin_data['timing_uuid'])
                     if timing and st.session_state['frame_styling_view_type'] != "Timeline":
@@ -114,5 +125,5 @@ def sidebar_logger(shot_uuid):
                                 
                                 st.rerun()
                 
-                
+
             st.markdown("---")

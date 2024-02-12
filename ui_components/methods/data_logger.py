@@ -20,14 +20,6 @@ def log_model_inference(model: MLModel, time_taken, **kwargs):
     data_str = json.dumps(kwargs_dict)
     time_taken = round(time_taken, 2) if time_taken else 0
 
-    data = {
-        'model_name': model.name,
-        'model_version': model.version,
-        'total_inference_time': time_taken,
-        'input_params': data_str,
-        'created_on': int(time.time())
-    }
-
     # system_logger = AppLogger()
     # logging_payload = LoggingPayload(message="logging inference data", data=data)
 
@@ -47,7 +39,7 @@ def log_model_inference(model: MLModel, time_taken, **kwargs):
         "project_id" : st.session_state["project_uuid"],
         "model_id" : ai_model.uuid if ai_model else None,
         "input_params" : data_str,
-        "output_details" : json.dumps({"model_name": model.name, "version": model.version}),
+        "output_details" : json.dumps({"model_name": model.display_name(), "version": model.version}),
         "total_inference_time" : time_taken,
         "status" : InferenceStatus.COMPLETED.value if time_taken else InferenceStatus.QUEUED.value,
     }

@@ -5,7 +5,7 @@ from ui_components.methods.data_logger import log_model_inference
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.comfy_data_transform import get_model_workflow_from_query
-from utils.ml_processor.constants import MLModel
+from utils.ml_processor.constants import ML_MODEL, MLModel
 from utils.ml_processor.gpu.utils import predict_gpu_output, setup_comfy_runner
 from utils.ml_processor.ml_interface import MachineLearningProcessor
 import time
@@ -52,8 +52,10 @@ class GPUProcessor(MachineLearningProcessor):
         if queue_inference:
             return self.queue_prediction(replicate_model, **kwargs)
         
+        data = kwargs.get(InferenceParamType.GPU_INFERENCE.value, None)
+        data = json.loads(data)
         start_time = time.time()
-        output = predict_gpu_output(kwargs.get(InferenceParamType.GPU_INFERENCE.value, None))
+        output = predict_gpu_output(data['workflow_input'], data['file_path_list'], data['output_node_ids'])
         end_time = time.time()
 
         log = log_model_inference(replicate_model, end_time - start_time, **kwargs)

@@ -7,7 +7,7 @@ from ui_components.widgets.add_key_frame_element import add_key_frame
 from utils.common_utils import refresh_app
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
-from shared.constants import QUEUE_INFERENCE_QUERIES, AIModelType, InferenceType, InternalFileTag, InternalFileType, SortOrder
+from shared.constants import GPU_INFERENCE_ENABLED, QUEUE_INFERENCE_QUERIES, AIModelType, InferenceType, InternalFileTag, InternalFileType, SortOrder
 from utils import st_memory
 import time
 from utils.enum import ExtendedEnum
@@ -46,24 +46,17 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
         prompt = st_memory.text_area("What's your base prompt?", key="explorer_base_prompt", help="This exact text will be included for each generation.")
 
     with a2 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a1:
-        magic_prompt = st_memory.text_area("What's your magic prompt?", key="explorer_magic_prompt", help=help_input)
-        #if magic_prompt != "":
-        #    chaos_level = st_memory.slider("How much chaos would you like to add to the magic prompt?", min_value=0, max_value=100, value=20, step=1, key="chaos_level", help="This will determine how random the generated prompt will be.")                    
-        #    temperature = chaos_level / 20
-        temperature = 1.0
-    with a3:
-        st.write("")
-        st.write("")
-        st.write("")
-        if st.button("🔄", key="switch_prompt_position_button:", use_container_width=True, help="This will switch the order the prompt and magic prompt are used - earlier items gets more attention."):
-            st.session_state['switch_prompt_position'] = not st.session_state.get('switch_prompt_position', False)
-            st.experimental_rerun()
-
-    neg1, _ = st.columns([1,1.3])
-    with neg1:
-        negative_prompt = st_memory.text_input("Negative prompt:", value="bad image, worst image, bad anatomy, washed out colors",\
+       negative_prompt = st_memory.text_area("Negative prompt:", value="bad image, worst image, bad anatomy, washed out colors",\
                                             key="explorer_neg_prompt", \
                                                 help="These are the things you wish to be excluded from the image")
+    
+    # with a3:
+    #     st.write("")
+    #     st.write("")
+    #     st.write("")
+    #     if st.button("🔄", key="switch_prompt_position_button:", use_container_width=True, help="This will switch the order the prompt and magic prompt are used - earlier items gets more attention."):
+    #         st.session_state['switch_prompt_position'] = not st.session_state.get('switch_prompt_position', False)
+    #         st.experimental_rerun()
 
     b1, b2, b3, _ = st.columns([1.5,1.5,1.5,1])
     with b1:
@@ -261,8 +254,9 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_controlnet_openpose, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                 elif generation_method == InputImageStyling.CONTROLNET_CANNY.value:
-                    edge_pil_img = get_canny_img(st.session_state[input_image_1_key], low_threshold=100, high_threshold=200)    # redundant incase of local inference
-                    input_image_file = save_new_image(st.session_state[input_image_1_key], project_uuid)
+                    edge_pil_img = get_canny_img(st.session_state[input_image_1_key], low_threshold=50, high_threshold=150)    # redundant incase of local inference
+                    input_img = edge_pil_img if GPU_INFERENCE_ENABLED else st.session_state[input_image_1_key]
+                    input_image_file = save_new_image(input_img, project_uuid)
                     query_obj = MLQueryObject(
                         timing_uuid=None,
                         model_uuid=None,
@@ -434,18 +428,21 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     if shortlist is False:
         _, fetch2, fetch3, _ = st.columns([0.25, 1, 1, 0.25])
         st.markdown("***")
-        num_of_temp_gallery_images = data_repo.get_file_count_from_type(\
-            file_tag=InternalFileTag.TEMP_GALLERY_IMAGE.value, project_uuid=project_uuid)
-        if num_of_temp_gallery_images:   
+        explorer_stats = data_repo.get_explorer_pending_stats(project_uuid=project_uuid)
+        
+        if explorer_stats['temp_image_count'] + explorer_stats['pending_image_count']:   
             st.markdown("***")
-            with fetch2:                
-                st.info(f"###### {num_of_temp_gallery_images} images pending")     
+            
+            with fetch2:
+                st.info(f"###### {explorer_stats['temp_image_count']} new images generated")     
+                st.info(f"###### {explorer_stats['pending_image_count']} images pending generation")     
+            
             with fetch3:
-                                        
                     if st.button("Pull in new images", key=f"check_for_new_images_", use_container_width=True):
-                        data_repo.update_temp_gallery_images(project_uuid)
-                        st.success("New images fetched")
-                        time.sleep(0.3)
+                        if explorer_stats['temp_image_count']:
+                            data_repo.update_temp_gallery_images(project_uuid)
+                            st.success("New images fetched")
+                            time.sleep(0.3)
                         st.rerun()
 
     total_image_count = res_payload['count']
