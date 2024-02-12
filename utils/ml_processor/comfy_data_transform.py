@@ -262,7 +262,7 @@ def get_workflow_json_url(workflow_json):
     return ml_client.upload_training_data(temp_json_path, delete_after_upload=True)
 
 # returns the zip file which can be passed to the comfy_runner replicate endpoint
-def get_file_zip_url(query_obj: MLQueryObject) -> str:
+def get_file_zip_url(query_obj: MLQueryObject, index_files=False) -> str:
     from utils.ml_processor.ml_interface import get_ml_client
 
     data_repo = DataRepo()
@@ -277,6 +277,7 @@ def get_file_zip_url(query_obj: MLQueryObject) -> str:
             file_uuid_list.append(v)
 
     file_list = data_repo.get_image_list_from_uuid_list(file_uuid_list)
-    zip_path = zip_images([f.location for f in file_list], 'videos/temp/input_images.zip', [f.filename for f in file_list])
+    filename_list = [f.filename for f in file_list] if index_files else []  # file names would be indexed like 1.png, 2.png ...
+    zip_path = zip_images([f.location for f in file_list], 'videos/temp/input_images.zip', filename_list)
 
     return ml_client.upload_training_data(zip_path, delete_after_upload=True)

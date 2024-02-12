@@ -806,6 +806,7 @@ def process_inference_output(**kwargs):
             if not shot:
                 return False
             
+            output = output[-1] if isinstance(output, list) else output
             # output can also be an url
             if isinstance(output, str):
                 if output.startswith("http"):

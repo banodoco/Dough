@@ -192,6 +192,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
             ml_client = get_ml_client()
             counter = 0
 
+            magic_prompt, temperature = "", 0
             for _ in range(number_to_generate):
                 if counter % 4 == 0:
                     if magic_prompt != "":
