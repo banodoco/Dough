@@ -32,11 +32,13 @@ def animation_style_element(shot_uuid):
 
     interpolation_style = 'ease-in-out'
     
-    advanced1, advanced2 = st.columns([2, 1])
+    advanced1, advanced2, advanced3 = st.columns([0.5,1.5, 0.5])
     with advanced1:
         st.markdown("#### Animation Settings")
-    with advanced2:
-        with st.expander("Bulk edit:"):
+
+
+    with advanced3:
+        with st.expander("Bulk edit"):
             what_would_you_like_to_edit = st.selectbox("What would you like to edit?", options=["Distance to next frames", "Speed of transitions", "Freedom between frames","Strength of frames",  "Motion during frames"], key="what_would_you_like_to_edit")
             if what_would_you_like_to_edit == "Distance to next frames":
                 what_to_change_it_to = st.slider("What would you like to change it to?", min_value=4, max_value=96, step=4, value=16, key="what_to_change_it_to")
@@ -130,9 +132,13 @@ def animation_style_element(shot_uuid):
                                                
                 if (i < len(timing_list) - 1)  or (len(timing_list) % items_per_row != 0):
                     st.markdown("***")
-
-        if st.button("Save current_settings", key="save_current_settings"):
-            update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts)
+        
+        with advanced1:
+            if st.button("Save current settings", key="save_current_settings"):
+                update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts)
+                st.success("Settings saved successfully.")
+                time.sleep(0.7)
+                st.rerun()
 
         def transform_data(strength_of_frames, movements_between_frames, speeds_of_transitions, distances_to_next_frames):
             def adjust_and_invert_relative_value(middle_value, relative_value):
@@ -183,34 +189,37 @@ def animation_style_element(shot_uuid):
         linear_frame_distribution_value = 16
         linear_key_frame_influence_value = 1.0
         linear_cn_strength_value = 1.0
-        
-        if st.toggle("Visualise motion data"):
-            columns = st.columns(max(7, len(timing_list))) 
-            for idx, timing in enumerate(timing_list):
+        with advanced2:
+            with st.expander("Visualise motion data"):
+                if st.button("Visualise motion data"):
+                    columns = st.columns(max(7, len(timing_list))) 
+                    for idx, timing in enumerate(timing_list):
 
-                markdown_text = f'##### **Frame {idx + 1}** ___'
+                        markdown_text = f'##### **Frame {idx + 1}** ___'
 
-                with columns[idx]:
-                    st.markdown(markdown_text)
+                        with columns[idx]:
+                            st.markdown(markdown_text)
 
-            keyframe_positions = get_keyframe_positions(type_of_frame_distribution, dynamic_frame_distribution_values, timing_list, linear_frame_distribution_value)
-            keyframe_positions = [position + 4 - 1 for position in keyframe_positions]
-            keyframe_positions.insert(0, 0)
+                    keyframe_positions = get_keyframe_positions(type_of_frame_distribution, dynamic_frame_distribution_values, timing_list, linear_frame_distribution_value)
+                    keyframe_positions = [position + 4 - 1 for position in keyframe_positions]
+                    keyframe_positions.insert(0, 0)
 
-            last_key_frame_position = (keyframe_positions[-1] + 1)
-            strength_values = extract_strength_values(type_of_strength_distribution, dynamic_strength_values, keyframe_positions, linear_cn_strength_value)
-            key_frame_influence_values = extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value)                                        
-            # calculate_weights(keyframe_positions, strength_values, buffer, key_frame_influence_values):
-            weights_list, frame_numbers_list = calculate_weights(keyframe_positions, strength_values, 4, key_frame_influence_values,last_key_frame_position)            
-            plot_weights(weights_list, frame_numbers_list)
-            st.write(f"distribution: {str(dynamic_frame_distribution_values)[1:-1]}")
-            st.write(f"influence: {str(dynamic_key_frame_influence_values)[1:-1]}")
-            st.write(f"strength: {str(dynamic_strength_values)[1:-1]}")
+                    last_key_frame_position = (keyframe_positions[-1] + 1)
+                    strength_values = extract_strength_values(type_of_strength_distribution, dynamic_strength_values, keyframe_positions, linear_cn_strength_value)
+                    key_frame_influence_values = extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value)                                        
+                    # calculate_weights(keyframe_positions, strength_values, buffer, key_frame_influence_values):
+                    weights_list, frame_numbers_list = calculate_weights(keyframe_positions, strength_values, 4, key_frame_influence_values,last_key_frame_position)            
+                    plot_weights(weights_list, frame_numbers_list)
+                    '''
+                    st.write(f"distribution: {str(dynamic_frame_distribution_values)[1:-1]}")
+                    st.write(f"influence: {str(dynamic_key_frame_influence_values)[1:-1]}")
+                    st.write(f"strength: {str(dynamic_strength_values)[1:-1]}")
 
-            formatted_individual_prompts = format_frame_prompts_with_buffer(dynamic_frame_distribution_values, individual_prompts, buffer)
-            st.write(f"prompts: {formatted_individual_prompts}")
-            formatted_negative_prompts = format_frame_prompts_with_buffer(dynamic_frame_distribution_values, individual_negative_prompts, buffer)
-            st.write(f"negative prompts: {formatted_negative_prompts}")
+                    formatted_individual_prompts = format_frame_prompts_with_buffer(dynamic_frame_distribution_values, individual_prompts, buffer)
+                    st.write(f"prompts: {formatted_individual_prompts}")
+                    formatted_negative_prompts = format_frame_prompts_with_buffer(dynamic_frame_distribution_values, individual_negative_prompts, buffer)
+                    st.write(f"negative prompts: {formatted_negative_prompts}")
+                    '''
 
             # drop all the first values in each list
             # keyframe_positions = keyframe_positions[1:]
@@ -315,7 +324,7 @@ def animation_style_element(shot_uuid):
         motion_scale = 1.3
         sd_model = st_memory.selectbox("Which model would you like to use?", options=sd_model_list, key="sd_model_video")
     with e2:
-        st.info("Higher values may cause flickering and sudden changes in the video. Lower values may cause the video to be less influenced by the input images.")
+        st.info("Higher values may cause flickering and sudden changes in the video. Lower values may cause the video to be less influenced by the input images but can also fix colouring issues.")
 
     f1, f2, f3 = st.columns([1, 1, 1])
     
@@ -325,6 +334,7 @@ def animation_style_element(shot_uuid):
         negative_prompt = st_memory.text_area("What would you like to avoid in the videos?", value="bad image, worst quality", key="negative_prompt_video")
     
     with f3:
+        st.write("")
         st.write("")
         st.info("Use these sparingly, as they can have a large impact on the video. You can also edit them for individual frames in the advanced settings above.")
         soft_scaled_cn_weights_multiplier = ""
@@ -397,11 +407,13 @@ def animation_style_element(shot_uuid):
     animate_col_1, animate_col_2, _ = st.columns([1, 1, 2])
     with animate_col_1:
         variant_count = st.number_input("How many variants?", min_value=1, max_value=5, value=1, step=1, key="variant_count")
+        '''
         st.download_button(
                 label="Download images",
                 data=prepare_workflow_images(shot_uuid),
                 file_name='data.zip'
             )
+        '''
         
         if st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help):
             update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts)

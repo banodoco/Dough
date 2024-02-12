@@ -51,7 +51,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                                                 help="These are the things you wish to be excluded from the image")
 
 
-    b1, b2, b3, _ = st.columns([1.5,1.5,1.5,1])
+    b1, b2, b3, _ = st.columns([1.5,1,1.5,1])
     with b1:
         type_of_generation = st_memory.radio("How would you like to generate the image?", options=InputImageStyling.value_list(), key="type_of_generation_key", help="Evolve Image will evolve the image based on the prompt, while Maintain Structure will keep the structure of the image and change the style.",horizontal=True) 
 
@@ -129,26 +129,21 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                 else:
                     st.error("Please upload an image")
         
-        # UI - extra input params for different generations
-        if type_of_generation == InputImageStyling.IMAGE2IMAGE.value:
-            with b3:                                      
+            if type_of_generation == InputImageStyling.IMAGE2IMAGE.value:                                                 
                 strength_of_image = st_memory.slider("How much blur would you like to add to the image?", min_value=0, max_value=100, value=50, step=1, key="strength_of_image2image", help="This will determine how much of the current image will be kept in the final image.")
 
-        elif type_of_generation == InputImageStyling.CONTROLNET_CANNY.value:
-            with b3:
+            elif type_of_generation == InputImageStyling.CONTROLNET_CANNY.value:                
                 strength_of_image = st_memory.slider("How much of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_controlnet_canny", help="This will determine how much of the current image will be kept in the final image.")
 
-        elif type_of_generation == InputImageStyling.IPADAPTER_FACE.value:
-            with b3:
+            elif type_of_generation == InputImageStyling.IPADAPTER_FACE.value:                
                 strength_of_image = st_memory.slider("How much of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_ipadapter_face", help="This will determine how much of the current image will be kept in the final image.")
 
-        elif type_of_generation == InputImageStyling.IPADAPTER_PLUS.value:
-            with b3:                
-                strength_of_plus = st_memory.slider("How much of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_ipadapter_plus", help="This will determine how much of the current image will be kept in the final image.")                            
+            elif type_of_generation == InputImageStyling.IPADAPTER_PLUS.value:                
+                strength_of_image = st_memory.slider("How much of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_ipadapter_plus", help="This will determine how much of the current image will be kept in the final image.")                            
 
-        elif type_of_generation == InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
-            # UI - displaying uploaded images
-            with b3:
+            elif type_of_generation == InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
+                # UI - displaying uploaded images
+                
                 st.info("IP-Adapter Face image:")
                 if st.session_state[input_image_1_key] is not None:    
                     st.image(st.session_state[input_image_1_key], use_column_width=True)
@@ -210,7 +205,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         guidance_scale=8,
                         seed=-1,                            
                         num_inference_steps=25,            
-                        strength=1,
+                        strength=0.5,
                         adapter_type=None,
                         prompt=prompt,
                         negative_prompt=negative_prompt,
@@ -259,7 +254,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         guidance_scale=5,
                         seed=-1,
                         num_inference_steps=30,
-                        strength=0.5,
+                        strength=strength_of_image/100,
                         adapter_type=None,
                         prompt=prompt,
                         low_threshold=0.3,
@@ -287,7 +282,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         guidance_scale=5,
                         seed=-1,
                         num_inference_steps=30,
-                        strength=0.5,
+                        strength=strength_of_image/100,
                         adapter_type=None,
                         prompt=prompt,
                         negative_prompt=negative_prompt,
@@ -308,7 +303,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         guidance_scale=5,
                         seed=-1,
                         num_inference_steps=30,
-                        strength=0.5,
+                        strength=strength_of_image/100,
                         adapter_type=None,
                         prompt=prompt,
                         negative_prompt=negative_prompt,
@@ -335,7 +330,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         guidance_scale=5,
                         seed=-1,
                         num_inference_steps=30,
-                        strength=0.5,
+                        strength=(strength_of_face/100, strength_of_plus/100), # (face, plus)
                         adapter_type=None,
                         prompt=prompt,
                         negative_prompt=negative_prompt,
@@ -364,7 +359,20 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
             st.rerun()
 
         # ----------- generate btn --------------
-        st.button("Generate images", key="generate_images", use_container_width=True, type="primary", on_click=lambda: toggle_generate_inference(position))
+        if prompt == "":
+            st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please enter a prompt to generate images")
+        elif type_of_generation == InputImageStyling.IMAGE2IMAGE.value and st.session_state[input_image_1_key] is None:
+            st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
+        elif type_of_generation == InputImageStyling.CONTROLNET_CANNY.value and st.session_state[input_image_1_key] is None:
+            st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
+        elif type_of_generation == InputImageStyling.IPADAPTER_FACE.value and st.session_state[input_image_1_key] is None:
+            st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
+        elif type_of_generation == InputImageStyling.IPADAPTER_PLUS.value and st.session_state[input_image_1_key] is None:
+            st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
+        elif type_of_generation == InputImageStyling.IPADPTER_FACE_AND_PLUS.value and (st.session_state[input_image_1_key] is None or st.session_state[input_image_2_key] is None):
+            st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload both images")        
+        else:
+            st.button("Generate images", key="generate_images", use_container_width=True, type="primary", on_click=lambda: toggle_generate_inference(position))
             
 def toggle_generate_inference(position):
     if position + '_generate_inference' not in st.session_state:
@@ -425,17 +433,29 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         # st.markdown("***")
         explorer_stats = data_repo.get_explorer_pending_stats(project_uuid=project_uuid)
         
-        if explorer_stats['temp_image_count'] + explorer_stats['pending_image_count']:               
+        if explorer_stats['temp_image_count'] + explorer_stats['pending_image_count']:        
             st.markdown("***")
             
             with fetch2:
                 total_number_pending = explorer_stats['temp_image_count'] + explorer_stats['pending_image_count']
-                st.info(f"###### {total_number_pending} images pending generation")
+                if total_number_pending:
+                    
+                    if explorer_stats['temp_image_count'] == 0 and explorer_stats['pending_image_count'] > 0:
+                        st.info(f"###### {explorer_stats['pending_image_count']} images pending generation")
+                        button_text = "Check for new images"
+                    elif explorer_stats['temp_image_count'] > 0 and explorer_stats['pending_image_count'] == 0:
+                        st.info(f"###### {explorer_stats['temp_image_count']} new images generated")                        
+                        button_text = "Pull new images"
+                    else:
+                        st.info(f"###### {explorer_stats['pending_image_count']} images pending generation and {explorer_stats['temp_image_count']} ready to be fetched")
+                        button_text = "Check for/pull new images"
+                    
+                # st.info(f"###### {total_number_pending} images pending generation")
                 # st.info(f"###### {explorer_stats['temp_image_count']} new images generated")     
                 # st.info(f"###### {explorer_stats['pending_image_count']} images pending generation")     
             
             with fetch3:
-                    if st.button("Check for new images", key=f"check_for_new_images_", use_container_width=True):
+                    if st.button(f"{button_text}", key=f"check_for_new_images_", use_container_width=True):
                         if explorer_stats['temp_image_count']:
                             data_repo.update_temp_gallery_images(project_uuid)
                             st.success("New images fetched")

@@ -174,9 +174,12 @@ class ComfyDataTransform:
         workflow["3"]["inputs"]["seed"] = random_seed()
         workflow["5"]["width"], workflow["5"]["height"] = width, height
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
-        workflow["24"]["inputs"]["image"] = image_name  # ipadapter image
+        # workflow["24"]["inputs"]["image"] = image_name  # ipadapter image
         workflow["28"]["inputs"]["image"] = image_name  # dummy image
-
+        workflow["6"]["inputs"]["text"] = query.prompt
+        workflow["7"]["inputs"]["text"] = query.negative_prompt
+        workflow["27"]["inputs"]["weight"] = query.strength
+        
         return json.dumps(workflow), output_node_ids
 
     @staticmethod
@@ -189,12 +192,16 @@ class ComfyDataTransform:
         steps, cfg = query.num_inference_steps, query.guidance_scale
         image = data_repo.get_file_from_uuid(query.image_uuid)
         image_name = image.filename
+        strength = query.strength
 
         # updating params
         workflow["3"]["inputs"]["seed"] = random_seed()
         workflow["5"]["width"], workflow["5"]["height"] = width, height
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["24"]["inputs"]["image"] = image_name  # ipadapter image
+        workflow["6"]["inputs"]["text"] = query.prompt
+        workflow["7"]["inputs"]["text"] = query.negative_prompt                
+        workflow["29"]["inputs"]["weight"] = query.strength
 
         return json.dumps(workflow), output_node_ids
 
@@ -217,6 +224,10 @@ class ComfyDataTransform:
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["24"]["inputs"]["image"] = image_name  # ipadapter image
         workflow["28"]["inputs"]["image"] = image_name_2 # insight face image
+        workflow["6"]["inputs"]["text"] = query.prompt
+        workflow["7"]["inputs"]["text"] = query.negative_prompt
+        workflow["29"]["inputs"]["weight"] = query.strength[0]
+        workflow["27"]["inputs"]["weight"] = query.strength[1]
 
         return json.dumps(workflow), output_node_ids
 
