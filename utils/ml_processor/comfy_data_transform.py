@@ -15,6 +15,7 @@ import json
 
 MODEL_PATH_DICT = {
     ComfyWorkflow.SDXL: {"workflow_path": 'comfy_workflows/sdxl_workflow_api.json', "output_node_id": 19},
+    ComfyWorkflow.SDXL_IMG2IMG: {"workflow_path": 'comfy_workflows/sdxl_img2img_workflow_api.json', "output_node_id": 31},
     ComfyWorkflow.SDXL_CONTROLNET: {"workflow_path": 'comfy_workflows/sdxl_controlnet_workflow_api.json', "output_node_id": 9},
     ComfyWorkflow.SDXL_CONTROLNET_OPENPOSE: {"workflow_path": 'comfy_workflows/sdxl_openpose_workflow_api.json', "output_node_id": 9},
     ComfyWorkflow.LLAMA_2_7B: {"workflow_path": 'comfy_workflows/llama_workflow_api.json', "output_node_id": 14},
@@ -54,6 +55,31 @@ class ComfyDataTransform:
         workflow["11"]["inputs"]["steps"], workflow["11"]["inputs"]["cfg"] = steps, cfg
 
         return json.dumps(workflow), output_node_ids
+
+    @staticmethod
+    def transform_sdxl_img2img_workflow(query: MLQueryObject):
+        data_repo = DataRepo()
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_IMG2IMG)
+
+        # workflow params
+        height, width = 1024, 1024
+        positive_prompt, negative_prompt = query.prompt, query.negative_prompt
+        steps, cfg = 20, 7      # hardcoding values
+        strength = round(query.strength / 100, 1)
+        image = data_repo.get_file_from_uuid(query.image_uuid)
+        image_name = image.filename
+
+        # updating params
+        workflow["37:0"]["inputs"]["image"] = image_name
+        workflow["42:0"]["inputs"]["text"] = positive_prompt
+        workflow["42:1"]["inputs"]["text"] = negative_prompt
+        workflow["42:2"]["inputs"]["steps"] = steps
+        workflow["42:2"]["inputs"]["cfg"] = cfg
+        workflow["42:2"]["inputs"]["denoise"] = 1 - strength
+        workflow["42:2"]["inputs"]["seed"] = random_seed()
+
+        return json.dumps(workflow), output_node_ids
+
 
     @staticmethod
     def transform_sdxl_controlnet_workflow(query: MLQueryObject):
@@ -201,7 +227,7 @@ class ComfyDataTransform:
         workflow["24"]["inputs"]["image"] = image_name  # ipadapter image
         workflow["6"]["inputs"]["text"] = query.prompt
         workflow["7"]["inputs"]["text"] = query.negative_prompt                
-        workflow["29"]["inputs"]["weight"] = query.strength
+        workflow["36"]["inputs"]["weight"] = query.strength
 
         return json.dumps(workflow), output_node_ids
 
@@ -251,7 +277,8 @@ MODEL_WORKFLOW_MAP = {
     ML_MODEL.ipadapter_plus.workflow_name: ComfyDataTransform.transform_ipadaptor_plus_workflow,
     ML_MODEL.ipadapter_face.workflow_name: ComfyDataTransform.transform_ipadaptor_face_workflow,
     ML_MODEL.ipadapter_face_plus.workflow_name: ComfyDataTransform.transform_ipadaptor_face_plus_workflow,
-    ML_MODEL.ad_interpolation.workflow_name: ComfyDataTransform.transform_steerable_motion_workflow
+    ML_MODEL.ad_interpolation.workflow_name: ComfyDataTransform.transform_steerable_motion_workflow,
+    ML_MODEL.sdxl_img2img.workflow_name: ComfyDataTransform.transform_sdxl_img2img_workflow
 }
 
 # returns stringified json of the workflow

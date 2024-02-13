@@ -144,6 +144,8 @@ class DataRepo:
         if not (image_uuid_list and len(image_uuid_list)):
             return []
         image_list = self.db_repo.get_image_list_from_uuid_list(image_uuid_list, file_type=file_type).data['data']
+        
+        print("--------------- ", image_list[0]['project']['uuid'])
         return [InternalFileObject(**image) for image in image_list] if image_list else []
     
     def update_file(self, file_uuid, **kwargs):

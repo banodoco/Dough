@@ -242,7 +242,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         project_uuid=project_uuid
                     )
 
-                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_img2img, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                 elif generation_method == InputImageStyling.CONTROLNET_CANNY.value:
                     edge_pil_img = get_canny_img(st.session_state[input_image_1_key], low_threshold=50, high_threshold=150)    # redundant incase of local inference
@@ -252,14 +252,14 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         timing_uuid=None,
                         model_uuid=None,
                         image_uuid=input_image_file.uuid,
-                        guidance_scale=5,
+                        guidance_scale=8,
                         seed=-1,
                         num_inference_steps=30,
                         strength=strength_of_image/100,
                         adapter_type=None,
                         prompt=prompt,
-                        low_threshold=0.3,
-                        high_threshold=0.9,
+                        low_threshold=0.2,
+                        high_threshold=0.7,
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,

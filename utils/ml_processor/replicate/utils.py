@@ -1,10 +1,11 @@
 import io
 from PIL import Image
+from ui_components.methods.file_methods import normalize_size_internal_file_obj, resize_io_buffers
 from utils.common_utils import user_credits_available
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.comfy_data_transform import get_file_zip_url, get_model_workflow_from_query, get_workflow_json_url
-from utils.ml_processor.constants import CONTROLNET_MODELS, ML_MODEL, ComfyRunnerModel
+from utils.ml_processor.constants import CONTROLNET_MODELS, ML_MODEL, ComfyRunnerModel, ComfyWorkflow
 
 
 def check_user_credits(method):
@@ -35,6 +36,13 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
     if model.name == ComfyRunnerModel.name:
         workflow_json, output_node_ids = get_model_workflow_from_query(model, query_obj)
         workflow_file = get_workflow_json_url(workflow_json)
+
+        # resizing image for sdxl
+        if model.display_name() in [ComfyWorkflow.STEERABLE_MOTION.value]:
+            new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
+            file = data_repo.get_file_from_uuid(query_obj.image_uuid)
+            new_file = normalize_size_internal_file_obj(file, dim=[new_width, new_height], create_new_file=True)
+            query_obj.image_uuid = new_file.uuid
 
         index_files = True if model.display_name() in ['steerable_motion'] else False
         file_zip = get_file_zip_url(query_obj, index_files=index_files)
@@ -86,8 +94,8 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             "input": input_image,
             "output_style": query_obj.prompt
         }
-    elif model == ML_MODEL.sdxl:
-        new_width, new_height = 1024 if query_obj.width == 512 else 1024, 1024 if query_obj.height == 512 else 1024
+    elif model in [ML_MODEL.sdxl, ML_MODEL.sdxl_img2img]:
+        new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
         data = {
             "prompt" : query_obj.prompt,
             "negative_prompt" : query_obj.negative_prompt,
@@ -99,14 +107,11 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         }
 
         if input_image:
-            input_image = Image.open(input_image)
-            input_image = input_image.resize((new_width, new_height), Image.ANTIALIAS)
-            output_image_buffer = io.BytesIO()
-            input_image.save(output_image_buffer, format='PNG')
+            output_image_buffer = resize_io_buffers(input_image, new_width, new_height)
             data['image'] = output_image_buffer
 
     elif model == ML_MODEL.sdxl_inpainting:
-        new_width, new_height = 1024 if query_obj.width == 512 else 1024, 1024 if query_obj.height == 512 else 1024
+        new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
         data = {
             "prompt" : query_obj.prompt,
             "negative_prompt" : query_obj.negative_prompt,
@@ -122,10 +127,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         }
 
         if input_image:
-            input_image = Image.open(input_image)
-            input_image = input_image.resize((new_width, new_height), Image.ANTIALIAS)
-            output_image_buffer = io.BytesIO()
-            input_image.save(output_image_buffer, format='PNG')
+            output_image_buffer = resize_io_buffers(input_image, new_width, new_height)
             data['image'] = output_image_buffer
 
     elif model == ML_MODEL.arielreplicate:
@@ -201,6 +203,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             data['mask'] = mask
 
     elif model == ML_MODEL.sdxl_controlnet:
+        new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
         data = {
             'prompt': query_obj.prompt,
             'negative_prompt': query_obj.negative_prompt,
@@ -209,7 +212,8 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         }
 
         if input_image:
-            data['image'] = input_image
+            output_image_buffer = resize_io_buffers(input_image, new_width, new_height)
+            data['image'] = output_image_buffer
     
     elif model == ML_MODEL.sdxl_controlnet_openpose:
         data = {
