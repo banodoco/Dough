@@ -246,7 +246,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
 
                 elif generation_method == InputImageStyling.CONTROLNET_CANNY.value:
                     edge_pil_img = get_canny_img(st.session_state[input_image_1_key], low_threshold=50, high_threshold=150)    # redundant incase of local inference
-                    input_img = edge_pil_img if GPU_INFERENCE_ENABLED else st.session_state[input_image_1_key]
+                    input_img = edge_pil_img if not GPU_INFERENCE_ENABLED else st.session_state[input_image_1_key]
                     input_image_file = save_new_image(input_img, project_uuid)
                     query_obj = MLQueryObject(
                         timing_uuid=None,

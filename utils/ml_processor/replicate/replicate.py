@@ -63,6 +63,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         query_obj.data = {}
 
         params[InferenceParamType.QUERY_DICT.value] = query_obj.to_json()
+        params["prompt"] = query_obj.prompt
         return self.predict_model_output(model, **params) if not queue_inference else self.queue_prediction(model, **params)
     
     @check_user_credits

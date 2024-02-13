@@ -425,7 +425,7 @@ def animation_style_element(shot_uuid):
             for idx, timing in enumerate(timing_list):
                 if timing.primary_image and timing.primary_image.location:
                     b = timing.primary_image.inference_params
-                    prompt = b['prompt'] if b else ""
+                    prompt = b.get("prompt", "") if b else ""
                     prompt += append_to_prompt
                     frame_prompt = f"{idx * linear_frame_distribution_value}_" + prompt
                     positive_prompt += ":" + frame_prompt if positive_prompt else frame_prompt

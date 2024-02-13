@@ -33,7 +33,9 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
     if model.name == ComfyRunnerModel.name:
         workflow_json, output_node_ids = get_model_workflow_from_query(model, query_obj)
         workflow_file = get_workflow_json_url(workflow_json)
-        file_zip = get_file_zip_url(query_obj)
+
+        index_files = True if model.display_name() in ['steerable_motion'] else False
+        file_zip = get_file_zip_url(query_obj, index_files=index_files)
 
         data = {
             "workflow_json": workflow_file,
