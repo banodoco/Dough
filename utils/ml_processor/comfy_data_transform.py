@@ -201,7 +201,8 @@ class ComfyDataTransform:
         workflow["24"]["inputs"]["image"] = image_name  # ipadapter image
         workflow["6"]["inputs"]["text"] = query.prompt
         workflow["7"]["inputs"]["text"] = query.negative_prompt                
-        workflow["29"]["inputs"]["weight"] = query.strength
+        workflow["36"]["inputs"]["weight"] = query.strength
+        workflow["36"]["inputs"]["weight_v2"] = query.strength
 
         return json.dumps(workflow), output_node_ids
 
@@ -233,10 +234,57 @@ class ComfyDataTransform:
 
     @staticmethod
     def transform_steerable_motion_workflow(query: MLQueryObject):
-        # NOTE: @Peter you can access all the settings that you passed using
-        # settings = query.data.get('data', {})
-        # fill them in workflow (check the functions above to get an idea)
+
+
+        sm_data = query.data.get('data', {})
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.STEERABLE_MOTION)
+        #project_settings = data_repo.get_project_setting(shot.project.uuid)
+        # width = project_settings.width
+        # height = project_settings.height
+
+
+        print(sm_data)
+        workflow['464']['inputs']['height'] = sm_data.get('height')
+        workflow['464']['inputs']['width'] = sm_data.get('width')
+        
+        workflow['461']['inputs']['ckpt_name'] = sm_data.get('ckpt')
+        
+        workflow['473']['inputs']['buffer'] = sm_data.get('buffer')
+        workflow['187']['inputs']['motion_scale'] = sm_data.get('motion_scale')
+        # workflow['548']['inputs']['text'] = sm_data.get('motion_scales')
+        workflow['281']['inputs']['format'] = sm_data.get('output_format')
+        workflow['536']['inputs']['pre_text'] = sm_data.get('prompt')
+        workflow['537']['inputs']['pre_text'] = sm_data.get('negative_prompt')
+        workflow['292']['inputs']['multiplier'] = sm_data.get('stmfnet_multiplier')
+        workflow['473']['inputs']['relative_ipadapter_strength'] = sm_data.get('relative_ipadapter_strength')
+        workflow['473']['inputs']['relative_cn_strength'] = sm_data.get('relative_cn_strength')        
+        workflow['473']['inputs']['type_of_strength_distribution'] = sm_data.get('type_of_strength_distribution')
+        workflow['473']['inputs']['linear_strength_value'] = sm_data.get('linear_strength_value')
+        
+        workflow['473']['inputs']['dynamic_strength_values'] = str(sm_data.get('dynamic_strength_values'))[1:-1]  
+        workflow['473']['inputs']['linear_frame_distribution_value'] = sm_data.get('linear_frame_distribution_value')                
+        workflow['473']['inputs']['dynamic_frame_distribution_values'] = ', '.join(str(int(value)) for value in sm_data.get('dynamic_frame_distribution_values'))        
+        workflow['473']['inputs']['type_of_frame_distribution'] = sm_data.get('type_of_frame_distribution')
+        workflow['473']['inputs']['type_of_key_frame_influence'] = sm_data.get('type_of_key_frame_influence')
+        workflow['473']['inputs']['linear_key_frame_influence_value'] = sm_data.get('linear_key_frame_influence_value')
+        
+        # print(dynamic_key_frame_influence_values)
+        workflow['473']['inputs']['dynamic_key_frame_influence_values'] = str(sm_data.get('dynamic_key_frame_influence_values'))[1:-1]
+        workflow['473']['inputs']['ipadapter_noise'] = sm_data.get('ipadapter_noise')
+        workflow['342']['inputs']['context_length'] = sm_data.get('context_length')
+        workflow['342']['inputs']['context_stride'] = sm_data.get('context_stride')
+        workflow['342']['inputs']['context_overlap'] = sm_data.get('context_overlap')
+        workflow['468']['inputs']['end_percent'] = sm_data.get('multipled_base_end_percent')
+        workflow['470']['inputs']['strength_model'] = sm_data.get('multipled_base_adapter_strength')
+        workflow["482"]["inputs"]["seed"] = random_seed()
+        workflow["536"]["inputs"]["text"] = sm_data.get('individual_prompts')
+        # make max_frames an int
+        
+        
+        workflow["536"]["inputs"]["max_frames"] = int(float(sm_data.get('max_frames')))
+        workflow["537"]["inputs"]["max_frames"] = int(float(sm_data.get('max_frames')))
+        workflow["537"]["inputs"]["text"] = sm_data.get('individual_negative_prompts')
+        
 
         return json.dumps(workflow), output_node_ids
 

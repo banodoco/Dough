@@ -60,12 +60,12 @@ class DefaultProjectSettingParams:
 
 DEFAULT_SHOT_MOTION_VALUES = {
     "strength_of_frame" : 0.5,
-    "distance_to_next_frame" : 16,
+    "distance_to_next_frame" : 1.0,
     "speed_of_transition" : 0.6,
     "freedom_between_frames" : 0.5,
     "individual_prompt" : "",
     "individual_negative_prompt" : "",
-    "motion_during_frame" : 0.5,
+    "motion_during_frame" : 1.3,
 }
 
 # TODO: make proper paths for every file
