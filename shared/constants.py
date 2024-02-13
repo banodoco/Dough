@@ -110,8 +110,10 @@ class SortOrder(ExtendedEnum):
 SERVER = os.getenv('SERVER', ServerType.PRODUCTION.value)
 
 AUTOMATIC_FILE_HOSTING = SERVER != ServerType.DEVELOPMENT.value  # automatically upload project files to s3 (images, videos, gifs)
-AWS_S3_BUCKET = 'banodoco'
+AWS_S3_BUCKET = "banodoco-data-bucket-public"
 AWS_S3_REGION = 'ap-south-1'
+AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY", "")
+AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY", "")
 OFFLINE_MODE = os.getenv('OFFLINE_MODE', False)     # for picking up secrets and file storage
 
 LOCAL_DATABASE_NAME = 'banodoco_local.db'

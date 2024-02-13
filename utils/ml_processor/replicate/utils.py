@@ -1,3 +1,5 @@
+import io
+from PIL import Image
 from utils.common_utils import user_credits_available
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
@@ -85,33 +87,46 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             "output_style": query_obj.prompt
         }
     elif model == ML_MODEL.sdxl:
+        new_width, new_height = 1024 if query_obj.width == 512 else 1024, 1024 if query_obj.height == 512 else 1024
         data = {
             "prompt" : query_obj.prompt,
             "negative_prompt" : query_obj.negative_prompt,
-            "width" : 1024 if query_obj.width == 512 else 1024,    # 768 is the default for sdxl
-            "height" : 1024 if query_obj.height == 512 else 1024,
+            "width" : new_width,    # 768 is the default for sdxl
+            "height" : new_height,
             "prompt_strength": query_obj.strength,
             "mask": mask,
             "disable_safety_checker": True,
         }
 
         if input_image:
-            data['image'] = input_image
+            input_image = Image.open(input_image)
+            input_image = input_image.resize((new_width, new_height), Image.ANTIALIAS)
+            output_image_buffer = io.BytesIO()
+            input_image.save(output_image_buffer, format='PNG')
+            data['image'] = output_image_buffer
 
     elif model == ML_MODEL.sdxl_inpainting:
+        new_width, new_height = 1024 if query_obj.width == 512 else 1024, 1024 if query_obj.height == 512 else 1024
         data = {
             "prompt" : query_obj.prompt,
             "negative_prompt" : query_obj.negative_prompt,
-            "width" : 1024 if query_obj.width == 512 else 1024,    # 768 is the default for sdxl
-            "height" : 1024 if query_obj.height == 512 else 1024,
-            "prompt_strength": query_obj.strength,
+            "width" : new_width,    # 768 is the default for sdxl
+            "height" : new_height,
+            "strength": query_obj.strength,
+            "scheduler": "K_EULER",
+            "guidance_scale": 8,
+            "steps": 20,
             "mask": query_obj.data.get("data", {}).get("mask", None),
             "image": query_obj.data.get("data", {}).get("input_image", None),
             "disable_safety_checker": True,
         }
 
         if input_image:
-            data['image'] = query_obj.data.get("data", {}).get("image", None)
+            input_image = Image.open(input_image)
+            input_image = input_image.resize((new_width, new_height), Image.ANTIALIAS)
+            output_image_buffer = io.BytesIO()
+            input_image.save(output_image_buffer, format='PNG')
+            data['image'] = output_image_buffer
 
     elif model == ML_MODEL.arielreplicate:
         data = {

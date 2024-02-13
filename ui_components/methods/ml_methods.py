@@ -210,7 +210,7 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, mask_in_p
         guidance_scale=7.5,
         seed=-1,
         num_inference_steps=25,            
-        strength=0.99,
+        strength=0.7,
         adapter_type=None,
         prompt=prompt,
         negative_prompt=negative_prompt,
