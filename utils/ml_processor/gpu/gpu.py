@@ -2,10 +2,11 @@ import json
 from shared.constants import InferenceParamType
 from shared.logging.logging import AppLogger
 from ui_components.methods.data_logger import log_model_inference
+from ui_components.methods.file_methods import normalize_size_internal_file_obj
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.comfy_data_transform import get_model_workflow_from_query
-from utils.ml_processor.constants import ML_MODEL, MLModel
+from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow, MLModel
 from utils.ml_processor.gpu.utils import predict_gpu_output, setup_comfy_runner
 from utils.ml_processor.ml_interface import MachineLearningProcessor
 import time
@@ -32,6 +33,26 @@ class GPUProcessor(MachineLearningProcessor):
                 file_uuid_list.append(v)
 
         file_list = data_repo.get_image_list_from_uuid_list(file_uuid_list)
+
+        models_using_sdxl = [
+                ComfyWorkflow.SDXL.value, 
+                ComfyWorkflow.SDXL_IMG2IMG.value,
+                ComfyWorkflow.SDXL_CONTROLNET.value, 
+                ComfyWorkflow.SDXL_INPAINTING.value,
+                ComfyWorkflow.IP_ADAPTER_FACE.value,
+                ComfyWorkflow.IP_ADAPTER_FACE_PLUS.value,
+                ComfyWorkflow.IP_ADAPTER_PLUS.value
+            ]
+
+        if model.display_name() in models_using_sdxl:
+            res = []
+            for file in file_list:
+                new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
+                new_file = normalize_size_internal_file_obj(file, dim=[new_width, new_height], create_new_file=True)
+                res.append(new_file)
+            
+            file_list = res
+
         file_path_list = [f.location for f in file_list]
         
         data = {

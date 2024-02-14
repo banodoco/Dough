@@ -390,10 +390,16 @@ def combine_mask_and_input_image(mask_path, input_image_path, overlap_color="tra
 
     is_white = lambda pixel, threshold=245: all(value > threshold for value in pixel[:3])
 
+    fill_color = (0.5,0.5,0.5,1)      # default grey
+    if overlap_color == "transparent":
+        fill_color = (0,0,0,0)
+    elif overlap_color == "grey":
+        fill_color = (0.5, 0.5, 0.5, 1)
+
     for x in range(mask_image.width):
         for y in range(mask_image.height):
             if is_white(mask_image.getpixel((x, y))):
-                input_image.putpixel((x, y), (0, 0, 0, 0))
+                input_image.putpixel((x, y), fill_color)
 
     return input_image
 

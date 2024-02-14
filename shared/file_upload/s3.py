@@ -1,3 +1,4 @@
+import hashlib
 import mimetypes
 from urllib.parse import urlparse
 import boto3
@@ -6,9 +7,10 @@ import os
 import shutil
 
 import requests
-from shared.constants import AWS_S3_BUCKET, AWS_S3_REGION
+from shared.constants import AWS_ACCESS_KEY, AWS_S3_BUCKET, AWS_S3_REGION, AWS_SECRET_KEY
 from shared.logging.logging import AppLogger
 from shared.logging.constants import LoggingPayload, LoggingType
+from ui_components.methods.file_methods import convert_file_to_base64
 logger = AppLogger()
 
 # TODO: fix proper paths for file uploads 
@@ -29,14 +31,15 @@ def upload_file(file_location, aws_access_key, aws_secret_key, bucket=AWS_S3_BUC
 
     return url
 
-def upload_file_from_obj(file, aws_access_key, aws_secret_key, bucket=AWS_S3_BUCKET):
+def upload_file_from_obj(file, file_extension, bucket=AWS_S3_BUCKET):
+    aws_access_key, aws_secret_key = AWS_ACCESS_KEY, AWS_SECRET_KEY
     folder = 'test/'
     unique_tag = str(uuid.uuid4())
-    file_extension = os.path.splitext(file.name)[1]
     filename = unique_tag + file_extension
+    file.seek(0)
 
     # Upload the file
-    content_type = mimetypes.guess_type(file.name)[0]
+    content_type = "application/octet-stream" if file_extension not in [".png", ".jpg"] else "image/png"    # hackish sol, will fix later
     data = {
         "Body": file,
         "Bucket": bucket,

@@ -11,8 +11,9 @@ class ComfyWorkflow(ExtendedEnum):
     SDXL_CONTROLNET = "sdxl_controlnet"
     SDXL_CONTROLNET_OPENPOSE = "sdxl_controlnet_openpose"
     LLAMA_2_7B = "llama_2_7b"
-    SDXL_INPAINTING = "sdxl_inpainting"
+    SDXL_INPAINTING = "sdxl-inpainting"
     STEERABLE_MOTION = "steerable_motion"
+    SDXL_IMG2IMG = "sdxl_img2img"
 
 @dataclass
 class MLModel:
@@ -68,6 +69,7 @@ class ML_MODEL:
     controlnet_1_1_x_realistic_vision_v2_0 = MLModel("usamaehsan/controlnet-1.1-x-realistic-vision-v2.0", "7fbf4c86671738f97896c9cb4922705adfcdcf54a6edab193bb8c176c6b34a69")
     urpm = MLModel("mcai/urpm-v1.3-img2img", "4df956e8dbfebf1afaf0c3ee98ad426ec58c4262d24360d054582e5eab2cb5f6")
     sdxl = MLModel("stability-ai/sdxl", "af1a68a271597604546c09c64aabcd7782c114a63539a4a8d14d1eeda5630c33", ComfyWorkflow.SDXL)
+    sdxl_img2img = MLModel("stability-ai/sdxl", "af1a68a271597604546c09c64aabcd7782c114a63539a4a8d14d1eeda5630c33", ComfyWorkflow.SDXL_IMG2IMG)
 
     # addition 30/9/2023
     realistic_vision_v5 = MLModel("heedster/realistic-vision-v5", "c0259010b93e7a4102a4ba946d70e06d7d0c7dc007201af443cfc8f943ab1d3c")

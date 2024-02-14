@@ -1,8 +1,11 @@
+import io
+from PIL import Image
+from ui_components.methods.file_methods import normalize_size_internal_file_obj, resize_io_buffers
 from utils.common_utils import user_credits_available
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.comfy_data_transform import get_file_zip_url, get_model_workflow_from_query, get_workflow_json_url
-from utils.ml_processor.constants import CONTROLNET_MODELS, ML_MODEL, ComfyRunnerModel
+from utils.ml_processor.comfy_data_transform import get_file_list_from_query_obj, get_file_zip_url, get_model_workflow_from_query, get_workflow_json_url
+from utils.ml_processor.constants import CONTROLNET_MODELS, ML_MODEL, ComfyRunnerModel, ComfyWorkflow
 
 
 def check_user_credits(method):
@@ -34,8 +37,30 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         workflow_json, output_node_ids = get_model_workflow_from_query(model, query_obj)
         workflow_file = get_workflow_json_url(workflow_json)
 
+        models_using_sdxl = [
+                ComfyWorkflow.SDXL.value, 
+                ComfyWorkflow.SDXL_IMG2IMG.value,
+                ComfyWorkflow.SDXL_CONTROLNET.value, 
+                ComfyWorkflow.SDXL_INPAINTING.value,
+                ComfyWorkflow.IP_ADAPTER_FACE.value,
+                ComfyWorkflow.IP_ADAPTER_FACE_PLUS.value,
+                ComfyWorkflow.IP_ADAPTER_PLUS.value
+            ]
+
+        # resizing image for sdxl
+        file_uuid_list = get_file_list_from_query_obj(query_obj)
+        if model.display_name() in models_using_sdxl and len(file_uuid_list):
+            new_uuid_list = []
+            for file_uuid in file_uuid_list:
+                new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
+                file = data_repo.get_file_from_uuid(file_uuid)
+                new_file = normalize_size_internal_file_obj(file, dim=[new_width, new_height], create_new_file=True)
+                new_uuid_list.append(new_file.uuid)
+            
+            file_uuid_list = new_uuid_list
+
         index_files = True if model.display_name() in ['steerable_motion'] else False
-        file_zip = get_file_zip_url(query_obj, index_files=index_files)
+        file_zip = get_file_zip_url(file_uuid_list, index_files=index_files)
 
         data = {
             "workflow_json": workflow_file,
@@ -84,34 +109,41 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             "input": input_image,
             "output_style": query_obj.prompt
         }
-    elif model == ML_MODEL.sdxl:
+    elif model in [ML_MODEL.sdxl, ML_MODEL.sdxl_img2img]:
+        new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
         data = {
             "prompt" : query_obj.prompt,
             "negative_prompt" : query_obj.negative_prompt,
-            "width" : 1024 if query_obj.width == 512 else 1024,    # 768 is the default for sdxl
-            "height" : 1024 if query_obj.height == 512 else 1024,
+            "width" : new_width,    # 768 is the default for sdxl
+            "height" : new_height,
             "prompt_strength": query_obj.strength,
             "mask": mask,
             "disable_safety_checker": True,
         }
 
         if input_image:
-            data['image'] = input_image
+            output_image_buffer = resize_io_buffers(input_image, new_width, new_height)
+            data['image'] = output_image_buffer
 
     elif model == ML_MODEL.sdxl_inpainting:
+        new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
         data = {
             "prompt" : query_obj.prompt,
             "negative_prompt" : query_obj.negative_prompt,
-            "width" : 1024 if query_obj.width == 512 else 1024,    # 768 is the default for sdxl
-            "height" : 1024 if query_obj.height == 512 else 1024,
-            "prompt_strength": query_obj.strength,
+            "width" : new_width,    # 768 is the default for sdxl
+            "height" : new_height,
+            "strength": query_obj.strength,
+            "scheduler": "K_EULER",
+            "guidance_scale": 8,
+            "steps": 20,
             "mask": query_obj.data.get("data", {}).get("mask", None),
             "image": query_obj.data.get("data", {}).get("input_image", None),
             "disable_safety_checker": True,
         }
 
         if input_image:
-            data['image'] = query_obj.data.get("data", {}).get("image", None)
+            output_image_buffer = resize_io_buffers(input_image, new_width, new_height)
+            data['image'] = output_image_buffer
 
     elif model == ML_MODEL.arielreplicate:
         data = {
@@ -186,6 +218,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             data['mask'] = mask
 
     elif model == ML_MODEL.sdxl_controlnet:
+        new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
         data = {
             'prompt': query_obj.prompt,
             'negative_prompt': query_obj.negative_prompt,
@@ -194,7 +227,8 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         }
 
         if input_image:
-            data['image'] = input_image
+            output_image_buffer = resize_io_buffers(input_image, new_width, new_height)
+            data['image'] = output_image_buffer
     
     elif model == ML_MODEL.sdxl_controlnet_openpose:
         data = {

@@ -84,6 +84,12 @@ def normalize_size_internal_file_obj(file_obj: InternalFileObject, **kwargs):
         project_setting = data_repo.get_project_setting(file_obj.project.uuid)
         dim = (project_setting.width, project_setting.height)
 
+    create_new_file = True if 'create_new_file' in kwargs \
+        and kwargs['create_new_file'] else False
+
+    if create_new_file:
+        file_obj = create_duplicate_file(file_obj)
+    
     pil_file = generate_pil_image(file_obj.location)
     uploaded_url = save_or_host_file(pil_file, file_obj.location, mime_type='image/png', dim=dim)
     if uploaded_url:
@@ -210,6 +216,13 @@ def convert_file_to_base64(fh: io.IOBase) -> str:
         mime_type = "application/octet-stream"
     s = encoded_body.decode("utf-8")
     return f"data:{mime_type};base64,{s}"
+
+def resize_io_buffers(io_buffer, target_width, target_height, format="PNG"):
+    input_image = Image.open(io_buffer)
+    input_image = input_image.resize((target_width, target_height), Image.ANTIALIAS)
+    output_image_buffer = io.BytesIO()
+    input_image.save(output_image_buffer, format='PNG')
+    return output_image_buffer
 
 ENV_FILE_PATH = '.env'
 def save_to_env(key, value):
