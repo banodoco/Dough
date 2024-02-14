@@ -1,7 +1,7 @@
 # this repo serves as a middlerware between API backend and the frontend
 import json
 import time
-from shared.constants import SECRET_ACCESS_TOKEN, InferenceParamType, InternalFileType, InternalResponse
+from shared.constants import SECRET_ACCESS_TOKEN, InferenceParamType, InferenceStatus, InternalFileType, InternalResponse
 from shared.constants import SERVER, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
@@ -121,6 +121,11 @@ class DataRepo:
             uploaded_file_url = self.upload_file(file_content)
             kwargs.update({'hosted_url':uploaded_file_url})
 
+        # handling the case of local inference.. will fix later
+        if 'hosted_url' in kwargs and not kwargs['hosted_url'].startswith('http'):
+            kwargs['local_path'] = kwargs['hosted_url']
+            del kwargs['hosted_url']
+
         res = self.db_repo.create_file(**kwargs)
         file = res.data['data'] if res.status else None
         file = InternalFileObject(**file) if file else None
@@ -139,6 +144,8 @@ class DataRepo:
         if not (image_uuid_list and len(image_uuid_list)):
             return []
         image_list = self.db_repo.get_image_list_from_uuid_list(image_uuid_list, file_type=file_type).data['data']
+        
+        print("--------------- ", image_list[0]['project']['uuid'])
         return [InternalFileObject(**image) for image in image_list] if image_list else []
     
     def update_file(self, file_uuid, **kwargs):
@@ -152,6 +159,13 @@ class DataRepo:
         res = self.db_repo.update_file(uuid=file_uuid, **kwargs)
         file = res.data['data'] if res.status else None
         return InternalFileObject(**file) if file else None
+    
+    def get_file_count_from_type(self, file_tag=None, project_uuid=None):
+        return self.db_repo.get_file_count_from_type(file_tag, project_uuid).data['data']
+    
+    def update_temp_gallery_images(self, project_uuid):
+        self.db_repo.update_temp_gallery_images(project_uuid)
+        return True
     
     # project
     def get_project_from_uuid(self, uuid):
@@ -465,3 +479,11 @@ class DataRepo:
     def add_interpolated_clip(self, shot_uuid, **kwargs):
         res = self.db_repo.add_interpolated_clip(shot_uuid, **kwargs)
         return res.status
+    
+    # combined
+    # gives the count of 1. temp generated images 2. inference logs with in-progress/pending status
+    def get_explorer_pending_stats(self, project_uuid):
+        log_status_list = [InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value]
+        res = self.db_repo.get_explorer_pending_stats(project_uuid, log_status_list)
+        count_data = res.data['data'] if res.status else {"temp_image_count": 0, "pending_image_count": 0}
+        return count_data

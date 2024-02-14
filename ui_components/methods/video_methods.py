@@ -40,6 +40,7 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
 
     img_list = [t.primary_image.location for t in timing_list]
     settings.update(interpolation_steps=interpolation_steps)
+    settings.update(file_uuid_list=[t.primary_image.uuid for t in timing_list])
 
     # res is an array of tuples (video_bytes, log)
     res = VideoInterpolator.create_interpolated_clip(
@@ -250,7 +251,7 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
     for shot in shot_list:
         if not shot.main_clip:
             st.error("Please generate all videos")
-            time.sleep(0.3)
+            time.sleep(0.7)
             return False
         
         shot_video = sync_audio_and_duration(shot.main_clip, shot.uuid, audio_sync_required=False)

@@ -61,6 +61,7 @@ class InternalFileTag(ExtendedEnum):
     TEMP_IMAGE = 'temp'
     GALLERY_IMAGE = 'gallery_image'
     SHORTLISTED_GALLERY_IMAGE = 'shortlisted_gallery_image'
+    TEMP_GALLERY_IMAGE = 'temp_gallery_image'   # these generations are complete but not yet being shown in the gallery
 
 class AnimationStyleType(ExtendedEnum):
     CREATIVE_INTERPOLATION = "Creative Interpolation"
@@ -93,6 +94,7 @@ class InferenceParamType(ExtendedEnum):
     REPLICATE_INFERENCE = "replicate_inference"     # replicate url for queue inference and other data
     QUERY_DICT = "query_dict"                       # query dict of standardized inference params
     ORIGIN_DATA = "origin_data"                     # origin data - used to store file once inference is completed
+    GPU_INFERENCE = "gpu_inference"                 # gpu inference data
 
 class ProjectMetaData(ExtendedEnum):
     DATA_UPDATE = "data_update"                     # info regarding cache/data update when runner updates the db
@@ -108,8 +110,10 @@ class SortOrder(ExtendedEnum):
 SERVER = os.getenv('SERVER', ServerType.PRODUCTION.value)
 
 AUTOMATIC_FILE_HOSTING = SERVER != ServerType.DEVELOPMENT.value  # automatically upload project files to s3 (images, videos, gifs)
-AWS_S3_BUCKET = 'banodoco'
-AWS_S3_REGION = 'ap-south-1'    # TODO: discuss this
+AWS_S3_BUCKET = "banodoco-data-bucket-public"
+AWS_S3_REGION = 'ap-south-1'
+AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY", "")
+AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY", "")
 OFFLINE_MODE = os.getenv('OFFLINE_MODE', False)     # for picking up secrets and file storage
 
 LOCAL_DATABASE_NAME = 'banodoco_local.db'
@@ -117,6 +121,7 @@ ENCRYPTION_KEY = os.getenv('ENCRYPTION_KEY', 'J2684nBgNUYa_K0a6oBr5H8MpSRW0EJ52Q
 
 QUEUE_INFERENCE_QUERIES = True
 HOSTED_BACKGROUND_RUNNER_MODE = os.getenv('HOSTED_BACKGROUND_RUNNER_MODE', False)
+GPU_INFERENCE_ENABLED = False if os.getenv('GPU_INFERENCE_ENABLED', False) in [False, 'False'] else True
 
 if OFFLINE_MODE:
     SECRET_ACCESS_TOKEN = os.getenv('SECRET_ACCESS_TOKEN', None)

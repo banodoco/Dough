@@ -6,14 +6,16 @@ from utils.common_utils import get_current_user
 from utils.data_repo.data_repo import DataRepo
 
 def query_logger_page():
-    st.header("Inference Log list")
+    st.markdown("##### Inference log")
 
     data_repo = DataRepo()
     current_user = get_current_user()
     b1, b2 = st.columns([1, 1])
 
     total_log_table_pages = st.session_state['total_log_table_pages'] if 'total_log_table_pages' in st.session_state else DefaultTimingStyleParams.total_log_table_pages
-    page_number = b1.number_input('Page number', min_value=1, max_value=total_log_table_pages, value=1, step=1)
+    list_of_pages = [i for i in range(1, total_log_table_pages + 1)]
+    page_number = b1.radio('Select page:', options=list_of_pages, key='inference_log_page_number', index=0, horizontal=True)
+    # page_number = b1.number_input('Page number', min_value=1, max_value=total_log_table_pages, value=1, step=1)
     inference_log_list, total_page_count = data_repo.get_all_inference_log_list(
         page=page_number,
         data_per_page=100
@@ -44,3 +46,5 @@ def query_logger_page():
 
     
     st.table(data=data)
+
+    st.markdown("***")

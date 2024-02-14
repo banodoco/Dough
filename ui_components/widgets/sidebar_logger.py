@@ -1,13 +1,14 @@
+import time
 import streamlit as st
 
-from shared.constants import InferenceParamType, InferenceStatus
+from shared.constants import InferenceParamType, InferenceStatus, InternalFileTag, InternalFileType
 from ui_components.widgets.frame_movement_widgets import jump_to_single_frame_view_button
 import json
 import math
 from ui_components.widgets.frame_selector import update_current_frame_index
 
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.replicate.constants import REPLICATE_MODEL
+from utils.ml_processor.constants import ML_MODEL
 
 def sidebar_logger(shot_uuid):
     data_repo = DataRepo()
@@ -19,7 +20,7 @@ def sidebar_logger(shot_uuid):
     if a1.button("Refresh log", disabled=refresh_disabled, help="You can also press 'r' on your keyboard to refresh."): st.rerun()
 
     status_option = st.radio("Statuses to display:", options=["All", "In Progress", "Succeeded", "Failed"], key="status_option", index=0, horizontal=True)
-
+    
     status_list = None
     if status_option == "In Progress":
         status_list = [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value]
@@ -73,7 +74,10 @@ def sidebar_logger(shot_uuid):
                 prompt = input_params.get('prompt', 'No prompt found')                
                 st.write(f'"{prompt[:30]}..."' if len(prompt) > 30 else f'"{prompt}"')
                 st.caption(f"Model:")
-                st.write(json.loads(log.output_details)['model_name'].split('/')[-1])
+                try:
+                    st.write(json.loads(log.output_details)['model_name'].split('/')[-1])
+                except Exception as e:
+                    st.write('')
                             
             with c2:
                 if output_url:                                              
@@ -96,13 +100,23 @@ def sidebar_logger(shot_uuid):
                 elif log.status == InferenceStatus.CANCELED.value:
                     st.warning("Canceled")
                 
+                log_file = log_file_dict[log.uuid] if log.uuid in log_file_dict else None
+                if log_file:
+                    if log_file.type == InternalFileType.IMAGE.value and log_file.tag != InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value:
+                        if st.button("Add to shortlist ➕", key=f"sidebar_shortlist_{log_file.uuid}",use_container_width=True, help="Add to shortlist"):
+                            data_repo.update_file(log_file.uuid, tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value)
+                            st.success("Added To Shortlist")
+                            time.sleep(0.3)
+                            st.rerun()
+
+
                 if output_url and origin_data and 'timing_uuid' in origin_data and origin_data['timing_uuid']:
                     timing = data_repo.get_timing_from_uuid(origin_data['timing_uuid'])
                     if timing and st.session_state['frame_styling_view_type'] != "Timeline":
                         jump_to_single_frame_view_button(timing.aux_frame_index + 1, timing_list, 'sidebar_'+str(log.uuid))     
 
                     else:
-                        if st.session_state['frame_styling_view_type'] != "Explorer":
+                        if st.session_state['page'] != "Explore":
                             if st.button(f"Jump to explorer", key=str(log.uuid)):
                                 # TODO: fix this
                                 st.session_state['main_view_type'] = "Creative Process"
@@ -111,5 +125,5 @@ def sidebar_logger(shot_uuid):
                                 
                                 st.rerun()
                 
-                
+
             st.markdown("---")
