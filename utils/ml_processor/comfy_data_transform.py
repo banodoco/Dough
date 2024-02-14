@@ -152,6 +152,7 @@ class ComfyDataTransform:
         steps, cfg = query.num_inference_steps, query.guidance_scale
         input_image = query.data.get('data', {}).get('input_image', None)
         mask = query.data.get('data', {}).get('mask', None)
+        timing = data_repo.get_timing_from_uuid(query.timing_uuid)
 
         # inpainting workflows takes in an image and inpaints the transparent area
         combined_img = combine_mask_and_input_image(mask, input_image)
@@ -161,6 +162,7 @@ class ComfyDataTransform:
         file_data = {
             "name": filename,
             "type": InternalFileType.IMAGE.value,
+            "project_id": timing.shot.project.uuid
         }
 
         if hosted_url:
