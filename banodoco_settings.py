@@ -1,11 +1,12 @@
 import copy
+import time
 import uuid
 import streamlit as st
 
 from PIL import Image
 from shared.constants import SERVER, AIModelCategory, GuidanceType, InternalFileType, ServerType
 from shared.logging.constants import LoggingType
-from shared.logging.logging import AppLogger
+from shared.logging.logging import app_logger
 from shared.constants import AnimationStyleType
 from ui_components.methods.common_methods import add_image_variant
 from ui_components.methods.file_methods import save_or_host_file
@@ -14,17 +15,25 @@ from utils.common_utils import create_working_assets
 from utils.constants import ML_MODEL_LIST
 from utils.data_repo.data_repo import DataRepo
 
-logger = AppLogger()
+
+def wait_for_db_ready():
+    data_repo = DataRepo()
+    while True:
+        try:
+            user_count = data_repo.get_total_user_count()
+            break
+        except Exception as e:
+            app_logger.log(LoggingType.DEBUG, 'waiting for db...')
+            time.sleep(3)
 
 def project_init():
     from utils.data_repo.data_repo import DataRepo
     data_repo = DataRepo()
 
-    # db initialization takes some time
-    # time.sleep(2)
+    wait_for_db_ready()
+    user_count = data_repo.get_total_user_count()
     # create a user if not already present (if dev mode)
     # if this is the local server with no user than create one and related data
-    user_count = data_repo.get_total_user_count()
     if SERVER == ServerType.DEVELOPMENT.value and not user_count:
         user_data = {
             "name" : "banodoco_user",
@@ -33,7 +42,7 @@ def project_init():
             "type" : "user"
         }
         user: InternalUserObject = data_repo.create_user(**user_data)
-        logger.log(LoggingType.INFO, "new temp user created: " + user.name)
+        app_logger.log(LoggingType.INFO, "new temp user created: " + user.name)
 
         create_new_user_data(user)
     # creating data for online user

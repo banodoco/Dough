@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+comfyui*.log
 
 venv
 .vscode
@@ -22,6 +23,10 @@ test.py
 doc.py
 .env
 data.json
+comfy_runner/
+ComfyUI/
+output/
+images.zip
 
 # generated file TODO: move inside videos
 depth.png

@@ -73,6 +73,7 @@ def inpainting_element(timing_uuid):
 
                     type_of_mask_selection = "Manual Background Selection"
 
+                # NOTE: removed other mask selection methods, will update the code later
                 if type_of_mask_selection == "Manual Background Selection":
                     if st.session_state['edited_image'] == "":
                         with main_col_1:
@@ -150,11 +151,8 @@ def inpainting_element(timing_uuid):
                             st.session_state['edited_image'] = ""
                             st.rerun()
 
-
                 with main_col_1:
-         
                     st.session_state["type_of_mask_replacement"] = "Inpainting"
-                    
                     btn1, btn2 = st.columns([1, 1])
                     with btn1:
                         prompt = st.text_area("Prompt:", help="Describe the whole image, but focus on the details you want changed!",
@@ -163,9 +161,8 @@ def inpainting_element(timing_uuid):
                         negative_prompt = st.text_area(
                             "Negative Prompt:", help="Enter any things you want to make the model avoid!", value=DefaultProjectSettingParams.batch_negative_prompt, height=150)
 
-                    edit1, edit2 = st.columns(2)
-
-                    with edit1:
+                    col1, _ = st.columns(2)
+                    with col1:
                         if st.button(f'Run Edit'):
                             if st.session_state["type_of_mask_replacement"] == "Inpainting":
                                 edited_image, log = execute_image_edit(

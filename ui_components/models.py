@@ -1,5 +1,7 @@
 import datetime
 import json
+import os
+from urllib.parse import urlparse
 from shared.constants import InferenceParamType, ProjectMetaData
 
 from ui_components.constants import DefaultProjectSettingParams, DefaultTimingStyleParams
@@ -39,6 +41,17 @@ class InternalFileObject:
             return json.loads(log.input_params)
         
         return None
+    
+    @property
+    def filename(self):
+        input_path = self.location
+        if urlparse(input_path).scheme:
+            parts = urlparse(input_path)
+            filename = os.path.basename(parts.path)
+        else:
+            filename = os.path.basename(input_path)
+
+        return filename
 
 
 class InternalProjectObject:

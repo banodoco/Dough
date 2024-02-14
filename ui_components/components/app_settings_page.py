@@ -3,17 +3,17 @@ import streamlit as st
 import webbrowser
 from shared.constants import SERVER, ServerType
 from utils.common_utils import get_current_user
+from ui_components.components.query_logger_page import query_logger_page
 
 from utils.data_repo.data_repo import DataRepo
 
 
 def app_settings_page():
     data_repo = DataRepo()
-            
-    if SERVER == ServerType.DEVELOPMENT.value:
-        st.subheader("Purchase Credits")
-        st.write("This feature is only available in production")
 
+    st.markdown("#### App Settings")
+    st.markdown("***")
+            
     if SERVER != ServerType.DEVELOPMENT.value:
         with st.expander("Purchase Credits", expanded=True):
             user_credits = get_current_user(invalidate_cache=True).total_credits
@@ -38,3 +38,5 @@ def app_settings_page():
                         payment_link = data_repo.generate_payment_link(credits)
                         payment_link = f"""<a target='_self' href='{payment_link}'> PAYMENT LINK </a>"""
                         st.markdown(payment_link, unsafe_allow_html=True)
+    
+    query_logger_page()

@@ -1,7 +1,11 @@
+import io
+from PIL import Image
+from ui_components.methods.file_methods import normalize_size_internal_file_obj, resize_io_buffers
 from utils.common_utils import user_credits_available
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.replicate.constants import CONTROLNET_MODELS, REPLICATE_MODEL
+from utils.ml_processor.comfy_data_transform import get_file_list_from_query_obj, get_file_zip_url, get_model_workflow_from_query, get_workflow_json_url
+from utils.ml_processor.constants import CONTROLNET_MODELS, ML_MODEL, ComfyRunnerModel, ComfyWorkflow
 
 
 def check_user_credits(method):
@@ -28,6 +32,43 @@ def check_user_credits_async(method):
 def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
     data_repo = DataRepo()
 
+    # handling comfy_runner workflows 
+    if model.name == ComfyRunnerModel.name:
+        workflow_json, output_node_ids = get_model_workflow_from_query(model, query_obj)
+        workflow_file = get_workflow_json_url(workflow_json)
+
+        models_using_sdxl = [
+                ComfyWorkflow.SDXL.value, 
+                ComfyWorkflow.SDXL_IMG2IMG.value,
+                ComfyWorkflow.SDXL_CONTROLNET.value, 
+                ComfyWorkflow.SDXL_INPAINTING.value,
+                ComfyWorkflow.IP_ADAPTER_FACE.value,
+                ComfyWorkflow.IP_ADAPTER_FACE_PLUS.value,
+                ComfyWorkflow.IP_ADAPTER_PLUS.value
+            ]
+
+        # resizing image for sdxl
+        file_uuid_list = get_file_list_from_query_obj(query_obj)
+        if model.display_name() in models_using_sdxl and len(file_uuid_list):
+            new_uuid_list = []
+            for file_uuid in file_uuid_list:
+                new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
+                file = data_repo.get_file_from_uuid(file_uuid)
+                new_file = normalize_size_internal_file_obj(file, dim=[new_width, new_height], create_new_file=True)
+                new_uuid_list.append(new_file.uuid)
+            
+            file_uuid_list = new_uuid_list
+
+        index_files = True if model.display_name() in ['steerable_motion'] else False
+        file_zip = get_file_zip_url(file_uuid_list, index_files=index_files)
+
+        data = {
+            "workflow_json": workflow_file,
+            "file_list": file_zip
+        }
+
+        return data
+
     input_image, mask = None, None
     if query_obj.image_uuid:
         image = data_repo.get_file_from_uuid(query_obj.image_uuid)
@@ -43,7 +84,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             if not mask.startswith('http'):
                 mask = open(mask, 'rb')
 
-    if model == REPLICATE_MODEL.img2img_sd_2_1:
+    if model == ML_MODEL.img2img_sd_2_1:
         data = {
             "prompt_strength" : query_obj.strength,
             "prompt" : query_obj.prompt,
@@ -58,30 +99,53 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if input_image:
             data['image'] = input_image
 
-    elif model == REPLICATE_MODEL.real_esrgan_upscale:
+    elif model == ML_MODEL.real_esrgan_upscale:
         data = {
             "image": input_image,
             "upscale": query_obj.data.get('upscale', 2),
         }
-    elif model == REPLICATE_MODEL.stylegan_nada:
+    elif model == ML_MODEL.stylegan_nada:
         data = {
             "input": input_image,
             "output_style": query_obj.prompt
         }
-    elif model == REPLICATE_MODEL.sdxl:
+    elif model in [ML_MODEL.sdxl, ML_MODEL.sdxl_img2img]:
+        new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
         data = {
             "prompt" : query_obj.prompt,
             "negative_prompt" : query_obj.negative_prompt,
-            "width" : 768 if query_obj.width == 512 else 1024,    # 768 is the default for sdxl
-            "height" : 768 if query_obj.height == 512 else 1024,
+            "width" : new_width,    # 768 is the default for sdxl
+            "height" : new_height,
             "prompt_strength": query_obj.strength,
-            "mask": mask
+            "mask": mask,
+            "disable_safety_checker": True,
         }
 
         if input_image:
-            data['image'] = input_image
+            output_image_buffer = resize_io_buffers(input_image, new_width, new_height)
+            data['image'] = output_image_buffer
 
-    elif model == REPLICATE_MODEL.arielreplicate:
+    elif model == ML_MODEL.sdxl_inpainting:
+        new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
+        data = {
+            "prompt" : query_obj.prompt,
+            "negative_prompt" : query_obj.negative_prompt,
+            "width" : new_width,    # 768 is the default for sdxl
+            "height" : new_height,
+            "strength": query_obj.strength,
+            "scheduler": "K_EULER",
+            "guidance_scale": 8,
+            "steps": 20,
+            "mask": query_obj.data.get("data", {}).get("mask", None),
+            "image": query_obj.data.get("data", {}).get("input_image", None),
+            "disable_safety_checker": True,
+        }
+
+        if input_image:
+            output_image_buffer = resize_io_buffers(input_image, new_width, new_height)
+            data['image'] = output_image_buffer
+
+    elif model == ML_MODEL.arielreplicate:
         data = {
             "instruction_text" : query_obj.prompt,
             "seed" : query_obj.seed, 
@@ -93,7 +157,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if input_image:
             data['input_image'] = input_image
 
-    elif model  == REPLICATE_MODEL.urpm:
+    elif model  == ML_MODEL.urpm:
         data = {
             'prompt': query_obj.prompt,
             'negative_prompt': query_obj.negative_prompt,
@@ -107,7 +171,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if input_image:
             data['image'] = input_image
 
-    elif model == REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0:
+    elif model == ML_MODEL.controlnet_1_1_x_realistic_vision_v2_0:
         data = {
             'prompt': query_obj.prompt,
             'ddim_steps': query_obj.num_inference_steps,
@@ -119,7 +183,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if input_image:
             data['image'] = input_image
 
-    elif model == REPLICATE_MODEL.realistic_vision_v5:
+    elif model == ML_MODEL.realistic_vision_v5:
         if not (query_obj.guidance_scale >= 3.5 and query_obj.guidance_scale <= 7.0):
             raise ValueError("Guidance scale must be between 3.5 and 7.0")
 
@@ -132,7 +196,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             'steps': query_obj.num_inference_steps,
             'seed': query_obj.seed if query_obj.seed not in [-1, 0] else 0
         }
-    elif model == REPLICATE_MODEL.deliberate_v3 or model == REPLICATE_MODEL.dreamshaper_v7 or model == REPLICATE_MODEL.epicrealism_v5:
+    elif model == ML_MODEL.deliberate_v3 or model == ML_MODEL.dreamshaper_v7 or model == ML_MODEL.epicrealism_v5:
         data = {
             'prompt': query_obj.prompt,
             'negative_prompt': query_obj.negative_prompt,
@@ -153,7 +217,8 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if mask:
             data['mask'] = mask
 
-    elif model == REPLICATE_MODEL.sdxl_controlnet:
+    elif model == ML_MODEL.sdxl_controlnet:
+        new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
         data = {
             'prompt': query_obj.prompt,
             'negative_prompt': query_obj.negative_prompt,
@@ -162,9 +227,10 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         }
 
         if input_image:
-            data['image'] = input_image
+            output_image_buffer = resize_io_buffers(input_image, new_width, new_height)
+            data['image'] = output_image_buffer
     
-    elif model == REPLICATE_MODEL.sdxl_controlnet_openpose:
+    elif model == ML_MODEL.sdxl_controlnet_openpose:
         data = {
             'prompt': query_obj.prompt,
             'negative_prompt': query_obj.negative_prompt,
@@ -175,7 +241,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if input_image:
             data['image'] = input_image
 
-    elif model == REPLICATE_MODEL.realistic_vision_v5_img2img:
+    elif model == ML_MODEL.realistic_vision_v5_img2img:
         data = {
             'prompt': query_obj.prompt,
             'negative_prompt': query_obj.negative_prompt,
@@ -188,7 +254,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             data['image'] = input_image
 
     elif model in CONTROLNET_MODELS:
-        if model == REPLICATE_MODEL.jagilley_controlnet_scribble and query_obj.data.get('canny_image', None):
+        if model == ML_MODEL.jagilley_controlnet_scribble and query_obj.data.get('canny_image', None):
             input_image = data_repo.get_file_from_uuid(query_obj.data['canny_image']).location
             if not input_image.startswith('http'):
                 input_image = open(input_image, 'rb')
@@ -211,7 +277,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             'high_threshold': query_obj.high_threshold,
         }
 
-    elif model in [REPLICATE_MODEL.clones_lora_training_2]:
+    elif model in [ML_MODEL.clones_lora_training_2]:
         
         if query_obj.adapter_type:
             adapter_condition_image = input_image

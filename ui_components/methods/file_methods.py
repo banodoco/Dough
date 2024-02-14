@@ -84,6 +84,12 @@ def normalize_size_internal_file_obj(file_obj: InternalFileObject, **kwargs):
         project_setting = data_repo.get_project_setting(file_obj.project.uuid)
         dim = (project_setting.width, project_setting.height)
 
+    create_new_file = True if 'create_new_file' in kwargs \
+        and kwargs['create_new_file'] else False
+
+    if create_new_file:
+        file_obj = create_duplicate_file(file_obj)
+    
     pil_file = generate_pil_image(file_obj.location)
     uploaded_url = save_or_host_file(pil_file, file_obj.location, mime_type='image/png', dim=dim)
     if uploaded_url:
@@ -91,7 +97,6 @@ def normalize_size_internal_file_obj(file_obj: InternalFileObject, **kwargs):
         data_repo.update_file(file_obj.uuid, hosted_url=uploaded_url)
     
     return file_obj
-
 
 def save_or_host_file_bytes(video_bytes, path, ext=".mp4"):
     uploaded_url = None
@@ -130,7 +135,6 @@ def add_temp_file_to_project(project_uuid, key, file_path):
     }
     data_repo.update_project(**project_data)
 
-
 def generate_temp_file(url, ext=".mp4"):
     response = requests.get(url)
     if not response.ok:
@@ -141,7 +145,6 @@ def generate_temp_file(url, ext=".mp4"):
     temp_file.close()
 
     return temp_file
-
 
 def generate_pil_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO]):
     # Check if img is a PIL image
@@ -177,7 +180,6 @@ def generate_temp_file_from_uploaded_file(uploaded_file):
             temp_file.write(uploaded_file.read())
             return temp_file
 
-
 def convert_bytes_to_file(file_location_to_save, mime_type, file_bytes, project_uuid, inference_log_id=None, filename=None, tag="") -> InternalFileObject:
     data_repo = DataRepo()
 
@@ -201,7 +203,6 @@ def convert_bytes_to_file(file_location_to_save, mime_type, file_bytes, project_
 
     return file
 
-
 def convert_file_to_base64(fh: io.IOBase) -> str:
     fh.seek(0)
 
@@ -215,6 +216,13 @@ def convert_file_to_base64(fh: io.IOBase) -> str:
         mime_type = "application/octet-stream"
     s = encoded_body.decode("utf-8")
     return f"data:{mime_type};base64,{s}"
+
+def resize_io_buffers(io_buffer, target_width, target_height, format="PNG"):
+    input_image = Image.open(io_buffer)
+    input_image = input_image.resize((target_width, target_height), Image.ANTIALIAS)
+    output_image_buffer = io.BytesIO()
+    input_image.save(output_image_buffer, format='PNG')
+    return output_image_buffer
 
 ENV_FILE_PATH = '.env'
 def save_to_env(key, value):
@@ -230,7 +238,7 @@ import requests
 from PIL import Image
 from io import BytesIO
 
-def zip_images(image_locations, zip_filename='images.zip'):
+def zip_images(image_locations, zip_filename='images.zip', filename_list=[]):
     # Calculate the number of digits needed for padding
     num_digits = len(str(len(image_locations) - 1))
 
@@ -238,7 +246,10 @@ def zip_images(image_locations, zip_filename='images.zip'):
         for idx, image_location in enumerate(image_locations):
             # Pad the index with zeros
             padded_idx = str(idx).zfill(num_digits)
-            image_name = f"{padded_idx}.png"
+            if filename_list and len(filename_list) > idx:
+                image_name = filename_list[idx]
+            else:
+                image_name = f"{padded_idx}.png"
 
             if image_location.startswith('http'):
                 response = requests.get(image_location)
@@ -265,12 +276,10 @@ def zip_images(image_locations, zip_filename='images.zip'):
 
     return zip_filename
 
-
-
 def create_duplicate_file(file: InternalFileObject, project_uuid=None) -> InternalFileObject:
     data_repo = DataRepo()
 
-    unique_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5)) + ".mp4"
+    unique_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
     file_data = {
         "name": unique_id + '_' + file.name,
         "type": file.type,

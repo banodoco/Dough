@@ -1,22 +1,26 @@
 import json
 import os
+import shutil
 import signal
 import sys
 import time
+import uuid
 import requests
+import traceback
 import sentry_sdk
 import setproctitle
 from dotenv import load_dotenv
 import django
 from shared.constants import OFFLINE_MODE, InferenceParamType, InferenceStatus, InferenceType, ProjectMetaData, HOSTED_BACKGROUND_RUNNER_MODE
 from shared.logging.constants import LoggingType
-from shared.logging.logging import AppLogger
+from shared.logging.logging import app_logger
 from ui_components.methods.file_methods import load_from_env, save_to_env
 from utils.common_utils import acquire_lock, release_lock
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.replicate.constants import replicate_status_map
+from utils.ml_processor.constants import replicate_status_map
 
 from utils.constants import RUNNER_PROCESS_NAME, AUTH_TOKEN, REFRESH_AUTH_TOKEN
+from utils.ml_processor.gpu.utils import is_comfy_runner_present, predict_gpu_output, setup_comfy_runner
 
 
 load_dotenv()
@@ -50,6 +54,7 @@ sentry_sdk.init(
 
 def handle_termination(signal, frame):
     print("Received termination signal. Cleaning up...")
+    global TERMINATE_SCRIPT
     TERMINATE_SCRIPT = True
     sys.exit(0)
 
@@ -127,18 +132,41 @@ def is_app_running():
     except requests.exceptions.RequestException as e:
         print("server not running")
         return False
+    
+def update_cache_dict(inference_type, log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list):
+    if inference_type in [InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value, \
+                                        InferenceType.FRAME_INPAINTING.value]:
+        if str(log.project.uuid) not in timing_update_list:
+            timing_update_list[str(log.project.uuid)] = []
+        timing_update_list[str(log.project.uuid)].append(timing_uuid)
+
+    elif inference_type == InferenceType.GALLERY_IMAGE_GENERATION.value:
+        gallery_update_list[str(log.project.uuid)] = True
+    
+    elif inference_type == InferenceType.FRAME_INTERPOLATION.value:
+        if str(log.project.uuid) not in shot_update_list:
+            shot_update_list[str(log.project.uuid)] = []
+        shot_update_list[str(log.project.uuid)].append(shot_uuid)
 
 def check_and_update_db():
     # print("updating logs")
     from backend.models import InferenceLog, AppSetting, User
     
-    app_logger = AppLogger()
+    # returning if db creation and migrations are pending
+    try:
+        user = User.objects.filter(is_disabled=False).first()
+    except Exception as e:
+        app_logger.log(LoggingType.DEBUG, "db creation pending..")
+        time.sleep(3)
+        return
 
-    user = User.objects.filter(is_disabled=False).first()
+    if not user:
+        return
+
     app_setting = AppSetting.objects.filter(user_id=user.id, is_disabled=False).first()
     replicate_key = app_setting.replicate_key_decrypted
     if not replicate_key:
-        app_logger.log(LoggingType.ERROR, "Replicate key not found")
+        # app_logger.log(LoggingType.ERROR, "Replicate key not found")
         return
     
     log_list = InferenceLog.objects.filter(status__in=[InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
@@ -152,6 +180,7 @@ def check_and_update_db():
     for log in log_list:
         input_params = json.loads(log.input_params)
         replicate_data = input_params.get(InferenceParamType.REPLICATE_INFERENCE.value, None)
+        local_gpu_data = input_params.get(InferenceParamType.GPU_INFERENCE.value, None)
         if replicate_data:
             prediction_id = replicate_data['prediction_id']
 
@@ -186,7 +215,7 @@ def check_and_update_db():
                             update_data['total_inference_time'] = float(result['metrics']['predict_time'])
 
                         InferenceLog.objects.filter(id=log.id).update(**update_data)
-                        origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
+                        origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, {})
                         if origin_data and log_status == InferenceStatus.COMPLETED.value:
                             from ui_components.methods.common_methods import process_inference_output
 
@@ -195,20 +224,8 @@ def check_and_update_db():
                                 origin_data['log_uuid'] = log.uuid
                                 print("processing inference output")
                                 process_inference_output(**origin_data)
-
-                                if origin_data['inference_type'] in [InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value, \
-                                                                    InferenceType.FRAME_INPAINTING.value]:
-                                    if str(log.project.uuid) not in timing_update_list:
-                                        timing_update_list[str(log.project.uuid)] = []
-                                    timing_update_list[str(log.project.uuid)].append(origin_data['timing_uuid'])
-
-                                elif origin_data['inference_type'] == InferenceType.GALLERY_IMAGE_GENERATION.value:
-                                    gallery_update_list[str(log.project.uuid)] = True
-                                
-                                elif origin_data['inference_type'] == InferenceType.FRAME_INTERPOLATION.value:
-                                    if str(log.project.uuid) not in shot_update_list:
-                                        shot_update_list[str(log.project.uuid)] = []
-                                    shot_update_list[str(log.project.uuid)].append(origin_data['shot_uuid'])
+                                timing_uuid, shot_uuid = origin_data.get('timing_uuid', None), origin_data.get('shot_uuid', None)
+                                update_cache_dict(origin_data['inference_type'], log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list)
 
                             except Exception as e:
                                 app_logger.log(LoggingType.ERROR, f"Error: {e}")
@@ -226,8 +243,43 @@ def check_and_update_db():
                 if response:
                     app_logger.log(LoggingType.DEBUG, f"Error: {response.content}")
                     sentry_sdk.capture_exception(response.content)
+        elif local_gpu_data:
+            data = json.loads(local_gpu_data)
+            try:
+                setup_comfy_runner()
+                start_time = time.time()
+                output = predict_gpu_output(data['workflow_input'], data['file_path_list'], data['output_node_ids'])
+                end_time = time.time()
+
+                output = output[-1]     # TODO: different models can have different logic
+                destination_path = "./videos/temp/" + str(uuid.uuid4()) + "." + output.split(".")[-1]
+                shutil.copy2("./output/" + output, destination_path)
+                output_details = json.loads(log.output_details)
+                output_details['output'] = destination_path
+                update_data = {
+                    "status" : InferenceStatus.COMPLETED.value,
+                    "output_details" : json.dumps(output_details),
+                    "total_inference_time" : end_time - start_time,
+                }
+
+                InferenceLog.objects.filter(id=log.id).update(**update_data)
+                origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, {})
+                origin_data['output'] = destination_path
+                origin_data['log_uuid'] = log.uuid
+                print("processing inference output")
+
+                from ui_components.methods.common_methods import process_inference_output
+                process_inference_output(**origin_data)
+                timing_uuid, shot_uuid = origin_data.get('timing_uuid', None), origin_data.get('shot_uuid', None)
+                update_cache_dict(origin_data['inference_type'], log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list)
+
+            except Exception as e:
+                print("error occured: ", str(e))
+                # sentry_sdk.capture_exception(e)
+                traceback.print_exc()
+                InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.FAILED.value)
         else:
-            # if not replicate data is present then removing the status
+            # if replicate/gpu data is not present then removing the status
             InferenceLog.objects.filter(id=log.id).update(status="")
 
     # adding update_data in the project
