@@ -279,7 +279,7 @@ def zip_images(image_locations, zip_filename='images.zip', filename_list=[]):
 def create_duplicate_file(file: InternalFileObject, project_uuid=None) -> InternalFileObject:
     data_repo = DataRepo()
 
-    unique_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5)) + ".mp4"
+    unique_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
     file_data = {
         "name": unique_id + '_' + file.name,
         "type": file.type,

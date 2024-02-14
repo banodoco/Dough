@@ -44,17 +44,33 @@ class GPUProcessor(MachineLearningProcessor):
                 ComfyWorkflow.IP_ADAPTER_PLUS.value
             ]
 
+        # maps old_file_name : new_resized_file_name
+        new_file_map = {}
         if model.display_name() in models_using_sdxl:
             res = []
             for file in file_list:
                 new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
+                # although the new_file created using create_new_file has the same location as the original file, it is 
+                # scaled to the original resolution after inference save (so resize has no effect)
                 new_file = normalize_size_internal_file_obj(file, dim=[new_width, new_height], create_new_file=True)
                 res.append(new_file)
-            
+                new_file_map[file.filename] = new_file.filename
+
             file_list = res
 
         file_path_list = [f.location for f in file_list]
-        
+
+        # replacing old files with resized files
+        # if len(new_file_map.keys()):
+        #     workflow_json = json.loads(workflow_json)
+        #     for node in workflow_json:
+        #         if "inputs" in workflow_json[node]:
+        #             for k, v in workflow_json[node]["inputs"].items():
+        #                 if isinstance(v, str) and v in new_file_map:
+        #                     workflow_json[node]["inputs"][k] = new_file_map[v]
+
+        #     workflow_json = json.dumps(workflow_json)
+
         data = {
             "workflow_input": workflow_json,
             "file_path_list": file_path_list,

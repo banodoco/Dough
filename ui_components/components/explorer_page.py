@@ -144,14 +144,15 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
             elif type_of_generation == InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
                 # UI - displaying uploaded images
                 
-                st.info("IP-Adapter Face image:")
+                # NOTE: hackish sol, text of plus and face are interchanged, will fix later
+                st.info("IP-Adapter Plus image:")
                 if st.session_state[input_image_1_key] is not None:    
                     st.image(st.session_state[input_image_1_key], use_column_width=True)
                     strength_of_face = st_memory.slider("How strong would would you like the Face model to influence?", min_value=0, max_value=100, value=50, step=1, key="strength_of_ipadapter_face", help="This will determine how much of the current image will be kept in the final image.")
                 else:
                     st.error("Please upload an image")
                 
-                st.info("IP-Adapter Plus image:")
+                st.info("IP-Adapter Face image:")
                 if st.session_state[input_image_2_key] is not None:  
                     st.image(st.session_state[input_image_2_key], use_column_width=True)
                     strength_of_plus = st_memory.slider("How strong would you like to influence the Plus model?", min_value=0, max_value=100, value=50, step=1, key="strength_of_ipadapter_plus", help="This will determine how much of the current image will be kept in the final image.")

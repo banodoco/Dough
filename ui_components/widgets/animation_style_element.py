@@ -290,7 +290,7 @@ def animation_style_element(shot_uuid):
         type_of_key_frame_influence=type_of_key_frame_influence,
         linear_key_frame_influence_value=float(linear_key_frame_influence_value),
         dynamic_key_frame_influence_values=dynamic_key_frame_influence_values,
-        normalise_speed=True,
+        normalise_speed=False,
         ipadapter_noise=0.3,
         animation_style=AnimationStyleType.CREATIVE_INTERPOLATION.value,
         context_length=context_length,
