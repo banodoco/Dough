@@ -301,21 +301,28 @@ def get_workflow_json_url(workflow_json):
     
     return ml_client.upload_training_data(temp_json_path, delete_after_upload=True)
 
-# returns the zip file which can be passed to the comfy_runner replicate endpoint
-def get_file_zip_url(query_obj: MLQueryObject, index_files=False) -> str:
-    from utils.ml_processor.ml_interface import get_ml_client
-
-    data_repo = DataRepo()
-    ml_client = get_ml_client()
+def get_file_list_from_query_obj(query_obj: MLQueryObject):
     file_uuid_list = []
 
     if query_obj.image_uuid:
         file_uuid_list.append(query_obj.image_uuid)
     
+    if query_obj.mask_uuid:
+        file_uuid_list.append(query_obj.mask_uuid)
+    
     for k, v in query_obj.data.get('data', {}).items():
         if k.startswith("file_"):
             file_uuid_list.append(v)
+    
+    return file_uuid_list
 
+# returns the zip file which can be passed to the comfy_runner replicate endpoint
+def get_file_zip_url(file_uuid_list, index_files=False) -> str:
+    from utils.ml_processor.ml_interface import get_ml_client
+
+    data_repo = DataRepo()
+    ml_client = get_ml_client()
+    
     file_list = data_repo.get_image_list_from_uuid_list(file_uuid_list)
     filename_list = [f.filename for f in file_list] if not index_files else []  # file names would be indexed like 1.png, 2.png ...
     zip_path = zip_images([f.location for f in file_list], 'videos/temp/input_images.zip', filename_list)

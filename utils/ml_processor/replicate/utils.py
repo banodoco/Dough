@@ -4,7 +4,7 @@ from ui_components.methods.file_methods import normalize_size_internal_file_obj,
 from utils.common_utils import user_credits_available
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.comfy_data_transform import get_file_zip_url, get_model_workflow_from_query, get_workflow_json_url
+from utils.ml_processor.comfy_data_transform import get_file_list_from_query_obj, get_file_zip_url, get_model_workflow_from_query, get_workflow_json_url
 from utils.ml_processor.constants import CONTROLNET_MODELS, ML_MODEL, ComfyRunnerModel, ComfyWorkflow
 
 
@@ -37,15 +37,30 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         workflow_json, output_node_ids = get_model_workflow_from_query(model, query_obj)
         workflow_file = get_workflow_json_url(workflow_json)
 
+        models_using_sdxl = [
+                ComfyWorkflow.SDXL.value, 
+                ComfyWorkflow.SDXL_IMG2IMG.value,
+                ComfyWorkflow.SDXL_CONTROLNET.value, 
+                ComfyWorkflow.SDXL_INPAINTING.value,
+                ComfyWorkflow.IP_ADAPTER_FACE.value,
+                ComfyWorkflow.IP_ADAPTER_FACE_PLUS.value,
+                ComfyWorkflow.IP_ADAPTER_PLUS.value
+            ]
+
         # resizing image for sdxl
-        if model.display_name() in [ComfyWorkflow.STEERABLE_MOTION.value]:
-            new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
-            file = data_repo.get_file_from_uuid(query_obj.image_uuid)
-            new_file = normalize_size_internal_file_obj(file, dim=[new_width, new_height], create_new_file=True)
-            query_obj.image_uuid = new_file.uuid
+        file_uuid_list = get_file_list_from_query_obj(query_obj)
+        if model.display_name() in models_using_sdxl and len(file_uuid_list):
+            new_uuid_list = []
+            for file_uuid in file_uuid_list:
+                new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
+                file = data_repo.get_file_from_uuid(file_uuid)
+                new_file = normalize_size_internal_file_obj(file, dim=[new_width, new_height], create_new_file=True)
+                new_uuid_list.append(new_file.uuid)
+            
+            file_uuid_list = new_uuid_list
 
         index_files = True if model.display_name() in ['steerable_motion'] else False
-        file_zip = get_file_zip_url(query_obj, index_files=index_files)
+        file_zip = get_file_zip_url(file_uuid_list, index_files=index_files)
 
         data = {
             "workflow_json": workflow_file,
