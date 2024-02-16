@@ -15,7 +15,6 @@ import json
 
 MODEL_PATH_DICT = {
     ComfyWorkflow.SDXL: {"workflow_path": 'comfy_workflows/sdxl_workflow_api.json', "output_node_id": 19},
-    ComfyWorkflow.SDXL_IMG2IMG: {"workflow_path": 'comfy_workflows/sdxl_img2img_workflow_api.json', "output_node_id": 31},
     ComfyWorkflow.SDXL_CONTROLNET: {"workflow_path": 'comfy_workflows/sdxl_controlnet_workflow_api.json', "output_node_id": 9},
     ComfyWorkflow.SDXL_CONTROLNET_OPENPOSE: {"workflow_path": 'comfy_workflows/sdxl_openpose_workflow_api.json', "output_node_id": 9},
     ComfyWorkflow.LLAMA_2_7B: {"workflow_path": 'comfy_workflows/llama_workflow_api.json', "output_node_id": 14},
@@ -55,31 +54,6 @@ class ComfyDataTransform:
         workflow["11"]["inputs"]["steps"], workflow["11"]["inputs"]["cfg"] = steps, cfg
 
         return json.dumps(workflow), output_node_ids
-
-    @staticmethod
-    def transform_sdxl_img2img_workflow(query: MLQueryObject):
-        data_repo = DataRepo()
-        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_IMG2IMG)
-
-        # workflow params
-        height, width = 1024, 1024
-        positive_prompt, negative_prompt = query.prompt, query.negative_prompt
-        steps, cfg = 20, 7      # hardcoding values
-        strength = round(query.strength / 100, 1)
-        image = data_repo.get_file_from_uuid(query.image_uuid)
-        image_name = image.filename
-
-        # updating params
-        workflow["37:0"]["inputs"]["image"] = image_name
-        workflow["42:0"]["inputs"]["text"] = positive_prompt
-        workflow["42:1"]["inputs"]["text"] = negative_prompt
-        workflow["42:2"]["inputs"]["steps"] = steps
-        workflow["42:2"]["inputs"]["cfg"] = cfg
-        workflow["42:2"]["inputs"]["denoise"] = 1 - strength
-        workflow["42:2"]["inputs"]["seed"] = random_seed()
-
-        return json.dumps(workflow), output_node_ids
-
 
     @staticmethod
     def transform_sdxl_controlnet_workflow(query: MLQueryObject):
@@ -152,7 +126,6 @@ class ComfyDataTransform:
         steps, cfg = query.num_inference_steps, query.guidance_scale
         input_image = query.data.get('data', {}).get('input_image', None)
         mask = query.data.get('data', {}).get('mask', None)
-        timing = data_repo.get_timing_from_uuid(query.timing_uuid)
 
         # inpainting workflows takes in an image and inpaints the transparent area
         combined_img = combine_mask_and_input_image(mask, input_image)
@@ -162,7 +135,6 @@ class ComfyDataTransform:
         file_data = {
             "name": filename,
             "type": InternalFileType.IMAGE.value,
-            "project_id": timing.shot.project.uuid
         }
 
         if hosted_url:
@@ -263,13 +235,46 @@ class ComfyDataTransform:
     @staticmethod
     def transform_steerable_motion_workflow(query: MLQueryObject):
 
+        def update_json_with_loras(json_data, loras):
+            start_id = 536
+            new_ids = []
 
+            # Add LoRAs
+            for lora in loras:
+                new_id = str(start_id)
+                json_data[new_id] = {
+                    "inputs": {
+                        "lora_name": lora["lora_name"],
+                        "strength": lora["lora_strength"],
+                        "prev_motion_lora": [new_ids[-1] if new_ids else "", 0]
+                    },
+                    "class_type": "ADE_AnimateDiffLoRALoader",
+                    "_meta": {
+                        "title": "Load AnimateDiff LoRA 🎭🅐🅓"
+                    }
+                }
+                if new_ids:  # Update previous node's prev_motion_lora to point to this new node
+                    json_data[new_ids[-1]]['inputs']['prev_motion_lora'][0] = new_id
+                new_ids.append(new_id)
+                start_id += 1
+
+            # Ensure the last node's prev_motion_lora is empty
+            if new_ids:
+                json_data[new_ids[-1]]['inputs']['prev_motion_lora'] = ["", 0]
+
+            # Update node 545 if needed and if there are new items
+            if loras and "545" in json_data:
+                json_data["545"]["inputs"]["motion_lora"][0] = "546"
+
+            return json_data
+    
         sm_data = query.data.get('data', {})
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.STEERABLE_MOTION)
         #project_settings = data_repo.get_project_setting(shot.project.uuid)
         # width = project_settings.width
         # height = project_settings.height
-
+        # create a list of items called loras containining lora_name and lora_strength with placeholder values                
+        workflow = update_json_with_loras(workflow, st_data.get('lora_data'))
 
         print(sm_data)
         workflow['464']['inputs']['height'] = sm_data.get('height')
@@ -327,8 +332,7 @@ MODEL_WORKFLOW_MAP = {
     ML_MODEL.ipadapter_plus.workflow_name: ComfyDataTransform.transform_ipadaptor_plus_workflow,
     ML_MODEL.ipadapter_face.workflow_name: ComfyDataTransform.transform_ipadaptor_face_workflow,
     ML_MODEL.ipadapter_face_plus.workflow_name: ComfyDataTransform.transform_ipadaptor_face_plus_workflow,
-    ML_MODEL.ad_interpolation.workflow_name: ComfyDataTransform.transform_steerable_motion_workflow,
-    ML_MODEL.sdxl_img2img.workflow_name: ComfyDataTransform.transform_sdxl_img2img_workflow
+    ML_MODEL.ad_interpolation.workflow_name: ComfyDataTransform.transform_steerable_motion_workflow
 }
 
 # returns stringified json of the workflow
@@ -349,28 +353,21 @@ def get_workflow_json_url(workflow_json):
     
     return ml_client.upload_training_data(temp_json_path, delete_after_upload=True)
 
-def get_file_list_from_query_obj(query_obj: MLQueryObject):
+# returns the zip file which can be passed to the comfy_runner replicate endpoint
+def get_file_zip_url(query_obj: MLQueryObject, index_files=False) -> str:
+    from utils.ml_processor.ml_interface import get_ml_client
+
+    data_repo = DataRepo()
+    ml_client = get_ml_client()
     file_uuid_list = []
 
     if query_obj.image_uuid:
         file_uuid_list.append(query_obj.image_uuid)
     
-    if query_obj.mask_uuid:
-        file_uuid_list.append(query_obj.mask_uuid)
-    
     for k, v in query_obj.data.get('data', {}).items():
         if k.startswith("file_"):
             file_uuid_list.append(v)
-    
-    return file_uuid_list
 
-# returns the zip file which can be passed to the comfy_runner replicate endpoint
-def get_file_zip_url(file_uuid_list, index_files=False) -> str:
-    from utils.ml_processor.ml_interface import get_ml_client
-
-    data_repo = DataRepo()
-    ml_client = get_ml_client()
-    
     file_list = data_repo.get_image_list_from_uuid_list(file_uuid_list)
     filename_list = [f.filename for f in file_list] if not index_files else []  # file names would be indexed like 1.png, 2.png ...
     zip_path = zip_images([f.location for f in file_list], 'videos/temp/input_images.zip', filename_list)

@@ -11,6 +11,9 @@ from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from utils import st_memory
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+import requests
+
 
 def animation_style_element(shot_uuid):
     disable_generate = False
@@ -34,40 +37,10 @@ def animation_style_element(shot_uuid):
     
     advanced1, advanced2, advanced3 = st.columns([1.0,1.5, 1.0])
     with advanced1:
-        st.markdown("#### Animation Settings")
+        st.markdown("### Individual frame settings")
 
-    with advanced3:
-        with st.expander("Bulk edit"):
-            what_would_you_like_to_edit = st.selectbox("What would you like to edit?", options=["Seconds to next frames", "Speed of transitions", "Freedom between frames","Strength of frames",  "Motion during frames"], key="what_would_you_like_to_edit")
-            if what_would_you_like_to_edit == "Seconds to next frames":
-                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=6.00, step=0.25, value=1.0, key="what_to_change_it_to")
-            if what_would_you_like_to_edit == "Strength of frames":
-                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=1.0, step=0.01, value=0.5, key="what_to_change_it_to")
-            elif what_would_you_like_to_edit == "Speed of transitions":
-                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, value=0.6, key="what_to_change_it_to")
-            elif what_would_you_like_to_edit == "Freedom between frames":
-                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.2, max_value=0.95, step=0.01, value=0.5, key="what_to_change_it_to")
-            elif what_would_you_like_to_edit == "Motion during frames":
-                what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="what_to_change_it_to")
-            
-            if st.button("Bulk edit", key="bulk_edit"):
-                if what_would_you_like_to_edit == "Strength of frames":
-                    for idx, timing in enumerate(timing_list):
-                        st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
-                elif what_would_you_like_to_edit == "Seconds to next frames":
-                    for idx, timing in enumerate(timing_list):
-                        st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
-                elif what_would_you_like_to_edit == "Speed of transitions":
-                    for idx, timing in enumerate(timing_list):
-                        st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'] = what_to_change_it_to
-                elif what_would_you_like_to_edit == "Freedom between frames":
-                    for idx, timing in enumerate(timing_list):
-                        st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'] = what_to_change_it_to
-                elif what_would_you_like_to_edit == "Motion during frames":
-                    for idx, timing in enumerate(timing_list):
-                        st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
     
-    st.markdown("***")
+    
     type_of_setting = "Individual"
     if type_of_setting == "Individual":        
         items_per_row = 3
@@ -136,12 +109,8 @@ def animation_style_element(shot_uuid):
                 if (i < len(timing_list) - 1)  or (len(timing_list) % items_per_row != 0):
                     st.markdown("***")
         
-        with advanced1:
-            if st.button("Save current settings", key="save_current_settings"):
-                update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts)
-                st.success("Settings saved successfully.")
-                time.sleep(0.7)
-                st.rerun()
+        
+
         
         dynamic_strength_values, dynamic_key_frame_influence_values, dynamic_frame_distribution_values = transform_data(strength_of_frames, freedoms_between_frames, speeds_of_transitions, distances_to_next_frames)
 
@@ -154,8 +123,16 @@ def animation_style_element(shot_uuid):
 
         with st.sidebar:
             with st.expander("📈 Visualise motion data", expanded=True): 
-                if st_memory.toggle("Visualise motion data"):
+                if st_memory.toggle("Open", key="open_motion_data"):
+                    h1, h2 = st.columns([1, 1])
+                    with h2:
+                        if st.button("Save current settings", key="save_current_settings",use_container_width=True):
+                            update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts)
+                            st.success("Settings saved successfully.")
+                            time.sleep(0.7)
+                            st.rerun()
                     
+                    st.markdown("#### Keyframe positions")
                     keyframe_positions = get_keyframe_positions(type_of_frame_distribution, dynamic_frame_distribution_values, timing_list, linear_frame_distribution_value)                    
                     keyframe_positions = [int(kf * 16) for kf in keyframe_positions]                                        
                     last_key_frame_position = (keyframe_positions[-1])
@@ -163,8 +140,160 @@ def animation_style_element(shot_uuid):
                     key_frame_influence_values = extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value)                                                                                                            
                     weights_list, frame_numbers_list = calculate_weights(keyframe_positions, strength_values, 4, key_frame_influence_values,last_key_frame_position)                                                    
                     plot_weights(weights_list, frame_numbers_list)
+                
+                    st.markdown("***")
+
+                    st.markdown("#### Bulk edit")
+                    
+                    what_would_you_like_to_edit = st.selectbox("What would you like to edit?", options=["Seconds to next frames", "Speed of transitions", "Freedom between frames","Strength of frames",  "Motion during frames"], key="what_would_you_like_to_edit")
+                    if what_would_you_like_to_edit == "Seconds to next frames":
+                        what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=6.00, step=0.25, value=1.0, key="what_to_change_it_to")
+                    if what_would_you_like_to_edit == "Strength of frames":
+                        what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=1.0, step=0.01, value=0.5, key="what_to_change_it_to")
+                    elif what_would_you_like_to_edit == "Speed of transitions":
+                        what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, value=0.6, key="what_to_change_it_to")
+                    elif what_would_you_like_to_edit == "Freedom between frames":
+                        what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.2, max_value=0.95, step=0.01, value=0.5, key="what_to_change_it_to")
+                    elif what_would_you_like_to_edit == "Motion during frames":
+                        what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="what_to_change_it_to")
+                    
+                    if st.button("Bulk edit", key="bulk_edit"):
+                        if what_would_you_like_to_edit == "Strength of frames":
+                            for idx, timing in enumerate(timing_list):
+                                st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
+                        elif what_would_you_like_to_edit == "Seconds to next frames":
+                            for idx, timing in enumerate(timing_list):
+                                st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
+                        elif what_would_you_like_to_edit == "Speed of transitions":
+                            for idx, timing in enumerate(timing_list):
+                                st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'] = what_to_change_it_to
+                        elif what_would_you_like_to_edit == "Freedom between frames":
+                            for idx, timing in enumerate(timing_list):
+                                st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'] = what_to_change_it_to
+                        elif what_would_you_like_to_edit == "Motion during frames":
+                            for idx, timing in enumerate(timing_list):
+                                st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
+                        st.rerun()
+
+    # if it's in local DEVELOPMENT ENVIRONMENT
+    st.markdown("***")
+
+    st.markdown("#### Motion guidance")
+    
+
+    
+    
+    tab1, tab2, tab3  = st.tabs(["Apply LoRAs","Explore LoRAs","Train LoRAs"])
+
+    with tab1:
+
+        if "current_loras" not in st.session_state:
+            st.session_state["current_loras"] = []
+        
 
 
+        
+        
+
+        # Initialize a single list to hold dictionaries for LoRA data
+        lora_data = []
+
+        # Check if the directory exists and list files, or use a default list
+        if os.path.exists("ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"):
+            files = os.listdir("ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora")
+        else:
+            files = ['zooming_in_temporal_unet.safetensors', 'cat_walking_temporal_unet.safetensors', 'playing_banjo_temporal_unet.safetensors']
+
+        # Iterate through each current LoRA in session state
+        for idx, lora in enumerate(st.session_state["current_loras"]):
+            if st.session_state["current_loras"][idx] == "":
+                h1, h2, h3, h4 = st.columns([1, 1, 1, 0.5])
+
+                with h1:
+                    if len(files) == 0:
+                        st.error("No LoRAs found in the directory - go to Explore to download some, or drop them into ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora")
+                        st.stop()
+                    else:
+                        # User selects the LoRA they want to use
+                        which_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"which_lora_{idx}")
+                        
+                with h2:
+                    # User selects the strength for the LoRA
+                    strength_of_lora = st.slider("How strong would you like the LoRA to be?", min_value=0.0, max_value=1.0, value=0.5, step=0.01, key=f"strength_of_lora_{idx}")
+                    
+                    # Append the selected LoRA name and strength as a dictionary to lora_data
+                    lora_data.append({"lora_name": which_lora, "lora_strength": strength_of_lora})
+                    # st.write(lora_data)
+                with h3:
+                    when_to_apply_lora = st.slider("When to apply the LoRA?", min_value=0, max_value=100, value=(0,100), step=1, key=f"when_to_apply_lora_{idx}",disabled=True,help="This feature is not yet available.")
+                with h4:
+                    # remove button
+                    st.write("")
+                    if st.button("Remove", key=f"remove_lora_{idx}"):
+                        # pop the current lora from the list
+                        st.session_state["current_loras"].pop(idx)
+                        st.rerun()
+            
+            
+        if st.button("Add another LoRA", key="add_motion_guidance"):
+            st.session_state["current_loras"].append("")
+            st.rerun()
+    with tab2:
+        
+        file_links = [
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_tony_stark_r64_temporal_unet.safetensors",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_train_r128_temporal_unet.safetensors",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/300_car_temporal_unet.safetensors",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_desert_48_temporal_unet.safetensors",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_temporal_unet.safetensors",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_jeep_driving_r32_temporal_unet.safetensors",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_man_running_temporal_unet.safetensors",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_rotation_temporal_unet.safetensors",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/750_jeep_driving_r32_temporal_unet.safetensors",
+            "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/300_zooming_in_temporal_unet.safetensors",
+            "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_cat_walking_temporal_unet.safetensors",
+            "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_playing_banjo_temporal_unet.safetensors",
+            "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_woman_dancing_temporal_unet.safetensors",
+            "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_zooming_out_temporal_unet.safetensors"
+        ]
+                
+        which_would_you_like_to_download = st.selectbox("Which LoRA would you like to download?", options=file_links, key="which_would_you_like_to_download")
+        if st.button("Download LoRA", key="download_lora"):
+            # Specify the directory where you want to save the file
+            save_directory = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
+            os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
+            
+            # Extract the filename from the URL
+            filename = which_would_you_like_to_download.split("/")[-1]
+            save_path = os.path.join(save_directory, filename)
+            
+            # Download the file
+            response = requests.get(which_would_you_like_to_download)
+            if response.status_code == 200:
+                with open(save_path, 'wb') as f:
+                    f.write(response.content)
+                st.success(f"Downloaded LoRA to {save_path}")
+            else:
+                st.error("Failed to download LoRA")
+
+
+    with tab3:
+        b1, b2 = st.columns([1, 1])
+        with b1:
+            st.error("This feature is not yet available.")
+            name_this_lora = st.text_input("Name this LoRA", key="name_this_lora")
+            describe_the_motion = st.text_area("Describe the motion", key="describe_the_motion")
+            training_video = st.file_uploader("Upload a video to train a new LoRA", type=["mp4"])
+
+            if st.button("Train LoRA", key="train_lora", use_container_width=True):
+                st.write("Training LoRA")
+            
+            
+        
+
+        
+    
     st.markdown("***")
     st.markdown("#### Overall style settings")
 
@@ -290,7 +419,7 @@ def animation_style_element(shot_uuid):
         type_of_key_frame_influence=type_of_key_frame_influence,
         linear_key_frame_influence_value=float(linear_key_frame_influence_value),
         dynamic_key_frame_influence_values=dynamic_key_frame_influence_values,
-        normalise_speed=False,
+        normalise_speed=True,
         ipadapter_noise=0.3,
         animation_style=AnimationStyleType.CREATIVE_INTERPOLATION.value,
         context_length=context_length,
@@ -302,7 +431,8 @@ def animation_style_element(shot_uuid):
         individual_negative_prompts=individual_negative_prompts,
         animation_stype=AnimationStyleType.CREATIVE_INTERPOLATION.value,
         # make max_frame the final value in the dynamic_frame_distribution_values
-        max_frames=str(dynamic_frame_distribution_values[-1])
+        max_frames=str(dynamic_frame_distribution_values[-1]),
+        lora_data=lora_data
 
 
     )

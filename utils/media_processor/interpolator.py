@@ -117,6 +117,7 @@ class VideoInterpolator:
                     "individual_prompts": settings["individual_prompts"],
                     "individual_negative_prompts": settings["individual_negative_prompts"],
                     "max_frames": settings["max_frames"],
+                    "lora_data": settings["lora_data"],
 
                 }
 
