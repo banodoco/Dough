@@ -15,6 +15,7 @@ import json
 
 MODEL_PATH_DICT = {
     ComfyWorkflow.SDXL: {"workflow_path": 'comfy_workflows/sdxl_workflow_api.json', "output_node_id": 19},
+    ComfyWorkflow.SDXL_IMG2IMG: {"workflow_path": 'comfy_workflows/sdxl_img2img_workflow_api.json', "output_node_id": 31},
     ComfyWorkflow.SDXL_CONTROLNET: {"workflow_path": 'comfy_workflows/sdxl_controlnet_workflow_api.json', "output_node_id": 9},
     ComfyWorkflow.SDXL_CONTROLNET_OPENPOSE: {"workflow_path": 'comfy_workflows/sdxl_openpose_workflow_api.json', "output_node_id": 9},
     ComfyWorkflow.LLAMA_2_7B: {"workflow_path": 'comfy_workflows/llama_workflow_api.json', "output_node_id": 14},
@@ -54,7 +55,31 @@ class ComfyDataTransform:
         workflow["11"]["inputs"]["steps"], workflow["11"]["inputs"]["cfg"] = steps, cfg
 
         return json.dumps(workflow), output_node_ids
+    
+    @staticmethod
+    def transform_sdxl_img2img_workflow(query: MLQueryObject):
+        data_repo = DataRepo()
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_IMG2IMG)
 
+        # workflow params
+        height, width = 1024, 1024
+        positive_prompt, negative_prompt = query.prompt, query.negative_prompt
+        steps, cfg = 20, 7      # hardcoding values
+        strength = round(query.strength / 100, 1)
+        image = data_repo.get_file_from_uuid(query.image_uuid)
+        image_name = image.filename
+
+        # updating params
+        workflow["37:0"]["inputs"]["image"] = image_name
+        workflow["42:0"]["inputs"]["text"] = positive_prompt
+        workflow["42:1"]["inputs"]["text"] = negative_prompt
+        workflow["42:2"]["inputs"]["steps"] = steps
+        workflow["42:2"]["inputs"]["cfg"] = cfg
+        workflow["42:2"]["inputs"]["denoise"] = 1 - strength
+        workflow["42:2"]["inputs"]["seed"] = random_seed()
+
+        return json.dumps(workflow), output_node_ids
+    
     @staticmethod
     def transform_sdxl_controlnet_workflow(query: MLQueryObject):
         data_repo = DataRepo()
@@ -126,6 +151,7 @@ class ComfyDataTransform:
         steps, cfg = query.num_inference_steps, query.guidance_scale
         input_image = query.data.get('data', {}).get('input_image', None)
         mask = query.data.get('data', {}).get('mask', None)
+        timing = data_repo.get_timing_from_uuid(query.timing_uuid)
 
         # inpainting workflows takes in an image and inpaints the transparent area
         combined_img = combine_mask_and_input_image(mask, input_image)
@@ -135,6 +161,7 @@ class ComfyDataTransform:
         file_data = {
             "name": filename,
             "type": InternalFileType.IMAGE.value,
+            "project_id": timing.shot.project.uuid
         }
 
         if hosted_url:
@@ -332,7 +359,8 @@ MODEL_WORKFLOW_MAP = {
     ML_MODEL.ipadapter_plus.workflow_name: ComfyDataTransform.transform_ipadaptor_plus_workflow,
     ML_MODEL.ipadapter_face.workflow_name: ComfyDataTransform.transform_ipadaptor_face_workflow,
     ML_MODEL.ipadapter_face_plus.workflow_name: ComfyDataTransform.transform_ipadaptor_face_plus_workflow,
-    ML_MODEL.ad_interpolation.workflow_name: ComfyDataTransform.transform_steerable_motion_workflow
+    ML_MODEL.ad_interpolation.workflow_name: ComfyDataTransform.transform_steerable_motion_workflow,
+    ML_MODEL.sdxl_img2img.workflow_name: ComfyDataTransform.transform_sdxl_img2img_workflow
 }
 
 # returns stringified json of the workflow
@@ -354,15 +382,14 @@ def get_workflow_json_url(workflow_json):
     return ml_client.upload_training_data(temp_json_path, delete_after_upload=True)
 
 # returns the zip file which can be passed to the comfy_runner replicate endpoint
-def get_file_zip_url(query_obj: MLQueryObject, index_files=False) -> str:
-    from utils.ml_processor.ml_interface import get_ml_client
+def get_file_list_from_query_obj(query_obj: MLQueryObject):
 
-    data_repo = DataRepo()
-    ml_client = get_ml_client()
     file_uuid_list = []
 
     if query_obj.image_uuid:
         file_uuid_list.append(query_obj.image_uuid)
+    if query_obj.mask_uuid:
+        file_uuid_list.append(query_obj.mask_uuid)
     
     for k, v in query_obj.data.get('data', {}).items():
         if k.startswith("file_"):
