@@ -10,7 +10,7 @@ from shared.logging.logging import app_logger
 
 COMFY_RUNNER_PATH = "./comfy_runner"
 
-def predict_gpu_output(workflow: str, file_path_list=[], output_node=None) -> str:
+def predict_gpu_output(workflow: str, file_path_list=[], output_node=None, extra_model_list=[]) -> str:
     # spec = importlib.util.spec_from_file_location('my_module', f'{COMFY_RUNNER_PATH}/inf.py')
     # comfy_runner = importlib.util.module_from_spec(spec)
     # spec.loader.exec_module(comfy_runner)
@@ -27,7 +27,8 @@ def predict_gpu_output(workflow: str, file_path_list=[], output_node=None) -> st
         workflow_input=workflow,
         file_path_list=file_path_list,
         stop_server_after_completion=True,
-        output_node_ids=output_node
+        output_node_ids=output_node,
+        extra_models_list=extra_model_list
     )
 
     return output['file_paths']   # ignoring text output for now {"file_paths": [], "text_content": []}
