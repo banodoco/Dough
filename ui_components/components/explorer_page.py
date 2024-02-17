@@ -234,7 +234,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         guidance_scale=5,
                         seed=-1,
                         num_inference_steps=30,
-                        strength=0.8,
+                        strength=strength_of_image,
                         adapter_type=None,
                         prompt=prompt,
                         negative_prompt=negative_prompt,

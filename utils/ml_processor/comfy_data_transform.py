@@ -62,7 +62,7 @@ class ComfyDataTransform:
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_IMG2IMG)
 
         # workflow params
-        height, width = 1024, 1024
+        height, width = query.height, query.width
         positive_prompt, negative_prompt = query.prompt, query.negative_prompt
         steps, cfg = 20, 7      # hardcoding values
         strength = round(query.strength / 100, 1)
