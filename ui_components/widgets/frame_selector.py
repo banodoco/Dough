@@ -7,6 +7,7 @@ from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from utils.data_repo.data_repo import DataRepo
 from ui_components.constants import WorkflowStageType
 from utils import st_memory
+from ui_components.methods.common_methods import add_new_shot
 
 
 
@@ -17,23 +18,38 @@ def frame_selector_widget(show_frame_selector=True):
     shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
     shot_list = data_repo.get_shot_list(shot.project.uuid)
     len_timing_list = len(timing_list) if len(timing_list) > 0 else 1.0
+    project_uuid = shot.project.uuid
 
     if 'prev_shot_index' not in st.session_state:
         st.session_state['prev_shot_index'] = shot.shot_idx
-
+    if 'shot_name' not in st.session_state:
+        st.session_state['shot_name'] = shot.name
     shot1, shot2 = st.columns([1, 1])
-    with shot1:
+    with shot1:        
         shot_names = [s.name for s in shot_list]
-        shot_name = st.selectbox('Shot name:', shot_names, key="current_shot_sidebar_selector",index=shot_names.index(shot.name))
+        shot_names.append('**Create New Shot**')   
+        current_shot_name = st.selectbox('Shot name:', shot_names, key="current_shot_sidebar_selector",index=shot_names.index(shot.name))
+        if current_shot_name != "**Create New Shot**":
+            if current_shot_name != st.session_state['shot_name']:
+                st.session_state['shot_name'] = current_shot_name                
+                st.rerun()
+                    
+        if current_shot_name == "**Create New Shot**":
+            new_shot_name = st.text_input("New shot name:", max_chars=40, key=f"shot_name_sidebar_{st.session_state['shot_name']}")
+            if st.button("Create new shot", key=f"create_new_shot_{st.session_state['shot_name']}"):
+                new_shot = add_new_shot(project_uuid, name=new_shot_name)
+                st.session_state['shot_name'] = new_shot_name
+                st.session_state["shot_uuid"] = new_shot.uuid
+                st.rerun()
     # find shot index based on shot name
-    st.session_state['current_shot_index'] = shot_names.index(shot_name) + 1
+    st.session_state['current_shot_index'] = shot_names.index(st.session_state['shot_name']) + 1
 
-    if shot_name != shot.name:
-        st.session_state["shot_uuid"] = shot_list[shot_names.index(shot_name)].uuid
+    if st.session_state['shot_name'] != shot.name:
+        st.session_state["shot_uuid"] = shot_list[shot_names.index(st.session_state['shot_name'])].uuid
         st.rerun()
 
     if not ('current_shot_index' in st.session_state and st.session_state['current_shot_index']):
-        st.session_state['current_shot_index'] = shot_names.index(shot_name) + 1
+        st.session_state['current_shot_index'] = shot_names.index(st.session_state['shot_name']) + 1
         update_current_shot_index(st.session_state['current_shot_index'])
     # st.write if frame_selector is present
     
