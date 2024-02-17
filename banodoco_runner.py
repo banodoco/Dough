@@ -225,7 +225,7 @@ def check_and_update_db():
                                 print("processing inference output")
                                 process_inference_output(**origin_data)
                                 timing_uuid, shot_uuid = origin_data.get('timing_uuid', None), origin_data.get('shot_uuid', None)
-                                update_cache_dict(origin_data['inference_type'], log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list)
+                                update_cache_dict(origin_data.get('inference_type', ""), log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list)
 
                             except Exception as e:
                                 app_logger.log(LoggingType.ERROR, f"Error: {e}")
@@ -271,7 +271,7 @@ def check_and_update_db():
                 from ui_components.methods.common_methods import process_inference_output
                 process_inference_output(**origin_data)
                 timing_uuid, shot_uuid = origin_data.get('timing_uuid', None), origin_data.get('shot_uuid', None)
-                update_cache_dict(origin_data['inference_type'], log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list)
+                update_cache_dict(origin_data.get('inference_type', ''), log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list)
 
             except Exception as e:
                 print("error occured: ", str(e))

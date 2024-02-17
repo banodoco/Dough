@@ -8,6 +8,7 @@ from shared.constants import QUEUE_INFERENCE_QUERIES, AnimationStyleType, Animat
 from ui_components.constants import DefaultTimingStyleParams
 from ui_components.methods.file_methods import generate_temp_file, zip_images
 from ui_components.models import InferenceLogObject
+from utils.common_utils import padded_integer
 from utils.constants import MLQueryObject
 
 from utils.data_repo.data_repo import DataRepo
@@ -123,7 +124,7 @@ class VideoInterpolator:
 
                 # adding the input images
                 for idx, img_uuid in enumerate(settings['file_uuid_list']):
-                    sm_data["file_image_" + str(idx) + "_uuid"] = img_uuid
+                    sm_data[f"file_image_{padded_integer(idx+1)}" + "_uuid"] = img_uuid
 
                 # NOTE: @Peter all the above settings are put in the 'data' parameter below
                 ml_query_object = MLQueryObject(
