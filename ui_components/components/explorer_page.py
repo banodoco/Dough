@@ -34,7 +34,7 @@ def explorer_page(project_uuid):
         generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None)
     st.markdown("***")
 
-    gallery_image_view(project_uuid,False,view=['add_and_remove_from_shortlist','view_inference_details'])
+    gallery_image_view(project_uuid,False,view=['add_and_remove_from_shortlist','view_inference_details','shot_chooser'])
 
 def generate_images_element(position='explorer', project_uuid=None, timing_uuid=None):
     data_repo = DataRepo()
@@ -146,7 +146,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
         d2, d3 = st.columns([1,1])
     with d2:  
         
-        number_to_generate = st.slider("How many images would you like to generate?", min_value=0, max_value=100, value=4, step=2, key="number_to_generate", help="It'll generate 4 from each variation.")
+        number_to_generate = st.slider("How many images would you like to generate?", min_value=4, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
     
     with d3:
         st.write(" ")
@@ -347,24 +347,24 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         with f2:
             num_items_per_page = st_memory.slider('Items per page:', min_value=10, max_value=50, value=16, key="num_items_per_page_explorer")
 
-
-        
-        shot_chooser_1,shot_chooser_2,_ = st.columns([1, 1,0.5])
-        with shot_chooser_1:        
-            options = ["No shots", "Specific shots", "Any shot or no shot"]                          
-            if shot is None:            
-                default_value = 0
-            else:
-                default_value = 1
-            show_images_associated_with_shots = st.selectbox("Show images associated with:", options=options, index=default_value, key="show_images_associated_with_shots_explorer")
-        with shot_chooser_2:
-            if show_images_associated_with_shots == "Specific shots":
-                specific_shots = [shot.name for shot in shot_list]  
-                if shot is None:
-                    default_shot = specific_shots[0]
+        if 'shot_chooser' in view:
+            
+            shot_chooser_1,shot_chooser_2,_ = st.columns([1, 1,0.5])
+            with shot_chooser_1:        
+                options = ["No shots", "Specific shots", "Any shot or no shot"]                          
+                if shot is None:            
+                    default_value = 0
                 else:
-                    default_shot = shot.name
-                shots = st.multiselect("Shots to show:", options=specific_shots, default=default_shot, key="specific_shots_explorer")
+                    default_value = 1
+                show_images_associated_with_shots = st.selectbox("Show images associated with:", options=options, index=default_value, key="show_images_associated_with_shots_explorer")
+            with shot_chooser_2:
+                if show_images_associated_with_shots == "Specific shots":
+                    specific_shots = [shot.name for shot in shot_list]  
+                    if shot is None:
+                        default_shot = specific_shots[0]
+                    else:
+                        default_shot = shot.name
+                    shots = st.multiselect("Shots to show:", options=specific_shots, default=default_shot, key="specific_shots_explorer")
 
         if shortlist is False:
             page_number = k1.radio("Select page:", options=range(1, project_settings.total_gallery_pages + 1), horizontal=True, key="main_gallery")

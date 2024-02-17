@@ -10,7 +10,7 @@ def query_logger_page():
 
     data_repo = DataRepo()
     current_user = get_current_user()
-    b1, b2 = st.columns([1, 1])
+    b1, b2 = st.columns([1, 0.2])
 
     total_log_table_pages = st.session_state['total_log_table_pages'] if 'total_log_table_pages' in st.session_state else DefaultTimingStyleParams.total_log_table_pages
     list_of_pages = [i for i in range(1, total_log_table_pages + 1)]
