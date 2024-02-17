@@ -27,13 +27,6 @@ def adjust_shot_page(shot_uuid: str, h2):
         st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}] > :orange[{shot.name}]")
         st.markdown("***")
         shot_keyframe_element(st.session_state["shot_uuid"], 4, position="Individual")
-        project_setting = data_repo.get_project_setting(shot.project.uuid)
-            
-        with st.expander("✨ Generate Images", expanded=True):
-            generate_images_element(position='explorer', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
-            st.markdown("***")
-            
-        st.markdown("***")
-        gallery_image_view(shot.project.uuid, shortlist=False,view=['add_and_remove_from_shortlist','add_to_this_shot','view_inference_details'], shot=shot,sidebar=False)
+        
     else:
         frame_styling_page(st.session_state["shot_uuid"], h2)

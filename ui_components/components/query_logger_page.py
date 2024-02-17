@@ -24,23 +24,17 @@ def query_logger_page():
     if total_log_table_pages != total_page_count:
         st.session_state['total_log_table_pages'] = total_page_count
         st.rerun()
+
+    data = {
+        'Project': [],
+        'Prompt': [],
+        'Model': [],
+        'Inference time (sec)': [],            
+        'Status': []
+    }
+    
     if SERVER != ServerType.DEVELOPMENT.value:
-        data = {
-            'Project': [],
-            'Prompt': [],
-            'Model': [],
-            'Inference time (sec)': [],
-            'Cost ($)': [],
-            'Status': []
-        }
-    else:
-        data = {
-            'Project': [],
-            'Prompt': [],
-            'Model': [],
-            'Inference time (sec)': [],            
-            'Status': []
-        }
+        data["Cost ($)"] = []
 
     for log in inference_log_list:
         data['Project'].append(log.project.name)
@@ -54,5 +48,4 @@ def query_logger_page():
 
     
     st.table(data=data)
-
     st.markdown("***")

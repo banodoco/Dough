@@ -190,25 +190,15 @@ def animation_style_element(shot_uuid):
                     st.success("Settings saved successfully.")
                     time.sleep(0.7)
                     st.rerun()
+
     # if it's in local DEVELOPMENT ENVIRONMENT
     st.markdown("***")
-
     st.markdown("#### Motion guidance")
-    
 
-    
-    
     tab1, tab2, tab3  = st.tabs(["Apply LoRAs","Explore LoRAs","Train LoRAs"])
-
     with tab1:
-
         if "current_loras" not in st.session_state:
             st.session_state["current_loras"] = []
-        
-
-
-        
-        
 
         # Initialize a single list to hold dictionaries for LoRA data
         lora_data = []
@@ -255,8 +245,8 @@ def animation_style_element(shot_uuid):
         if st.button(text, key="add_motion_guidance"):
             st.session_state["current_loras"].append("")
             st.rerun()
+
     with tab2:
-        
         file_links = [
             "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors",
             "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_tony_stark_r64_temporal_unet.safetensors",
@@ -275,18 +265,18 @@ def animation_style_element(shot_uuid):
             "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_zooming_out_temporal_unet.safetensors"
         ]
                 
-        which_would_you_like_to_download = st.selectbox("Which LoRA would you like to download?", options=file_links, key="which_would_you_like_to_download")
+        motion_lora_url = st.selectbox("Which LoRA would you like to download?", options=file_links, key="motion_lora_url")
         if st.button("Download LoRA", key="download_lora"):
             with st.spinner("Downloading LoRA..."):
                 save_directory = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
                 os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
                 
                 # Extract the filename from the URL
-                filename = which_would_you_like_to_download.split("/")[-1]
+                filename = motion_lora_url.split("/")[-1]
                 save_path = os.path.join(save_directory, filename)
                 
                 # Download the file
-                response = requests.get(which_would_you_like_to_download)
+                response = requests.get(motion_lora_url)
                 if response.status_code == 200:
                     with open(save_path, 'wb') as f:
                         f.write(response.content)
@@ -294,33 +284,32 @@ def animation_style_element(shot_uuid):
                 else:
                     st.error("Failed to download LoRA")
 
-
     with tab3:
         b1, b2 = st.columns([1, 1])
         with b1:
             st.error("This feature is not yet available.")
-            name_this_lora = st.text_input("Name this LoRA", key="name_this_lora")
-            describe_the_motion = st.text_area("Describe the motion", key="describe_the_motion")
-            training_video = st.file_uploader("Upload a video to train a new LoRA", type=["mp4"])
+            # name_this_lora = st.text_input("Name this LoRA", key="name_this_lora")
+            # describe_the_motion = st.text_area("Describe the motion", key="describe_the_motion")
+            # training_video = st.file_uploader("Upload a video to train a new LoRA", type=["mp4"])
 
-            if st.button("Train LoRA", key="train_lora", use_container_width=True):
-                st.write("Training LoRA")
+            # if st.button("Train LoRA", key="train_lora", use_container_width=True):
+            #     st.write("Training LoRA")
                                 
     st.markdown("***")
     st.markdown("#### Overall style settings")
 
     sd_model_list = [
-    "Realistic_Vision_V5.1.safetensors",
-    "anything-v3-fp16-pruned.safetensors",
-    "counterfeitV30_25.safetensors",
-    "Deliberate_v2.safetensors",
-    "dreamshaper_8.safetensors",
-    "epicrealism_pureEvolutionV5.safetensors",
-    "majicmixRealistic_v6.safetensors",
-    "perfectWorld_v6Baked.safetensors",            
-    "wd-illusion-fp16.safetensors",
-    "aniverse_v13.safetensors",
-    "juggernaut_v21.safetensor"
+        "Realistic_Vision_V5.1.safetensors",
+        "anything-v3-fp16-pruned.safetensors",
+        "counterfeitV30_25.safetensors",
+        "Deliberate_v2.safetensors",
+        "dreamshaper_8.safetensors",
+        "epicrealism_pureEvolutionV5.safetensors",
+        "majicmixRealistic_v6.safetensors",
+        "perfectWorld_v6Baked.safetensors",            
+        "wd-illusion-fp16.safetensors",
+        "aniverse_v13.safetensors",
+        "juggernaut_v21.safetensor"
     ]
     # remove .safe tensors from the end of each model name
     # motion_scale = st_memory.slider("Motion scale:", min_value=0.0, max_value=2.0, value=1.3, step=0.01, key="motion_scale")        

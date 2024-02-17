@@ -37,8 +37,10 @@ def add_key_frame_section(shot_uuid, individual_view=True):
                 add_key_frame(selected_image_location, "No", shot_uuid,refresh_state=False)
                 progress_bar.progress((i + 1) / len(uploaded_images))
         else:
+            st.error("Please generate new images or upload them")
+            time.sleep(0.7)
             # Add a frame with no image or a default image
-            add_key_frame(None, "No", shot_uuid,refresh_state=False)
+            # add_key_frame(None, "No", shot_uuid, refresh_state=False)
         st.rerun()
 
 def display_selected_key_frame(selected_image_location, apply_zoom_effects):

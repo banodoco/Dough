@@ -381,7 +381,7 @@ def get_workflow_json_url(workflow_json):
     
     return ml_client.upload_training_data(temp_json_path, delete_after_upload=True)
 
-# returns the zip file which can be passed to the comfy_runner replicate endpoint
+
 def get_file_list_from_query_obj(query_obj: MLQueryObject):
     file_uuid_list = []
 
