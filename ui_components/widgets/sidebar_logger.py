@@ -8,7 +8,7 @@ import math
 from ui_components.widgets.frame_selector import update_current_frame_index
 
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.constants import ML_MODEL
+from utils.ml_processor.constants import ML_MODEL, MODEL_FILTERS
 
 def sidebar_logger(shot_uuid):
     data_repo = DataRepo()
@@ -35,11 +35,24 @@ def sidebar_logger(shot_uuid):
     
     page_number = b1.number_input('Page number', min_value=1, max_value=project_setting.total_log_pages, value=1, step=1)
     items_per_page = b2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
+    
+    selected_option = st.selectbox(
+        "Choose an option",
+        ["All"] + [m.display_name() for m in MODEL_FILTERS]
+    )
+    
+    log_filter_data = {
+        "project_id" : shot.project.uuid,
+        "page" : page_number,
+        "data_per_page" : items_per_page,
+        "status_list" : status_list
+    }
+    
+    if selected_option != "All":
+        log_filter_data["model_name_list"] = [selected_option]      # multiple models can be entered here for filtering if needed
+    
     log_list, total_page_count = data_repo.get_all_inference_log_list(
-        project_id=shot.project.uuid,
-        page=page_number,
-        data_per_page=items_per_page,
-        status_list=status_list
+        **log_filter_data
     )
     
     if project_setting.total_log_pages != total_page_count:

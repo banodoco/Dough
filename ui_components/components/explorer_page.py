@@ -1,5 +1,6 @@
 import json
 import streamlit as st
+from ui_components.constants import GalleryImageViewType
 from ui_components.methods.common_methods import get_canny_img, process_inference_output,add_new_shot, save_new_image, save_uploaded_image
 from ui_components.methods.file_methods import generate_pil_image
 from ui_components.methods.ml_methods import query_llama2
@@ -31,7 +32,7 @@ def explorer_page(project_uuid):
     st.markdown("***")
 
     with st.expander("✨ Generate Images", expanded=True):
-        generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None)
+        generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None, shot_uuid=None)
     st.markdown("***")
 
     gallery_image_view(project_uuid,False,view=['add_and_remove_from_shortlist','view_inference_details','shot_chooser'])
@@ -305,7 +306,8 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         "log_uuid": log.uuid,
                         "project_uuid": project_uuid,
                         "timing_uuid": timing_uuid,
-                        "promote_new_generation": False
+                        "promote_new_generation": False,
+                        "shot_uuid": shot_uuid if shot_uuid else "explorer"
                     }
                     process_inference_output(**inference_data)
 
@@ -340,6 +342,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     data_repo = DataRepo()
     project_settings = data_repo.get_project_setting(project_uuid)
     shot_list = data_repo.get_shot_list(project_uuid)
+    shot_name_uuid_map = {s.name : s.uuid for s in shot_list}
+    shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]     # by default only showing explorer views
     k1,k2 = st.columns([5,1])
 
     if sidebar != True:
@@ -350,7 +354,6 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             num_items_per_page = st_memory.slider('Items per page:', min_value=10, max_value=50, value=16, key="num_items_per_page_explorer")
 
         if 'shot_chooser' in view:
-            
             shot_chooser_1,shot_chooser_2,_ = st.columns([1, 1,0.5])
             with shot_chooser_1:        
                 options = ["Explore", "Specific shots", "Any shot or Explore"]                          
@@ -360,13 +363,20 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                     default_value = 1
                 show_images_associated_with_shots = st.selectbox("Show images associated with:", options=options, index=default_value, key="show_images_associated_with_shots_explorer")
             with shot_chooser_2:
-                if show_images_associated_with_shots == "Specific shots":
+                if show_images_associated_with_shots == "Explore":
+                    shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]
+                
+                elif show_images_associated_with_shots == "Specific shots":
                     specific_shots = [shot.name for shot in shot_list]  
                     if shot is None:
                         default_shot = specific_shots[0]
                     else:
                         default_shot = shot.name
-                    shots = st.multiselect("Shots to show:", options=specific_shots, default=default_shot, key="specific_shots_explorer")
+                    shot_name_list = st.multiselect("Shots to show:", options=specific_shots, default=default_shot, key="specific_shots_explorer")
+                    shot_uuid_list = [str(shot_name_uuid_map[s]) for s in shot_name_list] if shot_name_list else ['xyz']
+                    
+                else:
+                    shot_uuid_list = []
 
         if shortlist is False:
             page_number = k1.radio("Select page:", options=range(1, project_settings.total_gallery_pages + 1), horizontal=True, key="main_gallery")
@@ -394,8 +404,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         "sort_order" : SortOrder.DESCENDING.value 
     }
     
-    if shot:
-        gallery_image_filter_data["shot_uuid_list"] = [str(shot.uuid)]
+    if shot_uuid_list and not sidebar:
+        gallery_image_filter_data["shot_uuid_list"] = shot_uuid_list
     
     gallery_image_list, res_payload = data_repo.get_all_file_list(
         **gallery_image_filter_data

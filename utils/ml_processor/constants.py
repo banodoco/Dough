@@ -98,6 +98,19 @@ class ML_MODEL:
             if isinstance(model, MLModel) and model.name == model_db_obj.replicate_url and model.version == model_db_obj.version:
                 return model
         return None
+    
+    
+MODEL_FILTERS = [
+    ML_MODEL.sdxl,
+    ML_MODEL.sdxl_controlnet,
+    ML_MODEL.sdxl_controlnet_openpose,
+    ML_MODEL.sdxl_img2img,
+    ML_MODEL.sdxl_inpainting,
+    ML_MODEL.ad_interpolation,
+    ML_MODEL.ipadapter_face,
+    ML_MODEL.ipadapter_face_plus,
+    ML_MODEL.ipadapter_plus
+]
 
 DEFAULT_LORA_MODEL_URL = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
 

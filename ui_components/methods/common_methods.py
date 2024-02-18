@@ -782,6 +782,7 @@ def process_inference_output(**kwargs):
                 hosted_url=output[0] if isinstance(output, list) else output, 
                 inference_log_id=log.uuid,
                 project_id=timing.shot.project.uuid,
+                shot_uuid=kwargs["shot_uuid"] if "shot_uuid" in kwargs else ""
             )
             
             add_image_variant(output_file.uuid, timing_uuid)
@@ -870,7 +871,8 @@ def process_inference_output(**kwargs):
                 hosted_url=output[0] if isinstance(output, list) else output, 
                 inference_log_id=log.uuid,
                 project_id=project_uuid,
-                tag=InternalFileTag.TEMP_GALLERY_IMAGE.value        # will be updated to GALLERY_IMAGE once the user clicks 'check for new images'
+                tag=InternalFileTag.TEMP_GALLERY_IMAGE.value,        # will be updated to GALLERY_IMAGE once the user clicks 'check for new images'
+                shot_uuid=kwargs["shot_uuid"] if "shot_uuid" in kwargs else ""
             )
         else:
             log_uuid = kwargs.get('log_uuid')
