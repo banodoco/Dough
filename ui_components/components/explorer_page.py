@@ -351,7 +351,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             
             shot_chooser_1,shot_chooser_2,_ = st.columns([1, 1,0.5])
             with shot_chooser_1:        
-                options = ["No shots", "Specific shots", "Any shot or no shot"]                          
+                options = ["Explore", "Specific shots", "Any shot or Explore"]                          
                 if shot is None:            
                     default_value = 0
                 else:
