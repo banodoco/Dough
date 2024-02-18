@@ -58,7 +58,8 @@ class GPUProcessor(MachineLearningProcessor):
         file_path_list = []
         for idx, file in enumerate(file_list):
             _, filename = os.path.split(file.local_path)
-            new_filename = f"{padded_integer(idx+1)}_" + filename
+            new_filename = f"{padded_integer(idx+1)}_" + filename \
+                if model.display_name() == ComfyWorkflow.STEERABLE_MOTION.value else filename
             copy_local_file(file.local_path, "videos/temp/", new_filename)
             file_path_list.append("videos/temp/" + new_filename)
 

@@ -5,6 +5,7 @@ import signal
 import sys
 import time
 import uuid
+import psutil
 import requests
 import traceback
 import sentry_sdk
@@ -69,11 +70,13 @@ def main():
     print('runner running')
     while True:
         if TERMINATE_SCRIPT:
+            stop_server(8188)
             return
 
         if SERVER == 'development':
             if not is_app_running():
                 if retries <=  0:
+                    stop_server(8188)
                     print('runner stopped')
                     return
                 retries -= 1
@@ -147,6 +150,29 @@ def update_cache_dict(inference_type, log, timing_uuid, shot_uuid, timing_update
         if str(log.project.uuid) not in shot_update_list:
             shot_update_list[str(log.project.uuid)] = []
         shot_update_list[str(log.project.uuid)].append(shot_uuid)
+        
+def find_process_by_port(port):
+        pid = None
+        for proc in psutil.process_iter(attrs=['pid', 'name', 'connections']):
+            try:
+                if proc and 'connections' in proc.info and proc.info['connections']:
+                    for conn in proc.info['connections']:
+                        if conn.status == psutil.CONN_LISTEN and conn.laddr.port == port:
+                            app_logger.log(LoggingType.DEBUG, f"Process {proc.info['pid']} (Port {port})")
+                            pid = proc.info['pid']
+                            break
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+        
+        return pid
+    
+def stop_server(self, port):
+        pid = find_process_by_port(port)
+        if pid:
+            app_logger.log(LoggingType.DEBUG, "comfy server stopped")
+            process = psutil.Process(pid)
+            process.terminate()
+            process.wait()
 
 def check_and_update_db():
     # print("updating logs")

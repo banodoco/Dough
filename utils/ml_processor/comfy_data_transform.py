@@ -196,7 +196,6 @@ class ComfyDataTransform:
         steps, cfg = query.num_inference_steps, query.guidance_scale
         image = data_repo.get_file_from_uuid(query.image_uuid)
         image_name = image.filename
-
         # updating params
         workflow["3"]["inputs"]["seed"] = random_seed()
         workflow["5"]["width"], workflow["5"]["height"] = width, height

@@ -26,7 +26,7 @@ def predict_gpu_output(workflow: str, file_path_list=[], output_node=None, extra
     output = comfy_runner.predict(
         workflow_input=workflow,
         file_path_list=file_path_list,
-        stop_server_after_completion=True,
+        stop_server_after_completion=False,
         output_node_ids=output_node,
         extra_models_list=extra_model_list
     )

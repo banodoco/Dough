@@ -445,6 +445,7 @@ def animation_style_element(shot_uuid):
         lora_data=lora_data
     )
     
+    position = "generate_vid"
     st.markdown("***")
     st.markdown("#### Generation Settings")
 
@@ -452,7 +453,7 @@ def animation_style_element(shot_uuid):
     with animate_col_1:
         variant_count = st.number_input("How many variants?", min_value=1, max_value=5, value=1, step=1, key="variant_count")
         
-        if st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help):
+        if "generate_vid_generate_inference" in st.session_state and st.session_state["generate_vid_generate_inference"]:
             # last keyframe position * 16
             duration = float(dynamic_frame_distribution_values[-1] / 16)
             data_repo.update_shot(uuid=shot.uuid, duration=duration)
@@ -480,7 +481,11 @@ def animation_style_element(shot_uuid):
                 settings,
                 variant_count
             )
+            
+            toggle_generate_inference(position)
             st.rerun()
+            
+        st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help, on_click=lambda: toggle_generate_inference(position))
 
     with animate_col_2:
             number_of_frames = len(timing_list)
@@ -491,7 +496,13 @@ def animation_style_element(shot_uuid):
 
             cost_per_generation = cost_per_key_frame * number_of_frames * variant_count
             # st.info(f"Generating a video with {number_of_frames} frames in the cloud will cost c. ${cost_per_generation:.2f} USD.")
-    
+
+def toggle_generate_inference(position):
+    if position + '_generate_inference' not in st.session_state:
+        st.session_state[position + '_generate_inference'] = True
+    else:
+        st.session_state[position + '_generate_inference'] = not st.session_state[position + '_generate_inference']
+
 def update_session_state_with_animation_details(shot_uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)

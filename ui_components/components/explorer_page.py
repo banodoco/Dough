@@ -97,9 +97,11 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                             frame_list = data_repo.get_timing_list_from_shot(shot_uuid)
                             list_of_timings = [i + 1 for i in range(len(frame_list))]
                             timing = st.selectbox("Frame #:", options=list_of_timings, key=f"{output_value_name}_frame_number", help="This will be the base image for the generation.")
-                            st.session_state['uploaded_image'] = frame_list[timing - 1].primary_image.location
+                            if timing:
+                                st.session_state['uploaded_image'] = frame_list[timing - 1].primary_image.location
                         with selection2:
-                            st.image(frame_list[timing - 1].primary_image.location, use_column_width=True)
+                            if frame_list and len(frame_list) and timing:
+                                st.image(frame_list[timing - 1].primary_image.location, use_column_width=True)
 
                     # Trigger image processing
                     if st.button("Upload Image", key=f"{output_value_name}_upload_button", use_container_width=True):
@@ -155,8 +157,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
             ml_client = get_ml_client()
             
             for _ in range(number_to_generate):
-
-                counter += 1
                 log = None
                 generation_method = InputImageStyling.value_list()[st.session_state['type_of_generation_key']]
                 if generation_method == InputImageStyling.TEXT2IMAGE.value:
@@ -284,7 +284,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         guidance_scale=5,
                         seed=-1,
                         num_inference_steps=30,
-                        strength=(strength_of_face/100, strength_of_plus/100), # (face, plus)
+                        strength=(strength_of_image_1/100, strength_of_image_2/100), # (face, plus)
                         adapter_type=None,
                         prompt=prompt,
                         negative_prompt=negative_prompt,
