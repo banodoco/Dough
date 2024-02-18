@@ -24,6 +24,7 @@ class MLModel:
     # workflow name (multiple workflows can be run through a common replicate endpoint)
     workflow_name: str = None
 
+    # NOTE: changing the display name will lead to issues with filtering
     def display_name(self):
         for model in ML_MODEL.__dict__.values():
             if isinstance(model, MLModel):

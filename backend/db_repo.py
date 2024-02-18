@@ -200,8 +200,14 @@ class DBRepo:
             del kwargs['data_per_page']
             sort_order = kwargs['sort_order'] if 'sort_order' in kwargs else None
             del kwargs['sort_order']
+            shot_uuid_list = kwargs['shot_uuid_list'] if 'shot_uuid_list' in kwargs else None
+            del kwargs['shot_uuid_list']
 
             file_list = InternalFileObject.objects.filter(**kwargs).all()
+            
+            if shot_uuid_list and len(shot_uuid_list):
+                file_list = file_list.filter(shot_uuid__in=shot_uuid_list)
+
             if sort_order:
                 if sort_order == SortOrder.DESCENDING.value:
                     file_list = file_list.order_by('-created_on')
@@ -600,7 +606,7 @@ class DBRepo:
         
         return InternalResponse(payload, 'inference log fetched', True)
     
-    def get_all_inference_log_list(self, project_id=None, page=1, data_per_page=5, status_list=None, exclude_model_list=None):
+    def get_all_inference_log_list(self, project_id=None, page=1, data_per_page=5, status_list=None, exclude_model_list=None, model_name=""):
         if project_id:
             project = Project.objects.filter(uuid=project_id, is_disabled=False).first()
             log_list = InferenceLog.objects.filter(project_id=project.id, is_disabled=False).order_by('-created_on').all()
@@ -612,6 +618,9 @@ class DBRepo:
         else:
             log_list = log_list.exclude(status__in=["", None])
 
+        if model_name:
+            log_list = log_list.filter(model_name=model_name)
+        
         log_list = log_list.exclude(model_id=None)       # hackish sol to exclude non-image/video logs
 
         paginator = Paginator(log_list, data_per_page)

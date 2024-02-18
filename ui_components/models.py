@@ -18,6 +18,7 @@ class InternalFileObject:
         self.hosted_url = kwargs['hosted_url'] if key_present('hosted_url', kwargs) else None
         self.tag = kwargs['tag'] if key_present('tag', kwargs) else None
         self.created_on = kwargs['created_on'] if key_present('created_on', kwargs) else None
+        self.shot_uuid = kwargs['shot_uuid'] if key_present('shot_uuid', kwargs) else ""
         self.inference_log = InferenceLogObject(**kwargs['inference_log']) if key_present('inference_log', kwargs) else None
         self.project = InternalProjectObject(**kwargs['project']) if key_present('project', kwargs) else None
 
@@ -273,7 +274,7 @@ class InferenceLogObject:
         self.total_inference_time = kwargs['total_inference_time'] if key_present('total_inference_time', kwargs) else None
         self.status = kwargs['status'] if key_present('status', kwargs) else None
         self.updated_on = datetime.datetime.fromisoformat(kwargs['updated_on'][:26]) if key_present('updated_on', kwargs) else None
-
+        self.model_name = kwargs['model_name'] if key_present('model_name', kwargs) else ""
 
 def key_present(key, dict):
     if key in dict and dict[key] is not None:

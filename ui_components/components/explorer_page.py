@@ -36,7 +36,7 @@ def explorer_page(project_uuid):
 
     gallery_image_view(project_uuid,False,view=['add_and_remove_from_shortlist','view_inference_details','shot_chooser'])
 
-def generate_images_element(position='explorer', project_uuid=None, timing_uuid=None):
+def generate_images_element(position='explorer', project_uuid=None, timing_uuid=None, shot_uuid=None):
     data_repo = DataRepo()
     project_settings = data_repo.get_project_setting(project_uuid)
     help_input='''This will generate a specific prompt based on your input.\n\n For example, "Sad scene of old Russian man, dreary style" might result in "Boris Karloff, 80 year old man wearing a suit, standing at funeral, dark blue watercolour."'''
@@ -172,7 +172,8 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid
+                        project_uuid=project_uuid,
+                        data={"shot_uuid": shot_uuid}
                     )
                     
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
@@ -192,7 +193,8 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid
+                        project_uuid=project_uuid,
+                        data={"shot_uuid": shot_uuid}
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_img2img, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
@@ -217,7 +219,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         height=project_settings.height,
                         width=project_settings.width,
                         project_uuid=project_uuid,
-                        data={'condition_scale': 1}
+                        data={'condition_scale': 1, "shot_uuid": shot_uuid}
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
@@ -243,7 +245,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         height=project_settings.height,
                         width=project_settings.width,
                         project_uuid=project_uuid,
-                        data={}
+                        data={"shot_uuid": shot_uuid}
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_face, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
@@ -264,7 +266,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         height=project_settings.height,
                         width=project_settings.width,
                         project_uuid=project_uuid,
-                        data={'condition_scale': 1}
+                        data={'condition_scale': 1, "shot_uuid": shot_uuid}
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_plus, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
@@ -291,7 +293,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         height=project_settings.height,
                         width=project_settings.width,
                         project_uuid=project_uuid,
-                        data={'file_image_2_uuid': face_image_file.uuid}
+                        data={'file_image_2_uuid': face_image_file.uuid, "shot_uuid": shot_uuid}
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_face_plus, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
@@ -383,13 +385,20 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         num_items_per_page = 8
         num_columns = 2
     
+    gallery_image_filter_data = {
+        "file_type" : InternalFileType.IMAGE.value, 
+        "tag" : InternalFileTag.GALLERY_IMAGE.value if not shortlist else InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value, 
+        "project_id" : project_uuid,
+        "page" : page_number or 1,
+        "data_per_page" : num_items_per_page,
+        "sort_order" : SortOrder.DESCENDING.value 
+    }
+    
+    if shot:
+        gallery_image_filter_data["shot_uuid_list"] = [str(shot.uuid)]
+    
     gallery_image_list, res_payload = data_repo.get_all_file_list(
-        file_type=InternalFileType.IMAGE.value, 
-        tag=InternalFileTag.GALLERY_IMAGE.value if not shortlist else InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value, 
-        project_id=project_uuid,
-        page=page_number or 1,
-        data_per_page=num_items_per_page,
-        sort_order=SortOrder.DESCENDING.value 
+        **gallery_image_filter_data
     )
 
     if not shortlist:
