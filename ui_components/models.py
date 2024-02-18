@@ -211,7 +211,7 @@ class InternalAppSettingObject:
         self.previous_project = InternalProjectObject(
             **kwargs["project"]) if key_present('project', kwargs) else None
         self.replicate_username = kwargs['replicate_username'] if 'replicate_username' in kwargs and kwargs['replicate_username'] else ""
-        self.welcome_state = kwargs['welcome_state'] if 'welcome_state' in kwargs else None
+        self.welcome_state = kwargs['welcome_state'] if 'welcome_state' in kwargs else 1
         self.aws_secret_access_key = kwargs['aws_secret_access_key'] if 'aws_secret_access_key' in kwargs else None
         self.aws_access_key = kwargs['aws_access_key'] if 'aws_access_key' in kwargs else None
         self.replicate_key = kwargs['replicate_key'] if 'replicate_key' in kwargs and kwargs['replicate_key'] else ""
