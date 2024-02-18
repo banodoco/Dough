@@ -83,8 +83,8 @@ def animation_style_element(shot_uuid):
                                 individual_prompts.append(individual_prompt)
                                 individual_negative_prompt = st.text_input("What to avoid:", key=f"negative_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_negative_prompt_{shot.uuid}_{idx}'],help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
                                 individual_negative_prompts.append(individual_negative_prompt)
-                                # motion_during_frame = st.slider("Motion during frame:", min_value=0.5, max_value=1.5, step=0.01, key=f"motion_during_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'])
-                                motion_during_frame = 1.3
+                                motion_during_frame = st.slider("Motion during frame:", min_value=0.5, max_value=1.5, step=0.01, key=f"motion_during_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'])
+                                # motion_during_frame = 1.3
                                 motions_during_frames.append(motion_during_frame)
                         else:                        
                             st.warning("No primary image present.")    
@@ -99,7 +99,9 @@ def animation_style_element(shot_uuid):
                             # if st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] is a int, make it a float
                             if isinstance(st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'], int):
                                 st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = float(st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'])
+                                
                             distance_to_next_frame = st.slider("Seconds to next frame:", min_value=0.25, max_value=6.00, step=0.25, key=f"distance_to_next_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'])                                
+                            
                             distances_to_next_frames.append(distance_to_next_frame)                                    
                             speed_of_transition = st.slider("Speed of transition:", min_value=0.45, max_value=0.7, step=0.01, key=f"speed_of_transition_widget_{idx}_{timing.uuid}", value=st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'])
                             speeds_of_transitions.append(speed_of_transition)                                      
@@ -146,12 +148,13 @@ def animation_style_element(shot_uuid):
                         for idx, timing in enumerate(timing_list):
                             
                             for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
+                                
                                 st.session_state[f'{k}_{shot.uuid}_{idx}'] = v
-
+                                                                
                         st.success("All frames have been reset to default values.")
                         st.rerun()
                                         
-                what_would_you_like_to_edit = st.selectbox("What would you like to edit?", options=["Seconds to next frames", "Speed of transitions", "Freedom between frames","Strength of frames"], key="what_would_you_like_to_edit")
+                what_would_you_like_to_edit = st.selectbox("What would you like to edit?", options=["Seconds to next frames", "Speed of transitions", "Freedom between frames","Strength of frames","Motion during frames"], key="what_would_you_like_to_edit")
                 if what_would_you_like_to_edit == "Seconds to next frames":
                     what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=6.00, step=0.25, value=1.0, key="what_to_change_it_to")
                 if what_would_you_like_to_edit == "Strength of frames":
@@ -178,9 +181,9 @@ def animation_style_element(shot_uuid):
                         elif what_would_you_like_to_edit == "Freedom between frames":
                             for idx, timing in enumerate(timing_list):
                                 st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'] = what_to_change_it_to
-                        # elif what_would_you_like_to_edit == "Motion during frames":
-                          #  for idx, timing in enumerate(timing_list):
-                           #     st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
+                        elif what_would_you_like_to_edit == "Motion during frames":
+                            for idx, timing in enumerate(timing_list):
+                                st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
                         st.rerun()
                 
                 st.markdown("***")
@@ -200,19 +203,14 @@ def animation_style_element(shot_uuid):
     
     tab1, tab2, tab3  = st.tabs(["Apply LoRAs","Explore LoRAs","Train LoRAs"])
 
+    lora_data = []
+
     with tab1:
 
         if "current_loras" not in st.session_state:
-            st.session_state["current_loras"] = []
-        
-
-
-        
-        
-
+            st.session_state["current_loras"] = []                
         # Initialize a single list to hold dictionaries for LoRA data
-        lora_data = []
-
+        #lora_data = []
         # Check if the directory exists and list files, or use a default list
         if os.path.exists("ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"):
             files = os.listdir("ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora")
@@ -232,7 +230,7 @@ def animation_style_element(shot_uuid):
                         st.stop()
                     else:
                         # User selects the LoRA they want to use
-                        which_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"which_lora_{idx}")
+                        which_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"which_lora_{idx}")                        
                         
                 with h2:
                     # User selects the strength for the LoRA
@@ -250,7 +248,7 @@ def animation_style_element(shot_uuid):
                         # pop the current lora from the list
                         st.session_state["current_loras"].pop(idx)
                         st.rerun()
-            
+        # st.write(lora_data)
         if len(st.session_state["current_loras"]) == 0:
             text = "Add a LoRA"
         else:
@@ -362,8 +360,8 @@ def animation_style_element(shot_uuid):
         st.info("This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.")
     
     i1, i2, i3 = st.columns([1, 1, 1])
-    with i1:
-        motion_scale = st.slider("Motion scale:", min_value=0.0, max_value=2.0, value=1.3, step=0.01, key="motion_scale")
+    # with i1:
+        # motion_scale = st.slider("Motion scale:", min_value=0.0, max_value=2.0, value=1.3, step=0.01, key="motion_scale")
 
     with i2:
         st.info("This is how much the video moves. Above 1.4 gets jittery, below 0.8 makes it too fluid.")
@@ -403,7 +401,11 @@ def animation_style_element(shot_uuid):
     multipled_base_end_percent = 0.05 * (strength_of_adherence * 10)
     multipled_base_adapter_strength = 0.05 * (strength_of_adherence * 20)
     
+    
     motion_scales = format_motion_strengths_with_buffer(dynamic_frame_distribution_values, motions_during_frames, buffer)
+    motion_scale = 1.3
+
+    # st.write(motion_scales)
         
     settings.update(
         ckpt=sd_model,
