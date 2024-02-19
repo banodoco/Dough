@@ -1,5 +1,6 @@
 import json
 import streamlit as st
+from ui_components.constants import GalleryImageViewType
 from ui_components.methods.common_methods import get_canny_img, process_inference_output,add_new_shot, save_new_image, save_uploaded_image
 from ui_components.methods.file_methods import generate_pil_image
 from ui_components.methods.ml_methods import query_llama2
@@ -31,173 +32,132 @@ def explorer_page(project_uuid):
     st.markdown("***")
 
     with st.expander("✨ Generate Images", expanded=True):
-        generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None)
+        generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None, shot_uuid=None)
     st.markdown("***")
 
-    gallery_image_view(project_uuid,False,view=['add_and_remove_from_shortlist','view_inference_details'])
+    gallery_image_view(project_uuid,False,view=['add_and_remove_from_shortlist','view_inference_details','shot_chooser'])
 
-def generate_images_element(position='explorer', project_uuid=None, timing_uuid=None):
+def generate_images_element(position='explorer', project_uuid=None, timing_uuid=None, shot_uuid=None):
     data_repo = DataRepo()
     project_settings = data_repo.get_project_setting(project_uuid)
     help_input='''This will generate a specific prompt based on your input.\n\n For example, "Sad scene of old Russian man, dreary style" might result in "Boris Karloff, 80 year old man wearing a suit, standing at funeral, dark blue watercolour."'''
-    a1, a2, a3 = st.columns([1,1,0.3])   
+    a1, a2 = st.columns([1,1])   
 
-    with a1 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a2:
+    #with a1 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a2:
+    with a1:
         prompt = st_memory.text_area("What's your base prompt?", key="explorer_base_prompt", help="This exact text will be included for each generation.")
 
-    with a2 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a1:
-       negative_prompt = st_memory.text_area("Negative prompt:", value="bad image, worst image, bad anatomy, washed out colors",\
-                                            key="explorer_neg_prompt", \
+    # with a2 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a1:
+    with a2:
+        negative_prompt = st_memory.text_area("Negative prompt:", value="bad image, worst image, bad anatomy, washed out colors",\
+                                        key="explorer_neg_prompt", \
                                                 help="These are the things you wish to be excluded from the image")
 
 
-    b1, b2, b3, _ = st.columns([1.5,1,1.5,1])
+    b1, b2, b3 = st.columns([0.75,1,1])
     with b1:
         type_of_generation = st_memory.radio("How would you like to generate the image?", options=InputImageStyling.value_list(), key="type_of_generation_key", help="Evolve Image will evolve the image based on the prompt, while Maintain Structure will keep the structure of the image and change the style.",horizontal=True) 
 
-    input_image_1_key = "input_image_1"
-    input_image_2_key = "input_image_2"
-    if input_image_1_key not in st.session_state:
-        st.session_state[input_image_1_key] = None
-        st.session_state[input_image_2_key] = None
-
-    uploaded_image_1 = None
-    uploaded_image_2 = None
-
-    # these require two images
-    ipadapter_types = [InputImageStyling.IPADPTER_FACE_AND_PLUS.value]
-
-    # UI for image input if type_of_generation is not txt2img
     if type_of_generation != InputImageStyling.TEXT2IMAGE.value:
-        # UI - Base Input
-        with b2:
-            source_of_starting_image = st_memory.radio("Image source:", options=["Upload", "From Shot"], key="source_of_starting_image", help="This will be the base image for the generation.",horizontal=True)
-            # image upload
-            if source_of_starting_image == "Upload":
-                uploaded_image_1 = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key="explorer_input_image", help="This will be the base image for the generation.")
-            # taking image from shots
-            else:
-                shot_list = data_repo.get_shot_list(project_uuid)
-                selection1, selection2 = st.columns([1,1])
-                with selection1:
-                    shot_name = st.selectbox("Shot:", options=[shot.name for shot in shot_list], key="explorer_shot_uuid", help="This will be the base image for the generation.")
-                
-                shot_uuid = [shot.uuid for shot in shot_list if shot.name == shot_name][0]
-                frame_list = data_repo.get_timing_list_from_shot(shot_uuid)
-                
-                with selection2:
-                    list_of_timings = [i + 1 for i in range(len(frame_list))]
-                    timing = st.selectbox("Frame #:", options=list_of_timings, key="explorer_frame_number", help="This will be the base image for the generation.")
+        if "input_image_1" not in st.session_state:
+            st.session_state["input_image_1"] = None
+            st.session_state["input_image_2"] = None
 
-                uploaded_image_1 = frame_list[timing - 1].primary_image.location
-                # make it a byte stream
-                st.image(frame_list[timing - 1].primary_image.location, use_column_width=True)
-            
-            # taking a second image in the case of ip_adapter_face_plus
-            if type_of_generation in ipadapter_types:
-                source_of_starting_image_2 = st_memory.radio("How would you like to upload the second starting image?", options=["Upload", "From Shot"], key="source_of_starting_image_2", help="This will be the base image for the generation.",horizontal=True)
-                if source_of_starting_image_2 == "Upload":
-                    uploaded_image_2 = st.file_uploader("IP-Adapter Face image:", type=["png", "jpg", "jpeg"], key="explorer_input_image_2", help="This will be the base image for the generation.")
-                else:
-                    selection1, selection2 = st.columns([1,1])
-                    with selection1:   
+        uploaded_image_1 = None
+        uploaded_image_2 = None
+
+        # these require two images
+        ipadapter_types = [InputImageStyling.IPADPTER_FACE_AND_PLUS.value]
+
+        def handle_image_input(column, type_of_generation, output_value_name, data_repo=None, project_uuid=None):
+
+            with column:
+
+                if st.session_state.get(output_value_name) is None:
+
+                    top1, top2 = st.columns([1, 1])
+                    with top1:
+                        st.info(f"{type_of_generation} input:")  # Dynamic title based on type_of_generation
+                    with top2:                    
+                        source_of_starting_image = st.radio("Image source:", options=["From Shot", "Upload"], key=f"{output_value_name}_starting_image", help="This will be the base image for the generation.", horizontal=True)                
+                                                
+                    if 'uploaded_image' not in st.session_state:
+                        st.session_state['uploaded_image'] = None
+                    if f"uploaded_image_{output_value_name}" not in st.session_state:
+                        st.session_state[f"uploaded_image_{output_value_name}"] = 0    
+                    if source_of_starting_image == "Upload":
+
+                        st.session_state['uploaded_image'] = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=st.session_state[f"uploaded_image_{output_value_name}"], help="This will be the base image for the generation.")
+                    else:
+                        # taking image from shots
                         shot_list = data_repo.get_shot_list(project_uuid)
-                        shot_name = st.selectbox("Shot:", options=[shot.name for shot in shot_list], key="explorer_shot_uuid_2", help="This will be the base image for the generation.")
-                        shot_uuid = [shot.uuid for shot in shot_list if shot.name == shot_name][0]
-                    with selection2:
-                        frame_list = data_repo.get_timing_list_from_shot(shot_uuid)
-                        list_of_timings = [i + 1 for i in range(len(frame_list))]
-                        timing = st.selectbox("Frame #:", options=list_of_timings, key="explorer_frame_number_2", help="This will be the base image for the generation.")
-                    uploaded_image_2 = frame_list[timing - 1].primary_image.location
-                    st.image(frame_list[timing - 1].primary_image.location, use_column_width=True)
+                        selection1, selection2 = st.columns([1, 1])
+                        with selection1:
+                            shot_name = st.selectbox("Shot:", options=[shot.name for shot in shot_list], key=f"{output_value_name}_shot_name", help="This will be the base image for the generation.")
+                            shot_uuid = [shot.uuid for shot in shot_list if shot.name == shot_name][0]
+                            frame_list = data_repo.get_timing_list_from_shot(shot_uuid)
+                            list_of_timings = [i + 1 for i in range(len(frame_list))]
+                            timing = st.selectbox("Frame #:", options=list_of_timings, key=f"{output_value_name}_frame_number", help="This will be the base image for the generation.")
+                            if timing:
+                                st.session_state['uploaded_image'] = frame_list[timing - 1].primary_image.location
+                        with selection2:
+                            if frame_list and len(frame_list) and timing:
+                                st.image(frame_list[timing - 1].primary_image.location, use_column_width=True)
 
-            # if type type is face and plus, then we need to make the text images
-            button_text = "Upload Images" if type_of_generation in ipadapter_types else "Upload Image"
+                    # Trigger image processing
+                    if st.button("Upload Image", key=f"{output_value_name}_upload_button", use_container_width=True):
+                        st.session_state[output_value_name] = st.session_state['uploaded_image']
+                        st.session_state[f"uploaded_image_{output_value_name}"] += 1                        
+                        st.rerun()
 
-            if st.button(button_text, use_container_width=True):                                                
-                st.session_state[input_image_1_key] = uploaded_image_1   
-                st.session_state[input_image_2_key] = uploaded_image_2   
-                st.rerun()
-
-        # UI - Preview
-        with b3:
-            # prompt_strength = round(1 - (strength_of_image / 100), 2)
-            if type_of_generation not in ipadapter_types:                                             
-                st.info("Current image:")
-                if st.session_state[input_image_1_key] is not None:
-                    st.image(st.session_state[input_image_1_key], use_column_width=True)
+                    return None
                 else:
-                    st.error("Please upload an image")
+                    # Display current image
+                    st.info(f"{type_of_generation} image:")
+                    half1, half2 = st.columns([1, 1])
+                    with half1:                        
+                        st.image(st.session_state[output_value_name], use_column_width=True)
+                    # Slider for image adjustment based on type_of_generation
+                    with half2:
+                        strength_of_image = st.slider("Image strength:", min_value=0, max_value=100, value=50, step=1, key=f"{output_value_name}_strength", help="This will be the strength of the image for the generation.")
+                                            
+                        if st.button("Clear image", key=f"{output_value_name}_clear_button"):
+                            st.session_state[output_value_name] = None
+                            st.rerun()
+
+                    return strength_of_image
+                            
+        if type_of_generation != InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
+            strength_of_image = handle_image_input(b2, type_of_generation, "input_image_1", data_repo, project_uuid) 
         
-            if type_of_generation == InputImageStyling.IMAGE2IMAGE.value:                                                 
-                strength_of_image = st_memory.slider("How much blur would you like to add to the image?", min_value=0, max_value=100, value=50, step=1, key="strength_of_image2image", help="This will determine how much of the current image will be kept in the final image.")
-
-            elif type_of_generation == InputImageStyling.CONTROLNET_CANNY.value:                
-                strength_of_image = st_memory.slider("How much of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_controlnet_canny", help="This will determine how much of the current image will be kept in the final image.")
-
-            elif type_of_generation == InputImageStyling.IPADAPTER_FACE.value:                
-                strength_of_image = st_memory.slider("How much of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_ipadapter_face", help="This will determine how much of the current image will be kept in the final image.")
-
-            elif type_of_generation == InputImageStyling.IPADAPTER_PLUS.value:                
-                strength_of_image = st_memory.slider("How much of the current image would you like to keep?", min_value=0, max_value=100, value=50, step=1, key="strength_of_ipadapter_plus", help="This will determine how much of the current image will be kept in the final image.")                            
-
-            elif type_of_generation == InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
-                # UI - displaying uploaded images
-                
-                # NOTE: hackish sol, text of plus and face are interchanged, will fix later
-                st.info("IP-Adapter Plus image:")
-                if st.session_state[input_image_1_key] is not None:    
-                    st.image(st.session_state[input_image_1_key], use_column_width=True)
-                    strength_of_face = st_memory.slider("How strong would would you like the Face model to influence?", min_value=0, max_value=100, value=50, step=1, key="strength_of_ipadapter_face", help="This will determine how much of the current image will be kept in the final image.")
-                else:
-                    st.error("Please upload an image")
-                
-                st.info("IP-Adapter Face image:")
-                if st.session_state[input_image_2_key] is not None:  
-                    st.image(st.session_state[input_image_2_key], use_column_width=True)
-                    strength_of_plus = st_memory.slider("How strong would you like to influence the Plus model?", min_value=0, max_value=100, value=50, step=1, key="strength_of_ipadapter_plus", help="This will determine how much of the current image will be kept in the final image.")
-                else:
-                    st.error("Please upload an second image")
-        
-        # UI - clear btn
-        if st.session_state[input_image_1_key] is not None:
+        else:
+            strength_of_image_1 = handle_image_input(b2, "IP-Adapter Face", "input_image_1", data_repo, project_uuid)
+            strength_of_image_2 = handle_image_input(b3, "IP-Adapter Plus", "input_image_2", data_repo, project_uuid)
+            strength_of_image = (strength_of_image_1, strength_of_image_2)
+            # if both images are populated, create a "switch images" button 
             with b3:
-                if st.button("Clear input image(s)", key="clear_input_image", use_container_width=True):
-                    st.session_state[input_image_1_key] = None
-                    st.session_state[input_image_2_key] = None
-                    st.rerun()
-
+                corner1, corner2 = st.columns([1, 1])
+                with corner2:
+                    if st.session_state["input_image_1"] and st.session_state["input_image_2"]:
+                        if st.button("Switch images 🔄", key="switch_images", use_container_width=True):
+                            st.session_state["input_image_1"], st.session_state["input_image_2"] = st.session_state["input_image_2"], st.session_state["input_image_1"]
+                            st.rerun()
+    
     if position == 'explorer':
         _, d2,d3, _ = st.columns([0.25, 1,1, 0.25])
     else:
         d2, d3 = st.columns([1,1])
-    with d2:        
-        number_to_generate = st.slider("How many images would you like to generate?", min_value=0, max_value=100, value=4, step=2, key="number_to_generate", help="It'll generate 4 from each variation.")
+    with d2:  
+        
+        number_to_generate = st.slider("How many images would you like to generate?", min_value=4, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
     
     with d3:
         st.write(" ")
         # ------------------- Generating output -------------------------------------
         if st.session_state.get(position + '_generate_inference'):
             ml_client = get_ml_client()
-            counter = 0
-
-            magic_prompt, temperature = "", 0
+            
             for _ in range(number_to_generate):
-
-                '''
-                if counter % 4 == 0:
-                    if magic_prompt != "":
-                        input_text = "I want to flesh the following user input out - could you make it such that it retains the original meaning but is more specific and descriptive:\n\nfloral background|array of colorful wildflowers and green foliage forms a vibrant, natural backdrop.\nfancy old man|Barnaby Jasper Hawthorne, a dignified gentleman in his late seventies\ncomic book style|illustration style of a 1960s superhero comic book\nsky with diamonds|night sky filled with twinkling stars like diamonds on velvet\n20 y/o indian guy|Piyush Ahuja, a twenty-year-old Indian software engineer\ndark fantasy|a dark, gothic style similar to an Edgar Allen Poe novel\nfuturistic world|set in a 22nd century off-world colony called Ajita Iyera\nbeautiful lake|the crystal clear waters of a luminous blue alpine mountain lake\nminimalistic illustration|simple illustration with solid colors and basic geometrical shapes and figures\nmale blacksmith|Arun Thakkar, a Black country village blacksmith\ndesert sunrise|reddish orange sky at sunrise somewhere out in the Arabia desert\nforest|dense forest of Swedish pine trees\ngreece landscape|bright cyan sky meets turquoise on Santorini\nspace|shifting nebula clouds across the endless expanse of deep space\nwizard orcs|Poljak Ardell, a half-orc warlock\ntropical island|Palm tree-lined tropical paradise beach near Corfu\ncyberpunk cityscape  |Neon holo displays reflect from steel surfaces of buildings in Cairo Cyberspace\njapanese garden & pond|peaceful asian zen koi fishpond surrounded by bonsai trees\nattractive young african woman|Chimene Nkasa, young Congolese social media star\ninsane style|wild and unpredictable artwork like Salvador Dali’s Persistence Of Memory painting\n30s european women|Francisca Sampere, 31 year old Spanish woman\nlighthouse|iconic green New England coastal lighthouse against grey sky\ngirl in hat|Dora Alamanni dressed up with straw boater hat\nretro poster design|stunning vintage 80s movie poster reminiscent of Blade Runner\nabstract color combinations|a modernist splatter painting with overlapping colors\nnordic style |simple line drawing of white on dark blue with clean geometrical figures and shapes\nyoung asian woman, abstract style|Kaya Suzuki's face rendered in bright, expressive brush strokes\nblue monster|large cobalt blue cartoonish creature similar to a yeti\nman at work|portrait sketch of business man working late night in the office\nunderwater sunbeams|aquatic creatures swimming through waves of refracting ocean sunlight\nhappy cat on table|tabby kitten sitting alert in anticipation on kitchen counter\ntop​\nold timey train robber|Wiley Hollister, mid-thirties outlaw\nchinese landscape|Mt. Taihang surrounded by clouds\nancient ruins, sci fi style|deserted ancient civilization under stormy ominous sky full of mysterious UFOs\nanime art|classic anime, in the style of Akira Toriyama\nold man, sad scene|Seneca Hawkins, older gentleman slumped forlorn on street bench in early autumn evening\ncathedral|interior view of Gothic church in Vienna\ndreamlike|spellbinding dreamlike atmosphere, work called Pookanaut\nbird on lake, evening time|grizzled kingfisher sitting regally facing towards beautiful ripple-reflected setting orange pink sum\nyoung female character, cutsey style|Aoife Delaney dressed up as Candyflud, cheerful child adventurer\ninteresting style|stunning cubist abstract geometrical block\nevil woman|Luisa Schultze, frightening murderess\nfashion model|Ishita Chaudry, an Indian fashionista with unique dress sense\ncastle, moody scene|grand Renaissance Palace in Prague against twilight mist filled with crows\ntropical paradise island|Pristine white sand beach with palm trees at Ile du Mariasi, Reunion\npoverty stricken village|simple shack-based settlement in rural Niger\ngothic horror creature|wretchedly deformed and hideous tatter-clad creature like Caliban from Shakespeare ’s Tempes\nlots of color|rainbow colored Dutch flower field\nattractive woman on holidays|Siena Chen in her best little black dress, walking down a glamorous Las Vegas Boulevard\nItalian city scene|Duomo di Milano on dark rainy night sky behind it\nhappy dog outdoor|bouncy Irish Setter frolickling around green grass in summer sun\nmedieval fantasy world|illustration work for Eye Of The Titan - novel by Rania D’Allara\nperson relaxing|Alejandro Gonzalez sitting crosslegged in elegant peacock blue kurta while reading book\nretro sci fi robot|Vintage, cartoonish android reminiscent of the Bender Futurama character. Named Clyde Frost.\ngeometric style|geometric abstract style based on 1960 Russian poster design by Alexander Rodchenk \nbeautiful girl face, vaporwave style|Rayna Vratasky, looking all pink and purple retro\nspooking |horrifying Chupacabra-like being staring intensely to camera\nbrazilian woman having fun|Analia Santos, playing puzzle game with friends\nfemale elf warrior|Finnula Thalas, an Eladrin paladin wielding two great warblades\nlsd trip scene|kaleidoscopic colorscape, filled with ephemerally shifting forms\nyoung african man headshot|Roger Mwafulo looking sharp with big lush smile\nsad or dying person|elderly beggar Jeon Hagopian slumped against trash can bin corner\nart |neurologically inspired psychedelian artwork like David Normal's “Sentient Energy ” series\nattractive german woman|Johanna Hecker, blonde beauty with long hair wrapped in braid ties\nladybug|Cute ladybug perched on red sunset flower petals on summery meadow backdrop\nbeautiful asian women |Chiraya Phetlue, Thai-French model standing front view wearing white dress\nmindblowing style|trippy space illustration that could be cover for a book by Koyu Azumi\nmoody|forest full of thorn trees stretching into the horizon at dusk\nhappy family, abstract style|illustration work of mother, father and child from 2017 children’s picture book The Gifts Of Motherhood By Michelle Sparks\n"
-                        output_magic_prompt=query_llama2(f"{input_text}{magic_prompt}|", temperature=temperature)
-                    else:
-                        output_magic_prompt = ""                                        
-                if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False:                
-                    prompt_with_variations = f"{prompt}, {output_magic_prompt}" if prompt else output_magic_prompt
-                    
-                else:  # switch_prompt_position is True
-                    prompt_with_variations = f"{output_magic_prompt}, {prompt}" if prompt else output_magic_prompt
-                '''
-                counter += 1
                 log = None
                 generation_method = InputImageStyling.value_list()[st.session_state['type_of_generation_key']]
                 if generation_method == InputImageStyling.TEXT2IMAGE.value:
@@ -213,20 +173,14 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid
+                        project_uuid=project_uuid,
+                        data={"shot_uuid": shot_uuid}
                     )
-
-                    # NOTE: code not is use
-                    # model_list = data_repo.get_all_ai_model_list(model_type_list=[AIModelType.TXT2IMG.value], custom_trained=False)
-                    # model_dict = {}
-                    # for m in model_list:
-                    #     model_dict[m.name] = m
-                    # replicate_model = ML_MODEL.get_model_by_db_obj(model_dict[model_name])
-
+                    
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
                 
                 elif generation_method == InputImageStyling.IMAGE2IMAGE.value:
-                    input_image_file = save_new_image(st.session_state[input_image_1_key], project_uuid)
+                    input_image_file = save_new_image(st.session_state["input_image_1"], project_uuid)
                     query_obj = MLQueryObject(
                         timing_uuid=None,
                         model_uuid=None,
@@ -234,20 +188,21 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         guidance_scale=5,
                         seed=-1,
                         num_inference_steps=30,
-                        strength=0.8,
+                        strength=strength_of_image,
                         adapter_type=None,
                         prompt=prompt,
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid
+                        project_uuid=project_uuid,
+                        data={"shot_uuid": shot_uuid}
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_img2img, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                 elif generation_method == InputImageStyling.CONTROLNET_CANNY.value:
-                    edge_pil_img = get_canny_img(st.session_state[input_image_1_key], low_threshold=50, high_threshold=150)    # redundant incase of local inference
-                    input_img = edge_pil_img if not GPU_INFERENCE_ENABLED else st.session_state[input_image_1_key]
+                    edge_pil_img = get_canny_img(st.session_state["input_image_1"], low_threshold=50, high_threshold=150)    # redundant incase of local inference
+                    input_img = edge_pil_img if not GPU_INFERENCE_ENABLED else st.session_state["input_image_1"]
                     input_image_file = save_new_image(input_img, project_uuid)
                     query_obj = MLQueryObject(
                         timing_uuid=None,
@@ -265,18 +220,18 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         height=project_settings.height,
                         width=project_settings.width,
                         project_uuid=project_uuid,
-                        data={'condition_scale': 1}
+                        data={'condition_scale': 1, "shot_uuid": shot_uuid}
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
                 
                 elif generation_method == InputImageStyling.IPADAPTER_FACE.value:
                     # validation
-                    if not (st.session_state[input_image_1_key]):
+                    if not (st.session_state["input_image_1"]):
                         st.error('Please upload an image')
                         return
 
-                    input_image_file = save_new_image(st.session_state[input_image_1_key], project_uuid)
+                    input_image_file = save_new_image(st.session_state["input_image_1"], project_uuid)
                     query_obj = MLQueryObject(
                         timing_uuid=None,
                         model_uuid=None,
@@ -291,13 +246,13 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         height=project_settings.height,
                         width=project_settings.width,
                         project_uuid=project_uuid,
-                        data={}
+                        data={"shot_uuid": shot_uuid}
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_face, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
                 
                 elif generation_method == InputImageStyling.IPADAPTER_PLUS.value:
-                    input_image_file = save_new_image(st.session_state[input_image_1_key], project_uuid)
+                    input_image_file = save_new_image(st.session_state["input_image_1"], project_uuid)
                     query_obj = MLQueryObject(
                         timing_uuid=None,
                         model_uuid=None,
@@ -312,19 +267,19 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         height=project_settings.height,
                         width=project_settings.width,
                         project_uuid=project_uuid,
-                        data={'condition_scale': 1}
+                        data={'condition_scale': 1, "shot_uuid": shot_uuid}
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_plus, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                 elif generation_method == InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
                     # validation
-                    if not (st.session_state[input_image_2_key] and st.session_state[input_image_1_key]):
+                    if not (st.session_state["input_image_2"] and st.session_state["input_image_1"]):
                         st.error('Please upload both images')
                         return
 
-                    plus_image_file = save_new_image(st.session_state[input_image_1_key], project_uuid)
-                    face_image_file = save_new_image(st.session_state[input_image_2_key], project_uuid)
+                    plus_image_file = save_new_image(st.session_state["input_image_1"], project_uuid)
+                    face_image_file = save_new_image(st.session_state["input_image_2"], project_uuid)
                     query_obj = MLQueryObject(
                         timing_uuid=None,
                         model_uuid=None,
@@ -332,14 +287,14 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         guidance_scale=5,
                         seed=-1,
                         num_inference_steps=30,
-                        strength=(strength_of_face/100, strength_of_plus/100), # (face, plus)
+                        strength=(strength_of_image_1/100, strength_of_image_2/100), # (face, plus)
                         adapter_type=None,
                         prompt=prompt,
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
                         project_uuid=project_uuid,
-                        data={'file_image_2_uuid': face_image_file.uuid}
+                        data={'file_image_2_uuid': face_image_file.uuid, "shot_uuid": shot_uuid}
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_face_plus, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
@@ -351,7 +306,8 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         "log_uuid": log.uuid,
                         "project_uuid": project_uuid,
                         "timing_uuid": timing_uuid,
-                        "promote_new_generation": False
+                        "promote_new_generation": False,
+                        "shot_uuid": shot_uuid if shot_uuid else "explorer"
                     }
                     process_inference_output(**inference_data)
 
@@ -363,15 +319,15 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
         # ----------- generate btn --------------
         if prompt == "":
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please enter a prompt to generate images")
-        elif type_of_generation == InputImageStyling.IMAGE2IMAGE.value and st.session_state[input_image_1_key] is None:
+        elif type_of_generation == InputImageStyling.IMAGE2IMAGE.value and st.session_state["input_image_1"] is None:
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
-        elif type_of_generation == InputImageStyling.CONTROLNET_CANNY.value and st.session_state[input_image_1_key] is None:
+        elif type_of_generation == InputImageStyling.CONTROLNET_CANNY.value and st.session_state["input_image_1"] is None:
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
-        elif type_of_generation == InputImageStyling.IPADAPTER_FACE.value and st.session_state[input_image_1_key] is None:
+        elif type_of_generation == InputImageStyling.IPADAPTER_FACE.value and st.session_state["input_image_1"] is None:
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
-        elif type_of_generation == InputImageStyling.IPADAPTER_PLUS.value and st.session_state[input_image_1_key] is None:
+        elif type_of_generation == InputImageStyling.IPADAPTER_PLUS.value and st.session_state["input_image_1"] is None:
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
-        elif type_of_generation == InputImageStyling.IPADPTER_FACE_AND_PLUS.value and (st.session_state[input_image_1_key] is None or st.session_state[input_image_2_key] is None):
+        elif type_of_generation == InputImageStyling.IPADPTER_FACE_AND_PLUS.value and (st.session_state["input_image_1"] is None or st.session_state["input_image_2"] is None):
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload both images")        
         else:
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", on_click=lambda: toggle_generate_inference(position))
@@ -386,6 +342,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     data_repo = DataRepo()
     project_settings = data_repo.get_project_setting(project_uuid)
     shot_list = data_repo.get_shot_list(project_uuid)
+    shot_name_uuid_map = {s.name : s.uuid for s in shot_list}
+    shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]     # by default only showing explorer views
     k1,k2 = st.columns([5,1])
 
     if sidebar != True:
@@ -394,6 +352,31 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             num_columns = st_memory.slider('Number of columns:', min_value=3, max_value=7, value=4,key="num_columns_explorer")
         with f2:
             num_items_per_page = st_memory.slider('Items per page:', min_value=10, max_value=50, value=16, key="num_items_per_page_explorer")
+
+        if 'shot_chooser' in view:
+            shot_chooser_1,shot_chooser_2,_ = st.columns([1, 1,0.5])
+            with shot_chooser_1:        
+                options = ["Explore", "Specific shots", "Any shot or Explore"]                          
+                if shot is None:            
+                    default_value = 0
+                else:
+                    default_value = 1
+                show_images_associated_with_shots = st.selectbox("Show images associated with:", options=options, index=default_value, key="show_images_associated_with_shots_explorer")
+            with shot_chooser_2:
+                if show_images_associated_with_shots == "Explore":
+                    shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]
+                
+                elif show_images_associated_with_shots == "Specific shots":
+                    specific_shots = [shot.name for shot in shot_list]  
+                    if shot is None:
+                        default_shot = specific_shots[0]
+                    else:
+                        default_shot = shot.name
+                    shot_name_list = st.multiselect("Shots to show:", options=specific_shots, default=default_shot, key="specific_shots_explorer")
+                    shot_uuid_list = [str(shot_name_uuid_map[s]) for s in shot_name_list] if shot_name_list else ['xyz']
+                    
+                else:
+                    shot_uuid_list = []
 
         if shortlist is False:
             page_number = k1.radio("Select page:", options=range(1, project_settings.total_gallery_pages + 1), horizontal=True, key="main_gallery")
@@ -412,13 +395,20 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         num_items_per_page = 8
         num_columns = 2
     
+    gallery_image_filter_data = {
+        "file_type" : InternalFileType.IMAGE.value, 
+        "tag" : InternalFileTag.GALLERY_IMAGE.value if not shortlist else InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value, 
+        "project_id" : project_uuid,
+        "page" : page_number or 1,
+        "data_per_page" : num_items_per_page,
+        "sort_order" : SortOrder.DESCENDING.value 
+    }
+    
+    if shot_uuid_list and not sidebar:
+        gallery_image_filter_data["shot_uuid_list"] = shot_uuid_list
+    
     gallery_image_list, res_payload = data_repo.get_all_file_list(
-        file_type=InternalFileType.IMAGE.value, 
-        tag=InternalFileTag.GALLERY_IMAGE.value if not shortlist else InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value, 
-        project_id=project_uuid,
-        page=page_number or 1,
-        data_per_page=num_items_per_page,
-        sort_order=SortOrder.DESCENDING.value 
+        **gallery_image_filter_data
     )
 
     if not shortlist:

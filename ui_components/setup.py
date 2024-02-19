@@ -49,9 +49,11 @@ def setup_app_ui():
     st.markdown(hide_img, unsafe_allow_html=True)
 
     with st.sidebar:
-        h1, h2 = st.columns([1, 3])
+        h1, h2 = st.columns([1, 2])
         with h1:
-            st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
+            #st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
+            st.markdown("# :red[D]:green[o]:orange[u]:blue[g]:red[h] :green[□] :orange[□] :blue[□]")
+            st.caption("by Banodoco")
 
         sections = ["Open Project", "App Settings", "New Project"]
         with h2:
@@ -136,7 +138,7 @@ def setup_app_ui():
                 st.session_state["index_of_page"] = 0
 
             with st.sidebar:
-                main_view_types = ["Creative Process", "Project Settings", "Video Rendering"]
+                main_view_types = ["Creative Process", "Project Settings"]
                 st.session_state['main_view_type'] = st_memory.menu(None, main_view_types, icons=['search-heart', 'tools', "play-circle", 'stopwatch'], menu_icon="cast", default_index=0, key="main_view_type_name", orientation="horizontal", styles={
                                                                     "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "red"}})
 

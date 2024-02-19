@@ -12,7 +12,7 @@ def radio(label, options, index=0, key=None, help=None, on_change=None, disabled
     if key not in st.session_state:        
         st.session_state[key] = default_value                
 
-    selection = st.radio(label=label, options=options, index=st.session_state[key], horizontal=horizontal, label_visibility=label_visibility)
+    selection = st.radio(label=label, options=options, index=st.session_state[key], horizontal=horizontal, label_visibility=label_visibility,key=f"{key}_value")
 
     if options.index(selection) != st.session_state[key]:
         st.session_state[key] = options.index(selection)

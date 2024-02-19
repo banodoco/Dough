@@ -103,38 +103,39 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
 
     shot = data_repo.create_shot(**shot_data)
 
+    # NOTE: removing sample timing frame
     # create a sample timing frame
-    st.session_state["project_uuid"] = project.uuid
-    sample_file_location = "sample_assets/sample_images/v.jpeg"
-    img = Image.open(sample_file_location)
-    img = img.resize((width, height))
+    # st.session_state["project_uuid"] = project.uuid
+    # sample_file_location = "sample_assets/sample_images/v.jpeg"
+    # img = Image.open(sample_file_location)
+    # img = img.resize((width, height))
 
-    unique_file_name = f"{str(uuid.uuid4())}.png"
-    file_location = f"videos/{project.uuid}/resources/prompt_images/{unique_file_name}"
-    hosted_url = save_or_host_file(img, file_location, mime_type='image/png', dim=(width, height))
-    file_data = {
-        "name": str(uuid.uuid4()),
-        "type": InternalFileType.IMAGE.value,
-        "project_id": project.uuid,
-        "dim": (width, height),
-    }
+    # unique_file_name = f"{str(uuid.uuid4())}.png"
+    # file_location = f"videos/{project.uuid}/resources/prompt_images/{unique_file_name}"
+    # hosted_url = save_or_host_file(img, file_location, mime_type='image/png', dim=(width, height))
+    # file_data = {
+    #     "name": str(uuid.uuid4()),
+    #     "type": InternalFileType.IMAGE.value,
+    #     "project_id": project.uuid,
+    #     "dim": (width, height),
+    # }
 
-    if hosted_url:
-        file_data.update({'hosted_url': hosted_url})
-    else:
-        file_data.update({'local_path': file_location})
+    # if hosted_url:
+    #     file_data.update({'hosted_url': hosted_url})
+    # else:
+    #     file_data.update({'local_path': file_location})
 
-    source_image = data_repo.create_file(**file_data)
+    # source_image = data_repo.create_file(**file_data)
 
-    timing_data = {
-        "frame_time": 0.0,
-        "aux_frame_index": 0,
-        "source_image_id": source_image.uuid,
-        "shot_id": shot.uuid,
-    }
-    timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
+    # timing_data = {
+    #     "frame_time": 0.0,
+    #     "aux_frame_index": 0,
+    #     "source_image_id": source_image.uuid,
+    #     "shot_id": shot.uuid,
+    # }
+    # timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
 
-    add_image_variant(source_image.uuid, timing.uuid)
+    # add_image_variant(source_image.uuid, timing.uuid)
 
     # create default ai models
     model_list = create_predefined_models(user)

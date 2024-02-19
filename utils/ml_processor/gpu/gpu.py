@@ -1,11 +1,14 @@
+from distutils.file_util import copy_file
 import json
+import os
 from shared.constants import InferenceParamType
 from shared.logging.logging import AppLogger
 from ui_components.methods.data_logger import log_model_inference
-from ui_components.methods.file_methods import normalize_size_internal_file_obj
+from ui_components.methods.file_methods import copy_local_file, normalize_size_internal_file_obj
+from utils.common_utils import padded_integer
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.comfy_data_transform import get_model_workflow_from_query
+from utils.ml_processor.comfy_data_transform import get_file_list_from_query_obj, get_model_workflow_from_query
 from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow, MLModel
 from utils.ml_processor.gpu.utils import predict_gpu_output, setup_comfy_runner
 from utils.ml_processor.ml_interface import MachineLearningProcessor
@@ -22,16 +25,10 @@ class GPUProcessor(MachineLearningProcessor):
 
     def predict_model_output_standardized(self, model: MLModel, query_obj: MLQueryObject, queue_inference=False):
         data_repo = DataRepo()
-        workflow_json, output_node_ids = get_model_workflow_from_query(model, query_obj)
+        workflow_json, output_node_ids, extra_model_list, ignore_list = get_model_workflow_from_query(model, query_obj)
         file_uuid_list = []
 
-        if query_obj.image_uuid:
-            file_uuid_list.append(query_obj.image_uuid)
-        
-        for k, v in query_obj.data.get('data', {}).items():
-            if k.startswith("file_"):
-                file_uuid_list.append(v)
-
+        file_uuid_list = get_file_list_from_query_obj(query_obj)
         file_list = data_repo.get_image_list_from_uuid_list(file_uuid_list)
 
         models_using_sdxl = [
@@ -58,7 +55,13 @@ class GPUProcessor(MachineLearningProcessor):
 
             file_list = res
 
-        file_path_list = [f.location for f in file_list]
+        file_path_list = []
+        for idx, file in enumerate(file_list):
+            _, filename = os.path.split(file.local_path)
+            new_filename = f"{padded_integer(idx+1)}_" + filename \
+                if model.display_name() == ComfyWorkflow.STEERABLE_MOTION.value else filename
+            copy_local_file(file.local_path, "videos/temp/", new_filename)
+            file_path_list.append("videos/temp/" + new_filename)
 
         # replacing old files with resized files
         # if len(new_file_map.keys()):
@@ -74,7 +77,9 @@ class GPUProcessor(MachineLearningProcessor):
         data = {
             "workflow_input": workflow_json,
             "file_path_list": file_path_list,
-            "output_node_ids": output_node_ids
+            "output_node_ids": output_node_ids,
+            "extra_model_list": extra_model_list,
+            "ignore_model_list": ignore_list
         }
 
         params = {

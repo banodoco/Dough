@@ -34,7 +34,8 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
 
     # handling comfy_runner workflows 
     if model.name == ComfyRunnerModel.name:
-        workflow_json, output_node_ids = get_model_workflow_from_query(model, query_obj)
+        # TODO: add custom model download option in the replicate cog
+        workflow_json, output_node_ids, extra_model_list, ignore_list = get_model_workflow_from_query(model, query_obj)
         workflow_file = get_workflow_json_url(workflow_json)
 
         models_using_sdxl = [

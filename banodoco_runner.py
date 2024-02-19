@@ -5,6 +5,7 @@ import signal
 import sys
 import time
 import uuid
+import psutil
 import requests
 import traceback
 import sentry_sdk
@@ -69,11 +70,13 @@ def main():
     print('runner running')
     while True:
         if TERMINATE_SCRIPT:
+            stop_server(8188)
             return
 
         if SERVER == 'development':
             if not is_app_running():
                 if retries <=  0:
+                    stop_server(8188)
                     print('runner stopped')
                     return
                 retries -= 1
@@ -147,6 +150,29 @@ def update_cache_dict(inference_type, log, timing_uuid, shot_uuid, timing_update
         if str(log.project.uuid) not in shot_update_list:
             shot_update_list[str(log.project.uuid)] = []
         shot_update_list[str(log.project.uuid)].append(shot_uuid)
+        
+def find_process_by_port(port):
+        pid = None
+        for proc in psutil.process_iter(attrs=['pid', 'name', 'connections']):
+            try:
+                if proc and 'connections' in proc.info and proc.info['connections']:
+                    for conn in proc.info['connections']:
+                        if conn.status == psutil.CONN_LISTEN and conn.laddr.port == port:
+                            app_logger.log(LoggingType.DEBUG, f"Process {proc.info['pid']} (Port {port})")
+                            pid = proc.info['pid']
+                            break
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                pass
+        
+        return pid
+    
+def stop_server(self, port):
+        pid = find_process_by_port(port)
+        if pid:
+            app_logger.log(LoggingType.DEBUG, "comfy server stopped")
+            process = psutil.Process(pid)
+            process.terminate()
+            process.wait()
 
 def check_and_update_db():
     # print("updating logs")
@@ -225,7 +251,7 @@ def check_and_update_db():
                                 print("processing inference output")
                                 process_inference_output(**origin_data)
                                 timing_uuid, shot_uuid = origin_data.get('timing_uuid', None), origin_data.get('shot_uuid', None)
-                                update_cache_dict(origin_data['inference_type'], log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list)
+                                update_cache_dict(origin_data.get('inference_type', ""), log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list)
 
                             except Exception as e:
                                 app_logger.log(LoggingType.ERROR, f"Error: {e}")
@@ -248,7 +274,8 @@ def check_and_update_db():
             try:
                 setup_comfy_runner()
                 start_time = time.time()
-                output = predict_gpu_output(data['workflow_input'], data['file_path_list'], data['output_node_ids'])
+                output = predict_gpu_output(data['workflow_input'], data['file_path_list'], \
+                    data['output_node_ids'], data.get("extra_model_list", []), data.get("ignore_model_list", []))
                 end_time = time.time()
 
                 output = output[-1]     # TODO: different models can have different logic
@@ -271,7 +298,7 @@ def check_and_update_db():
                 from ui_components.methods.common_methods import process_inference_output
                 process_inference_output(**origin_data)
                 timing_uuid, shot_uuid = origin_data.get('timing_uuid', None), origin_data.get('shot_uuid', None)
-                update_cache_dict(origin_data['inference_type'], log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list)
+                update_cache_dict(origin_data.get('inference_type', ''), log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list)
 
             except Exception as e:
                 print("error occured: ", str(e))

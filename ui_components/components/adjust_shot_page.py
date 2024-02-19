@@ -23,17 +23,17 @@ def adjust_shot_page(shot_uuid: str, h2):
                     project_setting = data_repo.get_project_setting(shot.project.uuid)
                     number_of_pages = project_setting.total_shortlist_gallery_pages
                     page_number = 0
-                    gallery_image_view(shot.project.uuid, shortlist=True,view=['add_and_remove_from_shortlist','add_to_this_shot'], shot=shot,sidebar=True)
+                    gallery_image_view(shot.project.uuid, shortlist=True,view=['add_and_remove_from_shortlist','add_to_this_shot'], shot=shot, sidebar=True)
+        
         st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}] > :orange[{shot.name}]")
         st.markdown("***")
         shot_keyframe_element(st.session_state["shot_uuid"], 4, position="Individual")
-        project_setting = data_repo.get_project_setting(shot.project.uuid)
-            
+
         with st.expander("✨ Generate Images", expanded=True):
-            generate_images_element(position='explorer', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
+            generate_images_element(position='explorer', project_uuid=shot.project.uuid, timing_uuid=None, shot_uuid=shot.uuid)
             st.markdown("***")
-            
+
         st.markdown("***")
-        gallery_image_view(shot.project.uuid, shortlist=False,view=['add_and_remove_from_shortlist','add_to_this_shot','view_inference_details'], shot=shot,sidebar=False)
+        gallery_image_view(shot.project.uuid, shortlist=False,view=['add_and_remove_from_shortlist','add_to_this_shot','view_inference_details','shot_chooser'], shot=shot,sidebar=False)
     else:
         frame_styling_page(st.session_state["shot_uuid"], h2)

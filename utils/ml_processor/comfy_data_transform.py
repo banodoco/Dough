@@ -54,15 +54,15 @@ class ComfyDataTransform:
         workflow["10"]["inputs"]["steps"], workflow["10"]["inputs"]["cfg"] = steps, cfg
         workflow["11"]["inputs"]["steps"], workflow["11"]["inputs"]["cfg"] = steps, cfg
 
-        return json.dumps(workflow), output_node_ids
-
+        return json.dumps(workflow), output_node_ids, [], []
+    
     @staticmethod
     def transform_sdxl_img2img_workflow(query: MLQueryObject):
         data_repo = DataRepo()
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_IMG2IMG)
 
         # workflow params
-        height, width = 1024, 1024
+        height, width = query.height, query.width
         positive_prompt, negative_prompt = query.prompt, query.negative_prompt
         steps, cfg = 20, 7      # hardcoding values
         strength = round(query.strength / 100, 1)
@@ -78,9 +78,8 @@ class ComfyDataTransform:
         workflow["42:2"]["inputs"]["denoise"] = 1 - strength
         workflow["42:2"]["inputs"]["seed"] = random_seed()
 
-        return json.dumps(workflow), output_node_ids
-
-
+        return json.dumps(workflow), output_node_ids, [], []
+    
     @staticmethod
     def transform_sdxl_controlnet_workflow(query: MLQueryObject):
         data_repo = DataRepo()
@@ -103,7 +102,7 @@ class ComfyDataTransform:
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["13"]["inputs"]["image"] = image_name
 
-        return json.dumps(workflow), output_node_ids
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_sdxl_controlnet_openpose_workflow(query: MLQueryObject):
@@ -125,7 +124,7 @@ class ComfyDataTransform:
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["12"]["inputs"]["image"] = image_name
 
-        return json.dumps(workflow), output_node_ids
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_llama_2_7b_workflow(query: MLQueryObject):
@@ -139,7 +138,7 @@ class ComfyDataTransform:
         workflow["15"]["inputs"]["prompt"] = input_text
         workflow["15"]["inputs"]["temperature"] = temperature
 
-        return json.dumps(workflow), output_node_ids
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_sdxl_inpainting_workflow(query: MLQueryObject):
@@ -185,7 +184,7 @@ class ComfyDataTransform:
         workflow["34"]["inputs"]["text_g"] = workflow["34"]["inputs"]["text_l"] = positive_prompt
         workflow["37"]["inputs"]["text_g"] = workflow["37"]["inputs"]["text_l"] = negative_prompt
 
-        return json.dumps(workflow), output_node_ids
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_ipadaptor_plus_workflow(query: MLQueryObject):
@@ -197,7 +196,6 @@ class ComfyDataTransform:
         steps, cfg = query.num_inference_steps, query.guidance_scale
         image = data_repo.get_file_from_uuid(query.image_uuid)
         image_name = image.filename
-
         # updating params
         workflow["3"]["inputs"]["seed"] = random_seed()
         workflow["5"]["width"], workflow["5"]["height"] = width, height
@@ -208,7 +206,7 @@ class ComfyDataTransform:
         workflow["7"]["inputs"]["text"] = query.negative_prompt
         workflow["27"]["inputs"]["weight"] = query.strength
         
-        return json.dumps(workflow), output_node_ids
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_ipadaptor_face_workflow(query: MLQueryObject):
@@ -232,7 +230,7 @@ class ComfyDataTransform:
         workflow["36"]["inputs"]["weight"] = query.strength
         workflow["36"]["inputs"]["weight_v2"] = query.strength
 
-        return json.dumps(workflow), output_node_ids
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_ipadaptor_face_plus_workflow(query: MLQueryObject):
@@ -258,18 +256,49 @@ class ComfyDataTransform:
         workflow["29"]["inputs"]["weight"] = query.strength[0]
         workflow["27"]["inputs"]["weight"] = query.strength[1]
 
-        return json.dumps(workflow), output_node_ids
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_steerable_motion_workflow(query: MLQueryObject):
 
+        def update_json_with_loras(json_data, loras):
+            start_id = 536
+            new_ids = []
 
+            # Add LoRAs
+            for lora in loras:
+                new_id = str(start_id)
+                json_data[new_id] = {
+                    "inputs": {
+                        "lora_name": lora["filename"],
+                        "strength": lora["lora_strength"],
+                    },
+                    "class_type": "ADE_AnimateDiffLoRALoader",
+                    "_meta": {
+                        "title": "Load AnimateDiff LoRA 🎭🅐🅓"
+                    }
+                }
+                
+                if new_ids:
+                    json_data[new_ids[-1]]['inputs']['prev_motion_lora'] = [new_id, 0]
+                    
+                new_ids.append(new_id)
+                start_id += 1
+
+            # Update node 545 if needed and if there are new items
+            if "545" in json_data and len(new_ids):
+                if "motion_lora" not in json_data["545"]["inputs"]:
+                    # If "motion_lora" is not present, add it with the specified values
+                    json_data["545"]["inputs"]["motion_lora"] = ["536", 0]
+                else:
+                    # If "motion_lora" is already present, just update the first value
+                    json_data["545"]["inputs"]["motion_lora"][0] = "536"
+
+            return json_data
+    
         sm_data = query.data.get('data', {})
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.STEERABLE_MOTION)
-        #project_settings = data_repo.get_project_setting(shot.project.uuid)
-        # width = project_settings.width
-        # height = project_settings.height
-
+        workflow = update_json_with_loras(workflow, sm_data.get('lora_data'))
 
         print(sm_data)
         workflow['464']['inputs']['height'] = sm_data.get('height')
@@ -277,44 +306,47 @@ class ComfyDataTransform:
         
         workflow['461']['inputs']['ckpt_name'] = sm_data.get('ckpt')
         
-        workflow['473']['inputs']['buffer'] = sm_data.get('buffer')
-        workflow['187']['inputs']['motion_scale'] = sm_data.get('motion_scale')
+        workflow['558']['inputs']['buffer'] = sm_data.get('buffer')
+        workflow['548']['inputs']['text'] = sm_data.get('motion_scales')
         # workflow['548']['inputs']['text'] = sm_data.get('motion_scales')
         workflow['281']['inputs']['format'] = sm_data.get('output_format')
-        workflow['536']['inputs']['pre_text'] = sm_data.get('prompt')
-        workflow['537']['inputs']['pre_text'] = sm_data.get('negative_prompt')
+        workflow['541']['inputs']['pre_text'] = sm_data.get('prompt')
+        workflow['543']['inputs']['pre_text'] = sm_data.get('negative_prompt')
         workflow['292']['inputs']['multiplier'] = sm_data.get('stmfnet_multiplier')
-        workflow['473']['inputs']['relative_ipadapter_strength'] = sm_data.get('relative_ipadapter_strength')
-        workflow['473']['inputs']['relative_cn_strength'] = sm_data.get('relative_cn_strength')        
-        workflow['473']['inputs']['type_of_strength_distribution'] = sm_data.get('type_of_strength_distribution')
-        workflow['473']['inputs']['linear_strength_value'] = sm_data.get('linear_strength_value')
+        workflow['558']['inputs']['relative_ipadapter_strength'] = sm_data.get('relative_ipadapter_strength')
+        workflow['558']['inputs']['relative_cn_strength'] = sm_data.get('relative_cn_strength')        
+        workflow['558']['inputs']['type_of_strength_distribution'] = sm_data.get('type_of_strength_distribution')
+        workflow['558']['inputs']['linear_strength_value'] = sm_data.get('linear_strength_value')
         
-        workflow['473']['inputs']['dynamic_strength_values'] = str(sm_data.get('dynamic_strength_values'))[1:-1]  
-        workflow['473']['inputs']['linear_frame_distribution_value'] = sm_data.get('linear_frame_distribution_value')                
-        workflow['473']['inputs']['dynamic_frame_distribution_values'] = ', '.join(str(int(value)) for value in sm_data.get('dynamic_frame_distribution_values'))        
-        workflow['473']['inputs']['type_of_frame_distribution'] = sm_data.get('type_of_frame_distribution')
-        workflow['473']['inputs']['type_of_key_frame_influence'] = sm_data.get('type_of_key_frame_influence')
-        workflow['473']['inputs']['linear_key_frame_influence_value'] = sm_data.get('linear_key_frame_influence_value')
+        workflow['558']['inputs']['dynamic_strength_values'] = str(sm_data.get('dynamic_strength_values'))[1:-1]  
+        workflow['558']['inputs']['linear_frame_distribution_value'] = sm_data.get('linear_frame_distribution_value')                
+        workflow['558']['inputs']['dynamic_frame_distribution_values'] = ', '.join(str(int(value)) for value in sm_data.get('dynamic_frame_distribution_values'))        
+        workflow['558']['inputs']['type_of_frame_distribution'] = sm_data.get('type_of_frame_distribution')
+        workflow['558']['inputs']['type_of_key_frame_influence'] = sm_data.get('type_of_key_frame_influence')
+        workflow['558']['inputs']['linear_key_frame_influence_value'] = sm_data.get('linear_key_frame_influence_value')
         
         # print(dynamic_key_frame_influence_values)
-        workflow['473']['inputs']['dynamic_key_frame_influence_values'] = str(sm_data.get('dynamic_key_frame_influence_values'))[1:-1]
-        workflow['473']['inputs']['ipadapter_noise'] = sm_data.get('ipadapter_noise')
+        workflow['558']['inputs']['dynamic_key_frame_influence_values'] = str(sm_data.get('dynamic_key_frame_influence_values'))[1:-1]
+        workflow['558']['inputs']['ipadapter_noise'] = sm_data.get('ipadapter_noise')
         workflow['342']['inputs']['context_length'] = sm_data.get('context_length')
         workflow['342']['inputs']['context_stride'] = sm_data.get('context_stride')
         workflow['342']['inputs']['context_overlap'] = sm_data.get('context_overlap')
         workflow['468']['inputs']['end_percent'] = sm_data.get('multipled_base_end_percent')
         workflow['470']['inputs']['strength_model'] = sm_data.get('multipled_base_adapter_strength')
-        workflow["482"]["inputs"]["seed"] = random_seed()
-        workflow["536"]["inputs"]["text"] = sm_data.get('individual_prompts')
+        workflow["207"]["inputs"]["noise_seed"] = random_seed()
+        workflow["541"]["inputs"]["text"] = sm_data.get('individual_prompts')
+        
         # make max_frames an int
-        
-        
-        workflow["536"]["inputs"]["max_frames"] = int(float(sm_data.get('max_frames')))
-        workflow["537"]["inputs"]["max_frames"] = int(float(sm_data.get('max_frames')))
-        workflow["537"]["inputs"]["text"] = sm_data.get('individual_negative_prompts')
-        
+        workflow["541"]["inputs"]["max_frames"] = int(float(sm_data.get('max_frames')))
+        workflow["543"]["inputs"]["max_frames"] = int(float(sm_data.get('max_frames')))
+        workflow["543"]["inputs"]["text"] = sm_data.get('individual_negative_prompts')
 
-        return json.dumps(workflow), output_node_ids
+        # download the json file as text.json
+        # with open("text.json", "w") as f:
+        #     f.write(json.dumps(workflow))
+
+        ignore_list = sm_data.get("lora_data", [])
+        return json.dumps(workflow), output_node_ids, [], ignore_list
 
 
 # NOTE: only populating with models currently in use
@@ -348,6 +380,7 @@ def get_workflow_json_url(workflow_json):
         temp_json_file.write(workflow_json)
     
     return ml_client.upload_training_data(temp_json_path, delete_after_upload=True)
+
 
 def get_file_list_from_query_obj(query_obj: MLQueryObject):
     file_uuid_list = []
