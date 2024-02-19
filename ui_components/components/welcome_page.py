@@ -1,4 +1,4 @@
-from Dough.utils.data_repo.data_repo import DataRepo
+from utils.data_repo.data_repo import DataRepo
 import streamlit as st
 
 def welcome_page():
