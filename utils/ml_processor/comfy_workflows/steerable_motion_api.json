@@ -65,7 +65,6 @@
       "clear_cache_after_n_frames": 15,
       "multiplier": 2,
       "duplicate_first_last_frames": true,
-      "cache_in_fp16": false,
       "frames": [
         "354",
         2
@@ -151,7 +150,7 @@
   "436": {
     "inputs": {
       "images": [
-        "473",
+        "558",
         0
       ]
     },
@@ -171,7 +170,7 @@
   },
   "461": {
     "inputs": {
-      "ckpt_name": "Realistic_Vision_V5.0.safetensors"
+      "ckpt_name": "Realistic_Vision_V5.1.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
@@ -180,10 +179,16 @@
   },
   "464": {
     "inputs": {
-      "width": 512,
-      "height": 512,
+      "width": [
+        "508",
+        0
+      ],
+      "height": [
+        "508",
+        1
+      ],
       "batch_size": [
-        "473",
+        "558",
         5
       ]
     },
@@ -199,7 +204,7 @@
       "motion_strength": 1,
       "motion_scale": 1,
       "sparse_method": [
-        "473",
+        "558",
         4
       ]
     },
@@ -214,11 +219,11 @@
       "start_percent": 0,
       "end_percent": 0.3,
       "positive": [
-        "473",
+        "558",
         1
       ],
       "negative": [
-        "473",
+        "558",
         2
       ],
       "control_net": [
@@ -274,57 +279,6 @@
       "title": "Load LoRA"
     }
   },
-  "473": {
-    "inputs": {
-      "control_net_name": "control_v11f1e_sd15_tile_fp16.safetensors",
-      "type_of_frame_distribution": "linear",
-      "linear_frame_distribution_value": 16,
-      "dynamic_frame_distribution_values": "0, 24, 48, 72",
-      "type_of_key_frame_influence": "linear",
-      "linear_key_frame_influence_value": "0.8",
-      "dynamic_key_frame_influence_values": "(None, 0.96), (0.96, 0.94), (0.94, 0.92), (0.92, None)",
-      "type_of_strength_distribution": "linear",
-      "linear_strength_value": "(0.7,0.8,0.7)",
-      "dynamic_strength_values": "(None, 0.5, 0.34), (0.34, 0.5, 0.33), (0.33, 0.5, 0.34), (0.34, 0.5, None)",
-      "soft_scaled_cn_weights_multiplier": 0.9,
-      "buffer": 4,
-      "relative_cn_strength": 0,
-      "relative_ipadapter_strength": 1,
-      "ipadapter_noise": 0,
-      "ipadapter_start_at": 0,
-      "ipadapter_end_at": 0.6,
-      "cn_start_at": 0,
-      "cn_end_at": 0.65,
-      "positive": [
-        "541",
-        0
-      ],
-      "negative": [
-        "543",
-        1
-      ],
-      "images": [
-        "401",
-        0
-      ],
-      "model": [
-        "470",
-        0
-      ],
-      "ipadapter": [
-        "369",
-        0
-      ],
-      "clip_vision": [
-        "370",
-        0
-      ]
-    },
-    "class_type": "BatchCreativeInterpolation",
-    "_meta": {
-      "title": "Batch Creative Interpolation 🎞️🅢🅜"
-    }
-  },
   "505": {
     "inputs": {
       "strength": 0.5,
@@ -350,6 +304,18 @@
     "class_type": "ACN_AdvancedControlNetApply",
     "_meta": {
       "title": "Apply Advanced ControlNet 🛂🅐🅒🅝"
+    }
+  },
+  "508": {
+    "inputs": {
+      "image": [
+        "401",
+        0
+      ]
+    },
+    "class_type": "GetImageSize+",
+    "_meta": {
+      "title": "🔧 Get Image Size"
     }
   },
   "541": {
@@ -439,7 +405,7 @@
     "inputs": {
       "beta_schedule": "sqrt_linear (AnimateDiff)",
       "model": [
-        "473",
+        "558",
         3
       ],
       "m_models": [
@@ -468,6 +434,57 @@
     "class_type": "BatchValueScheduleLatentInput",
     "_meta": {
       "title": "Batch Value Schedule (Latent Input) 📅🅕🅝"
+    }
+  },
+  "558": {
+    "inputs": {
+      "control_net_name": "v3_sd15_sparsectrl_rgb.ckpt",
+      "type_of_frame_distribution": "linear",
+      "linear_frame_distribution_value": 16,
+      "dynamic_frame_distribution_values": "0,10,26,40",
+      "type_of_key_frame_influence": "linear",
+      "linear_key_frame_influence_value": "(1.0,1.0)",
+      "dynamic_key_frame_influence_values": "(1.0,1.0),(1.0,1.5)(1.0,0.5)",
+      "type_of_strength_distribution": "linear",
+      "linear_strength_value": "(0.3,0.4)",
+      "dynamic_strength_values": "(0.0,1.0),(0.0,1.0),(0.0,1.0),(0.0,1.0)",
+      "soft_scaled_cn_weights_multiplier": 0.85,
+      "buffer": 4,
+      "relative_cn_strength": 0,
+      "relative_ipadapter_strength": 1,
+      "ipadapter_noise": 0.3,
+      "ipadapter_start_at": 0,
+      "ipadapter_end_at": 0.75,
+      "cn_start_at": 0,
+      "cn_end_at": 0.75,
+      "positive": [
+        "541",
+        0
+      ],
+      "negative": [
+        "543",
+        1
+      ],
+      "images": [
+        "401",
+        0
+      ],
+      "model": [
+        "470",
+        0
+      ],
+      "ipadapter": [
+        "369",
+        0
+      ],
+      "clip_vision": [
+        "370",
+        0
+      ]
+    },
+    "class_type": "BatchCreativeInterpolation",
+    "_meta": {
+      "title": "Batch Creative Interpolation 🎞️🅢🅜"
     }
   }
 }

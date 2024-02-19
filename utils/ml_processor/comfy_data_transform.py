@@ -301,7 +301,7 @@ class ComfyDataTransform:
     
         sm_data = query.data.get('data', {})
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.STEERABLE_MOTION)
-        workflow = update_json_with_loras(workflow, sm_data.get('lora_data'))
+        # workflow = update_json_with_loras(workflow, sm_data.get('lora_data'))
 
         print(sm_data)
         workflow['464']['inputs']['height'] = sm_data.get('height')
@@ -309,28 +309,28 @@ class ComfyDataTransform:
         
         workflow['461']['inputs']['ckpt_name'] = sm_data.get('ckpt')
         
-        workflow['473']['inputs']['buffer'] = sm_data.get('buffer')
+        workflow['558']['inputs']['buffer'] = sm_data.get('buffer')
         workflow['548']['inputs']['text'] = sm_data.get('motion_scales')
         # workflow['548']['inputs']['text'] = sm_data.get('motion_scales')
         workflow['281']['inputs']['format'] = sm_data.get('output_format')
         workflow['541']['inputs']['pre_text'] = sm_data.get('prompt')
         workflow['543']['inputs']['pre_text'] = sm_data.get('negative_prompt')
         workflow['292']['inputs']['multiplier'] = sm_data.get('stmfnet_multiplier')
-        workflow['473']['inputs']['relative_ipadapter_strength'] = sm_data.get('relative_ipadapter_strength')
-        workflow['473']['inputs']['relative_cn_strength'] = sm_data.get('relative_cn_strength')        
-        workflow['473']['inputs']['type_of_strength_distribution'] = sm_data.get('type_of_strength_distribution')
-        workflow['473']['inputs']['linear_strength_value'] = sm_data.get('linear_strength_value')
+        workflow['558']['inputs']['relative_ipadapter_strength'] = sm_data.get('relative_ipadapter_strength')
+        workflow['558']['inputs']['relative_cn_strength'] = sm_data.get('relative_cn_strength')        
+        workflow['558']['inputs']['type_of_strength_distribution'] = sm_data.get('type_of_strength_distribution')
+        workflow['558']['inputs']['linear_strength_value'] = sm_data.get('linear_strength_value')
         
-        workflow['473']['inputs']['dynamic_strength_values'] = str(sm_data.get('dynamic_strength_values'))[1:-1]  
-        workflow['473']['inputs']['linear_frame_distribution_value'] = sm_data.get('linear_frame_distribution_value')                
-        workflow['473']['inputs']['dynamic_frame_distribution_values'] = ', '.join(str(int(value)) for value in sm_data.get('dynamic_frame_distribution_values'))        
-        workflow['473']['inputs']['type_of_frame_distribution'] = sm_data.get('type_of_frame_distribution')
-        workflow['473']['inputs']['type_of_key_frame_influence'] = sm_data.get('type_of_key_frame_influence')
-        workflow['473']['inputs']['linear_key_frame_influence_value'] = sm_data.get('linear_key_frame_influence_value')
+        workflow['558']['inputs']['dynamic_strength_values'] = str(sm_data.get('dynamic_strength_values'))[1:-1]  
+        workflow['558']['inputs']['linear_frame_distribution_value'] = sm_data.get('linear_frame_distribution_value')                
+        workflow['558']['inputs']['dynamic_frame_distribution_values'] = ', '.join(str(int(value)) for value in sm_data.get('dynamic_frame_distribution_values'))        
+        workflow['558']['inputs']['type_of_frame_distribution'] = sm_data.get('type_of_frame_distribution')
+        workflow['558']['inputs']['type_of_key_frame_influence'] = sm_data.get('type_of_key_frame_influence')
+        workflow['558']['inputs']['linear_key_frame_influence_value'] = sm_data.get('linear_key_frame_influence_value')
         
         # print(dynamic_key_frame_influence_values)
-        workflow['473']['inputs']['dynamic_key_frame_influence_values'] = str(sm_data.get('dynamic_key_frame_influence_values'))[1:-1]
-        workflow['473']['inputs']['ipadapter_noise'] = sm_data.get('ipadapter_noise')
+        workflow['558']['inputs']['dynamic_key_frame_influence_values'] = str(sm_data.get('dynamic_key_frame_influence_values'))[1:-1]
+        workflow['558']['inputs']['ipadapter_noise'] = sm_data.get('ipadapter_noise')
         workflow['342']['inputs']['context_length'] = sm_data.get('context_length')
         workflow['342']['inputs']['context_stride'] = sm_data.get('context_stride')
         workflow['342']['inputs']['context_overlap'] = sm_data.get('context_overlap')

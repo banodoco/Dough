@@ -400,8 +400,7 @@ def animation_style_element(shot_uuid):
                 
     multipled_base_end_percent = 0.05 * (strength_of_adherence * 10)
     multipled_base_adapter_strength = 0.05 * (strength_of_adherence * 20)
-    
-    
+
     motion_scales = format_motion_strengths_with_buffer(dynamic_frame_distribution_values, motions_during_frames, buffer)
     motion_scale = 1.3
 
@@ -1006,11 +1005,10 @@ def transform_data(strength_of_frames, movements_between_frames, speeds_of_trans
     return output_strength, output_speeds, cumulative_distances
 
 
-
 def format_motion_strengths_with_buffer(frame_numbers, motion_strengths, buffer):
     # Adjust the first frame number to 0 and shift the others by the buffer
     adjusted_frame_numbers = [0] + [frame + buffer for frame in frame_numbers[1:]]
     
     # Format the adjusted frame numbers and strengths
-    formatted = ', '.join(f'{frame}:({strength})' for frame, strength in zip(adjusted_frame_numbers, motion_strengths))
+    formatted = ', '.join(f'{int(frame)}:({strength})' for frame, strength in zip(adjusted_frame_numbers, motion_strengths))
     return formatted
