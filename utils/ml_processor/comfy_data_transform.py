@@ -272,24 +272,21 @@ class ComfyDataTransform:
                     "inputs": {
                         "lora_name": lora["filename"],
                         "strength": lora["lora_strength"],
-                        "prev_motion_lora": [new_ids[-1] if new_ids else "", 0]
                     },
                     "class_type": "ADE_AnimateDiffLoRALoader",
                     "_meta": {
                         "title": "Load AnimateDiff LoRA 🎭🅐🅓"
                     }
                 }
-                if new_ids:  # Update previous node's prev_motion_lora to point to this new node
-                    json_data[new_ids[-1]]['inputs']['prev_motion_lora'][0] = new_id
+                
+                if new_ids:
+                    json_data[new_ids[-1]]['inputs']['prev_motion_lora'] = [new_id, 0]
+                    
                 new_ids.append(new_id)
                 start_id += 1
 
-            # Ensure the last node's prev_motion_lora is empty
-            if new_ids:
-                json_data[new_ids[-1]]['inputs']['prev_motion_lora'] = ["", 0]
-
             # Update node 545 if needed and if there are new items
-            if "545" in json_data:
+            if "545" in json_data and len(new_ids):
                 if "motion_lora" not in json_data["545"]["inputs"]:
                     # If "motion_lora" is not present, add it with the specified values
                     json_data["545"]["inputs"]["motion_lora"] = ["536", 0]
@@ -301,7 +298,7 @@ class ComfyDataTransform:
     
         sm_data = query.data.get('data', {})
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.STEERABLE_MOTION)
-        # workflow = update_json_with_loras(workflow, sm_data.get('lora_data'))
+        workflow = update_json_with_loras(workflow, sm_data.get('lora_data'))
 
         print(sm_data)
         workflow['464']['inputs']['height'] = sm_data.get('height')
