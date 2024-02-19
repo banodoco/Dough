@@ -1,4 +1,3 @@
-import threading
 import time
 import streamlit as st
 from moviepy.editor import *
@@ -93,7 +92,14 @@ def main():
         project_init()
         
         from ui_components.setup import setup_app_ui
-        setup_app_ui()
+        from ui_components.components.welcome_page import welcome_page
+        
+        data_repo = DataRepo()
+        app_setting = data_repo.get_app_setting_from_uuid()
+        if app_setting.welcome_state != 0:
+            setup_app_ui()
+        else:
+            welcome_page()
 
         st.session_state['maintain_state'] = False
                                                     

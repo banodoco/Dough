@@ -62,7 +62,8 @@ class InferenceLogDto(serializers.ModelSerializer):
             "total_inference_time",
             "created_on",
             "updated_on",
-            "status"
+            "status",
+            "model_name"
         )
 
 
@@ -71,7 +72,18 @@ class InternalFileDto(serializers.ModelSerializer):
     inference_log = InferenceLogDto()
     class Meta:
         model = InternalFileObject
-        fields = ('uuid', 'name', 'local_path', 'type',  'hosted_url', 'created_on', 'inference_log', 'project', 'tag')
+        fields = (
+                'uuid', 
+                'name', 
+                'local_path', 
+                'type', 
+                'hosted_url', 
+                'created_on', 
+                'inference_log', 
+                'project', 
+                'tag',
+                'shot_uuid'
+            )
 
 
 class BasicShotDto(serializers.ModelSerializer):

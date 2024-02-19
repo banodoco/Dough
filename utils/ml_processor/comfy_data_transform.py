@@ -54,7 +54,7 @@ class ComfyDataTransform:
         workflow["10"]["inputs"]["steps"], workflow["10"]["inputs"]["cfg"] = steps, cfg
         workflow["11"]["inputs"]["steps"], workflow["11"]["inputs"]["cfg"] = steps, cfg
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
     
     @staticmethod
     def transform_sdxl_img2img_workflow(query: MLQueryObject):
@@ -78,7 +78,7 @@ class ComfyDataTransform:
         workflow["42:2"]["inputs"]["denoise"] = 1 - strength
         workflow["42:2"]["inputs"]["seed"] = random_seed()
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
     
     @staticmethod
     def transform_sdxl_controlnet_workflow(query: MLQueryObject):
@@ -102,7 +102,7 @@ class ComfyDataTransform:
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["13"]["inputs"]["image"] = image_name
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_sdxl_controlnet_openpose_workflow(query: MLQueryObject):
@@ -124,7 +124,7 @@ class ComfyDataTransform:
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["12"]["inputs"]["image"] = image_name
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_llama_2_7b_workflow(query: MLQueryObject):
@@ -138,7 +138,7 @@ class ComfyDataTransform:
         workflow["15"]["inputs"]["prompt"] = input_text
         workflow["15"]["inputs"]["temperature"] = temperature
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_sdxl_inpainting_workflow(query: MLQueryObject):
@@ -184,7 +184,7 @@ class ComfyDataTransform:
         workflow["34"]["inputs"]["text_g"] = workflow["34"]["inputs"]["text_l"] = positive_prompt
         workflow["37"]["inputs"]["text_g"] = workflow["37"]["inputs"]["text_l"] = negative_prompt
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_ipadaptor_plus_workflow(query: MLQueryObject):
@@ -206,7 +206,7 @@ class ComfyDataTransform:
         workflow["7"]["inputs"]["text"] = query.negative_prompt
         workflow["27"]["inputs"]["weight"] = query.strength
         
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_ipadaptor_face_workflow(query: MLQueryObject):
@@ -230,7 +230,7 @@ class ComfyDataTransform:
         workflow["36"]["inputs"]["weight"] = query.strength
         workflow["36"]["inputs"]["weight_v2"] = query.strength
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_ipadaptor_face_plus_workflow(query: MLQueryObject):
@@ -256,7 +256,7 @@ class ComfyDataTransform:
         workflow["29"]["inputs"]["weight"] = query.strength[0]
         workflow["27"]["inputs"]["weight"] = query.strength[1]
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_steerable_motion_workflow(query: MLQueryObject):
@@ -270,26 +270,23 @@ class ComfyDataTransform:
                 new_id = str(start_id)
                 json_data[new_id] = {
                     "inputs": {
-                        "lora_name": lora["lora_name"],
+                        "lora_name": lora["filename"],
                         "strength": lora["lora_strength"],
-                        "prev_motion_lora": [new_ids[-1] if new_ids else "", 0]
                     },
                     "class_type": "ADE_AnimateDiffLoRALoader",
                     "_meta": {
                         "title": "Load AnimateDiff LoRA 🎭🅐🅓"
                     }
                 }
-                if new_ids:  # Update previous node's prev_motion_lora to point to this new node
-                    json_data[new_ids[-1]]['inputs']['prev_motion_lora'][0] = new_id
+                
+                if new_ids:
+                    json_data[new_ids[-1]]['inputs']['prev_motion_lora'] = [new_id, 0]
+                    
                 new_ids.append(new_id)
                 start_id += 1
 
-            # Ensure the last node's prev_motion_lora is empty
-            if new_ids:
-                json_data[new_ids[-1]]['inputs']['prev_motion_lora'] = ["", 0]
-
             # Update node 545 if needed and if there are new items
-            if loras:
+            if "545" in json_data and len(new_ids):
                 if "motion_lora" not in json_data["545"]["inputs"]:
                     # If "motion_lora" is not present, add it with the specified values
                     json_data["545"]["inputs"]["motion_lora"] = ["536", 0]
@@ -309,28 +306,28 @@ class ComfyDataTransform:
         
         workflow['461']['inputs']['ckpt_name'] = sm_data.get('ckpt')
         
-        workflow['473']['inputs']['buffer'] = sm_data.get('buffer')
+        workflow['558']['inputs']['buffer'] = sm_data.get('buffer')
         workflow['548']['inputs']['text'] = sm_data.get('motion_scales')
         # workflow['548']['inputs']['text'] = sm_data.get('motion_scales')
         workflow['281']['inputs']['format'] = sm_data.get('output_format')
         workflow['541']['inputs']['pre_text'] = sm_data.get('prompt')
         workflow['543']['inputs']['pre_text'] = sm_data.get('negative_prompt')
         workflow['292']['inputs']['multiplier'] = sm_data.get('stmfnet_multiplier')
-        workflow['473']['inputs']['relative_ipadapter_strength'] = sm_data.get('relative_ipadapter_strength')
-        workflow['473']['inputs']['relative_cn_strength'] = sm_data.get('relative_cn_strength')        
-        workflow['473']['inputs']['type_of_strength_distribution'] = sm_data.get('type_of_strength_distribution')
-        workflow['473']['inputs']['linear_strength_value'] = sm_data.get('linear_strength_value')
+        workflow['558']['inputs']['relative_ipadapter_strength'] = sm_data.get('relative_ipadapter_strength')
+        workflow['558']['inputs']['relative_cn_strength'] = sm_data.get('relative_cn_strength')        
+        workflow['558']['inputs']['type_of_strength_distribution'] = sm_data.get('type_of_strength_distribution')
+        workflow['558']['inputs']['linear_strength_value'] = sm_data.get('linear_strength_value')
         
-        workflow['473']['inputs']['dynamic_strength_values'] = str(sm_data.get('dynamic_strength_values'))[1:-1]  
-        workflow['473']['inputs']['linear_frame_distribution_value'] = sm_data.get('linear_frame_distribution_value')                
-        workflow['473']['inputs']['dynamic_frame_distribution_values'] = ', '.join(str(int(value)) for value in sm_data.get('dynamic_frame_distribution_values'))        
-        workflow['473']['inputs']['type_of_frame_distribution'] = sm_data.get('type_of_frame_distribution')
-        workflow['473']['inputs']['type_of_key_frame_influence'] = sm_data.get('type_of_key_frame_influence')
-        workflow['473']['inputs']['linear_key_frame_influence_value'] = sm_data.get('linear_key_frame_influence_value')
+        workflow['558']['inputs']['dynamic_strength_values'] = str(sm_data.get('dynamic_strength_values'))[1:-1]  
+        workflow['558']['inputs']['linear_frame_distribution_value'] = sm_data.get('linear_frame_distribution_value')                
+        workflow['558']['inputs']['dynamic_frame_distribution_values'] = ', '.join(str(int(value)) for value in sm_data.get('dynamic_frame_distribution_values'))        
+        workflow['558']['inputs']['type_of_frame_distribution'] = sm_data.get('type_of_frame_distribution')
+        workflow['558']['inputs']['type_of_key_frame_influence'] = sm_data.get('type_of_key_frame_influence')
+        workflow['558']['inputs']['linear_key_frame_influence_value'] = sm_data.get('linear_key_frame_influence_value')
         
         # print(dynamic_key_frame_influence_values)
-        workflow['473']['inputs']['dynamic_key_frame_influence_values'] = str(sm_data.get('dynamic_key_frame_influence_values'))[1:-1]
-        workflow['473']['inputs']['ipadapter_noise'] = sm_data.get('ipadapter_noise')
+        workflow['558']['inputs']['dynamic_key_frame_influence_values'] = str(sm_data.get('dynamic_key_frame_influence_values'))[1:-1]
+        workflow['558']['inputs']['ipadapter_noise'] = sm_data.get('ipadapter_noise')
         workflow['342']['inputs']['context_length'] = sm_data.get('context_length')
         workflow['342']['inputs']['context_stride'] = sm_data.get('context_stride')
         workflow['342']['inputs']['context_overlap'] = sm_data.get('context_overlap')
@@ -345,13 +342,11 @@ class ComfyDataTransform:
         workflow["543"]["inputs"]["text"] = sm_data.get('individual_negative_prompts')
 
         # download the json file as text.json
-        with open("text.json", "w") as f:
-            f.write(json.dumps(workflow))
+        # with open("text.json", "w") as f:
+        #     f.write(json.dumps(workflow))
 
-
-        
-        extra_model_lists = sm_data.get("lora_data", [])
-        return json.dumps(workflow), output_node_ids, extra_model_lists
+        ignore_list = sm_data.get("lora_data", [])
+        return json.dumps(workflow), output_node_ids, [], ignore_list
 
 
 # NOTE: only populating with models currently in use

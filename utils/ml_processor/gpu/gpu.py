@@ -25,7 +25,7 @@ class GPUProcessor(MachineLearningProcessor):
 
     def predict_model_output_standardized(self, model: MLModel, query_obj: MLQueryObject, queue_inference=False):
         data_repo = DataRepo()
-        workflow_json, output_node_ids, extra_model_list = get_model_workflow_from_query(model, query_obj)
+        workflow_json, output_node_ids, extra_model_list, ignore_list = get_model_workflow_from_query(model, query_obj)
         file_uuid_list = []
 
         file_uuid_list = get_file_list_from_query_obj(query_obj)
@@ -78,7 +78,8 @@ class GPUProcessor(MachineLearningProcessor):
             "workflow_input": workflow_json,
             "file_path_list": file_path_list,
             "output_node_ids": output_node_ids,
-            "extra_model_list": extra_model_list
+            "extra_model_list": extra_model_list,
+            "ignore_model_list": ignore_list
         }
 
         params = {

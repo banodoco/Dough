@@ -18,6 +18,11 @@ class CreativeProcessType(ExtendedEnum):
 
 class ShotMetaData(ExtendedEnum):
     MOTION_DATA = "motion_data"     # {"timing_data": [...]}
+    
+class GalleryImageViewType(ExtendedEnum):
+    EXPLORER_ONLY = "explorer"
+    SHOT_ONLY = "shot"
+    ANY = "any"
 
 class DefaultTimingStyleParams:
     prompt = ""

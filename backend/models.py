@@ -79,6 +79,7 @@ class AIModel(BaseModel):
 class InferenceLog(BaseModel):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
     model = models.ForeignKey(AIModel, on_delete=models.DO_NOTHING, null=True)
+    model_name = models.CharField(max_length=512, default="", blank=True)     # for filtering purposes
     input_params = models.TextField(default="", blank=True)
     output_details = models.TextField(default="", blank=True)
     total_inference_time = models.FloatField(default=0)
@@ -97,6 +98,7 @@ class InternalFileObject(BaseModel):
     tag = models.CharField(max_length=255,default="")  # background_image, mask_image, canny_image etc..
     project = models.ForeignKey(Project, on_delete=models.SET_NULL, default=None, null=True)
     inference_log = models.ForeignKey(InferenceLog, on_delete=models.SET_NULL, default=None, null=True)
+    shot_uuid = models.CharField(max_length=255, default="", blank=True)    # NOTE: this is not a foreignkey and purely for filtering purpose
 
     class Meta:
         app_label = 'backend'

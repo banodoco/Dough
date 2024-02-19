@@ -274,7 +274,8 @@ def check_and_update_db():
             try:
                 setup_comfy_runner()
                 start_time = time.time()
-                output = predict_gpu_output(data['workflow_input'], data['file_path_list'], data['output_node_ids'], data.get("extra_model_list", []))
+                output = predict_gpu_output(data['workflow_input'], data['file_path_list'], \
+                    data['output_node_ids'], data.get("extra_model_list", []), data.get("ignore_model_list", []))
                 end_time = time.time()
 
                 output = output[-1]     # TODO: different models can have different logic

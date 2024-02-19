@@ -18,6 +18,7 @@ class InternalFileObject:
         self.hosted_url = kwargs['hosted_url'] if key_present('hosted_url', kwargs) else None
         self.tag = kwargs['tag'] if key_present('tag', kwargs) else None
         self.created_on = kwargs['created_on'] if key_present('created_on', kwargs) else None
+        self.shot_uuid = kwargs['shot_uuid'] if key_present('shot_uuid', kwargs) else ""
         self.inference_log = InferenceLogObject(**kwargs['inference_log']) if key_present('inference_log', kwargs) else None
         self.project = InternalProjectObject(**kwargs['project']) if key_present('project', kwargs) else None
 
@@ -211,7 +212,7 @@ class InternalAppSettingObject:
         self.previous_project = InternalProjectObject(
             **kwargs["project"]) if key_present('project', kwargs) else None
         self.replicate_username = kwargs['replicate_username'] if 'replicate_username' in kwargs and kwargs['replicate_username'] else ""
-        self.welcome_state = kwargs['welcome_state'] if 'welcome_state' in kwargs else None
+        self.welcome_state = kwargs['welcome_state'] if 'welcome_state' in kwargs else 1
         self.aws_secret_access_key = kwargs['aws_secret_access_key'] if 'aws_secret_access_key' in kwargs else None
         self.aws_access_key = kwargs['aws_access_key'] if 'aws_access_key' in kwargs else None
         self.replicate_key = kwargs['replicate_key'] if 'replicate_key' in kwargs and kwargs['replicate_key'] else ""
@@ -273,7 +274,7 @@ class InferenceLogObject:
         self.total_inference_time = kwargs['total_inference_time'] if key_present('total_inference_time', kwargs) else None
         self.status = kwargs['status'] if key_present('status', kwargs) else None
         self.updated_on = datetime.datetime.fromisoformat(kwargs['updated_on'][:26]) if key_present('updated_on', kwargs) else None
-
+        self.model_name = kwargs['model_name'] if key_present('model_name', kwargs) else ""
 
 def key_present(key, dict):
     if key in dict and dict[key] is not None:

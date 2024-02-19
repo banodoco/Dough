@@ -1,4 +1,3 @@
-
 import streamlit as st
 from ui_components.constants import CreativeProcessType
 from ui_components.widgets.timeline_view import timeline_view
@@ -17,21 +16,12 @@ def timeline_view_page(shot_uuid: str, h2):
         if "view" not in st.session_state:
             st.session_state["view"] = views[0]
             st.session_state["manual_select"] = None
+
         st.write("")         
         with st.expander("📋 Explorer Shortlist",expanded=True):
-
             if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
-                project_setting = data_repo.get_project_setting(shot.project.uuid)
-                # page_number = st.radio("Select page:", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True)
-                gallery_image_view(shot.project.uuid, shortlist=True,view=["add_and_remove_from_shortlist","add_to_any_shot"], shot=shot,sidebar=True)
-    '''
-    with h2:
-        st.session_state['view'] = option_menu(None, views, icons=['palette', 'camera-reels', "hourglass", 'stopwatch'], menu_icon="cast", orientation="vertical", key="secti2on_selector", styles={
-                                                "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}}, manual_select=st.session_state["manual_select"])
-        
-        if st.session_state["manual_select"] != None:
-            st.session_state["manual_select"] = None
-    '''
+                gallery_image_view(shot.project.uuid, shortlist=True, view=["add_and_remove_from_shortlist","add_to_any_shot"], shot=None, sidebar=True)
+    
     st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}] > :orange[{st.session_state['view']}]")
 
     st.markdown("***")
