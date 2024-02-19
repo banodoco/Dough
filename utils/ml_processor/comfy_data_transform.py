@@ -289,7 +289,7 @@ class ComfyDataTransform:
                 json_data[new_ids[-1]]['inputs']['prev_motion_lora'] = ["", 0]
 
             # Update node 545 if needed and if there are new items
-            if "536" in json_data:
+            if loras:
                 if "motion_lora" not in json_data["545"]["inputs"]:
                     # If "motion_lora" is not present, add it with the specified values
                     json_data["545"]["inputs"]["motion_lora"] = ["536", 0]
