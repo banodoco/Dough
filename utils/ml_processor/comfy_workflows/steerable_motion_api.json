@@ -50,29 +50,13 @@
       "pingpong": false,
       "save_output": true,
       "images": [
-        "292",
+        "559",
         0
       ]
     },
     "class_type": "VHS_VideoCombine",
     "_meta": {
       "title": "Video Combine 🎥🅥🅗🅢"
-    }
-  },
-  "292": {
-    "inputs": {
-      "ckpt_name": "stmfnet.pth",
-      "clear_cache_after_n_frames": 15,
-      "multiplier": 2,
-      "duplicate_first_last_frames": true,
-      "frames": [
-        "354",
-        2
-      ]
-    },
-    "class_type": "STMFNet VFI",
-    "_meta": {
-      "title": "STMFNet VFI"
     }
   },
   "342": {
@@ -137,7 +121,7 @@
   },
   "401": {
     "inputs": {
-      "directory": "./ComfyUI/input/",
+      "directory": "/workspace/ComfyUI/input//light_goes_on/",
       "image_load_cap": 0,
       "skip_first_images": 0,
       "select_every_nth": 1
@@ -170,7 +154,7 @@
   },
   "461": {
     "inputs": {
-      "ckpt_name": "Realistic_Vision_V5.1.safetensors"
+      "ckpt_name": "Realistic_Vision_V5.0.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
@@ -438,7 +422,7 @@
   },
   "558": {
     "inputs": {
-      "control_net_name": "v3_sd15_sparsectrl_rgb.ckpt",
+      "control_net_name": "SD1.5/animatediff/v3_sd15_sparsectrl_rgb.ckpt",
       "type_of_frame_distribution": "linear",
       "linear_frame_distribution_value": 16,
       "dynamic_frame_distribution_values": "0,10,26,40",
@@ -485,6 +469,21 @@
     "class_type": "BatchCreativeInterpolation",
     "_meta": {
       "title": "Batch Creative Interpolation 🎞️🅢🅜"
+    }
+  },
+  "559": {
+    "inputs": {
+      "ckpt_name": "film_net_fp32.pt",
+      "clear_cache_after_n_frames": 10,
+      "multiplier": 2,
+      "frames": [
+        "354",
+        2
+      ]
+    },
+    "class_type": "FILM VFI",
+    "_meta": {
+      "title": "FILM VFI"
     }
   }
 }
