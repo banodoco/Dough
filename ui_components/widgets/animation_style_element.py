@@ -204,7 +204,7 @@ def animation_style_element(shot_uuid):
     tab1, tab2, tab3  = st.tabs(["Apply LoRAs","Explore LoRAs","Train LoRAs"])
 
     lora_data = []
-
+    lora_file_dest = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
     with tab1:
 
         if "current_loras" not in st.session_state:
@@ -212,8 +212,8 @@ def animation_style_element(shot_uuid):
         # Initialize a single list to hold dictionaries for LoRA data
         #lora_data = []
         # Check if the directory exists and list files, or use a default list
-        if os.path.exists("ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"):
-            files = os.listdir("ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora")
+        if os.path.exists(lora_file_dest):
+            files = os.listdir(lora_file_dest)
             # remove files that start with a dot
             files = [file for file in files if not file.startswith(".")]
         else:
@@ -237,7 +237,7 @@ def animation_style_element(shot_uuid):
                     strength_of_lora = st.slider("How strong would you like the LoRA to be?", min_value=0.0, max_value=1.0, value=0.5, step=0.01, key=f"strength_of_lora_{idx}")
                     
                     # Append the selected LoRA name and strength as a dictionary to lora_data
-                    lora_data.append({"lora_name": which_lora, "lora_strength": strength_of_lora})
+                    lora_data.append({"filename": which_lora, "lora_strength": strength_of_lora, "filepath": lora_file_dest + "/" + which_lora})
                     # st.write(lora_data)
                 with h3:
                     when_to_apply_lora = st.slider("When to apply the LoRA?", min_value=0, max_value=100, value=(0,100), step=1, key=f"when_to_apply_lora_{idx}",disabled=True,help="This feature is not yet available.")
