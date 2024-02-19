@@ -270,8 +270,8 @@ class ComfyDataTransform:
                 new_id = str(start_id)
                 json_data[new_id] = {
                     "inputs": {
-                        "lora_name": lora["filename"],
-                        "strength": lora["strength"],
+                        "lora_name": lora["lora_name"],
+                        "strength": lora["lora_strength"],
                         "prev_motion_lora": [new_ids[-1] if new_ids else "", 0]
                     },
                     "class_type": "ADE_AnimateDiffLoRALoader",
@@ -289,8 +289,13 @@ class ComfyDataTransform:
                 json_data[new_ids[-1]]['inputs']['prev_motion_lora'] = ["", 0]
 
             # Update node 545 if needed and if there are new items
-            if loras and "545" in json_data:
-                json_data["545"]["inputs"]["motion_lora"][0] = "546"
+            if "545" in json_data:
+                if "motion_lora" not in json_data["545"]["inputs"]:
+                    # If "motion_lora" is not present, add it with the specified values
+                    json_data["545"]["inputs"]["motion_lora"] = ["536", 0]
+                else:
+                    # If "motion_lora" is already present, just update the first value
+                    json_data["545"]["inputs"]["motion_lora"][0] = "536"
 
             return json_data
     
@@ -305,11 +310,11 @@ class ComfyDataTransform:
         workflow['461']['inputs']['ckpt_name'] = sm_data.get('ckpt')
         
         workflow['473']['inputs']['buffer'] = sm_data.get('buffer')
-        workflow['187']['inputs']['motion_scale'] = sm_data.get('motion_scale')
+        workflow['548']['inputs']['text'] = sm_data.get('motion_scales')
         # workflow['548']['inputs']['text'] = sm_data.get('motion_scales')
         workflow['281']['inputs']['format'] = sm_data.get('output_format')
-        workflow['536']['inputs']['pre_text'] = sm_data.get('prompt')
-        workflow['537']['inputs']['pre_text'] = sm_data.get('negative_prompt')
+        workflow['541']['inputs']['pre_text'] = sm_data.get('prompt')
+        workflow['543']['inputs']['pre_text'] = sm_data.get('negative_prompt')
         workflow['292']['inputs']['multiplier'] = sm_data.get('stmfnet_multiplier')
         workflow['473']['inputs']['relative_ipadapter_strength'] = sm_data.get('relative_ipadapter_strength')
         workflow['473']['inputs']['relative_cn_strength'] = sm_data.get('relative_cn_strength')        
@@ -331,13 +336,19 @@ class ComfyDataTransform:
         workflow['342']['inputs']['context_overlap'] = sm_data.get('context_overlap')
         workflow['468']['inputs']['end_percent'] = sm_data.get('multipled_base_end_percent')
         workflow['470']['inputs']['strength_model'] = sm_data.get('multipled_base_adapter_strength')
-        workflow["482"]["inputs"]["seed"] = random_seed()
-        workflow["536"]["inputs"]["text"] = sm_data.get('individual_prompts')
+        workflow["207"]["inputs"]["noise_seed"] = random_seed()
+        workflow["541"]["inputs"]["text"] = sm_data.get('individual_prompts')
         
         # make max_frames an int
-        workflow["536"]["inputs"]["max_frames"] = int(float(sm_data.get('max_frames')))
-        workflow["537"]["inputs"]["max_frames"] = int(float(sm_data.get('max_frames')))
-        workflow["537"]["inputs"]["text"] = sm_data.get('individual_negative_prompts')
+        workflow["541"]["inputs"]["max_frames"] = int(float(sm_data.get('max_frames')))
+        workflow["543"]["inputs"]["max_frames"] = int(float(sm_data.get('max_frames')))
+        workflow["543"]["inputs"]["text"] = sm_data.get('individual_negative_prompts')
+
+        # download the json file as text.json
+        with open("text.json", "w") as f:
+            f.write(json.dumps(workflow))
+
+
         
         extra_model_lists = sm_data.get("lora_data", [])
         return json.dumps(workflow), output_node_ids, extra_model_lists

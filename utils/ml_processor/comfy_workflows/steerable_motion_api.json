@@ -1,24 +1,4 @@
 {
-  "187": {
-    "inputs": {
-      "model_name": "v3_sd15_mm.ckpt",
-      "beta_schedule": "sqrt_linear (AnimateDiff)",
-      "motion_scale": 1.3,
-      "apply_v2_models_properly": false,
-      "model": [
-        "473",
-        3
-      ],
-      "context_options": [
-        "342",
-        0
-      ]
-    },
-    "class_type": "ADE_AnimateDiffLoaderWithContext",
-    "_meta": {
-      "title": "AnimateDiff Loader [Legacy] 🎭🅐🅓①"
-    }
-  },
   "207": {
     "inputs": {
       "add_noise": "enable",
@@ -33,7 +13,7 @@
       "preview_method": "auto",
       "vae_decode": "true",
       "model": [
-        "187",
+        "547",
         0
       ],
       "positive": [
@@ -60,7 +40,7 @@
   },
   "281": {
     "inputs": {
-      "frame_rate": 16,
+      "frame_rate": 15,
       "loop_count": 0,
       "filename_prefix": "steerable-motion/AD_",
       "format": "video/h264-mp4",
@@ -115,7 +95,7 @@
   },
   "354": {
     "inputs": {
-      "split_index": 4,
+      "split_index": 3,
       "images": [
         "207",
         5
@@ -158,7 +138,7 @@
   },
   "401": {
     "inputs": {
-      "directory": "./ComfyUI/input/",
+      "directory": "/workspace/ComfyUI/input//light_goes_on/",
       "image_load_cap": 0,
       "skip_first_images": 0,
       "select_every_nth": 1
@@ -191,7 +171,7 @@
   },
   "461": {
     "inputs": {
-      "ckpt_name": "Realistic_Vision_V5.1.safetensors"
+      "ckpt_name": "Realistic_Vision_V5.0.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
@@ -200,14 +180,8 @@
   },
   "464": {
     "inputs": {
-      "width": [
-        "508",
-        0
-      ],
-      "height": [
-        "508",
-        1
-      ],
+      "width": 512,
+      "height": 512,
       "batch_size": [
         "473",
         5
@@ -238,7 +212,7 @@
     "inputs": {
       "strength": 0.6,
       "start_percent": 0,
-      "end_percent": 0.05,
+      "end_percent": 0.3,
       "positive": [
         "473",
         1
@@ -284,7 +258,7 @@
   "470": {
     "inputs": {
       "lora_name": "v3_sd15_adapter.ckpt",
-      "strength_model": 0.01,
+      "strength_model": 0.05,
       "strength_clip": 0.25,
       "model": [
         "461",
@@ -305,28 +279,28 @@
       "control_net_name": "control_v11f1e_sd15_tile_fp16.safetensors",
       "type_of_frame_distribution": "linear",
       "linear_frame_distribution_value": 16,
-      "dynamic_frame_distribution_values": "0,16,32,48",
+      "dynamic_frame_distribution_values": "0, 24, 48, 72",
       "type_of_key_frame_influence": "linear",
-      "linear_key_frame_influence_value": "0.75",
-      "dynamic_key_frame_influence_values": "",
+      "linear_key_frame_influence_value": "0.8",
+      "dynamic_key_frame_influence_values": "(None, 0.96), (0.96, 0.94), (0.94, 0.92), (0.92, None)",
       "type_of_strength_distribution": "linear",
-      "linear_strength_value": "(0.4,0.5,0.4)",
-      "dynamic_strength_values": "(0.0,1.0),(0.0,1.0),(0.0,1.0),(0.0,1.0)",
-      "soft_scaled_cn_weights_multiplier": 0.85,
+      "linear_strength_value": "(0.7,0.8,0.7)",
+      "dynamic_strength_values": "(None, 0.5, 0.34), (0.34, 0.5, 0.33), (0.33, 0.5, 0.34), (0.34, 0.5, None)",
+      "soft_scaled_cn_weights_multiplier": 0.9,
       "buffer": 4,
       "relative_cn_strength": 0,
       "relative_ipadapter_strength": 1,
-      "ipadapter_noise": 0.2,
+      "ipadapter_noise": 0,
       "ipadapter_start_at": 0,
       "ipadapter_end_at": 0.6,
       "cn_start_at": 0,
       "cn_end_at": 0.65,
       "positive": [
-        "536",
+        "541",
         0
       ],
       "negative": [
-        "537",
+        "543",
         1
       ],
       "images": [
@@ -349,20 +323,6 @@
     "class_type": "BatchCreativeInterpolation",
     "_meta": {
       "title": "Batch Creative Interpolation 🎞️🅢🅜"
-    }
-  },
-  "482": {
-    "inputs": {
-      "seed": 32,
-      "steps": 25,
-      "cfg": 5,
-      "sampler_name": "dpmpp_2m_sde_gpu",
-      "scheduler": "exponential",
-      "denoise": 1
-    },
-    "class_type": "KSampler",
-    "_meta": {
-      "title": "KSampler"
     }
   },
   "505": {
@@ -392,19 +352,7 @@
       "title": "Apply Advanced ControlNet 🛂🅐🅒🅝"
     }
   },
-  "508": {
-    "inputs": {
-      "image": [
-        "401",
-        0
-      ]
-    },
-    "class_type": "GetImageSize+",
-    "_meta": {
-      "title": "🔧 Get Image Size"
-    }
-  },
-  "536": {
+  "541": {
     "inputs": {
       "text": "\"4\": \"\", \"36\": \"\", \"68\": \"\"",
       "max_frames": 120,
@@ -426,7 +374,7 @@
       "title": "Positive Prompt"
     }
   },
-  "537": {
+  "543": {
     "inputs": {
       "text": "\"4\": \"\", \"36\": \"\", \"68\": \"\"",
       "max_frames": 120,
@@ -446,6 +394,80 @@
     "class_type": "PromptSchedule",
     "_meta": {
       "title": "Negative Prompt"
+    }
+  },
+  "544": {
+    "inputs": {
+      "float_val": [
+        "548",
+        0
+      ]
+    },
+    "class_type": "ADE_MultivalDynamic",
+    "_meta": {
+      "title": "Multival Dynamic 🎭🅐🅓"
+    }
+  },
+  "545": {
+    "inputs": {
+      "start_percent": 0,
+      "end_percent": 1,
+      "motion_model": [
+        "546",
+        0
+      ],
+      "scale_multival": [
+        "544",
+        0
+      ]
+    },
+    "class_type": "ADE_ApplyAnimateDiffModel",
+    "_meta": {
+      "title": "Apply AnimateDiff Model (Adv.) 🎭🅐🅓②"
+    }
+  },
+  "546": {
+    "inputs": {
+      "model_name": "v3_sd15_mm.ckpt"
+    },
+    "class_type": "ADE_LoadAnimateDiffModel",
+    "_meta": {
+      "title": "Load AnimateDiff Model 🎭🅐🅓②"
+    }
+  },
+  "547": {
+    "inputs": {
+      "beta_schedule": "sqrt_linear (AnimateDiff)",
+      "model": [
+        "473",
+        3
+      ],
+      "m_models": [
+        "545",
+        0
+      ],
+      "context_options": [
+        "342",
+        0
+      ]
+    },
+    "class_type": "ADE_UseEvolvedSampling",
+    "_meta": {
+      "title": "Use Evolved Sampling 🎭🅐🅓②"
+    }
+  },
+  "548": {
+    "inputs": {
+      "text": "0:(1.3)",
+      "print_output": true,
+      "num_latents": [
+        "464",
+        0
+      ]
+    },
+    "class_type": "BatchValueScheduleLatentInput",
+    "_meta": {
+      "title": "Batch Value Schedule (Latent Input) 📅🅕🅝"
     }
   }
 }
