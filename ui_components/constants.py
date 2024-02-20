@@ -18,6 +18,11 @@ class CreativeProcessType(ExtendedEnum):
 
 class ShotMetaData(ExtendedEnum):
     MOTION_DATA = "motion_data"     # {"timing_data": [...]}
+    
+class GalleryImageViewType(ExtendedEnum):
+    EXPLORER_ONLY = "explorer"
+    SHOT_ONLY = "shot"
+    ANY = "any"
 
 class DefaultTimingStyleParams:
     prompt = ""
@@ -59,10 +64,10 @@ class DefaultProjectSettingParams:
     max_frames_per_shot = 30
 
 DEFAULT_SHOT_MOTION_VALUES = {
-    "strength_of_frame" : 0.5,
+    "strength_of_frame" : 0.7,
     "distance_to_next_frame" : 1.0,
     "speed_of_transition" : 0.6,
-    "freedom_between_frames" : 0.5,
+    "freedom_between_frames" : 0.4,
     "individual_prompt" : "",
     "individual_negative_prompt" : "",
     "motion_during_frame" : 1.3,

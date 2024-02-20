@@ -62,10 +62,12 @@ def timeline_view(shot_uuid, stage):
         if (idx + 1) % items_per_row == 0 or idx == len(shot_list) - 1:
             st.markdown("***")
         
-        if idx == len(shot_list) - 1:
-            with grid[(idx + 1) % items_per_row]:
-                st.markdown("### Add new shot")
-                add_new_shot_element(shot, data_repo)
+    
+    grid2 = st.columns(2)
+    
+    with grid2[0]:
+        st.markdown("### Add new shot")
+        add_new_shot_element(shot, data_repo)
 
         
 

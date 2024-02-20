@@ -42,6 +42,7 @@ def log_model_inference(model: MLModel, time_taken, **kwargs):
         "output_details" : json.dumps({"model_name": model.display_name(), "version": model.version}),
         "total_inference_time" : time_taken,
         "status" : InferenceStatus.COMPLETED.value if time_taken else InferenceStatus.QUEUED.value,
+        "model_name": model.display_name()
     }
     
     log = data_repo.create_inference_log(**log_data)

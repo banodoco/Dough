@@ -5,6 +5,7 @@ import json
 import os
 import mimetypes
 import random
+import shutil
 import string
 import tempfile
 from typing import Union
@@ -304,3 +305,12 @@ def create_duplicate_file(file: InternalFileObject, project_uuid=None) -> Intern
 
     new_file = data_repo.create_file(**file_data)
     return new_file
+
+
+def copy_local_file(filepath, destination_directory, new_name):
+    try:
+        os.makedirs(destination_directory, exist_ok=True)
+        new_filepath = os.path.join(destination_directory, new_name)
+        shutil.copy2(filepath, new_filepath)
+    except Exception as e:
+        print("error occured: ", e)

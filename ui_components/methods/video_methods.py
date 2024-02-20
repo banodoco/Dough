@@ -14,6 +14,7 @@ from shared.constants import InferenceType, InternalFileTag
 from shared.file_upload.s3 import is_s3_image_url
 from ui_components.methods.file_methods import save_or_host_file_bytes
 from ui_components.models import InternalFileObject, InternalFrameTimingObject, InternalShotObject
+from utils.common_utils import padded_integer
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.interpolator import VideoInterpolator
 from utils.media_processor.video import VideoProcessor

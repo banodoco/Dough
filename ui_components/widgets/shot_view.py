@@ -31,7 +31,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, position="Timeline", **kwarg
                 
     if position == "Timeline":
 
-        header_col_0, header_col_1, header_col_2, header_col_3 = st.columns([2,1,1.5,1.5])
+        header_col_0, header_col_1, header_col_2, header_col_3 = st.columns([2,1,1.5,0.5])
             
         with header_col_0:
             update_shot_name(shot.uuid)                 
@@ -48,7 +48,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, position="Timeline", **kwarg
 
     else:
 
-        col1, col2, col3, col4, col5, _ = st.columns([1,1,1,1,1,3])
+        col1, col2, col3, col4, col5, _ = st.columns([1,1,1,1,1,2])
 
         with col1:
             delete_frames_toggle = st_memory.toggle("Delete Frames", value=True, key="delete_frames_toggle")
@@ -206,6 +206,7 @@ def update_shot_name(shot_uuid):
     name = st.text_input("Name:", value=shot.name, max_chars=25, key=f"shot_name_{shot_uuid}")
     if name != shot.name:
         data_repo.update_shot(uuid=shot.uuid, name=name)
+        st.session_state['shot_name'] = name
         st.success("Name updated!")
         time.sleep(0.3)
         st.rerun()
