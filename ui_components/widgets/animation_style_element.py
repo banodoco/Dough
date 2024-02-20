@@ -217,21 +217,20 @@ def animation_style_element(shot_uuid):
             # remove files that start with a dot
             files = [file for file in files if not file.startswith(".")]
         else:
-            files = ['zooming_in_temporal_unet.safetensors', 'cat_walking_temporal_unet.safetensors', 'playing_banjo_temporal_unet.safetensors']
+            files = []
 
         # Iterate through each current LoRA in session state
-        for idx, lora in enumerate(st.session_state["current_loras"]):
-            if st.session_state["current_loras"][idx] == "":
-                h1, h2, h3, h4 = st.columns([1, 1, 1, 0.5])
+        if len(files) == 0:
+            st.error("No LoRAs found in the directory - go to Explore to download some, or drop them into ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora")                    
+            if st.button("Check again", key="check_again"):
+                st.rerun()
+        else:
+            for idx, lora in enumerate(st.session_state["current_loras"]):
 
+                h1, h2, h3, h4 = st.columns([1, 1, 1, 0.5])
+                    
                 with h1:
-                    if len(files) == 0:
-                        st.error("No LoRAs found in the directory - go to Explore to download some, or drop them into ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora")
-                        st.stop()
-                    else:
-                        # User selects the LoRA they want to use
-                        which_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"which_lora_{idx}")                        
-                        
+                    which_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"which_lora_{idx}")                                                    
                 with h2:
                     # User selects the strength for the LoRA
                     strength_of_lora = st.slider("How strong would you like the LoRA to be?", min_value=0.0, max_value=1.0, value=0.5, step=0.01, key=f"strength_of_lora_{idx}")
@@ -248,14 +247,14 @@ def animation_style_element(shot_uuid):
                         # pop the current lora from the list
                         st.session_state["current_loras"].pop(idx)
                         st.rerun()
-        # st.write(lora_data)
-        if len(st.session_state["current_loras"]) == 0:
-            text = "Add a LoRA"
-        else:
-            text = "Add another LoRA"
-        if st.button(text, key="add_motion_guidance"):
-            st.session_state["current_loras"].append("")
-            st.rerun()
+            # st.write(lora_data)
+            if len(st.session_state["current_loras"]) == 0:
+                text = "Add a LoRA"
+            else:
+                text = "Add another LoRA"
+            if st.button(text, key="add_motion_guidance"):
+                st.session_state["current_loras"].append("")
+                st.rerun()
     with tab2:
         
         file_links = [
