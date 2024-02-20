@@ -121,7 +121,7 @@
   },
   "401": {
     "inputs": {
-      "directory": "/workspace/ComfyUI/input//light_goes_on/",
+      "directory": "./ComfyUI/input/",
       "image_load_cap": 0,
       "skip_first_images": 0,
       "select_every_nth": 1
