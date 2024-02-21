@@ -307,26 +307,92 @@ def animation_style_element(shot_uuid):
                 st.write("Training LoRA")
                                 
     st.markdown("***")
-    st.markdown("#### Overall style settings")
+    st.markdown("#### Style model")
+    tab1, tab2   = st.tabs(["Choose Model","Download Models"])
+    
+    checkpoints_dir = "ComfyUI/models/checkpoints"
 
-    sd_model_list = [
-    "Realistic_Vision_V5.1.safetensors",
-    "anything-v3-fp16-pruned.safetensors",
-    "counterfeitV30_25.safetensors",
-    "Deliberate_v2.safetensors",
-    "dreamshaper_8.safetensors",
-    "epicrealism_pureEvolutionV5.safetensors",
-    "majicmixRealistic_v6.safetensors",
-    "perfectWorld_v6Baked.safetensors",            
-    "wd-illusion-fp16.safetensors",
-    "aniverse_v13.safetensors",
-    "juggernaut_v21.safetensor"
-    ]
-    # remove .safe tensors from the end of each model name
-    # motion_scale = st_memory.slider("Motion scale:", min_value=0.0, max_value=2.0, value=1.3, step=0.01, key="motion_scale")        
-    z1,z2 = st.columns([1, 1])
-    with z1:
-        sd_model = st_memory.selectbox("Which model would you like to use?", options=sd_model_list, key="sd_model_video")
+    # List all files in the directory
+    all_files = os.listdir(checkpoints_dir)
+
+    # Filter files to only include those with .safetensors and .ckpt extensions
+    
+    model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
+
+    with tab1:
+        
+
+        if len(all_files) == 0:
+            model1, model2 = st.columns([1, 1])
+            with model1:
+                sd_model = st_memory.selectbox("Which model would you like to use?", options=["Realistic_Vision_V5.1.safetensors"], key="sd_model_video")
+            with model2:
+                st.info("This is the default model - to download more, go to the Download Model tab.")
+
+        # if it's in sd_model-list, just pass the name. If not, stick checkpoints_dir in front of it        
+        sd_model = checkpoints_dir + "/" + sd_model
+    
+    with tab2:
+                # Mapping of model names to their download URLs
+        sd_model_dict = {
+            "Anything V3 FP16 Pruned": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/anything-v3-fp16-pruned.safetensors.tar",
+            "Deliberate V2": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/Deliberate_v2.safetensors.tar",
+            "Dreamshaper 8": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/dreamshaper_8.safetensors.tar",
+            "epicrealism_pureEvolutionV5": "https://civitai.com/api/download/models/134065",
+            "majicmixRealistic_v6": "https://civitai.com/api/download/models/94640",            
+        }
+
+        where_to_get_model = st.radio("Where would you like to get the model from?", options=["Our list", "Upload a model", "From a URL"], key="where_to_get_model")
+
+        if where_to_get_model == "Our list":
+            # Use the keys (model names) for the selection box
+            model_name_selected = st.selectbox("Which model would you like to download?", options=list(sd_model_dict.keys()), key="model_to_download")
+            
+            if st.button("Download Model", key="download_model"):
+                with st.spinner("Downloading model..."):
+                    save_directory = "ComfyUI/models/checkpoints"
+                    os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
+                    
+                    # Retrieve the URL using the selected model name
+                    model_url = sd_model_dict[model_name_selected]
+                    
+                    # Download the model and save it to the directory
+                    response = requests.get(model_url)
+                    if response.status_code == 200:
+                        # Extract the filename from the URL for saving
+                        filename = model_url.split("/")[-1]
+                        with open(os.path.join(save_directory, filename), 'wb') as f:
+                            f.write(response.content)
+                        st.success(f"Downloaded {model_name_selected} to {save_directory}")
+                    else:
+                        st.error("Failed to download model")
+
+        elif where_to_get_model == "Upload a model":
+            st.info("It's simpler to just drop this into the ComfyUI/models/checkpoints directory.")
+        
+        elif where_to_get_model == "From a URL":
+            text1, text2 = st.columns([1, 1])
+            with text1:
+
+                text_input = st.text_input("Enter the URL of the model", key="text_input")
+            with text2:
+                st.info("Make sure to get the download url of the model. \n\n For example, from Civit, this should look like this: https://civitai.com/api/download/models/179446. \n\n While from Hugging Face, it should look like this: https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors")
+            if st.button("Download Model", key="download_model"):
+                with st.spinner("Downloading model..."):
+                    save_directory = "ComfyUI/models/checkpoints"
+                    os.makedirs(save_directory, exist_ok=True)
+                    response = requests.get(text_input)
+                    if response.status_code == 200:
+                        with open(os.path.join(save_directory, text_input.split("/")[-1]), 'wb') as f:
+                            f.write(response.content)
+                        st.success(f"Downloaded model to {save_directory}")
+                    else:
+                        st.error("Failed to download model")
+            
+            
+
+    st.markdown("***")
+    st.markdown("#### Overall style settings")
 
     e1, e2, e3 = st.columns([1, 1,1])
 
