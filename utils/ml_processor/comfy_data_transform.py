@@ -312,7 +312,7 @@ class ComfyDataTransform:
         workflow['281']['inputs']['format'] = sm_data.get('output_format')
         workflow['541']['inputs']['pre_text'] = sm_data.get('prompt')
         workflow['543']['inputs']['pre_text'] = sm_data.get('negative_prompt')
-        workflow['292']['inputs']['multiplier'] = sm_data.get('stmfnet_multiplier')
+        workflow['559']['inputs']['multiplier'] = sm_data.get('stmfnet_multiplier')
         workflow['558']['inputs']['relative_ipadapter_strength'] = sm_data.get('relative_ipadapter_strength')
         workflow['558']['inputs']['relative_cn_strength'] = sm_data.get('relative_cn_strength')        
         workflow['558']['inputs']['type_of_strength_distribution'] = sm_data.get('type_of_strength_distribution')
