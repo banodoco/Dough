@@ -53,7 +53,8 @@ def start_runner():
             while not is_process_active(RUNNER_PROCESS_NAME):
                 time.sleep(0.1)
         else:
-            app_logger.debug("Runner already running")
+            # app_logger.debug("Runner already running")
+            pass
 
 def main():
     st.set_page_config(page_title="Banodoco", page_icon="🎨", layout="wide")
