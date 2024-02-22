@@ -349,7 +349,18 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
 
                     process_inference_output(**inference_data)
 
-
+                if log:
+                    inference_data = {
+                        "inference_type": InferenceType.GALLERY_IMAGE_GENERATION.value if position == 'explorer' else InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
+                        "output": output,
+                        "log_uuid": log.uuid,
+                        "project_uuid": project_uuid,
+                        "timing_uuid": timing_uuid,
+                        "promote_new_generation": False,
+                        "shot_uuid": shot_uuid if shot_uuid else "explorer"
+                    }
+                    
+                    process_inference_output(**inference_data)
 
             st.info("Check the Generation Log to the left for the status.")
             time.sleep(0.5)
