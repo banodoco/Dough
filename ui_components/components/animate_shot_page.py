@@ -12,7 +12,8 @@ def animate_shot_page(shot_uuid: str, h2):
         
     with st.sidebar:
         frame_selector_widget(show_frame_selector=False)
-        frame_view(view='Video',show_current_frames=False)
+        st.write("")
+        # frame_view(view='Video',show_current_frames=False)
 
     st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}] > :orange[{shot.name}]")
     st.markdown("***")

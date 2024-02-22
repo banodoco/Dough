@@ -252,10 +252,10 @@ def create_video_download_button(video_location, tag="temp"):
             )
 def shot_adjustment_button(shot, show_label=False):
     button_label = "Shot Adjustment 🔧" if show_label else "🔧"
-    if st.button(button_label, key=f"jump_to_shot_adjustment_{shot.uuid}", help=f"Shot adjustment view for '{shot.name}'", use_container_width=True):
+    if st.button(button_label, key=f"jump_to_shot_adjustment_{shot.uuid}", help=f"Adjust '{shot.name}'", use_container_width=True):
         st.session_state["shot_uuid"] = shot.uuid
         st.session_state['current_frame_sidebar_selector'] = 0
-        st.session_state['creative_process_manual_select'] = 3
+        st.session_state['creative_process_manual_select'] = 1
         st.session_state["manual_select"] = 1          
         st.session_state['shot_view_manual_select'] = 1  
         st.session_state['shot_view_index'] = 1  
@@ -263,9 +263,9 @@ def shot_adjustment_button(shot, show_label=False):
 
 def shot_animation_button(shot, show_label=False):
     button_label = "Shot Animation 🎞️" if show_label else "🎞️"
-    if st.button(button_label, key=f"jump_to_shot_animation_{shot.uuid}", help=f"Shot animation view for '{shot.name}'", use_container_width=True):
+    if st.button(button_label, key=f"jump_to_shot_animation_{shot.uuid}", help=f"Animate '{shot.name}'", use_container_width=True):
         st.session_state["shot_uuid"] = shot.uuid
-        st.session_state['creative_process_manual_select'] = 4
+        st.session_state['creative_process_manual_select'] = 2
         # st.session_state["manual_select"] = 1       
         st.session_state['shot_view_manual_select'] = 0       
         st.session_state['shot_view_index'] = 0

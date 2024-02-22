@@ -1,10 +1,11 @@
 import json
 import streamlit as st
 from ui_components.constants import GalleryImageViewType
-from ui_components.methods.common_methods import get_canny_img, process_inference_output,add_new_shot, save_new_image, save_uploaded_image
+from ui_components.methods.common_methods import get_canny_img, process_inference_output,add_new_shot, save_new_image, save_uploaded_image, execute_image_edit
 from ui_components.methods.file_methods import generate_pil_image
-from ui_components.methods.ml_methods import query_llama2
+from ui_components.methods.ml_methods import query_llama2, inpainting
 from ui_components.widgets.add_key_frame_element import add_key_frame
+from ui_components.widgets.inpainting_element import inpainting_element
 from utils.common_utils import refresh_app
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
@@ -25,6 +26,7 @@ class InputImageStyling(ExtendedEnum):
     IPADAPTER_FACE = "IP-Adapter Face"
     IPADAPTER_PLUS = "IP-Adapter Plus"
     IPADPTER_FACE_AND_PLUS = "IP-Adapter Face & Plus"
+    INPAINTING = "Inpainting"
 
 
 def explorer_page(project_uuid):
@@ -49,14 +51,13 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
 
     # with a2 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a1:
     with a2:
-        negative_prompt = st_memory.text_area("Negative prompt:", value="bad image, worst image, bad anatomy, washed out colors",\
+        negative_prompt = st_memory.text_area("Negative prompt:", value="",\
                                         key="explorer_neg_prompt", \
                                                 help="These are the things you wish to be excluded from the image")
 
 
-    b1, b2, b3 = st.columns([0.75,1,1])
-    with b1:
-        type_of_generation = st_memory.radio("How would you like to generate the image?", options=InputImageStyling.value_list(), key="type_of_generation_key", help="Evolve Image will evolve the image based on the prompt, while Maintain Structure will keep the structure of the image and change the style.",horizontal=True) 
+   
+    type_of_generation = st_memory.radio("How would you like to generate the image?", options=InputImageStyling.value_list(), key="type_of_generation_key", help="Evolve Image will evolve the image based on the prompt, while Maintain Structure will keep the structure of the image and change the style.",horizontal=True) 
 
     if type_of_generation != InputImageStyling.TEXT2IMAGE.value:
         if "input_image_1" not in st.session_state:
@@ -67,81 +68,115 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
         uploaded_image_2 = None
 
         # these require two images
-        ipadapter_types = [InputImageStyling.IPADPTER_FACE_AND_PLUS.value]
-
-        def handle_image_input(column, type_of_generation, output_value_name, data_repo=None, project_uuid=None):
-
-            with column:
-
-                if st.session_state.get(output_value_name) is None:
-
-                    top1, top2 = st.columns([1, 1])
-                    with top1:
-                        st.info(f"{type_of_generation} input:")  # Dynamic title based on type_of_generation
-                    with top2:                    
-                        source_of_starting_image = st.radio("Image source:", options=["From Shot", "Upload"], key=f"{output_value_name}_starting_image", help="This will be the base image for the generation.", horizontal=True)                
-                                                
-                    if 'uploaded_image' not in st.session_state:
-                        st.session_state['uploaded_image'] = None
-                    if f"uploaded_image_{output_value_name}" not in st.session_state:
-                        st.session_state[f"uploaded_image_{output_value_name}"] = 0    
+        if type_of_generation == InputImageStyling.INPAINTING.value:
+            if 'uploaded_image' not in st.session_state:
+                st.session_state['uploaded_image'] = ""
+            h1, h2 = st.columns([0.8, 3])
+            with h1:
+                if st.session_state['uploaded_image'] == "":
+                    source_of_starting_image = st.radio("Image source:", options=["Upload","From Shot"], key=f"{inpainting_element}_starting_image", help="This will be the base image for the generation.", horizontal=True)
                     if source_of_starting_image == "Upload":
-
-                        st.session_state['uploaded_image'] = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=st.session_state[f"uploaded_image_{output_value_name}"], help="This will be the base image for the generation.")
+                        uploaded_image = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=st.session_state[f"uploaded_image"], help="This will be the base image for the generation.")
+                        if uploaded_image:
+                            if st.button("Select as base image", key="select_as_base_image"):
+                                st.session_state['uploaded_image'] = uploaded_image
                     else:
                         # taking image from shots
                         shot_list = data_repo.get_shot_list(project_uuid)
-                        selection1, selection2 = st.columns([1, 1])
-                        with selection1:
-                            shot_name = st.selectbox("Shot:", options=[shot.name for shot in shot_list], key=f"{output_value_name}_shot_name", help="This will be the base image for the generation.")
-                            shot_uuid = [shot.uuid for shot in shot_list if shot.name == shot_name][0]
-                            frame_list = data_repo.get_timing_list_from_shot(shot_uuid)
-                            list_of_timings = [i + 1 for i in range(len(frame_list))]
-                            timing = st.selectbox("Frame #:", options=list_of_timings, key=f"{output_value_name}_frame_number", help="This will be the base image for the generation.")
-                            if timing:
+                        selection1, selection2 = st.columns([1, 1])            
+                        shot_name = st.selectbox("Shot:", options=[shot.name for shot in shot_list], key=f"inpainting_shot_name", help="This will be the base image for the generation.")
+                        shot_uuid = [shot.uuid for shot in shot_list if shot.name == shot_name][0]
+                        frame_list = data_repo.get_timing_list_from_shot(shot_uuid)
+                        list_of_timings = [i + 1 for i in range(len(frame_list))]
+                        timing = st.selectbox("Frame #:", options=list_of_timings, key=f"inpainting_frame_number", help="This will be the base image for the generation.")
+                        st.image(frame_list[timing - 1].primary_image.location, use_column_width=True)
+                        if timing:
+                            if st.button("Select as base image", key="select_as_base_image"):
                                 st.session_state['uploaded_image'] = frame_list[timing - 1].primary_image.location
-                        with selection2:
-                            if frame_list and len(frame_list) and timing:
-                                st.image(frame_list[timing - 1].primary_image.location, use_column_width=True)
 
-                    # Trigger image processing
-                    if st.button("Upload Image", key=f"{output_value_name}_upload_button", use_container_width=True):
-                        st.session_state[output_value_name] = st.session_state['uploaded_image']
-                        st.session_state[f"uploaded_image_{output_value_name}"] += 1                        
-                        st.rerun()
-
-                    return None
+            with h2:
+                if st.session_state['uploaded_image']:                    
+                    inpainting_element(h1)
                 else:
-                    # Display current image
-                    st.info(f"{type_of_generation} image:")
-                    half1, half2 = st.columns([1, 1])
-                    with half1:                        
-                        st.image(st.session_state[output_value_name], use_column_width=True)
-                    # Slider for image adjustment based on type_of_generation
-                    with half2:
-                        strength_of_image = st.slider("Image strength:", min_value=0, max_value=100, value=50, step=1, key=f"{output_value_name}_strength", help="This will be the strength of the image for the generation.")
-                                            
-                        if st.button("Clear image", key=f"{output_value_name}_clear_button"):
-                            st.session_state[output_value_name] = None
+                    st.info("<- Please select an image")
+
+        else:
+
+            def handle_image_input(column, type_of_generation, output_value_name, data_repo=None, project_uuid=None):
+
+                with column:
+
+                    if st.session_state.get(output_value_name) is None:
+
+                        top0, top1, top2, top3 = st.columns([0.4,1, 1,0.4])
+                        with top1:
+                            st.info(f"{type_of_generation} input:")  # Dynamic title based on type_of_generation
+                        with top2:                    
+                            source_of_starting_image = st.radio("Image source:", options=["Upload","From Shot"], key=f"{output_value_name}_starting_image", help="This will be the base image for the generation.", horizontal=True)                
+                                                    
+                        if 'uploaded_image' not in st.session_state:
+                            st.session_state['uploaded_image'] = None
+                        if f"uploaded_image_{output_value_name}" not in st.session_state:
+                            st.session_state[f"uploaded_image_{output_value_name}"] = f"0_{output_value_name}"
+                        if source_of_starting_image == "Upload":
+
+                            st.session_state['uploaded_image'] = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=st.session_state[f"uploaded_image_{output_value_name}"], help="This will be the base image for the generation.")
+                        else:
+                            # taking image from shots
+                            shot_list = data_repo.get_shot_list(project_uuid)
+                            selection1, selection2 = st.columns([1, 1])
+                            with selection1:
+                                shot_name = st.selectbox("Shot:", options=[shot.name for shot in shot_list], key=f"{output_value_name}_shot_name", help="This will be the base image for the generation.")
+                                shot_uuid = [shot.uuid for shot in shot_list if shot.name == shot_name][0]
+                                frame_list = data_repo.get_timing_list_from_shot(shot_uuid)
+                                list_of_timings = [i + 1 for i in range(len(frame_list))]
+                                timing = st.selectbox("Frame #:", options=list_of_timings, key=f"{output_value_name}_frame_number", help="This will be the base image for the generation.")
+                                if timing:
+                                    st.session_state['uploaded_image'] = frame_list[timing - 1].primary_image.location
+                            with selection2:
+                                if frame_list and len(frame_list) and timing:
+                                    st.image(frame_list[timing - 1].primary_image.location, use_column_width=True)
+
+                        # Trigger image processing
+                        if st.button("Upload Image", key=f"{output_value_name}_upload_button", use_container_width=True):
+                            st.session_state[output_value_name] = st.session_state['uploaded_image']
+                            st.session_state[f"uploaded_image_{output_value_name}"] += 1                        
                             st.rerun()
 
-                    return strength_of_image
-                            
-        if type_of_generation != InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
-            strength_of_image = handle_image_input(b2, type_of_generation, "input_image_1", data_repo, project_uuid) 
-        
-        else:
-            strength_of_image_1 = handle_image_input(b2, "IP-Adapter Face", "input_image_1", data_repo, project_uuid)
-            strength_of_image_2 = handle_image_input(b3, "IP-Adapter Plus", "input_image_2", data_repo, project_uuid)
-            strength_of_image = (strength_of_image_1, strength_of_image_2)
-            # if both images are populated, create a "switch images" button 
-            with b3:
-                corner1, corner2 = st.columns([1, 1])
-                with corner2:
-                    if st.session_state["input_image_1"] and st.session_state["input_image_2"]:
-                        if st.button("Switch images 🔄", key="switch_images", use_container_width=True):
-                            st.session_state["input_image_1"], st.session_state["input_image_2"] = st.session_state["input_image_2"], st.session_state["input_image_1"]
-                            st.rerun()
+                        return None
+                    else:
+                        # Display current image
+                        st.info(f"{type_of_generation} image:")
+                        half1, half2 = st.columns([1, 1])
+                        with half1:                        
+                            st.image(st.session_state[output_value_name], use_column_width=True)
+                        # Slider for image adjustment based on type_of_generation
+                        with half2:
+                            strength_of_image = st.slider("Image strength:", min_value=0, max_value=100, value=50, step=1, key=f"{output_value_name}_strength", help="This will be the strength of the image for the generation.")
+                                                
+                            if st.button("Clear image", key=f"{output_value_name}_clear_button"):
+                                st.session_state[output_value_name] = None
+                                st.rerun()
+
+                        return strength_of_image
+            
+            sub0, sub1, sub2, sub3 = st.columns([0.3,1, 1,0.3])
+            if type_of_generation != InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
+                strength_of_image = handle_image_input(top1, type_of_generation, "input_image_1", data_repo, project_uuid) 
+            
+            else:
+                strength_of_image_1 = handle_image_input(sub1, "IP-Adapter Face", "input_image_1", data_repo, project_uuid)
+                strength_of_image_2 = handle_image_input(sub2, "IP-Adapter Plus", "input_image_2", data_repo, project_uuid)
+                strength_of_image = (strength_of_image_1, strength_of_image_2)
+                # if both images are populated, create a "switch images" button 
+                with sub2:
+                    corner1, corner2 = st.columns([1, 1])
+                    with corner2:
+                        if st.session_state["input_image_1"] and st.session_state["input_image_2"]:
+                            if st.button("Switch images 🔄", key="switch_images", use_container_width=True):
+                                st.session_state["input_image_1"], st.session_state["input_image_2"] = st.session_state["input_image_2"], st.session_state["input_image_1"]
+                                st.rerun()
+    
     
     if position == 'explorer':
         _, d2,d3, _ = st.columns([0.25, 1,1, 0.25])
@@ -299,17 +334,22 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_face_plus, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
-                if log:
+                elif generation_method == InputImageStyling.INPAINTING.value:
+                    edited_image, log = inpainting(st.session_state['editing_image'], prompt, negative_prompt, project_settings.width, project_settings.height, shot_uuid,project_uuid)
+
+                    
                     inference_data = {
-                        "inference_type": InferenceType.GALLERY_IMAGE_GENERATION.value if position == 'explorer' else InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
-                        "output": output,
+                        "inference_type": InferenceType.FRAME_INPAINTING.value,
+                        "output": edited_image,
                         "log_uuid": log.uuid,
-                        "project_uuid": project_uuid,
-                        "timing_uuid": timing_uuid,
-                        "promote_new_generation": False,
-                        "shot_uuid": shot_uuid if shot_uuid else "explorer"
+                        "timing_uuid": st.session_state['current_frame_uuid'],
+                        "promote_generation": False,
+                        "stage": ""
                     }
+
                     process_inference_output(**inference_data)
+
+
 
             st.info("Check the Generation Log to the left for the status.")
             time.sleep(0.5)
@@ -347,23 +387,27 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     k1,k2 = st.columns([5,1])
 
     if sidebar != True:
-        f1, f2 = st.columns([1, 1])
-        with f1:
-            num_columns = st_memory.slider('Number of columns:', min_value=3, max_value=7, value=4,key="num_columns_explorer")
-        with f2:
-            num_items_per_page = st_memory.slider('Items per page:', min_value=10, max_value=50, value=16, key="num_items_per_page_explorer")
+        if shortlist is False:
+            f1, f2 = st.columns([1, 1])
+            with f1:
+                num_columns = st_memory.slider('Number of columns:', min_value=3, max_value=7, value=4,key="num_columns_explorer")
+            with f2:
+                num_items_per_page = st_memory.slider('Items per page:', min_value=10, max_value=50, value=16, key="num_items_per_page_explorer")
+        else:
+            num_items_per_page = 4
+            num_columns = 2
 
         if 'shot_chooser' in view:
             shot_chooser_1,shot_chooser_2,_ = st.columns([1, 1,0.5])
             with shot_chooser_1:        
-                options = ["Explore", "Specific shots", "Any shot or Explore"]                          
+                options = ["Timeline", "Specific shots", "All"]                          
                 if shot is None:            
                     default_value = 0
                 else:
                     default_value = 1
-                show_images_associated_with_shots = st.selectbox("Show images associated with:", options=options, index=default_value, key="show_images_associated_with_shots_explorer")
+                show_images_associated_with_shots = st.selectbox("Show images associated with:", options=options, index=default_value, key=f"show_images_associated_with_shots_explorer_{shortlist}")
             with shot_chooser_2:
-                if show_images_associated_with_shots == "Explore":
+                if show_images_associated_with_shots == "Timeline":
                     shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]
                 
                 elif show_images_associated_with_shots == "Specific shots":
@@ -377,6 +421,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                     
                 else:
                     shot_uuid_list = []
+        else:
+            shot_uuid_list = []
 
         if shortlist is False:
             page_number = k1.radio("Select page:", options=range(1, project_settings.total_gallery_pages + 1), horizontal=True, key="main_gallery")

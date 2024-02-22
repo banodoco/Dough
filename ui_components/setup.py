@@ -146,14 +146,14 @@ def setup_app_ui():
                 set_default_values(st.session_state["shot_uuid"])
 
                 with st.sidebar:
-                    creative_process_pages = ["Explore", "Shortlist", "Timeline", "Adjust Shot", "Adjust Frame", "Animate Shot"]
+                    creative_process_pages = ["Timeline", "Adjust Shot", "Adjust Frame", "Animate Shot"]
                     if 'creative_process_manual_select' not in st.session_state:
                         st.session_state['creative_process_manual_select'] = 0
                         st.session_state['page'] = creative_process_pages[0]
 
                     
                     # view_types = ["Explorer","Timeline","Individual"]
-                    creative_process_pages = ["Explore", "Shortlist", "Timeline", "Adjust Shot", "Animate Shot"]
+                    creative_process_pages = ["Timeline", "Adjust Shot", "Animate Shot"]
                     st.session_state['page'] = option_menu(
                         None,
                         creative_process_pages,
