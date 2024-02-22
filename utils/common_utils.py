@@ -6,6 +6,7 @@ import time
 import psutil
 import streamlit as st
 import json
+import platform
 from shared.constants import SERVER, ServerType
 from ui_components.models import InternalUserObject
 from utils.cache.cache import CacheKey, StCache
@@ -213,18 +214,26 @@ def reset_styling_settings(timing_uuid):
 
 
 def is_process_active(custom_process_name):
-    # this caching assumes that the runner won't interupt or break once started
-    if custom_process_name + "_process_state" in st.session_state and st.session_state[custom_process_name + "_process_state"]:
+    # This caching assumes that the runner won't interrupt or break once started
+    cache_key = custom_process_name + "_process_state"
+    if cache_key in st.session_state and st.session_state[cache_key]:
         return True
 
     try:
-        ps_output = subprocess.check_output(["ps", "aux"]).decode("utf-8")
+        if platform.system() == "Windows":
+            # Use 'tasklist' for Windows
+            ps_output = subprocess.check_output(["tasklist"], shell=True).decode("utf-8")
+        else:
+            # Use 'ps' for Unix/Linux
+            ps_output = subprocess.check_output(["ps", "aux"]).decode("utf-8")
+
         if custom_process_name in ps_output:
-            st.session_state[custom_process_name + "_process_state"] = True
+            st.session_state[cache_key] = True
             return True
     except subprocess.CalledProcessError:
         return False
 
+    # If the process is not found or an error occurs, assume it's not active
     return False
 
 
