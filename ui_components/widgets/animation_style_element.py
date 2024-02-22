@@ -223,6 +223,13 @@ def animation_style_element(shot_uuid):
                 with model2:
                     st.write("")
                     st.info("This is the default model - to download more, go to the Download Models tab.")
+            else:
+                model1, model2 = st.columns([1, 1])
+                with model1:
+                    sd_model = st_memory.selectbox("Which model would you like to use?", options=model_files, key="sd_model_video")
+                with model2:
+                    st.write("")
+                    st.info("To download more models, go to the Download Models tab.")
 
             # if it's in sd_model-list, just pass the name. If not, stick checkpoints_dir in front of it        
             sd_model = checkpoints_dir + "/" + sd_model
