@@ -112,7 +112,7 @@ def animation_style_element(shot_uuid):
                                 distances_to_next_frames.append(distance_to_next_frame)                                    
                                 speed_of_transition = st.slider("Speed of transition:", min_value=0.45, max_value=0.7, step=0.01, key=f"speed_of_transition_widget_{idx}_{timing.uuid}", value=st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'])
                                 speeds_of_transitions.append(speed_of_transition)                                      
-                                freedom_between_frames = st.slider("Freedom between frames:", min_value=0.2, max_value=0.95, step=0.01, key=f"freedom_between_frames_widget_{idx}_{timing.uuid}", value=st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'])
+                                freedom_between_frames = st.slider("Freedom between frames:", min_value=0.05, max_value=0.95, step=0.01, key=f"freedom_between_frames_widget_{idx}_{timing.uuid}", value=st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'])
                                 freedoms_between_frames.append(freedom_between_frames)
                                                 
                 if (i < len(timing_list) - 1)  or (len(timing_list) % items_per_row != 0):
