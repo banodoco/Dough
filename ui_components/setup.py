@@ -157,7 +157,7 @@ def setup_app_ui():
                     st.session_state['page'] = option_menu(
                         None,
                         creative_process_pages,
-                        icons=['compass', 'bookshelf','aspect-ratio', "hourglass", 'stopwatch'],
+                        icons=[ 'bookshelf','aspect-ratio', "lightning-charge", 'stopwatch'],
                         menu_icon="cast",
                         orientation="vertical",
                         key="section-selecto1r",

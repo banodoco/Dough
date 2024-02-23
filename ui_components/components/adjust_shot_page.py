@@ -33,13 +33,13 @@ def adjust_shot_page(shot_uuid: str, h2):
         with column1:
             
             
-            st.markdown(f"### 🎬 '{shot.name}' Frames ----------")
+            st.markdown(f"### 🎬 '{shot.name}' frames ----------")
             st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
 
         shot_keyframe_element(st.session_state["shot_uuid"], 4, column2, position="Individual")
 
         # sparkle emoji with Generate Frames
-        st.markdown("### ✨ Generate Frames ----------")
+        st.markdown("### ✨ Generate frames ----------")
         st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
         
         
