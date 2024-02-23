@@ -34,13 +34,17 @@ def animation_style_element(shot_uuid):
     }
 
     interpolation_style = 'ease-in-out'
-    st.markdown("### ✨ Generate Animations ----------")  
+    st.markdown("### 🎥 Generate Animations ----------")  
+    st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+    
 
-    with st.expander("", expanded=True):
+    with st.container():
         advanced1, advanced2, advanced3 = st.columns([1.0,1.5, 1.0])
 
         with advanced1:
             st.markdown("##### Individual frame settings")
+        
+        
     
         items_per_row = 3
         strength_of_frames = []
@@ -54,6 +58,8 @@ def animation_style_element(shot_uuid):
         if len(timing_list) <= 1:
             st.warning("You need at least two frames to generate a video.")
             st.stop()
+
+        open_advanced_settings = st_memory.toggle("Advanced settings", key="advanced_settings")
         
         for i in range(0, len(timing_list) , items_per_row):
             with st.container():
@@ -80,19 +86,19 @@ def animation_style_element(shot_uuid):
                                         st.session_state[f'{k}_{shot.uuid}_{idx}'] = v
                                                                                                                             
                                 # settings control
-                                # with st.expander("Advanced settings:"):
-                            
-                                individual_prompt = st.text_input("What to include:", key=f"individual_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_prompt_{shot.uuid}_{idx}'], help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
-                                individual_prompts.append(individual_prompt)
-                                individual_negative_prompt = st.text_input("What to avoid:", key=f"negative_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_negative_prompt_{shot.uuid}_{idx}'],help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
-                                individual_negative_prompts.append(individual_negative_prompt)
-                                strength1, strength2 = st.columns([1, 1])
-                                with strength1:
-                                    strength_of_frame = st.slider("Strength of current frame:", min_value=0.25, max_value=1.0, step=0.01, key=f"strength_of_frame_widget_{shot.uuid}_{idx}", value=st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'])
-                                    strength_of_frames.append(strength_of_frame)         
-                                with strength2:
-                                    motion_during_frame = st.slider("Motion during frame:", min_value=0.5, max_value=1.5, step=0.01, key=f"motion_during_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'])                            
-                                    motions_during_frames.append(motion_during_frame)
+                                with st.expander("Advanced settings:", expanded=open_advanced_settings):
+                                
+                                    individual_prompt = st.text_input("What to include:", key=f"individual_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_prompt_{shot.uuid}_{idx}'], help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
+                                    individual_prompts.append(individual_prompt)
+                                    individual_negative_prompt = st.text_input("What to avoid:", key=f"negative_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_negative_prompt_{shot.uuid}_{idx}'],help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
+                                    individual_negative_prompts.append(individual_negative_prompt)
+                                    strength1, strength2 = st.columns([1, 1])
+                                    with strength1:
+                                        strength_of_frame = st.slider("Strength of current frame:", min_value=0.25, max_value=1.0, step=0.01, key=f"strength_of_frame_widget_{shot.uuid}_{idx}", value=st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'])
+                                        strength_of_frames.append(strength_of_frame)         
+                                    with strength2:
+                                        motion_during_frame = st.slider("Motion during frame:", min_value=0.5, max_value=1.5, step=0.01, key=f"motion_during_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'])                            
+                                        motions_during_frames.append(motion_during_frame)
                             else:                        
                                 st.warning("No primary image present.")    
 
@@ -118,6 +124,7 @@ def animation_style_element(shot_uuid):
                 if (i < len(timing_list) - 1)  or (len(timing_list) % items_per_row != 0):
                     st.markdown("***")
         
+    
         
 
         

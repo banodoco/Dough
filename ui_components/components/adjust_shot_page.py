@@ -28,14 +28,26 @@ def adjust_shot_page(shot_uuid: str, h2):
         
         st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}] > :orange[{shot.name}]")
         st.markdown("***")
-        shot_keyframe_element(st.session_state["shot_uuid"], 4, position="Individual")
+        
+        column1, column2 = st.columns([1,1])
+        with column1:
+            
+            
+            st.markdown(f"### 🎬 '{shot.name}' Frames ----------")
+            st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
 
-        st.markdown("### ✨ Generate Images ----------")        
-        with st.expander("", expanded=True):
-            generate_images_element(position='explorer', project_uuid=shot.project.uuid, timing_uuid=None, shot_uuid=shot.uuid)
-        st.markdown("***")
+        shot_keyframe_element(st.session_state["shot_uuid"], 4, column2, position="Individual")
 
+        # sparkle emoji with Generate Frames
+        st.markdown("### ✨ Generate Frames ----------")
+        st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+        
+        
+        generate_images_element(position='explorer', project_uuid=shot.project.uuid, timing_uuid=None, shot_uuid=shot.uuid)
         st.markdown("***")
+        st.markdown("### 🖼️ Gallery ----------")
+        st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+        # st.markdown("***")
         gallery_image_view(shot.project.uuid, shortlist=False,view=['add_and_remove_from_shortlist','add_to_this_shot','view_inference_details','shot_chooser'], shot=shot,sidebar=False)
     else:
         frame_styling_page(st.session_state["shot_uuid"], h2)

@@ -90,8 +90,10 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
 
     if isinstance(selected_image, InternalFileObject):
         saved_image = selected_image
+        print("selected_image is an instance of InternalFileObject")
     else:
         saved_image = save_new_image(selected_image, shot.project.uuid)
+        print("selected_image is an instance of Image.Image")
 
     timing_data = {
         "shot_id": shot_uuid,

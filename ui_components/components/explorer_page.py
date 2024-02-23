@@ -523,6 +523,35 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                 if i + j < len(gallery_image_list):
                     with cols[j]:                        
                         st.image(gallery_image_list[i + j].location, use_column_width=True)
+                                                # ---------- add to shot btn ---------------
+                        if "last_shot_number" not in st.session_state:
+                            st.session_state["last_shot_number"] = 0
+                        if 'add_to_this_shot' in view or 'add_to_any_shot' in view:
+                            if 'add_to_this_shot' in view:
+                                shot_name = shot.name
+                            else:
+                                shot_name = st.selectbox('Add to shot:', shot_names, key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}",index=st.session_state["last_shot_number"])
+                            
+                            if shot_name != "":
+                                if shot_name == "**Create New Shot**":
+                                    shot_name = st.text_input("New shot name:", max_chars=40, key=f"shot_name_{gallery_image_list[i+j].uuid}")
+                                    if st.button("Create new shot", key=f"create_new_{gallery_image_list[i + j].uuid}", use_container_width=True):
+                                        new_shot = add_new_shot(project_uuid, name=shot_name)
+                                        add_key_frame(gallery_image_list[i + j], False, new_shot.uuid, len(data_repo.get_timing_list_from_shot(new_shot.uuid)), refresh_state=False)
+                                        # removing this from the gallery view
+                                        data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+                                        st.rerun()
+                                    
+                                else:
+                                    if st.button(f"Add to shot", key=f"add_{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
+                                        shot_number = shot_names.index(shot_name)
+                                        st.session_state["last_shot_number"] = shot_number 
+                                        shot_uuid = shot_list[shot_number].uuid
+
+                                        add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
+                                        # removing this from the gallery view
+                                        data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+                                        refresh_app(maintain_state=True)                  
                         # else:
                         #     st.error("The image is truncated and cannot be displayed.")
                         if 'add_and_remove_from_shortlist' in view:
@@ -555,35 +584,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                         else:
                             st.warning("No data found")
 
-                        # ---------- add to shot btn ---------------
-                        if "last_shot_number" not in st.session_state:
-                            st.session_state["last_shot_number"] = 0
-                        if 'add_to_this_shot' in view or 'add_to_any_shot' in view:
-                            if 'add_to_this_shot' in view:
-                                shot_name = shot.name
-                            else:
-                                shot_name = st.selectbox('Add to shot:', shot_names, key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}",index=st.session_state["last_shot_number"])
-                            
-                            if shot_name != "":
-                                if shot_name == "**Create New Shot**":
-                                    shot_name = st.text_input("New shot name:", max_chars=40, key=f"shot_name_{gallery_image_list[i+j].uuid}")
-                                    if st.button("Create new shot", key=f"create_new_{gallery_image_list[i + j].uuid}", use_container_width=True):
-                                        new_shot = add_new_shot(project_uuid, name=shot_name)
-                                        add_key_frame(gallery_image_list[i + j], False, new_shot.uuid, len(data_repo.get_timing_list_from_shot(new_shot.uuid)), refresh_state=False)
-                                        # removing this from the gallery view
-                                        data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                        st.rerun()
-                                    
-                                else:
-                                    if st.button(f"Add to shot", key=f"add_{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
-                                        shot_number = shot_names.index(shot_name)
-                                        st.session_state["last_shot_number"] = shot_number 
-                                        shot_uuid = shot_list[shot_number].uuid
-
-                                        add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
-                                        # removing this from the gallery view
-                                        data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                        refresh_app(maintain_state=True)                                                    
+                                  
             st.markdown("***")
     else:
         st.warning("No images present")

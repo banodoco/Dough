@@ -11,6 +11,7 @@ def timeline_view_page(shot_uuid: str, h2):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     project_uuid = shot.project.uuid
+    project = data_repo.get_project_from_uuid(project_uuid)
 
     with st.sidebar:
         views = CreativeProcessType.value_list()
@@ -23,12 +24,15 @@ def timeline_view_page(shot_uuid: str, h2):
         with st.expander("📋 Explorer Shortlist",expanded=True):
             if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
                 gallery_image_view(shot.project.uuid, shortlist=True, view=["add_and_remove_from_shortlist","add_to_any_shot"])
-    
+        
     st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}] > :orange[{st.session_state['view']}]")
-
     st.markdown("***")
-    slider1, slider2 = st.columns([1,5])
+    slider1, slider2 = st.columns([4,1])
     with slider1:
+        st.markdown(f"### 🪄 '{project.name}' timeline")
+        st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+        
+    with slider2:
         show_video = st.toggle("Show Video:", value=False, key="show_video")
     if show_video:
         st.session_state["view"] = "Shots"
@@ -37,10 +41,12 @@ def timeline_view_page(shot_uuid: str, h2):
     timeline_view(st.session_state["shot_uuid"], st.session_state['view'])
 
 
-    st.markdown("### ✨ Generate Images ----------")
-    with st.expander("", expanded=True):
-        generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None, shot_uuid=None)
+    st.markdown("### ✨ Generate Frames ----------")
+    st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+    
+    generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None, shot_uuid=None)
     
     st.markdown("***")
-
+    st.markdown("### 🖼️ Gallery ----------")
+    st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
     gallery_image_view(project_uuid,False,view=['add_and_remove_from_shortlist','view_inference_details','shot_chooser','add_to_any_shot'])

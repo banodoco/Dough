@@ -41,6 +41,9 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     if stage == CreativeProcessType.MOTION.value:
         items_to_show = 2
         num_columns = 3
+        with col1:
+            st.markdown(f"### 🎞️ '{shot.name}' options ----------")
+            st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
     else:
         items_to_show = col2.slider('Variants per page:', min_value=1, max_value=12, value=6)
         items_to_show -= 1    
@@ -54,7 +57,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         page = col3.radio('Page:', options=list(range(1, num_pages + 1)), horizontal=True)
 
     if not len(variants):
-        st.info("No variants present")
+        st.info("No options created yet.")
         st.markdown("***")
     else:
         current_variant = shot.primary_interpolated_video_index if stage == CreativeProcessType.MOTION.value else int(timing.primary_variant_index)
@@ -118,7 +121,7 @@ def variant_inference_detail_element(variant, stage, shot_uuid, timing_list="", 
     shot = data_repo.get_shot_from_uuid(shot_uuid)
 
     if stage == CreativeProcessType.MOTION.value:
-        if st.button("Load up settings from this variant", key=f"{tag}_{variant.name}", help="This will enter the settings from this variant into the inputs below - you can also use them on other shots", use_container_width=True):
+        if st.button("Load up settings from this variant", key=f"{tag}_{variant.name}", disabled=True, help="This is currently being worked on", use_container_width=True):
             print("Loading settings")
             print(len(timing_list))
             new_data = prepare_values(fetch_inference_data(variant), timing_list)
@@ -134,7 +137,7 @@ def variant_inference_detail_element(variant, stage, shot_uuid, timing_list="", 
             st.success("Video synced")
             time.sleep(0.3)
             st.rerun()
-
+    '''
     st.markdown(f"Details:")
     inf_data = fetch_inference_data(variant)
     if 'image_prompt_list' in inf_data:
@@ -145,7 +148,7 @@ def variant_inference_detail_element(variant, stage, shot_uuid, timing_list="", 
         del inf_data['output_format']
     
     st.write(inf_data)
-
+    '''
     if stage != CreativeProcessType.MOTION.value:
         h1, h2 = st.columns([1, 1])
         with h1:
