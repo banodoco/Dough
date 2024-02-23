@@ -349,25 +349,11 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         height=project_settings.height,
                         width=project_settings.width,
                         project_uuid=project_uuid,
-                        data={"shot_uuid": shot_uuid, "mask": st.session_state['mask_to_use'], "input_image": st.session_state['editing_image']}
+                        data={"shot_uuid": shot_uuid, "mask": st.session_state['mask_to_use'], "input_image": st.session_state['editing_image'], "project_uuid": project_uuid}
                     )
 
+                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_inpainting, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
                     
-                    
-                    output, log = inpainting(st.session_state['editing_image'], prompt, negative_prompt, project_settings.width, project_settings.height, shot_uuid,project_uuid)
-
-                    '''
-                    inference_data = {
-                        "inference_type": InferenceType.FRAME_INPAINTING.value,
-                        "output": edited_image,
-                        "log_uuid": log.uuid,
-                        "timing_uuid": st.session_state['current_frame_uuid'],
-                        "promote_generation": False,
-                        "stage": ""
-                    }
-                    '''
-
-                    # process_inference_output(**inference_data)
 
                 if log:
                     inference_data = {
