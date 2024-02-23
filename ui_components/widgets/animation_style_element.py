@@ -59,7 +59,7 @@ def animation_style_element(shot_uuid):
             st.warning("You need at least two frames to generate a video.")
             st.stop()
 
-        open_advanced_settings = st_memory.toggle("Advanced settings", key="advanced_settings", value=False)
+        open_advanced_settings = st_memory.toggle("Open all advanced settings", key="advanced_settings", value=False)
         
         for i in range(0, len(timing_list) , items_per_row):
             with st.container():
@@ -441,8 +441,7 @@ def animation_style_element(shot_uuid):
 
                 if st.button("Train LoRA", key="train_lora", use_container_width=True):
                     st.write("Training LoRA")
-                                    
-                
+                                                    
 
         st.markdown("***")
         st.markdown("##### Overall style settings")
@@ -473,9 +472,26 @@ def animation_style_element(shot_uuid):
         with h1:
             
             type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=False, index=1)
+
             
         with h2: 
             st.info("This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.")
+        st.write("")
+        i1, i3,_ = st.columns([1,2,1])
+        with i1:
+            amount_of_motion = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="amount_of_motion")        
+            st.write("")
+            if st.button("Update amount of motion", key="update_motion"):
+                for idx, timing in enumerate(timing_list):
+                    st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = amount_of_motion                
+                st.success("Updated amount of motion")
+                time.sleep(0.3)
+                st.rerun()
+        with i3:
+            st.write("")
+            st.write("")
+            st.info("This actually updates the motion during frames in the advanced settings above - but we put it here because it has a big impact on the video. You can scroll up to see the changes and tweak for individual frames.")
+        
         
         context_length = 16
         context_stride = 2
@@ -598,7 +614,7 @@ def animation_style_element(shot_uuid):
                 toggle_generate_inference(position)
                 st.rerun()
                 
-            st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help, on_click=lambda: toggle_generate_inference(position))
+            st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help, on_click=lambda: toggle_generate_inference(position),type="primary")
 
         with animate_col_2:
                 number_of_frames = len(timing_list)
