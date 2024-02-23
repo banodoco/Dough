@@ -208,15 +208,15 @@ def apply_image_transformations(image: Image, zoom_level, rotation_angle, x_shif
     rotation_offset = ((diagonal - width) // 2, (diagonal - height) // 2)
     rotation_bg.paste(image, rotation_offset)
 
-    # Rotation
-    rotated_image = rotation_bg.rotate(rotation_angle)
+    # Rotation - Rotate in the opposite direction
+    rotated_image = rotation_bg.rotate(-rotation_angle)
 
-    # Shift
+    # Shift - Invert the direction of the shift
     # Create a new image with black background
     shift_bg = Image.new("RGB", (diagonal, diagonal), "black")
-    shift_bg.paste(rotated_image, (-x_shift, y_shift)) 
+    shift_bg.paste(rotated_image, (x_shift, -y_shift)) 
 
-    # Zoom
+    # Zoom - No change
     zoomed_width = int(diagonal * (zoom_level / 100))
     zoomed_height = int(diagonal * (zoom_level / 100))
     zoomed_image = shift_bg.resize((zoomed_width, zoomed_height))
@@ -228,16 +228,16 @@ def apply_image_transformations(image: Image, zoom_level, rotation_angle, x_shif
     crop_y2 = crop_y1 + height
     cropped_image = zoomed_image.crop((crop_x1, crop_y1, crop_x2, crop_y2))
 
-    # Flip vertically
+    # Flip vertically - No change
     if flip_vertically:
         cropped_image = cropped_image.transpose(Image.FLIP_TOP_BOTTOM)
 
-    # Flip horizontally
+    # Flip horizontally - No change
     if flip_horizontally:
         cropped_image = cropped_image.transpose(Image.FLIP_LEFT_RIGHT)
 
     return cropped_image
-
+    
 def fetch_image_by_stage(shot_uuid, stage, frame_idx):
     data_repo = DataRepo()
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)

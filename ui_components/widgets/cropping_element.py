@@ -23,7 +23,8 @@ def cropping_selector_element(shot_uuid):
     with selector1:
         # crop_stage = st_memory.radio("Which stage to work on?", ["Styled Key Frame", "Unedited Key Frame"], key="crop_stage", horizontal=True)
         crop_stage = "Styled Key Frame"
-        how_to_crop = st_memory.radio("How to crop:", options=["Precision Cropping","Manual Cropping"], key="how_to_crop",horizontal=True)
+        # how_to_crop = st_memory.radio("How to crop:", options=["Precision Cropping","Manual Cropping"], key="how_to_crop",horizontal=True)
+        how_to_crop = "Precision Cropping"
     
         
                                         
