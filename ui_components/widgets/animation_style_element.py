@@ -169,7 +169,7 @@ def animation_style_element(shot_uuid):
                     elif what_would_you_like_to_edit == "Speed of transitions":
                         what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, value=0.6, key="what_to_change_it_to")
                     elif what_would_you_like_to_edit == "Freedom between frames":
-                        what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.2, max_value=0.95, step=0.01, value=0.5, key="what_to_change_it_to")
+                        what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.05, max_value=0.95, step=0.01, value=0.5, key="what_to_change_it_to")
                     elif what_would_you_like_to_edit == "Motion during frames":
                         what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="what_to_change_it_to")
                     
@@ -212,6 +212,8 @@ def animation_style_element(shot_uuid):
         # Filter files to only include those with .safetensors and .ckpt extensions
         
         model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
+        # drop all files that contain xl
+        model_files = [file for file in model_files if "xl" not in file]
 
         with tab1:
             
