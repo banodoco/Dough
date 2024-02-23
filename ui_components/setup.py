@@ -52,7 +52,7 @@ def setup_app_ui():
         h1, h2 = st.columns([1, 2])
         with h1:
             #st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
-            st.markdown("# :red[D]:green[o]:orange[u]:blue[g]:red[h] :green[□] :orange[□] :blue[□]")
+            st.markdown("# :green[D]:red[o]:orange[u]:blue[g]:green[h] :red[□] :orange[□] :blue[□]")
             st.caption("by Banodoco")
 
         sections = ["Open Project", "App Settings", "New Project"]
@@ -67,7 +67,7 @@ def setup_app_ui():
                 key="app_settings",
                 orientation="horizontal",
                 styles={
-                    "nav-link": {"font-size": "12px", "margin": "0px", "--hover-color": "#eee"},
+                    "nav-link": {"font-size": "12px", "margin": "0px", "--hover-color": "#5c5c5c"},
                     "nav-link-selected": {"background-color": "grey"}
                 }
             )
@@ -140,7 +140,7 @@ def setup_app_ui():
             with st.sidebar:
                 main_view_types = ["Creative Process", "Project Settings"]
                 st.session_state['main_view_type'] = st_memory.menu(None, main_view_types, icons=['search-heart', 'tools', "play-circle", 'stopwatch'], menu_icon="cast", default_index=0, key="main_view_type_name", orientation="horizontal", styles={
-                                                                    "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "red"}})
+                                                                    "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#014001"}, "nav-link-selected": {"background-color": "green"}})
 
             if st.session_state["main_view_type"] == "Creative Process":
                 set_default_values(st.session_state["shot_uuid"])
@@ -161,8 +161,8 @@ def setup_app_ui():
                         menu_icon="cast",
                         orientation="vertical",
                         key="section-selecto1r",
-                        styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#eee"},
-                                "nav-link-selected": {"background-color": "green"}},
+                        styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#bd3737"},
+                                "nav-link-selected": {"background-color": "#ff4b4b"}},
                         manual_select=st.session_state['creative_process_manual_select']                        
                     )
 

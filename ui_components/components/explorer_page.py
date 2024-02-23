@@ -30,7 +30,7 @@ class InputImageStyling(ExtendedEnum):
 
 
 def explorer_page(project_uuid):
-    st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}]")
+    st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['page']}]")
     st.markdown("***")
 
     with st.expander("✨ Generate Images", expanded=True):
@@ -518,8 +518,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             
             with fetch3:
                     if st.button(f"{button_text}", key=f"check_for_new_images_", use_container_width=True):
-                        if explorer_stats['temp_image_count']:
-                            data_repo.update_temp_gallery_images(project_uuid)
+                        data_repo.update_temp_gallery_images(project_uuid)
+                        if explorer_stats['temp_image_count']:                           
                             st.success("New images fetched")
                             time.sleep(0.3)
                         st.rerun()
