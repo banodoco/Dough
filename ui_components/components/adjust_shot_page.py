@@ -44,9 +44,7 @@ def adjust_shot_page(shot_uuid: str, h2):
         
         
         generate_images_element(position='explorer', project_uuid=shot.project.uuid, timing_uuid=None, shot_uuid=shot.uuid)
-        st.markdown("***")
-        st.markdown("### 🖼️ Gallery ----------")
-        st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+
         # st.markdown("***")
         gallery_image_view(shot.project.uuid, shortlist=False,view=['add_and_remove_from_shortlist','add_to_this_shot','view_inference_details','shot_chooser'], shot=shot,sidebar=False)
     else:

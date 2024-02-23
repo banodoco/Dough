@@ -59,7 +59,7 @@ def animation_style_element(shot_uuid):
             st.warning("You need at least two frames to generate a video.")
             st.stop()
 
-        open_advanced_settings = st_memory.toggle("Advanced settings", key="advanced_settings")
+        open_advanced_settings = st_memory.toggle("Advanced settings", key="advanced_settings", value=False)
         
         for i in range(0, len(timing_list) , items_per_row):
             with st.container():
@@ -305,7 +305,7 @@ def animation_style_element(shot_uuid):
 
         st.markdown("##### Motion guidance")
                 
-        tab1, tab2, tab3  = st.tabs(["Apply LoRAs","Explore LoRAs","Train LoRAs"])
+        tab1, tab2, tab3  = st.tabs(["Apply LoRAs","Download LoRAs","Train LoRAs"])
 
         lora_data = []
         lora_file_dest = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
@@ -360,43 +360,75 @@ def animation_style_element(shot_uuid):
                     st.session_state["current_loras"].append("")
                     st.rerun()
         with tab2:
+
+            text1, text2 = st.columns([1, 1])
+            with text1:
+                where_to_download_from = st.radio("Where would you like to get the LoRA from?", options=["Our list", "From a URL"], key="where_to_download_from")
+
+            if where_to_download_from == "Our list":
+
+                
+
+                with text1:
+                
+                    file_links = [
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_tony_stark_r64_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_train_r128_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/300_car_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_desert_48_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_jeep_driving_r32_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_man_running_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_rotation_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/750_jeep_driving_r32_temporal_unet.safetensors",
+                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/300_zooming_in_temporal_unet.safetensors",
+                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_cat_walking_temporal_unet.safetensors",
+                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_playing_banjo_temporal_unet.safetensors",
+                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_woman_dancing_temporal_unet.safetensors",
+                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_zooming_out_temporal_unet.safetensors"
+                    ]
+                            
+                    which_would_you_like_to_download = st.selectbox("Which LoRA would you like to download?", options=file_links, key="which_would_you_like_to_download")
+                    if st.button("Download LoRA", key="download_lora"):
+                        with st.spinner("Downloading LoRA..."):
+                            save_directory = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
+                            os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
+                            
+                            # Extract the filename from the URL
+                            filename = which_would_you_like_to_download.split("/")[-1]
+                            save_path = os.path.join(save_directory, filename)
+                            
+                            # Download the file
+                            response = requests.get(which_would_you_like_to_download)
+                            if response.status_code == 200:
+                                with open(save_path, 'wb') as f:
+                                    f.write(response.content)
+                                st.success(f"Downloaded LoRA to {save_path}")
+                            else:
+                                st.error("Failed to download LoRA")
             
-            file_links = [
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_tony_stark_r64_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_train_r128_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/300_car_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_desert_48_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_jeep_driving_r32_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_man_running_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_rotation_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/750_jeep_driving_r32_temporal_unet.safetensors",
-                "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/300_zooming_in_temporal_unet.safetensors",
-                "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_cat_walking_temporal_unet.safetensors",
-                "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_playing_banjo_temporal_unet.safetensors",
-                "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_woman_dancing_temporal_unet.safetensors",
-                "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_zooming_out_temporal_unet.safetensors"
-            ]
-                    
-            which_would_you_like_to_download = st.selectbox("Which LoRA would you like to download?", options=file_links, key="which_would_you_like_to_download")
-            if st.button("Download LoRA", key="download_lora"):
-                with st.spinner("Downloading LoRA..."):
-                    save_directory = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
-                    os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
-                    
-                    # Extract the filename from the URL
-                    filename = which_would_you_like_to_download.split("/")[-1]
-                    save_path = os.path.join(save_directory, filename)
-                    
-                    # Download the file
-                    response = requests.get(which_would_you_like_to_download)
-                    if response.status_code == 200:
-                        with open(save_path, 'wb') as f:
-                            f.write(response.content)
-                        st.success(f"Downloaded LoRA to {save_path}")
-                    else:
-                        st.error("Failed to download LoRA")
+            elif where_to_download_from == "From a URL":
+                
+                with text1:
+                    text_input = st.text_input("Enter the URL of the LoRA", key="text_input_lora")
+                with text2:
+                    st.write("")
+                    st.write("")
+                    st.write("")
+                    st.info("Make sure to get the download url of the LoRA. \n\n For example, from Hugging Face, it should look like this: https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors")
+                with text1:
+                    if st.button("Download LoRA", key="download_lora"):
+                        with st.spinner("Downloading LoRA..."):
+                            save_directory = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
+                            os.makedirs(save_directory, exist_ok=True)
+                            response = requests.get(text_input)
+                            if response.status_code == 200:
+                                with open(os.path.join(save_directory, text_input.split("/")[-1]), 'wb') as f:
+                                    f.write(response.content)
+                                st.success(f"Downloaded LoRA to {save_directory}")
+                            else:
+                                st.error("Failed to download LoRA")
 
 
         with tab3:

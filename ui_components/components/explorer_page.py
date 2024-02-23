@@ -394,57 +394,70 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     project_settings = data_repo.get_project_setting(project_uuid)
     shot_list = data_repo.get_shot_list(project_uuid)
     shot_name_uuid_map = {s.name : s.uuid for s in shot_list}
-    shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]     # by default only showing explorer views
+    shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]  
+    
+    st.markdown("***")
+    st.markdown("### 🖼️ Gallery ----------")
+    st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+
+    h1,h2,h3,h4 = st.columns([2, 1, 1, 0.75])
+       # by default only showing explorer views
     k1,k2 = st.columns([5,1])
 
     if sidebar != True:
         if shortlist is False:
             f1, f2 = st.columns([1, 1])
-            with f1:
+            with h2:
                 num_columns = st_memory.slider('Number of columns:', min_value=3, max_value=7, value=4,key="num_columns_explorer")
-            with f2:
-                num_items_per_page = st_memory.slider('Items per page:', min_value=10, max_value=50, value=16, key="num_items_per_page_explorer")
+            with h3:
+                num_items_per_page = st_memory.slider('Items per page:', min_value=8, max_value=64, value=16, key="num_items_per_page_explorer")
         else:
             num_items_per_page = 4
             num_columns = 2
 
         if 'shot_chooser' in view:
-            shot_chooser_1,shot_chooser_2,_ = st.columns([1, 1,0.5])
-            with shot_chooser_1:        
-                options = ["Timeline", "Specific shots", "All"]                          
-                if shot is None:            
-                    default_value = 0
-                else:
-                    default_value = 1
-                show_images_associated_with_shots = st.selectbox("Show images associated with:", options=options, index=default_value, key=f"show_images_associated_with_shots_explorer_{shortlist}")
-            with shot_chooser_2:
-                if show_images_associated_with_shots == "Timeline":
-                    shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]
-                
-                elif show_images_associated_with_shots == "Specific shots":
-                    specific_shots = [shot.name for shot in shot_list]  
-                    if shot is None:
-                        default_shot = specific_shots[0]
+            with h1:
+                shot_chooser_1,shot_chooser_2 = st.columns([1, 1])
+                with shot_chooser_1:        
+                    options = ["Timeline", "Specific shots", "All"]                          
+                    if shot is None:            
+                        default_value = 0
                     else:
-                        default_shot = shot.name
-                    shot_name_list = st.multiselect("Shots to show:", options=specific_shots, default=default_shot, key="specific_shots_explorer")
-                    shot_uuid_list = [str(shot_name_uuid_map[s]) for s in shot_name_list] if shot_name_list else ['xyz']
+                        default_value = 1
+                    show_images_associated_with_shots = st.selectbox("Show images associated with:", options=options, index=default_value, key=f"show_images_associated_with_shots_explorer_{shortlist}")
+                with shot_chooser_2:
+                    if show_images_associated_with_shots == "Timeline":
+                        shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]
                     
-                else:
-                    shot_uuid_list = []
+                    elif show_images_associated_with_shots == "Specific shots":
+                        specific_shots = [shot.name for shot in shot_list]  
+                        if shot is None:
+                            default_shot = specific_shots[0]
+                        else:
+                            default_shot = shot.name
+                        shot_name_list = st.multiselect("Shots to show:", options=specific_shots, default=default_shot, key="specific_shots_explorer")
+                        shot_uuid_list = [str(shot_name_uuid_map[s]) for s in shot_name_list] if shot_name_list else ['xyz']
+                        
+                    else:
+                        shot_uuid_list = []
         else:
             shot_uuid_list = []
 
         if shortlist is False:
-            page_number = k1.radio("Select page:", options=range(1, project_settings.total_gallery_pages + 1), horizontal=True, key="main_gallery")
-            if 'view_inference_details' in view:
-                open_detailed_view_for_all = k2.toggle("Open detailed view for all:", key='main_gallery_toggle')
-            st.markdown("***")
+            with h1:
+                page_number = st.radio("Select page:", options=range(1, project_settings.total_gallery_pages + 1), horizontal=True, key="main_gallery")
+            with h4:
+                st.write("")
+                st.write("")
+                if 'view_inference_details' in view:
+                    open_detailed_view_for_all = st.toggle("Open detailed view for all:", key='main_gallery_toggle')
+                
         else:
-            project_setting = data_repo.get_project_setting(project_uuid)
-            page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
-            open_detailed_view_for_all = False     
-            st.markdown("***")
+            with h1:
+                project_setting = data_repo.get_project_setting(project_uuid)
+                page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
+                open_detailed_view_for_all = False     
+                st.markdown("***")
     else:
         project_setting = data_repo.get_project_setting(project_uuid)
         page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
