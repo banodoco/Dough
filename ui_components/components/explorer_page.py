@@ -335,6 +335,25 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_face_plus, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                 elif generation_method == InputImageStyling.INPAINTING.value:
+                    
+                    query_obj = MLQueryObject(
+                        timing_uuid=None,
+                        model_uuid=None,
+                        guidance_scale=8,
+                        seed=-1,                            
+                        num_inference_steps=25,            
+                        strength=0.5,
+                        adapter_type=None,
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        height=project_settings.height,
+                        width=project_settings.width,
+                        project_uuid=project_uuid,
+                        data={"shot_uuid": shot_uuid, "mask": st.session_state['mask_to_use'], "input_image": st.session_state['editing_image']}
+                    )
+
+                    
+                    
                     output, log = inpainting(st.session_state['editing_image'], prompt, negative_prompt, project_settings.width, project_settings.height, shot_uuid,project_uuid)
 
                     '''

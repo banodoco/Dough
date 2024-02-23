@@ -220,8 +220,8 @@ def inpainting(input_image: str, prompt, negative_prompt, width, height, shot_uu
         image_uuid=None,
         mask_uuid=None,
         data={
-            "input_image": input_image,
-            "mask": mask,
+            "input_image": st.session_state['editing_image'],
+            "mask": st.session_state['mask_to_use'] ,
             "shot_uuid": shot_uuid,
         }
     )
