@@ -45,9 +45,9 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             st.markdown(f"### 🎞️ '{shot.name}' options ----------")
             st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
     else:
-        items_to_show = col2.slider('Variants per page:', min_value=1, max_value=12, value=6)
-        items_to_show -= 1    
-        num_columns = col1.slider('Number of columns:', min_value=1, max_value=6, value=3)
+        items_to_show = 5
+            
+        num_columns = 3
 
     # Updated logic for pagination
     num_pages = (len(variants) - 1) // items_to_show + ((len(variants) - 1) % items_to_show > 0)

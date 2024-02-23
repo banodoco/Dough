@@ -29,7 +29,7 @@ def adjust_shot_page(shot_uuid: str, h2):
         st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}] > :orange[{shot.name}]")
         st.markdown("***")
         
-        column1, column2 = st.columns([1,1])
+        column1, column2 = st.columns([1,1.35])
         with column1:
             
             

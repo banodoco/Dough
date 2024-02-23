@@ -34,7 +34,7 @@ def animation_style_element(shot_uuid):
     }
 
     interpolation_style = 'ease-in-out'
-    st.markdown("### 🎥 Generate Animations ----------")  
+    st.markdown("### 🎥 Generate animations ----------")  
     st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
     
 

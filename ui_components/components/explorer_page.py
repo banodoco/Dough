@@ -396,11 +396,12 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     shot_name_uuid_map = {s.name : s.uuid for s in shot_list}
     shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]  
     
-    st.markdown("***")
-    st.markdown("### 🖼️ Gallery ----------")
-    st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+    if shortlist is False:
+        st.markdown("***")
+        st.markdown("### 🖼️ Gallery ----------")
+        st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
 
-    h1,h2,h3,h4 = st.columns([2, 1, 1, 0.75])
+    h1,h2,h3,h4 = st.columns([3, 1, 1, 1])
        # by default only showing explorer views
     k1,k2 = st.columns([5,1])
 
@@ -424,7 +425,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                         default_value = 0
                     else:
                         default_value = 1
-                    show_images_associated_with_shots = st.selectbox("Show images associated with:", options=options, index=default_value, key=f"show_images_associated_with_shots_explorer_{shortlist}")
+                    show_images_associated_with_shots = st.selectbox("Images associated with:", options=options, index=default_value, key=f"show_images_associated_with_shots_explorer_{shortlist}")
                 with shot_chooser_2:
                     if show_images_associated_with_shots == "Timeline":
                         shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]
@@ -447,17 +448,16 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             with h1:
                 page_number = st.radio("Select page:", options=range(1, project_settings.total_gallery_pages + 1), horizontal=True, key="main_gallery")
             with h4:
-                st.write("")
-                st.write("")
+                st.write("")                
                 if 'view_inference_details' in view:
-                    open_detailed_view_for_all = st.toggle("Open detailed view for all:", key='main_gallery_toggle')
+                    open_detailed_view_for_all = st.toggle("Open all details:", key='main_gallery_toggle')
                 
         else:
             with h1:
                 project_setting = data_repo.get_project_setting(project_uuid)
                 page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
                 open_detailed_view_for_all = False     
-                st.markdown("***")
+                
     else:
         project_setting = data_repo.get_project_setting(project_uuid)
         page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
