@@ -162,7 +162,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
             
             sub0, sub1, sub2, sub3 = st.columns([0.3,1, 1,0.3])
             if type_of_generation != InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
-                strength_of_image = handle_image_input(top1, type_of_generation, "input_image_1", data_repo, project_uuid) 
+                strength_of_image = handle_image_input(sub1, type_of_generation, "input_image_1", data_repo, project_uuid) 
             
             else:
                 strength_of_image_1 = handle_image_input(sub1, "IP-Adapter Face", "input_image_1", data_repo, project_uuid)
@@ -420,7 +420,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             with h1:
                 shot_chooser_1,shot_chooser_2 = st.columns([1, 1])
                 with shot_chooser_1:        
-                    options = ["Timeline", "Specific shots", "All"]                          
+                    options = ["Timeline", "Specific shots", "All"]                         
                     if shot is None:            
                         default_value = 0
                     else:
@@ -600,4 +600,5 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                   
             st.markdown("***")
     else:
-        st.warning("No images present")
+        
+        st.info("No images present in this view.")
