@@ -52,7 +52,7 @@ def setup_app_ui():
         h1, h2 = st.columns([1, 2])
         with h1:
             #st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
-            st.markdown("# :green[D]:red[o]:orange[u]:blue[g]:green[h] :red[□] :orange[□] :blue[□]")
+            st.markdown("# :green[D]:red[o]:blue[u]:orange[g]:green[h] :red[□] :blue[□] :orange[□]")
             st.caption("by Banodoco")
 
         sections = ["Open Project", "App Settings", "New Project"]

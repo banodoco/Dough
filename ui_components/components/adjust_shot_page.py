@@ -26,7 +26,7 @@ def adjust_shot_page(shot_uuid: str, h2):
                     page_number = 0
                     gallery_image_view(shot.project.uuid, shortlist=True,view=['add_and_remove_from_shortlist','add_to_this_shot'], shot=shot, sidebar=True)
         
-        st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['page']}] > :orange[{shot.name}]")
+        st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['page']}] > :blue[{shot.name}]")
         st.markdown("***")
         
         column1, column2 = st.columns([1,1.35])

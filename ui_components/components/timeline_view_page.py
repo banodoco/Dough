@@ -41,7 +41,7 @@ def timeline_view_page(shot_uuid: str, h2):
     timeline_view(st.session_state["shot_uuid"], st.session_state['view'])
 
 
-    st.markdown("### ✨ Generate Frames ----------")
+    st.markdown("### ✨ Generate frames ----------")
     st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
     
     generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None, shot_uuid=None)

@@ -32,11 +32,11 @@ def frame_styling_page(shot_uuid: str, h2):
                                         icons=['magic', 'crop', "paint-bucket", 'pencil'], \
                                             menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), \
                                                 key="styling_view_selector", orientation="horizontal", \
-                                                    styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "orange"}})
+                                                    styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#3f6e99"}, "nav-link-selected": {"background-color": "#60b4ff"}})
             
             frame_view(view="Key Frame")
 
-        st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['frame_styling_view_type']}] > :orange[{shot.name} - #{st.session_state['current_frame_index']}] > :blue[{st.session_state['styling_view']}]")
+        st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['frame_styling_view_type']}] > :blue[{shot.name} - #{st.session_state['current_frame_index']}] > :orange[{st.session_state['styling_view']}]")
 
         variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)    
 

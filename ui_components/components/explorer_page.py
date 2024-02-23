@@ -546,7 +546,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                 shot_name = st.selectbox('Add to shot:', shot_names, key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}",index=st.session_state["last_shot_number"])
                             
                             if shot_name != "":
-                                if shot_name == "**Create New Shot**":
+                                if shot_name == "**Create New Shot**":                                    
                                     shot_name = st.text_input("New shot name:", max_chars=40, key=f"shot_name_{gallery_image_list[i+j].uuid}")
                                     if st.button("Create new shot", key=f"create_new_{gallery_image_list[i + j].uuid}", use_container_width=True):
                                         new_shot = add_new_shot(project_uuid, name=shot_name)
@@ -556,7 +556,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                         st.rerun()
                                     
                                 else:
-                                    if st.button(f"Add to shot", key=f"add_{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
+                                    if st.button(f"Add to shot", key=f"add_{gallery_image_list[i + j].uuid}", use_container_width=True):
                                         shot_number = shot_names.index(shot_name)
                                         st.session_state["last_shot_number"] = shot_number 
                                         shot_uuid = shot_list[shot_number].uuid
@@ -569,13 +569,13 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                         #     st.error("The image is truncated and cannot be displayed.")
                         if 'add_and_remove_from_shortlist' in view:
                             if shortlist:
-                                if st.button("Remove from shortlist ➖", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="Remove from shortlist"):
+                                if st.button("Remove from shortlist ➖", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True):
                                     data_repo.update_file(gallery_image_list[i + j].uuid, tag=InternalFileTag.GALLERY_IMAGE.value)
                                     st.success("Removed From Shortlist")
                                     time.sleep(0.3)
                                     st.rerun()
                             else:
-                                if st.button("Add to shortlist ➕", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="Add to shortlist"):
+                                if st.button("Add to shortlist ➕", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="The shortlist appears in a box on the left."):
                                     data_repo.update_file(gallery_image_list[i + j].uuid, tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value)
                                     st.success("Added To Shortlist")
                                     time.sleep(0.3)
