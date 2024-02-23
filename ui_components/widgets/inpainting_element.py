@@ -44,10 +44,9 @@ def inpainting_element(h1):
         st.session_state["current_mask"] = ""
 
    
-    main_col_1, main_col_2 = st.columns([0.4, 3])
+    main_col_1, main_col_2 = st.columns([0.5, 3])
 
-    with main_col_1:
-        st.write("")
+
 
     # initiative value
     if "current_frame_uuid" not in st.session_state:
@@ -74,9 +73,9 @@ def inpainting_element(h1):
     # NOTE: removed other mask selection methods, will update the code later
     if type_of_mask_selection == "Manual Background Selection":
         if st.session_state['current_mask'] != "":
-            with main_col_2:
-                st.info("Current mask:")
+            with main_col_2:                
                 st.image(st.session_state['current_mask'], use_column_width=True)
+            with main_col_1:
                 if st.button("Clear Mask",use_container_width=True):
                     st.session_state['current_mask'] = ""
                     st.session_state['uploaded_image'] = ""
@@ -103,7 +102,7 @@ def inpainting_element(h1):
                         if st.session_state['drawing_input'] == "Move shapes 🏋🏾‍♂️":
                             drawing_mode = "transform"
                             st.info(
-                                "To delete something, just move it outside of the image! 🥴")
+                                "To delete something, double click ib ut.")
                         elif st.session_state['drawing_input'] == "Make shapes 🪄":
                             drawing_mode = "polygon"
                             st.info("To end a shape, right click!")

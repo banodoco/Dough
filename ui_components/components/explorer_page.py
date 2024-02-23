@@ -71,9 +71,9 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
         if type_of_generation == InputImageStyling.INPAINTING.value:
             if 'uploaded_image' not in st.session_state:
                 st.session_state['uploaded_image'] = ""
-            h1, h2 = st.columns([0.8, 3])
+            h1, h2 = st.columns([1.2, 3])
             with h1:
-                if st.session_state['uploaded_image'] == "":
+                if st.session_state['uploaded_image'] == "" or st.session_state['uploaded_image'] is None:
                     source_of_starting_image = st.radio("Image source:", options=["Upload","From Shot"], key=f"{inpainting_element}_starting_image", help="This will be the base image for the generation.", horizontal=True)
                     if source_of_starting_image == "Upload":
                         uploaded_image = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=st.session_state[f"uploaded_image"], help="This will be the base image for the generation.")
@@ -335,9 +335,9 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_face_plus, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                 elif generation_method == InputImageStyling.INPAINTING.value:
-                    edited_image, log = inpainting(st.session_state['editing_image'], prompt, negative_prompt, project_settings.width, project_settings.height, shot_uuid,project_uuid)
+                    output, log = inpainting(st.session_state['editing_image'], prompt, negative_prompt, project_settings.width, project_settings.height, shot_uuid,project_uuid)
 
-                    
+                    '''
                     inference_data = {
                         "inference_type": InferenceType.FRAME_INPAINTING.value,
                         "output": edited_image,
@@ -346,8 +346,9 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         "promote_generation": False,
                         "stage": ""
                     }
+                    '''
 
-                    process_inference_output(**inference_data)
+                    # process_inference_output(**inference_data)
 
                 if log:
                     inference_data = {
