@@ -31,7 +31,8 @@ class ComfyDataTransform:
     @staticmethod
     def get_workflow_json(model: ComfyWorkflow):
         json_file_path = "./utils/ml_processor/" + MODEL_PATH_DICT[model]["workflow_path"]
-        with open(json_file_path) as f:
+        # Specify encoding as 'utf-8' when opening the file
+        with open(json_file_path, 'r', encoding='utf-8') as f:
             json_data = json.load(f)
             return json_data, [MODEL_PATH_DICT[model]['output_node_id']]
 
