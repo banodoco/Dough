@@ -55,7 +55,8 @@ class DBRepo:
                 conn = sqlite3.connect(database_file)
                 conn.close()
 
-                completed_process = subprocess.run(['python', 'manage.py', 'migrate'], capture_output=True, text=True)
+                python_executable = sys.executable
+                completed_process = subprocess.run([python_executable, 'manage.py', 'migrate'], capture_output=True, text=True)
                 if completed_process.returncode == 0:
                     logger.log(LoggingType.INFO, "Migrations completed successfully")
                 else:
