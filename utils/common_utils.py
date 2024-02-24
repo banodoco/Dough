@@ -4,6 +4,7 @@ import csv
 import subprocess
 import time
 import psutil
+import socket
 import streamlit as st
 import json
 import platform
@@ -213,23 +214,29 @@ def reset_styling_settings(timing_uuid):
             del st.session_state[k]
 
 
-def is_process_active(custom_process_name):
+def is_process_active(custom_process_name, custom_process_port):
     # This caching assumes that the runner won't interrupt or break once started
     cache_key = custom_process_name + "_process_state"
     if cache_key in st.session_state and st.session_state[cache_key]:
         return True
 
+    res = False
     try:
         if platform.system() == "Windows":
-            # Use 'tasklist' for Windows
-            ps_output = subprocess.check_output(["tasklist"], shell=True).decode("utf-8")
+            try:
+                client_socket = socket.create_connection(("localhost", custom_process_port))
+                client_socket.close()
+                res = True
+            except ConnectionRefusedError:
+                res = False
         else:
             # Use 'ps' for Unix/Linux
             ps_output = subprocess.check_output(["ps", "aux"]).decode("utf-8")
-
-        if custom_process_name in ps_output:
+            res = True if custom_process_name in ps_output else False
+            
+        if res:
             st.session_state[cache_key] = True
-            return True
+        return res
     except subprocess.CalledProcessError:
         return False
 
