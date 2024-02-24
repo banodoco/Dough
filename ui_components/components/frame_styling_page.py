@@ -28,7 +28,7 @@ def frame_styling_page(shot_uuid: str, h2):
         with st.sidebar:     
                                                                 
             st.session_state['styling_view'] = st_memory.menu('',\
-                                    ["Crop","Generate"], \
+                                    ["Crop","Inpaint"], \
                                         icons=['magic', 'crop', "paint-bucket", 'pencil'], \
                                             menu_icon="cast", default_index=st.session_state.get('styling_view_index', 0), \
                                                 key="styling_view_selector", orientation="horizontal", \
