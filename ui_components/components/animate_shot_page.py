@@ -15,7 +15,7 @@ def animate_shot_page(shot_uuid: str, h2):
         st.write("")
         # frame_view(view='Video',show_current_frames=False)
 
-    st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['page']}] > :orange[{shot.name}]")
+    st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['page']}] > :blue[{shot.name}]")
     st.markdown("***")
     
     variant_comparison_grid(st.session_state['shot_uuid'], stage="Shots")
