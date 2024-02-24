@@ -28,7 +28,7 @@ def frame_selector_widget(show_frame_selector=True):
     with shot1:        
         shot_names = [s.name for s in shot_list]
         shot_names.append('**Create New Shot**')   
-        current_shot_name = st.selectbox('Shot name:', shot_names, key="current_shot_sidebar_selector",index=shot_names.index(shot.name))
+        current_shot_name = st.selectbox('Shot:', shot_names, key="current_shot_sidebar_selector",index=shot_names.index(shot.name))
         if current_shot_name != "**Create New Shot**":
             if current_shot_name != st.session_state['shot_name']:
                 st.session_state['shot_name'] = current_shot_name                
@@ -72,7 +72,7 @@ def frame_selector_widget(show_frame_selector=True):
 
 
             with shot2:          
-                frame_selection = st_memory.selectbox('Select a frame:', frame_list, key="current_frame_sidebar_selector")
+                frame_selection = st_memory.selectbox('Frame:', frame_list, key="current_frame_sidebar_selector")
             
             # Only trigger the frame number extraction and current frame index update if a non-empty value is selected
             if frame_selection != '':

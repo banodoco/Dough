@@ -19,7 +19,7 @@ def adjust_shot_page(shot_uuid: str, h2):
         with st.sidebar:       
             # frame_view(view='Video',show_current_frames=False)
             st.write("")
-            with st.expander("📋 Explorer Shortlist",expanded=True):
+            with st.expander("📋 Explorer shortlist",expanded=True):
                 if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
                     project_setting = data_repo.get_project_setting(shot.project.uuid)
                     number_of_pages = project_setting.total_shortlist_gallery_pages

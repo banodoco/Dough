@@ -50,7 +50,7 @@ def timeline_view(shot_uuid, stage):
             with switch2:
                 shot_animation_button(shot)
 
-            with st.expander("Details & settings", expanded=False):
+            with st.expander("Details & settings:", expanded=False):
                 update_shot_name(shot.uuid)    
                 update_shot_duration(shot.uuid)
                 move_shot_buttons(shot, "side")

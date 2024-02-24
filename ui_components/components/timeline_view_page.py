@@ -21,7 +21,7 @@ def timeline_view_page(shot_uuid: str, h2):
             st.session_state["manual_select"] = None
 
         st.write("")         
-        with st.expander("📋 Explorer Shortlist",expanded=True):
+        with st.expander("📋 Explorer shortlist",expanded=True):
             if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
                 gallery_image_view(shot.project.uuid, shortlist=True, view=["add_and_remove_from_shortlist","add_to_any_shot"])
         

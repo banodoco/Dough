@@ -47,7 +47,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
 
     #with a1 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a2:
     with a1:
-        prompt = st_memory.text_area("What's your base prompt?", key="explorer_base_prompt", help="This exact text will be included for each generation.")
+        prompt = st_memory.text_area("Prompt:", key="explorer_base_prompt", help="This exact text will be included for each generation.")
 
     # with a2 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a1:
     with a2:
@@ -57,7 +57,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
 
 
    
-    type_of_generation = st_memory.radio("How would you like to generate the image?", options=InputImageStyling.value_list(), key="type_of_generation_key", help="Evolve Image will evolve the image based on the prompt, while Maintain Structure will keep the structure of the image and change the style.",horizontal=True) 
+    type_of_generation = st_memory.radio("Type of generation:", options=InputImageStyling.value_list(), key="type_of_generation_key", help="Evolve Image will evolve the image based on the prompt, while Maintain Structure will keep the structure of the image and change the style.",horizontal=True) 
 
     if type_of_generation != InputImageStyling.TEXT2IMAGE.value:
         if "input_image_1" not in st.session_state:
@@ -184,7 +184,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
         d2, d3 = st.columns([1,1])
     with d2:  
         
-        number_to_generate = st.slider("How many images would you like to generate?", min_value=4, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
+        number_to_generate = st.slider("Number of images to generate:", min_value=4, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
     
     with d3:
         st.write(" ")

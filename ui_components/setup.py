@@ -88,7 +88,7 @@ def setup_app_ui():
             else:
                 st.session_state["index_of_project_name"] = 0
 
-        selected_project_name = st.sidebar.selectbox("Select which project you'd like to work on:", [
+        selected_project_name = st.sidebar.selectbox("Project:", [
                                                             p.name for p in project_list], index=st.session_state["index_of_project_name"])
     
         selected_index = next(i for i, p in enumerate(project_list) if p.name == selected_project_name)
@@ -189,7 +189,7 @@ def setup_app_ui():
                     animate_shot_page(st.session_state["shot_uuid"], h2)
 
                 with st.sidebar:
-                    with st.expander("🔍 Generation Log", expanded=True):
+                    with st.expander("🔍 Generation log", expanded=True):
                         if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
                             sidebar_logger(st.session_state["shot_uuid"])
                     # st.markdown("***")
