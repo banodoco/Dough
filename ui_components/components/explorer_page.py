@@ -293,6 +293,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                 elif generation_method == InputImageStyling.INPAINTING.value:
                     if not ("mask_to_use" in st.session_state and st.session_state["mask_to_use"]):
                         st.error("Please create and save mask before generation")
+                        toggle_generate_inference(position)
                         time.sleep(0.7)
                         return
                     
