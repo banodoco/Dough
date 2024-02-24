@@ -3,7 +3,7 @@ from ui_components.widgets.shot_view import shot_keyframe_element
 from ui_components.components.explorer_page import gallery_image_view
 from ui_components.components.explorer_page import generate_images_element
 from ui_components.components.frame_styling_page import frame_styling_page
-from ui_components.widgets.frame_selector import frame_selector_widget, frame_view
+from ui_components.widgets.frame_selector import frame_selector_widget
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 
@@ -48,4 +48,4 @@ def adjust_shot_page(shot_uuid: str, h2):
         # st.markdown("***")
         gallery_image_view(shot.project.uuid, shortlist=False,view=['add_and_remove_from_shortlist','add_to_this_shot','view_inference_details','shot_chooser'], shot=shot,sidebar=False)
     else:
-        frame_styling_page(st.session_state["shot_uuid"], h2)
+        frame_styling_page(st.session_state["shot_uuid"])

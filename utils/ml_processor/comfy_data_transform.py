@@ -161,7 +161,7 @@ class ComfyDataTransform:
         file_data = {
             "name": filename,
             "type": InternalFileType.IMAGE.value,
-            "project_id": query.project_uuid,
+            "project_id": query.data.get("data", {}).get("project_uuid"),
         }
 
         print("file_data", file_data)
@@ -169,11 +169,10 @@ class ComfyDataTransform:
         if hosted_url:
             file_data.update({'hosted_url': hosted_url})
         else:
-            file_data.update({'local_path': "videos/temp/" + filename})        
-        print(file_data)
+            file_data.update({'local_path': "videos/temp/" + filename})
+        
         file = data_repo.create_file(**file_data)
-        print(file)
-        print(file.uuid)
+       
         # adding the combined image in query (and removing io buffers)
         query.data = {
             "data": {

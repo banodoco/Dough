@@ -116,18 +116,10 @@ class DataRepo:
         return file_url
 
     def create_file(self, **kwargs) -> InternalFileObject:
-        print("kwargs: ", kwargs)
-        print("SERVER: ", SERVER)
-        print("ServerType.DEVELOPMENT.value: ", ServerType.DEVELOPMENT.value)
-        
         if 'hosted_url' not in kwargs and SERVER != ServerType.DEVELOPMENT.value:
-            print("uploading file")
             file_content = ('file', open(kwargs['local_path'], 'rb'))
-            print("file_content: ", file_content)
             uploaded_file_url = self.upload_file(file_content)
-            print("uploaded_file_url: ", uploaded_file_url)
             kwargs.update({'hosted_url':uploaded_file_url})
-            print("kwargs: ", kwargs)
 
         # handling the case of local inference.. will fix later
         if 'hosted_url' in kwargs and not kwargs['hosted_url'].startswith('http'):
@@ -135,11 +127,8 @@ class DataRepo:
             del kwargs['hosted_url']
 
         res = self.db_repo.create_file(**kwargs)
-        print("res: ", res)
         file = res.data['data'] if res.status else None
-        print("file: ", file)
         file = InternalFileObject(**file) if file else None
-        print("file: ", file)
 
         if file and file.type == InternalFileType.IMAGE.value:
             from ui_components.methods.file_methods import normalize_size_internal_file_obj

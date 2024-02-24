@@ -2,12 +2,8 @@ import streamlit as st
 import os
 from moviepy.editor import *
 from shared.constants import SERVER, ServerType
-from ui_components.components.query_logger_page import query_logger_page
-# from ui_components.components.explorer_page import explorer_element,shortlist_element
-from ui_components.widgets.timeline_view import timeline_view
 from ui_components.widgets.sidebar_logger import sidebar_logger
 from ui_components.components.app_settings_page import app_settings_page
-from ui_components.components.frame_styling_page import frame_styling_page
 from ui_components.components.shortlist_page import shortlist_page
 from ui_components.components.timeline_view_page import timeline_view_page
 from ui_components.components.adjust_shot_page import adjust_shot_page
@@ -24,7 +20,6 @@ from ui_components.methods.common_methods import check_project_meta_data, update
 from ui_components.models import InternalAppSettingObject
 from utils.common_utils import create_working_assets, get_current_user, get_current_user_uuid, reset_project_state
 from utils import st_memory
-
 
 from utils.data_repo.data_repo import DataRepo
 

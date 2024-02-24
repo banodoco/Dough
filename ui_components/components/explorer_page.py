@@ -1,11 +1,9 @@
 import json
 import streamlit as st
 from ui_components.constants import GalleryImageViewType
-from ui_components.methods.common_methods import get_canny_img, process_inference_output,add_new_shot, save_new_image, save_uploaded_image, execute_image_edit
-from ui_components.methods.file_methods import generate_pil_image
-from ui_components.methods.ml_methods import query_llama2, inpainting
+from ui_components.methods.common_methods import get_canny_img, process_inference_output,add_new_shot, save_new_image
 from ui_components.widgets.add_key_frame_element import add_key_frame
-from ui_components.widgets.inpainting_element import inpainting_element
+from ui_components.widgets.inpainting_element import inpainting_image_input
 from utils.common_utils import refresh_app
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
@@ -59,55 +57,20 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
    
     type_of_generation = st_memory.radio("Type of generation:", options=InputImageStyling.value_list(), key="type_of_generation_key", help="Evolve Image will evolve the image based on the prompt, while Maintain Structure will keep the structure of the image and change the style.",horizontal=True) 
 
+    # --------------------- taking image inputs --------------------------------
     if type_of_generation != InputImageStyling.TEXT2IMAGE.value:
         if "input_image_1" not in st.session_state:
             st.session_state["input_image_1"] = None
             st.session_state["input_image_2"] = None
 
-        uploaded_image_1 = None
-        uploaded_image_2 = None
-
         # these require two images
         if type_of_generation == InputImageStyling.INPAINTING.value:
-            if 'uploaded_image' not in st.session_state:
-                st.session_state['uploaded_image'] = ""
-            h1, h2 = st.columns([1.2, 3])
-            with h1:
-                if st.session_state['uploaded_image'] == "" or st.session_state['uploaded_image'] is None:
-                    source_of_starting_image = st.radio("Image source:", options=["Upload","From Shot"], key=f"{inpainting_element}_starting_image", help="This will be the base image for the generation.", horizontal=True)
-                    if source_of_starting_image == "Upload":
-                        uploaded_image = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=st.session_state[f"uploaded_image"], help="This will be the base image for the generation.")
-                        if uploaded_image:
-                            if st.button("Select as base image", key="select_as_base_image"):
-                                st.session_state['uploaded_image'] = uploaded_image
-                    else:
-                        # taking image from shots
-                        shot_list = data_repo.get_shot_list(project_uuid)
-                        selection1, selection2 = st.columns([1, 1])            
-                        shot_name = st.selectbox("Shot:", options=[shot.name for shot in shot_list], key=f"inpainting_shot_name", help="This will be the base image for the generation.")
-                        shot_uuid = [shot.uuid for shot in shot_list if shot.name == shot_name][0]
-                        frame_list = data_repo.get_timing_list_from_shot(shot_uuid)
-                        list_of_timings = [i + 1 for i in range(len(frame_list))]
-                        timing = st.selectbox("Frame #:", options=list_of_timings, key=f"inpainting_frame_number", help="This will be the base image for the generation.")
-                        st.image(frame_list[timing - 1].primary_image.location, use_column_width=True)
-                        if timing:
-                            if st.button("Select as base image", key="select_as_base_image"):
-                                st.session_state['uploaded_image'] = frame_list[timing - 1].primary_image.location
-
-            with h2:
-                if st.session_state['uploaded_image']:                    
-                    inpainting_element(h1)
-                else:
-                    st.info("<- Please select an image")
+            inpainting_image_input(project_uuid)
 
         else:
-
             def handle_image_input(column, type_of_generation, output_value_name, data_repo=None, project_uuid=None):
-
                 with column:
-
                     if st.session_state.get(output_value_name) is None:
-
                         top0, top1, top2, top3 = st.columns([0.4,1, 1,0.4])
                         with top1:
                             st.info(f"{type_of_generation} input:")  # Dynamic title based on type_of_generation
@@ -116,11 +79,13 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                                                     
                         if 'uploaded_image' not in st.session_state:
                             st.session_state['uploaded_image'] = None
+                            
                         if f"uploaded_image_{output_value_name}" not in st.session_state:
                             st.session_state[f"uploaded_image_{output_value_name}"] = f"0_{output_value_name}"
+                            
                         if source_of_starting_image == "Upload":
-
                             st.session_state['uploaded_image'] = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=st.session_state[f"uploaded_image_{output_value_name}"], help="This will be the base image for the generation.")
+                        
                         else:
                             # taking image from shots
                             shot_list = data_repo.get_shot_list(project_uuid)
@@ -140,7 +105,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         # Trigger image processing
                         if st.button("Upload Image", key=f"{output_value_name}_upload_button", use_container_width=True):
                             st.session_state[output_value_name] = st.session_state['uploaded_image']
-                            st.session_state[f"uploaded_image_{output_value_name}"] += 1                        
+                            # st.session_state[f"uploaded_image_{output_value_name}"] += 1                  
                             st.rerun()
 
                         return None
@@ -163,7 +128,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
             sub0, sub1, sub2, sub3 = st.columns([0.3,1, 1,0.3])
             if type_of_generation != InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
                 strength_of_image = handle_image_input(sub1, type_of_generation, "input_image_1", data_repo, project_uuid) 
-            
             else:
                 strength_of_image_1 = handle_image_input(sub1, "IP-Adapter Face", "input_image_1", data_repo, project_uuid)
                 strength_of_image_2 = handle_image_input(sub2, "IP-Adapter Plus", "input_image_2", data_repo, project_uuid)
@@ -176,14 +140,12 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                             if st.button("Switch images 🔄", key="switch_images", use_container_width=True):
                                 st.session_state["input_image_1"], st.session_state["input_image_2"] = st.session_state["input_image_2"], st.session_state["input_image_1"]
                                 st.rerun()
-    
-    
+
     if position == 'explorer':
         _, d2,d3, _ = st.columns([0.25, 1,1, 0.25])
     else:
         d2, d3 = st.columns([1,1])
-    with d2:  
-        
+    with d2:
         number_to_generate = st.slider("Number of images to generate:", min_value=4, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
     
     with d3:
@@ -208,7 +170,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid,
                         data={"shot_uuid": shot_uuid}
                     )
                     
@@ -229,7 +190,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid,
                         data={"shot_uuid": shot_uuid}
                     )
 
@@ -254,7 +214,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid,
                         data={'condition_scale': 1, "shot_uuid": shot_uuid}
                     )
 
@@ -280,7 +239,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid,
                         data={"shot_uuid": shot_uuid}
                     )
 
@@ -301,7 +259,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid,
                         data={'condition_scale': 1, "shot_uuid": shot_uuid}
                     )
 
@@ -328,13 +285,16 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid,
                         data={'file_image_2_uuid': face_image_file.uuid, "shot_uuid": shot_uuid}
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_face_plus, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                 elif generation_method == InputImageStyling.INPAINTING.value:
+                    if not ("mask_to_use" in st.session_state and st.session_state["mask_to_use"]):
+                        st.error("Please create and save mask before generation")
+                        time.sleep(0.7)
+                        return
                     
                     query_obj = MLQueryObject(
                         timing_uuid=None,
@@ -348,7 +308,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid,
                         data={"shot_uuid": shot_uuid, "mask": st.session_state['mask_to_use'], "input_image": st.session_state['editing_image'], "project_uuid": project_uuid}
                     )
 
