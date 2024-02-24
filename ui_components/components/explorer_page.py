@@ -41,16 +41,21 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
     data_repo = DataRepo()
     project_settings = data_repo.get_project_setting(project_uuid)
     help_input='''This will generate a specific prompt based on your input.\n\n For example, "Sad scene of old Russian man, dreary style" might result in "Boris Karloff, 80 year old man wearing a suit, standing at funeral, dark blue watercolour."'''
+    if shot_uuid:
+        prompt_key=f"prompt_{shot_uuid}"
+        negative_prompt_key=f"negative_prompt_{shot_uuid}"
+    else:
+        prompt_key=f"explorer_base_prompt"
+        negative_prompt_key=f"explorer_base_negative_prompt"
+
     a1, a2 = st.columns([1,1])   
 
-    #with a1 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a2:
     with a1:
-        prompt = st_memory.text_area("Prompt:", key="explorer_base_prompt", help="This exact text will be included for each generation.")
-
+        prompt = st_memory.text_area("Prompt:", key=prompt_key, help="This exact text will be included for each generation.")
     # with a2 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a1:
     with a2:
         negative_prompt = st_memory.text_area("Negative prompt:", value="",\
-                                        key="explorer_neg_prompt", \
+                                        key=negative_prompt_key, \
                                                 help="These are the things you wish to be excluded from the image")
 
 
