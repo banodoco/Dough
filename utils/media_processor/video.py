@@ -4,6 +4,12 @@ from moviepy.editor import VideoFileClip, vfx
 
 class VideoProcessor:
     @staticmethod
+    def update_video_speed(video_location, desired_duration):
+        clip = VideoFileClip(video_location)
+
+        return VideoProcessor.update_clip_speed(clip, desired_duration)
+    
+    @staticmethod
     def update_video_bytes_speed(video_bytes, desired_duration):
         # Use a context manager for the temporary file to ensure it's deleted when done
         with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb') as temp_file:
