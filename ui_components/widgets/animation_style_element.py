@@ -1,5 +1,7 @@
 import json
+import tarfile
 import time
+import zipfile
 import streamlit as st
 from typing import List
 from shared.constants import AnimationStyleType, AnimationToolType
@@ -223,8 +225,6 @@ def animation_style_element(shot_uuid):
         model_files = [file for file in model_files if "xl" not in file]
 
         with tab1:
-            
-
             if len(all_files) == 0:
                 model1, model2 = st.columns([1, 1])
                 with model1:
@@ -235,7 +235,10 @@ def animation_style_element(shot_uuid):
             else:
                 model1, model2 = st.columns([1, 1])
                 with model1:
-                    sd_model = st_memory.selectbox("Which model would you like to use?", options=model_files, key="sd_model_video")
+                    if model_files and len(model_files):
+                        sd_model = st_memory.selectbox("Which model would you like to use?", options=model_files, key="sd_model_video")
+                    else:
+                        sd_model = ""
                 with model2:
                     st.write("")
                     st.info("To download more models, go to the Download Models tab.")
@@ -244,7 +247,7 @@ def animation_style_element(shot_uuid):
             sd_model = checkpoints_dir + "/" + sd_model
         
         with tab2:
-                    # Mapping of model names to their download URLs
+            # Mapping of model names to their download URLs
             sd_model_dict = {
                 "Anything V3 FP16 Pruned": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/anything-v3-fp16-pruned.safetensors.tar",
                 "Deliberate V2": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/Deliberate_v2.safetensors.tar",
@@ -261,6 +264,7 @@ def animation_style_element(shot_uuid):
                 
                 if st.button("Download Model", key="download_model"):
                     with st.spinner("Downloading model..."):
+                        download_bar = st.progress(0, text="")
                         save_directory = "ComfyUI/models/checkpoints"
                         os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
                         
@@ -268,13 +272,37 @@ def animation_style_element(shot_uuid):
                         model_url = sd_model_dict[model_name_selected]
                         
                         # Download the model and save it to the directory
-                        response = requests.get(model_url)
+                        response = requests.get(model_url, stream=True)
+                        zip_filename = model_url.split("/")[-1]
+                        filepath = os.path.join(save_directory, zip_filename)
+                        print("filepath: ", filepath)
                         if response.status_code == 200:
-                            # Extract the filename from the URL for saving
-                            filename = model_url.split("/")[-1]
-                            with open(os.path.join(save_directory, filename), 'wb') as f:
-                                f.write(response.content)
+                            total_size = int(response.headers.get('content-length', 0))
+                            
+                            with open(filepath, 'wb') as f:
+                                received_bytes = 0
+
+                                for data in response.iter_content(chunk_size=8192):
+                                    f.write(data)
+                                    received_bytes += len(data)
+                                    progress = received_bytes / total_size
+                                    download_bar.progress(progress)
+
                             st.success(f"Downloaded {model_name_selected} to {save_directory}")
+                            download_bar.empty()
+                            
+                        if model_url.endswith(".zip") or model_url.endswith(".tar"):
+                            st.success("Extracting the zip file. Please wait...")
+                            new_filepath = filepath.replace(zip_filename, "")
+                            if model_url.endswith(".zip"):
+                                with zipfile.ZipFile(f"{filepath}", "r") as zip_ref:
+                                    zip_ref.extractall(new_filepath)
+                            else:
+                                with tarfile.open(f"{filepath}", "r") as tar_ref:
+                                    tar_ref.extractall(new_filepath)
+                            
+                            # os.remove(filepath)
+                            st.rerun()
                         else:
                             st.error("Failed to download model")
 
@@ -300,17 +328,14 @@ def animation_style_element(shot_uuid):
                         else:
                             st.error("Failed to download model")
                 
-                # if it's in local DEVELOPMENT ENVIRONMENT
+        # if it's in local DEVELOPMENT ENVIRONMENT
         st.markdown("***")        
-
         st.markdown("##### Motion guidance")
-                
         tab1, tab2, tab3  = st.tabs(["Apply LoRAs","Download LoRAs","Train LoRAs"])
 
         lora_data = []
-        lora_file_dest = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
+        lora_file_dest = "ComfyUI/models/animatediff_motion_lora"
         with tab1:
-
             if "current_loras" not in st.session_state:
                 st.session_state["current_loras"] = []                
             # Initialize a single list to hold dictionaries for LoRA data
@@ -325,14 +350,12 @@ def animation_style_element(shot_uuid):
 
             # Iterate through each current LoRA in session state
             if len(files) == 0:
-                st.error("No LoRAs found in the directory - go to Explore to download some, or drop them into ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora")                    
+                st.error("No LoRAs found in the directory - go to Explore to download some, or drop them into ComfyUI/models/animatediff_motion_lora")                    
                 if st.button("Check again", key="check_again"):
                     st.rerun()
             else:
                 for idx, lora in enumerate(st.session_state["current_loras"]):
-
                     h1, h2, h3, h4 = st.columns([1, 1, 1, 0.5])
-                        
                     with h1:
                         which_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"which_lora_{idx}")                                                    
                     with h2:
@@ -360,17 +383,12 @@ def animation_style_element(shot_uuid):
                     st.session_state["current_loras"].append("")
                     st.rerun()
         with tab2:
-
             text1, text2 = st.columns([1, 1])
             with text1:
                 where_to_download_from = st.radio("Where would you like to get the LoRA from?", options=["Our list", "From a URL"], key="where_to_download_from")
 
             if where_to_download_from == "Our list":
-
-                
-
                 with text1:
-                
                     file_links = [
                         "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors",
                         "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_tony_stark_r64_temporal_unet.safetensors",
@@ -392,7 +410,7 @@ def animation_style_element(shot_uuid):
                     which_would_you_like_to_download = st.selectbox("Which LoRA would you like to download?", options=file_links, key="which_would_you_like_to_download")
                     if st.button("Download LoRA", key="download_lora"):
                         with st.spinner("Downloading LoRA..."):
-                            save_directory = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
+                            save_directory = "ComfyUI/models/animatediff_motion_lora"
                             os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
                             
                             # Extract the filename from the URL
@@ -400,11 +418,22 @@ def animation_style_element(shot_uuid):
                             save_path = os.path.join(save_directory, filename)
                             
                             # Download the file
-                            response = requests.get(which_would_you_like_to_download)
+                            download_lora_bar = st.progress(0, text="")
+                            response = requests.get(which_would_you_like_to_download, stream=True)
                             if response.status_code == 200:
+                                total_size = int(response.headers.get('content-length', 0))
                                 with open(save_path, 'wb') as f:
-                                    f.write(response.content)
+                                    received_bytes = 0
+                                    
+                                    for data in response.iter_content(chunk_size=8192):
+                                        f.write(data)
+                                        received_bytes += len(data)
+                                        progress = received_bytes / total_size
+                                        download_lora_bar.progress(progress)
+                                        
                                 st.success(f"Downloaded LoRA to {save_path}")
+                                download_lora_bar.empty()
+                                st.rerun()
                             else:
                                 st.error("Failed to download LoRA")
             
@@ -420,7 +449,7 @@ def animation_style_element(shot_uuid):
                 with text1:
                     if st.button("Download LoRA", key="download_lora"):
                         with st.spinner("Downloading LoRA..."):
-                            save_directory = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
+                            save_directory = "ComfyUI/models/animatediff_motion_lora"
                             os.makedirs(save_directory, exist_ok=True)
                             response = requests.get(text_input)
                             if response.status_code == 200:
@@ -429,7 +458,6 @@ def animation_style_element(shot_uuid):
                                 st.success(f"Downloaded LoRA to {save_directory}")
                             else:
                                 st.error("Failed to download LoRA")
-
 
         with tab3:
             b1, b2 = st.columns([1, 1])
@@ -447,14 +475,12 @@ def animation_style_element(shot_uuid):
         st.markdown("##### Overall style settings")
 
         e1, e2, e3 = st.columns([1, 1,1])
-
         with e1:        
             strength_of_adherence = st_memory.slider("How much would you like to force adherence to the input images?", min_value=0.0, max_value=1.0, value=0.3, step=0.01, key="stregnth_of_adherence")
         with e2:
             st.info("Higher values may cause flickering and sudden changes in the video. Lower values may cause the video to be less influenced by the input images but can lead to smoother motion and better colours.")
 
         f1, f2, f3 = st.columns([1, 1, 1])
-        
         with f1:
             overall_positive_prompt = st_memory.text_area("What would you like to see in the videos?", value="", key="positive_prompt_video")
         with f2:
@@ -470,10 +496,8 @@ def animation_style_element(shot_uuid):
         st.markdown("##### Overall motion settings")
         h1, h2, h3 = st.columns([0.5, 1.5, 1])
         with h1:
-            
             type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=False, index=1)
 
-            
         with h2: 
             st.info("This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.")
         st.write("")
@@ -491,8 +515,7 @@ def animation_style_element(shot_uuid):
             st.write("")
             st.write("")
             st.info("This actually updates the motion during frames in the advanced settings above - but we put it here because it has a big impact on the video. You can scroll up to see the changes and tweak for individual frames.")
-        
-        
+
         context_length = 16
         context_stride = 2
         context_overlap = 4
@@ -511,7 +534,6 @@ def animation_style_element(shot_uuid):
             context_length = 16
             context_stride = 4
             context_overlap = 4
-        
 
         relative_ipadapter_strength = 1.0
         relative_cn_strength = 0.0
@@ -532,8 +554,6 @@ def animation_style_element(shot_uuid):
         motion_scales = format_motion_strengths_with_buffer(dynamic_frame_distribution_values, motions_during_frames, buffer)
         motion_scale = 1.3
 
-        # st.write(motion_scales)
-            
         settings.update(
             ckpt=sd_model,
             width=width,
