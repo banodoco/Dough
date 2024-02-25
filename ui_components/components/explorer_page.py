@@ -1,11 +1,9 @@
 import json
 import streamlit as st
 from ui_components.constants import GalleryImageViewType
-from ui_components.methods.common_methods import get_canny_img, process_inference_output,add_new_shot, save_new_image, save_uploaded_image, execute_image_edit
-from ui_components.methods.file_methods import generate_pil_image
-from ui_components.methods.ml_methods import query_llama2, inpainting
+from ui_components.methods.common_methods import get_canny_img, process_inference_output,add_new_shot, save_new_image
 from ui_components.widgets.add_key_frame_element import add_key_frame
-from ui_components.widgets.inpainting_element import inpainting_element
+from ui_components.widgets.inpainting_element import inpainting_image_input
 from utils.common_utils import refresh_app
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
@@ -30,7 +28,7 @@ class InputImageStyling(ExtendedEnum):
 
 
 def explorer_page(project_uuid):
-    st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}]")
+    st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['page']}]")
     st.markdown("***")
 
     with st.expander("✨ Generate Images", expanded=True):
@@ -43,71 +41,41 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
     data_repo = DataRepo()
     project_settings = data_repo.get_project_setting(project_uuid)
     help_input='''This will generate a specific prompt based on your input.\n\n For example, "Sad scene of old Russian man, dreary style" might result in "Boris Karloff, 80 year old man wearing a suit, standing at funeral, dark blue watercolour."'''
+    if shot_uuid:
+        prompt_key=f"prompt_{shot_uuid}"
+        negative_prompt_key=f"negative_prompt_{shot_uuid}"
+    else:
+        prompt_key=f"explorer_base_prompt"
+        negative_prompt_key=f"explorer_base_negative_prompt"
+
     a1, a2 = st.columns([1,1])   
 
-    #with a1 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a2:
     with a1:
-        prompt = st_memory.text_area("What's your base prompt?", key="explorer_base_prompt", help="This exact text will be included for each generation.")
-
+        prompt = st_memory.text_area("Prompt:", key=prompt_key, help="This exact text will be included for each generation.")
     # with a2 if 'switch_prompt_position' not in st.session_state or st.session_state['switch_prompt_position'] == False else a1:
     with a2:
         negative_prompt = st_memory.text_area("Negative prompt:", value="",\
-                                        key="explorer_neg_prompt", \
+                                        key=negative_prompt_key, \
                                                 help="These are the things you wish to be excluded from the image")
 
 
    
-    type_of_generation = st_memory.radio("How would you like to generate the image?", options=InputImageStyling.value_list(), key="type_of_generation_key", help="Evolve Image will evolve the image based on the prompt, while Maintain Structure will keep the structure of the image and change the style.",horizontal=True) 
+    type_of_generation = st_memory.radio("Type of generation:", options=InputImageStyling.value_list(), key="type_of_generation_key", help="Evolve Image will evolve the image based on the prompt, while Maintain Structure will keep the structure of the image and change the style.",horizontal=True) 
 
+    # --------------------- taking image inputs --------------------------------
     if type_of_generation != InputImageStyling.TEXT2IMAGE.value:
         if "input_image_1" not in st.session_state:
             st.session_state["input_image_1"] = None
             st.session_state["input_image_2"] = None
 
-        uploaded_image_1 = None
-        uploaded_image_2 = None
-
         # these require two images
         if type_of_generation == InputImageStyling.INPAINTING.value:
-            if 'uploaded_image' not in st.session_state:
-                st.session_state['uploaded_image'] = ""
-            h1, h2 = st.columns([0.8, 3])
-            with h1:
-                if st.session_state['uploaded_image'] == "":
-                    source_of_starting_image = st.radio("Image source:", options=["Upload","From Shot"], key=f"{inpainting_element}_starting_image", help="This will be the base image for the generation.", horizontal=True)
-                    if source_of_starting_image == "Upload":
-                        uploaded_image = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=st.session_state[f"uploaded_image"], help="This will be the base image for the generation.")
-                        if uploaded_image:
-                            if st.button("Select as base image", key="select_as_base_image"):
-                                st.session_state['uploaded_image'] = uploaded_image
-                    else:
-                        # taking image from shots
-                        shot_list = data_repo.get_shot_list(project_uuid)
-                        selection1, selection2 = st.columns([1, 1])            
-                        shot_name = st.selectbox("Shot:", options=[shot.name for shot in shot_list], key=f"inpainting_shot_name", help="This will be the base image for the generation.")
-                        shot_uuid = [shot.uuid for shot in shot_list if shot.name == shot_name][0]
-                        frame_list = data_repo.get_timing_list_from_shot(shot_uuid)
-                        list_of_timings = [i + 1 for i in range(len(frame_list))]
-                        timing = st.selectbox("Frame #:", options=list_of_timings, key=f"inpainting_frame_number", help="This will be the base image for the generation.")
-                        st.image(frame_list[timing - 1].primary_image.location, use_column_width=True)
-                        if timing:
-                            if st.button("Select as base image", key="select_as_base_image"):
-                                st.session_state['uploaded_image'] = frame_list[timing - 1].primary_image.location
-
-            with h2:
-                if st.session_state['uploaded_image']:                    
-                    inpainting_element(h1)
-                else:
-                    st.info("<- Please select an image")
+            inpainting_image_input(project_uuid)
 
         else:
-
             def handle_image_input(column, type_of_generation, output_value_name, data_repo=None, project_uuid=None):
-
                 with column:
-
                     if st.session_state.get(output_value_name) is None:
-
                         top0, top1, top2, top3 = st.columns([0.4,1, 1,0.4])
                         with top1:
                             st.info(f"{type_of_generation} input:")  # Dynamic title based on type_of_generation
@@ -116,11 +84,13 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                                                     
                         if 'uploaded_image' not in st.session_state:
                             st.session_state['uploaded_image'] = None
+                            
                         if f"uploaded_image_{output_value_name}" not in st.session_state:
                             st.session_state[f"uploaded_image_{output_value_name}"] = f"0_{output_value_name}"
+                            
                         if source_of_starting_image == "Upload":
-
                             st.session_state['uploaded_image'] = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=st.session_state[f"uploaded_image_{output_value_name}"], help="This will be the base image for the generation.")
+                        
                         else:
                             # taking image from shots
                             shot_list = data_repo.get_shot_list(project_uuid)
@@ -140,7 +110,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         # Trigger image processing
                         if st.button("Upload Image", key=f"{output_value_name}_upload_button", use_container_width=True):
                             st.session_state[output_value_name] = st.session_state['uploaded_image']
-                            st.session_state[f"uploaded_image_{output_value_name}"] += 1                        
+                            # st.session_state[f"uploaded_image_{output_value_name}"] += 1                  
                             st.rerun()
 
                         return None
@@ -162,8 +132,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
             
             sub0, sub1, sub2, sub3 = st.columns([0.3,1, 1,0.3])
             if type_of_generation != InputImageStyling.IPADPTER_FACE_AND_PLUS.value:
-                strength_of_image = handle_image_input(top1, type_of_generation, "input_image_1", data_repo, project_uuid) 
-            
+                strength_of_image = handle_image_input(sub1, type_of_generation, "input_image_1", data_repo, project_uuid) 
             else:
                 strength_of_image_1 = handle_image_input(sub1, "IP-Adapter Face", "input_image_1", data_repo, project_uuid)
                 strength_of_image_2 = handle_image_input(sub2, "IP-Adapter Plus", "input_image_2", data_repo, project_uuid)
@@ -176,15 +145,13 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                             if st.button("Switch images 🔄", key="switch_images", use_container_width=True):
                                 st.session_state["input_image_1"], st.session_state["input_image_2"] = st.session_state["input_image_2"], st.session_state["input_image_1"]
                                 st.rerun()
-    
-    
+
     if position == 'explorer':
         _, d2,d3, _ = st.columns([0.25, 1,1, 0.25])
     else:
         d2, d3 = st.columns([1,1])
-    with d2:  
-        
-        number_to_generate = st.slider("How many images would you like to generate?", min_value=4, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
+    with d2:
+        number_to_generate = st.slider("Number of images to generate:", min_value=4, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
     
     with d3:
         st.write(" ")
@@ -208,7 +175,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid,
                         data={"shot_uuid": shot_uuid}
                     )
                     
@@ -229,7 +195,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid,
                         data={"shot_uuid": shot_uuid}
                     )
 
@@ -254,7 +219,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid,
                         data={'condition_scale': 1, "shot_uuid": shot_uuid}
                     )
 
@@ -280,7 +244,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid,
                         data={"shot_uuid": shot_uuid}
                     )
 
@@ -301,7 +264,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid,
                         data={'condition_scale': 1, "shot_uuid": shot_uuid}
                     )
 
@@ -328,26 +290,35 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        project_uuid=project_uuid,
                         data={'file_image_2_uuid': face_image_file.uuid, "shot_uuid": shot_uuid}
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_face_plus, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
                 elif generation_method == InputImageStyling.INPAINTING.value:
-                    edited_image, log = inpainting(st.session_state['editing_image'], prompt, negative_prompt, project_settings.width, project_settings.height, shot_uuid,project_uuid)
-
+                    if not ("mask_to_use" in st.session_state and st.session_state["mask_to_use"]):
+                        st.error("Please create and save mask before generation")
+                        toggle_generate_inference(position)
+                        time.sleep(0.7)
+                        return
                     
-                    inference_data = {
-                        "inference_type": InferenceType.FRAME_INPAINTING.value,
-                        "output": edited_image,
-                        "log_uuid": log.uuid,
-                        "timing_uuid": st.session_state['current_frame_uuid'],
-                        "promote_generation": False,
-                        "stage": ""
-                    }
+                    query_obj = MLQueryObject(
+                        timing_uuid=None,
+                        model_uuid=None,
+                        guidance_scale=8,
+                        seed=-1,                            
+                        num_inference_steps=25,            
+                        strength=0.5,
+                        adapter_type=None,
+                        prompt=prompt,
+                        negative_prompt=negative_prompt,
+                        height=project_settings.height,
+                        width=project_settings.width,
+                        data={"shot_uuid": shot_uuid, "mask": st.session_state['mask_to_use'], "input_image": st.session_state['editing_image'], "project_uuid": project_uuid}
+                    )
 
-                    process_inference_output(**inference_data)
+                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_inpainting, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                    
 
                 if log:
                     inference_data = {
@@ -394,57 +365,70 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     project_settings = data_repo.get_project_setting(project_uuid)
     shot_list = data_repo.get_shot_list(project_uuid)
     shot_name_uuid_map = {s.name : s.uuid for s in shot_list}
-    shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]     # by default only showing explorer views
+    shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]  
+    
+    if shortlist is False:
+        st.markdown("***")
+        st.markdown("### 🖼️ Gallery ----------")
+        st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+
+    h1,h2,h3,h4 = st.columns([3, 1, 1, 1])
+       # by default only showing explorer views
     k1,k2 = st.columns([5,1])
 
     if sidebar != True:
         if shortlist is False:
             f1, f2 = st.columns([1, 1])
-            with f1:
+            with h2:
                 num_columns = st_memory.slider('Number of columns:', min_value=3, max_value=7, value=4,key="num_columns_explorer")
-            with f2:
-                num_items_per_page = st_memory.slider('Items per page:', min_value=10, max_value=50, value=16, key="num_items_per_page_explorer")
+            with h3:
+                num_items_per_page = st_memory.slider('Items per page:', min_value=8, max_value=64, value=16, key="num_items_per_page_explorer")
         else:
             num_items_per_page = 4
             num_columns = 2
 
         if 'shot_chooser' in view:
-            shot_chooser_1,shot_chooser_2,_ = st.columns([1, 1,0.5])
-            with shot_chooser_1:        
-                options = ["Timeline", "Specific shots", "All"]                          
-                if shot is None:            
-                    default_value = 0
-                else:
-                    default_value = 1
-                show_images_associated_with_shots = st.selectbox("Show images associated with:", options=options, index=default_value, key=f"show_images_associated_with_shots_explorer_{shortlist}")
-            with shot_chooser_2:
-                if show_images_associated_with_shots == "Timeline":
-                    shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]
-                
-                elif show_images_associated_with_shots == "Specific shots":
-                    specific_shots = [shot.name for shot in shot_list]  
-                    if shot is None:
-                        default_shot = specific_shots[0]
+            with h1:
+                shot_chooser_1,shot_chooser_2 = st.columns([1, 1])
+                with shot_chooser_1:        
+                    options = ["Timeline", "Specific shots", "All"]                         
+                    if shot is None:            
+                        default_value = 0
                     else:
-                        default_shot = shot.name
-                    shot_name_list = st.multiselect("Shots to show:", options=specific_shots, default=default_shot, key="specific_shots_explorer")
-                    shot_uuid_list = [str(shot_name_uuid_map[s]) for s in shot_name_list] if shot_name_list else ['xyz']
+                        default_value = 1
+                    show_images_associated_with_shots = st.selectbox("Images associated with:", options=options, index=default_value, key=f"show_images_associated_with_shots_explorer_{shortlist}")
+                with shot_chooser_2:
+                    if show_images_associated_with_shots == "Timeline":
+                        shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]
                     
-                else:
-                    shot_uuid_list = []
+                    elif show_images_associated_with_shots == "Specific shots":
+                        specific_shots = [shot.name for shot in shot_list]  
+                        if shot is None:
+                            default_shot = specific_shots[0]
+                        else:
+                            default_shot = shot.name
+                        shot_name_list = st.multiselect("Shots to show:", options=specific_shots, default=default_shot, key="specific_shots_explorer")
+                        shot_uuid_list = [str(shot_name_uuid_map[s]) for s in shot_name_list] if shot_name_list else ['xyz']
+                        
+                    else:
+                        shot_uuid_list = []
         else:
             shot_uuid_list = []
 
         if shortlist is False:
-            page_number = k1.radio("Select page:", options=range(1, project_settings.total_gallery_pages + 1), horizontal=True, key="main_gallery")
-            if 'view_inference_details' in view:
-                open_detailed_view_for_all = k2.toggle("Open detailed view for all:", key='main_gallery_toggle')
-            st.markdown("***")
+            with h1:
+                page_number = st.radio("Select page:", options=range(1, project_settings.total_gallery_pages + 1), horizontal=True, key="main_gallery")
+            with h4:
+                st.write("")                
+                if 'view_inference_details' in view:
+                    open_detailed_view_for_all = st.toggle("Open all details:", key='main_gallery_toggle')
+                
         else:
-            project_setting = data_repo.get_project_setting(project_uuid)
-            page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
-            open_detailed_view_for_all = False     
-            st.markdown("***")
+            with h1:
+                project_setting = data_repo.get_project_setting(project_uuid)
+                page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
+                open_detailed_view_for_all = False     
+                
     else:
         project_setting = data_repo.get_project_setting(project_uuid)
         page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
@@ -505,8 +489,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             
             with fetch3:
                     if st.button(f"{button_text}", key=f"check_for_new_images_", use_container_width=True):
-                        if explorer_stats['temp_image_count']:
-                            data_repo.update_temp_gallery_images(project_uuid)
+                        data_repo.update_temp_gallery_images(project_uuid)
+                        if explorer_stats['temp_image_count']:                           
                             st.success("New images fetched")
                             time.sleep(0.3)
                         st.rerun()
@@ -523,17 +507,46 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                 if i + j < len(gallery_image_list):
                     with cols[j]:                        
                         st.image(gallery_image_list[i + j].location, use_column_width=True)
+                                                # ---------- add to shot btn ---------------
+                        if "last_shot_number" not in st.session_state:
+                            st.session_state["last_shot_number"] = 0
+                        if 'add_to_this_shot' in view or 'add_to_any_shot' in view:
+                            if 'add_to_this_shot' in view:
+                                shot_name = shot.name
+                            else:
+                                shot_name = st.selectbox('Add to shot:', shot_names, key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}",index=st.session_state["last_shot_number"])
+                            
+                            if shot_name != "":
+                                if shot_name == "**Create New Shot**":                                    
+                                    shot_name = st.text_input("New shot name:", max_chars=40, key=f"shot_name_{gallery_image_list[i+j].uuid}")
+                                    if st.button("Create new shot", key=f"create_new_{gallery_image_list[i + j].uuid}", use_container_width=True):
+                                        new_shot = add_new_shot(project_uuid, name=shot_name)
+                                        add_key_frame(gallery_image_list[i + j], False, new_shot.uuid, len(data_repo.get_timing_list_from_shot(new_shot.uuid)), refresh_state=False)
+                                        # removing this from the gallery view
+                                        data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+                                        st.rerun()
+                                    
+                                else:
+                                    if st.button(f"Add to shot", key=f"add_{gallery_image_list[i + j].uuid}", use_container_width=True):
+                                        shot_number = shot_names.index(shot_name)
+                                        st.session_state["last_shot_number"] = shot_number 
+                                        shot_uuid = shot_list[shot_number].uuid
+
+                                        add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
+                                        # removing this from the gallery view
+                                        data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+                                        refresh_app(maintain_state=True)                  
                         # else:
                         #     st.error("The image is truncated and cannot be displayed.")
                         if 'add_and_remove_from_shortlist' in view:
                             if shortlist:
-                                if st.button("Remove from shortlist ➖", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="Remove from shortlist"):
+                                if st.button("Remove from shortlist ➖", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True):
                                     data_repo.update_file(gallery_image_list[i + j].uuid, tag=InternalFileTag.GALLERY_IMAGE.value)
                                     st.success("Removed From Shortlist")
                                     time.sleep(0.3)
                                     st.rerun()
                             else:
-                                if st.button("Add to shortlist ➕", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="Add to shortlist"):
+                                if st.button("Add to shortlist ➕", key=f"shortlist_{gallery_image_list[i + j].uuid}",use_container_width=True, help="The shortlist appears in a box on the left."):
                                     data_repo.update_file(gallery_image_list[i + j].uuid, tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value)
                                     st.success("Added To Shortlist")
                                     time.sleep(0.3)
@@ -555,35 +568,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                         else:
                             st.warning("No data found")
 
-                        # ---------- add to shot btn ---------------
-                        if "last_shot_number" not in st.session_state:
-                            st.session_state["last_shot_number"] = 0
-                        if 'add_to_this_shot' in view or 'add_to_any_shot' in view:
-                            if 'add_to_this_shot' in view:
-                                shot_name = shot.name
-                            else:
-                                shot_name = st.selectbox('Add to shot:', shot_names, key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}",index=st.session_state["last_shot_number"])
-                            
-                            if shot_name != "":
-                                if shot_name == "**Create New Shot**":
-                                    shot_name = st.text_input("New shot name:", max_chars=40, key=f"shot_name_{gallery_image_list[i+j].uuid}")
-                                    if st.button("Create new shot", key=f"create_new_{gallery_image_list[i + j].uuid}", use_container_width=True):
-                                        new_shot = add_new_shot(project_uuid, name=shot_name)
-                                        add_key_frame(gallery_image_list[i + j], False, new_shot.uuid, len(data_repo.get_timing_list_from_shot(new_shot.uuid)), refresh_state=False)
-                                        # removing this from the gallery view
-                                        data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                        st.rerun()
-                                    
-                                else:
-                                    if st.button(f"Add to shot", key=f"add_{gallery_image_list[i + j].uuid}", help="Promote this variant to the primary image", use_container_width=True):
-                                        shot_number = shot_names.index(shot_name)
-                                        st.session_state["last_shot_number"] = shot_number 
-                                        shot_uuid = shot_list[shot_number].uuid
-
-                                        add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
-                                        # removing this from the gallery view
-                                        data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                        refresh_app(maintain_state=True)                                                    
+                                  
             st.markdown("***")
     else:
-        st.warning("No images present")
+        
+        st.info("No images present in this view.")

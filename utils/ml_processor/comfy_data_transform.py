@@ -147,7 +147,7 @@ class ComfyDataTransform:
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_INPAINTING)
 
         # workflow params
-        # node 'get_img_size' automatically fetches the size
+        # node 'get_img_size' automatically fetches the size        
         positive_prompt, negative_prompt = query.prompt, query.negative_prompt
         steps, cfg = query.num_inference_steps, query.guidance_scale
         input_image = query.data.get('data', {}).get('input_image', None)
@@ -162,22 +162,24 @@ class ComfyDataTransform:
         file_data = {
             "name": filename,
             "type": InternalFileType.IMAGE.value,
-            "project_id": timing.shot.project.uuid
+            "project_id": query.data.get("data", {}).get("project_uuid"),
         }
+
+        print("file_data", file_data)
 
         if hosted_url:
             file_data.update({'hosted_url': hosted_url})
         else:
             file_data.update({'local_path': "videos/temp/" + filename})
+        
         file = data_repo.create_file(**file_data)
-
+       
         # adding the combined image in query (and removing io buffers)
         query.data = {
             "data": {
                 "file_combined_img": file.uuid
             }
         }
-
         # updating params
         workflow["3"]["inputs"]["seed"] = random_seed()
         workflow["20"]["inputs"]["image"] = filename

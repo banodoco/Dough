@@ -34,13 +34,17 @@ def animation_style_element(shot_uuid):
     }
 
     interpolation_style = 'ease-in-out'
-    st.markdown("### ✨ Generate Animations ----------")  
+    st.markdown("### 🎥 Generate animations ----------")  
+    st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+    
 
-    with st.expander("", expanded=True):
+    with st.container():
         advanced1, advanced2, advanced3 = st.columns([1.0,1.5, 1.0])
 
         with advanced1:
             st.markdown("##### Individual frame settings")
+        
+        
     
         items_per_row = 3
         strength_of_frames = []
@@ -54,6 +58,8 @@ def animation_style_element(shot_uuid):
         if len(timing_list) <= 1:
             st.warning("You need at least two frames to generate a video.")
             st.stop()
+
+        open_advanced_settings = st_memory.toggle("Open all advanced settings", key="advanced_settings", value=False)
         
         for i in range(0, len(timing_list) , items_per_row):
             with st.container():
@@ -80,19 +86,19 @@ def animation_style_element(shot_uuid):
                                         st.session_state[f'{k}_{shot.uuid}_{idx}'] = v
                                                                                                                             
                                 # settings control
-                                # with st.expander("Advanced settings:"):
-                            
-                                individual_prompt = st.text_input("What to include:", key=f"individual_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_prompt_{shot.uuid}_{idx}'], help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
-                                individual_prompts.append(individual_prompt)
-                                individual_negative_prompt = st.text_input("What to avoid:", key=f"negative_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_negative_prompt_{shot.uuid}_{idx}'],help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
-                                individual_negative_prompts.append(individual_negative_prompt)
-                                strength1, strength2 = st.columns([1, 1])
-                                with strength1:
-                                    strength_of_frame = st.slider("Strength of current frame:", min_value=0.25, max_value=1.0, step=0.01, key=f"strength_of_frame_widget_{shot.uuid}_{idx}", value=st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'])
-                                    strength_of_frames.append(strength_of_frame)         
-                                with strength2:
-                                    motion_during_frame = st.slider("Motion during frame:", min_value=0.5, max_value=1.5, step=0.01, key=f"motion_during_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'])                            
-                                    motions_during_frames.append(motion_during_frame)
+                                with st.expander("Advanced settings:", expanded=open_advanced_settings):
+                                
+                                    individual_prompt = st.text_input("What to include:", key=f"individual_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_prompt_{shot.uuid}_{idx}'], help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
+                                    individual_prompts.append(individual_prompt)
+                                    individual_negative_prompt = st.text_input("What to avoid:", key=f"negative_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_negative_prompt_{shot.uuid}_{idx}'],help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
+                                    individual_negative_prompts.append(individual_negative_prompt)
+                                    strength1, strength2 = st.columns([1, 1])
+                                    with strength1:
+                                        strength_of_frame = st.slider("Strength of current frame:", min_value=0.25, max_value=1.0, step=0.01, key=f"strength_of_frame_widget_{shot.uuid}_{idx}", value=st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'])
+                                        strength_of_frames.append(strength_of_frame)         
+                                    with strength2:
+                                        motion_during_frame = st.slider("Motion during frame:", min_value=0.5, max_value=1.5, step=0.01, key=f"motion_during_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'])                            
+                                        motions_during_frames.append(motion_during_frame)
                             else:                        
                                 st.warning("No primary image present.")    
 
@@ -118,6 +124,7 @@ def animation_style_element(shot_uuid):
                 if (i < len(timing_list) - 1)  or (len(timing_list) % items_per_row != 0):
                     st.markdown("***")
         
+    
         
 
         
@@ -298,7 +305,7 @@ def animation_style_element(shot_uuid):
 
         st.markdown("##### Motion guidance")
                 
-        tab1, tab2, tab3  = st.tabs(["Apply LoRAs","Explore LoRAs","Train LoRAs"])
+        tab1, tab2, tab3  = st.tabs(["Apply LoRAs","Download LoRAs","Train LoRAs"])
 
         lora_data = []
         lora_file_dest = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
@@ -353,43 +360,75 @@ def animation_style_element(shot_uuid):
                     st.session_state["current_loras"].append("")
                     st.rerun()
         with tab2:
+
+            text1, text2 = st.columns([1, 1])
+            with text1:
+                where_to_download_from = st.radio("Where would you like to get the LoRA from?", options=["Our list", "From a URL"], key="where_to_download_from")
+
+            if where_to_download_from == "Our list":
+
+                
+
+                with text1:
+                
+                    file_links = [
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_tony_stark_r64_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_train_r128_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/300_car_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_desert_48_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_jeep_driving_r32_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_man_running_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_rotation_temporal_unet.safetensors",
+                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/750_jeep_driving_r32_temporal_unet.safetensors",
+                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/300_zooming_in_temporal_unet.safetensors",
+                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_cat_walking_temporal_unet.safetensors",
+                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_playing_banjo_temporal_unet.safetensors",
+                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_woman_dancing_temporal_unet.safetensors",
+                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_zooming_out_temporal_unet.safetensors"
+                    ]
+                            
+                    which_would_you_like_to_download = st.selectbox("Which LoRA would you like to download?", options=file_links, key="which_would_you_like_to_download")
+                    if st.button("Download LoRA", key="download_lora"):
+                        with st.spinner("Downloading LoRA..."):
+                            save_directory = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
+                            os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
+                            
+                            # Extract the filename from the URL
+                            filename = which_would_you_like_to_download.split("/")[-1]
+                            save_path = os.path.join(save_directory, filename)
+                            
+                            # Download the file
+                            response = requests.get(which_would_you_like_to_download)
+                            if response.status_code == 200:
+                                with open(save_path, 'wb') as f:
+                                    f.write(response.content)
+                                st.success(f"Downloaded LoRA to {save_path}")
+                            else:
+                                st.error("Failed to download LoRA")
             
-            file_links = [
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_tony_stark_r64_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_train_r128_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/300_car_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_desert_48_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_jeep_driving_r32_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_man_running_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_rotation_temporal_unet.safetensors",
-                "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/750_jeep_driving_r32_temporal_unet.safetensors",
-                "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/300_zooming_in_temporal_unet.safetensors",
-                "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_cat_walking_temporal_unet.safetensors",
-                "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_playing_banjo_temporal_unet.safetensors",
-                "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_woman_dancing_temporal_unet.safetensors",
-                "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_zooming_out_temporal_unet.safetensors"
-            ]
-                    
-            which_would_you_like_to_download = st.selectbox("Which LoRA would you like to download?", options=file_links, key="which_would_you_like_to_download")
-            if st.button("Download LoRA", key="download_lora"):
-                with st.spinner("Downloading LoRA..."):
-                    save_directory = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
-                    os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
-                    
-                    # Extract the filename from the URL
-                    filename = which_would_you_like_to_download.split("/")[-1]
-                    save_path = os.path.join(save_directory, filename)
-                    
-                    # Download the file
-                    response = requests.get(which_would_you_like_to_download)
-                    if response.status_code == 200:
-                        with open(save_path, 'wb') as f:
-                            f.write(response.content)
-                        st.success(f"Downloaded LoRA to {save_path}")
-                    else:
-                        st.error("Failed to download LoRA")
+            elif where_to_download_from == "From a URL":
+                
+                with text1:
+                    text_input = st.text_input("Enter the URL of the LoRA", key="text_input_lora")
+                with text2:
+                    st.write("")
+                    st.write("")
+                    st.write("")
+                    st.info("Make sure to get the download url of the LoRA. \n\n For example, from Hugging Face, it should look like this: https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors")
+                with text1:
+                    if st.button("Download LoRA", key="download_lora"):
+                        with st.spinner("Downloading LoRA..."):
+                            save_directory = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"
+                            os.makedirs(save_directory, exist_ok=True)
+                            response = requests.get(text_input)
+                            if response.status_code == 200:
+                                with open(os.path.join(save_directory, text_input.split("/")[-1]), 'wb') as f:
+                                    f.write(response.content)
+                                st.success(f"Downloaded LoRA to {save_directory}")
+                            else:
+                                st.error("Failed to download LoRA")
 
 
         with tab3:
@@ -402,8 +441,7 @@ def animation_style_element(shot_uuid):
 
                 if st.button("Train LoRA", key="train_lora", use_container_width=True):
                     st.write("Training LoRA")
-                                    
-                
+                                                    
 
         st.markdown("***")
         st.markdown("##### Overall style settings")
@@ -434,9 +472,26 @@ def animation_style_element(shot_uuid):
         with h1:
             
             type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=False, index=1)
+
             
         with h2: 
             st.info("This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.")
+        st.write("")
+        i1, i3,_ = st.columns([1,2,1])
+        with i1:
+            amount_of_motion = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="amount_of_motion")        
+            st.write("")
+            if st.button("Update amount of motion", key="update_motion"):
+                for idx, timing in enumerate(timing_list):
+                    st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = amount_of_motion                
+                st.success("Updated amount of motion")
+                time.sleep(0.3)
+                st.rerun()
+        with i3:
+            st.write("")
+            st.write("")
+            st.info("This actually updates the motion during frames in the advanced settings above - but we put it here because it has a big impact on the video. You can scroll up to see the changes and tweak for individual frames.")
+        
         
         context_length = 16
         context_stride = 2
@@ -559,7 +614,7 @@ def animation_style_element(shot_uuid):
                 toggle_generate_inference(position)
                 st.rerun()
                 
-            st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help, on_click=lambda: toggle_generate_inference(position))
+            st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help, on_click=lambda: toggle_generate_inference(position),type="primary")
 
         with animate_col_2:
                 number_of_frames = len(timing_list)

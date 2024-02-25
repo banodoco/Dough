@@ -19,7 +19,10 @@ def sidebar_logger(shot_uuid):
     refresh_disabled = False # not any(log.status in [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value] for log in log_list)
     if a1.button("Refresh log", disabled=refresh_disabled, help="You can also press 'r' on your keyboard to refresh."): st.rerun()
 
-    status_option = st.radio("Statuses to display:", options=["All", "In Progress", "Succeeded", "Failed"], key="status_option", index=0, horizontal=True)
+
+    z1, z2 = st.columns([1, 1])
+    with z1:
+        status_option = st.radio("Statuses to display:", options=["All", "In Progress", "Succeeded", "Failed"], key="status_option", index=0, horizontal=True)
     
     status_list = None
     if status_option == "In Progress":
@@ -29,18 +32,22 @@ def sidebar_logger(shot_uuid):
     elif status_option == "Failed":
         status_list = [InferenceStatus.FAILED.value]
 
-    b1, b2 = st.columns([1, 1])
+    
 
     project_setting = data_repo.get_project_setting(shot.project.uuid)
+    with z2:
+        st.write("")        
+        selected_option = st.selectbox(
+        "Which model to show:",
+        ["All"] + [m.display_name() for m in MODEL_FILTERS]
+        )
+        
+    b1, b2 = st.columns([1, 1])
     
     page_number = b1.number_input('Page number', min_value=1, max_value=project_setting.total_log_pages, value=1, step=1)
     items_per_page = b2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
     
-    selected_option = st.selectbox(
-        "Choose an option",
-        ["All"] + [m.display_name() for m in MODEL_FILTERS]
-    )
-    
+
     log_filter_data = {
         "project_id" : shot.project.uuid,
         "page" : page_number,
