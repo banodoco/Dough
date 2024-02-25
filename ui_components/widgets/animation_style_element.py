@@ -335,18 +335,21 @@ def animation_style_element(shot_uuid):
 
         lora_data = []
         lora_file_dest = "ComfyUI/models/animatediff_motion_lora"
+        additional_lora_file_dest = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"  # Additional directory
+
         with tab1:
             if "current_loras" not in st.session_state:
                 st.session_state["current_loras"] = []                
             # Initialize a single list to hold dictionaries for LoRA data
             #lora_data = []
-            # Check if the directory exists and list files, or use a default list
+            files = []
+            # Check if the first directory exists and list files, or use a default list
             if os.path.exists(lora_file_dest):
-                files = os.listdir(lora_file_dest)
-                # remove files that start with a dot
-                files = [file for file in files if not file.startswith(".")]
-            else:
-                files = []
+                files += [file for file in os.listdir(lora_file_dest) if not file.startswith(".")]
+            # Check if the additional directory exists and list files, then extend the files list
+            if os.path.exists(additional_lora_file_dest):
+                additional_files = [file for file in os.listdir(additional_lora_file_dest) if not file.startswith(".")]
+                files += additional_files
 
             # Iterate through each current LoRA in session state
             if len(files) == 0:
