@@ -2,6 +2,7 @@ import json
 import time
 import ast
 import streamlit as st
+import re
 from shared.constants import InferenceParamType, InternalFileTag
 from ui_components.constants import CreativeProcessType
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
@@ -119,17 +120,67 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 def variant_inference_detail_element(variant, stage, shot_uuid, timing_list="", tag="temp"):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
-
+    inf_data = fetch_inference_data(variant)
+    # st.write(inf_data)
     if stage == CreativeProcessType.MOTION.value:
-        if st.button("Load up settings from this variant", key=f"{tag}_{variant.name}", disabled=True, help="This is currently being worked on", use_container_width=True):
-            print("Loading settings")
-            print(len(timing_list))
-            new_data = prepare_values(fetch_inference_data(variant), timing_list)
+        if st.button("Load up settings from this variant", key=f"{tag}_{variant.name}", help="This is currently being worked on", use_container_width=True):
+                        
+            dynamic_strength_values = inf_data["dynamic_strength_values"]
+            dynamic_key_frame_influence_values = inf_data["dynamic_key_frame_influence_values"]
+            dynamic_frame_distribution_values = inf_data["dynamic_frame_distribution_values"]            
+            dynamic_frame_distribution_values = [int(float(i)) for i in dynamic_frame_distribution_values]
+            context_length = inf_data["context_length"]
+            context_stride = inf_data["context_stride"]
+            context_overlap = inf_data["context_overlap"]
+            multipled_base_end_percent = inf_data["multipled_base_end_percent"]
+            individual_prompts = inf_data["individual_prompts"]
+            individual_prompts = individual_prompts.replace('"""', '""')
+            individual_negative_prompts = inf_data["individual_negative_prompts"]
+            individual_negative_prompts = individual_negative_prompts.replace('"""', '""')                         
+            motion_scales = inf_data["motion_scales"]
+            buffer = inf_data["buffer"]     
+
+            strength_of_frames, freedoms_between_frames, speeds_of_transitions, distances_to_next_frames, type_of_motion_context, strength_of_adherence, prompt_travel, negative_prompt_travel, motions_during_frames = reverse_data_transformation(
+                dynamic_strength_values,
+                dynamic_key_frame_influence_values,
+                dynamic_frame_distribution_values,            
+                context_length,
+                context_stride,
+                context_overlap,
+                multipled_base_end_percent,
+                individual_prompts,
+                individual_negative_prompts,
+                motion_scales,
+                buffer
+            )            
+
+            if type_of_motion_context == "Low":
+                st.session_state[f'type_of_motion_context_index_{shot.uuid}'] = 0
+            elif type_of_motion_context == "Standard":
+                st.session_state[f'type_of_motion_context_index_{shot.uuid}'] = 1
+            else:
+                st.session_state[f'type_of_motion_context_index_{shot.uuid}'] = 2
             
-            update_interpolation_settings(values=new_data, timing_list=timing_list)                        
-            st.success("Settings loaded - scroll down to run them.")       
-            time.sleep(0.3)                                                               
-            st.rerun()
+            st.session_state[f'strength_of_adherence_value_{shot.uuid}'] = strength_of_adherence
+            
+            for i in range(0, len(strength_of_frames)):
+
+                st.session_state[f'strength_of_frame_{shot.uuid}_{i}'] = strength_of_frames[i]
+                if i < len(prompt_travel):
+                    st.session_state[f'individual_prompt_{shot.uuid}_{i}'] = prompt_travel[i] if prompt_travel[i] else ""
+                else:
+                    st.session_state[f'individual_prompt_{shot.uuid}_{i}'] = ""
+                if i < len(negative_prompt_travel):
+                    st.session_state[f'individual_negative_prompt_{shot.uuid}_{i}'] = negative_prompt_travel[i]
+                else:
+                    st.session_state[f'individual_negative_prompt_{shot.uuid}_{i}'] = ""
+                st.session_state[f'motion_during_frame_{shot.uuid}_{i}'] = motions_during_frames[i]                                     
+                
+                if i < len(strength_of_frames) - 1:
+                    st.session_state[f'freedom_between_frames_{shot.uuid}_{i}'] = freedoms_between_frames[i]                    
+                    st.session_state[f'distance_to_next_frame_{shot.uuid}_{i}'] = distances_to_next_frames[i]
+                    st.session_state[f'speed_of_transition_{shot.uuid}_{i}'] = speeds_of_transitions[i]                                                
+
         if st.button("Sync audio/duration", key=f"{tag}_{variant.uuid}", help="Updates video length and the attached audio", use_container_width=True):
             data_repo = DataRepo()
             _ = sync_audio_and_duration(variant, shot_uuid)
@@ -137,8 +188,8 @@ def variant_inference_detail_element(variant, stage, shot_uuid, timing_list="", 
             st.success("Video synced")
             time.sleep(0.3)
             st.rerun()
-    '''
-    st.markdown(f"Details:")
+    
+    
     inf_data = fetch_inference_data(variant)
     if 'image_prompt_list' in inf_data:
         del inf_data['image_prompt_list']
@@ -147,8 +198,8 @@ def variant_inference_detail_element(variant, stage, shot_uuid, timing_list="", 
     if 'output_format' in inf_data:
         del inf_data['output_format']
     
-    st.write(inf_data)
-    '''
+    # st.write(inf_data)
+    
     if stage != CreativeProcessType.MOTION.value:
         h1, h2 = st.columns([1, 1])
         with h1:
@@ -267,3 +318,119 @@ def add_variant_to_shot_element(file: InternalFileObject, project_uuid):
             duplicate_file = create_duplicate_file(file, project_uuid)
             add_key_frame(duplicate_file, False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
             st.rerun()
+
+
+
+def reverse_data_transformation(dynamic_strength_values, dynamic_key_frame_influence_values, dynamic_frame_distribution_values, context_length, context_stride, context_overlap, multipled_base_end_percent, formatted_individual_prompts, formatted_individual_negative_prompts, formatted_motions, buffer):
+
+    def reverse_transform(dynamic_strength_values, dynamic_key_frame_influence_values, dynamic_frame_distribution_values):
+
+        # Reconstructing strength_of_frames
+        strength_of_frames = [strength for _, strength, _ in dynamic_strength_values]
+        
+        # Reconstructing freedoms_between_frames (correctly as movements_between_frames)
+        freedoms_between_frames = []
+        for i in range(1, len(dynamic_strength_values)):
+            if dynamic_strength_values[i][0] is not None:
+                middle_value = dynamic_strength_values[i][1]
+                adjusted_value = dynamic_strength_values[i][0]
+                relative_value = (middle_value - adjusted_value) / middle_value
+                freedoms_between_frames.append(round(relative_value, 2))  # Ensure proper rounding
+        
+        # Reconstructing speeds_of_transitions with correct rounding
+        speeds_of_transitions = []
+        for current, next_ in dynamic_key_frame_influence_values[:-1]:
+            if next_ is not None:
+                inverted_speed = next_ / 2
+                original_speed = 1.0 - inverted_speed
+                speeds_of_transitions.append(round(original_speed, 2))  # Ensure proper rounding
+        
+        # Reconstructing distances_to_next_frames with exact values
+        distances_to_next_frames = []
+        for i in range(1, len(dynamic_frame_distribution_values)):
+            distances_to_next_frames.append(dynamic_frame_distribution_values[i] - dynamic_frame_distribution_values[i-1])
+        
+        return strength_of_frames,freedoms_between_frames, speeds_of_transitions
+
+    def identify_type_of_motion_context(context_length, context_stride, context_overlap):
+        # Given the context settings, identify the type of motion context
+        if context_stride == 1 and context_overlap == 2:
+            return "Low"
+        elif context_stride == 2 and context_overlap == 4:
+            return "Standard"
+        elif context_stride == 4 and context_overlap == 4:
+            return "High"
+        else:
+            return "Unknown"  # Fallback case if the inputs do not match expected values
+        
+    def calculate_strength_of_adherence(multipled_base_end_percent):
+        return multipled_base_end_percent / (0.05 * 10)
+
+    def reverse_frame_prompts_formatting(formatted_prompts):
+        # Extract frame number and prompt pairs using a regular expression
+        prompt_pairs = re.findall(r'\"(\d+\.\d+)\":\s*\"(.*?)\"', formatted_prompts)
+        
+        # Initialize an empty list to collect prompts
+        original_prompts = [prompt for frame, prompt in prompt_pairs]
+        
+        return original_prompts
+
+
+    def reverse_motion_strengths_formatting(formatted_motions, buffer):
+        # Extract frame number and motion strength pairs using a regular expression
+        motion_pairs = re.findall(r'(\d+):\((.*?)\)', formatted_motions)
+        
+        # Convert extracted pairs back to the original format, adjusting frame numbers
+        original_motions = []
+        for frame, strength in motion_pairs:
+            original_frame = int(frame) - buffer  # Subtract buffer to get original frame number
+            original_strength = float(strength)  # Convert strength back to float
+            # Ensure the motion is appended in the correct order based on original frame numbers
+            original_motions.append(original_strength)
+        
+        return original_motions
+    
+
+    def safe_eval(input_data):
+        if isinstance(input_data, str):
+            try:
+                return ast.literal_eval(input_data)
+            except ValueError:
+                # Handle the case where the string cannot be parsed
+                return input_data
+        else:
+            return input_data
+
+    dynamic_strength_values = safe_eval(dynamic_strength_values)
+    dynamic_key_frame_influence_values = safe_eval(dynamic_key_frame_influence_values)
+    dynamic_frame_distribution_values = safe_eval(dynamic_frame_distribution_values)
+
+    context_length = int(context_length)
+    context_stride = int(context_stride)
+    context_overlap = int(context_overlap)
+    multipled_base_end_percent = float(multipled_base_end_percent)    
+
+    # Step 1: Reverse dynamic_strength_values and dynamic_key_frame_influence_values
+
+    strength_of_frames, freedoms_between_frames, speeds_of_transitions  = reverse_transform(dynamic_strength_values, dynamic_key_frame_influence_values, dynamic_frame_distribution_values)
+    
+    # Step 2: Reverse dynamic_frame_distribution_values to distances_to_next_frames
+    distances_to_next_frames = [round((dynamic_frame_distribution_values[i] - dynamic_frame_distribution_values[i-1]) / 16, 2) for i in range(1, len(dynamic_frame_distribution_values))]
+    
+    # Step 3: Identify type_of_motion_context
+    type_of_motion_context = identify_type_of_motion_context(context_length, context_stride, context_overlap)
+    
+    # Step 4: Calculate strength_of_adherence from multipled_base_end_percent
+    strength_of_adherence = calculate_strength_of_adherence(multipled_base_end_percent)
+    
+    # Step 5: Reverse frame prompts formatting
+
+    individual_prompts = reverse_frame_prompts_formatting(formatted_individual_prompts) 
+
+    individual_negative_prompts = reverse_frame_prompts_formatting(formatted_individual_negative_prompts)
+
+    # Step 6: Reverse motion strengths formatting
+    motions_during_frames = reverse_motion_strengths_formatting(formatted_motions, buffer)
+
+    return strength_of_frames, freedoms_between_frames, speeds_of_transitions, distances_to_next_frames, type_of_motion_context, strength_of_adherence, individual_prompts, individual_negative_prompts, motions_during_frames
+    
