@@ -32,8 +32,6 @@ def sidebar_logger(shot_uuid):
     elif status_option == "Failed":
         status_list = [InferenceStatus.FAILED.value]
 
-    
-
     project_setting = data_repo.get_project_setting(shot.project.uuid)
     with z2:
         st.write("")        
@@ -128,7 +126,26 @@ def sidebar_logger(shot_uuid):
                             st.success("Added To Shortlist")
                             time.sleep(0.3)
                             st.rerun()
-
+                
+                if log.status == InferenceStatus.QUEUED.value:
+                    if st.button("Cancel", key=f"cancel_gen_{log.uuid}", use_container_width=True, help="Cancel"):
+                        err_msg = "Generation has already started"
+                        success_msg = "Generation cancelled"
+                        # fetching the current status as this could have been already started
+                        log = data_repo.get_inference_log_from_uuid(log.uuid)
+                        cur_status = log.status
+                        if cur_status != InferenceStatus.QUEUED.value:
+                            st.error(err_msg)
+                            time.sleep(0.7)
+                            st.rerun()
+                        else:
+                            res = data_repo.update_inference_log(uuid=log.uuid, status=InferenceStatus.CANCELED.value)
+                            if not res:
+                                st.error(err_msg)
+                            else:
+                                st.success(success_msg)
+                            time.sleep(0.7)
+                            st.rerun()
 
                 if output_url and origin_data and 'timing_uuid' in origin_data and origin_data['timing_uuid']:
                     timing = data_repo.get_timing_from_uuid(origin_data['timing_uuid'])
