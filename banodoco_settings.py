@@ -1,7 +1,9 @@
 import copy
+import os
 import time
 import uuid
 import streamlit as st
+from git import Repo
 
 from PIL import Image
 from shared.constants import SERVER, AIModelCategory, GuidanceType, InternalFileType, ServerType
@@ -51,6 +53,17 @@ def project_init():
         if not app_settings:
             online_user = data_repo.get_first_active_user()
             create_new_user_data(online_user)
+    
+    # cloning basic comfyui (not installing packages atm)
+    comfy_repo_url = "https://github.com/comfyanonymous/ComfyUI"
+    comfy_manager_url = "https://github.com/ltdrdata/ComfyUI-Manager"
+    if not os.path.exists("ComfyUI"):
+        app_logger.log(LoggingType.DEBUG, "cloning comfy repo")
+        Repo.clone_from(comfy_repo_url, "ComfyUI")
+    if not os.path.exists("./ComfyUI/custom_nodes/ComfyUI-Manager"):
+        os.chdir("./ComfyUI/custom_nodes/")
+        Repo.clone_from(comfy_manager_url, "ComfyUI-Manager")
+        os.chdir("../../")
 
     # create encryption key if not already present (not applicable in dev mode)
     # env_vars = dotenv_values('.env')

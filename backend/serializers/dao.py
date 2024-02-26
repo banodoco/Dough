@@ -104,7 +104,7 @@ class UpdateAppSettingDao(serializers.Serializer):
     aws_access_key = serializers.CharField(max_length=100, required=False)
     previous_project = serializers.CharField(max_length=100, required=False)
     replicate_username = serializers.CharField(max_length=100, required=False)
-    welcome_state = serializers.IntegerField(default=0, required=False)
+    welcome_state = serializers.IntegerField(required=False)
 
 class CreateSettingDao(serializers.Serializer):
     project_id = serializers.CharField(max_length=255)

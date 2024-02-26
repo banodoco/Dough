@@ -4,8 +4,10 @@ import csv
 import subprocess
 import time
 import psutil
+import socket
 import streamlit as st
 import json
+import platform
 from shared.constants import SERVER, ServerType
 from ui_components.models import InternalUserObject
 from utils.cache.cache import CacheKey, StCache
@@ -212,19 +214,33 @@ def reset_styling_settings(timing_uuid):
             del st.session_state[k]
 
 
-def is_process_active(custom_process_name):
-    # this caching assumes that the runner won't interupt or break once started
-    if custom_process_name + "_process_state" in st.session_state and st.session_state[custom_process_name + "_process_state"]:
+def is_process_active(custom_process_name, custom_process_port):
+    # This caching assumes that the runner won't interrupt or break once started
+    cache_key = custom_process_name + "_process_state"
+    if cache_key in st.session_state and st.session_state[cache_key]:
         return True
 
+    res = False
     try:
-        ps_output = subprocess.check_output(["ps", "aux"]).decode("utf-8")
-        if custom_process_name in ps_output:
-            st.session_state[custom_process_name + "_process_state"] = True
-            return True
+        if platform.system() == "Windows":
+            try:
+                client_socket = socket.create_connection(("localhost", custom_process_port))
+                client_socket.close()
+                res = True
+            except ConnectionRefusedError:
+                res = False
+        else:
+            # Use 'ps' for Unix/Linux
+            ps_output = subprocess.check_output(["ps", "aux"]).decode("utf-8")
+            res = True if custom_process_name in ps_output else False
+            
+        if res:
+            st.session_state[cache_key] = True
+        return res
     except subprocess.CalledProcessError:
         return False
 
+    # If the process is not found or an error occurs, assume it's not active
     return False
 
 

@@ -50,7 +50,7 @@ def timeline_view(shot_uuid, stage):
             with switch2:
                 shot_animation_button(shot)
 
-            with st.expander("Details & settings", expanded=False):
+            with st.expander("Details & settings:", expanded=False):
                 update_shot_name(shot.uuid)    
                 update_shot_duration(shot.uuid)
                 move_shot_buttons(shot, "side")
@@ -61,13 +61,11 @@ def timeline_view(shot_uuid, stage):
 
         if (idx + 1) % items_per_row == 0 or idx == len(shot_list) - 1:
             st.markdown("***")
-        
-    
-    grid2 = st.columns(2)
-    
-    with grid2[0]:
-        st.markdown("### Add new shot")
-        add_new_shot_element(shot, data_repo)
+        if idx == len(shot_list) - 1:
+            with grid[(idx + 1) % items_per_row]:
+                st.markdown("### Add new shot")
+                add_new_shot_element(shot, data_repo)
+
 
         
 

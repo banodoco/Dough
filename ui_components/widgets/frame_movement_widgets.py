@@ -93,16 +93,15 @@ def delete_frame(timing_uuid):
     next_timing = data_repo.get_next_timing(timing_uuid)
     timing_list = data_repo.get_timing_list_from_shot(timing.shot.uuid)
 
-    if len(timing_list) == 1:
-        st.error("can't delete the only image present in the shot")
-        time.sleep(0.3)
-        return
+
 
     data_repo.delete_timing_from_uuid(timing.uuid)
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
     
+    if len(timing_list) == 0:
+        st.success("Frame deleted!")
     # this is the last frame
-    if not next_timing:
+    elif not next_timing:
         st.session_state['current_frame_index'] = max(1, st.session_state['current_frame_index'] - 1)
         st.session_state['prev_frame_index'] = st.session_state['current_frame_index']
         st.session_state['current_frame_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].uuid
@@ -136,7 +135,7 @@ def jump_to_single_frame_view_button(display_number, timing_list, src,uuid=None)
     
     if st.button(f"Jump to #{display_number}", key=f"{src}_{uuid}", use_container_width=True):
         st.session_state['current_frame_sidebar_selector'] = display_number
-        st.session_state["creative_process_manual_select"] = 3
+        st.session_state["creative_process_manual_select"] = 1
         '''
         st.session_state['prev_frame_index'] = st.session_state['current_frame_index'] = display_number
         st.session_state['current_frame_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].uuid                

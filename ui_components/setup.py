@@ -2,12 +2,8 @@ import streamlit as st
 import os
 from moviepy.editor import *
 from shared.constants import SERVER, ServerType
-from ui_components.components.query_logger_page import query_logger_page
-# from ui_components.components.explorer_page import explorer_element,shortlist_element
-from ui_components.widgets.timeline_view import timeline_view
 from ui_components.widgets.sidebar_logger import sidebar_logger
 from ui_components.components.app_settings_page import app_settings_page
-from ui_components.components.frame_styling_page import frame_styling_page
 from ui_components.components.shortlist_page import shortlist_page
 from ui_components.components.timeline_view_page import timeline_view_page
 from ui_components.components.adjust_shot_page import adjust_shot_page
@@ -24,7 +20,6 @@ from ui_components.methods.common_methods import check_project_meta_data, update
 from ui_components.models import InternalAppSettingObject
 from utils.common_utils import create_working_assets, get_current_user, get_current_user_uuid, reset_project_state
 from utils import st_memory
-
 
 from utils.data_repo.data_repo import DataRepo
 
@@ -52,7 +47,7 @@ def setup_app_ui():
         h1, h2 = st.columns([1, 2])
         with h1:
             #st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
-            st.markdown("# :red[D]:green[o]:orange[u]:blue[g]:red[h] :green[□] :orange[□] :blue[□]")
+            st.markdown("# :green[D]:red[o]:blue[u]:orange[g]:green[h] :red[□] :blue[□] :orange[□]")
             st.caption("by Banodoco")
 
         sections = ["Open Project", "App Settings", "New Project"]
@@ -67,7 +62,7 @@ def setup_app_ui():
                 key="app_settings",
                 orientation="horizontal",
                 styles={
-                    "nav-link": {"font-size": "12px", "margin": "0px", "--hover-color": "#eee"},
+                    "nav-link": {"font-size": "12px", "margin": "0px", "--hover-color": "#5c5c5c"},
                     "nav-link-selected": {"background-color": "grey"}
                 }
             )
@@ -88,7 +83,7 @@ def setup_app_ui():
             else:
                 st.session_state["index_of_project_name"] = 0
 
-        selected_project_name = st.sidebar.selectbox("Select which project you'd like to work on:", [
+        selected_project_name = st.sidebar.selectbox("Project:", [
                                                             p.name for p in project_list], index=st.session_state["index_of_project_name"])
     
         selected_index = next(i for i, p in enumerate(project_list) if p.name == selected_project_name)
@@ -140,29 +135,29 @@ def setup_app_ui():
             with st.sidebar:
                 main_view_types = ["Creative Process", "Project Settings"]
                 st.session_state['main_view_type'] = st_memory.menu(None, main_view_types, icons=['search-heart', 'tools', "play-circle", 'stopwatch'], menu_icon="cast", default_index=0, key="main_view_type_name", orientation="horizontal", styles={
-                                                                    "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#eee"}, "nav-link-selected": {"background-color": "red"}})
+                                                                    "nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#014001"}, "nav-link-selected": {"background-color": "green"}})
 
             if st.session_state["main_view_type"] == "Creative Process":
                 set_default_values(st.session_state["shot_uuid"])
 
                 with st.sidebar:
-                    creative_process_pages = ["Explore", "Shortlist", "Timeline", "Adjust Shot", "Adjust Frame", "Animate Shot"]
+                    creative_process_pages = ["Timeline", "Adjust Shot", "Adjust Frame", "Animate Shot"]
                     if 'creative_process_manual_select' not in st.session_state:
                         st.session_state['creative_process_manual_select'] = 0
                         st.session_state['page'] = creative_process_pages[0]
 
                     
                     # view_types = ["Explorer","Timeline","Individual"]
-                    creative_process_pages = ["Explore", "Shortlist", "Timeline", "Adjust Shot", "Animate Shot"]
+                    creative_process_pages = ["Timeline", "Adjust Shot", "Animate Shot"]
                     st.session_state['page'] = option_menu(
                         None,
                         creative_process_pages,
-                        icons=['compass', 'bookshelf','aspect-ratio', "hourglass", 'stopwatch'],
+                        icons=[ 'bookshelf','aspect-ratio', "lightning-charge", 'stopwatch'],
                         menu_icon="cast",
                         orientation="vertical",
                         key="section-selecto1r",
-                        styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#eee"},
-                                "nav-link-selected": {"background-color": "green"}},
+                        styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#bd3737"},
+                                "nav-link-selected": {"background-color": "#ff4b4b"}},
                         manual_select=st.session_state['creative_process_manual_select']                        
                     )
 
@@ -189,7 +184,7 @@ def setup_app_ui():
                     animate_shot_page(st.session_state["shot_uuid"], h2)
 
                 with st.sidebar:
-                    with st.expander("🔍 Generation Log", expanded=True):
+                    with st.expander("🔍 Generation log", expanded=True):
                         if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
                             sidebar_logger(st.session_state["shot_uuid"])
                     # st.markdown("***")

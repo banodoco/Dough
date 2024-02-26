@@ -6,7 +6,7 @@ from utils import st_memory
 
 def shortlist_page(project_uuid):
 
-    st.markdown(f"#### :red[{st.session_state['main_view_type']}] > :green[{st.session_state['page']}]")    
+    st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['page']}]")    
 
     data_repo = DataRepo()
     project_setting = data_repo.get_project_setting(project_uuid)       

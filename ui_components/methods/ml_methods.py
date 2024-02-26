@@ -188,15 +188,13 @@ from utils.ml_processor.constants import ML_MODEL, MLModel
 #         emotion = (f"neutral expression")
 #     return emotion
 
-def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, mask_in_project=False) -> InternalFileObject:
+def inpainting(input_image: str, prompt, negative_prompt, width, height, shot_uuid,project_uuid) -> InternalFileObject:
     data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    # timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
-    if mask_in_project == False:
-        mask = timing.mask.location
-    else:
-        project = data_repo.get_project_from_uuid(timing.shot.project.uuid)
-        mask = project.get_temp_mask_file(TEMP_MASK_FILE).location
+  
+    project = data_repo.get_project_from_uuid(project_uuid)
+    mask = st.session_state['mask_to_use']
 
     if not mask.startswith("http"):
         mask = open(mask, "rb")
@@ -205,7 +203,7 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, mask_in_p
         input_image = open(input_image, "rb")
 
     query_obj = MLQueryObject(
-        timing_uuid=timing_uuid,
+        timing_uuid=None,
         model_uuid=None,
         guidance_scale=7.5,
         seed=-1,
@@ -214,15 +212,17 @@ def inpainting(input_image: str, prompt, negative_prompt, timing_uuid, mask_in_p
         adapter_type=None,
         prompt=prompt,
         negative_prompt=negative_prompt,
-        height=512,
-        width=512,
+        width=width,
+        height=height,
+        
         low_threshold=100,  # update these default values
         high_threshold=200,
         image_uuid=None,
         mask_uuid=None,
         data={
-            "input_image": input_image,
-            "mask": mask,
+            "input_image": st.session_state['editing_image'],
+            "mask": st.session_state['mask_to_use'] ,
+            "shot_uuid": shot_uuid,
         }
     )
 

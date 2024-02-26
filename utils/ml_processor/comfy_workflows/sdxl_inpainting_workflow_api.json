@@ -57,7 +57,7 @@
   },
   "26": {
     "inputs": {
-      "grow_mask_by": 1,
+      "grow_mask_by": 20,
       "pixels": [
         "20",
         0

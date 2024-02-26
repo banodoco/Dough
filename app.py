@@ -9,7 +9,7 @@ import sentry_sdk
 from shared.logging.logging import AppLogger
 from utils.common_utils import is_process_active
 
-from utils.constants import AUTH_TOKEN, RUNNER_PROCESS_NAME
+from utils.constants import AUTH_TOKEN, RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT
 from utils.local_storage.url_storage import delete_url_param, get_url_param, set_url_param
 from utils.third_party_auth.google.google_auth import get_google_auth_url
 from streamlit_server_state import server_state_lock
@@ -46,14 +46,15 @@ def start_runner():
     with server_state_lock["runner"]:
         app_logger = AppLogger()
         
-        if not is_process_active(RUNNER_PROCESS_NAME):
+        if not is_process_active(RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT):
             app_logger.info("Starting runner")
-            # _ = subprocess.Popen(["streamlit", "run", "banodoco_runner.py", "--runner.fastReruns", "false", "--server.port", "5502", "--server.headless", "true"])
-            _ = subprocess.Popen(["python", "banodoco_runner.py"])
-            while not is_process_active(RUNNER_PROCESS_NAME):
+            python_executable = sys.executable
+            _ = subprocess.Popen([python_executable, "banodoco_runner.py"])
+            while not is_process_active(RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT):
                 time.sleep(0.1)
         else:
-            app_logger.debug("Runner already running")
+            # app_logger.debug("Runner already running")
+            pass
 
 def main():
     st.set_page_config(page_title="Banodoco", page_icon="🎨", layout="wide")
@@ -81,7 +82,8 @@ def main():
                 discord_url = "<a target='_self' href='https://discord.gg/zGgpH9JEw4'> Banodoco Discord </a>"
                 st.markdown(discord_url, unsafe_allow_html=True)
         else:
-            st.markdown("# :red[ba]:green[no]:orange[do]:blue[co]")
+            st.markdown("# :green[D]:red[o]:blue[u]:orange[g]:green[h] :red[□] :blue[□] :orange[□]")
+            st.caption("by Banodoco")
             st.markdown("#### Login with Google to proceed")
     
             auth_url = get_google_auth_url()
