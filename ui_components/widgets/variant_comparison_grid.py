@@ -74,11 +74,13 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             # Display the main variant
             if stage == CreativeProcessType.MOTION.value:
                 st.video(variants[current_variant].location, format='mp4', start_time=0) if (current_variant != -1 and variants[current_variant]) else st.error("No video present")
-            else:
-                st.image(variants[current_variant].location, use_column_width=True)
-            with st.expander(f"Variant #{current_variant + 1} details"):
                 create_video_download_button(variants[current_variant].location, tag="var_compare")
                 variant_inference_detail_element(variants[current_variant], stage, shot_uuid, timing_list, tag="var_compare")                        
+
+            else:
+                st.image(variants[current_variant].location, use_column_width=True)
+
+            
 
         # Determine the start and end indices for additional variants on the current page
         additional_variants = [idx for idx in range(len(variants) - 1, -1, -1) if idx != current_variant]
@@ -103,12 +105,13 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
                 if stage == CreativeProcessType.MOTION.value:                    
                     st.video(variants[variant_index].location, format='mp4', start_time=0) if variants[variant_index] else st.error("No video present")
-                else:
-                    st.image(variants[variant_index].location, use_column_width=True) if variants[variant_index] else st.error("No image present")                
-                with st.expander(f"Variant #{variant_index + 1} details"):
                     create_video_download_button(variants[variant_index].location, tag="var_details")
                     variant_inference_detail_element(variants[variant_index], stage, shot_uuid, timing_list, tag="var_details")
 
+                else:
+                    st.image(variants[variant_index].location, use_column_width=True) if variants[variant_index] else st.error("No image present")                
+                
+            
             next_col += 1
             if next_col >= num_columns or i == len(page_indices) - 1 or len(page_indices) == i:
                 next_col = 0  # Reset the column counter
@@ -123,7 +126,7 @@ def variant_inference_detail_element(variant, stage, shot_uuid, timing_list="", 
     inf_data = fetch_inference_data(variant)
     # st.write(inf_data)
     if stage == CreativeProcessType.MOTION.value:
-        if st.button("Load up settings from this variant", key=f"{tag}_{variant.name}", help="This is currently being worked on", use_container_width=True):
+        if st.button("Load up settings from this variant", key=f"{tag}_{variant.name}", help="This will remove the current settings and images - though they'll be available for all previous runs.", use_container_width=True):
                         
             dynamic_strength_values = inf_data["dynamic_strength_values"]
             dynamic_key_frame_influence_values = inf_data["dynamic_key_frame_influence_values"]
@@ -180,7 +183,7 @@ def variant_inference_detail_element(variant, stage, shot_uuid, timing_list="", 
                     st.session_state[f'freedom_between_frames_{shot.uuid}_{i}'] = freedoms_between_frames[i]                    
                     st.session_state[f'distance_to_next_frame_{shot.uuid}_{i}'] = distances_to_next_frames[i]
                     st.session_state[f'speed_of_transition_{shot.uuid}_{i}'] = speeds_of_transitions[i]                                                
-
+        '''
         if st.button("Sync audio/duration", key=f"{tag}_{variant.uuid}", help="Updates video length and the attached audio", use_container_width=True):
             data_repo = DataRepo()
             _ = sync_audio_and_duration(variant, shot_uuid)
@@ -188,7 +191,7 @@ def variant_inference_detail_element(variant, stage, shot_uuid, timing_list="", 
             st.success("Video synced")
             time.sleep(0.3)
             st.rerun()
-    
+        '''    
     
     inf_data = fetch_inference_data(variant)
     if 'image_prompt_list' in inf_data:
