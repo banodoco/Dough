@@ -26,7 +26,7 @@ def add_key_frame_section(shot_uuid, individual_view=True):
     
     uploaded_images = st.file_uploader("Upload images:", type=["png", "jpg", "jpeg"], key=f"uploaded_image_{shot_uuid}", help="You can upload multiple images", accept_multiple_files=True)
     
-    if st.button(f"Add key frame(s)",type="primary",use_container_width=True, key=f"add_key_frame_btn_{shot_uuid}"):
+    if st.button(f"Add key frame(s)",use_container_width=True, key=f"add_key_frame_btn_{shot_uuid}",type="primary"):
         if uploaded_images:
             progress_bar = st.progress(0)
             for i, uploaded_image in enumerate(uploaded_images):
@@ -90,8 +90,10 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
 
     if isinstance(selected_image, InternalFileObject):
         saved_image = selected_image
+        print("selected_image is an instance of InternalFileObject")
     else:
         saved_image = save_new_image(selected_image, shot.project.uuid)
+        print("selected_image is an instance of Image.Image")
 
     timing_data = {
         "shot_id": shot_uuid,

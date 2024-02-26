@@ -9,6 +9,7 @@ import streamlit as st
 AUTH_TOKEN = 'auth_details'
 REFRESH_AUTH_TOKEN = 'refresh_auth_details'
 RUNNER_PROCESS_NAME = 'banodoco_runner'
+RUNNER_PROCESS_PORT = 12345
 
 class ImageStage(ExtendedEnum):
     SOURCE_IMAGE = 'Source Image'

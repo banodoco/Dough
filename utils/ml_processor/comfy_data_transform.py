@@ -31,7 +31,8 @@ class ComfyDataTransform:
     @staticmethod
     def get_workflow_json(model: ComfyWorkflow):
         json_file_path = "./utils/ml_processor/" + MODEL_PATH_DICT[model]["workflow_path"]
-        with open(json_file_path) as f:
+        # Specify encoding as 'utf-8' when opening the file
+        with open(json_file_path, 'r', encoding='utf-8') as f:
             json_data = json.load(f)
             return json_data, [MODEL_PATH_DICT[model]['output_node_id']]
 
@@ -54,7 +55,7 @@ class ComfyDataTransform:
         workflow["10"]["inputs"]["steps"], workflow["10"]["inputs"]["cfg"] = steps, cfg
         workflow["11"]["inputs"]["steps"], workflow["11"]["inputs"]["cfg"] = steps, cfg
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
     
     @staticmethod
     def transform_sdxl_img2img_workflow(query: MLQueryObject):
@@ -78,7 +79,7 @@ class ComfyDataTransform:
         workflow["42:2"]["inputs"]["denoise"] = 1 - strength
         workflow["42:2"]["inputs"]["seed"] = random_seed()
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
     
     @staticmethod
     def transform_sdxl_controlnet_workflow(query: MLQueryObject):
@@ -102,7 +103,7 @@ class ComfyDataTransform:
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["13"]["inputs"]["image"] = image_name
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_sdxl_controlnet_openpose_workflow(query: MLQueryObject):
@@ -124,7 +125,7 @@ class ComfyDataTransform:
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["12"]["inputs"]["image"] = image_name
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_llama_2_7b_workflow(query: MLQueryObject):
@@ -138,7 +139,7 @@ class ComfyDataTransform:
         workflow["15"]["inputs"]["prompt"] = input_text
         workflow["15"]["inputs"]["temperature"] = temperature
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_sdxl_inpainting_workflow(query: MLQueryObject):
@@ -146,7 +147,7 @@ class ComfyDataTransform:
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_INPAINTING)
 
         # workflow params
-        # node 'get_img_size' automatically fetches the size
+        # node 'get_img_size' automatically fetches the size        
         positive_prompt, negative_prompt = query.prompt, query.negative_prompt
         steps, cfg = query.num_inference_steps, query.guidance_scale
         input_image = query.data.get('data', {}).get('input_image', None)
@@ -161,22 +162,24 @@ class ComfyDataTransform:
         file_data = {
             "name": filename,
             "type": InternalFileType.IMAGE.value,
-            "project_id": timing.shot.project.uuid
+            "project_id": query.data.get("data", {}).get("project_uuid"),
         }
+
+        print("file_data", file_data)
 
         if hosted_url:
             file_data.update({'hosted_url': hosted_url})
         else:
             file_data.update({'local_path': "videos/temp/" + filename})
+        
         file = data_repo.create_file(**file_data)
-
+       
         # adding the combined image in query (and removing io buffers)
         query.data = {
             "data": {
                 "file_combined_img": file.uuid
             }
         }
-
         # updating params
         workflow["3"]["inputs"]["seed"] = random_seed()
         workflow["20"]["inputs"]["image"] = filename
@@ -184,7 +187,7 @@ class ComfyDataTransform:
         workflow["34"]["inputs"]["text_g"] = workflow["34"]["inputs"]["text_l"] = positive_prompt
         workflow["37"]["inputs"]["text_g"] = workflow["37"]["inputs"]["text_l"] = negative_prompt
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_ipadaptor_plus_workflow(query: MLQueryObject):
@@ -206,7 +209,7 @@ class ComfyDataTransform:
         workflow["7"]["inputs"]["text"] = query.negative_prompt
         workflow["27"]["inputs"]["weight"] = query.strength
         
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_ipadaptor_face_workflow(query: MLQueryObject):
@@ -230,7 +233,7 @@ class ComfyDataTransform:
         workflow["36"]["inputs"]["weight"] = query.strength
         workflow["36"]["inputs"]["weight_v2"] = query.strength
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_ipadaptor_face_plus_workflow(query: MLQueryObject):
@@ -256,7 +259,7 @@ class ComfyDataTransform:
         workflow["29"]["inputs"]["weight"] = query.strength[0]
         workflow["27"]["inputs"]["weight"] = query.strength[1]
 
-        return json.dumps(workflow), output_node_ids, []
+        return json.dumps(workflow), output_node_ids, [], []
 
     @staticmethod
     def transform_steerable_motion_workflow(query: MLQueryObject):
@@ -264,32 +267,29 @@ class ComfyDataTransform:
         def update_json_with_loras(json_data, loras):
             start_id = 536
             new_ids = []
-                  
+
             # Add LoRAs
             for lora in loras:
                 new_id = str(start_id)
                 json_data[new_id] = {
                     "inputs": {
-                        "lora_name": lora["lora_name"],
+                        "lora_name": lora["filename"],
                         "strength": lora["lora_strength"],
-                        "prev_motion_lora": [new_ids[-1] if new_ids else "", 0]
                     },
                     "class_type": "ADE_AnimateDiffLoRALoader",
                     "_meta": {
                         "title": "Load AnimateDiff LoRA 🎭🅐🅓"
                     }
                 }
-                if new_ids:  # Update previous node's prev_motion_lora to point to this new node
-                    json_data[new_ids[-1]]['inputs']['prev_motion_lora'][0] = new_id
+                
+                if new_ids:
+                    json_data[new_ids[-1]]['inputs']['prev_motion_lora'] = [new_id, 0]
+                    
                 new_ids.append(new_id)
                 start_id += 1
 
-            # Ensure the last node's prev_motion_lora is empty
-            if new_ids:
-                json_data[new_ids[-1]]['inputs']['prev_motion_lora'] = ["", 0]
-
             # Update node 545 if needed and if there are new items
-            if loras:
+            if "545" in json_data and len(new_ids):
                 if "motion_lora" not in json_data["545"]["inputs"]:
                     # If "motion_lora" is not present, add it with the specified values
                     json_data["545"]["inputs"]["motion_lora"] = ["536", 0]
@@ -345,13 +345,11 @@ class ComfyDataTransform:
         workflow["543"]["inputs"]["text"] = sm_data.get('individual_negative_prompts')
 
         # download the json file as text.json
-        with open("text.json", "w") as f:
-            f.write(json.dumps(workflow))
+        # with open("text.json", "w") as f:
+        #     f.write(json.dumps(workflow))
 
-
-        
-        extra_model_lists = sm_data.get("lora_data", [])
-        return json.dumps(workflow), output_node_ids, extra_model_lists
+        ignore_list = sm_data.get("lora_data", [])
+        return json.dumps(workflow), output_node_ids, [], ignore_list
 
 
 # NOTE: only populating with models currently in use

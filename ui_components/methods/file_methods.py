@@ -25,29 +25,35 @@ from utils.data_repo.data_repo import DataRepo
 # depending on the environment it will either save or host the PIL image object
 def save_or_host_file(file, path, mime_type='image/png', dim=None):
     data_repo = DataRepo()
-    # TODO: fix session state management, remove direct access out side the main code
-    if dim:
-        width, height = dim[0], dim[1]
-    elif 'project_uuid' in st.session_state and st.session_state['project_uuid']:
-        project_setting = data_repo.get_project_setting(st.session_state['project_uuid'])
-        width, height = project_setting.width, project_setting.height
-
-    if width and height:
-        file = zoom_and_crop(file, width, height)
-    else:
-        # new project
-        file = zoom_and_crop(file, 512, 512)
-
     uploaded_url = None
-    if SERVER != ServerType.DEVELOPMENT.value:
-        image_bytes = BytesIO()
-        file.save(image_bytes, format=mime_type.split('/')[1])
-        image_bytes.seek(0)
+    try:
+        # TODO: fix session state management, remove direct access outside the main code
+        if dim:
+            width, height = dim[0], dim[1]
+        elif 'project_uuid' in st.session_state and st.session_state['project_uuid']:
+            project_setting = data_repo.get_project_setting(st.session_state['project_uuid'])
+            width, height = project_setting.width, project_setting.height
+        else:
+            # Default dimensions for new project
+            width, height = 512, 512
 
-        uploaded_url = data_repo.upload_file(image_bytes, '.png')
-    else:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        file.save(path)
+        # Apply zoom and crop based on determined dimensions
+        file = zoom_and_crop(file, width, height)
+
+        if SERVER != ServerType.DEVELOPMENT.value:
+            image_bytes = BytesIO()
+            file.save(image_bytes, format=mime_type.split('/')[1])
+            image_bytes.seek(0)
+
+            uploaded_url = data_repo.upload_file(image_bytes, '.png')
+        else:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            file.save(path)
+    except Exception as e:
+        # Log the error. You can replace 'print' with logging to a file or external logging service.
+        print(f"Error saving or hosting file: {e}")
+        # Optionally, re-raise the exception if you want the calling code to handle it
+        # raise e
 
     return uploaded_url
 

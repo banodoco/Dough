@@ -7,12 +7,14 @@ import time
 import uuid
 import psutil
 import requests
+import socket
+import platform
 import traceback
 import sentry_sdk
 import setproctitle
 from dotenv import load_dotenv
 import django
-from shared.constants import OFFLINE_MODE, InferenceParamType, InferenceStatus, InferenceType, ProjectMetaData, HOSTED_BACKGROUND_RUNNER_MODE
+from shared.constants import LOCAL_DATABASE_NAME, OFFLINE_MODE, InferenceParamType, InferenceStatus, InferenceType, ProjectMetaData, HOSTED_BACKGROUND_RUNNER_MODE
 from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
 from ui_components.methods.file_methods import load_from_env, save_to_env
@@ -20,7 +22,7 @@ from utils.common_utils import acquire_lock, release_lock
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import replicate_status_map
 
-from utils.constants import RUNNER_PROCESS_NAME, AUTH_TOKEN, REFRESH_AUTH_TOKEN
+from utils.constants import RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT, AUTH_TOKEN, REFRESH_AUTH_TOKEN
 from utils.ml_processor.gpu.utils import is_comfy_runner_present, predict_gpu_output, setup_comfy_runner
 
 
@@ -66,6 +68,12 @@ def main():
         return
     
     retries = MAX_APP_RETRY_CHECK
+
+    # in case of windows opening a dummy socket (to signal that the process has started)
+    if platform.system() == "Windows" and OFFLINE_MODE:
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.bind(("localhost", RUNNER_PROCESS_PORT))
+        server_socket.listen(1)
     
     print('runner running')
     while True:
@@ -178,6 +186,10 @@ def check_and_update_db():
     # print("updating logs")
     from backend.models import InferenceLog, AppSetting, User
     
+    # waiting for db (hackish sol)
+    while not os.path.exists(LOCAL_DATABASE_NAME):
+        time.sleep(2)
+
     # returning if db creation and migrations are pending
     try:
         user = User.objects.filter(is_disabled=False).first()
