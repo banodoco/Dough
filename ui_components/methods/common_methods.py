@@ -384,8 +384,8 @@ def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_
 
 def combine_mask_and_input_image(mask_path, input_image_path, overlap_color="transparent"):
     # Open the input image and the mask
-    input_image = Image.open(input_image_path)
-    mask_image = Image.open(mask_path)
+    input_image = Image.open(input_image_path) if not isinstance(input_image_path, Image.Image) else input_image_path
+    mask_image = Image.open(mask_path) if not isinstance(mask_path, Image.Image) else mask_path
     input_image = input_image.convert("RGBA")
 
     is_white = lambda pixel, threshold=245: all(value > threshold for value in pixel[:3])
