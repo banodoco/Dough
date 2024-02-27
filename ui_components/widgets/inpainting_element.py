@@ -85,12 +85,13 @@ def inpainting_element(options_width, image, position="explorer"):
 
             if 'image_created' not in st.session_state:
                 st.session_state['image_created'] = 'no'
-            
+        with main_col_1:
+
             if position == "explorer":
                 if st.button("Pick new image", use_container_width=True):
                     st.session_state["uploaded_image"] = ""
                     st.rerun()
-
+        with main_col_2:
             # saves both the image and mask in the session state
             if st.button("Save Mask", use_container_width=True):
                 img_data = canvas_result.image_data

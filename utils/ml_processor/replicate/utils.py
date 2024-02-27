@@ -1,11 +1,13 @@
 import io
 from PIL import Image
-from ui_components.methods.file_methods import normalize_size_internal_file_obj, resize_io_buffers
+from ui_components.methods.file_methods import normalize_size_internal_file_obj, resize_io_buffers,determine_dimensions_for_sdxl
 from utils.common_utils import user_credits_available
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.comfy_data_transform import get_file_list_from_query_obj, get_file_zip_url, get_model_workflow_from_query, get_workflow_json_url
 from utils.ml_processor.constants import CONTROLNET_MODELS, ML_MODEL, ComfyRunnerModel, ComfyWorkflow
+
+
 
 
 def check_user_credits(method):
@@ -53,7 +55,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
         if model.display_name() in models_using_sdxl and len(file_uuid_list):
             new_uuid_list = []
             for file_uuid in file_uuid_list:
-                new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
+                new_width, new_height = determine_dimensions_for_sdxl(query_obj.width, query_obj.height)
                 file = data_repo.get_file_from_uuid(file_uuid)
                 new_file = normalize_size_internal_file_obj(file, dim=[new_width, new_height], create_new_file=True)
                 new_uuid_list.append(new_file.uuid)
@@ -111,7 +113,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             "output_style": query_obj.prompt
         }
     elif model in [ML_MODEL.sdxl, ML_MODEL.sdxl_img2img]:
-        new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
+        new_width, new_height = determine_dimensions_for_sdxl(query_obj.width, query_obj.height)
         data = {
             "prompt" : query_obj.prompt,
             "negative_prompt" : query_obj.negative_prompt,
@@ -127,7 +129,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             data['image'] = output_image_buffer
 
     elif model == ML_MODEL.sdxl_inpainting:
-        new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
+        new_width, new_height = determine_dimensions_for_sdxl(query_obj.width, query_obj.height)
         data = {
             "prompt" : query_obj.prompt,
             "negative_prompt" : query_obj.negative_prompt,
@@ -219,7 +221,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             data['mask'] = mask
 
     elif model == ML_MODEL.sdxl_controlnet:
-        new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
+        new_width, new_height = determine_dimensions_for_sdxl(query_obj.width, query_obj.height)
         data = {
             'prompt': query_obj.prompt,
             'negative_prompt': query_obj.negative_prompt,

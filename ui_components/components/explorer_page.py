@@ -351,6 +351,8 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
         elif type_of_generation == InputImageStyling.IPADPTER_FACE_AND_PLUS.value and (st.session_state["input_image_1"] is None or st.session_state["input_image_2"] is None):
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload both images")        
+        elif type_of_generation == InputImageStyling.INPAINTING.value and not ("mask_to_use" in st.session_state and st.session_state["mask_to_use"]):
+            st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please create and save mask before generation")
         else:
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", on_click=lambda: toggle_generate_inference(position))
             

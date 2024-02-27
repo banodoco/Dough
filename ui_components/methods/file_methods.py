@@ -35,10 +35,10 @@ def save_or_host_file(file, path, mime_type='image/png', dim=None):
             width, height = project_setting.width, project_setting.height
         else:
             # Default dimensions for new project
-            width, height = 512, 512
-
-        # Apply zoom and crop based on determined dimensions
+            width, height = 512, 512        
+        # Apply zoom and crop based on determined dimensions            
         file = zoom_and_crop(file, width, height)
+        # download PIL image to bytee        
 
         if SERVER != ServerType.DEVELOPMENT.value:
             image_bytes = BytesIO()
@@ -59,15 +59,14 @@ def save_or_host_file(file, path, mime_type='image/png', dim=None):
 
 def zoom_and_crop(file, width, height):
     if file.width == width and file.height == height:
-        return file
-    
+        return file    
     # scaling
     s_x = width / file.width
     s_y = height / file.height
     scale = max(s_x, s_y)
     new_width = int(file.width * scale)
     new_height = int(file.height * scale)
-    file = file.resize((new_width, new_height))
+    file = file.resize((new_width, new_height))    
 
     # cropping
     left = (file.width - width) // 2
@@ -320,3 +319,12 @@ def copy_local_file(filepath, destination_directory, new_name):
         shutil.copy2(filepath, new_filepath)
     except Exception as e:
         print("error occured: ", e)
+
+
+def determine_dimensions_for_sdxl(width, height):
+    if width == height:
+        return 1024, 1024
+    elif width > height:
+        return 1216, 832
+    else:
+        return 832, 1216
