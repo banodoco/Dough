@@ -72,6 +72,7 @@ def main():
     # in case of windows opening a dummy socket (to signal that the process has started)
     if platform.system() == "Windows" and OFFLINE_MODE:
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server_socket.bind(("localhost", RUNNER_PROCESS_PORT))
         server_socket.listen(1)
     
@@ -285,6 +286,14 @@ def check_and_update_db():
             data = json.loads(local_gpu_data)
             try:
                 setup_comfy_runner()
+                
+                # fetching the current status again (as this could have been cancelled)
+                log = InferenceLog.objects.filter(id=log.id).first()
+                cur_status = log.status
+                if cur_status in [InferenceStatus.FAILED.value, InferenceStatus.CANCELED.value]:
+                    return
+                
+                InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.IN_PROGRESS.value)
                 start_time = time.time()
                 output = predict_gpu_output(data['workflow_input'], data['file_path_list'], \
                     data['output_node_ids'], data.get("extra_model_list", []), data.get("ignore_model_list", []))

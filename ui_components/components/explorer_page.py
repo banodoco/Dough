@@ -369,8 +369,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     
     if shortlist is False:
         st.markdown("***")
-        st.markdown("### 🖼️ Gallery ----------")
-        st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+        st.markdown("### 🖼️ Gallery _________")
+        st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
     h1,h2,h3,h4 = st.columns([3, 1, 1, 1])
        # by default only showing explorer views

@@ -7,7 +7,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 import urllib
 
-from shared.constants import SERVER, ServerType
+from shared.constants import SERVER, InferenceStatus, ServerType
 from shared.file_upload.s3 import generate_s3_url, is_s3_image_url
 
 class BaseModel(models.Model):
@@ -88,6 +88,17 @@ class InferenceLog(BaseModel):
     class Meta:
         app_label = 'backend'
         db_table = 'inference_log'
+    
+    def __init__(self, *args, **kwargs):
+        super(InferenceLog, self).__init__(*args, **kwargs)
+        self.old_status = self.status
+    
+    def save(self, *args, **kwargs):
+        # preventing status update if it has been set to one of these values
+        if self.old_status in [InferenceStatus.CANCELED.value, InferenceStatus.FAILED.value]:
+            self.status = self.old_status
+            
+        super().save(*args, **kwargs)
 
 
 class InternalFileObject(BaseModel):

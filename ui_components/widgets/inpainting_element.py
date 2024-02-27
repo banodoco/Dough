@@ -3,14 +3,17 @@ import numpy as np
 from PIL import Image, ImageOps
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
-from shared.constants import InferenceType
+from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE, DefaultProjectSettingParams, WorkflowStageType
 from ui_components.methods.file_methods import add_temp_file_to_project, save_or_host_file
+from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 
 from utils.data_repo.data_repo import DataRepo
 from ui_components.methods.common_methods import add_image_variant, process_inference_output, promote_image_variant
-from ui_components.models import InternalSettingObject
+from ui_components.models import InternalProjectObject, InternalSettingObject
+from utils.ml_processor.constants import ML_MODEL
+from utils.ml_processor.ml_interface import get_ml_client
 
 
 def inpainting_element(options_width, image, position="explorer"):
@@ -157,9 +160,7 @@ def replace_with_image(stage, output_file, current_frame_uuid, promote=False):
     st.rerun()
 
 # cropped_img here is a PIL image object
-def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStageType.SOURCE.value):
-    from ui_components.methods.ml_methods import inpainting
-
+def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStageType.SOURCE.value, shot_uuid=None):
     data_repo = DataRepo()
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         project_uuid)
@@ -168,7 +169,7 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
 
     inpaint_prompt = st.text_area("Prompt", value=st.session_state['explorer_base_prompt'])
     inpaint_negative_prompt = st.text_input(
-        "Negative Prompt", value='edge,branches, frame, fractals, text' + DefaultProjectSettingParams.batch_negative_prompt)
+        "Negative Prompt", value='fractals, overlay text, markings, signature, graphic texts, weird artifacts, bad image, worst quality' + DefaultProjectSettingParams.batch_negative_prompt)
     if 'precision_cropping_inpainted_image_uuid' not in st.session_state:
         st.session_state['precision_cropping_inpainted_image_uuid'] = ""
 
@@ -179,55 +180,49 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
         saved_cropped_img = cropped_img.resize(
             (width, height), Image.ANTIALIAS)
         
-        hosted_cropped_img_path = save_or_host_file(saved_cropped_img, CROPPED_IMG_LOCAL_PATH)
-        mask = Image.new('RGB', cropped_img.size)
-        width, height = cropped_img.size
+        # removing the mask from this img (as all ml_processors require img, mask separately)
+        mask = Image.new('RGB', cropped_img.size, color='white')
         for x in range(width):
             for y in range(height):
-                pixel = cropped_img.getpixel((x, y))
-                if cropped_img.mode == 'RGB':
-                    r, g, b = pixel
-                elif cropped_img.mode == 'RGBA':
-                    r, g, b, a = pixel
-                elif cropped_img.mode == 'L':
-                    brightness = pixel
-                else:
-                    raise ValueError(
-                        f'Unsupported image mode: {cropped_img.mode}')
-
-                if r == 0 and g == 0 and b == 0:
-                    mask.putpixel((x, y), (0, 0, 0))  # Black
-                    for i in range(-2, 3):
-                        for j in range(-2, 3):
-                            if 0 <= x + i < width and 0 <= y + j < height:
-                                mask.putpixel((x + i, y + j),
-                                              (0, 0, 0))  # Black
-                else:
-                    mask.putpixel((x, y), (255, 255, 255))  # White
+                pixel = saved_cropped_img.getpixel((x, y))
+                if all(value < 10 for value in pixel[:3]):
+                    mask.putpixel((x, y), (0, 0, 0))
 
         mask = ImageOps.invert(mask)
-        hosted_url = save_or_host_file(mask, MASK_IMG_LOCAL_PATH)
-        add_temp_file_to_project(project_uuid, TEMP_MASK_FILE, hosted_url or MASK_IMG_LOCAL_PATH)
-
-        cropped_img_path = hosted_cropped_img_path if hosted_cropped_img_path else CROPPED_IMG_LOCAL_PATH
-        output, log = inpainting(cropped_img_path, inpaint_prompt,
-                                    inpaint_negative_prompt, st.session_state['current_frame_uuid'], True)
+        query_obj = MLQueryObject(
+                timing_uuid=None,
+                model_uuid=None,
+                guidance_scale=8,
+                seed=-1,                            
+                num_inference_steps=25,            
+                strength=0.5,
+                adapter_type=None,
+                prompt=inpaint_prompt,
+                negative_prompt=inpaint_negative_prompt,
+                height=project_settings.height,
+                width=project_settings.width,
+                data={"shot_uuid": shot_uuid, "mask": mask, "input_image": cropped_img, "project_uuid": project_uuid}
+            )
         
-        inference_data = {
-            "inference_type": InferenceType.FRAME_INPAINTING.value,
-            "output": output,
-            "log_uuid": log.uuid,
-            "timing_uuid": st.session_state['current_frame_uuid'],
-            "promote_generation": promote,
-            "stage": stage
-        }
+        ml_client = get_ml_client()
+        output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_inpainting, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+        
+        if log:
+            inference_data = {
+                "inference_type": InferenceType.FRAME_INPAINTING.value,
+                "output": output,
+                "log_uuid": log.uuid,
+                "project_uuid": project_uuid,
+                "timing_uuid": st.session_state['current_frame_uuid'],
+                "promote_generation": promote,
+                "stage": stage,
+                "shot_uuid": shot_uuid
+            }
 
-        process_inference_output(**inference_data)
-
+            process_inference_output(**inference_data)
 
     if st.button("Inpaint"):
         inpaint(promote=False)
         
-    
     if st.button("Inpaint and Promote"):
         inpaint(promote=True)

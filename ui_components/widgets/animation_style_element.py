@@ -15,6 +15,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import requests
+# import re
+import re
 
 
 def animation_style_element(shot_uuid):
@@ -28,26 +30,20 @@ def animation_style_element(shot_uuid):
     shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
     st.session_state['project_uuid'] = str(shot.project.uuid)
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
-    buffer = 4
-    
-
+        
     settings = {
         'animation_tool': AnimationToolType.ANIMATEDIFF.value,
     }
-
-    interpolation_style = 'ease-in-out'
-    st.markdown("### 🎥 Generate animations ----------")  
-    st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
     
+    st.markdown("### 🎥 Generate animations  _________")  
+    st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
     with st.container():
         advanced1, advanced2, advanced3 = st.columns([1.0,1.5, 1.0])
 
         with advanced1:
             st.markdown("##### Individual frame settings")
-        
-        
-    
+                    
         items_per_row = 3
         strength_of_frames = []
         distances_to_next_frames = []
@@ -62,6 +58,27 @@ def animation_style_element(shot_uuid):
             st.stop()
 
         open_advanced_settings = st_memory.toggle("Open all advanced settings", key="advanced_settings", value=False)
+
+        # SET DEFAULT VALUES FOR LORA, MODEL, ADHERENCE, PROMPTS, MOTION CONTEXT
+
+        if f'lora_data_{shot.uuid}' not in st.session_state:
+            st.session_state[f'lora_data_{shot.uuid}'] = []
+
+        if f'strength_of_adherence_value_{shot.uuid}' not in st.session_state:
+            st.session_state[f'strength_of_adherence_value_{shot.uuid}'] = 0.3
+
+        if f'type_of_motion_context_index_{shot.uuid}' not in st.session_state:
+            st.session_state[f'type_of_motion_context_index_{shot.uuid}'] = 0
+
+        if f'positive_prompt_video_{shot.uuid}' not in st.session_state:
+            st.session_state[f"positive_prompt_video_{shot.uuid}"] = ""
+
+        if f'negative_prompt_video_{shot.uuid}' not in st.session_state:
+            st.session_state[f"negative_prompt_video_{shot.uuid}"] = ""
+
+        if f'ckpt_{shot.uuid}' not in st.session_state:
+            st.session_state[f'ckpt_{shot.uuid}'] = ""
+                
         
         for i in range(0, len(timing_list) , items_per_row):
             with st.container():
@@ -126,90 +143,7 @@ def animation_style_element(shot_uuid):
                 if (i < len(timing_list) - 1)  or (len(timing_list) % items_per_row != 0):
                     st.markdown("***")
         
-    
-        
-
-        
-        dynamic_strength_values, dynamic_key_frame_influence_values, dynamic_frame_distribution_values = transform_data(strength_of_frames, freedoms_between_frames, speeds_of_transitions, distances_to_next_frames)
-
-        type_of_frame_distribution = "dynamic"
-        type_of_key_frame_influence = "dynamic"
-        type_of_strength_distribution = "dynamic"
-        linear_frame_distribution_value = 16
-        linear_key_frame_influence_value = 1.0
-        linear_cn_strength_value = 1.0
-
-        with st.sidebar:
-            with st.expander("⚙️ Animation Settings", expanded=True): 
-                if st_memory.toggle("Open", key="open_motion_data"):
-                                    
-
-                    
-                    st.markdown("### Visualisation of current motion")
-                    keyframe_positions = get_keyframe_positions(type_of_frame_distribution, dynamic_frame_distribution_values, timing_list, linear_frame_distribution_value)                    
-                    keyframe_positions = [int(kf * 16) for kf in keyframe_positions]                                        
-                    last_key_frame_position = (keyframe_positions[-1])
-                    strength_values = extract_strength_values(type_of_strength_distribution, dynamic_strength_values, keyframe_positions, linear_cn_strength_value)
-                    key_frame_influence_values = extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value)                                                                                                            
-                    weights_list, frame_numbers_list = calculate_weights(keyframe_positions, strength_values, 4, key_frame_influence_values,last_key_frame_position)                                                    
-                    plot_weights(weights_list, frame_numbers_list)
-                
-                    st.markdown("***")
-
-                    bulk1, bulk2 = st.columns([1, 1])
-                    with bulk1:
-                        st.markdown("### Bulk edit frame settings")
-                    with bulk2:
-                        if st.button("Reset to Default", use_container_width=True, key="reset_to_default"):
-                            for idx, timing in enumerate(timing_list):
-                                
-                                for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
-                                    
-                                    st.session_state[f'{k}_{shot.uuid}_{idx}'] = v
-                                                                    
-                            st.success("All frames have been reset to default values.")
-                            st.rerun()
-                                            
-                    what_would_you_like_to_edit = st.selectbox("What would you like to edit?", options=["Seconds to next frames", "Speed of transitions", "Freedom between frames","Strength of frames","Motion during frames"], key="what_would_you_like_to_edit")
-                    if what_would_you_like_to_edit == "Seconds to next frames":
-                        what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=6.00, step=0.25, value=1.0, key="what_to_change_it_to")
-                    if what_would_you_like_to_edit == "Strength of frames":
-                        what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=1.0, step=0.01, value=0.5, key="what_to_change_it_to")
-                    elif what_would_you_like_to_edit == "Speed of transitions":
-                        what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, value=0.6, key="what_to_change_it_to")
-                    elif what_would_you_like_to_edit == "Freedom between frames":
-                        what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.05, max_value=0.95, step=0.01, value=0.5, key="what_to_change_it_to")
-                    elif what_would_you_like_to_edit == "Motion during frames":
-                        what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="what_to_change_it_to")
-                    
-                    bulk1, bulk2 = st.columns([1, 1])
-                    with bulk1:
-                        if st.button("Bulk edit", key="bulk_edit", use_container_width=True):
-                            if what_would_you_like_to_edit == "Strength of frames":
-                                for idx, timing in enumerate(timing_list):
-                                    st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
-                            elif what_would_you_like_to_edit == "Seconds to next frames":
-                                for idx, timing in enumerate(timing_list):
-                                    st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
-                            elif what_would_you_like_to_edit == "Speed of transitions":
-                                for idx, timing in enumerate(timing_list):
-                                    st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'] = what_to_change_it_to
-                            elif what_would_you_like_to_edit == "Freedom between frames":
-                                for idx, timing in enumerate(timing_list):
-                                    st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'] = what_to_change_it_to
-                            elif what_would_you_like_to_edit == "Motion during frames":
-                                for idx, timing in enumerate(timing_list):
-                                    st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
-                            st.rerun()
-                    
-                    st.markdown("***")
-                    st.markdown("### Save current settings")
-                    if st.button("Save current settings", key="save_current_settings",use_container_width=True,help="Settings will also be saved when you generate the animation."):
-                        update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts)
-                        st.success("Settings saved successfully.")
-                        time.sleep(0.7)
-                        st.rerun()
-
+            
         st.markdown("##### Style model")
         tab1, tab2   = st.tabs(["Choose Model","Download Models"])
         
@@ -218,28 +152,33 @@ def animation_style_element(shot_uuid):
         # List all files in the directory
         all_files = os.listdir(checkpoints_dir)
 
-        # Filter files to only include those with .safetensors and .ckpt extensions
-        
-        model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
-        # drop all files that contain xl
-        model_files = [file for file in model_files if "xl" not in file]
+
+        if len(all_files) == 0:
+            model_files = ['Realistic_Vision_V5.1.safetensors']
+
+        else:
+            # Filter files to only include those with .safetensors and .ckpt extensions
+            
+            model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
+            # drop all files that contain xl
+            model_files = [file for file in model_files if "xl" not in file]
+
+
+        current_model_index = model_files.index(st.session_state[f'ckpt_{shot.uuid}']) if st.session_state[f'ckpt_{shot.uuid}'] in model_files else 0
 
         with tab1:
-            if len(all_files) == 0:
-                model1, model2 = st.columns([1, 1])
-                with model1:
-                    sd_model = st_memory.selectbox("Which model would you like to use?", options=["Realistic_Vision_V5.1.safetensors"], key="sd_model_video")
-                with model2:
+
+            model1, model2 = st.columns([1, 1])
+            with model1:
+                if model_files and len(model_files):
+                    sd_model = st_memory.selectbox("Which model would you like to use?", options=model_files, key="sd_model_video",index=current_model_index)
+                else:
+                    sd_model = ""
+            with model2:
+                if len(all_files) == 0:
                     st.write("")
                     st.info("This is the default model - to download more, go to the Download Models tab.")
-            else:
-                model1, model2 = st.columns([1, 1])
-                with model1:
-                    if model_files and len(model_files):
-                        sd_model = st_memory.selectbox("Which model would you like to use?", options=model_files, key="sd_model_video")
-                    else:
-                        sd_model = ""
-                with model2:
+                else:
                     st.write("")
                     st.info("To download more models, go to the Download Models tab.")
 
@@ -335,21 +274,17 @@ def animation_style_element(shot_uuid):
 
         lora_data = []
         lora_file_dest = "ComfyUI/models/animatediff_motion_lora"
-        additional_lora_file_dest = "ComfyUI/custom_nodes/ComfyUI-AnimateDiff-Evolved/motion_lora"  # Additional directory
-
         with tab1:
-            if "current_loras" not in st.session_state:
-                st.session_state["current_loras"] = []                
+           
             # Initialize a single list to hold dictionaries for LoRA data
             #lora_data = []
-            files = []
-            # Check if the first directory exists and list files, or use a default list
+            # Check if the directory exists and list files, or use a default list
             if os.path.exists(lora_file_dest):
-                files += [file for file in os.listdir(lora_file_dest) if not file.startswith(".")]
-            # Check if the additional directory exists and list files, then extend the files list
-            if os.path.exists(additional_lora_file_dest):
-                additional_files = [file for file in os.listdir(additional_lora_file_dest) if not file.startswith(".")]
-                files += additional_files
+                files = os.listdir(lora_file_dest)
+                # remove files that start with a dot
+                files = [file for file in files if not file.startswith(".")]
+            else:
+                files = []
 
             # Iterate through each current LoRA in session state
             if len(files) == 0:
@@ -357,7 +292,7 @@ def animation_style_element(shot_uuid):
                 if st.button("Check again", key="check_again"):
                     st.rerun()
             else:
-                for idx, lora in enumerate(st.session_state["current_loras"]):
+                for idx, lora in enumerate(st.session_state[f"lora_data_{shot.uuid}"]):
                     h1, h2, h3, h4 = st.columns([1, 1, 1, 0.5])
                     with h1:
                         which_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"which_lora_{idx}")                                                    
@@ -375,20 +310,20 @@ def animation_style_element(shot_uuid):
                         st.write("")
                         if st.button("Remove", key=f"remove_lora_{idx}"):
                             # pop the current lora from the list
-                            st.session_state["current_loras"].pop(idx)
+                            st.session_state[f"lora_data_{shot.uuid}"].pop(idx)
                             st.rerun()
                 # st.write(lora_data)
-                if len(st.session_state["current_loras"]) == 0:
+                if len(st.session_state[f"lora_data_{shot.uuid}"]) == 0:
                     text = "Add a LoRA"
                 else:
                     text = "Add another LoRA"
                 if st.button(text, key="add_motion_guidance"):
-                    st.session_state["current_loras"].append("")
+                    st.session_state[f"lora_data_{shot.uuid}"].append("")
                     st.rerun()
         with tab2:
             text1, text2 = st.columns([1, 1])
             with text1:
-                where_to_download_from = st.radio("Where would you like to get the LoRA from?", options=["Our list", "From a URL"], key="where_to_download_from")
+                where_to_download_from = st.radio("Where would you like to get the LoRA from?", options=["Our list", "From a URL","Upload a LoRA"], key="where_to_download_from", horizontal=True)
 
             if where_to_download_from == "Our list":
                 with text1:
@@ -461,7 +396,8 @@ def animation_style_element(shot_uuid):
                                 st.success(f"Downloaded LoRA to {save_directory}")
                             else:
                                 st.error("Failed to download LoRA")
-
+            elif where_to_download_from == "Upload a LoRA":
+                st.info("It's simpler to just drop this into the ComfyUI/models/animatediff_motion_lora directory.")
         with tab3:
             b1, b2 = st.columns([1, 1])
             with b1:
@@ -479,15 +415,15 @@ def animation_style_element(shot_uuid):
 
         e1, e2, e3 = st.columns([1, 1,1])
         with e1:        
-            strength_of_adherence = st_memory.slider("How much would you like to force adherence to the input images?", min_value=0.0, max_value=1.0, value=0.3, step=0.01, key="stregnth_of_adherence")
+            strength_of_adherence = st.slider("How much would you like to force adherence to the input images?", min_value=0.0, max_value=1.0, step=0.01, key="strength_of_adherence", value=st.session_state[f"strength_of_adherence_value_{shot.uuid}"])
         with e2:
             st.info("Higher values may cause flickering and sudden changes in the video. Lower values may cause the video to be less influenced by the input images but can lead to smoother motion and better colours.")
 
         f1, f2, f3 = st.columns([1, 1, 1])
         with f1:
-            overall_positive_prompt = st_memory.text_area("What would you like to see in the videos?", value="", key="positive_prompt_video")
+            overall_positive_prompt = st.text_area("What would you like to see in the videos?", value=st.session_state[f"positive_prompt_video_{shot.uuid}"])
         with f2:
-            overall_negative_prompt = st_memory.text_area("What would you like to avoid in the videos?", value="", key="negative_prompt_video")
+            overall_negative_prompt = st.text_area("What would you like to avoid in the videos?", value=st.session_state[f"negative_prompt_video_{shot.uuid}"])
         
         with f3:
             st.write("")
@@ -499,7 +435,7 @@ def animation_style_element(shot_uuid):
         st.markdown("##### Overall motion settings")
         h1, h2, h3 = st.columns([0.5, 1.5, 1])
         with h1:
-            type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=False, index=1)
+            type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=False, index=st.session_state[f"type_of_motion_context_index_{shot.uuid}"])
 
         with h2: 
             st.info("This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.")
@@ -519,43 +455,29 @@ def animation_style_element(shot_uuid):
             st.write("")
             st.info("This actually updates the motion during frames in the advanced settings above - but we put it here because it has a big impact on the video. You can scroll up to see the changes and tweak for individual frames.")
 
-        context_length = 16
-        context_stride = 2
-        context_overlap = 4
-
-        if type_of_motion_context == "Low":
-            context_length = 16
-            context_stride = 1
-            context_overlap = 2
-
-        elif type_of_motion_context == "Standard":
-            context_length = 16
-            context_stride = 2
-            context_overlap = 4
-        
-        elif type_of_motion_context == "High":
-            context_length = 16
-            context_stride = 4
-            context_overlap = 4
-
+        type_of_frame_distribution = "dynamic"
+        type_of_key_frame_influence = "dynamic"
+        type_of_strength_distribution = "dynamic"
+        linear_frame_distribution_value = 16
+        linear_key_frame_influence_value = 1.0
+        linear_cn_strength_value = 1.0            
         relative_ipadapter_strength = 1.0
         relative_cn_strength = 0.0
         project_settings = data_repo.get_project_setting(shot.project.uuid)
         width = project_settings.width
         height = project_settings.height
         img_dimension = f"{width}x{height}"
-
-        # st.write(dynamic_frame_distribution_values)
-        dynamic_frame_distribution_values = [float(value) * 16 for value in dynamic_frame_distribution_values]
-        
-        individual_prompts = format_frame_prompts_with_buffer(dynamic_frame_distribution_values, individual_prompts, buffer)    
-        individual_negative_prompts = format_frame_prompts_with_buffer(dynamic_frame_distribution_values, individual_negative_prompts, buffer)
-                    
-        multipled_base_end_percent = 0.05 * (strength_of_adherence * 10)
-        multipled_base_adapter_strength = 0.05 * (strength_of_adherence * 20)
-
-        motion_scales = format_motion_strengths_with_buffer(dynamic_frame_distribution_values, motions_during_frames, buffer)
         motion_scale = 1.3
+        interpolation_style = 'ease-in-out'
+        buffer = 4
+
+
+        (dynamic_strength_values, dynamic_key_frame_influence_values, dynamic_frame_distribution_values, 
+        context_length, context_stride, context_overlap, multipled_base_end_percent, multipled_base_adapter_strength, 
+        prompt_travel,  negative_prompt_travel, motion_scales) = transform_data(strength_of_frames, 
+            freedoms_between_frames, speeds_of_transitions, distances_to_next_frames, type_of_motion_context, 
+            strength_of_adherence,individual_prompts, individual_negative_prompts, buffer, motions_during_frames)
+
 
         settings.update(
             ckpt=sd_model,
@@ -589,10 +511,9 @@ def animation_style_element(shot_uuid):
             context_overlap=context_overlap,
             multipled_base_end_percent=multipled_base_end_percent,
             multipled_base_adapter_strength=multipled_base_adapter_strength,
-            individual_prompts=individual_prompts,
-            individual_negative_prompts=individual_negative_prompts,
-            animation_stype=AnimationStyleType.CREATIVE_INTERPOLATION.value,
-            # make max_frame the final value in the dynamic_frame_distribution_values
+            individual_prompts=prompt_travel,
+            individual_negative_prompts=negative_prompt_travel,
+            animation_stype=AnimationStyleType.CREATIVE_INTERPOLATION.value,            
             max_frames=str(dynamic_frame_distribution_values[-1]),
             lora_data=lora_data
         )
@@ -639,15 +560,73 @@ def animation_style_element(shot_uuid):
                 
             st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help, on_click=lambda: toggle_generate_inference(position),type="primary")
 
-        with animate_col_2:
-                number_of_frames = len(timing_list)
-                if height==width:
-                    cost_per_key_frame = 0.035
-                else:
-                    cost_per_key_frame = 0.045
 
-                cost_per_generation = cost_per_key_frame * number_of_frames * variant_count
-            # st.info(f"Generating a video with {number_of_frames} frames in the cloud will cost c. ${cost_per_generation:.2f} USD.")
+        with st.sidebar:
+                with st.expander("⚙️ Animation settings", expanded=True): 
+                    if st_memory.toggle("Open", key="open_motion_data"):
+                                                            
+                        st.markdown("### Visualisation of current motion")
+                        keyframe_positions = get_keyframe_positions(type_of_frame_distribution, dynamic_frame_distribution_values, timing_list, linear_frame_distribution_value)                    
+                        keyframe_positions = [int(kf * 16) for kf in keyframe_positions]                                        
+                        last_key_frame_position = (keyframe_positions[-1])
+                        strength_values = extract_strength_values(type_of_strength_distribution, dynamic_strength_values, keyframe_positions, linear_cn_strength_value)
+                        key_frame_influence_values = extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value)                                                                                                            
+                        weights_list, frame_numbers_list = calculate_weights(keyframe_positions, strength_values, 4, key_frame_influence_values,last_key_frame_position)                                                    
+                        plot_weights(weights_list, frame_numbers_list)
+                    
+                        st.markdown("***")
+
+                        bulk1, bulk2 = st.columns([1, 1])
+                        with bulk1:
+                            st.markdown("### Bulk edit frame settings")
+                        with bulk2:
+                            if st.button("Reset to Default", use_container_width=True, key="reset_to_default"):
+                                for idx, timing in enumerate(timing_list):                                    
+                                    for k, v in DEFAULT_SHOT_MOTION_VALUES.items():                                        
+                                        st.session_state[f'{k}_{shot.uuid}_{idx}'] = v
+                                                                        
+                                st.success("All frames have been reset to default values.")
+                                st.rerun()
+                                                
+                        what_would_you_like_to_edit = st.selectbox("What would you like to edit?", options=["Seconds to next frames", "Speed of transitions", "Freedom between frames","Strength of frames","Motion during frames"], key="what_would_you_like_to_edit")
+                        if what_would_you_like_to_edit == "Seconds to next frames":
+                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=6.00, step=0.25, value=1.0, key="what_to_change_it_to")
+                        if what_would_you_like_to_edit == "Strength of frames":
+                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=1.0, step=0.01, value=0.5, key="what_to_change_it_to")
+                        elif what_would_you_like_to_edit == "Speed of transitions":
+                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, value=0.6, key="what_to_change_it_to")
+                        elif what_would_you_like_to_edit == "Freedom between frames":
+                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.05, max_value=0.95, step=0.01, value=0.5, key="what_to_change_it_to")
+                        elif what_would_you_like_to_edit == "Motion during frames":
+                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="what_to_change_it_to")
+                        
+                        bulk1, bulk2 = st.columns([1, 1])
+                        with bulk1:
+                            if st.button("Bulk edit", key="bulk_edit", use_container_width=True):
+                                if what_would_you_like_to_edit == "Strength of frames":
+                                    for idx, timing in enumerate(timing_list):
+                                        st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
+                                elif what_would_you_like_to_edit == "Seconds to next frames":
+                                    for idx, timing in enumerate(timing_list):
+                                        st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
+                                elif what_would_you_like_to_edit == "Speed of transitions":
+                                    for idx, timing in enumerate(timing_list):
+                                        st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'] = what_to_change_it_to
+                                elif what_would_you_like_to_edit == "Freedom between frames":
+                                    for idx, timing in enumerate(timing_list):
+                                        st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'] = what_to_change_it_to
+                                elif what_would_you_like_to_edit == "Motion during frames":
+                                    for idx, timing in enumerate(timing_list):
+                                        st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
+                                st.rerun()
+                        
+                        st.markdown("***")
+                        st.markdown("### Save current settings")
+                        if st.button("Save current settings", key="save_current_settings",use_container_width=True,help="Settings will also be saved when you generate the animation."):
+                            update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts)
+                            st.success("Settings saved successfully.")
+                            time.sleep(0.7)
+                            st.rerun()
 
 def toggle_generate_inference(position):
     if position + '_generate_inference' not in st.session_state:
@@ -698,34 +677,6 @@ def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):
     formatted = ', '.join(f'"{int(frame)}": "{prompt}"' for frame, prompt in zip(adjusted_frame_numbers, processed_prompts))
     return formatted
 
-'''
-def prepare_workflow_images(shot_uuid):
-    import requests
-    import io
-    import zipfile
-
-    data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
-    image_locations = [t.primary_image.location if t.primary_image else None for t in shot.timing_list]
-
-    buffer = io.BytesIO()
-    with zipfile.ZipFile(buffer, 'w') as zip_file:
-        for idx, image_location in enumerate(image_locations):
-            if not image_location:
-                continue
-
-            image_name = f"{idx}.png"
-            if image_location.startswith('http'):
-                response = requests.get(image_location)
-                image_data = response.content
-                zip_file.writestr(image_name, image_data)
-            else:
-                zip_file.write(image_location, image_name)
-
-    buffer.seek(0)
-    return buffer.getvalue()
-
-'''
 def extract_strength_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value):
 
     if type_of_key_frame_influence == "dynamic":
@@ -749,93 +700,7 @@ def extract_strength_values(type_of_key_frame_influence, dynamic_key_frame_influ
             linear_key_frame_influence_value = (linear_key_frame_influence_value[0], linear_key_frame_influence_value[1], linear_key_frame_influence_value[0])
         return [linear_key_frame_influence_value for _ in range(len(keyframe_positions) - 1)]
 
-'''
-def create_workflow_json(image_locations, settings):
-    import os
 
-    # get the current working directory
-    current_working_directory = os.getcwd()
-
-    # print output to the console
-    print(current_working_directory)
-
-    with open('./sample_assets/interpolation_workflow.json', 'r') as json_file:
-        json_data = json.load(json_file)
-
-    image_prompt_list = settings['image_prompt_list']
-    negative_prompt = settings['negative_prompt']
-    type_of_frame_distribution = settings['type_of_frame_distribution']
-    linear_frame_distribution_value = settings['linear_frame_distribution_value']
-    dynamic_frame_distribution_values = settings['dynamic_frame_distribution_values']
-    type_of_key_frame_influence = settings['type_of_key_frame_influence']
-    linear_key_frame_influence_value = settings['linear_key_frame_influence_value']
-    dynamic_key_frame_influence_values = settings['dynamic_key_frame_influence_values']
-    type_of_cn_strength_distribution=settings['type_of_cn_strength_distribution']
-    linear_cn_strength_value=settings['linear_cn_strength_value']
-    buffer = settings['buffer']
-    dynamic_strength_values = settings['dynamic_strength_values']
-    interpolation_type = settings['interpolation_type']
-    ckpt = settings['ckpt']
-    motion_scale = settings['motion_scale']    
-    relative_ipadapter_strength = settings['relative_ipadapter_strength']
-    relative_ipadapter_influence = settings['relative_ipadapter_influence']
-    image_dimension = settings['image_dimension']
-    output_format = settings['output_format']
-    # soft_scaled_cn_weights_multiplier = settings['soft_scaled_cn_weights_multiplier']
-    stmfnet_multiplier = settings['stmfnet_multiplier']
-
-    if settings['type_of_frame_distribution'] == 'linear':
-        batch_size = (len(image_locations) - 1) * settings['linear_frame_distribution_value'] + int(buffer)
-    else:
-        batch_size = int(settings['dynamic_frame_distribution_values'].split(',')[-1]) + int(buffer)
-
-    img_width, img_height = image_dimension.split("x")
-
-    for node in json_data['nodes']:
-        if node['id'] == 189:
-            node['widgets_values'][-3] = int(img_width)
-            node['widgets_values'][-2] = int(img_height)
-            node['widgets_values'][0] = ckpt
-            node['widgets_values'][-1] = batch_size
-
-        elif node['id'] == 187:
-            node['widgets_values'][-2] = motion_scale
-
-        elif node['id'] == 347:
-            node['widgets_values'][0] = image_prompt_list
-
-        elif node['id'] == 352:
-            node['widgets_values'] = [negative_prompt]
-
-        elif node['id'] == 365:
-            node['widgets_values'][1] = type_of_frame_distribution
-            node['widgets_values'][2] = linear_frame_distribution_value
-            node['widgets_values'][3] = dynamic_frame_distribution_values
-            node['widgets_values'][4] = type_of_key_frame_influence
-            node['widgets_values'][5] = linear_key_frame_influence_value
-            node['widgets_values'][6] = dynamic_key_frame_influence_values
-            node['widgets_values'][7] = type_of_cn_strength_distribution
-            node['widgets_values'][8] = linear_cn_strength_value
-            node['widgets_values'][9] = dynamic_strength_values
-            node['widgets_values'][-1] = buffer
-            node['widgets_values'][-2] = interpolation_type
-            node['widgets_values'][-3] = soft_scaled_cn_weights_multiplier
-
-        elif node['id'] == 292:
-            node['widgets_values'][-2] = stmfnet_multiplier
-
-        elif node['id'] == 301:
-            node['widgets_values'] = [ip_adapter_model_weight]
-
-        elif node['id'] == 281:
-            # Special case: 'widgets_values' is a dictionary for this node
-            node['widgets_values']['output_format'] = output_format
-        
-        # st.write(json_data)
-    
-    return json_data
-            
-'''
 def update_interpolation_settings(values=None, timing_list=None):
     default_values = {
         'type_of_frame_distribution': 0,
@@ -864,26 +729,6 @@ def update_interpolation_settings(values=None, timing_list=None):
         # print(f"{key}: {st.session_state[key]}")
 
 
-def calculate_dynamic_influence_ranges(keyframe_positions, key_frame_influence_values, allow_extension=True):
-    if len(keyframe_positions) < 2 or len(keyframe_positions) != len(key_frame_influence_values):
-        return []
-
-    influence_ranges = []
-    for i, position in enumerate(keyframe_positions):
-        influence_factor = key_frame_influence_values[i]
-        range_size = influence_factor * (keyframe_positions[-1] - keyframe_positions[0]) / (len(keyframe_positions) - 1) / 2
-
-        start_influence = position - range_size
-        end_influence = position + range_size
-
-        # If extension beyond the adjacent keyframe is allowed, do not constrain the start and end influence.
-        if not allow_extension:
-            start_influence = max(start_influence, keyframe_positions[i - 1] if i > 0 else 0)
-            end_influence = min(end_influence, keyframe_positions[i + 1] if i < len(keyframe_positions) - 1 else keyframe_positions[-1])
-
-        influence_ranges.append((round(start_influence), round(end_influence)))
-
-    return influence_ranges
         
 def extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value):
     # Check and convert linear_key_frame_influence_value if it's a float or string float        
@@ -927,27 +772,6 @@ def get_keyframe_positions(type_of_frame_distribution, dynamic_frame_distributio
     else:
         # Calculate the number of keyframes based on the total duration and linear_frames_per_keyframe
         return [i * linear_frame_distribution_value for i in range(len(images))]
-
-def extract_keyframe_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value):
-    if type_of_key_frame_influence == "dynamic":
-        return [float(influence.strip()) for influence in dynamic_key_frame_influence_values.split(',')]
-    else:
-        return [linear_key_frame_influence_value for _ in keyframe_positions]
-
-def extract_start_and_endpoint_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value):
-    if type_of_key_frame_influence == "dynamic":
-        # If dynamic_key_frame_influence_values is a list of characters representing tuples, process it
-        if isinstance(dynamic_key_frame_influence_values[0], str) and dynamic_key_frame_influence_values[0] == "(":
-            # Join the characters to form a single string and evaluate to convert into a list of tuples
-            string_representation = ''.join(dynamic_key_frame_influence_values)
-            dynamic_values = eval(f'[{string_representation}]')
-        else:
-            # If it's already a list of tuples or a single tuple, use it directly
-            dynamic_values = dynamic_key_frame_influence_values if isinstance(dynamic_key_frame_influence_values, list) else [dynamic_key_frame_influence_values]
-        return dynamic_values
-    else:
-        # Return a list of tuples with the linear_key_frame_influence_value as a tuple repeated for each position
-        return [linear_key_frame_influence_value for _ in keyframe_positions]
 
 def calculate_weights(keyframe_positions, strength_values, buffer, key_frame_influence_values,last_key_frame_position):
 
@@ -1113,7 +937,10 @@ def plot_weights(weights_list, frame_numbers_list):
 
 
 
-def transform_data(strength_of_frames, movements_between_frames, speeds_of_transitions, distances_to_next_frames):
+def transform_data(strength_of_frames, movements_between_frames, speeds_of_transitions, distances_to_next_frames, type_of_motion_context, strength_of_adherence, individual_prompts, individual_negative_prompts, buffer, motions_during_frames):
+
+    # FRAME SETTINGS
+
     def adjust_and_invert_relative_value(middle_value, relative_value):
         if relative_value is not None:
             adjusted_value = middle_value * relative_value
@@ -1152,14 +979,53 @@ def transform_data(strength_of_frames, movements_between_frames, speeds_of_trans
     cumulative_distances = [0]
     for distance in distances_to_next_frames:
         cumulative_distances.append(cumulative_distances[-1] + distance)
-                                        
-    return output_strength, output_speeds, cumulative_distances
 
+    cumulative_distances = [int(float(value) * 16) for value in cumulative_distances]
 
-def format_motion_strengths_with_buffer(frame_numbers, motion_strengths, buffer):
-    # Adjust the first frame number to 0 and shift the others by the buffer
-    adjusted_frame_numbers = [0] + [frame + buffer for frame in frame_numbers[1:]]
+    # MOTION CONTEXT SETTINGS
+
+    if type_of_motion_context == "Low":
+        context_length = 16
+        context_stride = 1
+        context_overlap = 2
+
+    elif type_of_motion_context == "Standard":
+        context_length = 16
+        context_stride = 2
+        context_overlap = 4
+    
+    elif type_of_motion_context == "High":
+        context_length = 16
+        context_stride = 4
+        context_overlap = 4
+
+    # SPARSE CTRL SETTINGS
+
+    multipled_base_end_percent = 0.05 * (strength_of_adherence * 10)
+    multipled_base_adapter_strength = 0.05 * (strength_of_adherence * 20)
+
+    # FRAME PROMPTS FORMATTING
+
+    def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):
+        adjusted_frame_numbers = [frame + buffer for frame in frame_numbers]
+        
+        # Preprocess prompts to remove any '/' or '"' from the values
+        processed_prompts = [prompt.replace("/", "").replace('"', '') for prompt in individual_prompts]
+        
+        # Format the adjusted frame numbers and processed prompts
+        formatted = ', '.join(f'"{int(frame)}": "{prompt}"' for frame, prompt in zip(adjusted_frame_numbers, processed_prompts))
+        return formatted
+
+    # Applying format_frame_prompts_with_buffer
+    formatted_individual_prompts = format_frame_prompts_with_buffer(cumulative_distances, individual_prompts, buffer)
+    formatted_individual_negative_prompts = format_frame_prompts_with_buffer(cumulative_distances, individual_negative_prompts, buffer)
+
+    # MOTION STRENGTHS FORMATTING
+
+    adjusted_frame_numbers = [0] + [frame + buffer for frame in cumulative_distances[1:]]
     
     # Format the adjusted frame numbers and strengths
-    formatted = ', '.join(f'{int(frame)}:({strength})' for frame, strength in zip(adjusted_frame_numbers, motion_strengths))
-    return formatted
+    motions_during_frames = ', '.join(f'{int(frame)}:({strength})' for frame, strength in zip(adjusted_frame_numbers, motions_during_frames))    
+            
+    return output_strength, output_speeds, cumulative_distances, context_length, context_stride, context_overlap, multipled_base_end_percent, multipled_base_adapter_strength, formatted_individual_prompts, formatted_individual_negative_prompts,motions_during_frames
+
