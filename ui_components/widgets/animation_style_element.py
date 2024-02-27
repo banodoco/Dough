@@ -35,9 +35,8 @@ def animation_style_element(shot_uuid):
         'animation_tool': AnimationToolType.ANIMATEDIFF.value,
     }
     
-    st.markdown("### 🎥 Generate animations ----------")  
-    st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
-    
+    st.markdown("### 🎥 Generate animations  _________")  
+    st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
     with st.container():
         advanced1, advanced2, advanced3 = st.columns([1.0,1.5, 1.0])
@@ -513,7 +512,7 @@ def animation_style_element(shot_uuid):
             multipled_base_end_percent=multipled_base_end_percent,
             multipled_base_adapter_strength=multipled_base_adapter_strength,
             individual_prompts=prompt_travel,
-            individual_negative_prompts=individual_negative_prompts,
+            individual_negative_prompts=negative_prompt_travel,
             animation_stype=AnimationStyleType.CREATIVE_INTERPOLATION.value,            
             max_frames=str(dynamic_frame_distribution_values[-1]),
             lora_data=lora_data
@@ -563,7 +562,7 @@ def animation_style_element(shot_uuid):
 
 
         with st.sidebar:
-                with st.expander("⚙️ Animation Settings", expanded=True): 
+                with st.expander("⚙️ Animation settings", expanded=True): 
                     if st_memory.toggle("Open", key="open_motion_data"):
                                                             
                         st.markdown("### Visualisation of current motion")

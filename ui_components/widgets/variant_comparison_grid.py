@@ -43,8 +43,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         items_to_show = 2
         num_columns = 3
         with col1:
-            st.markdown(f"### 🎞️ '{shot.name}' options ----------")
-            st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+            st.markdown(f"### 🎞️ '{shot.name}' options  _________")
+            st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
     else:
         items_to_show = 5
             
