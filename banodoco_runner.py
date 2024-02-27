@@ -72,6 +72,7 @@ def main():
     # in case of windows opening a dummy socket (to signal that the process has started)
     if platform.system() == "Windows" and OFFLINE_MODE:
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server_socket.bind(("localhost", RUNNER_PROCESS_PORT))
         server_socket.listen(1)
     
