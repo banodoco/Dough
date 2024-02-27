@@ -29,8 +29,8 @@ def timeline_view_page(shot_uuid: str, h2):
     st.markdown("***")
     slider1, slider2 = st.columns([4,1])
     with slider1:
-        st.markdown(f"### 🪄 '{project.name}' timeline  ----------")
-        st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+        st.markdown(f"### 🪄 '{project.name}' timeline  _________")
+        st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
         
     with slider2:
         show_video = st.toggle("Show Video:", value=False, key="show_video")
@@ -41,8 +41,8 @@ def timeline_view_page(shot_uuid: str, h2):
     timeline_view(st.session_state["shot_uuid"], st.session_state['view'])
 
 
-    st.markdown("### ✨ Generate frames ----------")
-    st.write("##### -\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+    st.markdown("### ✨ Generate frames  _________")
+    st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
     
     generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None, shot_uuid=None)
     

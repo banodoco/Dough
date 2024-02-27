@@ -73,7 +73,6 @@ def precision_cropping_element(stage, shot_uuid):
         st.image(input_image, caption="Input Image", width=300)
 
     with col2:
-
         st.caption("Output Image:")
         output_image = apply_image_transformations(
             input_image, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'], st.session_state['flip_vertically'], st.session_state['flip_horizontally'])
@@ -85,7 +84,7 @@ def precision_cropping_element(stage, shot_uuid):
             time.sleep(1)
             st.rerun()
 
-        inpaint_in_black_space_element(output_image, shot.project.uuid, stage)
+        inpaint_in_black_space_element(output_image, shot.project.uuid, stage, shot_uuid)
 
 
 def manual_cropping_element(stage, timing_uuid):
@@ -177,4 +176,4 @@ def manual_cropping_element(stage, timing_uuid):
             with cropbtn2:
                 st.warning("Warning: This will overwrite the original image")
 
-            inpaint_in_black_space_element(cropped_img, project_uuid, stage=stage)
+            inpaint_in_black_space_element(cropped_img, project_uuid, stage, timing.shot.uuid)

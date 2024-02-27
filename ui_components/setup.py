@@ -125,6 +125,11 @@ def setup_app_ui():
                 "No projects found - create one in the 'New Project' section")
         else:
 
+            with st.sidebar:
+                with st.expander("🔍 Generation log", expanded=False):
+                    if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
+                        sidebar_logger(st.session_state["shot_uuid"])
+
             if not os.path.exists("videos/" + st.session_state["project_uuid"] + "/assets"):
                 create_working_assets(st.session_state["project_uuid"])
 
@@ -183,12 +188,6 @@ def setup_app_ui():
                 elif st.session_state['page'] == "Animate Shot":
                     animate_shot_page(st.session_state["shot_uuid"], h2)
 
-                with st.sidebar:
-                    with st.expander("🔍 Generation log", expanded=True):
-                        if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
-                            sidebar_logger(st.session_state["shot_uuid"])
-                    # st.markdown("***")
-
             elif st.session_state["main_view_type"] == "Project Settings":
 
                 project_settings_page(st.session_state["project_uuid"])
@@ -204,41 +203,3 @@ def setup_app_ui():
 
     else:
         st.info("You haven't added any prompts yet. Add an image to get started.")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
