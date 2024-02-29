@@ -19,7 +19,7 @@ def set_default_values(shot_uuid):
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
 
     if "page" not in st.session_state:
-        st.session_state['page'] = "Explore"
+        st.session_state['page'] = "Timeline"
 
     if "strength" not in st.session_state:
         st.session_state['strength'] = DefaultProjectSettingParams.batch_strength

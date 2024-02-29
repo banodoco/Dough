@@ -147,14 +147,12 @@ def setup_app_ui():
                 set_default_values(st.session_state["shot_uuid"])
 
                 with st.sidebar:
-                    creative_process_pages = ["Timeline", "Adjust Shot", "Adjust Frame", "Animate Shot"]
-                    if 'creative_process_manual_select' not in st.session_state:
-                        st.session_state['creative_process_manual_select'] = 0
-                        st.session_state['page'] = creative_process_pages[0]
-
-                    
-                    # view_types = ["Explorer","Timeline","Individual"]
                     creative_process_pages = ["Timeline", "Adjust Shot", "Animate Shot"]
+                    if 'page' not in st.session_state:
+                        selected_page_idx = 0
+                    else:
+                        selected_page_idx = creative_process_pages.index(st.session_state['page'])
+                        
                     st.session_state['page'] = option_menu(
                         None,
                         creative_process_pages,
@@ -164,15 +162,11 @@ def setup_app_ui():
                         key="section-selecto1r",
                         styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#bd3737"},
                                 "nav-link-selected": {"background-color": "#ff4b4b"}},
-                        manual_select=st.session_state['creative_process_manual_select']                        
+                        default_index=selected_page_idx
                     )
 
-                    if st.session_state['page'] != "Adjust Shot":
+                    if st.session_state['page'] != creative_process_pages[1]:
                         st.session_state['current_frame_sidebar_selector'] = 0
-
-                    if st.session_state['creative_process_manual_select']  != None:
-                        st.session_state['creative_process_manual_select'] = None
-
 
                 if st.session_state['page'] == "Explore":
                     explorer_page(st.session_state["project_uuid"])
