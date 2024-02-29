@@ -128,8 +128,8 @@ def setup_app_ui():
 
             with st.sidebar:
                 with st.expander("🔍 Generation log", expanded=False):
-                    if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
-                        sidebar_logger(st.session_state["shot_uuid"])
+                    # if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
+                    sidebar_logger(st.session_state["shot_uuid"])
 
             if not os.path.exists("videos/" + st.session_state["project_uuid"] + "/assets"):
                 create_working_assets(st.session_state["project_uuid"])

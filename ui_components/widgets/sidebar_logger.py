@@ -17,10 +17,11 @@ def sidebar_logger(shot_uuid):
     a1, _, a3 = st.columns([1, 0.2, 1])
 
     refresh_disabled = False # not any(log.status in [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value] for log in log_list)
-    if a1.button("Refresh log", disabled=refresh_disabled, help="You can also press 'r' on your keyboard to refresh."): st.rerun()
-
-
     z1, z2 = st.columns([1, 1])
+    if z1.button("Refresh log", disabled=refresh_disabled, help="You can also press 'r' on your keyboard to refresh."): st.rerun()
+
+
+    
     with z1:
         status_option = st.radio("Statuses to display:", options=["In Progress", "All","Succeeded", "Failed"], key="status_option", index=0, horizontal=True)
     
@@ -34,7 +35,7 @@ def sidebar_logger(shot_uuid):
 
     project_setting = data_repo.get_project_setting(shot.project.uuid)
     with z2:
-        st.write("")        
+              
         selected_option = st.selectbox(
         "Which model to show:",
         ["All"] + [m.display_name() for m in MODEL_FILTERS]
@@ -42,8 +43,9 @@ def sidebar_logger(shot_uuid):
         
     b1, b2 = st.columns([1, 1])
     
-    page_number = b1.number_input('Page number', min_value=1, max_value=project_setting.total_log_pages, value=1, step=1)
-    items_per_page = b2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
+    page_number = z2.number_input('Page number', min_value=1, max_value=project_setting.total_log_pages, value=1, step=1)
+    items_per_page = 5
+    # items_per_page = z2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
     
 
     log_filter_data = {
@@ -63,8 +65,9 @@ def sidebar_logger(shot_uuid):
     if project_setting.total_log_pages != total_page_count:
         project_setting.total_log_pages = total_page_count
         st.rerun()
-    
-    st.write("Total page count: ", total_page_count)
+    with z2:
+        if total_page_count > 1:            
+            st.write("Total page count: ", total_page_count)
     # display_list = log_list[(page_number - 1) * items_per_page : page_number * items_per_page]                
 
     if log_list and len(log_list):
