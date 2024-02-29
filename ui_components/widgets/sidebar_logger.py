@@ -22,7 +22,7 @@ def sidebar_logger(shot_uuid):
 
     z1, z2 = st.columns([1, 1])
     with z1:
-        status_option = st.radio("Statuses to display:", options=["All", "In Progress", "Succeeded", "Failed"], key="status_option", index=0, horizontal=True)
+        status_option = st.radio("Statuses to display:", options=["In Progress", "All","Succeeded", "Failed"], key="status_option", index=0, horizontal=True)
     
     status_list = None
     if status_option == "In Progress":
@@ -84,19 +84,20 @@ def sidebar_logger(shot_uuid):
             if log.uuid in log_file_dict:
                 output_url = log_file_dict[log.uuid].location
 
-            c1, c2, c3 = st.columns([1, 1 if output_url else 0.01, 1])
+            c1, c2, c3 = st.columns([1, 0.7 if output_url else 0.01, 1])
 
             with c1:                
                 input_params = json.loads(log.input_params)
-                st.caption(f"Prompt:")
-                prompt = input_params.get('prompt', 'No prompt found')                
-                st.write(f'"{prompt[:30]}..."' if len(prompt) > 30 else f'"{prompt}"')
-                st.caption(f"Model:")
+                prompt = input_params.get('prompt', 'No prompt found')
+                st.caption(f"Prompt: \"{prompt[:30] + '...' if len(prompt) > 30 else prompt}\"")
                 try:
-                    st.write(json.loads(log.output_details)['model_name'].split('/')[-1])
+                    model_name = json.loads(log.output_details)['model_name'].split('/')[-1]
                 except Exception as e:
-                    st.write('')
-                            
+                    model_name = 'Unavailable'
+                st.caption(f"Model: {model_name}")
+
+
+                                            
             with c2:
                 if output_url:                                              
                     if output_url.endswith('png') or output_url.endswith('jpg') or output_url.endswith('jpeg') or output_url.endswith('gif'):
@@ -119,6 +120,7 @@ def sidebar_logger(shot_uuid):
                     st.warning("Canceled")
                 
                 log_file = log_file_dict[log.uuid] if log.uuid in log_file_dict else None
+                '''
                 if log_file:
                     if log_file.type == InternalFileType.IMAGE.value and log_file.tag != InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value:
                         if st.button("Add to shortlist ➕", key=f"sidebar_shortlist_{log_file.uuid}",use_container_width=True, help="Add to shortlist"):
@@ -126,7 +128,7 @@ def sidebar_logger(shot_uuid):
                             st.success("Added To Shortlist")
                             time.sleep(0.3)
                             st.rerun()
-                
+                '''
                 if log.status == InferenceStatus.QUEUED.value:
                     if st.button("Cancel", key=f"cancel_gen_{log.uuid}", use_container_width=True, help="Cancel"):
                         err_msg = "Generation has already started"
