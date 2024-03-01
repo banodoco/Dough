@@ -15,6 +15,14 @@ from utils.ml_processor.ml_interface import MachineLearningProcessor
 import time
 
 
+def determine_dimensions_for_sdxl(width, height):
+    if width == height:
+        return 1024, 1024
+    elif width > height:
+        return 1216, 832
+    else:
+        return 832, 1216
+
 # NOTE: add credit management methods such update_usage_credits, check_usage_credits etc.. for hosting
 class GPUProcessor(MachineLearningProcessor):
     def __init__(self):
@@ -46,7 +54,8 @@ class GPUProcessor(MachineLearningProcessor):
         if model.display_name() in models_using_sdxl:
             res = []
             for file in file_list:
-                new_width, new_height = 1024 if query_obj.width == 512 else 768, 1024 if query_obj.height == 512 else 768
+                new_width, new_height = determine_dimensions_for_sdxl(query_obj.width, query_obj.height)
+                
                 # although the new_file created using create_new_file has the same location as the original file, it is 
                 # scaled to the original resolution after inference save (so resize has no effect)
                 new_file = normalize_size_internal_file_obj(file, dim=[new_width, new_height], create_new_file=True)

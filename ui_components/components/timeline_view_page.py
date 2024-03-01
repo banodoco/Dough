@@ -18,7 +18,6 @@ def timeline_view_page(shot_uuid: str, h2):
 
         if "view" not in st.session_state:
             st.session_state["view"] = views[0]
-            st.session_state["manual_select"] = None
 
         st.write("")         
         with st.expander("📋 Explorer shortlist",expanded=True):

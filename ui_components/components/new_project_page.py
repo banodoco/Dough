@@ -22,13 +22,14 @@ def new_project_page():
     
     # Prompt user for project naming within project_column
     with project_column:
-        new_project_name = st.text_input("Project name:", value="")
+        new_project_name = st.text_input("Project name:", value="")        
 
     # Prompt user for video dimension specifications
-    v1, v2, v3 = st.columns([3,1,10])
+    v1, v2, v3 = st.columns([6,3,12])
         
     frame_sizes = ["512x512", "768x512", "512x768"]
     with v1:
+        
         frame_size = st.radio("Select frame size:", options=frame_sizes, key="frame_size",horizontal=True)
         if frame_size == "512x512":
             width = 512
@@ -39,24 +40,20 @@ def new_project_page():
         elif frame_size == "512x768":
             width = 512
             height = 768
-    with v2:        
+    
+    with v2:                              
         img = Image.new('RGB', (width, height), color = (73, 109, 137))
         st.image(img, use_column_width=True)        
         # st.info("Uploaded images will be resized to the selected dimensions.")
-
 
     with v1:
         audio = st.radio("Audio:", ["No audio", "Attach new audio"], key="audio", horizontal=True)
 
         # Display audio upload option if user selects "Attach new audio"
         if audio == "Attach new audio":
-            audio_upload_column, audio_info_column = st.columns([4, 5])
-            with audio_upload_column:
-                uploaded_audio = st.file_uploader("Choose an audio file:")
-            with audio_info_column:
-                st.write("")
-                st.write("")
-                st.info("Make sure that this audio is around the same length as your video.")
+      
+            uploaded_audio = st.file_uploader("Choose an audio file:")
+        
         else:
             uploaded_audio = None
 
@@ -67,13 +64,9 @@ def new_project_page():
         if not new_project_name:
             st.error("Please enter a project name.")
         else:
-            
             current_user = data_repo.get_first_active_user()
-
             new_project, shot = create_new_project(current_user, new_project_name, width, height)
             new_timing = create_frame_inside_shot(shot.uuid, 0)
-            
-
             # remvoing the initial frame which moved to the 1st position 
             # (since creating new project also creates a frame)
             shot = data_repo.get_shot_from_number(new_project.uuid, 1)
@@ -99,4 +92,5 @@ def new_project_page():
             st.success("Project created successfully!")
             time.sleep(1)     
             st.rerun()
+
     st.markdown("***")

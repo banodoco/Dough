@@ -1,5 +1,6 @@
 import streamlit as st
 from ui_components.methods.common_methods import add_new_shot
+from ui_components.widgets.common_element import duplicate_shot_button
 from ui_components.widgets.shot_view import shot_keyframe_element, shot_adjustment_button, shot_animation_button, update_shot_name, update_shot_duration, move_shot_buttons, delete_shot_button, create_video_download_button
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
@@ -55,6 +56,7 @@ def timeline_view(shot_uuid, stage):
                 update_shot_duration(shot.uuid)
                 move_shot_buttons(shot, "side")
                 delete_shot_button(shot.uuid)
+                duplicate_shot_button(shot.uuid, position="timeline_view")
                 if shot.main_clip:
                     create_video_download_button(shot.main_clip.location, tag="main_clip")
                 
@@ -66,12 +68,7 @@ def timeline_view(shot_uuid, stage):
                 st.markdown("### Add new shot")
                 add_new_shot_element(shot, data_repo)
 
-
-        
-
-
 def add_new_shot_element(shot, data_repo):
-
     new_shot_name = st.text_input("Shot Name:",max_chars=25)
 
     if st.button('Add new shot', type="primary", key=f"add_shot_btn_{shot.uuid}"):

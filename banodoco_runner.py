@@ -14,7 +14,7 @@ import sentry_sdk
 import setproctitle
 from dotenv import load_dotenv
 import django
-from shared.constants import LOCAL_DATABASE_NAME, OFFLINE_MODE, InferenceParamType, InferenceStatus, InferenceType, ProjectMetaData, HOSTED_BACKGROUND_RUNNER_MODE
+from shared.constants import COMFY_PORT, LOCAL_DATABASE_NAME, OFFLINE_MODE, InferenceParamType, InferenceStatus, InferenceType, ProjectMetaData, HOSTED_BACKGROUND_RUNNER_MODE
 from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
 from ui_components.methods.file_methods import load_from_env, save_to_env
@@ -79,13 +79,13 @@ def main():
     print('runner running')
     while True:
         if TERMINATE_SCRIPT:
-            stop_server(8188)
+            stop_server(COMFY_PORT)
             return
 
         if SERVER == 'development':
             if not is_app_running():
                 if retries <=  0:
-                    stop_server(8188)
+                    stop_server(COMFY_PORT)
                     print('runner stopped')
                     return
                 retries -= 1

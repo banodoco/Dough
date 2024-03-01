@@ -1051,8 +1051,6 @@ class DBRepo:
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
         
-        print(attributes.data)
-        
         if 'uuid' in attributes.data and attributes.data['uuid']:
             app_setting = AppSetting.objects.filter(uuid=attributes.data['uuid'], is_disabled=False).first()
         else:

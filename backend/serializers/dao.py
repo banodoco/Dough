@@ -122,3 +122,4 @@ class UpdateSettingDao(serializers.Serializer):
     input_type = serializers.CharField(max_length=255, required=False)
     width = serializers.IntegerField(required=False)
     height = serializers.IntegerField(required=False)
+    name = serializers.CharField(max_length=255, required=False)
