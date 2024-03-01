@@ -14,6 +14,7 @@ from ui_components.methods.file_methods import generate_pil_image
 from streamlit_option_menu import option_menu
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from ui_components.widgets.add_key_frame_element import add_key_frame,add_key_frame_section
+from ui_components.widgets.common_element import duplicate_shot_button
 from ui_components.widgets.frame_movement_widgets import change_frame_shot, delete_frame_button, jump_to_single_frame_view_button, move_frame_back_button, move_frame_forward_button, replace_image_widget
 from utils.common_utils import refresh_app
 from utils.data_repo.data_repo import DataRepo
@@ -171,15 +172,6 @@ def download_all_images(shot_uuid):
     os.remove(f"{shot.uuid}.zip")
 
     return data
-
-def duplicate_shot_button(shot_uuid):
-    data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
-    if st.button("Duplicate shot", key=f"duplicate_btn_{shot.uuid}", help="This will duplicate this shot.", use_container_width=True):
-        data_repo.duplicate_shot(shot.uuid)
-        st.success("Shot duplicated successfully")
-        time.sleep(0.3)
-        st.rerun()
 
 def delete_shot_button(shot_uuid):
     data_repo = DataRepo()
