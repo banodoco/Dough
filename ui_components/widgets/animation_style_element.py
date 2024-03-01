@@ -65,10 +65,10 @@ def animation_style_element(shot_uuid):
             st.session_state[f'lora_data_{shot.uuid}'] = []
 
         if f'strength_of_adherence_value_{shot.uuid}' not in st.session_state:
-            st.session_state[f'strength_of_adherence_value_{shot.uuid}'] = 0.3
+            st.session_state[f'strength_of_adherence_value_{shot.uuid}'] = 0.15
 
         if f'type_of_motion_context_index_{shot.uuid}' not in st.session_state:
-            st.session_state[f'type_of_motion_context_index_{shot.uuid}'] = 0
+            st.session_state[f'type_of_motion_context_index_{shot.uuid}'] = 1
 
         if f'positive_prompt_video_{shot.uuid}' not in st.session_state:
             st.session_state[f"positive_prompt_video_{shot.uuid}"] = ""
@@ -130,10 +130,8 @@ def animation_style_element(shot_uuid):
                                 st.write("")                   
                                 # if st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] is a int, make it a float
                                 if isinstance(st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'], int):
-                                    st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = float(st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'])
-                                    
-                                distance_to_next_frame = st.slider("Seconds to next frame:", min_value=0.25, max_value=6.00, step=0.25, key=f"distance_to_next_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'])                                
-                                
+                                    st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = float(st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'])                                    
+                                distance_to_next_frame = st.slider("Seconds to next frame:", min_value=0.25, max_value=6.00, step=0.25, key=f"distance_to_next_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'])
                                 distances_to_next_frames.append(distance_to_next_frame)                                    
                                 speed_of_transition = st.slider("Speed of transition:", min_value=0.45, max_value=0.7, step=0.01, key=f"speed_of_transition_widget_{idx}_{timing.uuid}", value=st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'])
                                 speeds_of_transitions.append(speed_of_transition)                                      

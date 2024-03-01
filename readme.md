@@ -167,8 +167,8 @@ pip3 install torch torchvision torchaudio --index-url https://download.pytorch.o
 
 ### Copy the env file
 
-```jsx
-cp .env.sample .env
+```bash
+copy .env.sample .env
 ```
 
 ### Run the app

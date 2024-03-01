@@ -3,6 +3,7 @@ import uuid
 import json
 import requests
 from django.db.models import F
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 import urllib
@@ -56,6 +57,19 @@ class Project(BaseModel):
     class Meta:
         app_label = 'backend'
         db_table = 'project'
+        
+    def __init__(self, *args, **kwargs):
+        super(Project, self).__init__(*args, **kwargs)
+        self.old_project_name = self.name
+    
+    def save(self, *args, **kwargs):
+        # if either this is a new project or it's name is being updated
+        # we check to make sure that it's name is not already present in the app
+        if self._state.adding or (self.old_project_name and self.old_project_name != self.name):
+            if Project.objects.filter(name=self.name, is_disabled=False).exists():
+                raise ValidationError("Project name already exists. Please input unique project name")
+            
+        super().save(*args, **kwargs)
 
 
 class AIModel(BaseModel):

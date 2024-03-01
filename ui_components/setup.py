@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 from moviepy.editor import *
-from shared.constants import SERVER, ServerType
+from shared.constants import SERVER, AppSubPage, CreativeProcessPage, ServerType
 from ui_components.widgets.sidebar_logger import sidebar_logger
 from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.shortlist_page import shortlist_page
@@ -74,7 +74,7 @@ def setup_app_ui():
             if app_settings.previous_project:
                 st.session_state["project_uuid"] = app_settings.previous_project
                 st.session_state["index_of_project_name"] = next((i for i, p in enumerate(
-                    project_list) if p.uuid == app_settings.previous_project), None)
+                    project_list) if str(p.uuid) == str(app_settings.previous_project)), None)
                 
                 # if index is not found (project deleted or data mismatch) assigning the first project as default
                 if not st.session_state["index_of_project_name"]:
@@ -95,6 +95,7 @@ def setup_app_ui():
             reset_project_state()
         
         st.session_state["project_uuid"] = project_list[selected_index].uuid
+        data_repo.update_app_setting(previous_project_id=st.session_state['project_uuid'])
         if 'maintain_state' not in st.session_state:
             st.session_state["maintain_state"] = False
 
@@ -108,7 +109,6 @@ def setup_app_ui():
             st.session_state['shot_uuid'] = shot_list[0].uuid
                 
         # print uuids of shots
-
         if "current_frame_index" not in st.session_state:
             st.session_state['current_frame_index'] = 1
 
@@ -118,6 +118,7 @@ def setup_app_ui():
             st.session_state["index_of_project_name"] = next((i for i, p in enumerate(
                 project_list) if p.uuid == st.session_state["project_uuid"]), None)
             data_repo.update_app_setting(previous_project=st.session_state["project_uuid"])
+
             st.rerun()
 
         if st.session_state["project_uuid"] == "":
@@ -125,10 +126,6 @@ def setup_app_ui():
                 "No projects found - create one in the 'New Project' section")
         else:
 
-            with st.sidebar:
-                with st.expander("🔍 Generation log", expanded=False):
-                    if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
-                        sidebar_logger(st.session_state["shot_uuid"])
 
             if not os.path.exists("videos/" + st.session_state["project_uuid"] + "/assets"):
                 create_working_assets(st.session_state["project_uuid"])
@@ -146,32 +143,71 @@ def setup_app_ui():
                 set_default_values(st.session_state["shot_uuid"])
 
                 with st.sidebar:
-                    creative_process_pages = ["Timeline", "Adjust Shot", "Adjust Frame", "Animate Shot"]
-                    if 'creative_process_manual_select' not in st.session_state:
-                        st.session_state['creative_process_manual_select'] = 0
-                        st.session_state['page'] = creative_process_pages[0]
-
+                    creative_process_pages = CreativeProcessPage.value_list()
                     
-                    # view_types = ["Explorer","Timeline","Individual"]
-                    creative_process_pages = ["Timeline", "Adjust Shot", "Animate Shot"]
-                    st.session_state['page'] = option_menu(
+                    # mapping subpages to their main page
+                    subpage_page_map = {
+                        # timeline 
+                        AppSubPage.TIMELINE.value: CreativeProcessPage.TIMELINE.value,
+                        # adjust shot
+                        AppSubPage.ADJUST_SHOT.value: CreativeProcessPage.ADJUST_SHOT.value,
+                        AppSubPage.KEYFRAME.value: CreativeProcessPage.ADJUST_SHOT.value,
+                        # animate shot
+                        AppSubPage.ANIMATE_SHOT.value: CreativeProcessPage.ANIMATE_SHOT.value
+                    }
+                    
+                    if 'current_subpage' not in st.session_state:
+                        st.session_state['current_subpage'] = st.session_state['prev_subpage'] = AppSubPage.TIMELINE.value
+                        
+                    if 'page' not in st.session_state:
+                        st.session_state['page'] = st.session_state['prev_page'] = CreativeProcessPage.TIMELINE.value
+
+                    if 'selected_page_idx' not in st.session_state:
+                        st.session_state['selected_page_idx'] = creative_process_pages.index(st.session_state['page'])
+                    
+                    # checking if the subpage has changed
+                    if 'prev_subpage' in st.session_state and st.session_state['prev_subpage'] != st.session_state['current_subpage']:
+                        main_page = subpage_page_map[st.session_state['current_subpage']]
+                        st.session_state['prev_subpage'] = st.session_state['current_subpage']
+                        st.session_state['page'] = st.session_state['prev_page'] = main_page
+                        st.session_state['selected_page_idx'] = creative_process_pages.index(st.session_state['page'])
+                        st.rerun()
+                    
+                    # 'page' state randomly resets therefore binding it to 'selected_page_idx'
+                    st.session_state['page'] = creative_process_pages[st.session_state['selected_page_idx']]
+                    
+                    def change_page(key):
+                        page = st.session_state[key]
+                        st.session_state['page'] = page
+                        
+                        for k, v in subpage_page_map.items():
+                            if v == st.session_state['page']:
+                                st.session_state['current_subpage'] = st.session_state['prev_subpage'] = k
+                                st.session_state['prev_page'] = st.session_state['page']
+                                st.session_state['selected_page_idx'] = creative_process_pages.index(st.session_state['page'])
+                                break
+                    
+                    _ = option_menu(
                         None,
                         creative_process_pages,
                         icons=[ 'bookshelf','aspect-ratio', "lightning-charge", 'stopwatch'],
                         menu_icon="cast",
                         orientation="vertical",
-                        key="section-selecto1r",
+                        key="page_opt_menu",
                         styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#bd3737"},
                                 "nav-link-selected": {"background-color": "#ff4b4b"}},
-                        manual_select=st.session_state['creative_process_manual_select']                        
+                        manual_select=st.session_state['selected_page_idx'],
+                        default_index=st.session_state['selected_page_idx'],
+                        on_change=change_page
                     )
 
-                    if st.session_state['page'] != "Adjust Shot":
+                    with st.sidebar:
+                        with st.expander("🔍 Generation log", expanded=True):
+                            # if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
+                            sidebar_logger(st.session_state["shot_uuid"])
+                    
+                    if st.session_state['page'] != creative_process_pages[1]:
                         st.session_state['current_frame_sidebar_selector'] = 0
-
-                    if st.session_state['creative_process_manual_select']  != None:
-                        st.session_state['creative_process_manual_select'] = None
-
 
                 if st.session_state['page'] == "Explore":
                     explorer_page(st.session_state["project_uuid"])

@@ -351,6 +351,8 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
         elif type_of_generation == InputImageStyling.IPADPTER_FACE_AND_PLUS.value and (st.session_state["input_image_1"] is None or st.session_state["input_image_2"] is None):
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload both images")        
+        elif type_of_generation == InputImageStyling.INPAINTING.value and not ("mask_to_use" in st.session_state and st.session_state["mask_to_use"]):
+            st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please create and save mask before generation")
         else:
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", on_click=lambda: toggle_generate_inference(position))
             
@@ -532,7 +534,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                         st.session_state["last_shot_number"] = shot_number 
                                         shot_uuid = shot_list[shot_number].uuid
 
-                                        add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
+                                        add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
                                         # removing this from the gallery view
                                         data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
                                         refresh_app(maintain_state=True)                  
