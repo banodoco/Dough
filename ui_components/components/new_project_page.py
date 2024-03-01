@@ -23,6 +23,7 @@ def new_project_page():
     # Prompt user for project naming within project_column
     with project_column:
         new_project_name = st.text_input("Project name:", value="")
+        st.text("NOTE: Project name should be unique")
 
     # Prompt user for video dimension specifications
     v1, v2, v3 = st.columns([3,1,10])
@@ -39,11 +40,11 @@ def new_project_page():
         elif frame_size == "512x768":
             width = 512
             height = 768
+    
     with v2:        
         img = Image.new('RGB', (width, height), color = (73, 109, 137))
         st.image(img, use_column_width=True)        
         # st.info("Uploaded images will be resized to the selected dimensions.")
-
 
     with v1:
         audio = st.radio("Audio:", ["No audio", "Attach new audio"], key="audio", horizontal=True)
@@ -67,13 +68,9 @@ def new_project_page():
         if not new_project_name:
             st.error("Please enter a project name.")
         else:
-            
             current_user = data_repo.get_first_active_user()
-
             new_project, shot = create_new_project(current_user, new_project_name, width, height)
             new_timing = create_frame_inside_shot(shot.uuid, 0)
-            
-
             # remvoing the initial frame which moved to the 1st position 
             # (since creating new project also creates a frame)
             shot = data_repo.get_shot_from_number(new_project.uuid, 1)
@@ -99,4 +96,5 @@ def new_project_page():
             st.success("Project created successfully!")
             time.sleep(1)     
             st.rerun()
+
     st.markdown("***")
