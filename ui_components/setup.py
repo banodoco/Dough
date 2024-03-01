@@ -74,7 +74,7 @@ def setup_app_ui():
             if app_settings.previous_project:
                 st.session_state["project_uuid"] = app_settings.previous_project
                 st.session_state["index_of_project_name"] = next((i for i, p in enumerate(
-                    project_list) if p.uuid == app_settings.previous_project), None)
+                    project_list) if str(p.uuid) == str(app_settings.previous_project)), None)
                 
                 # if index is not found (project deleted or data mismatch) assigning the first project as default
                 if not st.session_state["index_of_project_name"]:
@@ -95,6 +95,7 @@ def setup_app_ui():
             reset_project_state()
         
         st.session_state["project_uuid"] = project_list[selected_index].uuid
+        data_repo.update_app_setting(previous_project_id=st.session_state['project_uuid'])
         if 'maintain_state' not in st.session_state:
             st.session_state["maintain_state"] = False
 

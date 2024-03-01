@@ -53,7 +53,7 @@ def project_init():
         if not app_settings:
             online_user = data_repo.get_first_active_user()
             create_new_user_data(online_user)
-    
+
     # cloning basic comfyui (not installing packages atm)
     comfy_repo_url = "https://github.com/comfyanonymous/ComfyUI"
     comfy_manager_url = "https://github.com/ltdrdata/ComfyUI-Manager"
