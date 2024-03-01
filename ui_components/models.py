@@ -209,8 +209,7 @@ class InternalAppSettingObject:
         self.uuid = kwargs['uuid'] if 'uuid' in kwargs else None
         self.user = InternalUserObject(
             **kwargs["user"]) if 'user' in kwargs else None
-        self.previous_project = InternalProjectObject(
-            **kwargs["project"]) if key_present('project', kwargs) else None
+        self.previous_project = kwargs["previous_project"] if key_present('previous_project', kwargs) else None
         self.replicate_username = kwargs['replicate_username'] if 'replicate_username' in kwargs and kwargs['replicate_username'] else ""
         self.welcome_state = kwargs['welcome_state'] if 'welcome_state' in kwargs else 1
         self.aws_secret_access_key = kwargs['aws_secret_access_key'] if 'aws_secret_access_key' in kwargs else None
