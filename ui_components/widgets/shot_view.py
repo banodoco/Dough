@@ -256,6 +256,7 @@ def shot_adjustment_button(shot, show_label=False):
         st.session_state["shot_uuid"] = shot.uuid
         st.session_state['current_frame_sidebar_selector'] = 0
         st.session_state['current_subpage'] = AppSubPage.ADJUST_SHOT.value
+        st.session_state['selected_page_idx'] = 1
         st.session_state['shot_view_index'] = 1  
         st.rerun() 
 
@@ -263,7 +264,8 @@ def shot_animation_button(shot, show_label=False):
     button_label = "Shot Animation 🎞️" if show_label else "🎞️"
     if st.button(button_label, key=f"jump_to_shot_animation_{shot.uuid}", help=f"Animate '{shot.name}'", use_container_width=True):
         st.session_state["shot_uuid"] = shot.uuid
-        st.session_state['current_subpage'] = AppSubPage.ANIMATE_SHOT.value 
+        st.session_state['current_subpage'] = AppSubPage.ANIMATE_SHOT.value
+        st.session_state['selected_page_idx'] = 2
         st.session_state['shot_view_index'] = 0
         st.rerun() 
 

@@ -271,9 +271,3 @@ def refresh_app(maintain_state=False):
 def padded_integer(integer, pad_length=4):
     padded_string = str(integer).zfill(pad_length)
     return padded_string
-
-# for debugging
-def print_pages(dest = 'none'):
-    print(f"++++++++++++ pages {dest} ++++++++++++")
-    print("current subpage: ", st.session_state['current_subpage'], " prev subpage: ", st.session_state['prev_subpage'])
-    print("current page: ", st.session_state['page'], ' prev page: ', st.session_state['prev_page'])
