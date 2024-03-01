@@ -8,7 +8,7 @@ from PIL import Image
 import requests
 from io import BytesIO
 import streamlit as st
-from shared.constants import InferenceParamType
+from shared.constants import AppSubPage, InferenceParamType
 from ui_components.constants import WorkflowStageType
 from ui_components.methods.file_methods import generate_pil_image
 from streamlit_option_menu import option_menu
@@ -255,9 +255,7 @@ def shot_adjustment_button(shot, show_label=False):
     if st.button(button_label, key=f"jump_to_shot_adjustment_{shot.uuid}", help=f"Adjust '{shot.name}'", use_container_width=True):
         st.session_state["shot_uuid"] = shot.uuid
         st.session_state['current_frame_sidebar_selector'] = 0
-        st.session_state['creative_process_manual_select'] = 1
-        st.session_state["manual_select"] = 1          
-        st.session_state['shot_view_manual_select'] = 1  
+        st.session_state['current_subpage'] = AppSubPage.ADJUST_SHOT.value
         st.session_state['shot_view_index'] = 1  
         st.rerun() 
 
@@ -265,9 +263,7 @@ def shot_animation_button(shot, show_label=False):
     button_label = "Shot Animation 🎞️" if show_label else "🎞️"
     if st.button(button_label, key=f"jump_to_shot_animation_{shot.uuid}", help=f"Animate '{shot.name}'", use_container_width=True):
         st.session_state["shot_uuid"] = shot.uuid
-        st.session_state['creative_process_manual_select'] = 2
-        # st.session_state["manual_select"] = 1       
-        st.session_state['shot_view_manual_select'] = 0       
+        st.session_state['current_subpage'] = AppSubPage.ANIMATE_SHOT.value 
         st.session_state['shot_view_index'] = 0
         st.rerun() 
 

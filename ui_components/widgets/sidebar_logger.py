@@ -20,8 +20,6 @@ def sidebar_logger(shot_uuid):
     z1, z2 = st.columns([1, 1])
     if z1.button("Refresh log", disabled=refresh_disabled, help="You can also press 'r' on your keyboard to refresh."): st.rerun()
 
-
-    
     with z1:
         status_option = st.radio("Statuses to display:", options=["In Progress", "All","Succeeded", "Failed"], key="status_option", index=0, horizontal=True)
     
@@ -46,7 +44,6 @@ def sidebar_logger(shot_uuid):
     page_number = z2.number_input('Page number', min_value=1, max_value=project_setting.total_log_pages, value=1, step=1)
     items_per_page = 5
     # items_per_page = z2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
-    
 
     log_filter_data = {
         "project_id" : shot.project.uuid,
@@ -77,7 +74,6 @@ def sidebar_logger(shot_uuid):
             log_file_dict[str(file.inference_log.uuid)] = file
 
         st.markdown("---")
-
         for _, log in enumerate(log_list):
             origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
             if not log.status:
@@ -88,7 +84,6 @@ def sidebar_logger(shot_uuid):
                 output_url = log_file_dict[log.uuid].location
 
             c1, c2, c3 = st.columns([1, 0.7 if output_url else 0.01, 1])
-
             with c1:                
                 input_params = json.loads(log.input_params)
                 prompt = input_params.get('prompt', 'No prompt found')
@@ -98,8 +93,6 @@ def sidebar_logger(shot_uuid):
                 except Exception as e:
                     model_name = 'Unavailable'
                 st.caption(f"Model: {model_name}")
-
-
                                             
             with c2:
                 if output_url:                                              

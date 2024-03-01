@@ -1,5 +1,6 @@
 import time
 import streamlit as st
+from shared.constants import AppSubPage
 from ui_components.constants import WorkflowStageType
 from ui_components.methods.common_methods import add_image_variant, promote_image_variant, save_and_promote_image
 from ui_components.models import InternalFrameTimingObject
@@ -135,15 +136,5 @@ def jump_to_single_frame_view_button(display_number, timing_list, src,uuid=None)
     
     if st.button(f"Jump to #{display_number}", key=f"{src}_{uuid}", use_container_width=True):
         st.session_state['current_frame_sidebar_selector'] = display_number
-        st.session_state["creative_process_manual_select"] = 1
-        '''
-        st.session_state['prev_frame_index'] = st.session_state['current_frame_index'] = display_number
-        st.session_state['current_frame_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].uuid                
-        st.session_state['frame_styling_view_type_manual_select'] = 2
-        st.session_state['shot_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].shot.uuid
-        st.session_state['prev_shot_index'] = st.session_state['current_shot_index'] = timing_list[st.session_state['current_frame_index'] - 1].shot.shot_idx
-        st.session_state["creative_process_manual_select"] = 4
-        st.session_state["styling_view_selector_manual_select"] = 0
-        st.session_state['page'] = "Key Frames"
-        '''
+        st.session_state["current_subpage"] = AppSubPage.KEYFRAME.value
         st.rerun()

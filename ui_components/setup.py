@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 from moviepy.editor import *
-from shared.constants import SERVER, ServerType
+from shared.constants import SERVER, AppSubPage, CreativeProcessPage, ServerType
 from ui_components.widgets.sidebar_logger import sidebar_logger
 from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.shortlist_page import shortlist_page
@@ -14,7 +14,7 @@ from ui_components.components.new_project_page import new_project_page
 from ui_components.components.project_settings_page import project_settings_page
 from ui_components.components.video_rendering_page import video_rendering_page
 from streamlit_option_menu import option_menu
-from utils.common_utils import set_default_values
+from utils.common_utils import print_pages, set_default_values
 
 from ui_components.methods.common_methods import check_project_meta_data, update_app_setting_keys
 from ui_components.models import InternalAppSettingObject
@@ -147,23 +147,64 @@ def setup_app_ui():
                 set_default_values(st.session_state["shot_uuid"])
 
                 with st.sidebar:
-                    creative_process_pages = ["Timeline", "Adjust Shot", "Animate Shot"]
-                    if 'page' not in st.session_state:
-                        selected_page_idx = 0
-                    else:
-                        selected_page_idx = creative_process_pages.index(st.session_state['page'])
+                    creative_process_pages = CreativeProcessPage.value_list()
+                    
+                    # mapping subpages to their main page
+                    subpage_page_map = {
+                        # timeline 
+                        AppSubPage.TIMELINE.value: CreativeProcessPage.TIMELINE.value,
+                        # adjust shot
+                        AppSubPage.ADJUST_SHOT.value: CreativeProcessPage.ADJUST_SHOT.value,
+                        AppSubPage.KEYFRAME.value: CreativeProcessPage.ADJUST_SHOT.value,
+                        # animate shot
+                        AppSubPage.ANIMATE_SHOT.value: CreativeProcessPage.ANIMATE_SHOT.value
+                    }
+                    
+                    if 'current_subpage' not in st.session_state:
+                        st.session_state['current_subpage'] = st.session_state['prev_subpage'] = AppSubPage.TIMELINE.value
                         
-                    st.session_state['page'] = option_menu(
+                    if 'page' not in st.session_state:
+                        st.session_state['page'] = st.session_state['prev_page'] = CreativeProcessPage.TIMELINE.value
+                        
+                    # checking if the subpage has changed
+                    if 'prev_subpage' in st.session_state and st.session_state['prev_subpage'] != st.session_state['current_subpage']:
+                        main_page = subpage_page_map[st.session_state['current_subpage']]
+                        st.session_state['prev_subpage'] = st.session_state['current_subpage']
+                        st.session_state['page'] = st.session_state['prev_page'] = main_page
+                        st.session_state['selected_page_idx'] = creative_process_pages.index(st.session_state['page'])
+                        print_pages()
+                        st.rerun()
+
+                    if 'selected_page_idx' not in st.session_state:
+                        st.session_state['selected_page_idx'] = creative_process_pages.index(st.session_state['page'])
+                    
+                    st.session_state['page'] = creative_process_pages[st.session_state['selected_page_idx']]
+                    page = option_menu(
                         None,
                         creative_process_pages,
                         icons=[ 'bookshelf','aspect-ratio', "lightning-charge", 'stopwatch'],
                         menu_icon="cast",
                         orientation="vertical",
-                        key="section-selecto1r",
+                        key="page_opt_menu",
                         styles={"nav-link": {"font-size": "15px", "margin":"0px", "--hover-color": "#bd3737"},
                                 "nav-link-selected": {"background-color": "#ff4b4b"}},
-                        default_index=selected_page_idx
+                        manual_select=st.session_state['selected_page_idx']
                     )
+                    
+                    st.session_state['selected_page_idx'] = creative_process_pages.index(page)
+                    st.session_state['page'] = page
+                    # checking if the page changed, if yes then updating the subpage as well
+                    if 'page' in st.session_state and 'prev_page' in st.session_state and st.session_state['prev_page'] != st.session_state['page']:
+                        for k, v in subpage_page_map.items():
+                            if v == st.session_state['page']:
+                                st.session_state['current_subpage'] = st.session_state['prev_subpage'] = k
+                                st.session_state['prev_page'] = st.session_state['page']
+                                st.session_state['selected_page_idx'] = creative_process_pages.index(st.session_state['page'])
+                                print_pages()
+                                st.rerun()
+                    
+                    st.session_state['prev_page'] = st.session_state['page']
+                    st.session_state['prev_subpage'] = st.session_state['current_subpage']
 
                     if st.session_state['page'] != creative_process_pages[1]:
                         st.session_state['current_frame_sidebar_selector'] = 0

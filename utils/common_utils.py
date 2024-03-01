@@ -8,7 +8,7 @@ import socket
 import streamlit as st
 import json
 import platform
-from shared.constants import SERVER, ServerType
+from shared.constants import SERVER, CreativeProcessPage, ServerType
 from ui_components.models import InternalUserObject
 from utils.cache.cache import CacheKey, StCache
 from utils.data_repo.data_repo import DataRepo
@@ -18,8 +18,11 @@ def set_default_values(shot_uuid):
     data_repo = DataRepo()
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
 
+    if 'selected_page_idx' not in st.session_state:
+        st.session_state['selected_page_idx'] = 0
+    
     if "page" not in st.session_state:
-        st.session_state['page'] = "Timeline"
+        st.session_state['page'] = CreativeProcessPage.value_list()[st.session_state['selected_page_idx']]
 
     if "strength" not in st.session_state:
         st.session_state['strength'] = DefaultProjectSettingParams.batch_strength
@@ -268,3 +271,9 @@ def refresh_app(maintain_state=False):
 def padded_integer(integer, pad_length=4):
     padded_string = str(integer).zfill(pad_length)
     return padded_string
+
+# for debugging
+def print_pages(dest = 'none'):
+    print(f"++++++++++++ pages {dest} ++++++++++++")
+    print("current subpage: ", st.session_state['current_subpage'], " prev subpage: ", st.session_state['prev_subpage'])
+    print("current page: ", st.session_state['page'], ' prev page: ', st.session_state['prev_page'])

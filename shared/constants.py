@@ -105,7 +105,21 @@ class ProjectMetaData(ExtendedEnum):
 class SortOrder(ExtendedEnum):
     ASCENDING = "asc"
     DESCENDING = "desc"
+    
+class CreativeProcessPage(ExtendedEnum):
+    TIMELINE = 'Timeline'
+    ADJUST_SHOT = 'Adjust Shot'
+    ANIMATE_SHOT = 'Animate Shot'
 
+# these can be one of the main creative process page or some other sub page inside it
+class AppSubPage(ExtendedEnum):
+    TIMELINE = 'Timeline'
+    ADJUST_SHOT = 'Adjust Shot'
+    ANIMATE_SHOT = 'Animate Shot'
+    KEYFRAME = 'Key Frames'
+    SHOT = 'Shots'
+    
+    
 ##################### global constants #####################
 SERVER = os.getenv('SERVER', ServerType.PRODUCTION.value)
 
@@ -130,3 +144,5 @@ else:
     ssm = boto3.client("ssm", region_name="ap-south-1")
 
     SECRET_ACCESS_TOKEN = ssm.get_parameter(Name='/backend/banodoco/secret-access-token')['Parameter']['Value']
+    
+COMFY_PORT = 6969

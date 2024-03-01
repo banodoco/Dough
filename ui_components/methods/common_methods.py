@@ -689,8 +689,8 @@ def process_inference_output(**kwargs):
                     with open(output, 'rb') as f:
                         output = f.read()
 
-            if 'normalise_speed' in settings and settings['normalise_speed']:
-                output = VideoProcessor.update_video_bytes_speed(output, shot.duration)
+            # if 'normalise_speed' in settings and settings['normalise_speed']:
+            #     output = VideoProcessor.update_video_bytes_speed(output, shot.duration)
 
             video_location = "videos/" + str(shot.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
             video = convert_bytes_to_file(

@@ -340,8 +340,8 @@ class ComfyDataTransform:
         workflow['558']['inputs']['type_of_strength_distribution'] = sm_data.get('type_of_strength_distribution')
         workflow['558']['inputs']['linear_strength_value'] = sm_data.get('linear_strength_value')
         
-        workflow['558']['inputs']['dynamic_strength_values'] = str(sm_data.get('dynamic_strength_values'))[1:-1]  
-        workflow['558']['inputs']['linear_frame_distribution_value'] = sm_data.get('linear_frame_distribution_value')                
+        workflow['558']['inputs']['dynamic_strength_values'] = str(sm_data.get('dynamic_strength_values'))[1:-1]
+        workflow['558']['inputs']['linear_frame_distribution_value'] = sm_data.get('linear_frame_distribution_value')
         workflow['558']['inputs']['dynamic_frame_distribution_values'] = ', '.join(str(int(value)) for value in sm_data.get('dynamic_frame_distribution_values'))        
         workflow['558']['inputs']['type_of_frame_distribution'] = sm_data.get('type_of_frame_distribution')
         workflow['558']['inputs']['type_of_key_frame_influence'] = sm_data.get('type_of_key_frame_influence')

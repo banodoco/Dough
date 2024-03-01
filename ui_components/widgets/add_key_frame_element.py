@@ -1,7 +1,7 @@
 import time
 from typing import Union
 import streamlit as st
-from shared.constants import AnimationStyleType
+from shared.constants import AnimationStyleType, AppSubPage
 from ui_components.constants import CreativeProcessType, WorkflowStageType
 from ui_components.models import InternalFileObject, InternalFrameTimingObject
 from ui_components.widgets.image_zoom_widgets import zoom_inputs
@@ -120,7 +120,7 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
             st.session_state['current_frame_index'] = min(len(timing_list), target_aux_frame_index + 1)
             st.session_state['current_frame_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].uuid
 
-        st.session_state['page'] = CreativeProcessType.STYLING.value
+        st.session_state['current_subpage'] = AppSubPage.KEYFRAME.value
         st.session_state['section_index'] = 0
     
     if refresh_state:
