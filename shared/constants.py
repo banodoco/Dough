@@ -145,4 +145,4 @@ else:
 
     SECRET_ACCESS_TOKEN = ssm.get_parameter(Name='/backend/banodoco/secret-access-token')['Parameter']['Value']
     
-COMFY_PORT = 6969
+COMFY_PORT = 4333

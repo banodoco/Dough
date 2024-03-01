@@ -328,3 +328,10 @@ def determine_dimensions_for_sdxl(width, height):
         return 1216, 832
     else:
         return 832, 1216
+
+def list_files_in_folder(folder_path):
+    files = []
+    for file in os.listdir(folder_path):
+        if os.path.isfile(os.path.join(folder_path, file)):
+            files.append(file)
+    return files

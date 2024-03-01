@@ -14,6 +14,7 @@ from ui_components.methods.file_methods import generate_pil_image
 from streamlit_option_menu import option_menu
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from ui_components.widgets.add_key_frame_element import add_key_frame,add_key_frame_section
+from ui_components.widgets.common_element import duplicate_shot_button
 from ui_components.widgets.frame_movement_widgets import change_frame_shot, delete_frame_button, jump_to_single_frame_view_button, move_frame_back_button, move_frame_forward_button, replace_image_widget
 from utils.common_utils import refresh_app
 from utils.data_repo.data_repo import DataRepo
@@ -172,15 +173,6 @@ def download_all_images(shot_uuid):
 
     return data
 
-def duplicate_shot_button(shot_uuid):
-    data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
-    if st.button("Duplicate shot", key=f"duplicate_btn_{shot.uuid}", help="This will duplicate this shot.", use_container_width=True):
-        data_repo.duplicate_shot(shot.uuid)
-        st.success("Shot duplicated successfully")
-        time.sleep(0.3)
-        st.rerun()
-
 def delete_shot_button(shot_uuid):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
@@ -297,17 +289,7 @@ def shift_frame_to_position(timing_uuid, target_position):
         time.sleep(0.5)
         return
 
-    # Update the position of the current frame and adjust other frames accordingly
-    if target_position > current_position:
-        # Moving forward in the list
-        for i in range(current_position, target_position):
-            data_repo.update_specific_timing(timing_list[i + 1].uuid, aux_frame_index=i)
-    else:
-        # Moving backward in the list
-        for i in range(current_position, target_position, -1):
-            data_repo.update_specific_timing(timing_list[i - 1].uuid, aux_frame_index=i)
-
-    # Finally, update the position of the current frame
+    # Update the position of the current frame
     data_repo.update_specific_timing(timing.uuid, aux_frame_index=target_position)
 
 
@@ -315,10 +297,9 @@ def shift_frame_button(idx,shot):
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
     col1, col2 = st.columns([1,1])
     with col1:
-        position_to_shift_to = st.number_input("Shift to position:", value=1, key=f"shift_to_position_{timing_list[idx].uuid}",min_value=1, max_value=len(timing_list))
+        position_to_shift_to = st.number_input("Shift to position:", value=timing_list[idx].aux_frame_index+1, key=f"shift_to_position_{timing_list[idx].uuid}",min_value=1, max_value=len(timing_list))
     with col2:
         st.write("")
-        
         if st.button("Shift", key=f"shift_frame_{timing_list[idx].uuid}", use_container_width=True):
             shift_frame_to_position(timing_list[idx].uuid, position_to_shift_to)
             st.rerun()

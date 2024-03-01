@@ -11,7 +11,7 @@ from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
 from shared.constants import AnimationStyleType
 from ui_components.methods.common_methods import add_image_variant
-from ui_components.methods.file_methods import save_or_host_file
+from ui_components.methods.file_methods import list_files_in_folder, save_or_host_file
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalUserObject
 from utils.common_utils import create_working_assets
 from utils.constants import ML_MODEL_LIST
@@ -116,39 +116,42 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
 
     shot = data_repo.create_shot(**shot_data)
 
-    # NOTE: removing sample timing frame
-    # create a sample timing frame
-    # st.session_state["project_uuid"] = project.uuid
-    # sample_file_location = "sample_assets/sample_images/v.jpeg"
-    # img = Image.open(sample_file_location)
-    # img = img.resize((width, height))
+    # create timings for init_images 
+    init_images_path = os.path.join("sample_assets", "sample_images", "init_frames")
+    init_image_list = list_files_in_folder(init_images_path)
+    st.session_state["project_uuid"] = project.uuid
+    
+    for idx, img_path in enumerate(init_image_list):
+        img_path = os.path.join(init_images_path, img_path)
+        img = Image.open(img_path)
+        img = img.resize((width, height))
 
-    # unique_file_name = f"{str(uuid.uuid4())}.png"
-    # file_location = f"videos/{project.uuid}/resources/prompt_images/{unique_file_name}"
-    # hosted_url = save_or_host_file(img, file_location, mime_type='image/png', dim=(width, height))
-    # file_data = {
-    #     "name": str(uuid.uuid4()),
-    #     "type": InternalFileType.IMAGE.value,
-    #     "project_id": project.uuid,
-    #     "dim": (width, height),
-    # }
+        unique_file_name = f"{str(uuid.uuid4())}.png"
+        file_location = f"videos/{project.uuid}/resources/prompt_images/{unique_file_name}"
+        hosted_url = save_or_host_file(img, file_location, mime_type='image/png', dim=(width, height))
+        file_data = {
+            "name": str(uuid.uuid4()),
+            "type": InternalFileType.IMAGE.value,
+            "project_id": project.uuid,
+            "dim": (width, height),
+        }
 
-    # if hosted_url:
-    #     file_data.update({'hosted_url': hosted_url})
-    # else:
-    #     file_data.update({'local_path': file_location})
+        if hosted_url:
+            file_data.update({'hosted_url': hosted_url})
+        else:
+            file_data.update({'local_path': file_location})
 
-    # source_image = data_repo.create_file(**file_data)
+        source_image = data_repo.create_file(**file_data)
 
-    # timing_data = {
-    #     "frame_time": 0.0,
-    #     "aux_frame_index": 0,
-    #     "source_image_id": source_image.uuid,
-    #     "shot_id": shot.uuid,
-    # }
-    # timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
+        timing_data = {
+            "frame_time": 0.0,
+            "aux_frame_index": idx,
+            "source_image_id": source_image.uuid,
+            "shot_id": shot.uuid,
+        }
+        timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
 
-    # add_image_variant(source_image.uuid, timing.uuid)
+        add_image_variant(source_image.uuid, timing.uuid)
 
     # create default ai models
     model_list = create_predefined_models(user)
