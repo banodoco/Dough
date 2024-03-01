@@ -52,6 +52,7 @@ class APIRepo:
         # project
         self.PROJECT_URL = '/v1/data/project'
         self.PROJECT_LIST_URL = '/v1/data/project/list'
+        self.EXPLORER_STATS_URL = '/v1/data/project/stats'
         
         # project setting
         self.PROJECT_SETTING_URL = '/v1/data/project-setting'
@@ -65,6 +66,7 @@ class APIRepo:
         self.FILE_LIST_URL = '/v1/data/file/list'
         self.FILE_UUID_LIST_URL = '/v1/data/file/uuid-list'
         self.FILE_UPLOAD_URL = '/v1/data/file/upload'
+        self.FILE_EXTRA_URL = '/v1/data/file/extra'      # TODO: fix url patterns
         
         # app setting
         self.APP_SETTING_URL = '/v1/data/app-setting'
@@ -86,6 +88,7 @@ class APIRepo:
         self.SHOT_INTERPOLATED_CLIP = '/v1/data/shot/interpolated-clip'
         self.SHOT_DUPLICATE_URL = '/v1/data/shot/duplicate'
 
+
     def logout(self):
         delete_url_param(AUTH_TOKEN)
         st.rerun()
@@ -94,7 +97,7 @@ class APIRepo:
     def _get_headers(self, content_type="application/json"):
         auth_token = get_url_param(AUTH_TOKEN)
         if not auth_token and SERVER != ServerType.DEVELOPMENT.value:
-            if not HOSTED_BACKGROUND_RUNNER_MODE:
+            if HOSTED_BACKGROUND_RUNNER_MODE in [False, 'False']:
                 self.logout()
             else:
                 from ui_components.methods.file_methods import load_from_env
@@ -141,7 +144,7 @@ class APIRepo:
         headers = {}
         headers["Authorization"] = f"Bearer {refresh_token}"
         headers["Content-Type"] = "application/json"
-        res = requests.get(self.base_url + self.AUTH_OP_URL, headers=headers)
+        res = requests.get(self.base_url + self.AUTH_REFRESH_URL, headers=headers)
         payload = { 'data': None }
         res_json = json.loads(res._content)
         if res.status_code == 200 and res_json['status']:
@@ -246,6 +249,14 @@ class APIRepo:
         res = self.http_put(url=self.FILE_URL, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
     
+    def get_file_count_from_type(self, file_tag, project_uuid):
+        res = self.http_get(self.FILE_EXTRA_URL, params={'file_tag': file_tag, 'project_uuid': project_uuid})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    def update_temp_gallery_images(self, project_uuid):
+        res = self.http_put(self.FILE_EXTRA_URL, data={'uuid': project_uuid})
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
     # project
     def get_project_from_uuid(self, uuid):
         res = self.http_get(self.PROJECT_URL, params={'uuid': uuid})
@@ -341,7 +352,7 @@ class APIRepo:
        return InternalResponse(res['payload'], 'success', res['status'])
     
     def get_timing_from_frame_number(self, shot_uuid, frame_number):
-        res = self.http_get(self.PROJECT_TIMING_URL, params={'project_id': shot_uuid, 'frame_number': frame_number})
+        res = self.http_get(self.PROJECT_TIMING_URL, params={'shot_id': shot_uuid, 'frame_number': frame_number})
         return InternalResponse(res['payload'], 'success', res['status']) 
     
     # this is based on the aux_frame_index and not the order in the db
@@ -401,8 +412,8 @@ class APIRepo:
         res = self.http_get(self.APP_SETTING_URL, params={'uuid': uuid})
         return InternalResponse(res['payload'], 'success', res['status'])
     
-    def get_app_secrets_from_user_uuid(self, uuid=None):
-        res = self.http_get(self.APP_SECRET_URL)
+    def get_app_secrets_from_user_uuid(self, uuid=None, secret_access=None):
+        res = self.http_post(self.APP_SECRET_URL, data={'secret_access': secret_access})
         return InternalResponse(res['payload'], 'success', res['status'])
     
     # TODO: complete this code
@@ -510,7 +521,7 @@ class APIRepo:
         return InternalResponse(res['payload'], 'success', res['status'])
     
     def duplicate_shot(self, shot_uuid):
-        res = self.http_post(self.SHOT_DUPLICATE_URL, params={'uuid': shot_uuid})
+        res = self.http_post(self.SHOT_DUPLICATE_URL, data={'uuid': shot_uuid})
         return InternalResponse(res['payload'], 'success', res['status'])
 
     def delete_shot(self, shot_uuid):
@@ -520,4 +531,9 @@ class APIRepo:
     def add_interpolated_clip(self, shot_uuid, **kwargs):
         kwargs['uuid'] = shot_uuid
         res = self.http_post(self.SHOT_INTERPOLATED_CLIP, data=kwargs)
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
+    # combined
+    def get_explorer_pending_stats(self, project_uuid, log_status_list):
+        res = self.http_get(self.EXPLORER_STATS_URL, params={'project_uuid': project_uuid, 'log_status_list': log_status_list})
         return InternalResponse(res['payload'], 'success', res['status'])

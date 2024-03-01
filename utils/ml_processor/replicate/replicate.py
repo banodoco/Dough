@@ -17,7 +17,7 @@ import json
 import zipfile
 from PIL import Image
 
-from utils.ml_processor.replicate.constants import REPLICATE_MODEL, ReplicateModel
+from utils.ml_processor.constants import ML_MODEL, MLModel
 from ui_components.methods.data_logger import log_model_inference
 from utils.ml_processor.replicate.utils import check_user_credits, get_model_params_from_query_obj
 
@@ -40,12 +40,12 @@ class ReplicateProcessor(MachineLearningProcessor):
         self.training_data_upload_url = "https://dreambooth-api-experimental.replicate.com/v1/upload/data.zip"
         self.model_version_url = "https://api.replicate.com/v1/models"
 
-    def _update_usage_credits(self, time_taken):
+    def update_usage_credits(self, time_taken):
         data_repo = DataRepo()
-        cost = round((time_taken / 60) * 0.17, 3)
+        cost = round(time_taken * 0.004, 3)
         data_repo.update_usage_credits(-cost)
 
-    def get_model(self, input_model: ReplicateModel):
+    def get_model(self, input_model: MLModel):
         model = replicate.models.get(input_model.name)
         model_version = model.versions.get(input_model.version) if input_model.version else model
         return model_version
@@ -56,13 +56,18 @@ class ReplicateProcessor(MachineLearningProcessor):
         return model_version
     
     # it converts the standardized query_obj into params required by replicate
-    def predict_model_output_standardized(self, model: ReplicateModel, query_obj: MLQueryObject, queue_inference=False):
+    def predict_model_output_standardized(self, model: MLModel, query_obj: MLQueryObject, queue_inference=False):
         params = get_model_params_from_query_obj(model, query_obj)
+
+        # remoing buffers
+        query_obj.data = {}
+
         params[InferenceParamType.QUERY_DICT.value] = query_obj.to_json()
+        params["prompt"] = query_obj.prompt
         return self.predict_model_output(model, **params) if not queue_inference else self.queue_prediction(model, **params)
     
     @check_user_credits
-    def predict_model_output(self, replicate_model: ReplicateModel, **kwargs):
+    def predict_model_output(self, replicate_model: MLModel, **kwargs):
         # TODO: make unified interface for directing to queue_prediction
         queue_inference = kwargs.get('queue_inference', False)
         if queue_inference:
@@ -90,9 +95,9 @@ class ReplicateProcessor(MachineLearningProcessor):
             del kwargs['model']
 
         log = log_model_inference(replicate_model, end_time - start_time, **kwargs)
-        self._update_usage_credits(end_time - start_time)
+        self.update_usage_credits(end_time - start_time)
 
-        if replicate_model == REPLICATE_MODEL.clip_interrogator:
+        if replicate_model == ML_MODEL.clip_interrogator:
             output = output     # adding this for organisation purpose
         else:
             output = [output[-1]] if isinstance(output, list) else output
@@ -100,7 +105,7 @@ class ReplicateProcessor(MachineLearningProcessor):
         return output, log
     
     @check_user_credits
-    def queue_prediction(self, replicate_model: ReplicateModel, **kwargs):
+    def queue_prediction(self, replicate_model: MLModel, **kwargs):
         url = "https://api.replicate.com/v1/predictions"
         headers = {
             "Authorization": "Token " + os.environ.get("REPLICATE_API_TOKEN"),
@@ -125,7 +130,7 @@ class ReplicateProcessor(MachineLearningProcessor):
 
         # converting io buffers to base64 format
         for k, v in data['input'].items():
-            if not isinstance(v, (int, str, list, dict, float)):
+            if not isinstance(v, (int, str, list, dict, float, tuple)):
                 data['input'][k] = convert_file_to_base64(v)
 
         response = r.post(url, headers=headers, json=data)
@@ -153,7 +158,7 @@ class ReplicateProcessor(MachineLearningProcessor):
             self.logger.log(LoggingType.ERROR, f"Error in creating prediction: {response.content}")
     
     @check_user_credits
-    def predict_model_output_async(self, replicate_model: ReplicateModel, **kwargs):
+    def predict_model_output_async(self, replicate_model: MLModel, **kwargs):
         res = asyncio.run(self._multi_async_prediction(replicate_model, **kwargs))
 
         output_list = []
@@ -164,17 +169,17 @@ class ReplicateProcessor(MachineLearningProcessor):
                 del kwargs['model']
                 
             log = log_model_inference(replicate_model, time_taken, **kwargs)
-            self._update_usage_credits(time_taken)
+            self.update_usage_credits(time_taken)
             output_list.append((output, log))
 
         return output_list
     
-    async def _multi_async_prediction(self, replicate_model: ReplicateModel, **kwargs):
+    async def _multi_async_prediction(self, replicate_model: MLModel, **kwargs):
         variant_count = kwargs['variant_count'] if ('variant_count' in kwargs and kwargs['variant_count']) else 1
         res = await asyncio.gather(*[self._async_model_prediction(replicate_model, **kwargs) for _ in range(variant_count)])
         return res
     
-    async def _async_model_prediction(self, replicate_model: ReplicateModel, **kwargs):
+    async def _async_model_prediction(self, replicate_model: MLModel, **kwargs):
         model_version = self.get_model(replicate_model)
         start_time = time.time()
         output = await asyncio.to_thread(model_version.predict, **kwargs)
@@ -184,7 +189,7 @@ class ReplicateProcessor(MachineLearningProcessor):
 
     @check_user_credits
     def inpainting(self, video_name, input_image, prompt, negative_prompt):
-        model = self.get_model(REPLICATE_MODEL.sdxl_inpainting)
+        model = self.get_model(ML_MODEL.sdxl_inpainting)
         
         mask = "mask.png"
         mask = upload_file("mask.png", self.app_settings['aws_access_key'], self.app_settings['aws_secret_key'])
@@ -193,10 +198,10 @@ class ReplicateProcessor(MachineLearningProcessor):
             input_image = open(input_image, "rb")
 
         start_time = time.time()
-        output = model.predict(mask=mask, image=input_image,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)    
+        output = model.predict(mask=mask, image=input_image,prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25, strength=0.99)    
         end_time = time.time()
         log = log_model_inference(model, end_time - start_time, prompt=prompt, invert_mask=True, negative_prompt=negative_prompt,num_inference_steps=25)
-        self._update_usage_credits(end_time - start_time)
+        self.update_usage_credits(end_time - start_time)
 
         return output[0], log
     
@@ -219,7 +224,6 @@ class ReplicateProcessor(MachineLearningProcessor):
             
         return serving_url
 
-    
     # TODO: figure how to resolve model location setting, right now it's hardcoded to peter942/modnet
     @check_user_credits
     def dreambooth_training(self, training_file_url, instance_prompt, \
@@ -263,7 +267,7 @@ class ReplicateProcessor(MachineLearningProcessor):
 
         # TODO: currently approximating total credit cost of training based on image len, will fix this in the future
         time_taken = image_len * 3 * 60 # per image 3 mins
-        self._update_usage_credits(time_taken)
+        self.update_usage_credits(time_taken)
 
         return response
     

@@ -2,13 +2,14 @@
 import json
 from shared.constants import AIModelCategory, AIModelType
 from utils.enum import ExtendedEnum
-from utils.ml_processor.replicate.constants import REPLICATE_MODEL
+from utils.ml_processor.constants import ML_MODEL
 import streamlit as st
 
 
 AUTH_TOKEN = 'auth_details'
 REFRESH_AUTH_TOKEN = 'refresh_auth_details'
 RUNNER_PROCESS_NAME = 'banodoco_runner'
+RUNNER_PROCESS_PORT = 12345
 
 class ImageStage(ExtendedEnum):
     SOURCE_IMAGE = 'Source Image'
@@ -67,8 +68,8 @@ class MLQueryObject:
 ML_MODEL_LIST = [
         {
             "name" : 'stable-diffusion-img2img-v2.1',
-            "version": REPLICATE_MODEL.img2img_sd_2_1.version,
-            "replicate_url" : REPLICATE_MODEL.img2img_sd_2_1.name,
+            "version": ML_MODEL.img2img_sd_2_1.version,
+            "replicate_url" : ML_MODEL.img2img_sd_2_1.name,
             "category" : AIModelCategory.BASE_SD.value,
             "keyword" : "",
             "model_type": json.dumps([AIModelType.IMG2IMG.value]),
@@ -76,8 +77,8 @@ ML_MODEL_LIST = [
         },
         {
             "name" : 'depth2img',
-            "version": REPLICATE_MODEL.jagilley_controlnet_depth2img.version,
-            "replicate_url" : REPLICATE_MODEL.jagilley_controlnet_depth2img.name,
+            "version": ML_MODEL.jagilley_controlnet_depth2img.version,
+            "replicate_url" : ML_MODEL.jagilley_controlnet_depth2img.name,
             "category" : AIModelCategory.BASE_SD.value,
             "keyword" : "",
             "model_type": json.dumps([AIModelType.IMG2IMG.value]),
@@ -85,8 +86,8 @@ ML_MODEL_LIST = [
         },
         {
             "name" : 'pix2pix',
-            "version": REPLICATE_MODEL.arielreplicate.version,
-            "replicate_url" : REPLICATE_MODEL.arielreplicate.name,
+            "version": ML_MODEL.arielreplicate.version,
+            "replicate_url" : ML_MODEL.arielreplicate.name,
             "category" : AIModelCategory.BASE_SD.value,
             "keyword" : "",
             "model_type": json.dumps([AIModelType.IMG2IMG.value]),
@@ -115,8 +116,8 @@ ML_MODEL_LIST = [
         },
         {
             "name" : 'StyleGAN-NADA',
-            "version": REPLICATE_MODEL.stylegan_nada.version,
-            "replicate_url" : REPLICATE_MODEL.stylegan_nada.name,
+            "version": ML_MODEL.stylegan_nada.version,
+            "replicate_url" : ML_MODEL.stylegan_nada.name,
             "category" : AIModelCategory.BASE_SD.value,
             "keyword" : "",
             "model_type": json.dumps([AIModelType.IMG2IMG.value]),
@@ -124,8 +125,8 @@ ML_MODEL_LIST = [
         },
         {
             "name" : 'real-esrgan-upscaling',
-            "version": REPLICATE_MODEL.real_esrgan_upscale.version,
-            "replicate_url" : REPLICATE_MODEL.real_esrgan_upscale.name,
+            "version": ML_MODEL.real_esrgan_upscale.version,
+            "replicate_url" : ML_MODEL.real_esrgan_upscale.name,
             "category" : AIModelCategory.BASE_SD.value,
             "keyword" : "",
             "model_type": json.dumps([AIModelType.IMG2IMG.value]),
@@ -133,8 +134,8 @@ ML_MODEL_LIST = [
         },
         {
             "name" : 'controlnet_1_1_x_realistic_vision_v2_0',
-            "version": REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0.version,
-            "replicate_url" : REPLICATE_MODEL.controlnet_1_1_x_realistic_vision_v2_0.name,
+            "version": ML_MODEL.controlnet_1_1_x_realistic_vision_v2_0.version,
+            "replicate_url" : ML_MODEL.controlnet_1_1_x_realistic_vision_v2_0.name,
             "category" : AIModelCategory.BASE_SD.value,
             "keyword" : "",
             "model_type": json.dumps([AIModelType.IMG2IMG.value]),
@@ -142,8 +143,8 @@ ML_MODEL_LIST = [
         },
         {
             "name" : 'urpm-v1.3',
-            "version": REPLICATE_MODEL.urpm.version,
-            "replicate_url" : REPLICATE_MODEL.urpm.name,
+            "version": ML_MODEL.urpm.version,
+            "replicate_url" : ML_MODEL.urpm.name,
             "category" : AIModelCategory.BASE_SD.value,
             "keyword" : "",
             "model_type": json.dumps([AIModelType.IMG2IMG.value]),
@@ -151,8 +152,8 @@ ML_MODEL_LIST = [
         },
         {
             "name": "stable_diffusion_xl",
-            "version": REPLICATE_MODEL.sdxl.version,
-            "replicate_url": REPLICATE_MODEL.sdxl.name,
+            "version": ML_MODEL.sdxl.version,
+            "replicate_url": ML_MODEL.sdxl.name,
             "category": AIModelCategory.BASE_SD.value,
             "keyword": "",
             "model_type": json.dumps([AIModelType.TXT2IMG.value, AIModelType.IMG2IMG.value]),
@@ -160,8 +161,8 @@ ML_MODEL_LIST = [
         },
         {
             "name": "realistic_vision_5",
-            "version": REPLICATE_MODEL.realistic_vision_v5.version,
-            "replicate_url": REPLICATE_MODEL.realistic_vision_v5.name,
+            "version": ML_MODEL.realistic_vision_v5.version,
+            "replicate_url": ML_MODEL.realistic_vision_v5.name,
             "category": AIModelCategory.BASE_SD.value,
             "keyword": "",
             "model_type": json.dumps([AIModelType.TXT2IMG.value]),
@@ -169,8 +170,8 @@ ML_MODEL_LIST = [
         },
         {
             "name": "deliberate_v3",
-            "version": REPLICATE_MODEL.deliberate_v3.version,
-            "replicate_url": REPLICATE_MODEL.deliberate_v3.name,
+            "version": ML_MODEL.deliberate_v3.version,
+            "replicate_url": ML_MODEL.deliberate_v3.name,
             "category": AIModelCategory.BASE_SD.value,
             "keyword": "",
             "model_type": json.dumps([AIModelType.TXT2IMG.value, AIModelType.IMG2IMG.value]),
@@ -178,8 +179,8 @@ ML_MODEL_LIST = [
         },
         {
             "name": "dreamshaper_v7",
-            "version": REPLICATE_MODEL.dreamshaper_v7.version,
-            "replicate_url": REPLICATE_MODEL.dreamshaper_v7.name,
+            "version": ML_MODEL.dreamshaper_v7.version,
+            "replicate_url": ML_MODEL.dreamshaper_v7.name,
             "category": AIModelCategory.BASE_SD.value,
             "keyword": "",
             "model_type": json.dumps([AIModelType.TXT2IMG.value, AIModelType.IMG2IMG.value]),
@@ -187,8 +188,8 @@ ML_MODEL_LIST = [
         },
         {
             "name": "epic_realism_v5",
-            "version": REPLICATE_MODEL.epicrealism_v5.version,
-            "replicate_url": REPLICATE_MODEL.epicrealism_v5.name,
+            "version": ML_MODEL.epicrealism_v5.version,
+            "replicate_url": ML_MODEL.epicrealism_v5.name,
             "category": AIModelCategory.BASE_SD.value,
             "keyword": "",
             "model_type": json.dumps([AIModelType.TXT2IMG.value, AIModelType.IMG2IMG.value]),
@@ -196,8 +197,8 @@ ML_MODEL_LIST = [
         },
         {
             "name": "sdxl_controlnet",
-            "version": REPLICATE_MODEL.sdxl_controlnet.version,
-            "replicate_url": REPLICATE_MODEL.sdxl_controlnet.name,
+            "version": ML_MODEL.sdxl_controlnet.version,
+            "replicate_url": ML_MODEL.sdxl_controlnet.name,
             "category": AIModelCategory.BASE_SD.value,
             "keyword": "",
             "model_type": json.dumps([AIModelType.IMG2IMG.value]),
@@ -205,8 +206,8 @@ ML_MODEL_LIST = [
         },
         {
             "name": "sdxl_controlnet_openpose",
-            "version": REPLICATE_MODEL.sdxl_controlnet_openpose.version,
-            "replicate_url": REPLICATE_MODEL.sdxl_controlnet_openpose.name,
+            "version": ML_MODEL.sdxl_controlnet_openpose.version,
+            "replicate_url": ML_MODEL.sdxl_controlnet_openpose.name,
             "category": AIModelCategory.BASE_SD.value,
             "keyword": "",
             "model_type": json.dumps([AIModelType.IMG2IMG.value]),
@@ -214,8 +215,8 @@ ML_MODEL_LIST = [
         },
         {
             "name": "realistic_vision_img2img",
-            "version": REPLICATE_MODEL.realistic_vision_v5_img2img.version,
-            "replicate_url": REPLICATE_MODEL.realistic_vision_v5_img2img.name,
+            "version": ML_MODEL.realistic_vision_v5_img2img.version,
+            "replicate_url": ML_MODEL.realistic_vision_v5_img2img.name,
             "category": AIModelCategory.BASE_SD.value,
             "keyword": "",
             "model_type": json.dumps([AIModelType.IMG2IMG.value]),

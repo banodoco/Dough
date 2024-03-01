@@ -1,0 +1,489 @@
+{
+  "207": {
+    "inputs": {
+      "add_noise": "enable",
+      "noise_seed": 5,
+      "steps": 20,
+      "cfg": 8,
+      "sampler_name": "euler_ancestral",
+      "scheduler": "normal",
+      "start_at_step": 0,
+      "end_at_step": 20,
+      "return_with_leftover_noise": "disable",
+      "preview_method": "auto",
+      "vae_decode": "true",
+      "model": [
+        "547",
+        0
+      ],
+      "positive": [
+        "505",
+        0
+      ],
+      "negative": [
+        "505",
+        1
+      ],
+      "latent_image": [
+        "464",
+        0
+      ],
+      "optional_vae": [
+        "458",
+        0
+      ]
+    },
+    "class_type": "KSampler Adv. (Efficient)",
+    "_meta": {
+      "title": "KSampler Adv. (Efficient), CN sampler"
+    }
+  },
+  "281": {
+    "inputs": {
+      "frame_rate": 15,
+      "loop_count": 0,
+      "filename_prefix": "steerable-motion/AD_",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 20,
+      "save_metadata": true,
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "559",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Video Combine 🎥🅥🅗🅢"
+    }
+  },
+  "342": {
+    "inputs": {
+      "context_length": 16,
+      "context_stride": 2,
+      "context_overlap": 4,
+      "context_schedule": "uniform",
+      "closed_loop": false,
+      "fuse_method": "flat",
+      "use_on_equal_length": false,
+      "start_percent": 0,
+      "guarantee_steps": 1
+    },
+    "class_type": "ADE_AnimateDiffUniformContextOptions",
+    "_meta": {
+      "title": "Context Options◆Looped Uniform 🎭🅐🅓"
+    }
+  },
+  "354": {
+    "inputs": {
+      "split_index": 3,
+      "images": [
+        "207",
+        5
+      ]
+    },
+    "class_type": "VHS_SplitImages",
+    "_meta": {
+      "title": "Split Image Batch 🎥🅥🅗🅢"
+    }
+  },
+  "369": {
+    "inputs": {
+      "ipadapter_file": "ip-adapter-plus_sd15.bin"
+    },
+    "class_type": "IPAdapterModelLoader",
+    "_meta": {
+      "title": "Load IPAdapter Model"
+    }
+  },
+  "370": {
+    "inputs": {
+      "clip_name": "SD1.5/pytorch_model.bin"
+    },
+    "class_type": "CLIPVisionLoader",
+    "_meta": {
+      "title": "Load CLIP Vision"
+    }
+  },
+  "389": {
+    "inputs": {
+      "images": [
+        "401",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "401": {
+    "inputs": {
+      "directory": "./ComfyUI/input/",
+      "image_load_cap": 0,
+      "skip_first_images": 0,
+      "select_every_nth": 1
+    },
+    "class_type": "VHS_LoadImagesPath",
+    "_meta": {
+      "title": "Load Images (Path) 🎥🅥🅗🅢"
+    }
+  },
+  "436": {
+    "inputs": {
+      "images": [
+        "558",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "Preview Image"
+    }
+  },
+  "458": {
+    "inputs": {
+      "vae_name": "vae-ft-mse-840000-ema-pruned.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "461": {
+    "inputs": {
+      "ckpt_name": "Realistic_Vision_V5.0.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "464": {
+    "inputs": {
+      "width": [
+        "508",
+        0
+      ],
+      "height": [
+        "508",
+        1
+      ],
+      "batch_size": [
+        "558",
+        5
+      ]
+    },
+    "class_type": "ADE_EmptyLatentImageLarge",
+    "_meta": {
+      "title": "Empty Latent Image (Big Batch) 🎭🅐🅓"
+    }
+  },
+  "467": {
+    "inputs": {
+      "sparsectrl_name": "v3_sd15_sparsectrl_rgb.ckpt",
+      "use_motion": true,
+      "motion_strength": 1,
+      "motion_scale": 1,
+      "sparse_method": [
+        "558",
+        4
+      ]
+    },
+    "class_type": "ACN_SparseCtrlLoaderAdvanced",
+    "_meta": {
+      "title": "Load SparseCtrl Model 🛂🅐🅒🅝"
+    }
+  },
+  "468": {
+    "inputs": {
+      "strength": 0.6,
+      "start_percent": 0,
+      "end_percent": 0.3,
+      "positive": [
+        "558",
+        1
+      ],
+      "negative": [
+        "558",
+        2
+      ],
+      "control_net": [
+        "467",
+        0
+      ],
+      "image": [
+        "469",
+        0
+      ]
+    },
+    "class_type": "ACN_AdvancedControlNetApply",
+    "_meta": {
+      "title": "Apply Advanced ControlNet 🛂🅐🅒🅝"
+    }
+  },
+  "469": {
+    "inputs": {
+      "image": [
+        "401",
+        0
+      ],
+      "vae": [
+        "458",
+        0
+      ],
+      "latent_size": [
+        "464",
+        0
+      ]
+    },
+    "class_type": "ACN_SparseCtrlRGBPreprocessor",
+    "_meta": {
+      "title": "RGB SparseCtrl 🛂🅐🅒🅝"
+    }
+  },
+  "470": {
+    "inputs": {
+      "lora_name": "v3_sd15_adapter.ckpt",
+      "strength_model": 0.05,
+      "strength_clip": 0.25,
+      "model": [
+        "461",
+        0
+      ],
+      "clip": [
+        "461",
+        1
+      ]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "505": {
+    "inputs": {
+      "strength": 0.5,
+      "start_percent": 0.6,
+      "end_percent": 0.675,
+      "positive": [
+        "468",
+        0
+      ],
+      "negative": [
+        "468",
+        1
+      ],
+      "control_net": [
+        "467",
+        0
+      ],
+      "image": [
+        "469",
+        0
+      ]
+    },
+    "class_type": "ACN_AdvancedControlNetApply",
+    "_meta": {
+      "title": "Apply Advanced ControlNet 🛂🅐🅒🅝"
+    }
+  },
+  "508": {
+    "inputs": {
+      "image": [
+        "401",
+        0
+      ]
+    },
+    "class_type": "GetImageSize+",
+    "_meta": {
+      "title": "🔧 Get Image Size"
+    }
+  },
+  "541": {
+    "inputs": {
+      "text": "\"4\": \"\", \"36\": \"\", \"68\": \"\"",
+      "max_frames": 120,
+      "current_frame": 0,
+      "print_output": false,
+      "pre_text": "",
+      "app_text": "",
+      "pw_a": 0,
+      "pw_b": 0,
+      "pw_c": 0,
+      "pw_d": 0,
+      "clip": [
+        "470",
+        1
+      ]
+    },
+    "class_type": "PromptSchedule",
+    "_meta": {
+      "title": "Positive Prompt"
+    }
+  },
+  "543": {
+    "inputs": {
+      "text": "\"4\": \"\", \"36\": \"\", \"68\": \"\"",
+      "max_frames": 120,
+      "current_frame": 0,
+      "print_output": false,
+      "pre_text": "",
+      "app_text": "",
+      "pw_a": 0,
+      "pw_b": 0,
+      "pw_c": 0,
+      "pw_d": 0,
+      "clip": [
+        "470",
+        1
+      ]
+    },
+    "class_type": "PromptSchedule",
+    "_meta": {
+      "title": "Negative Prompt"
+    }
+  },
+  "544": {
+    "inputs": {
+      "float_val": [
+        "548",
+        0
+      ]
+    },
+    "class_type": "ADE_MultivalDynamic",
+    "_meta": {
+      "title": "Multival Dynamic 🎭🅐🅓"
+    }
+  },
+  "545": {
+    "inputs": {
+      "start_percent": 0,
+      "end_percent": 1,
+      "motion_model": [
+        "546",
+        0
+      ],
+      "scale_multival": [
+        "544",
+        0
+      ]
+    },
+    "class_type": "ADE_ApplyAnimateDiffModel",
+    "_meta": {
+      "title": "Apply AnimateDiff Model (Adv.) 🎭🅐🅓②"
+    }
+  },
+  "546": {
+    "inputs": {
+      "model_name": "v3_sd15_mm.ckpt"
+    },
+    "class_type": "ADE_LoadAnimateDiffModel",
+    "_meta": {
+      "title": "Load AnimateDiff Model 🎭🅐🅓②"
+    }
+  },
+  "547": {
+    "inputs": {
+      "beta_schedule": "sqrt_linear (AnimateDiff)",
+      "model": [
+        "558",
+        3
+      ],
+      "m_models": [
+        "545",
+        0
+      ],
+      "context_options": [
+        "342",
+        0
+      ]
+    },
+    "class_type": "ADE_UseEvolvedSampling",
+    "_meta": {
+      "title": "Use Evolved Sampling 🎭🅐🅓②"
+    }
+  },
+  "548": {
+    "inputs": {
+      "text": "0:(1.3)",
+      "print_output": true,
+      "num_latents": [
+        "464",
+        0
+      ]
+    },
+    "class_type": "BatchValueScheduleLatentInput",
+    "_meta": {
+      "title": "Batch Value Schedule (Latent Input) 📅🅕🅝"
+    }
+  },
+  "558": {
+    "inputs": {
+      "control_net_name": "SD1.5/animatediff/v3_sd15_sparsectrl_rgb.ckpt",
+      "type_of_frame_distribution": "linear",
+      "linear_frame_distribution_value": 16,
+      "dynamic_frame_distribution_values": "0,10,26,40",
+      "type_of_key_frame_influence": "linear",
+      "linear_key_frame_influence_value": "(1.0,1.0)",
+      "dynamic_key_frame_influence_values": "(1.0,1.0),(1.0,1.5)(1.0,0.5)",
+      "type_of_strength_distribution": "linear",
+      "linear_strength_value": "(0.3,0.4)",
+      "dynamic_strength_values": "(0.0,1.0),(0.0,1.0),(0.0,1.0),(0.0,1.0)",
+      "soft_scaled_cn_weights_multiplier": 0.85,
+      "buffer": 4,
+      "relative_cn_strength": 0,
+      "relative_ipadapter_strength": 1,
+      "ipadapter_noise": 0.3,
+      "ipadapter_start_at": 0,
+      "ipadapter_end_at": 0.75,
+      "cn_start_at": 0,
+      "cn_end_at": 0.75,
+      "positive": [
+        "541",
+        0
+      ],
+      "negative": [
+        "543",
+        1
+      ],
+      "images": [
+        "401",
+        0
+      ],
+      "model": [
+        "470",
+        0
+      ],
+      "ipadapter": [
+        "369",
+        0
+      ],
+      "clip_vision": [
+        "370",
+        0
+      ]
+    },
+    "class_type": "BatchCreativeInterpolation",
+    "_meta": {
+      "title": "Batch Creative Interpolation 🎞️🅢🅜"
+    }
+  },
+  "559": {
+    "inputs": {
+      "ckpt_name": "film_net_fp32.pt",
+      "clear_cache_after_n_frames": 10,
+      "multiplier": 2,
+      "frames": [
+        "354",
+        2
+      ]
+    },
+    "class_type": "FILM VFI",
+    "_meta": {
+      "title": "FILM VFI"
+    }
+  }
+}

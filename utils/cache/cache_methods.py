@@ -1,5 +1,7 @@
+import uuid
 from shared.logging.logging import AppLogger
 from utils.cache.cache import CacheKey, StCache
+import streamlit as st
 
 logger = AppLogger()
 
@@ -307,10 +309,16 @@ def cache_data(cls):
         timing_func = getattr(cls, '_original_get_timing_from_uuid')
         timing = timing_func(self, args[0])
         if timing and timing.shot.project:
-            original_func = getattr(cls, '_original_get_timing_list_from_project')
-            timing_list = original_func(self, timing.shot.project.uuid)
-            if timing_list and len(timing_list):
-                StCache.add_all(timing_list, CacheKey.TIMING_DETAILS.value)
+            # original_func = getattr(cls, '_original_get_timing_list_from_project')
+            # timing_list = original_func(self, timing.shot.project.uuid)
+            # if timing_list and len(timing_list):
+            #     StCache.add_all(timing_list, CacheKey.TIMING_DETAILS.value)
+
+            # updating shot list
+            original_func = getattr(cls, '_original_get_shot_list')
+            shot_list = original_func(self, timing.shot.project.uuid)
+            if shot_list:
+                StCache.add_all(shot_list, CacheKey.SHOT.value)
     
     setattr(cls, '_original_update_specific_timing', cls.update_specific_timing)
     setattr(cls, "update_specific_timing", _cache_update_specific_timing)
@@ -399,6 +407,22 @@ def cache_data(cls):
     
     setattr(cls, '_original_get_app_setting_from_uuid', cls.get_app_setting_from_uuid)
     setattr(cls, "get_app_setting_from_uuid", _cache_get_app_setting_from_uuid)
+    
+    def _cache_get_app_secrets_from_user_uuid(self, *args, **kwargs):
+        app_secret = StCache.get_all(CacheKey.APP_SECRET.value)
+        if len(app_secret):
+            return app_secret[0]
+        
+        original_func = getattr(cls, '_original_get_app_secrets_from_user_uuid')
+        app_secret = original_func(self, *args, **kwargs)
+        if app_secret:
+            app_secret['uuid'] = str(uuid.uuid4())      # dummy uuid
+            StCache.add(app_secret, CacheKey.APP_SECRET.value)
+        
+        return app_secret
+    
+    setattr(cls, '_original_get_app_secrets_from_user_uuid', cls.get_app_secrets_from_user_uuid)
+    setattr(cls, "get_app_secrets_from_user_uuid", _cache_get_app_secrets_from_user_uuid)
 
     def _cache_get_all_app_setting_list(self, *args, **kwargs):
         app_setting_list = StCache.get_all(CacheKey.APP_SETTING.value)
@@ -522,9 +546,11 @@ def cache_data(cls):
     setattr(cls, "update_user", _cache_update_user)
 
     def _cache_get_first_active_user(self, *args, **kwargs):
-        logged_user_list = StCache.get_all(CacheKey.LOGGED_USER.value)
-        if logged_user_list and len(logged_user_list):
-            return logged_user_list[0]
+        invalidate_cache = kwargs.get('invalidate_cache', False)
+        if not invalidate_cache:
+            logged_user_list = StCache.get_all(CacheKey.LOGGED_USER.value)
+            if logged_user_list and len(logged_user_list):
+                return logged_user_list[0]
 
         original_func = getattr(cls, '_original_get_first_active_user')
         user = original_func(self, *args, **kwargs)
@@ -568,6 +594,13 @@ def cache_data(cls):
         
         original_func = getattr(cls, '_original_get_shot_from_uuid')
         shot = original_func(self, *args, **kwargs)
+
+        if shot and not (shot_list and len(shot_list)):
+            original_func = getattr(cls, '_original_get_shot_list')
+            shot_list = original_func(self, shot.project.uuid)
+            if shot_list:
+                StCache.delete_all(CacheKey.SHOT.value)
+                StCache.add_all(shot_list, CacheKey.SHOT.value)
         
         return shot
 
@@ -688,5 +721,85 @@ def cache_data(cls):
     
     setattr(cls, '_original_duplicate_shot', cls.duplicate_shot)
     setattr(cls, "duplicate_shot", _cache_duplicate_shot)
+
+    # ---------------------- APPROXIMATE METHODS ---------------------
+    '''
+    these methods output whatever is last cached in them, irrespective of the input/query params
+    these are only used in cases when there are minor changes in the app and we want to maintain 
+    the last state (check 'maintain_state' inside the refresh_app function)
+    '''
+    def _cache_get_all_inference_log_list(self, *args, **kwargs):
+        if 'maintain_state' in st.session_state and st.session_state['maintain_state']:
+            log_list = StCache.get_all(CacheKey.LOG.value)
+            if log_list and len(log_list):
+                return log_list, st.session_state['log_pages_approx']
+        
+        original_func = getattr(cls, '_original_get_all_inference_log_list')
+        output_log_list, total_pages = original_func(self, *args, **kwargs)
+        if output_log_list and len(output_log_list):
+            StCache.delete_all(CacheKey.LOG.value)
+            StCache.add_all(output_log_list, CacheKey.LOG.value)
+            st.session_state['log_pages_approx'] = total_pages
+        
+        return output_log_list, total_pages
+    
+    setattr(cls, '_original_get_all_inference_log_list', cls.get_all_inference_log_list)
+    setattr(cls, "get_all_inference_log_list", _cache_get_all_inference_log_list)
+
+    def _cache_get_project_from_uuid(self, *args, **kwargs):
+        if 'maintain_state' in st.session_state and st.session_state['maintain_state']:
+            project_list = StCache.get_all(CacheKey.PROJECT.value)
+            if project_list and len(project_list):
+                for project in project_list:
+                    if str(project.uuid) == str(args[0]):
+                        return project
+        
+        original_func = getattr(cls, '_original_get_project_from_uuid')
+        output_project = original_func(self, *args, **kwargs)
+        if output_project:
+            StCache.add(output_project, CacheKey.PROJECT.value)
+        
+        return output_project
+    
+    setattr(cls, '_original_get_project_from_uuid', cls.get_project_from_uuid)
+    setattr(cls, "get_project_from_uuid", _cache_get_project_from_uuid)
+    
+    def _cache_get_all_project_list(self, *args, **kwargs):
+        if 'maintain_state' in st.session_state and st.session_state['maintain_state']:
+            project_list = StCache.get_all(CacheKey.PROJECT.value)
+            if project_list and len(project_list):
+                res = []
+                for project in project_list:
+                    if str(project.user_uuid) == str(kwargs['user_id']):
+                        res.append(project)
+                
+                if len(res):
+                    return res
+        
+        original_func = getattr(cls, '_original_get_all_project_list')
+        output_project_list = original_func(self, *args, **kwargs)
+        if output_project_list:
+            StCache.add_all(output_project_list, CacheKey.PROJECT.value)
+        
+        return output_project_list
+    
+    setattr(cls, '_original_get_all_project_list', cls.get_all_project_list)
+    setattr(cls, "get_all_project_list", _cache_get_all_project_list)
+    
+    def _cache_get_all_user_list(self, *args, **kwargs):
+        if 'maintain_state' in st.session_state and st.session_state['maintain_state']:
+            user_list = StCache.get_all(CacheKey.USER.value)
+            if user_list and len(user_list):
+                return user_list
+        
+        original_func = getattr(cls, '_original_get_all_user_list')
+        user_list = original_func(self, *args, **kwargs)
+        if user_list and len(user_list):
+            StCache.add_all(user_list, CacheKey.USER.value)
+        
+        return user_list
+    
+    setattr(cls, '_original_get_all_user_list', cls.get_all_user_list)
+    setattr(cls, "get_all_user_list", _cache_get_all_user_list)
 
     return cls

@@ -1,4 +1,5 @@
 import io
+import random
 from typing import List
 import os
 from PIL import Image, ImageDraw, ImageOps, ImageFilter
@@ -12,9 +13,11 @@ import uuid
 from io import BytesIO
 import numpy as np
 import urllib3
-from shared.constants import InferenceType, InternalFileTag, InternalFileType, ProjectMetaData
+from shared.constants import OFFLINE_MODE, SERVER, InferenceType, InternalFileTag, InternalFileType, ProjectMetaData, ServerType
 from pydub import AudioSegment
 from backend.models import InternalFileObject
+from shared.logging.constants import LoggingType
+from shared.logging.logging import AppLogger
 from ui_components.constants import SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, WorkflowStageType
 from ui_components.methods.file_methods import add_temp_file_to_project, convert_bytes_to_file, generate_pil_image, generate_temp_file, save_or_host_file, save_or_host_file_bytes
 from ui_components.methods.video_methods import sync_audio_and_duration, update_speed_of_video_clip
@@ -57,6 +60,9 @@ def clone_styling_settings(source_frame_number, target_frame_uuid):
 
 # TODO: image format is assumed to be PNG, change this later
 def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project_uuid) -> InternalFileObject:
+    '''
+    Saves an image into the project. The image is not added into any shot and is without tags.
+    '''
     data_repo = DataRepo()
     img = generate_pil_image(img)
     
@@ -202,15 +208,15 @@ def apply_image_transformations(image: Image, zoom_level, rotation_angle, x_shif
     rotation_offset = ((diagonal - width) // 2, (diagonal - height) // 2)
     rotation_bg.paste(image, rotation_offset)
 
-    # Rotation
-    rotated_image = rotation_bg.rotate(rotation_angle)
+    # Rotation - Rotate in the opposite direction
+    rotated_image = rotation_bg.rotate(-rotation_angle)
 
-    # Shift
+    # Shift - Invert the direction of the shift
     # Create a new image with black background
     shift_bg = Image.new("RGB", (diagonal, diagonal), "black")
-    shift_bg.paste(rotated_image, (-x_shift, y_shift)) 
+    shift_bg.paste(rotated_image, (x_shift, -y_shift)) 
 
-    # Zoom
+    # Zoom - No change
     zoomed_width = int(diagonal * (zoom_level / 100))
     zoomed_height = int(diagonal * (zoom_level / 100))
     zoomed_image = shift_bg.resize((zoomed_width, zoomed_height))
@@ -222,16 +228,16 @@ def apply_image_transformations(image: Image, zoom_level, rotation_angle, x_shif
     crop_y2 = crop_y1 + height
     cropped_image = zoomed_image.crop((crop_x1, crop_y1, crop_x2, crop_y2))
 
-    # Flip vertically
+    # Flip vertically - No change
     if flip_vertically:
         cropped_image = cropped_image.transpose(Image.FLIP_TOP_BOTTOM)
 
-    # Flip horizontally
+    # Flip horizontally - No change
     if flip_horizontally:
         cropped_image = cropped_image.transpose(Image.FLIP_LEFT_RIGHT)
 
     return cropped_image
-
+    
 def fetch_image_by_stage(shot_uuid, stage, frame_idx):
     data_repo = DataRepo()
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
@@ -242,7 +248,6 @@ def fetch_image_by_stage(shot_uuid, stage, frame_idx):
         return timing_list[frame_idx].primary_image
     else:
         return None
-
 
 # returns a PIL image object
 def rotate_image(location, degree):
@@ -336,30 +341,27 @@ def promote_video_variant(shot_uuid, variant_uuid):
 
     data_repo.update_shot(uuid=shot.uuid, main_clip_id=variant_to_promote.uuid)
 
+def get_canny_img(img_obj, low_threshold, high_threshold, invert_img=False):
+    if isinstance(img_obj, str):
+        if img_obj.startswith("http"):
+            response = r.get(img_obj)
+            image_data = np.frombuffer(response.content, dtype=np.uint8)
+            image = cv2.imdecode(image_data, cv2.IMREAD_GRAYSCALE)
+        else:
+            image = cv2.imread(img_obj, cv2.IMREAD_GRAYSCALE)
+    else:
+        image_data = generate_pil_image(img_obj)
+        image = np.array(image_data)
+
+    blurred_image = cv2.GaussianBlur(image, (5, 5), 0)
+    canny_edges = cv2.Canny(blurred_image, low_threshold, high_threshold)
+    inverted_canny_edges = 255 - canny_edges if invert_img else canny_edges
+    new_canny_image = Image.fromarray(inverted_canny_edges)
+    return new_canny_image
 
 def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_threshold=150) -> InternalFileObject:
     data_repo = DataRepo()
-
-    # Check if the input is a URL
-    if image_path_or_url.startswith("http"):
-        response = r.get(image_path_or_url)
-        image_data = np.frombuffer(response.content, dtype=np.uint8)
-        image = cv2.imdecode(image_data, cv2.IMREAD_GRAYSCALE)
-    else:
-        # Read the image from a local file
-        image = cv2.imread(image_path_or_url, cv2.IMREAD_GRAYSCALE)
-
-    # Apply Gaussian blur to the image
-    blurred_image = cv2.GaussianBlur(image, (5, 5), 0)
-
-    # Apply the Canny edge detection
-    canny_edges = cv2.Canny(blurred_image, low_threshold, high_threshold)
-
-    # Reverse the colors (invert the image)
-    inverted_canny_edges = 255 - canny_edges
-
-    # Convert the inverted Canny edge result to a PIL Image
-    new_canny_image = Image.fromarray(inverted_canny_edges)
+    new_canny_image = get_canny_img(image_path_or_url, low_threshold, high_threshold)
 
     # Save the new image
     unique_file_name = str(uuid.uuid4()) + ".png"
@@ -379,6 +381,27 @@ def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_
 
     canny_image_file = data_repo.create_file(**file_data)
     return canny_image_file
+
+def combine_mask_and_input_image(mask_path, input_image_path, overlap_color="transparent"):
+    # Open the input image and the mask
+    input_image = Image.open(input_image_path) if not isinstance(input_image_path, Image.Image) else input_image_path
+    mask_image = Image.open(mask_path) if not isinstance(mask_path, Image.Image) else mask_path
+    input_image = input_image.convert("RGBA")
+
+    is_white = lambda pixel, threshold=245: all(value > threshold for value in pixel[:3])
+
+    fill_color = (0.5,0.5,0.5,1)      # default grey
+    if overlap_color == "transparent":
+        fill_color = (0,0,0,0)
+    elif overlap_color == "grey":
+        fill_color = (0.5, 0.5, 0.5, 1)
+
+    for x in range(mask_image.width):
+        for y in range(mask_image.height):
+            if is_white(mask_image.getpixel((x, y))):
+                input_image.putpixel((x, y), fill_color)
+
+    return input_image
 
 # the input image is an image created by the PIL library
 def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
@@ -590,147 +613,14 @@ def save_audio_file(uploaded_file, project_uuid):
     
     return audio_file
 
-def execute_image_edit(type_of_mask_selection, type_of_mask_replacement,
-                       background_image, editing_image, prompt, negative_prompt,
-                       width, height, layer, timing_uuid):
-    from ui_components.methods.ml_methods import inpainting, remove_background, create_depth_mask_image
-    data_repo = DataRepo()
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-    project = timing.shot.project
-    inference_log = None
-
-    if type_of_mask_selection == "Automated Background Selection":
-        removed_background = remove_background(editing_image)
-        response = r.get(removed_background)
-        img = Image.open(BytesIO(response.content))
-        hosted_url = save_or_host_file(img, SECOND_MASK_FILE_PATH)
-        add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_url or SECOND_MASK_FILE_PATH)
-
-        if type_of_mask_replacement == "Replace With Image":
-            edited_image = replace_background(project.uuid, background_image)
-
-        elif type_of_mask_replacement == "Inpainting":
-            path = project.get_temp_mask_file(SECOND_MASK_FILE).location
-            if path.startswith("http"):
-                response = r.get(path)
-                image = Image.open(BytesIO(response.content))
-            else:
-                image = Image.open(path)
-
-            converted_image = Image.new("RGB", image.size, (255, 255, 255))
-            for x in range(image.width):
-                for y in range(image.height):
-                    pixel = image.getpixel((x, y))
-                    if pixel[3] == 0:
-                        converted_image.putpixel((x, y), (0, 0, 0))
-                    else:
-                        converted_image.putpixel((x, y), (255, 255, 255))
-            create_or_update_mask(timing_uuid, converted_image)
-            edited_image = inpainting(
-                editing_image, prompt, negative_prompt, timing.uuid, True)
-
-    elif type_of_mask_selection == "Manual Background Selection":
-        if type_of_mask_replacement == "Replace With Image":
-            bg_img = generate_pil_image(editing_image)
-            mask_img = generate_pil_image(timing.mask.location)
-
-            result_img = Image.new("RGBA", bg_img.size, (255, 255, 255, 0))
-            for x in range(bg_img.size[0]):
-                for y in range(bg_img.size[1]):
-                    if x < mask_img.size[0] and y < mask_img.size[1]:
-                        if mask_img.getpixel((x, y)) == (255, 255, 255):
-                            result_img.putpixel((x, y), (255, 255, 255, 0))
-                        else:
-                            result_img.putpixel((x, y), bg_img.getpixel((x, y)))
-            
-            hosted_manual_bg_url = save_or_host_file(result_img, SECOND_MASK_FILE_PATH)
-            add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_manual_bg_url or SECOND_MASK_FILE_PATH)
-            edited_image = replace_background(project.uuid, background_image)
-
-        elif type_of_mask_replacement == "Inpainting":
-            edited_image, log = inpainting(editing_image, prompt, negative_prompt, timing_uuid, False)
-            inference_log = log
-    
-    elif type_of_mask_selection == "Automated Layer Selection":
-        mask_location = create_depth_mask_image(
-            editing_image, layer, timing.uuid)
-        if type_of_mask_replacement == "Replace With Image":
-            if mask_location.startswith("http"):
-                mask = Image.open(
-                    BytesIO(r.get(mask_location).content)).convert('1')
-            else:
-                mask = Image.open(mask_location).convert('1')
-            if editing_image.startswith("http"):
-                response = r.get(editing_image)
-                bg_img = Image.open(BytesIO(response.content)).convert('RGBA')
-            else:
-                bg_img = Image.open(editing_image).convert('RGBA')
-
-            hosted_automated_bg_url = save_or_host_file(result_img, SECOND_MASK_FILE_PATH)
-            add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_automated_bg_url or SECOND_MASK_FILE_PATH)
-            edited_image = replace_background(project.uuid, SECOND_MASK_FILE_PATH, background_image)
-
-        elif type_of_mask_replacement == "Inpainting":
-            edited_image = inpainting(
-                editing_image, prompt, negative_prompt, timing_uuid, True)
-
-    elif type_of_mask_selection == "Re-Use Previous Mask":
-        mask_location = timing.mask.location
-        if type_of_mask_replacement == "Replace With Image":
-            if mask_location.startswith("http"):
-                response = r.get(mask_location)
-                mask = Image.open(BytesIO(response.content)).convert('1')
-            else:
-                mask = Image.open(mask_location).convert('1')
-            if editing_image.startswith("http"):
-                response = r.get(editing_image)
-                bg_img = Image.open(BytesIO(response.content)).convert('RGBA')
-            else:
-                bg_img = Image.open(editing_image).convert('RGBA')
-            
-            hosted_image_replace_url = save_or_host_file(result_img, SECOND_MASK_FILE_PATH)
-            add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_image_replace_url or SECOND_MASK_FILE_PATH)
-            edited_image = replace_background(project.uuid, SECOND_MASK_FILE_PATH, background_image)
-
-        elif type_of_mask_replacement == "Inpainting":
-            edited_image = inpainting(
-                editing_image, prompt, negative_prompt, timing_uuid, True)
-
-    elif type_of_mask_selection == "Invert Previous Mask":
-        if type_of_mask_replacement == "Replace With Image":
-            mask_location = timing.mask.location
-            if mask_location.startswith("http"):
-                response = r.get(mask_location)
-                mask = Image.open(BytesIO(response.content)).convert('1')
-            else:
-                mask = Image.open(mask_location).convert('1')
-            inverted_mask = ImageOps.invert(mask)
-            if editing_image.startswith("http"):
-                response = r.get(editing_image)
-                bg_img = Image.open(BytesIO(response.content)).convert('RGBA')
-            else:
-                bg_img = Image.open(editing_image).convert('RGBA')
-            masked_img = Image.composite(bg_img, Image.new(
-                'RGBA', bg_img.size, (0, 0, 0, 0)), inverted_mask)
-            # TODO: standardise temproray fixes
-            hosted_prvious_invert_url = save_or_host_file(result_img, SECOND_MASK_FILE_PATH)
-            add_temp_file_to_project(project.uuid, SECOND_MASK_FILE, hosted_prvious_invert_url or SECOND_MASK_FILE_PATH)
-            edited_image = replace_background(project.uuid, SECOND_MASK_FILE_PATH, background_image)
-
-        elif type_of_mask_replacement == "Inpainting":
-            edited_image = inpainting(
-                editing_image, prompt, negative_prompt, timing_uuid, False)
-
-    return edited_image, inference_log
-
-
 # if the output is present it adds it to the respective place or else it updates the inference log
 # NOTE: every function used in this should not change/modify session state in anyway
 def process_inference_output(**kwargs):
     data_repo = DataRepo()
 
+    inference_time = 0.0
     inference_type = kwargs.get('inference_type')
+    log_uuid = None
     # ------------------- FRAME TIMING IMAGE INFERENCE -------------------
     if inference_type == InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value:
         output = kwargs.get('output')
@@ -745,11 +635,16 @@ def process_inference_output(**kwargs):
             filename = str(uuid.uuid4()) + ".png"
             log_uuid = kwargs.get('log_uuid')
             log = data_repo.get_inference_log_from_uuid(log_uuid)
+            if log and log.total_inference_time:
+                inference_time = log.total_inference_time
+
             output_file = data_repo.create_file(
                 name=filename, 
                 type=InternalFileType.IMAGE.value,
                 hosted_url=output[0] if isinstance(output, list) else output, 
-                inference_log_id=log.uuid
+                inference_log_id=log.uuid,
+                project_id=timing.shot.project.uuid,
+                shot_uuid=kwargs["shot_uuid"] if "shot_uuid" in kwargs else ""
             )
             
             add_image_variant(output_file.uuid, timing_uuid)
@@ -780,17 +675,22 @@ def process_inference_output(**kwargs):
             if not shot:
                 return False
             
+            output = output[-1] if isinstance(output, list) else output
             # output can also be an url
-            if isinstance(output, str) and output.startswith("http"):
-                temp_output_file = generate_temp_file(output, '.mp4')
-                output = None
-                with open(temp_output_file.name, 'rb') as f:
-                    output = f.read()
+            if isinstance(output, str):
+                if output.startswith("http"):
+                    temp_output_file = generate_temp_file(output, '.mp4')
+                    output = None
+                    with open(temp_output_file.name, 'rb') as f:
+                        output = f.read()
 
-                os.remove(temp_output_file.name)
+                    os.remove(temp_output_file.name)
+                else:
+                    with open(output, 'rb') as f:
+                        output = f.read()
 
-            if 'normalise_speed' in settings and settings['normalise_speed']:
-                output = VideoProcessor.update_video_bytes_speed(output, shot.duration)
+            # if 'normalise_speed' in settings and settings['normalise_speed']:
+            #     output = VideoProcessor.update_video_bytes_speed(output, shot.duration)
 
             video_location = "videos/" + str(shot.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
             video = convert_bytes_to_file(
@@ -807,7 +707,10 @@ def process_inference_output(**kwargs):
                 data_repo.add_interpolated_clip(shot_uuid, interpolated_clip_id=output_video.uuid)
             else:
                 data_repo.add_interpolated_clip(shot_uuid, interpolated_clip_id=video.uuid)
-        
+
+            log = data_repo.get_inference_log_from_uuid(log_uuid)
+            if log and log.total_inference_time:
+                inference_time = log.total_inference_time
         else:
             del kwargs['log_uuid']
             data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
@@ -820,6 +723,9 @@ def process_inference_output(**kwargs):
             log_uuid = kwargs.get('log_uuid')
             project_uuid = kwargs.get('project_uuid')
             log = data_repo.get_inference_log_from_uuid(log_uuid)
+            if log and log.total_inference_time:
+                inference_time = log.total_inference_time
+
             filename = str(uuid.uuid4()) + ".png"
             output_file = data_repo.create_file(
                 name=filename, 
@@ -827,7 +733,8 @@ def process_inference_output(**kwargs):
                 hosted_url=output[0] if isinstance(output, list) else output, 
                 inference_log_id=log.uuid,
                 project_id=project_uuid,
-                tag=InternalFileTag.GALLERY_IMAGE.value
+                tag=InternalFileTag.TEMP_GALLERY_IMAGE.value,        # will be updated to GALLERY_IMAGE once the user clicks 'check for new images'
+                shot_uuid=kwargs["shot_uuid"] if "shot_uuid" in kwargs else ""
             )
         else:
             log_uuid = kwargs.get('log_uuid')
@@ -860,9 +767,18 @@ def process_inference_output(**kwargs):
                 number_of_image_variants = add_image_variant(output_file.uuid, current_frame_uuid)
                 if promote:
                     promote_image_variant(current_frame_uuid, number_of_image_variants - 1)
+            
+            log = data_repo.get_inference_log_from_uuid(log_uuid)
+            if log and log.total_inference_time:
+                inference_time = log.total_inference_time
         else:
             del kwargs['log_uuid']
             data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
+
+    if inference_time:
+        credits_used = round(inference_time * 0.004, 3)     # make this more granular for different models
+        data_repo.update_usage_credits(-credits_used, log_uuid)
+
     return True
 
 
@@ -902,3 +818,27 @@ def check_project_meta_data(project_uuid):
         data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
         
         release_lock(key)
+
+
+def update_app_setting_keys():
+    data_repo = DataRepo()
+    app_logger = AppLogger()
+
+    if OFFLINE_MODE:
+        key = os.getenv('REPLICATE_KEY', None)
+    else:
+        import boto3
+        ssm = boto3.client("ssm", region_name="ap-south-1")
+        key = ssm.get_parameter(Name='/backend/banodoco/replicate/key')['Parameter']['Value']
+
+    app_setting = data_repo.get_app_secrets_from_user_uuid()
+    if app_setting and app_setting['replicate_key'] == key:
+        return
+
+    app_logger.log(LoggingType.DEBUG, 'setting keys', None)
+    data_repo.update_app_setting(replicate_username='bn')
+    data_repo.update_app_setting(replicate_key=key)
+
+
+def random_seed():
+    return random.randint(10**14, 10**15 - 1)

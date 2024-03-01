@@ -15,7 +15,7 @@ import sqlite3
 import subprocess
 from typing import List
 import uuid
-from shared.constants import InternalFileType, SortOrder
+from shared.constants import InferenceStatus, InternalFileTag, InternalFileType, SortOrder
 from backend.serializers.dto import  AIModelDto, AppSettingDto, BackupDto, BackupListDto, InferenceLogDto, InternalFileDto, ProjectDto, SettingDto, ShotDto, TimingDto, UserDto
 
 from shared.constants import AUTOMATIC_FILE_HOSTING, LOCAL_DATABASE_NAME, SERVER, ServerType
@@ -55,7 +55,8 @@ class DBRepo:
                 conn = sqlite3.connect(database_file)
                 conn.close()
 
-                completed_process = subprocess.run(['python', 'manage.py', 'migrate'], capture_output=True, text=True)
+                python_executable = sys.executable
+                completed_process = subprocess.run([python_executable, 'manage.py', 'migrate'], capture_output=True, text=True)
                 if completed_process.returncode == 0:
                     logger.log(LoggingType.INFO, "Migrations completed successfully")
                 else:
@@ -200,8 +201,17 @@ class DBRepo:
             del kwargs['data_per_page']
             sort_order = kwargs['sort_order'] if 'sort_order' in kwargs else None
             del kwargs['sort_order']
+            
+            shot_uuid_list = []
+            if 'shot_uuid_list' in kwargs:
+                shot_uuid_list = kwargs['shot_uuid_list']
+                del kwargs['shot_uuid_list']
 
             file_list = InternalFileObject.objects.filter(**kwargs).all()
+            
+            if shot_uuid_list and len(shot_uuid_list):
+                file_list = file_list.filter(shot_uuid__in=shot_uuid_list)
+
             if sort_order:
                 if sort_order == SortOrder.DESCENDING.value:
                     file_list = file_list.order_by('-created_on')
@@ -371,6 +381,38 @@ class DBRepo:
 
         return InternalResponse(payload, 'file updated successfully', True)
     
+    def get_file_count_from_type(self, file_tag, project_uuid):
+        project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        file_count = InternalFileObject.objects.filter(tag=file_tag, project_id=project.id, is_disabled=False).count()
+        payload = {
+            'data': file_count
+        }
+
+        return InternalResponse(payload, 'file count fetched', True)
+    
+    def get_explorer_pending_stats(self, project_uuid, log_status_list):
+        project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        temp_image_count = InternalFileObject.objects.filter(tag=InternalFileTag.TEMP_GALLERY_IMAGE.value,\
+                                                              project_id=project.id, is_disabled=False).count()
+        pending_image_count = InferenceLog.objects.filter(status__in=log_status_list, is_disabled=False).count()
+        payload = {
+            'data': {
+                'temp_image_count': temp_image_count,
+                'pending_image_count': pending_image_count
+            }
+        }
+
+        return InternalResponse(payload, 'file count fetched', True)
+    
+    def update_temp_gallery_images(self, project_uuid):
+        project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        InternalFileObject.objects.filter(
+            tag=InternalFileTag.TEMP_GALLERY_IMAGE.value, 
+            project_id=project.id,
+            is_disabled=False).update(tag=InternalFileTag.GALLERY_IMAGE.value)
+
+        return True
+
     # project
     def get_project_from_uuid(self, uuid):
         project = Project.objects.filter(uuid=uuid, is_disabled=False).first()
@@ -568,7 +610,7 @@ class DBRepo:
         
         return InternalResponse(payload, 'inference log fetched', True)
     
-    def get_all_inference_log_list(self, project_id=None, page=1, data_per_page=5, status_list=None, exclude_model_list=None):
+    def get_all_inference_log_list(self, project_id=None, page=1, data_per_page=5, status_list=None, exclude_model_list=None, model_name_list=""):
         if project_id:
             project = Project.objects.filter(uuid=project_id, is_disabled=False).first()
             log_list = InferenceLog.objects.filter(project_id=project.id, is_disabled=False).order_by('-created_on').all()
@@ -580,6 +622,9 @@ class DBRepo:
         else:
             log_list = log_list.exclude(status__in=["", None])
 
+        if model_name_list:
+            log_list = log_list.filter(model_name__in=model_name_list)
+        
         log_list = log_list.exclude(model_id=None)       # hackish sol to exclude non-image/video logs
 
         paginator = Paginator(log_list, data_per_page)
@@ -602,8 +647,6 @@ class DBRepo:
         attributes = CreateInferenceLogDao(data=kwargs)
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
-        
-        print(attributes.data)
         
         if 'project_id' in attributes.data and attributes.data['project_id']:
             project = Project.objects.filter(uuid=attributes.data['project_id'], is_disabled=False).first()
@@ -786,6 +829,7 @@ class DBRepo:
         return InternalResponse(payload, 'timing list fetched', True)
 
     def get_timing_list_from_shot(self, shot_uuid):
+
         shot: Shot = Shot.objects.filter(uuid=shot_uuid, is_disabled=False).first()
         if not shot:
             return InternalResponse({}, 'invalid shot', False)
@@ -847,13 +891,13 @@ class DBRepo:
                 
                 attributes._data['canny_image_id'] = canny_image.id
 
-        if 'primay_image_id' in attributes.data:
-            if attributes.data['primay_image_id'] != None:
-                primay_image: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['primay_image_id'], is_disabled=False).first()
+        if 'primary_image_id' in attributes.data:
+            if attributes.data['primary_image_id'] != None:
+                primay_image: InternalFileObject = InternalFileObject.objects.filter(uuid=attributes.data['primary_image_id'], is_disabled=False).first()
                 if not primay_image:
                     return InternalResponse({}, 'invalid primary image uuid', False)
                 
-                attributes._data['primay_image_id'] = primay_image.id
+                attributes._data['primary_image_id'] = primay_image.id
         
         timing = Timing.objects.create(**attributes.data)
         payload = {
@@ -1007,8 +1051,6 @@ class DBRepo:
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
         
-        print(attributes.data)
-        
         if 'uuid' in attributes.data and attributes.data['uuid']:
             app_setting = AppSetting.objects.filter(uuid=attributes.data['uuid'], is_disabled=False).first()
         else:
@@ -1029,7 +1071,7 @@ class DBRepo:
         return InternalResponse({}, 'app_setting updated successfully', True)
 
     
-    def get_app_secrets_from_user_uuid(self, user_uuid):
+    def get_app_secrets_from_user_uuid(self, user_uuid, secret_access=None):
         if user_uuid:
             user: User = User.objects.filter(uuid=user_uuid, is_disabled=False).first()
             if not user:
@@ -1412,7 +1454,11 @@ class DBRepo:
     
     # shot
     def get_shot_from_number(self, project_uuid, shot_number=0):
-        shot: Shot = Shot.objects.filter(project_id=project_uuid, shot_idx=shot_number, is_disabled=False).first()
+        project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+        if not project:
+            return InternalResponse({}, 'invalid project uuid', False)
+        
+        shot: Shot = Shot.objects.filter(project_id=project.id, shot_idx=shot_number, is_disabled=False).first()
         if not shot:
             return InternalResponse({}, 'invalid shot number', False)
         

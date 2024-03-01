@@ -18,7 +18,7 @@ def zoom_inputs(position='in-frame', horizontal=False):
         "Zoom In/Out", min_value=10, max_value=1000, step=10, key=f"zoom_level_input", value=100)
     
     col2.number_input(
-        "Rotate Clockwise/Counterclockwise", min_value=-360, max_value=360, step=5, key="rotation_angle_input", value=0)
+        "Rotate Counterclockwise/Clockwise", min_value=-360, max_value=360, step=5, key="rotation_angle_input", value=0)
     
     col3.number_input(
         "Shift Left/Right", min_value=-1000, max_value=1000, step=5, key=f"x_shift", value=0)
@@ -27,10 +27,10 @@ def zoom_inputs(position='in-frame', horizontal=False):
         "Shift Down/Up", min_value=-1000, max_value=1000, step=5, key=f"y_shift", value=0)
 
     col5.checkbox(
-        "Flip Vertically", key=f"flip_vertically", value=False)
+        "Flip Vertically ↕️", key=f"flip_vertically", value=False)
 
     col6.checkbox(
-        "Flip Horizontally", key=f"flip_horizontally", value=False)
+        "Flip Horizontally ↔️", key=f"flip_horizontally", value=False)
 
     
 
@@ -78,7 +78,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
             styled_image.uuid, timing_uuid)
         if promote:
             promote_image_variant(timing_uuid, number_of_image_variants - 1)
-
+    '''
     project_update_data = {
         "zoom_level": st.session_state['zoom_level_input'],
         "rotation_angle_value": st.session_state['rotation_angle_input'],
@@ -93,7 +93,9 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
         "zoom_details": f"{st.session_state['zoom_level_input']},{st.session_state['rotation_angle_input']},{st.session_state['x_shift']},{st.session_state['y_shift']}",
 
     }
+    
     data_repo.update_specific_timing(timing_uuid, **timing_update_data)
+    '''
 
 def reset_zoom_element():
     st.session_state['zoom_level_input_key'] = 100

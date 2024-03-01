@@ -1,30 +1,41 @@
-import json
+import copy
+import os
+import time
 import uuid
 import streamlit as st
+from git import Repo
 
 from PIL import Image
 from shared.constants import SERVER, AIModelCategory, GuidanceType, InternalFileType, ServerType
 from shared.logging.constants import LoggingType
-from shared.logging.logging import AppLogger
+from shared.logging.logging import app_logger
 from shared.constants import AnimationStyleType
 from ui_components.methods.common_methods import add_image_variant
-from ui_components.methods.file_methods import save_or_host_file
+from ui_components.methods.file_methods import list_files_in_folder, save_or_host_file
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalUserObject
 from utils.common_utils import create_working_assets
 from utils.constants import ML_MODEL_LIST
 from utils.data_repo.data_repo import DataRepo
 
-logger = AppLogger()
+
+def wait_for_db_ready():
+    data_repo = DataRepo()
+    while True:
+        try:
+            user_count = data_repo.get_total_user_count()
+            break
+        except Exception as e:
+            app_logger.log(LoggingType.DEBUG, 'waiting for db...')
+            time.sleep(3)
 
 def project_init():
     from utils.data_repo.data_repo import DataRepo
     data_repo = DataRepo()
 
-    # db initialization takes some time
-    # time.sleep(2)
+    wait_for_db_ready()
+    user_count = data_repo.get_total_user_count()
     # create a user if not already present (if dev mode)
     # if this is the local server with no user than create one and related data
-    user_count = data_repo.get_total_user_count()
     if SERVER == ServerType.DEVELOPMENT.value and not user_count:
         user_data = {
             "name" : "banodoco_user",
@@ -33,7 +44,7 @@ def project_init():
             "type" : "user"
         }
         user: InternalUserObject = data_repo.create_user(**user_data)
-        logger.log(LoggingType.INFO, "new temp user created: " + user.name)
+        app_logger.log(LoggingType.INFO, "new temp user created: " + user.name)
 
         create_new_user_data(user)
     # creating data for online user
@@ -42,6 +53,17 @@ def project_init():
         if not app_settings:
             online_user = data_repo.get_first_active_user()
             create_new_user_data(online_user)
+
+    # cloning basic comfyui (not installing packages atm)
+    comfy_repo_url = "https://github.com/comfyanonymous/ComfyUI"
+    comfy_manager_url = "https://github.com/ltdrdata/ComfyUI-Manager"
+    if not os.path.exists("ComfyUI"):
+        app_logger.log(LoggingType.DEBUG, "cloning comfy repo")
+        Repo.clone_from(comfy_repo_url, "ComfyUI")
+    if not os.path.exists("./ComfyUI/custom_nodes/ComfyUI-Manager"):
+        os.chdir("./ComfyUI/custom_nodes/")
+        Repo.clone_from(comfy_manager_url, "ComfyUI-Manager")
+        os.chdir("../../")
 
     # create encryption key if not already present (not applicable in dev mode)
     # env_vars = dotenv_values('.env')
@@ -89,40 +111,47 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     shot_data = {
         "project_uuid": project.uuid,
         "desc": "",
-        "duration": 2
+        "duration": 10
     }
 
     shot = data_repo.create_shot(**shot_data)
 
-    # create a sample timing frame
+    # create timings for init_images 
+    init_images_path = os.path.join("sample_assets", "sample_images", "init_frames")
+    init_image_list = list_files_in_folder(init_images_path)
     st.session_state["project_uuid"] = project.uuid
-    sample_file_location = "sample_assets/sample_images/v.jpeg"
-    img = Image.open(sample_file_location)
-    img = img.resize((width, height))
-    hosted_url = save_or_host_file(img, sample_file_location, mime_type='image/png', dim=(width, height))
-    file_data = {
-        "name": str(uuid.uuid4()),
-        "type": InternalFileType.IMAGE.value,
-        "project_id": project.uuid,
-        "dim": (width, height),
-    }
+    
+    for idx, img_path in enumerate(init_image_list):
+        img_path = os.path.join(init_images_path, img_path)
+        img = Image.open(img_path)
+        img = img.resize((width, height))
 
-    if hosted_url:
-        file_data.update({'hosted_url': hosted_url})
-    else:
-        file_data.update({'local_path': sample_file_location})
+        unique_file_name = f"{str(uuid.uuid4())}.png"
+        file_location = f"videos/{project.uuid}/resources/prompt_images/{unique_file_name}"
+        hosted_url = save_or_host_file(img, file_location, mime_type='image/png', dim=(width, height))
+        file_data = {
+            "name": str(uuid.uuid4()),
+            "type": InternalFileType.IMAGE.value,
+            "project_id": project.uuid,
+            "dim": (width, height),
+        }
 
-    source_image = data_repo.create_file(**file_data)
+        if hosted_url:
+            file_data.update({'hosted_url': hosted_url})
+        else:
+            file_data.update({'local_path': file_location})
 
-    timing_data = {
-        "frame_time": 0.0,
-        "aux_frame_index": 0,
-        "source_image_id": source_image.uuid,
-        "shot_id": shot.uuid,
-    }
-    timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
+        source_image = data_repo.create_file(**file_data)
 
-    add_image_variant(source_image.uuid, timing.uuid)
+        timing_data = {
+            "frame_time": 0.0,
+            "aux_frame_index": idx,
+            "source_image_id": source_image.uuid,
+            "shot_id": shot.uuid,
+        }
+        timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
+
+        add_image_variant(source_image.uuid, timing.uuid)
 
     # create default ai models
     model_list = create_predefined_models(user)
@@ -148,11 +177,12 @@ def create_predefined_models(user):
 
     # create predefined models
     data = []
-    for model in ML_MODEL_LIST:
-        if model['enabled']:
-            del model['enabled']
-            model['user_id'] = user.uuid
-            data.append(model)
+    predefined_model_list = copy.deepcopy(ML_MODEL_LIST)
+    for m in predefined_model_list:
+        if 'enabled' in m and m['enabled']:
+            del m['enabled']
+            m['user_id'] = user.uuid
+            data.append(m)
 
     # only creating pre-defined models for the first time
     available_models = data_repo.get_all_ai_model_list(\

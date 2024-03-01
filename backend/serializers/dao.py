@@ -17,6 +17,7 @@ class CreateFileDao(serializers.Serializer):
     hosted_url = serializers.CharField(max_length=512, required=False)
     tag = serializers.CharField(max_length=100, allow_blank=True, required=False)
     project_id = serializers.CharField(max_length=100, required=False)
+    shot_uuid = serializers.CharField(max_length=512, required=False, default="", allow_blank=True)
     inference_log_id = serializers.CharField(max_length=100, allow_null=True, required=False)
 
     def validate(self, data):
@@ -66,6 +67,7 @@ class CreateInferenceLogDao(serializers.Serializer):
     output_details = serializers.CharField(required=False)
     total_inference_time = serializers.CharField(required=False)
     status = serializers.CharField(required=False, default="")
+    model_name = serializers.CharField(max_length=512, allow_blank=True, required=False, default="")
 
 
 class CreateAIModelParamMapDao(serializers.Serializer):
@@ -80,7 +82,7 @@ class CreateTimingDao(serializers.Serializer):
     mask_id = serializers.CharField(max_length=100, required=False)
     canny_image_id = serializers.CharField(max_length=100, required=False)
     shot_id = serializers.CharField(max_length=100)
-    primary_image = serializers.CharField(max_length=100, required=False)
+    primary_image_id = serializers.CharField(max_length=100, required=False)
     alternative_images = serializers.CharField(max_length=100, required=False)
     notes = serializers.CharField(max_length=1024, required=False)
     aux_frame_index = serializers.IntegerField(required=False)
@@ -102,7 +104,7 @@ class UpdateAppSettingDao(serializers.Serializer):
     aws_access_key = serializers.CharField(max_length=100, required=False)
     previous_project = serializers.CharField(max_length=100, required=False)
     replicate_username = serializers.CharField(max_length=100, required=False)
-    welcome_state = serializers.IntegerField(default=0, required=False)
+    welcome_state = serializers.IntegerField(required=False)
 
 class CreateSettingDao(serializers.Serializer):
     project_id = serializers.CharField(max_length=255)
@@ -120,3 +122,4 @@ class UpdateSettingDao(serializers.Serializer):
     input_type = serializers.CharField(max_length=255, required=False)
     width = serializers.IntegerField(required=False)
     height = serializers.IntegerField(required=False)
+    name = serializers.CharField(max_length=255, required=False)

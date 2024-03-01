@@ -12,7 +12,7 @@ def radio(label, options, index=0, key=None, help=None, on_change=None, disabled
     if key not in st.session_state:        
         st.session_state[key] = default_value                
 
-    selection = st.radio(label=label, options=options, index=st.session_state[key], horizontal=horizontal, label_visibility=label_visibility)
+    selection = st.radio(label=label, options=options, index=st.session_state[key], horizontal=horizontal, label_visibility=label_visibility,key=f"{key}_value")
 
     if options.index(selection) != st.session_state[key]:
         st.session_state[key] = options.index(selection)
@@ -25,7 +25,7 @@ def selectbox(label, options, index=0, key=None, help=None, on_change=None, disa
     if key not in st.session_state:        
         st.session_state[key] = index                
 
-    selection = st.selectbox(label=label, options=options, index=st.session_state[key], format_func=format_func)
+    selection = st.selectbox(label=label, options=options, index=st.session_state[key], format_func=format_func, help=help, on_change=on_change, disabled=disabled)
 
     if options.index(selection) != st.session_state[key]:
         st.session_state[key] = options.index(selection)
@@ -117,17 +117,26 @@ def checkbox(label, value=True,key=None, help=None, on_change=None, disabled=Fal
     return selection
 
 
-def menu(menu_title,options, icons=None, menu_icon=None, default_index=0, key=None, help=None, on_change=None, disabled=False, orientation="horizontal", default_value=0, styles=None):    
+def menu(menu_title, options, icons=None, menu_icon=None, default_index=0, key=None, help=None, on_change=None, disabled=False, orientation="horizontal", default_value=0, styles=None):    
     
     if key not in st.session_state:        
         st.session_state[key] = default_value                
 
-    selection = option_menu(menu_title,options=options, icons=icons, menu_icon=menu_icon, orientation=orientation, default_index=st.session_state[key], styles=styles)
+    # if {key}_manual_select doesn't exist, set it to None
+    manual_select_key = f'{key}_manual_select'
+    if manual_select_key not in st.session_state:
+        st.session_state[manual_select_key] = None
+
+    selection = option_menu(menu_title, options=options, icons=icons, menu_icon=menu_icon, orientation=orientation, default_index=int(st.session_state[key]), styles=styles, manual_select=st.session_state[manual_select_key])
+
+    # if {key}_manual_select is not None, set it to None
+    if st.session_state[manual_select_key] is not None:
+        st.session_state[manual_select_key] = None
 
     if options.index(selection) != st.session_state[key]:
         st.session_state[key] = options.index(selection)
         st.rerun()
-        
+
     return selection
 
 def text_area(label, value='', height=None, max_chars=None, key=None, help=None, on_change=None, args=None, kwargs=None, *, disabled=False, label_visibility="visible"):

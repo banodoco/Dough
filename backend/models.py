@@ -3,11 +3,12 @@ import uuid
 import json
 import requests
 from django.db.models import F
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 import urllib
 
-from shared.constants import SERVER, ServerType
+from shared.constants import SERVER, InferenceStatus, ServerType
 from shared.file_upload.s3 import generate_s3_url, is_s3_image_url
 
 class BaseModel(models.Model):
@@ -56,6 +57,19 @@ class Project(BaseModel):
     class Meta:
         app_label = 'backend'
         db_table = 'project'
+        
+    def __init__(self, *args, **kwargs):
+        super(Project, self).__init__(*args, **kwargs)
+        self.old_project_name = self.name
+    
+    def save(self, *args, **kwargs):
+        # if either this is a new project or it's name is being updated
+        # we check to make sure that it's name is not already present in the app
+        if self._state.adding or (self.old_project_name and self.old_project_name != self.name):
+            if Project.objects.filter(name=self.name, is_disabled=False).exists():
+                raise ValidationError("Project name already exists. Please input unique project name")
+            
+        super().save(*args, **kwargs)
 
 
 class AIModel(BaseModel):
@@ -79,6 +93,7 @@ class AIModel(BaseModel):
 class InferenceLog(BaseModel):
     project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True)
     model = models.ForeignKey(AIModel, on_delete=models.DO_NOTHING, null=True)
+    model_name = models.CharField(max_length=512, default="", blank=True)     # for filtering purposes
     input_params = models.TextField(default="", blank=True)
     output_details = models.TextField(default="", blank=True)
     total_inference_time = models.FloatField(default=0)
@@ -87,6 +102,17 @@ class InferenceLog(BaseModel):
     class Meta:
         app_label = 'backend'
         db_table = 'inference_log'
+    
+    def __init__(self, *args, **kwargs):
+        super(InferenceLog, self).__init__(*args, **kwargs)
+        self.old_status = self.status
+    
+    def save(self, *args, **kwargs):
+        # preventing status update if it has been set to one of these values
+        if self.old_status in [InferenceStatus.CANCELED.value, InferenceStatus.FAILED.value]:
+            self.status = self.old_status
+            
+        super().save(*args, **kwargs)
 
 
 class InternalFileObject(BaseModel):
@@ -97,6 +123,7 @@ class InternalFileObject(BaseModel):
     tag = models.CharField(max_length=255,default="")  # background_image, mask_image, canny_image etc..
     project = models.ForeignKey(Project, on_delete=models.SET_NULL, default=None, null=True)
     inference_log = models.ForeignKey(InferenceLog, on_delete=models.SET_NULL, default=None, null=True)
+    shot_uuid = models.CharField(max_length=255, default="", blank=True)    # NOTE: this is not a foreignkey and purely for filtering purpose
 
     class Meta:
         app_label = 'backend'

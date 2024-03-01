@@ -16,6 +16,14 @@ class CreativeProcessType(ExtendedEnum):
     STYLING = "Key Frames"
     MOTION = "Shots"
 
+class ShotMetaData(ExtendedEnum):
+    MOTION_DATA = "motion_data"     # {"timing_data": [...]}
+    
+class GalleryImageViewType(ExtendedEnum):
+    EXPLORER_ONLY = "explorer"
+    SHOT_ONLY = "shot"
+    ANY = "any"
+
 class DefaultTimingStyleParams:
     prompt = ""
     negative_prompt = "bad image, worst quality"
@@ -32,6 +40,7 @@ class DefaultTimingStyleParams:
     animation_tool = AnimationToolType.G_FILM.value
     animation_style = AnimationStyleType.CREATIVE_INTERPOLATION.value
     model = None
+    total_log_table_pages = 1
 
 class DefaultProjectSettingParams:
     batch_prompt = ""
@@ -53,6 +62,16 @@ class DefaultProjectSettingParams:
     total_gallery_pages = 1
     total_shortlist_gallery_pages = 1
     max_frames_per_shot = 30
+
+DEFAULT_SHOT_MOTION_VALUES = {
+    "strength_of_frame" : 0.7,
+    "distance_to_next_frame" : 1.5,
+    "speed_of_transition" : 0.6,
+    "freedom_between_frames" : 0.4,
+    "individual_prompt" : "",
+    "individual_negative_prompt" : "",
+    "motion_during_frame" : 1.3,
+}
 
 # TODO: make proper paths for every file
 CROPPED_IMG_LOCAL_PATH = "videos/temp/cropped.png"

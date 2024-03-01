@@ -4,12 +4,57 @@ import csv
 import subprocess
 import time
 import psutil
+import socket
 import streamlit as st
 import json
-from shared.constants import SERVER, ServerType
+import platform
+from shared.constants import SERVER, CreativeProcessPage, ServerType
 from ui_components.models import InternalUserObject
-from utils.cache.cache import StCache
+from utils.cache.cache import CacheKey, StCache
 from utils.data_repo.data_repo import DataRepo
+from ui_components.constants import DefaultProjectSettingParams
+
+def set_default_values(shot_uuid):
+    data_repo = DataRepo()
+    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
+
+    if 'selected_page_idx' not in st.session_state:
+        st.session_state['selected_page_idx'] = 0
+    
+    if "page" not in st.session_state:
+        st.session_state['page'] = CreativeProcessPage.value_list()[st.session_state['selected_page_idx']]
+
+    if "strength" not in st.session_state:
+        st.session_state['strength'] = DefaultProjectSettingParams.batch_strength
+        st.session_state['prompt_value'] = DefaultProjectSettingParams.batch_prompt
+        st.session_state['model'] = None
+        st.session_state['negative_prompt_value'] = DefaultProjectSettingParams.batch_negative_prompt
+        st.session_state['guidance_scale'] = DefaultProjectSettingParams.batch_guidance_scale
+        st.session_state['seed'] = DefaultProjectSettingParams.batch_seed
+        st.session_state['num_inference_steps'] = DefaultProjectSettingParams.batch_num_inference_steps
+        st.session_state['transformation_stage'] = DefaultProjectSettingParams.batch_transformation_stage
+        
+    if "current_frame_uuid" not in st.session_state and len(timing_list) > 0:
+        timing = timing_list[0]
+        st.session_state['current_frame_uuid'] = timing.uuid
+        st.session_state['current_frame_index'] = timing.aux_frame_index + 1
+    
+    if 'frame_styling_view_type' not in st.session_state:
+        st.session_state['frame_styling_view_type'] = "Generate"
+        st.session_state['frame_styling_view_type_index'] = 0
+
+    if "explorer_view" not in st.session_state:
+        st.session_state['explorer_view'] = "Explorations"
+        st.session_state['explorer_view_index'] = 0
+
+    if "shot_view" not in st.session_state:
+        st.session_state['shot_view'] = "Animate Frames"
+        st.session_state['shot_view_index'] = 0
+    
+    if "styling_view" not in st.session_state:
+        st.session_state['styling_view'] = "Generate"
+        st.session_state['styling_view_index'] = 0
+
 
 def copy_sample_assets(project_uuid):
     import shutil
@@ -66,9 +111,9 @@ def truncate_decimal(num: float, n: int = 2) -> float:
     return int(num * 10 ** n) / 10 ** n
 
 
-def get_current_user() -> InternalUserObject:
+def get_current_user(invalidate_cache=False) -> InternalUserObject:
     data_repo = DataRepo()
-    user = data_repo.get_first_active_user()
+    user = data_repo.get_first_active_user(invalidate_cache=invalidate_cache)
     return user
 
 def user_credits_available():
@@ -105,8 +150,7 @@ def reset_project_state():
         "which_layer_index",
         "drawing_input",
         "image_created",
-        "precision_cropping_inpainted_image_uuid",
-        "frame_styling_view_type",
+        "precision_cropping_inpainted_image_uuid",        
         "transformation_stage",
         "custom_pipeline",
         "index_of_last_custom_pipeline",
@@ -131,6 +175,8 @@ def reset_project_state():
         "seed",
         "promote_new_generation",
         "use_new_settings",
+        "shot_uuid",
+        "maintain_state"
     ]
 
     for k in keys_to_delete:
@@ -170,19 +216,33 @@ def reset_styling_settings(timing_uuid):
             del st.session_state[k]
 
 
-def is_process_active(custom_process_name):
-    # this caching assumes that the runner won't interupt or break once started
-    if custom_process_name + "_process_state" in st.session_state and st.session_state[custom_process_name + "_process_state"]:
+def is_process_active(custom_process_name, custom_process_port):
+    # This caching assumes that the runner won't interrupt or break once started
+    cache_key = custom_process_name + "_process_state"
+    if cache_key in st.session_state and st.session_state[cache_key]:
         return True
 
+    res = False
     try:
-        ps_output = subprocess.check_output(["ps", "aux"]).decode("utf-8")
-        if custom_process_name in ps_output:
-            st.session_state[custom_process_name + "_process_state"] = True
-            return True
+        if platform.system() == "Windows":
+            try:
+                client_socket = socket.create_connection(("localhost", custom_process_port))
+                client_socket.close()
+                res = True
+            except ConnectionRefusedError:
+                res = False
+        else:
+            # Use 'ps' for Unix/Linux
+            ps_output = subprocess.check_output(["ps", "aux"]).decode("utf-8")
+            res = True if custom_process_name in ps_output else False
+            
+        if res:
+            st.session_state[cache_key] = True
+        return res
     except subprocess.CalledProcessError:
         return False
 
+    # If the process is not found or an error occurs, assume it's not active
     return False
 
 
@@ -201,3 +261,13 @@ def release_lock(key):
     data_repo = DataRepo()
     data_repo.release_lock(key)
     return True
+
+
+def refresh_app(maintain_state=False):
+    # st.session_state['maintain_state'] = maintain_state
+    st.rerun()
+
+
+def padded_integer(integer, pad_length=4):
+    padded_string = str(integer).zfill(pad_length)
+    return padded_string

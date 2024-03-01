@@ -59,4 +59,5 @@ class AppLogger(logging.Logger):
             self.error(log_message)
         elif log_type in [LoggingType.INFERENCE_CALL, LoggingType.INFERENCE_RESULT]:
             self.info(log_message)
-    
+
+app_logger = AppLogger()

@@ -1,13 +1,12 @@
 # this repo serves as a middlerware between API backend and the frontend
 import json
 import time
-from shared.constants import InferenceParamType, InternalFileType, InternalResponse
+from shared.constants import SECRET_ACCESS_TOKEN, InferenceParamType, InferenceStatus, InternalFileType, InternalResponse
 from shared.constants import SERVER, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from ui_components.models import InferenceLogObject, InternalAIModelObject, InternalAppSettingObject, InternalBackupObject, InternalFrameTimingObject, InternalProjectObject, InternalFileObject, InternalSettingObject, InternalShotObject, InternalUserObject
 from utils.cache.cache_methods import cache_data
-import wrapt
 
 from utils.data_repo.api_repo import APIRepo
 
@@ -57,7 +56,7 @@ class DataRepo:
         user = self.db_repo.create_user(**kwargs).data['data']
         return InternalUserObject(**user) if user else None
     
-    def get_first_active_user(self):
+    def get_first_active_user(self, invalidate_cache=False):
         res: InternalResponse = self.db_repo.get_first_active_user()
         user = res.data['data'] if res.status else None
         return InternalUserObject(**user) if user else None
@@ -88,7 +87,8 @@ class DataRepo:
         return InternalFileObject(**file) if file else None
 
     def get_file_from_uuid(self, uuid):
-        file = self.db_repo.get_file_from_uuid(uuid).data['data']
+        res = self.db_repo.get_file_from_uuid(uuid)
+        file = res.data['data'] if res.status else None
         return InternalFileObject(**file) if file else None
     
     def get_file_list_from_log_uuid_list(self, log_uuid_list):
@@ -96,7 +96,7 @@ class DataRepo:
         file_list = res.data['data'] if res.status else []
         return [InternalFileObject(**file) for file in file_list]
     
-    # kwargs -  file_type: InternalFileType, tag = None, project_id = None, page=None, data_per_page=None, sort_order=None
+    # kwargs -  file_type: InternalFileType, tag = None, shot_uuid = "", project_id = None, page=None, data_per_page=None, sort_order=None
     def get_all_file_list(self, **kwargs):
         kwargs["type"] = kwargs['file_type']
         del kwargs['file_type']
@@ -121,6 +121,11 @@ class DataRepo:
             uploaded_file_url = self.upload_file(file_content)
             kwargs.update({'hosted_url':uploaded_file_url})
 
+        # handling the case of local inference.. will fix later
+        if 'hosted_url' in kwargs and not kwargs['hosted_url'].startswith('http'):
+            kwargs['local_path'] = kwargs['hosted_url']
+            del kwargs['hosted_url']
+
         res = self.db_repo.create_file(**kwargs)
         file = res.data['data'] if res.status else None
         file = InternalFileObject(**file) if file else None
@@ -139,6 +144,8 @@ class DataRepo:
         if not (image_uuid_list and len(image_uuid_list)):
             return []
         image_list = self.db_repo.get_image_list_from_uuid_list(image_uuid_list, file_type=file_type).data['data']
+        
+        print("--------------- ", image_list[0]['project']['uuid'])
         return [InternalFileObject(**image) for image in image_list] if image_list else []
     
     def update_file(self, file_uuid, **kwargs):
@@ -149,8 +156,16 @@ class DataRepo:
             uploaded_file_url = self.upload_file(file_content)
             kwargs.update({'hosted_url':uploaded_file_url})
 
-        file = self.db_repo.update_file(uuid=file_uuid, **kwargs).data['data']
+        res = self.db_repo.update_file(uuid=file_uuid, **kwargs)
+        file = res.data['data'] if res.status else None
         return InternalFileObject(**file) if file else None
+    
+    def get_file_count_from_type(self, file_tag=None, project_uuid=None):
+        return self.db_repo.get_file_count_from_type(file_tag, project_uuid).data['data']
+    
+    def update_temp_gallery_images(self, project_uuid):
+        self.db_repo.update_temp_gallery_images(project_uuid)
+        return True
     
     # project
     def get_project_from_uuid(self, uuid):
@@ -159,6 +174,7 @@ class DataRepo:
     
     def get_all_project_list(self, user_id):
         project_list = self.db_repo.get_all_project_list(user_id).data['data']
+        project_list.sort(key=lambda x: x['created_on'])
         return [InternalProjectObject(**project) for project in project_list] if project_list else None
     
     def create_project(self, **kwargs):
@@ -327,7 +343,8 @@ class DataRepo:
         if not uuid:
             uuid = get_current_user_uuid()
         
-        app_secrets = self.db_repo.get_app_secrets_from_user_uuid(uuid).data['data']
+        app_secrets = self.db_repo.get_app_secrets_from_user_uuid(uuid, \
+            secret_access=SECRET_ACCESS_TOKEN).data['data']
         return app_secrets
     
     def get_all_app_setting_list(self):
@@ -392,8 +409,13 @@ class DataRepo:
         return res.status
     
     # update user credits - updates the credit of the user calling the API
-    def update_usage_credits(self, credits_to_add):
-        user = self.update_user(user_id=None, credits_to_add=credits_to_add)
+    def update_usage_credits(self, credits_to_add, log_uuid=None):
+        user_id = None
+        if log_uuid:
+            log = self.get_inference_log_from_uuid(log_uuid)
+            user_id = log.project.user_uuid
+
+        user = self.update_user(user_id=user_id, credits_to_add=credits_to_add)
         return user
     
     def generate_payment_link(self, amount):
@@ -457,3 +479,11 @@ class DataRepo:
     def add_interpolated_clip(self, shot_uuid, **kwargs):
         res = self.db_repo.add_interpolated_clip(shot_uuid, **kwargs)
         return res.status
+    
+    # combined
+    # gives the count of 1. temp generated images 2. inference logs with in-progress/pending status
+    def get_explorer_pending_stats(self, project_uuid):
+        log_status_list = [InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value]
+        res = self.db_repo.get_explorer_pending_stats(project_uuid, log_status_list)
+        count_data = res.data['data'] if res.status else {"temp_image_count": 0, "pending_image_count": 0}
+        return count_data
