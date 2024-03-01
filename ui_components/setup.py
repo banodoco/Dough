@@ -124,10 +124,7 @@ def setup_app_ui():
             st.info(
                 "No projects found - create one in the 'New Project' section")
         else:
-            with st.sidebar:
-                with st.expander("🔍 Generation log", expanded=False):
-                    # if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
-                    sidebar_logger(st.session_state["shot_uuid"])
+
 
             if not os.path.exists("videos/" + st.session_state["project_uuid"] + "/assets"):
                 create_working_assets(st.session_state["project_uuid"])
@@ -202,6 +199,11 @@ def setup_app_ui():
                         default_index=st.session_state['selected_page_idx'],
                         on_change=change_page
                     )
+
+                    with st.sidebar:
+                        with st.expander("🔍 Generation log", expanded=True):
+                            # if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
+                            sidebar_logger(st.session_state["shot_uuid"])
                     
                     if st.session_state['page'] != creative_process_pages[1]:
                         st.session_state['current_frame_sidebar_selector'] = 0

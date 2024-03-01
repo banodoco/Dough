@@ -12,9 +12,16 @@ def project_settings_page(project_uuid):
     data_repo = DataRepo()
     st.markdown("#### Project Settings")
     st.markdown("***")
+
+    with st.expander("📋 Project name", expanded=True):
+        project = data_repo.get_project_from_uuid(project_uuid)
+        st.write("Current Name = ", project.name)
+        new_name = st.text_input("Enter new name:", project.name)
+        if st.button("Save", key="project_name"):
+            data_repo.update_project_setting(project_uuid, project_name=new_name)
+            st.rerun()
     project_settings = data_repo.get_project_setting(project_uuid)
 
-    
 
     frame_sizes = ["512x512", "768x512", "512x768"]
     current_size = f"{project_settings.width}x{project_settings.height}"

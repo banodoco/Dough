@@ -55,6 +55,7 @@ def timeline_view(shot_uuid, stage):
                 update_shot_duration(shot.uuid)
                 move_shot_buttons(shot, "side")
                 delete_shot_button(shot.uuid)
+                duplicate_shot_button(shot.uuid)
                 if shot.main_clip:
                     create_video_download_button(shot.main_clip.location, tag="main_clip")
                 
@@ -67,6 +68,19 @@ def timeline_view(shot_uuid, stage):
                 add_new_shot_element(shot, data_repo)
 
 
+def duplicate_shot_button(shot_uuid):
+    if st.button("Duplicate shot", key=f"duplicate_shot_{shot_uuid}", use_container_width=True):
+        data_repo = DataRepo()
+        shot = data_repo.get_shot_from_uuid(shot_uuid)
+        new_shot = add_new_shot(shot.project.uuid)
+        new_shot.timing_list = shot.timing_list
+        new_shot.main_clip = shot.main_clip
+        # trim shot name so that it plus - Copy is less than 25 characters
+        if len(shot.name) > 18:
+            shot.name = shot.name[:20]
+        new_shot.name = f"{shot.name} - Copy"
+        data_repo.update_shot(uuid=new_shot.uuid, name=new_shot.name)
+        st.rerun()
         
 
 

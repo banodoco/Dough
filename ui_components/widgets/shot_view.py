@@ -48,7 +48,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
 
     else:
         with column:
-            col1, col2, col3, col4= st.columns([1,1,1,1])
+            col1, col2, col3, col4, col5 = st.columns([1,1,1,1,1])
 
             with col1:
                 delete_frames_toggle = st_memory.toggle("Delete Frames", value=True, key="delete_frames_toggle")
@@ -57,12 +57,10 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
             with col3:
                 move_frames_toggle = st_memory.toggle("Move Frames", value=True, key="move_frames_toggle")
             with col4:
-                change_shot_toggle = st_memory.toggle("Change Shot", value=False, key="change_shot_toggle")
-                # replace_image_widget_toggle = st_memory.toggle("Replace Image", value=False, key="replace_image_widget_toggle")
-                
-            
-                
-
+                change_shot_toggle = st_memory.toggle("Change Shot", value=False, key="change_shot_toggle")                
+            with col5:
+                shift_frame_toggle = st_memory.toggle("Shift Frame", value=False, key="shift_frame_toggle")
+                                            
     st.markdown("***")
 
     for i in range(0, len(timing_list) + 1, items_per_row):
@@ -86,7 +84,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
                                 st.warning("No primary image present.")       
                                 jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}",uuid=shot.uuid)
                             if position != "Timeline":
-                                timeline_view_buttons(idx, shot_uuid, copy_frame_toggle, move_frames_toggle,delete_frames_toggle, change_shot_toggle)
+                                timeline_view_buttons(idx, shot_uuid, copy_frame_toggle, move_frames_toggle,delete_frames_toggle, change_shot_toggle, shift_frame_toggle)
             if (i < len(timing_list) - 1) or (st.session_state["open_shot"] == shot.uuid) or (len(timing_list) % items_per_row != 0 and st.session_state["open_shot"] != shot.uuid) or len(timing_list) % items_per_row == 0:
                 st.markdown("***")
     # st.markdown("***")
@@ -269,9 +267,64 @@ def shot_animation_button(shot, show_label=False):
         st.session_state['shot_view_index'] = 0
         st.rerun() 
 
-        
 
-def timeline_view_buttons(idx, shot_uuid, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_shot_toggle):
+
+def shift_frame_to_position(timing_uuid, target_position):
+    '''
+    Shifts the frame to the specified target position within the list of frames.
+    
+    Note: target_position is expected to be 1-based for user convenience (e.g., position 1 is the first position).
+    '''
+    data_repo = DataRepo()
+    timing = data_repo.get_timing_from_uuid(timing_uuid)
+    timing_list = data_repo.get_timing_list_from_shot(timing.shot.uuid)
+
+    # Adjusting target_position to 0-based indexing for internal logic
+    target_position -= 1
+
+    current_position = timing.aux_frame_index
+    total_frames = len(timing_list)
+
+    # Check if the target position is valid
+    if target_position < 0 or target_position >= total_frames:
+        st.error("Invalid target position")
+        time.sleep(0.5)
+        return
+    
+    # Check if the frame is already at the target position
+    if current_position == target_position:
+        st.error("That's already your position")
+        time.sleep(0.5)
+        return
+
+    # Update the position of the current frame and adjust other frames accordingly
+    if target_position > current_position:
+        # Moving forward in the list
+        for i in range(current_position, target_position):
+            data_repo.update_specific_timing(timing_list[i + 1].uuid, aux_frame_index=i)
+    else:
+        # Moving backward in the list
+        for i in range(current_position, target_position, -1):
+            data_repo.update_specific_timing(timing_list[i - 1].uuid, aux_frame_index=i)
+
+    # Finally, update the position of the current frame
+    data_repo.update_specific_timing(timing.uuid, aux_frame_index=target_position)
+
+
+def shift_frame_button(idx,shot):
+    timing_list: List[InternalFrameTimingObject] = shot.timing_list
+    col1, col2 = st.columns([1,1])
+    with col1:
+        position_to_shift_to = st.number_input("Shift to position:", value=1, key=f"shift_to_position_{timing_list[idx].uuid}",min_value=1, max_value=len(timing_list))
+    with col2:
+        st.write("")
+        
+        if st.button("Shift", key=f"shift_frame_{timing_list[idx].uuid}", use_container_width=True):
+            shift_frame_to_position(timing_list[idx].uuid, position_to_shift_to)
+            st.rerun()
+            
+
+def timeline_view_buttons(idx, shot_uuid, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_shot_toggle, shift_frame_toggle):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     timing_list = shot.timing_list
@@ -301,3 +354,5 @@ def timeline_view_buttons(idx, shot_uuid, copy_frame_toggle, move_frames_toggle,
     
     jump_to_single_frame_view_button(idx + 1, timing_list, 'timeline_btn_'+str(timing_list[idx].uuid))        
 
+    if shift_frame_toggle:
+        shift_frame_button(idx,shot)

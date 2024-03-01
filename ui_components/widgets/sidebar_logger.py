@@ -14,10 +14,9 @@ def sidebar_logger(shot_uuid):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
-    a1, _, a3 = st.columns([1, 0.2, 1])
 
     refresh_disabled = False # not any(log.status in [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value] for log in log_list)
-    z1, z2 = st.columns([1, 1])
+    z1, z2 = st.columns([1.5, 1])
     if z1.button("Refresh log", disabled=refresh_disabled, help="You can also press 'r' on your keyboard to refresh."): st.rerun()
 
     with z1:
@@ -38,9 +37,7 @@ def sidebar_logger(shot_uuid):
         "Which model to show:",
         ["All"] + [m.display_name() for m in MODEL_FILTERS]
         )
-        
-    b1, b2 = st.columns([1, 1])
-    
+                
     page_number = z2.number_input('Page number', min_value=1, max_value=project_setting.total_log_pages, value=1, step=1)
     items_per_page = 5
     # items_per_page = z2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
@@ -64,7 +61,7 @@ def sidebar_logger(shot_uuid):
         st.rerun()
     with z2:
         if total_page_count > 1:            
-            st.write("Total page count: ", total_page_count)
+            st.caption(f"Total page count: {total_page_count}")
     # display_list = log_list[(page_number - 1) * items_per_page : page_number * items_per_page]                
 
     if log_list and len(log_list):
@@ -73,7 +70,7 @@ def sidebar_logger(shot_uuid):
         for file in file_list:
             log_file_dict[str(file.inference_log.uuid)] = file
 
-        st.markdown("---")
+        # st.markdown("---")
         for _, log in enumerate(log_list):
             origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
             if not log.status:
@@ -83,16 +80,20 @@ def sidebar_logger(shot_uuid):
             if log.uuid in log_file_dict:
                 output_url = log_file_dict[log.uuid].location
 
-            c1, c2, c3 = st.columns([1, 0.7 if output_url else 0.01, 1])
-            with c1:                
+            c0, c1, c2, c3, c4 = st.columns([0.5,0.5, 0.7 if output_url else 0.01, 0.1 if output_url else 1, 0.1 if output_url else 1])
+            with c0:
                 input_params = json.loads(log.input_params)
                 prompt = input_params.get('prompt', 'No prompt found')
-                st.caption(f"Prompt: \"{prompt[:30] + '...' if len(prompt) > 30 else prompt}\"")
+                st.caption(f"Prompt: \"{prompt[:5] + '...' if len(prompt) > 30 else prompt}\"")
+                st.caption("-\-\-\-\-\-\-\-\-")
+            with c1:                            
+
                 try:
                     model_name = json.loads(log.output_details)['model_name'].split('/')[-1]
                 except Exception as e:
                     model_name = 'Unavailable'
                 st.caption(f"Model: {model_name}")
+                
                                             
             with c2:
                 if output_url:                                              
@@ -125,6 +126,7 @@ def sidebar_logger(shot_uuid):
                             time.sleep(0.3)
                             st.rerun()
                 '''
+            with c4:
                 if log.status == InferenceStatus.QUEUED.value:
                     if st.button("Cancel", key=f"cancel_gen_{log.uuid}", use_container_width=True, help="Cancel"):
                         err_msg = "Generation has already started"
@@ -160,5 +162,7 @@ def sidebar_logger(shot_uuid):
                                 
                                 st.rerun()
                 
-
-            st.markdown("---")
+            # if it's not the last log
+            #if _ != len(log_list) - 1:
+             #   st.caption("-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-\-")
+            # st.markdown("_\_\_")

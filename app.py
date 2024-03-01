@@ -82,8 +82,7 @@ def main():
                 discord_url = "<a target='_self' href='https://discord.gg/zGgpH9JEw4'> Banodoco Discord </a>"
                 st.markdown(discord_url, unsafe_allow_html=True)
         else:
-            st.markdown("# :green[D]:red[o]:blue[u]:orange[g]:green[h] :red[□] :blue[□] :orange[□]")
-            st.caption("by Banodoco")
+            st.markdown("# :green[D]:red[o]:blue[u]:orange[g]:green[h] :red[□] :blue[□] :orange[□]")            
             st.markdown("#### Login with Google to proceed")
     
             auth_url = get_google_auth_url()
