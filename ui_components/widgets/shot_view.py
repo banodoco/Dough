@@ -60,7 +60,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
             with col4:
                 change_shot_toggle = st_memory.toggle("Change Shot", value=False, key="change_shot_toggle")                
             with col5:
-                shift_frame_toggle = st_memory.toggle("Shift Frame", value=False, key="shift_frame_toggle")
+                shift_frame_toggle = st_memory.toggle("Shift Frames", value=False, key="shift_frame_toggle")
                                             
     st.markdown("***")
 

@@ -22,14 +22,14 @@ def new_project_page():
     
     # Prompt user for project naming within project_column
     with project_column:
-        new_project_name = st.text_input("Project name:", value="")
-        st.text("NOTE: Project name should be unique")
+        new_project_name = st.text_input("Project name:", value="")        
 
     # Prompt user for video dimension specifications
-    v1, v2, v3 = st.columns([3,1,10])
+    v1, v2, v3 = st.columns([6,3,12])
         
     frame_sizes = ["512x512", "768x512", "512x768"]
     with v1:
+        
         frame_size = st.radio("Select frame size:", options=frame_sizes, key="frame_size",horizontal=True)
         if frame_size == "512x512":
             width = 512
@@ -41,7 +41,7 @@ def new_project_page():
             width = 512
             height = 768
     
-    with v2:        
+    with v2:                              
         img = Image.new('RGB', (width, height), color = (73, 109, 137))
         st.image(img, use_column_width=True)        
         # st.info("Uploaded images will be resized to the selected dimensions.")
@@ -51,13 +51,9 @@ def new_project_page():
 
         # Display audio upload option if user selects "Attach new audio"
         if audio == "Attach new audio":
-            audio_upload_column, audio_info_column = st.columns([4, 5])
-            with audio_upload_column:
-                uploaded_audio = st.file_uploader("Choose an audio file:")
-            with audio_info_column:
-                st.write("")
-                st.write("")
-                st.info("Make sure that this audio is around the same length as your video.")
+      
+            uploaded_audio = st.file_uploader("Choose an audio file:")
+        
         else:
             uploaded_audio = None
 

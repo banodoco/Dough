@@ -14,10 +14,8 @@ def project_settings_page(project_uuid):
     st.markdown("***")
 
     with st.expander("📋 Project name", expanded=True):
-        project = data_repo.get_project_from_uuid(project_uuid)
-        st.write("Current Name = ", project.name)
-        new_name = st.text_input("Enter new name:", project.name)
-        st.text("NOTE: Project name should be unique")
+        project = data_repo.get_project_from_uuid(project_uuid)        
+        new_name = st.text_input("Enter new name:", project.name)        
         if st.button("Save", key="project_name"):
             data_repo.update_project(uuid=project_uuid, name=new_name)
             st.rerun()
