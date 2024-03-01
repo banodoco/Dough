@@ -289,17 +289,7 @@ def shift_frame_to_position(timing_uuid, target_position):
         time.sleep(0.5)
         return
 
-    # Update the position of the current frame and adjust other frames accordingly
-    if target_position > current_position:
-        # Moving forward in the list
-        for i in range(current_position, target_position):
-            data_repo.update_specific_timing(timing_list[i + 1].uuid, aux_frame_index=i)
-    else:
-        # Moving backward in the list
-        for i in range(current_position, target_position, -1):
-            data_repo.update_specific_timing(timing_list[i - 1].uuid, aux_frame_index=i)
-
-    # Finally, update the position of the current frame
+    # Update the position of the current frame
     data_repo.update_specific_timing(timing.uuid, aux_frame_index=target_position)
 
 
@@ -307,10 +297,9 @@ def shift_frame_button(idx,shot):
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
     col1, col2 = st.columns([1,1])
     with col1:
-        position_to_shift_to = st.number_input("Shift to position:", value=1, key=f"shift_to_position_{timing_list[idx].uuid}",min_value=1, max_value=len(timing_list))
+        position_to_shift_to = st.number_input("Shift to position:", value=timing_list[idx].aux_frame_index+1, key=f"shift_to_position_{timing_list[idx].uuid}",min_value=1, max_value=len(timing_list))
     with col2:
         st.write("")
-        
         if st.button("Shift", key=f"shift_frame_{timing_list[idx].uuid}", use_container_width=True):
             shift_frame_to_position(timing_list[idx].uuid, position_to_shift_to)
             st.rerun()
