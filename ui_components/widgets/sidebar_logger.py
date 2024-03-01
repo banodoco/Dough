@@ -80,7 +80,7 @@ def sidebar_logger(shot_uuid):
             if log.uuid in log_file_dict:
                 output_url = log_file_dict[log.uuid].location
 
-            c0, c1, c2, c3, c4 = st.columns([0.5,0.5, 0.7 if output_url else 0.01, 0.1 if output_url else 1, 0.1 if output_url else 1])
+            c0, c1, c2, c3, c4 = st.columns([0.5,0.5, 0.7 if output_url else 0.01, 1, 0.01 if output_url else 1])
             with c0:
                 input_params = json.loads(log.input_params)
                 prompt = input_params.get('prompt', 'No prompt found')
