@@ -20,7 +20,13 @@ def sidebar_logger(shot_uuid):
     if z1.button("Refresh log", disabled=refresh_disabled, help="You can also press 'r' on your keyboard to refresh."): st.rerun()
 
     with z1:
-        status_option = st.radio("Statuses to display:", options=["In Progress", "All","Succeeded", "Failed"], key="status_option", index=0, horizontal=True)
+        if 'status_optn_index' not in st.session_state:
+            st.session_state['status_optn_index'] = 0
+            
+        status_option = st.radio("Statuses to display:", options=["In Progress", "All","Succeeded", "Failed"], \
+            key="status_option", index=st.session_state['status_optn_index'], horizontal=True)
+        
+        st.session_state['status_optn_index'] = ["In Progress", "All","Succeeded", "Failed"].index(status_option)
     
     status_list = None
     if status_option == "In Progress":
