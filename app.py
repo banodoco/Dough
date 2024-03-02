@@ -57,7 +57,7 @@ def start_runner():
             pass
 
 def main():
-    st.set_page_config(page_title="Banodoco", page_icon="🎨", layout="wide")
+    st.set_page_config(page_title="Dough", page_icon="https://eu-central.storage.cloudconvert.com/tasks/9a8c87e2-802b-4f56-b9cf-875d57d94a98/DALL%C2%B7E%202024-03-01%2022.04.27%20-%20A%20simple%20emoji%20representation%20of%20dough%2C%20without%20any%20facial%20features.%20The%20emoji%20should%20depict%20a%20light%20beige%2C%20soft-looking%2C%20pliable%20ball%20of%20dough%20with%20a.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Content-Sha256=UNSIGNED-PAYLOAD&X-Amz-Credential=cloudconvert-production%2F20240301%2Ffra%2Fs3%2Faws4_request&X-Amz-Date=20240301T210446Z&X-Amz-Expires=86400&X-Amz-Signature=48d00bf6a9c8ecf8f3b99042d4e30e6ecf5bbcf3bd31bece26f83af6f7fb29ed&X-Amz-SignedHeaders=host&response-content-disposition=inline%3B%20filename%3D%22DALL%C2%B7E%202024-03-01%2022.04.27%20-%20A%20simple%20emoji%20representation%20of%20dough%2C%20without%20any%20facial%20features.%20The%20emoji%20should%20depict%20a%20light%20beige%2C%20soft-looking%2C%20pliable%20ball%20of%20dough%20with%20a.png%22&response-content-type=image%2Fpng&x-id=GetObject", layout="wide")
 
     auth_details = get_url_param(AUTH_TOKEN)
     if (not auth_details or auth_details == 'None')\
