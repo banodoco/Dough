@@ -138,6 +138,7 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
 
     # --------- update video duration
     # output_video = update_speed_of_video_clip(video_file, shot.duration)
+    output_video = video_file
 
     # --------- add audio
     temp_file_list = []

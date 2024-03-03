@@ -6,6 +6,7 @@ import streamlit as st
 from typing import List
 from shared.constants import AnimationStyleType, AnimationToolType, InferenceParamType
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, DefaultProjectSettingParams, ShotMetaData
+from ui_components.methods.animation_style_methods import load_shot_settings
 from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.motion_module import AnimateDiffCheckpoint
@@ -52,6 +53,7 @@ def animation_style_element(shot_uuid):
         individual_prompts = []
         individual_negative_prompts = []
         motions_during_frames = []
+        shot_meta_data = {}
 
         if len(timing_list) <= 1:
             st.warning("You need at least two frames to generate a video.")
@@ -78,8 +80,9 @@ def animation_style_element(shot_uuid):
         if f'ckpt_{shot.uuid}' not in st.session_state:
             st.session_state[f'ckpt_{shot.uuid}'] = ""
             
-        # loading settings of the last shot
-        load_shot_settings(shot.uuid)
+        # loading settings of the last shot (if this shot is being loaded for the first time)
+        if f'strength_of_frame_{shot_uuid}_0' not in st.session_state:
+            load_shot_settings(shot.uuid)
                 
         # ------------- Timing Frame and their settings -------------------
         for i in range(0, len(timing_list) , items_per_row):
@@ -512,7 +515,8 @@ def animation_style_element(shot_uuid):
             individual_negative_prompts=negative_prompt_travel,
             animation_stype=AnimationStyleType.CREATIVE_INTERPOLATION.value,            
             max_frames=str(dynamic_frame_distribution_values[-1]),
-            lora_data=lora_data
+            lora_data=lora_data,
+            shot_data=shot_meta_data
         )
         
         position = "generate_vid"
@@ -527,7 +531,7 @@ def animation_style_element(shot_uuid):
                 # last keyframe position * 16
                 duration = float(dynamic_frame_distribution_values[-1] / 16)
                 data_repo.update_shot(uuid=shot.uuid, duration=duration)
-                update_session_state_with_animation_details(
+                shot_data = update_session_state_with_animation_details(
                     shot.uuid, 
                     timing_list, 
                     strength_of_frames, 
@@ -538,6 +542,7 @@ def animation_style_element(shot_uuid):
                     individual_prompts, 
                     individual_negative_prompts
                 )
+                settings.update(shot_data=shot_data)
                 vid_quality = "full"    # TODO: add this if video_resolution == "Full Resolution" else "preview"
                 st.success("Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update.")
 
@@ -636,50 +641,6 @@ def animation_style_element(shot_uuid):
                             st.rerun()
 
 # --------------------- METHODS -----------------------
-def load_shot_settings(shot_uuid, log_uuid=None):
-    data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
-    motion_data = DEFAULT_SHOT_MOTION_VALUES
-    
-    # loading settings of the last generation (saved in the shot)
-    # in case no log_uuid is provided
-    if not log_uuid:
-        shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, json.dumps({}))
-                    
-    # loading settings from that particular log
-    else:
-        log = data_repo.get_inference_log_from_uuid(log_uuid)
-        input_params = json.loads(log.input_params) if log.input_params else {}
-        query_obj = json.loads(input_params.get(InferenceParamType.QUERY_DICT.value, json.dumps({})))
-        shot_meta_data = query_obj.data.get('data', {}).get("shot_data", {})
-    
-    # updating timing data
-    timing_data = json.loads(shot_meta_data).get("timing_data", [])
-    for idx, _ in enumerate(shot.timing_list):
-        # setting default parameters (fetching data from the shot if it's present)
-        if f'strength_of_frame_{shot_uuid}_{idx}' not in st.session_state:
-            if timing_data and len(timing_data) >= idx + 1:
-                motion_data = timing_data[idx]
-
-            for k, v in motion_data.items():
-                st.session_state[f'{k}_{shot_uuid}_{idx}'] = v
-    
-    # updating other settings main settings
-    main_setting_data = json.loads(shot_meta_data, {}).get("main_setting_data", {})
-    update_keys = [
-        "lora_data",
-        "strength_of_adherence_value",
-        "type_of_motion_context_index",
-        "positive_prompt_video",
-        "negative_prompt_video",
-        "ckpt"
-    ]
-    for key in update_keys:
-        key = f"{key}_{shot_uuid}"
-        if key in main_setting_data:
-            st.session_state[key] = main_setting_data[key]
-        
-
 def toggle_generate_inference(position):
     if position + '_generate_inference' not in st.session_state:
         st.session_state[position + '_generate_inference'] = True
@@ -725,6 +686,7 @@ def update_session_state_with_animation_details(shot_uuid, timing_list, strength
     ]
     main_setting_data = {}
     for key in update_keys:
+        key = f"{key}_{shot_uuid}"
         main_setting_data[key] = st.session_state[key]
     
     meta_data.update(
@@ -737,7 +699,9 @@ def update_session_state_with_animation_details(shot_uuid, timing_list, strength
             )
         }
     )
+
     data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
+    return meta_data
 
 def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):
     adjusted_frame_numbers = [frame + buffer for frame in frame_numbers]
