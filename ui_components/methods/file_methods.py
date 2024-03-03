@@ -335,3 +335,17 @@ def list_files_in_folder(folder_path):
         if os.path.isfile(os.path.join(folder_path, file)):
             files.append(file)
     return files
+
+def get_file_bytes_and_extension(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # non-2xx responses
+        file_bytes = response.content
+        parsed_url = urlparse(url)
+        filename, file_extension = os.path.splitext(parsed_url.path)
+        file_extension = file_extension.lstrip('.')
+        
+        return file_bytes, file_extension
+    except Exception as e:
+        print("Error:", e)
+        return None, None
