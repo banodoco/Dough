@@ -137,7 +137,7 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
     project_settings = data_repo.get_project_setting(shot.project.uuid)
 
     # --------- update video duration
-    output_video = update_speed_of_video_clip(video_file, shot.duration)
+    # output_video = update_speed_of_video_clip(video_file, shot.duration)
 
     # --------- add audio
     temp_file_list = []

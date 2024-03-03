@@ -156,7 +156,6 @@ def animation_style_element(shot_uuid):
 
         else:
             # Filter files to only include those with .safetensors and .ckpt extensions
-            
             model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
             # drop all files that contain xl
             model_files = [file for file in model_files if "xl" not in file]
@@ -165,7 +164,6 @@ def animation_style_element(shot_uuid):
         current_model_index = model_files.index(st.session_state[f'ckpt_{shot.uuid}']) if st.session_state[f'ckpt_{shot.uuid}'] in model_files else 0
 
         with tab1:
-
             model1, model2 = st.columns([1, 1])
             with model1:
                 if model_files and len(model_files):
@@ -186,11 +184,26 @@ def animation_style_element(shot_uuid):
         with tab2:
             # Mapping of model names to their download URLs
             sd_model_dict = {
-                "Anything V3 FP16 Pruned": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/anything-v3-fp16-pruned.safetensors.tar",
-                "Deliberate V2": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/Deliberate_v2.safetensors.tar",
-                "Dreamshaper 8": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/dreamshaper_8.safetensors.tar",
-                "epicrealism_pureEvolutionV5": "https://civitai.com/api/download/models/134065",
-                "majicmixRealistic_v6": "https://civitai.com/api/download/models/94640",            
+                "Anything V3 FP16 Pruned": {
+                    "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/anything-v3-fp16-pruned.safetensors.tar",
+                    "filename": "anything-v3-fp16-pruned.safetensors.tar"
+                },
+                "Deliberate V2": {
+                    "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/Deliberate_v2.safetensors.tar",
+                    "filename": "Deliberate_v2.safetensors.tar"
+                },
+                "Dreamshaper 8": {
+                    "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/dreamshaper_8.safetensors.tar",
+                    "filename": "dreamshaper_8.safetensors.tar"
+                },
+                "epicrealism_pureEvolutionV5": {
+                    "url": "https://civitai.com/api/download/models/134065", 
+                    "filename": "epicrealism_pureEvolutionv5.safetensors"
+                },
+                "majicmixRealistic_v6": {
+                    "url": "https://civitai.com/api/download/models/94640", 
+                    "filename": "majicmixRealistic_v6.safetensors"
+                },
             }
 
             where_to_get_model = st.radio("Where would you like to get the model from?", options=["Our list", "Upload a model", "From a URL"], key="where_to_get_model")
@@ -206,11 +219,11 @@ def animation_style_element(shot_uuid):
                         os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
                         
                         # Retrieve the URL using the selected model name
-                        model_url = sd_model_dict[model_name_selected]
+                        model_url = sd_model_dict[model_name_selected]["url"]
                         
                         # Download the model and save it to the directory
                         response = requests.get(model_url, stream=True)
-                        zip_filename = model_url.split("/")[-1]
+                        zip_filename = sd_model_dict[model_name_selected]["filename"]
                         filepath = os.path.join(save_directory, zip_filename)
                         print("filepath: ", filepath)
                         if response.status_code == 200:
@@ -238,10 +251,8 @@ def animation_style_element(shot_uuid):
                                 with tarfile.open(f"{filepath}", "r") as tar_ref:
                                     tar_ref.extractall(new_filepath)
                             
-                            # os.remove(filepath)
-                            st.rerun()
-                        else:
-                            st.error("Failed to download model")
+                            os.remove(filepath)
+                        st.rerun()
 
             elif where_to_get_model == "Upload a model":
                 st.info("It's simpler to just drop this into the ComfyUI/models/checkpoints directory.")
