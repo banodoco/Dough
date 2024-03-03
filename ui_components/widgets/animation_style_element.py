@@ -294,23 +294,20 @@ def animation_style_element(shot_uuid):
                     h1, h2, h3, h4 = st.columns([1, 1, 1, 0.5])
                     with h1:
                         which_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"which_lora_{idx}")                                                    
+                    
                     with h2:
-                        # User selects the strength for the LoRA
                         strength_of_lora = st.slider("How strong would you like the LoRA to be?", min_value=0.0, max_value=1.0, value=0.5, step=0.01, key=f"strength_of_lora_{idx}")
-                        
-                        # Append the selected LoRA name and strength as a dictionary to lora_data
                         lora_data.append({"filename": which_lora, "lora_strength": strength_of_lora, "filepath": lora_file_dest + "/" + which_lora})
-                        # st.write(lora_data)
+                    
                     with h3:
                         when_to_apply_lora = st.slider("When to apply the LoRA?", min_value=0, max_value=100, value=(0,100), step=1, key=f"when_to_apply_lora_{idx}",disabled=True,help="This feature is not yet available.")
+                    
                     with h4:
-                        # remove button
                         st.write("")
                         if st.button("Remove", key=f"remove_lora_{idx}"):
-                            # pop the current lora from the list
                             st.session_state[f"lora_data_{shot.uuid}"].pop(idx)
                             st.rerun()
-                # st.write(lora_data)
+                
                 if len(st.session_state[f"lora_data_{shot.uuid}"]) == 0:
                     text = "Add a LoRA"
                 else:
@@ -343,19 +340,20 @@ def animation_style_element(shot_uuid):
                         "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_zooming_out_temporal_unet.safetensors"
                     ]
                             
-                    which_would_you_like_to_download = st.selectbox("Which LoRA would you like to download?", options=file_links, key="which_would_you_like_to_download")
+                    selected_lora_optn = st.selectbox("Which LoRA would you like to download?", options=[a.split("/")[-1] for a in file_links], key="selected_lora")
                     if st.button("Download LoRA", key="download_lora"):
                         with st.spinner("Downloading LoRA..."):
                             save_directory = "ComfyUI/models/animatediff_motion_lora"
                             os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
                             
                             # Extract the filename from the URL
-                            filename = which_would_you_like_to_download.split("/")[-1]
+                            selected_lora = next((ele for idx, ele in enumerate(file_links) if selected_lora_optn in ele), None)
+                            filename = selected_lora.split("/")[-1]
                             save_path = os.path.join(save_directory, filename)
                             
                             # Download the file
                             download_lora_bar = st.progress(0, text="")
-                            response = requests.get(which_would_you_like_to_download, stream=True)
+                            response = requests.get(selected_lora, stream=True)
                             if response.status_code == 200:
                                 total_size = int(response.headers.get('content-length', 0))
                                 with open(save_path, 'wb') as f:
