@@ -4,7 +4,7 @@ import time
 import zipfile
 import streamlit as st
 from typing import List
-from shared.constants import AnimationStyleType, AnimationToolType
+from shared.constants import AnimationStyleType, AnimationToolType, InferenceParamType
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, DefaultProjectSettingParams, ShotMetaData
 from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils.data_repo.data_repo import DataRepo
@@ -59,8 +59,7 @@ def animation_style_element(shot_uuid):
 
         open_advanced_settings = st_memory.toggle("Open all advanced settings", key="advanced_settings", value=False)
 
-        # SET DEFAULT VALUES FOR LORA, MODEL, ADHERENCE, PROMPTS, MOTION CONTEXT
-
+        # setting default values to main shot settings
         if f'lora_data_{shot.uuid}' not in st.session_state:
             st.session_state[f'lora_data_{shot.uuid}'] = []
 
@@ -78,8 +77,11 @@ def animation_style_element(shot_uuid):
 
         if f'ckpt_{shot.uuid}' not in st.session_state:
             st.session_state[f'ckpt_{shot.uuid}'] = ""
+            
+        # loading settings of the last shot
+        load_shot_settings(shot.uuid)
                 
-        
+        # ------------- Timing Frame and their settings -------------------
         for i in range(0, len(timing_list) , items_per_row):
             with st.container():
                 grid = st.columns([2 if j%2==0 else 1 for j in range(2*items_per_row)])  # Adjust the column widths
@@ -92,21 +94,9 @@ def animation_style_element(shot_uuid):
                             if timing.primary_image and timing.primary_image.location:
                                 st.info(f"**Frame {idx + 1}**")
                                 st.image(timing.primary_image.location, use_column_width=True)
-                                
-                                motion_data = DEFAULT_SHOT_MOTION_VALUES
-                                # setting default parameters (fetching data from the shot if it's present)
-                                if f'strength_of_frame_{shot.uuid}_{idx}' not in st.session_state:
-                                    shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, json.dumps({}))
-                                    timing_data = json.loads(shot_meta_data).get("timing_data", [])
-                                    if timing_data and len(timing_data) >= idx + 1:
-                                        motion_data = timing_data[idx]
-
-                                    for k, v in motion_data.items():
-                                        st.session_state[f'{k}_{shot.uuid}_{idx}'] = v
                                                                                                                             
                                 # settings control
                                 with st.expander("Advanced settings:", expanded=open_advanced_settings):
-                                
                                     individual_prompt = st.text_input("What to include:", key=f"individual_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_prompt_{shot.uuid}_{idx}'], help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
                                     individual_prompts.append(individual_prompt)
                                     individual_negative_prompt = st.text_input("What to avoid:", key=f"negative_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_negative_prompt_{shot.uuid}_{idx}'],help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
@@ -537,7 +527,17 @@ def animation_style_element(shot_uuid):
                 # last keyframe position * 16
                 duration = float(dynamic_frame_distribution_values[-1] / 16)
                 data_repo.update_shot(uuid=shot.uuid, duration=duration)
-                update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts)
+                update_session_state_with_animation_details(
+                    shot.uuid, 
+                    timing_list, 
+                    strength_of_frames, 
+                    distances_to_next_frames, 
+                    speeds_of_transitions, 
+                    freedoms_between_frames, 
+                    motions_during_frames, 
+                    individual_prompts, 
+                    individual_negative_prompts
+                )
                 vid_quality = "full"    # TODO: add this if video_resolution == "Full Resolution" else "preview"
                 st.success("Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update.")
 
@@ -635,6 +635,51 @@ def animation_style_element(shot_uuid):
                             time.sleep(0.7)
                             st.rerun()
 
+# --------------------- METHODS -----------------------
+def load_shot_settings(shot_uuid, log_uuid=None):
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    motion_data = DEFAULT_SHOT_MOTION_VALUES
+    
+    # loading settings of the last generation (saved in the shot)
+    # in case no log_uuid is provided
+    if not log_uuid:
+        shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, json.dumps({}))
+                    
+    # loading settings from that particular log
+    else:
+        log = data_repo.get_inference_log_from_uuid(log_uuid)
+        input_params = json.loads(log.input_params) if log.input_params else {}
+        query_obj = json.loads(input_params.get(InferenceParamType.QUERY_DICT.value, json.dumps({})))
+        shot_meta_data = query_obj.data.get('data', {}).get("shot_data", {})
+    
+    # updating timing data
+    timing_data = json.loads(shot_meta_data).get("timing_data", [])
+    for idx, _ in enumerate(shot.timing_list):
+        # setting default parameters (fetching data from the shot if it's present)
+        if f'strength_of_frame_{shot_uuid}_{idx}' not in st.session_state:
+            if timing_data and len(timing_data) >= idx + 1:
+                motion_data = timing_data[idx]
+
+            for k, v in motion_data.items():
+                st.session_state[f'{k}_{shot_uuid}_{idx}'] = v
+    
+    # updating other settings main settings
+    main_setting_data = json.loads(shot_meta_data, {}).get("main_setting_data", {})
+    update_keys = [
+        "lora_data",
+        "strength_of_adherence_value",
+        "type_of_motion_context_index",
+        "positive_prompt_video",
+        "negative_prompt_video",
+        "ckpt"
+    ]
+    for key in update_keys:
+        key = f"{key}_{shot_uuid}"
+        if key in main_setting_data:
+            st.session_state[key] = main_setting_data[key]
+        
+
 def toggle_generate_inference(position):
     if position + '_generate_inference' not in st.session_state:
         st.session_state[position + '_generate_inference'] = True
@@ -670,9 +715,29 @@ def update_session_state_with_animation_details(shot_uuid, timing_list, strength
 
         timing_data.append(state_data)
 
-    meta_data.update({ShotMetaData.MOTION_DATA.value : json.dumps({"timing_data": timing_data})})
+    update_keys = [
+        "lora_data",
+        "strength_of_adherence_value",
+        "type_of_motion_context_index",
+        "positive_prompt_video",
+        "negative_prompt_video",
+        "ckpt"
+    ]
+    main_setting_data = {}
+    for key in update_keys:
+        main_setting_data[key] = st.session_state[key]
+    
+    meta_data.update(
+        {
+            ShotMetaData.MOTION_DATA.value : json.dumps(
+                {
+                    "timing_data": timing_data,
+                    "main_setting_data": main_setting_data
+                }
+            )
+        }
+    )
     data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
-
 
 def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):
     adjusted_frame_numbers = [frame + buffer for frame in frame_numbers]
@@ -707,7 +772,6 @@ def extract_strength_values(type_of_key_frame_influence, dynamic_key_frame_influ
             linear_key_frame_influence_value = (linear_key_frame_influence_value[0], linear_key_frame_influence_value[1], linear_key_frame_influence_value[0])
         return [linear_key_frame_influence_value for _ in range(len(keyframe_positions) - 1)]
 
-
 def update_interpolation_settings(values=None, timing_list=None):
     default_values = {
         'type_of_frame_distribution': 0,
@@ -734,9 +798,7 @@ def update_interpolation_settings(values=None, timing_list=None):
     for key, default_value in default_values.items():
         st.session_state[key] = values.get(key, default_value) if values and values.get(key) is not None else default_value
         # print(f"{key}: {st.session_state[key]}")
-
-
-        
+    
 def extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value):
     # Check and convert linear_key_frame_influence_value if it's a float or string float        
     # if it's a string that starts with a parenthesis, convert it to a tuple
@@ -766,7 +828,6 @@ def extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_infl
         return dynamic_values[:number_of_outputs]
     else:
         return [linear_key_frame_influence_value for _ in range(number_of_outputs)]
-
 
 def get_keyframe_positions(type_of_frame_distribution, dynamic_frame_distribution_values, images, linear_frame_distribution_value):
     if type_of_frame_distribution == "dynamic":
@@ -942,12 +1003,8 @@ def plot_weights(weights_list, frame_numbers_list):
     st.set_option('deprecation.showPyplotGlobalUse', False)
     st.pyplot()
 
-
-
 def transform_data(strength_of_frames, movements_between_frames, speeds_of_transitions, distances_to_next_frames, type_of_motion_context, strength_of_adherence, individual_prompts, individual_negative_prompts, buffer, motions_during_frames):
-
     # FRAME SETTINGS
-
     def adjust_and_invert_relative_value(middle_value, relative_value):
         if relative_value is not None:
             adjusted_value = middle_value * relative_value
