@@ -5,7 +5,7 @@ import streamlit as st
 import re
 from shared.constants import InferenceParamType, InternalFileTag
 from ui_components.constants import CreativeProcessType
-from ui_components.methods.animation_style_methods import load_shot_settings
+from ui_components.methods.animation_style_methods import get_generation_settings_from_log, load_shot_settings
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
 from ui_components.methods.file_methods import create_duplicate_file
 from ui_components.methods.video_methods import sync_audio_and_duration
@@ -13,6 +13,7 @@ from ui_components.widgets.shot_view import create_video_download_button
 from ui_components.models import InternalFileObject
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.animation_style_element import update_interpolation_settings
+from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 
 
@@ -118,11 +119,18 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 def variant_inference_detail_element(variant: InternalFileObject, stage, shot_uuid, timing_list="", tag="temp"):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
-    inf_data = fetch_inference_data(variant)
-    # st.write(inf_data)
     if stage == CreativeProcessType.MOTION.value:
         if st.button("Load up settings from this variant", key=f"{tag}_{variant.name}", help="This will remove the current settings and images - though they'll be available for all previous runs.", use_container_width=True):
             load_shot_settings(shot_uuid, variant.inference_log.uuid)
+            
+        with st.expander("View Main Settings", expanded=False):
+            if st_memory.toggle("Open", key=f"motion_data_{variant.uuid}", value=False):
+                shot_meta_data = get_generation_settings_from_log(variant.inference_log.uuid)
+                if shot_meta_data and shot_meta_data.get("main_setting_data", None):
+                    for k, v in shot_meta_data.get("main_setting_data", {}).items():
+                        st.text(f"{k.split(str(shot.uuid))[0][:-1]} -- {v}")
+                else:
+                    st.error("No data found")
 
     if stage != CreativeProcessType.MOTION.value:
         h1, h2 = st.columns([1, 1])

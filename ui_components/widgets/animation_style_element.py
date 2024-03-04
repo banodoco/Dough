@@ -19,6 +19,7 @@ import requests
 # import re
 import re
 
+default_model = "Deliberate_v2.safetensors"
 
 def animation_style_element(shot_uuid):
     disable_generate = False
@@ -80,6 +81,9 @@ def animation_style_element(shot_uuid):
         if f'ckpt_{shot.uuid}' not in st.session_state:
             st.session_state[f'ckpt_{shot.uuid}'] = ""
             
+        if f"amount_of_motion_{shot.uuid}" not in st.session_state:
+            st.session_state[f"amount_of_motion_{shot.uuid}"] = 1.3
+            
         # loading settings of the last shot (if this shot is being loaded for the first time)
         if f'strength_of_frame_{shot_uuid}_0' not in st.session_state:
             load_shot_settings(shot.uuid)
@@ -139,13 +143,9 @@ def animation_style_element(shot_uuid):
         tab1, tab2   = st.tabs(["Choose Model","Download Models"])
         
         checkpoints_dir = "ComfyUI/models/checkpoints"
-
-        # List all files in the directory
         all_files = os.listdir(checkpoints_dir)
-
-
         if len(all_files) == 0:
-            model_files = ['Realistic_Vision_V5.1.safetensors']
+            model_files = [default_model]
 
         else:
             # Filter files to only include those with .safetensors and .ckpt extensions
@@ -153,16 +153,42 @@ def animation_style_element(shot_uuid):
             # drop all files that contain xl
             model_files = [file for file in model_files if "xl" not in file]
 
+        # Mapping of model names to their download URLs
+        sd_model_dict = {
+            "Anything V3 FP16 Pruned": {
+                "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/anything-v3-fp16-pruned.safetensors.tar",
+                "filename": "anything-v3-fp16-pruned.safetensors.tar"
+            },
+            "Deliberate V2": {
+                "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/Deliberate_v2.safetensors.tar",
+                "filename": "Deliberate_v2.safetensors.tar"
+            },
+            "Dreamshaper 8": {
+                "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/dreamshaper_8.safetensors.tar",
+                "filename": "dreamshaper_8.safetensors.tar"
+            },
+            "epicrealism_pureEvolutionV5": {
+                "url": "https://civitai.com/api/download/models/134065", 
+                "filename": "epicrealism_pureEvolutionv5.safetensors"
+            },
+            "majicmixRealistic_v6": {
+                "url": "https://civitai.com/api/download/models/94640", 
+                "filename": "majicmixRealistic_v6.safetensors"
+            },
+        }
 
         current_model_index = model_files.index(st.session_state[f'ckpt_{shot.uuid}']) if st.session_state[f'ckpt_{shot.uuid}'] in model_files else 0
-
+        
+        # ---------------- SELECT CKPT --------------
         with tab1:
             model1, model2 = st.columns([1, 1])
             with model1:
                 if model_files and len(model_files):
-                    sd_model = st_memory.selectbox("Which model would you like to use?", options=model_files, key="sd_model_video",index=current_model_index)
+                    sd_model = st_memory.selectbox("Which model would you like to use?", options=model_files, key="sd_model_video", index=current_model_index)
                 else:
                     sd_model = ""
+                    st.write("")
+                    st.info("Default model Deliberate V2 would be selected")
             with model2:
                 if len(all_files) == 0:
                     st.write("")
@@ -174,31 +200,8 @@ def animation_style_element(shot_uuid):
             # if it's in sd_model-list, just pass the name. If not, stick checkpoints_dir in front of it        
             sd_model = checkpoints_dir + "/" + sd_model
         
+        # ---------------- ADD CKPT ---------------
         with tab2:
-            # Mapping of model names to their download URLs
-            sd_model_dict = {
-                "Anything V3 FP16 Pruned": {
-                    "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/anything-v3-fp16-pruned.safetensors.tar",
-                    "filename": "anything-v3-fp16-pruned.safetensors.tar"
-                },
-                "Deliberate V2": {
-                    "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/Deliberate_v2.safetensors.tar",
-                    "filename": "Deliberate_v2.safetensors.tar"
-                },
-                "Dreamshaper 8": {
-                    "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/dreamshaper_8.safetensors.tar",
-                    "filename": "dreamshaper_8.safetensors.tar"
-                },
-                "epicrealism_pureEvolutionV5": {
-                    "url": "https://civitai.com/api/download/models/134065", 
-                    "filename": "epicrealism_pureEvolutionv5.safetensors"
-                },
-                "majicmixRealistic_v6": {
-                    "url": "https://civitai.com/api/download/models/94640", 
-                    "filename": "majicmixRealistic_v6.safetensors"
-                },
-            }
-
             where_to_get_model = st.radio("Where would you like to get the model from?", options=["Our list", "Upload a model", "From a URL"], key="where_to_get_model")
 
             if where_to_get_model == "Our list":
@@ -276,10 +279,10 @@ def animation_style_element(shot_uuid):
 
         lora_data = []
         lora_file_dest = "ComfyUI/models/animatediff_motion_lora"
+        
+        # ---------------- ADD LORA -----------------
         with tab1:
-           
             # Initialize a single list to hold dictionaries for LoRA data
-            #lora_data = []
             # Check if the directory exists and list files, or use a default list
             if os.path.exists(lora_file_dest):
                 files = os.listdir(lora_file_dest)
@@ -294,13 +297,21 @@ def animation_style_element(shot_uuid):
                 if st.button("Check again", key="check_again"):
                     st.rerun()
             else:
+                # cleaning empty lora vals
                 for idx, lora in enumerate(st.session_state[f"lora_data_{shot.uuid}"]):
+                    if not lora:
+                        st.session_state[f"lora_data_{shot.uuid}"].pop(idx)
+                
+                for idx, lora in enumerate(st.session_state[f"lora_data_{shot.uuid}"]):
+                    if not lora:
+                        continue
                     h1, h2, h3, h4 = st.columns([1, 1, 1, 0.5])
                     with h1:
-                        which_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"which_lora_{idx}")                                                    
+                        file_idx = files.index(lora["filename"])
+                        which_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"which_lora_{idx}", index=file_idx)                                                    
                     
                     with h2:
-                        strength_of_lora = st.slider("How strong would you like the LoRA to be?", min_value=0.0, max_value=1.0, value=0.5, step=0.01, key=f"strength_of_lora_{idx}")
+                        strength_of_lora = st.slider("How strong would you like the LoRA to be?", min_value=0.0, max_value=1.0, value=lora["lora_strength"], step=0.01, key=f"strength_of_lora_{idx}")
                         lora_data.append({"filename": which_lora, "lora_strength": strength_of_lora, "filepath": lora_file_dest + "/" + which_lora})
                     
                     with h3:
@@ -317,8 +328,14 @@ def animation_style_element(shot_uuid):
                 else:
                     text = "Add another LoRA"
                 if st.button(text, key="add_motion_guidance"):
-                    st.session_state[f"lora_data_{shot.uuid}"].append("")
-                    st.rerun()
+                    if files and len(files):
+                        st.session_state[f"lora_data_{shot.uuid}"].append({
+                            "filename": files[0],
+                            "lora_strength": 0.5,
+                            "filepath": lora_file_dest + "/" + files[0]
+                        })
+                        st.rerun()
+        # ---------------- DOWNLOAD LORA ---------------
         with tab2:
             text1, text2 = st.columns([1, 1])
             with text1:
@@ -398,6 +415,7 @@ def animation_style_element(shot_uuid):
                                 st.error("Failed to download LoRA")
             elif where_to_download_from == "Upload a LoRA":
                 st.info("It's simpler to just drop this into the ComfyUI/models/animatediff_motion_lora directory.")
+        # ---------------- TRAIN LORA --------------
         with tab3:
             b1, b2 = st.columns([1, 1])
             with b1:
@@ -408,7 +426,6 @@ def animation_style_element(shot_uuid):
 
                 if st.button("Train LoRA", key="train_lora", use_container_width=True):
                     st.write("Training LoRA")
-                                                    
 
         st.markdown("***")
         st.markdown("##### Overall style settings")
@@ -421,20 +438,22 @@ def animation_style_element(shot_uuid):
 
         f1, f2, f3 = st.columns([1, 1, 1])
         with f1:
-            overall_positive_prompt = st.text_area("What would you like to see in the videos?", value=st.session_state[f"positive_prompt_video_{shot.uuid}"])
+            overall_positive_prompt = st.text_area("What would you like to see in the videos?", key="overall_positive_prompt", value=st.session_state[f"positive_prompt_video_{shot.uuid}"])
         with f2:
-            overall_negative_prompt = st.text_area("What would you like to avoid in the videos?", value=st.session_state[f"negative_prompt_video_{shot.uuid}"])
+            overall_negative_prompt = st.text_area("What would you like to avoid in the videos?", key="overall_negative_prompt", value=st.session_state[f"negative_prompt_video_{shot.uuid}"])
         
         with f3:
             st.write("")
             st.write("")
             st.info("Use these sparingly, as they can have a large impact on the video. You can also edit them for individual frames in the advanced settings above.")
-            soft_scaled_cn_weights_multiplier = ""
 
         st.markdown("***")
         st.markdown("##### Overall motion settings")
         h1, h2, h3 = st.columns([0.5, 1.5, 1])
         with h1:
+            # will fix this later
+            if f"type_of_motion_context_index_{shot.uuid}" in st.session_state and isinstance(st.session_state[f"type_of_motion_context_index_{shot.uuid}"], str):
+                st.session_state[f"type_of_motion_context_index_{shot.uuid}"] = ["Low", "Standard", "High"].index(st.session_state[f"type_of_motion_context_index_{shot.uuid}"])
             type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=False, index=st.session_state[f"type_of_motion_context_index_{shot.uuid}"])
 
         with h2: 
@@ -442,9 +461,9 @@ def animation_style_element(shot_uuid):
         st.write("")
         i1, i3,_ = st.columns([1,2,1])
         with i1:
-            amount_of_motion = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="amount_of_motion")        
+            amount_of_motion = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01, key="amount_of_motion", value=st.session_state[f"amount_of_motion_{shot.uuid}"])        
             st.write("")
-            if st.button("Update amount of motion", key="update_motion"):
+            if st.button("Bulk update amount of motion", key="update_motion", help="This will update this value in all the frames"):
                 for idx, timing in enumerate(timing_list):
                     st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = amount_of_motion                
                 st.success("Updated amount of motion")
@@ -676,18 +695,24 @@ def update_session_state_with_animation_details(shot_uuid, timing_list, strength
 
         timing_data.append(state_data)
 
-    update_keys = [
-        "lora_data",
-        "strength_of_adherence_value",
-        "type_of_motion_context_index",
-        "positive_prompt_video",
-        "negative_prompt_video",
-        "ckpt"
-    ]
     main_setting_data = {}
-    for key in update_keys:
-        key = f"{key}_{shot_uuid}"
-        main_setting_data[key] = st.session_state[key]
+    main_setting_data[f'lora_data_{shot.uuid}'] = st.session_state[f'lora_data_{shot.uuid}']
+    main_setting_data[f"strength_of_adherence_value_{shot.uuid}"] = st.session_state["strength_of_adherence"]
+    main_setting_data[f"type_of_motion_context_index_{shot.uuid}"] = st.session_state["type_of_motion_context"]
+    main_setting_data[f"positive_prompt_value_{shot.uuid}"] = st.session_state["overall_positive_prompt"]
+    main_setting_data[f"negative_prompt_value_{shot.uuid}"] = st.session_state["overall_negative_prompt"]
+    main_setting_data[f"amount_of_motion_{shot.uuid}"] = st.session_state["amount_of_motion"]
+    
+    checkpoints_dir = "ComfyUI/models/checkpoints"
+    all_files = os.listdir(checkpoints_dir)
+    model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
+    model_files = [file for file in model_files if "xl" not in file]
+    
+    if 'sd_model_video' in st.session_state and len(model_files):
+        idx = st.session_state["sd_model_video"] if st.session_state["sd_model_video"] < len(model_files) else 0
+        main_setting_data[f'ckpt_{shot.uuid}'] = model_files[idx]
+    else:
+        main_setting_data[f'ckpt_{shot.uuid}'] = default_model
     
     meta_data.update(
         {

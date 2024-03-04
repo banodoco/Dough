@@ -6,10 +6,20 @@ from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, ShotMetaData
 from utils.data_repo.data_repo import DataRepo
 
 
+def get_generation_settings_from_log(log_uuid=None):
+    data_repo = DataRepo()
+    log = data_repo.get_inference_log_from_uuid(log_uuid)
+    input_params = json.loads(log.input_params) if log.input_params else {}
+    query_obj = json.loads(input_params.get(InferenceParamType.QUERY_DICT.value, json.dumps({})))
+    shot_meta_data = query_obj['data'].get('data', {}).get("shot_data", {})
+    shot_meta_data = json.loads(shot_meta_data.get("motion_data")) if shot_meta_data \
+        and "motion_data" in shot_meta_data else None
+    
+    return shot_meta_data
+
 def load_shot_settings(shot_uuid, log_uuid=None):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
-    motion_data = DEFAULT_SHOT_MOTION_VALUES
     
     # loading settings of the last generation (saved in the shot)
     # in case no log_uuid is provided
@@ -19,12 +29,7 @@ def load_shot_settings(shot_uuid, log_uuid=None):
                     
     # loading settings from that particular log
     else:
-        log = data_repo.get_inference_log_from_uuid(log_uuid)
-        input_params = json.loads(log.input_params) if log.input_params else {}
-        query_obj = json.loads(input_params.get(InferenceParamType.QUERY_DICT.value, json.dumps({})))
-        shot_meta_data = query_obj['data'].get('data', {}).get("shot_data", {})
-        shot_meta_data = json.loads(shot_meta_data.get("motion_data")) if shot_meta_data \
-            and "motion_data" in shot_meta_data else None
+        shot_meta_data = get_generation_settings_from_log(log_uuid)
     
     if shot_meta_data:
         # updating timing data
@@ -39,22 +44,12 @@ def load_shot_settings(shot_uuid, log_uuid=None):
         
         # updating other settings main settings
         main_setting_data = shot_meta_data.get("main_setting_data", {})
-        update_keys = [
-            "lora_data",
-            "strength_of_adherence_value",
-            "type_of_motion_context_index",
-            "positive_prompt_video",
-            "negative_prompt_video",
-            "ckpt"
-        ]
-        for key in update_keys:
-            key = f"{key}_{shot_uuid}"
-            if key in main_setting_data:
+        for key in main_setting_data:
                 st.session_state[key] = main_setting_data[key]
     else:
-        st.error("No generation data found")
-        time.sleep(0.7)
-        st.rerun()
+        for idx, _ in enumerate(shot.timing_list):
+            for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
+                st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
             
 def reverse_data_transformation(dynamic_strength_values, dynamic_key_frame_influence_values, dynamic_frame_distribution_values, context_length, context_stride, context_overlap, multipled_base_end_percent, formatted_individual_prompts, formatted_individual_negative_prompts, formatted_motions, buffer):
 
