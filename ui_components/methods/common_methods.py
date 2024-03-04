@@ -323,21 +323,22 @@ def promote_video_variant(shot_uuid, variant_uuid):
     if not variant_to_promote:
         return None
 
-    if variant_to_promote.location.startswith(('http://', 'https://')):
-        temp_video_path, _ = urllib3.request.urlretrieve(variant_to_promote.location)
-        video = VideoFileClip(temp_video_path)
-    else:
-        video = VideoFileClip(variant_to_promote.location)
+    # NOTE: removing speed udpate for now
+    # if variant_to_promote.location.startswith(('http://', 'https://')):
+    #     temp_video_path, _ = urllib3.request.urlretrieve(variant_to_promote.location)
+    #     video = VideoFileClip(temp_video_path)
+    # else:
+    #     video = VideoFileClip(variant_to_promote.location)
 
-    if video.duration != shot.duration:
-        video_bytes = VideoProcessor.update_video_speed(
-            variant_to_promote.location,
-            shot.duration
-        )
+    # if video.duration != shot.duration:
+    #     video_bytes = VideoProcessor.update_video_speed(
+    #         variant_to_promote.location,
+    #         shot.duration
+    #     )
 
-        hosted_url = save_or_host_file_bytes(video_bytes, variant_to_promote.local_path)
-        if hosted_url:
-            data_repo.update_file(video.uuid, hosted_url=hosted_url)
+    #     hosted_url = save_or_host_file_bytes(video_bytes, variant_to_promote.local_path)
+    #     if hosted_url:
+    #         data_repo.update_file(video.uuid, hosted_url=hosted_url)
 
     data_repo.update_shot(uuid=shot.uuid, main_clip_id=variant_to_promote.uuid)
 

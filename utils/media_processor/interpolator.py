@@ -119,7 +119,7 @@ class VideoInterpolator:
                     "individual_negative_prompts": settings["individual_negative_prompts"],
                     "max_frames": settings["max_frames"],
                     "lora_data": settings["lora_data"],
-
+                    "shot_data": settings["shot_data"]
                 }
 
                 # adding the input images

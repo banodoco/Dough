@@ -8,8 +8,6 @@ from utils.ml_processor.comfy_data_transform import get_file_list_from_query_obj
 from utils.ml_processor.constants import CONTROLNET_MODELS, ML_MODEL, ComfyRunnerModel, ComfyWorkflow
 
 
-
-
 def check_user_credits(method):
     def wrapper(self, *args, **kwargs):
         if user_credits_available():
@@ -119,7 +117,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             "negative_prompt" : query_obj.negative_prompt,
             "width" : new_width,    # 768 is the default for sdxl
             "height" : new_height,
-            "prompt_strength": query_obj.strength,
+            "prompt_strength": int(query_obj.strength / 100),
             "mask": mask,
             "disable_safety_checker": True,
         }

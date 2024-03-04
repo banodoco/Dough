@@ -44,7 +44,4 @@ def timeline_view_page(shot_uuid: str, h2):
     st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
     
     generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None, shot_uuid=None)
-    
-    
-
     gallery_image_view(project_uuid,False,view=['add_and_remove_from_shortlist','view_inference_details','shot_chooser','add_to_any_shot'])

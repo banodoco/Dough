@@ -326,7 +326,9 @@ class ComfyDataTransform:
         workflow['464']['inputs']['height'] = sm_data.get('height')
         workflow['464']['inputs']['width'] = sm_data.get('width')
         
-        workflow['461']['inputs']['ckpt_name'] = sm_data.get('ckpt')
+        ckpt = sm_data.get('ckpt')
+        if "ComfyUI/models/checkpoints/" != ckpt:
+            workflow['461']['inputs']['ckpt_name'] = ckpt
         
         workflow['558']['inputs']['buffer'] = sm_data.get('buffer')
         workflow['548']['inputs']['text'] = sm_data.get('motion_scales')
