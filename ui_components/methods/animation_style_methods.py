@@ -46,6 +46,7 @@ def load_shot_settings(shot_uuid, log_uuid=None):
         main_setting_data = shot_meta_data.get("main_setting_data", {})
         for key in main_setting_data:
                 st.session_state[key] = main_setting_data[key]
+        st.rerun()
     else:
         for idx, _ in enumerate(shot.timing_list):
             for k, v in DEFAULT_SHOT_MOTION_VALUES.items():

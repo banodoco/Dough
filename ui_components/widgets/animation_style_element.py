@@ -177,16 +177,27 @@ def animation_style_element(shot_uuid):
             },
         }
 
-        current_model_index = model_files.index(st.session_state[f'ckpt_{shot.uuid}']) if st.session_state[f'ckpt_{shot.uuid}'] in model_files else 0
-        
+        cur_model = st.session_state[f'ckpt_{shot.uuid}']
+        current_model_index = model_files.index(cur_model) if (cur_model and cur_model in model_files) else 0
+        # st.session_state['sd_model_video'] = current_model_index
         # ---------------- SELECT CKPT --------------
         with tab1:
             model1, model2 = st.columns([1, 1])
             with model1:
+                sd_model = ""
+                def update_model():
+                    global sd_model
+                    sd_model = checkpoints_dir + "/" + st.session_state['sd_model_video']
+                    
                 if model_files and len(model_files):
-                    sd_model = st_memory.selectbox("Which model would you like to use?", options=model_files, key="sd_model_video", index=current_model_index)
+                    sd_model = st.selectbox(
+                        label="Which model would you like to use?", 
+                        options=model_files, 
+                        key="sd_model_video", 
+                        index=current_model_index,
+                        on_change=update_model
+                    )
                 else:
-                    sd_model = ""
                     st.write("")
                     st.info("Default model Deliberate V2 would be selected")
             with model2:
@@ -198,7 +209,7 @@ def animation_style_element(shot_uuid):
                     st.info("To download more models, go to the Download Models tab.")
 
             # if it's in sd_model-list, just pass the name. If not, stick checkpoints_dir in front of it        
-            sd_model = checkpoints_dir + "/" + sd_model
+            # sd_model = checkpoints_dir + "/" + sd_model
         
         # ---------------- ADD CKPT ---------------
         with tab2:
@@ -438,9 +449,23 @@ def animation_style_element(shot_uuid):
 
         f1, f2, f3 = st.columns([1, 1, 1])
         with f1:
-            overall_positive_prompt = st.text_area("What would you like to see in the videos?", key="overall_positive_prompt", value=st.session_state[f"positive_prompt_video_{shot.uuid}"])
+            overall_positive_prompt = ""
+            def update_prompt():
+                global overall_positive_prompt
+                overall_positive_prompt = st.session_state[f"positive_prompt_video_{shot.uuid}"]
+
+            overall_positive_prompt = st.text_area(
+                "What would you like to see in the videos?", 
+                key="overall_positive_prompt", 
+                value=st.session_state[f"positive_prompt_video_{shot.uuid}"],
+                on_change=update_prompt
+            )
         with f2:
-            overall_negative_prompt = st.text_area("What would you like to avoid in the videos?", key="overall_negative_prompt", value=st.session_state[f"negative_prompt_video_{shot.uuid}"])
+            overall_negative_prompt = st.text_area(
+                "What would you like to avoid in the videos?", 
+                key="overall_negative_prompt", 
+                value=st.session_state[f"negative_prompt_video_{shot.uuid}"]
+            )
         
         with f3:
             st.write("")
@@ -559,7 +584,8 @@ def animation_style_element(shot_uuid):
                     freedoms_between_frames, 
                     motions_during_frames, 
                     individual_prompts, 
-                    individual_negative_prompts
+                    individual_negative_prompts,
+                    lora_data
                 )
                 settings.update(shot_data=shot_data)
                 vid_quality = "full"    # TODO: add this if video_resolution == "Full Resolution" else "preview"
@@ -666,7 +692,7 @@ def toggle_generate_inference(position):
     else:
         st.session_state[position + '_generate_inference'] = not st.session_state[position + '_generate_inference']
 
-def update_session_state_with_animation_details(shot_uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts):
+def update_session_state_with_animation_details(shot_uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts, lora_data):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     meta_data = shot.meta_data_dict
@@ -696,11 +722,11 @@ def update_session_state_with_animation_details(shot_uuid, timing_list, strength
         timing_data.append(state_data)
 
     main_setting_data = {}
-    main_setting_data[f'lora_data_{shot.uuid}'] = st.session_state[f'lora_data_{shot.uuid}']
+    main_setting_data[f'lora_data_{shot.uuid}'] = lora_data
     main_setting_data[f"strength_of_adherence_value_{shot.uuid}"] = st.session_state["strength_of_adherence"]
     main_setting_data[f"type_of_motion_context_index_{shot.uuid}"] = st.session_state["type_of_motion_context"]
-    main_setting_data[f"positive_prompt_value_{shot.uuid}"] = st.session_state["overall_positive_prompt"]
-    main_setting_data[f"negative_prompt_value_{shot.uuid}"] = st.session_state["overall_negative_prompt"]
+    main_setting_data[f"positive_prompt_video_{shot.uuid}"] = st.session_state["overall_positive_prompt"]
+    main_setting_data[f"negative_prompt_video_{shot.uuid}"] = st.session_state["overall_negative_prompt"]
     main_setting_data[f"amount_of_motion_{shot.uuid}"] = st.session_state["amount_of_motion"]
     
     checkpoints_dir = "ComfyUI/models/checkpoints"
@@ -709,7 +735,7 @@ def update_session_state_with_animation_details(shot_uuid, timing_list, strength
     model_files = [file for file in model_files if "xl" not in file]
     
     if 'sd_model_video' in st.session_state and len(model_files):
-        idx = st.session_state["sd_model_video"] if st.session_state["sd_model_video"] < len(model_files) else 0
+        idx = model_files.index(st.session_state["sd_model_video"]) if st.session_state["sd_model_video"] in model_files else 0
         main_setting_data[f'ckpt_{shot.uuid}'] = model_files[idx]
     else:
         main_setting_data[f'ckpt_{shot.uuid}'] = default_model
