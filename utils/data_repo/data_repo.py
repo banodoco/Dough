@@ -426,6 +426,7 @@ class DataRepo:
     # lock
     def acquire_lock(self, key):
         retry_count = 0
+        res = None
         while retry_count < 3:
             try:
                 res = self.db_repo.acquire_lock(key)
