@@ -248,6 +248,10 @@ class DataRepo:
         res = self.db_repo.update_inference_log(uuid, **kwargs)
         return res.status
     
+    def update_inference_log_list(self, uuid_list, **kwargs):
+        res = self.db_repo.update_inference_log_list(uuid_list, **kwargs)
+        return res.status
+    
     def update_inference_log_origin_data(self, uuid, **kwargs):
         res = self.get_inference_log_from_uuid(uuid)
         if not res:

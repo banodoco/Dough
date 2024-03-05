@@ -18,15 +18,38 @@ def sidebar_logger(shot_uuid):
     refresh_disabled = False # not any(log.status in [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value] for log in log_list)
     z1, z2 = st.columns([1.5, 1])
     if z1.button("Refresh log", disabled=refresh_disabled, help="You can also press 'r' on your keyboard to refresh."): st.rerun()
-
+    if z1.button("Start Backlog", help="This starts the backloged generations"):
+        log_list_filter_data = {
+            "project_id" : shot.project.uuid,
+            "page" : 1,
+            "data_per_page" : 100,
+            "status_list" : [InferenceStatus.BACKLOG.value]
+        }
+        
+        backlog_log_list, backlog_list_total_page_count = data_repo.get_all_inference_log_list(
+            **log_list_filter_data
+        )
+        
+        if backlog_log_list and len(backlog_log_list):
+            status = data_repo.update_inference_log_list([l.uuid for l in backlog_log_list], status=InferenceStatus.QUEUED.value)
+            if status:
+                st.success("success")
+                time.sleep(0.7)
+                st.rerun()
+        else:
+            st.info("No backlogs")
+            time.sleep(0.7)
+            st.rerun()
+    
     with z1:
+        display_options = ["In Progress", "All","Succeeded", "Failed", "Backlog"]
         if 'status_optn_index' not in st.session_state:
             st.session_state['status_optn_index'] = 0
             
-        status_option = st.radio("Statuses to display:", options=["In Progress", "All","Succeeded", "Failed"], \
+        status_option = st.radio("Statuses to display:", options=display_options, \
             key="status_option", index=st.session_state['status_optn_index'], horizontal=True)
         
-        st.session_state['status_optn_index'] = ["In Progress", "All","Succeeded", "Failed"].index(status_option)
+        st.session_state['status_optn_index'] = display_options.index(status_option)
     
     status_list = None
     if status_option == "In Progress":
@@ -35,6 +58,8 @@ def sidebar_logger(shot_uuid):
         status_list = [InferenceStatus.COMPLETED.value]
     elif status_option == "Failed":
         status_list = [InferenceStatus.FAILED.value]
+    elif status_option == "Backlog":
+        status_list = [InferenceStatus.BACKLOG.value]
 
     project_setting = data_repo.get_project_setting(shot.project.uuid)
     with z2:
@@ -121,6 +146,8 @@ def sidebar_logger(shot_uuid):
                     st.info("In progress")
                 elif log.status == InferenceStatus.CANCELED.value:
                     st.warning("Canceled")
+                elif log.status == InferenceStatus.BACKLOG.value:
+                    st.warning("Backlog")
                 
                 log_file = log_file_dict[log.uuid] if log.uuid in log_file_dict else None
                 '''
@@ -133,14 +160,14 @@ def sidebar_logger(shot_uuid):
                             st.rerun()
                 '''
             with c4:
-                if log.status == InferenceStatus.QUEUED.value:
+                if log.status in [InferenceStatus.QUEUED.value, InferenceStatus.BACKLOG.value]:
                     if st.button("Cancel", key=f"cancel_gen_{log.uuid}", use_container_width=True, help="Cancel"):
                         err_msg = "Generation has already started"
                         success_msg = "Generation cancelled"
                         # fetching the current status as this could have been already started
                         log = data_repo.get_inference_log_from_uuid(log.uuid)
                         cur_status = log.status
-                        if cur_status != InferenceStatus.QUEUED.value:
+                        if cur_status not in [InferenceStatus.QUEUED.value, InferenceStatus.BACKLOG.value]:
                             st.error(err_msg)
                             time.sleep(0.7)
                             st.rerun()

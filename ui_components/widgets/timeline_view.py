@@ -1,5 +1,7 @@
+from typing import List
 import streamlit as st
 from ui_components.methods.common_methods import add_new_shot
+from ui_components.models import InternalFrameTimingObject
 from ui_components.widgets.common_element import duplicate_shot_button
 from ui_components.widgets.shot_view import shot_keyframe_element, shot_adjustment_button, shot_animation_button, update_shot_name, update_shot_duration, move_shot_buttons, delete_shot_button, create_video_download_button
 from utils.data_repo.data_repo import DataRepo
@@ -48,7 +50,7 @@ def timeline_view(shot_uuid, stage):
 
             with st.expander("Details & settings:", expanded=False):
                 update_shot_name(shot.uuid)    
-                update_shot_duration(shot.uuid)
+                # update_shot_duration(shot.uuid)
                 move_shot_buttons(shot, "side")
                 delete_shot_button(shot.uuid)
                 duplicate_shot_button(shot.uuid, position="timeline_view")
