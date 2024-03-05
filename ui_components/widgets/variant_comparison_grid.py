@@ -120,17 +120,45 @@ def variant_inference_detail_element(variant: InternalFileObject, stage, shot_uu
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     if stage == CreativeProcessType.MOTION.value:
-        if st.button("Load up settings from this variant", key=f"{tag}_{variant.name}", help="This will remove the current settings and images - though they'll be available for all previous runs.", use_container_width=True):
-            load_shot_settings(shot_uuid, variant.inference_log.uuid)
-            
-        with st.expander("View Main Settings", expanded=False):
-            if st_memory.toggle("Open", key=f"motion_data_{variant.uuid}", value=False):
-                shot_meta_data = get_generation_settings_from_log(variant.inference_log.uuid)
-                if shot_meta_data and shot_meta_data.get("main_setting_data", None):
-                    for k, v in shot_meta_data.get("main_setting_data", {}).items():
-                        st.text(f"{k.split(str(shot.uuid))[0][:-1]} -- {v}")
-                else:
-                    st.error("No data found")
+
+        # with st.expander("Settings", expanded=True):
+        btn1, btn2 = st.columns([1, 1])
+        with btn1:
+            open_data=False
+            if st.button("See settings", key=f"view_{tag}_{variant.name}", help="This will reveal the settings for this variant below.", use_container_width=True):
+                open_data=True
+
+        with btn2:
+            if st.button("Boot up settings", key=f"boot_{tag}_{variant.name}", help="This will load all the settings for this run below. In doing so, it'll remove the current settings and images - though they'll be available for all previous runs.", use_container_width=True):
+                load_shot_settings(shot_uuid, variant.inference_log.uuid)
+                st.success("Settings Booted Up")
+                time.sleep(0.3)
+                st.rerun()
+        
+        if open_data:
+            shot_meta_data = get_generation_settings_from_log(variant.inference_log.uuid)
+            if shot_meta_data and shot_meta_data.get("main_setting_data", None):           
+                st.markdown("#### Main settings")         
+
+                for k, v in shot_meta_data.get("main_setting_data", {}).items():
+                    # Bold the title
+                    title = f"**{k.split(str(shot.uuid))[0][:-1]}:**"
+                    
+                    # Check if the key starts with 'lora_data'
+                    if k.startswith('lora_data') and isinstance(v, list):
+                        # Handle lora_data differently to format each item in the list
+                        lora_items = [f"- {item.get('filename', 'No filename')} - {item.get('lora_strength', 'No strength')} strength" for item in v]
+                        lora_data_formatted = "\n".join(lora_items)
+                        st.markdown(f"{title} \n{lora_data_formatted}", unsafe_allow_html=True)
+                        st.write("")
+                    else:
+                        # For other keys, display as before but with the title in bold and using a colon
+                        st.markdown(f"{title} {v}", unsafe_allow_html=True)
+
+            st.markdown("#### Frame settings")
+            st.success("To see the settings for each frame, click on the 'Boot up settings' button above and they'll load below.")
+        
+
 
     if stage != CreativeProcessType.MOTION.value:
         h1, h2 = st.columns([1, 1])
