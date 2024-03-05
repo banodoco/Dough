@@ -31,12 +31,7 @@ def timeline_view_page(shot_uuid: str, h2):
         st.markdown(f"### 🪄 '{project.name}' timeline  _________")
         st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
         
-    with slider2:
-        show_video = st.toggle("Show Video:", value=False, key="show_video")
-    if show_video:
-        st.session_state["view"] = "Shots"
-    else:
-        st.session_state["view"] = "Key Frames"
+
     timeline_view(st.session_state["shot_uuid"], st.session_state['view'])
 
 

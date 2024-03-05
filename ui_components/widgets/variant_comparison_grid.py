@@ -129,9 +129,9 @@ def variant_inference_detail_element(variant: InternalFileObject, stage, shot_uu
                 open_data=True
 
         with btn2:
-            if st.button("Boot up settings", key=f"boot_{tag}_{variant.name}", help="This will load all the settings for this run below. In doing so, it'll remove the current settings and images - though they'll be available for all previous runs.", use_container_width=True):
+            if st.button("Load settings", key=f"boot_{tag}_{variant.name}", help="This will load all the settings for this run below. In doing so, it'll remove the current settings and images - though they'll be available for all previous runs.", use_container_width=True):
                 load_shot_settings(shot_uuid, variant.inference_log.uuid)
-                st.success("Settings Booted Up")
+                st.success("Settings Loaded")
                 time.sleep(0.3)
                 st.rerun()
         
