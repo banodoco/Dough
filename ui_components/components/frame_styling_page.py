@@ -2,7 +2,7 @@ import time
 import streamlit as st
 from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType
 from ui_components.methods.common_methods import process_inference_output
-
+from ui_components.widgets.sidebar_logger import sidebar_logger
 from ui_components.widgets.cropping_element import cropping_selector_element
 from ui_components.widgets.frame_selector import frame_selector_widget, frame_view
 from ui_components.widgets.add_key_frame_element import add_key_frame, add_key_frame_element
@@ -37,9 +37,15 @@ def frame_styling_page(shot_uuid: str):
                                                 key="styling_view_selector", orientation="horizontal", \
                                                     styles={"nav-link": {"font-size": "15px", "margin": "0px", "--hover-color": "#3f6e99"}, "nav-link-selected": {"background-color": "#60b4ff"}})
             '''
+            st.write("")
+            with st.expander("🔍 Generation log", expanded=True):
+                # if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
+                sidebar_logger(st.session_state["shot_uuid"])
+
             frame_view(view="Key Frame")
 
-        st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['frame_styling_view_type']}] > :blue[{shot.name} - #{st.session_state['current_frame_index']}] > :orange[{st.session_state['styling_view']}]")
+
+        st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[Adjust Shot] > :blue[{shot.name} - #{st.session_state['current_frame_index']}]")
         variant_comparison_grid(st.session_state['current_frame_uuid'], stage=CreativeProcessType.STYLING.value)    
         
         
@@ -47,7 +53,7 @@ def frame_styling_page(shot_uuid: str):
         #    generate_images_element(position='individual', project_uuid=shot.project.uuid, timing_uuid=st.session_state['current_frame_uuid'])
                                         
         st.markdown("***")
-        
+
         with st.expander("🤏 Crop, Move & Rotate", expanded=True):                    
             cropping_selector_element(shot_uuid)
         
@@ -68,7 +74,7 @@ def frame_styling_page(shot_uuid: str):
             with canvas_width:
                 inpainting_element(options_width, timing.primary_image.location, position=f"{timing_uuid}")
                 
-            if st.button("Generate Inpainted image", key=f"generate_inpaint_{timing_uuid}"):
+            if st.button("Generate inpainted image", key=f"generate_inpaint_{timing_uuid}"):
                 if ("mask_to_use" in st.session_state and st.session_state["mask_to_use"]):
                     project_settings = data_repo.get_project_setting(shot.project.uuid)
                     query_obj = MLQueryObject(
