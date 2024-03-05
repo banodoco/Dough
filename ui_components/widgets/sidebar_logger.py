@@ -16,9 +16,9 @@ def sidebar_logger(shot_uuid):
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
 
     refresh_disabled = False # not any(log.status in [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value] for log in log_list)
-    z1, z2 = st.columns([1.5, 1])
-    if z1.button("Refresh log", disabled=refresh_disabled, help="You can also press 'r' on your keyboard to refresh."): st.rerun()
-    if z1.button("Start Backlog", help="This starts the backloged generations"):
+    z0, z1, z2 = st.columns([0.75, 0.75, 0.75])
+    if z0.button("Refresh log", disabled=refresh_disabled, type="primary",use_container_width=True,help="You can also press 'r' on your keyboard to refresh."): st.rerun()
+    if z1.button("Run backlog", help="This will run all the generations in the backlog.", use_container_width=True):
         log_list_filter_data = {
             "project_id" : shot.project.uuid,
             "page" : 1,
@@ -40,8 +40,8 @@ def sidebar_logger(shot_uuid):
             st.info("No backlogs")
             time.sleep(0.7)
             st.rerun()
-    
-    with z1:
+    y1, y2 = st.columns([1, 1])
+    with y1:
         display_options = ["In Progress", "All","Succeeded", "Failed", "Backlog"]
         if 'status_optn_index' not in st.session_state:
             st.session_state['status_optn_index'] = 0
@@ -62,14 +62,13 @@ def sidebar_logger(shot_uuid):
         status_list = [InferenceStatus.BACKLOG.value]
 
     project_setting = data_repo.get_project_setting(shot.project.uuid)
-    with z2:
+    with y2:
               
         selected_option = st.selectbox(
         "Which model to show:",
         ["All"] + [m.display_name() for m in MODEL_FILTERS]
-        )
-                
-    page_number = z2.number_input('Page number', min_value=1, max_value=project_setting.total_log_pages, value=1, step=1)
+        )                
+    page_number = y2.number_input('Page number:', min_value=1, max_value=project_setting.total_log_pages, value=1, step=1)
     items_per_page = 5
     # items_per_page = z2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
 

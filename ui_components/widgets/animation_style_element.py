@@ -568,7 +568,7 @@ def animation_style_element(shot_uuid):
         st.markdown("***")
         st.markdown("##### Generation Settings")
 
-        animate_col_1, animate_col_2, _ = st.columns([1, 1, 1])
+        animate_col_1, animate_col_2, _ = st.columns([3, 1, 1])
         with animate_col_1:
             variant_count = st.number_input("How many variants?", min_value=1, max_value=5, value=1, step=1, key="variant_count")
             
@@ -621,11 +621,14 @@ def animation_style_element(shot_uuid):
                 toggle_generate_inference(position, **backlog_update)
                 st.rerun()
             
+            btn1, btn2, btn3  = st.columns([1, 1, 1])
             backlog_no_update = {f'{shot_uuid}_backlog_enabled': False}
-            st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help, on_click=lambda: toggle_generate_inference(position, **backlog_no_update),type="primary")
+            with btn1:
+                st.button("Generate animation", key="generate_animation_clip", disabled=disable_generate, help=help, on_click=lambda: toggle_generate_inference(position, **backlog_no_update),type="primary")
             
             backlog_update = {f'{shot_uuid}_backlog_enabled': True}
-            st.button("Add generation to backlog", key="generate_animation_clip_backlog", disabled=disable_generate, help=backlog_help, on_click=lambda: toggle_generate_inference(position, **backlog_update),type="primary")
+            with btn2:
+                st.button("Add generation to backlog", key="generate_animation_clip_backlog", disabled=disable_generate, help=backlog_help, on_click=lambda: toggle_generate_inference(position, **backlog_update),type="secondary")
 
 
         with st.sidebar:

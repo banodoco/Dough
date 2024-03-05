@@ -137,26 +137,30 @@ def variant_inference_detail_element(variant: InternalFileObject, stage, shot_uu
         
         if open_data:
             shot_meta_data = get_generation_settings_from_log(variant.inference_log.uuid)
-            if shot_meta_data and shot_meta_data.get("main_setting_data", None):           
-                st.markdown("#### Main settings")         
-
+            if shot_meta_data and shot_meta_data.get("main_setting_data", None):
+                st.markdown("##### Main settings ---")
                 for k, v in shot_meta_data.get("main_setting_data", {}).items():
                     # Bold the title
                     title = f"**{k.split(str(shot.uuid))[0][:-1]}:**"
                     
                     # Check if the key starts with 'lora_data'
-                    if k.startswith('lora_data') and isinstance(v, list):
-                        # Handle lora_data differently to format each item in the list
-                        lora_items = [f"- {item.get('filename', 'No filename')} - {item.get('lora_strength', 'No strength')} strength" for item in v]
-                        lora_data_formatted = "\n".join(lora_items)
-                        st.markdown(f"{title} \n{lora_data_formatted}", unsafe_allow_html=True)
-                        st.write("")
+                    if k.startswith('lora_data'):
+                        if isinstance(v, list) and len(v) > 0:  # Check if v is a list and has more than 0 items
+                            # Handle lora_data differently to format each item in the list
+                            lora_items = [f"- {item.get('filename', 'No filename')} - {item.get('lora_strength', 'No strength')} strength" for item in v]
+                            lora_data_formatted = "\n".join(lora_items)
+                            st.markdown(f"{title} \n{lora_data_formatted}", unsafe_allow_html=True)
+                        # If there are no items in the list, do not display anything for lora_data
                     else:
                         # For other keys, display as before but with the title in bold and using a colon
-                        st.markdown(f"{title} {v}", unsafe_allow_html=True)
+                        if v:  # Check if v is not empty or None
+                            st.markdown(f"{title} {v}", unsafe_allow_html=True)
+                        else:
+                            # Optionally handle empty or None values differently here
+                            pass
 
-            st.markdown("#### Frame settings")
-            st.success("To see the settings for each frame, click on the 'Boot up settings' button above and they'll load below.")
+            st.markdown("##### Frame settings ---")
+            st.write("To see the settings for each frame, click on the 'Boot up settings' button above and they'll load below.")
         
 
 
