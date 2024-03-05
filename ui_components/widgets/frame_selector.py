@@ -136,8 +136,8 @@ def frame_view(view="Key Frame",show_current_frames=True):
                 a1,a2 = st.columns([2,2])
                 with a1:
                     update_shot_name(shot.uuid)
-                with a2:
-                    update_shot_duration(shot.uuid)
+                # with a2:
+                #     update_shot_duration(shot.uuid)
                 
                 if show_current_frames:
                     st.markdown("---")

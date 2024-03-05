@@ -129,7 +129,7 @@ def animation_style_element(shot_uuid):
                                 if isinstance(st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'], int):
                                     st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = float(st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'])                                    
                                 distance_to_next_frame = st.slider("Seconds to next frame:", min_value=0.25, max_value=6.00, step=0.25, key=f"distance_to_next_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'])
-                                distances_to_next_frames.append(distance_to_next_frame)                                    
+                                distances_to_next_frames.append(distance_to_next_frame/2)                                    
                                 speed_of_transition = st.slider("Speed of transition:", min_value=0.45, max_value=0.7, step=0.01, key=f"speed_of_transition_widget_{idx}_{timing.uuid}", value=st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'])
                                 speeds_of_transitions.append(speed_of_transition)                                      
                                 freedom_between_frames = st.slider("Freedom between frames:", min_value=0.05, max_value=0.95, step=0.01, key=f"freedom_between_frames_widget_{idx}_{timing.uuid}", value=st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'])
@@ -645,36 +645,36 @@ def animation_style_element(shot_uuid):
                                 st.success("All frames have been reset to default values.")
                                 st.rerun()
                                                 
-                        what_would_you_like_to_edit = st.selectbox("What would you like to edit?", options=["Seconds to next frames", "Speed of transitions", "Freedom between frames","Strength of frames","Motion during frames"], key="what_would_you_like_to_edit")
-                        if what_would_you_like_to_edit == "Seconds to next frames":
-                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=6.00, step=0.25, value=1.0, key="what_to_change_it_to")
-                        if what_would_you_like_to_edit == "Strength of frames":
-                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=1.0, step=0.01, value=0.5, key="what_to_change_it_to")
-                        elif what_would_you_like_to_edit == "Speed of transitions":
-                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, value=0.6, key="what_to_change_it_to")
-                        elif what_would_you_like_to_edit == "Freedom between frames":
-                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.05, max_value=0.95, step=0.01, value=0.5, key="what_to_change_it_to")
-                        elif what_would_you_like_to_edit == "Motion during frames":
-                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="what_to_change_it_to")
+                        editable_entity = st.selectbox("What would you like to edit?", options=["Seconds to next frames", "Speed of transitions", "Freedom between frames","Strength of frames","Motion during frames"], key="editable_entity")
+                        if editable_entity == "Seconds to next frames":
+                            entity_new_val = st.slider("What would you like to change it to?", min_value=0.25, max_value=6.00, step=0.25, value=1.0, key="entity_new_val")
+                        if editable_entity == "Strength of frames":
+                            entity_new_val = st.slider("What would you like to change it to?", min_value=0.25, max_value=1.0, step=0.01, value=0.5, key="entity_new_val")
+                        elif editable_entity == "Speed of transitions":
+                            entity_new_val = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, value=0.6, key="entity_new_val")
+                        elif editable_entity == "Freedom between frames":
+                            entity_new_val = st.slider("What would you like to change it to?", min_value=0.05, max_value=0.95, step=0.01, value=0.5, key="entity_new_val")
+                        elif editable_entity == "Motion during frames":
+                            entity_new_val = st.slider("What would you like to change it to?", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="entity_new_val")
                         
                         bulk1, bulk2 = st.columns([1, 1])
                         with bulk1:
                             if st.button("Bulk edit", key="bulk_edit", use_container_width=True):
-                                if what_would_you_like_to_edit == "Strength of frames":
+                                if editable_entity == "Strength of frames":
                                     for idx, timing in enumerate(timing_list):
-                                        st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
-                                elif what_would_you_like_to_edit == "Seconds to next frames":
+                                        st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = entity_new_val
+                                elif editable_entity == "Seconds to next frames":
                                     for idx, timing in enumerate(timing_list):
-                                        st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
-                                elif what_would_you_like_to_edit == "Speed of transitions":
+                                        st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = entity_new_val / 2
+                                elif editable_entity == "Speed of transitions":
                                     for idx, timing in enumerate(timing_list):
-                                        st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'] = what_to_change_it_to
-                                elif what_would_you_like_to_edit == "Freedom between frames":
+                                        st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'] = entity_new_val
+                                elif editable_entity == "Freedom between frames":
                                     for idx, timing in enumerate(timing_list):
-                                        st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'] = what_to_change_it_to
-                                elif what_would_you_like_to_edit == "Motion during frames":
+                                        st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'] = entity_new_val
+                                elif editable_entity == "Motion during frames":
                                     for idx, timing in enumerate(timing_list):
-                                        st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
+                                        st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = entity_new_val
                                 st.rerun()
                         
                         st.markdown("***")
@@ -704,7 +704,7 @@ def update_session_state_with_animation_details(shot_uuid, timing_list, strength
             st.session_state[f'individual_negative_prompt_{shot_uuid}_{idx}'] = individual_negative_prompts[idx]
             st.session_state[f'motion_during_frame_{shot_uuid}_{idx}'] = motions_during_frames[idx]
             if idx < len(timing_list) - 1:                             
-                st.session_state[f'distance_to_next_frame_{shot_uuid}_{idx}'] = distances_to_next_frames[idx]
+                st.session_state[f'distance_to_next_frame_{shot_uuid}_{idx}'] = distances_to_next_frames[idx] * 2
                 st.session_state[f'speed_of_transition_{shot_uuid}_{idx}'] = speeds_of_transitions[idx]
                 st.session_state[f'freedom_between_frames_{shot_uuid}_{idx}'] = freedoms_between_frames[idx]
 
@@ -714,7 +714,7 @@ def update_session_state_with_animation_details(shot_uuid, timing_list, strength
             "individual_prompt" : individual_prompts[idx],
             "individual_negative_prompt" : individual_negative_prompts[idx],
             "motion_during_frame" : motions_during_frames[idx],
-            "distance_to_next_frame" : distances_to_next_frames[idx] if idx < len(timing_list) - 1 else DEFAULT_SHOT_MOTION_VALUES["distance_to_next_frame"],
+            "distance_to_next_frame" : distances_to_next_frames[idx] * 2 if idx < len(timing_list) - 1 else DEFAULT_SHOT_MOTION_VALUES["distance_to_next_frame"],
             "speed_of_transition" : speeds_of_transitions[idx] if idx < len(timing_list) - 1 else DEFAULT_SHOT_MOTION_VALUES["speed_of_transition"],
             "freedom_between_frames" : freedoms_between_frames[idx] if idx < len(timing_list) - 1 else DEFAULT_SHOT_MOTION_VALUES["freedom_between_frames"],
         }

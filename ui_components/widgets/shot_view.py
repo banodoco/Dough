@@ -37,8 +37,8 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
         with header_col_0:
             update_shot_name(shot.uuid)                 
                            
-        with header_col_1:   
-            update_shot_duration(shot.uuid)
+        # with header_col_1:   
+        #     update_shot_duration(shot.uuid)
 
         with header_col_2:
             st.write("")
