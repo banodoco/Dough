@@ -24,6 +24,7 @@ default_model = "Deliberate_v2.safetensors"
 def animation_style_element(shot_uuid):
     disable_generate = False
     help = ""
+    backlog_help = "This will add the new video generation in the backlog"
     motion_modules = AnimateDiffCheckpoint.get_name_list()
     variant_count = 1
     current_animation_style = AnimationStyleType.CREATIVE_INTERPOLATION.value    # setting a default value
@@ -604,18 +605,27 @@ def animation_style_element(shot_uuid):
                         st.error("Please generate primary images")
                         time.sleep(0.7)
                         st.rerun()
+                        
+                if f'{shot_uuid}_backlog_enabled' not in st.session_state:
+                    st.session_state[f'{shot_uuid}_backlog_enabled'] = False
 
                 create_single_interpolated_clip(
                     shot_uuid,
                     vid_quality,
                     settings,
-                    variant_count
+                    variant_count,
+                    st.session_state[f'{shot_uuid}_backlog_enabled']
                 )
                 
-                toggle_generate_inference(position)
+                backlog_update = {f'{shot_uuid}_backlog_enabled': False}
+                toggle_generate_inference(position, **backlog_update)
                 st.rerun()
-                
-            st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help, on_click=lambda: toggle_generate_inference(position),type="primary")
+            
+            backlog_no_update = {f'{shot_uuid}_backlog_enabled': False}
+            st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help, on_click=lambda: toggle_generate_inference(position, **backlog_no_update),type="primary")
+            
+            backlog_update = {f'{shot_uuid}_backlog_enabled': True}
+            st.button("Add generation to backlog", key="generate_animation_clip_backlog", disabled=disable_generate, help=backlog_help, on_click=lambda: toggle_generate_inference(position, **backlog_update),type="primary")
 
 
         with st.sidebar:
@@ -686,7 +696,9 @@ def animation_style_element(shot_uuid):
                             st.rerun()
 
 # --------------------- METHODS -----------------------
-def toggle_generate_inference(position):
+def toggle_generate_inference(position, **kwargs):
+    for k,v in kwargs.items():
+        st.session_state[k] = v
     if position + '_generate_inference' not in st.session_state:
         st.session_state[position + '_generate_inference'] = True
     else:
@@ -877,13 +889,10 @@ def calculate_weights(keyframe_positions, strength_values, buffer, key_frame_inf
         return round(influence_frame_number)
 
     def find_curve(batch_index_from, batch_index_to, strength_from, strength_to, interpolation,revert_direction_at_midpoint, last_key_frame_position,i, number_of_items,buffer):
-
         # Initialize variables based on the position of the keyframe
         range_start = batch_index_from
         range_end = batch_index_to
         # if it's the first value, set influence range from 1.0 to 0.0
-
-        
         if i == number_of_items - 1:
             range_end = last_key_frame_position
 
@@ -925,56 +934,36 @@ def calculate_weights(keyframe_positions, strength_values, buffer, key_frame_inf
     
     weights_list = []
     frame_numbers_list = []
-    
 
     for i in range(len(keyframe_positions)):
-
         keyframe_position = keyframe_positions[i]                                    
         interpolation = "ease-in-out"
         # strength_from = strength_to = 1.0
 
         if i == 0: # first image 
-
-            # GET IMAGE AND KEYFRAME INFLUENCE VALUES        
-                       
+            # GET IMAGE AND KEYFRAME INFLUENCE VALUES
             key_frame_influence_from, key_frame_influence_to = key_frame_influence_values[i]      
-                  
             start_strength, mid_strength, end_strength = strength_values[i]
-                            
             keyframe_position = keyframe_positions[i]
             next_key_frame_position = keyframe_positions[i+1]
-            
-            batch_index_from = keyframe_position     
-            
+            batch_index_from = keyframe_position
             batch_index_to_excl = calculate_influence_frame_number(keyframe_position, next_key_frame_position, key_frame_influence_to)
-            
-            
             weights, frame_numbers = find_curve(batch_index_from, batch_index_to_excl, mid_strength, end_strength, interpolation, False, last_key_frame_position, i, len(keyframe_positions), buffer)                                    
             # interpolation = "ease-in"                                
         
         elif i == len(keyframe_positions) - 1:  # last image
-
-            
-            # GET IMAGE AND KEYFRAME INFLUENCE VALUES                           
-
-
+            # GET IMAGE AND KEYFRAME INFLUENCE VALUES
             key_frame_influence_from,key_frame_influence_to = key_frame_influence_values[i]       
             start_strength, mid_strength, end_strength = strength_values[i]
             # strength_from, strength_to = cn_strength_values[i-1]
-
             keyframe_position = keyframe_positions[i]
             previous_key_frame_position = keyframe_positions[i-1]
-
-
             batch_index_from = calculate_influence_frame_number(keyframe_position, previous_key_frame_position, key_frame_influence_from)
-
             batch_index_to_excl = keyframe_position
             weights, frame_numbers = find_curve(batch_index_from, batch_index_to_excl, start_strength, mid_strength, interpolation, False, last_key_frame_position, i, len(keyframe_positions), buffer)                                    
             # interpolation =  "ease-out"                                
         
         else:  # middle images
-            
-
             # GET IMAGE AND KEYFRAME INFLUENCE VALUES              
             key_frame_influence_from,key_frame_influence_to = key_frame_influence_values[i]                              
             start_strength, mid_strength, end_strength = strength_values[i]
@@ -1003,8 +992,6 @@ def calculate_weights(keyframe_positions, strength_values, buffer, key_frame_inf
 
 def plot_weights(weights_list, frame_numbers_list):
     plt.figure(figsize=(12, 6))
-
-
     for i, weights in enumerate(weights_list):
         frame_numbers = frame_numbers_list[i]
         plt.plot(frame_numbers, weights, label=f'Frame {i + 1}')
@@ -1062,7 +1049,6 @@ def transform_data(strength_of_frames, movements_between_frames, speeds_of_trans
     cumulative_distances = [int(float(value) * 16) for value in cumulative_distances]
 
     # MOTION CONTEXT SETTINGS
-
     if type_of_motion_context == "Low":
         context_length = 16
         context_stride = 1
@@ -1079,12 +1065,10 @@ def transform_data(strength_of_frames, movements_between_frames, speeds_of_trans
         context_overlap = 4
 
     # SPARSE CTRL SETTINGS
-
     multipled_base_end_percent = 0.05 * (strength_of_adherence * 10)
     multipled_base_adapter_strength = 0.05 * (strength_of_adherence * 20)
 
     # FRAME PROMPTS FORMATTING
-
     def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):
         adjusted_frame_numbers = [frame + buffer for frame in frame_numbers]
         
@@ -1100,7 +1084,6 @@ def transform_data(strength_of_frames, movements_between_frames, speeds_of_trans
     formatted_individual_negative_prompts = format_frame_prompts_with_buffer(cumulative_distances, individual_negative_prompts, buffer)
 
     # MOTION STRENGTHS FORMATTING
-
     adjusted_frame_numbers = [0] + [frame + buffer for frame in cumulative_distances[1:]]
     
     # Format the adjusted frame numbers and strengths
