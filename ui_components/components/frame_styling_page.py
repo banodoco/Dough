@@ -73,7 +73,8 @@ def frame_styling_page(shot_uuid: str):
                                                         help="These are the things you wish to be excluded from the image")
             with canvas_width:
                 inpainting_element(options_width, timing.primary_image.location, position=f"{timing_uuid}")
-                
+
+            how_many_images = st.slider("How many images to generate", 1, 10, 1, key=f"how_many_images_{timing_uuid}")
             if st.button("Generate inpainted image", key=f"generate_inpaint_{timing_uuid}"):
                 if ("mask_to_use" in st.session_state and st.session_state["mask_to_use"]):
                     project_settings = data_repo.get_project_setting(shot.project.uuid)

@@ -110,6 +110,10 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 
             
             next_col += 1
+            # if there's only one item, show a line break
+
+            if len(page_indices) == 1:
+                st.markdown("***")        
             if next_col >= num_columns or i == len(page_indices) - 1 or len(page_indices) == i:
                 next_col = 0  # Reset the column counter
                 st.markdown("***")  # Add markdown line
@@ -136,32 +140,34 @@ def variant_inference_detail_element(variant: InternalFileObject, stage, shot_uu
                 st.rerun()
         
         if open_data:
-            shot_meta_data = get_generation_settings_from_log(variant.inference_log.uuid)
-            if shot_meta_data and shot_meta_data.get("main_setting_data", None):
-                st.markdown("##### Main settings ---")
-                for k, v in shot_meta_data.get("main_setting_data", {}).items():
-                    # Bold the title
-                    title = f"**{k.split(str(shot.uuid))[0][:-1]}:**"
-                    
-                    # Check if the key starts with 'lora_data'
-                    if k.startswith('lora_data'):
-                        if isinstance(v, list) and len(v) > 0:  # Check if v is a list and has more than 0 items
-                            # Handle lora_data differently to format each item in the list
-                            lora_items = [f"- {item.get('filename', 'No filename')} - {item.get('lora_strength', 'No strength')} strength" for item in v]
-                            lora_data_formatted = "\n".join(lora_items)
-                            st.markdown(f"{title} \n{lora_data_formatted}", unsafe_allow_html=True)
-                        # If there are no items in the list, do not display anything for lora_data
-                    else:
-                        # For other keys, display as before but with the title in bold and using a colon
-                        if v:  # Check if v is not empty or None
-                            st.markdown(f"{title} {v}", unsafe_allow_html=True)
+            with st.expander("Settings", expanded=False):
+                shot_meta_data = get_generation_settings_from_log(variant.inference_log.uuid)
+                if shot_meta_data and shot_meta_data.get("main_setting_data", None):
+                    st.markdown("##### Main settings ---")
+                    for k, v in shot_meta_data.get("main_setting_data", {}).items():
+                        # Bold the title
+                        title = f"**{k.split(str(shot.uuid))[0][:-1]}:**"
+                        
+                        # Check if the key starts with 'lora_data'
+                        if k.startswith('lora_data'):
+                            if isinstance(v, list) and len(v) > 0:  # Check if v is a list and has more than 0 items
+                                # Handle lora_data differently to format each item in the list
+                                lora_items = [f"- {item.get('filename', 'No filename')} - {item.get('lora_strength', 'No strength')} strength" for item in v]
+                                lora_data_formatted = "\n".join(lora_items)
+                                st.markdown(f"{title} \n{lora_data_formatted}", unsafe_allow_html=True)
+                            # If there are no items in the list, do not display anything for lora_data
                         else:
-                            # Optionally handle empty or None values differently here
-                            pass
+                            # For other keys, display as before but with the title in bold and using a colon
+                            if v:  # Check if v is not empty or None
+                                st.markdown(f"{title} {v}", unsafe_allow_html=True)
+                            else:
+                                # Optionally handle empty or None values differently here
+                                pass
 
-            st.markdown("##### Frame settings ---")
-            st.write("To see the settings for each frame, click on the 'Boot up settings' button above and they'll load below.")
-        
+                st.markdown("##### Frame settings ---")
+                st.write("To see the settings for each frame, click on the 'Boot up settings' button above and they'll load below.")
+                st.button("Close settings", key=f"close_{tag}_{variant.name}", help="Close this section", use_container_width=True)
+            
 
 
     if stage != CreativeProcessType.MOTION.value:

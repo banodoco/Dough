@@ -624,11 +624,11 @@ def animation_style_element(shot_uuid):
             btn1, btn2, btn3  = st.columns([1, 1, 1])
             backlog_no_update = {f'{shot_uuid}_backlog_enabled': False}
             with btn1:
-                st.button("Generate animation", key="generate_animation_clip", disabled=disable_generate, help=help, on_click=lambda: toggle_generate_inference(position, **backlog_no_update),type="primary")
+                st.button("Add to queue", key="generate_animation_clip", disabled=disable_generate, help=help, on_click=lambda: toggle_generate_inference(position, **backlog_no_update),type="primary",use_container_width=True)
             
             backlog_update = {f'{shot_uuid}_backlog_enabled': True}
             with btn2:
-                st.button("Add generation to backlog", key="generate_animation_clip_backlog", disabled=disable_generate, help=backlog_help, on_click=lambda: toggle_generate_inference(position, **backlog_update),type="secondary")
+                st.button("Add to backlog", key="generate_animation_clip_backlog", disabled=disable_generate, help=backlog_help, on_click=lambda: toggle_generate_inference(position, **backlog_update),type="secondary")
 
 
         with st.sidebar:
