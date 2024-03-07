@@ -323,11 +323,32 @@ def copy_local_file(filepath, destination_directory, new_name):
 
 def determine_dimensions_for_sdxl(width, height):
     if width == height:
+        # Square aspect ratio
         return 1024, 1024
     elif width > height:
-        return 1216, 832
+        # Landscape orientation
+        aspect_ratio = width / height
+        # Select the size based on the aspect ratio thresholds for landscape orientations
+        if aspect_ratio >= 1.6:
+            return 1536, 640
+        elif aspect_ratio >= 1.4:
+            return 1344, 768
+        elif aspect_ratio >= 1.3:
+            return 1216, 832
+        else:
+            return 1152, 896
     else:
-        return 832, 1216
+        # Portrait orientation
+        aspect_ratio = height / width
+        # Select the size based on the aspect ratio thresholds for portrait orientations
+        if aspect_ratio >= 1.6:
+            return 640, 1536
+        elif aspect_ratio >= 1.4:
+            return 768, 1344
+        elif aspect_ratio >= 1.3:
+            return 832, 1216
+        else:
+            return 896, 1152
 
 def list_files_in_folder(folder_path):
     files = []

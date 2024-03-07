@@ -25,23 +25,19 @@ def new_project_page():
         new_project_name = st.text_input("Project name:", value="")        
 
     # Prompt user for video dimension specifications
-    v1, v2, v3 = st.columns([6,3,12])
+    v1, v2, v3 = st.columns([6,3,9])
         
-    frame_sizes = ["512x512", "768x512", "512x768"]
+    frame_sizes = ["512x512", "768x512", "512x768", "512x896", "896x512", "512x1024", "1024x512"]
     with v1:
         
         frame_size = st.radio("Select frame size:", options=frame_sizes, key="frame_size",horizontal=True)
-        if frame_size == "512x512":
-            width = 512
-            height = 512
-        elif frame_size == "768x512":
-            width = 768
-            height = 512
-        elif frame_size == "512x768":
-            width = 512
-            height = 768
+        width, height = map(int, frame_size.split('x'))
+
     
     with v2:                              
+        # is width or height > 767
+        if width > 769 or height > 769:
+            st.warning("There can be animation issue w/ wider or higher sizes.")
         img = Image.new('RGB', (width, height), color = (73, 109, 137))
         st.image(img, use_column_width=True)        
         # st.info("Uploaded images will be resized to the selected dimensions.")
