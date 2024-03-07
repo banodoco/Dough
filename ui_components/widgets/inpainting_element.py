@@ -170,7 +170,8 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
 
     inpaint_prompt = st.text_area("Prompt", value=st.session_state['explorer_base_prompt'])
     inpaint_negative_prompt = st.text_input(
-        "Negative Prompt", value='fractals, overlay text, markings, signature, graphic texts, weird artifacts, bad image, worst quality' + DefaultProjectSettingParams.batch_negative_prompt)
+        "Negative Prompt", value='' + DefaultProjectSettingParams.batch_negative_prompt)
+    
     if 'precision_cropping_inpainted_image_uuid' not in st.session_state:
         st.session_state['precision_cropping_inpainted_image_uuid'] = ""
 
@@ -222,8 +223,10 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
 
             process_inference_output(**inference_data)
 
-    if st.button("Inpaint"):
-        inpaint(promote=False)
-        
-    if st.button("Inpaint and Promote"):
-        inpaint(promote=True)
+    btn1, btn2, btn3 = st.columns([1, 1, 0.5])
+    with btn1:
+        if st.button("Inpaint",use_container_width=True):
+            inpaint(promote=False)
+    with btn2:
+        if st.button("Inpaint & Promote",use_container_width=True):
+            inpaint(promote=True)
