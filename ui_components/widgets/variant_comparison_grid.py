@@ -3,18 +3,19 @@ import time
 import ast
 import streamlit as st
 import re
-from shared.constants import InferenceParamType, InternalFileTag
+from shared.constants import AIModelCategory, InferenceParamType, InternalFileTag
 from ui_components.constants import CreativeProcessType
 from ui_components.methods.animation_style_methods import get_generation_settings_from_log, load_shot_settings
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
 from ui_components.methods.file_methods import create_duplicate_file
 from ui_components.methods.video_methods import sync_audio_and_duration
 from ui_components.widgets.shot_view import create_video_download_button
-from ui_components.models import InternalFileObject
+from ui_components.models import InternalAIModelObject, InternalFileObject
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.animation_style_element import update_interpolation_settings
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
+from utils.ml_processor.constants import ML_MODEL
 
 
 
@@ -78,6 +79,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
             else:
                 st.image(variants[current_variant].location, use_column_width=True)
+                image_variant_details(variants[current_variant])
 
         # Determine the start and end indices for additional variants on the current page
         additional_variants = [idx for idx in range(len(variants) - 1, -1, -1) if idx != current_variant]
@@ -106,12 +108,15 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                     variant_inference_detail_element(variants[variant_index], stage, shot_uuid, timing_list, tag="var_details")
 
                 else:
-                    st.image(variants[variant_index].location, use_column_width=True) if variants[variant_index] else st.error("No image present")                
-                
-            
-            next_col += 1
-            # if there's only one item, show a line break
+                    if variants[variant_index]:
+                        st.image(variants[variant_index].location, use_column_width=True)
+                        image_variant_details(variants[variant_index])
+                    else: 
+                        st.error("No image present")
 
+            next_col += 1
+
+            # if there's only one item, show a line break
             if len(page_indices) == 1:
                 st.markdown("***")        
             if next_col >= num_columns or i == len(page_indices) - 1 or len(page_indices) == i:
@@ -119,6 +124,28 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 st.markdown("***")  # Add markdown line
                 cols = st.columns(num_columns)  # Prepare for the next row            
                 # Add markdown line if this is not the last variant in page_indices
+                
+def image_variant_details(variant: InternalFileObject):
+    with st.expander("Settings", expanded=False):
+        if variant.inference_params and 'query_dict' in variant.inference_params:
+            query_dict = json.loads(variant.inference_params['query_dict'])
+            st.markdown(f"Prompt:  {query_dict['prompt']}", unsafe_allow_html=True)
+            st.markdown(f"Negative Prompt: {query_dict['negative_prompt']}", unsafe_allow_html=True)
+            st.markdown(f"Dimension: {query_dict['width']}x{query_dict['height']}", unsafe_allow_html=True)
+            st.markdown(f"Guidance scale: {query_dict['guidance_scale']}", unsafe_allow_html=True)
+            model_name = variant.inference_log.model_name
+            st.markdown(f"Model name: {model_name}", unsafe_allow_html=True)
+            if model_name in []:
+                st.markdown(f"Low threshold: {query_dict['low_threshold']}", unsafe_allow_html=True)
+                st.markdown(f"High threshold: {query_dict['high_threshold']}", unsafe_allow_html=True)
+            if model_name in [ML_MODEL.sdxl_img2img.display_name(), ML_MODEL.sdxl_controlnet.display_name(),
+                                ML_MODEL.ipadapter_face.display_name(), ML_MODEL.ipadapter_plus.display_name()]:
+                s = query_dict['strength']
+                st.markdown(f"Strength: {s if s > 1 and s <= 100 else int(s * 100)}", unsafe_allow_html=True)
+            if model_name in [ML_MODEL.ipadapter_face_plus.display_name()]:
+                s = query_dict['strength']
+                st.markdown(f"Face Img Strength: {s[0] if s[0] > 1 and s[0] <= 100 else int(s[0] * 100)}", unsafe_allow_html=True)
+                st.markdown(f"Plus Img Strength: {s[1] if s[1] > 1 and s[1] <= 100 else int(s[1] * 100)}", unsafe_allow_html=True)
                 
 def variant_inference_detail_element(variant: InternalFileObject, stage, shot_uuid, timing_list="", tag="temp"):
     data_repo = DataRepo()

@@ -42,16 +42,14 @@ def new_project_page():
         st.image(img, use_column_width=True)        
         # st.info("Uploaded images will be resized to the selected dimensions.")
 
-    with v1:
-        audio = st.radio("Audio:", ["No audio", "Attach new audio"], key="audio", horizontal=True)
+    # with v1:
+    #     audio = st.radio("Audio:", ["No audio", "Attach new audio"], key="audio", horizontal=True)
 
-        # Display audio upload option if user selects "Attach new audio"
-        if audio == "Attach new audio":
-      
-            uploaded_audio = st.file_uploader("Choose an audio file:")
-        
-        else:
-            uploaded_audio = None
+    #     # Display audio upload option if user selects "Attach new audio"
+    #     if audio == "Attach new audio":
+    #         uploaded_audio = st.file_uploader("Choose an audio file:")
+    #     else:
+    #         uploaded_audio = None
 
     st.write("")
 

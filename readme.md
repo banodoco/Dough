@@ -93,9 +93,9 @@ Then go to this URL, and it should be running!
 
 ## Instructions for Linux:
 
-### Install app
+### Install the app
 
-This commands sets up the app. Run this only the first time, after that we can simply start the app using the next command.
+This commands sets up the app. Run this only the first time, after that you can simply start the app using the next command.
 ```bash
 curl -sSL https://raw.githubusercontent.com/banodoco/Dough/green-head/linux_setup.sh | bash
 ```
@@ -110,7 +110,7 @@ source ./dough-env/bin/activate && sh entrypoint.sh
 
 ## Instructions for Windows:
 
-### Install packages
+### Install the app
 
 - Install MS C++ Redistributable (if not already present) - https://aka.ms/vs/16/release/vc_redist.x64.exe
 

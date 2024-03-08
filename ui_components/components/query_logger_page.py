@@ -36,16 +36,18 @@ def query_logger_page():
     if SERVER != ServerType.DEVELOPMENT.value:
         data["Cost ($)"] = []
 
-    for log in inference_log_list:
-        data['Project'].append(log.project.name)
-        prompt = json.loads(log.input_params).get('prompt', '') if log.input_params else ''
-        data['Prompt'].append(prompt)
-        model_name = json.loads(log.output_details).get('model_name', '') if log.output_details else ''
-        data['Model'].append(model_name)
-        data['Inference time (sec)'].append(round(log.total_inference_time, 3))
-        data['Cost ($)'].append(round(log.total_inference_time * 0.004, 3)) if SERVER != ServerType.DEVELOPMENT.value else None
-        data['Status'].append(log.status)
-
-    
-    st.table(data=data)
-    st.markdown("***")
+    if inference_log_list and len(inference_log_list):
+        for log in inference_log_list:
+            data['Project'].append(log.project.name)
+            prompt = json.loads(log.input_params).get('prompt', '') if log.input_params else ''
+            data['Prompt'].append(prompt)
+            model_name = json.loads(log.output_details).get('model_name', '') if log.output_details else ''
+            data['Model'].append(model_name)
+            data['Inference time (sec)'].append(round(log.total_inference_time, 3))
+            data['Cost ($)'].append(round(log.total_inference_time * 0.004, 3)) if SERVER != ServerType.DEVELOPMENT.value else None
+            data['Status'].append(log.status)
+            
+        st.table(data=data)
+        st.markdown("***")
+    else:
+        st.info("No logs present")

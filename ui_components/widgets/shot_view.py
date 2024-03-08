@@ -211,11 +211,6 @@ def update_shot_duration(shot_uuid):
         time.sleep(0.3)
         st.rerun()
 
-
-
-
-
-
 def create_video_download_button(video_location, tag="temp"):
     # Extract the file name from the video location
     file_name = os.path.basename(video_location)
@@ -240,6 +235,7 @@ def create_video_download_button(video_location, tag="temp"):
                 key=tag + str(file_name),
                 use_container_width=True
             )
+
 def shot_adjustment_button(shot, show_label=False):
     button_label = "Shot Adjustment 🔧" if show_label else "🔧"
     if st.button(button_label, key=f"jump_to_shot_adjustment_{shot.uuid}", help=f"Adjust '{shot.name}'", use_container_width=True):

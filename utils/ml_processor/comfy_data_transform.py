@@ -65,8 +65,6 @@ class ComfyDataTransform:
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_IMG2IMG)
 
         # workflow params
-
-        
         positive_prompt, negative_prompt = query.prompt, query.negative_prompt
         steps, cfg = 20, 7      # hardcoding values
         strength = round(query.strength / 100, 1)
@@ -180,7 +178,6 @@ class ComfyDataTransform:
             file_data.update({'local_path': "videos/temp/" + filename})
         
         file = data_repo.create_file(**file_data)
-       
         # adding the combined image in query (and removing io buffers)
         query.data = {
             "data": {
