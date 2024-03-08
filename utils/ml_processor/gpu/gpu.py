@@ -31,7 +31,7 @@ class GPUProcessor(MachineLearningProcessor):
         self.app_settings = data_repo.get_app_secrets_from_user_uuid()
         super().__init__()
 
-    def predict_model_output_standardized(self, model: MLModel, query_obj: MLQueryObject, queue_inference=False):
+    def predict_model_output_standardized(self, model: MLModel, query_obj: MLQueryObject, queue_inference=False, backlog=False):
         data_repo = DataRepo()
         workflow_json, output_node_ids, extra_model_list, ignore_list = get_model_workflow_from_query(model, query_obj)
         file_uuid_list = []
@@ -96,7 +96,7 @@ class GPUProcessor(MachineLearningProcessor):
             InferenceParamType.QUERY_DICT.value: query_obj.to_json(),
             InferenceParamType.GPU_INFERENCE.value: json.dumps(data)
         }
-        return self.predict_model_output(model, **params) if not queue_inference else self.queue_prediction(model, **params)
+        return self.predict_model_output(model, **params) if not queue_inference else self.queue_prediction(model, **params, backlog=backlog)
 
     def predict_model_output(self, replicate_model: MLModel, **kwargs):
         queue_inference = kwargs.get('queue_inference', False)

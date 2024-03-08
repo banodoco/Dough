@@ -201,11 +201,6 @@ def setup_app_ui():
                         on_change=change_page
                     )
 
-                    with st.sidebar:
-                        with st.expander("🔍 Generation log", expanded=True):
-                            # if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
-                            sidebar_logger(st.session_state["shot_uuid"])
-                    
                     if st.session_state['page'] != creative_process_pages[1]:
                         st.session_state['current_frame_sidebar_selector'] = 0
 

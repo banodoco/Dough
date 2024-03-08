@@ -681,6 +681,16 @@ class DBRepo:
 
         return InternalResponse({}, 'inference log deleted successfully', True)
     
+    def update_inference_log_list(self, uuid_list, **kwargs):
+        log_list = InferenceLog.objects.filter(uuid__in=uuid_list, is_disabled=False).all()
+        if log_list and len(log_list):
+            for log in log_list:
+                for attr, value in kwargs.items():
+                    setattr(log, attr, value)
+                log.save()
+        
+        return InternalResponse({}, 'inference log list updated successfully', True)
+    
     def update_inference_log(self, uuid, **kwargs):
         log = InferenceLog.objects.filter(uuid=uuid, is_disabled=False).first()
         if not log:

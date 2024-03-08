@@ -332,6 +332,11 @@ class APIRepo:
         res = self.http_put(url=self.LOG_URL, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
     
+    def update_inference_log_list(self, uuid_list, **kwargs):
+        kwargs['uuid_list'] = uuid_list
+        res = self.http_put(url=self.LOG_LIST_URL, data=kwargs)
+        return InternalResponse(res['payload'], 'success', res['status'])
+    
     # TODO: complete this: backend
     def get_ai_model_param_map_from_uuid(self, uuid):
         pass

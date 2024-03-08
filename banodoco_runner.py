@@ -17,7 +17,8 @@ import django
 from shared.constants import COMFY_PORT, LOCAL_DATABASE_NAME, OFFLINE_MODE, InferenceParamType, InferenceStatus, InferenceType, ProjectMetaData, HOSTED_BACKGROUND_RUNNER_MODE
 from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
-from ui_components.methods.file_methods import load_from_env, save_to_env
+from shared.utils import get_file_type
+from ui_components.methods.file_methods import get_file_bytes_and_extension, load_from_env, save_or_host_file_bytes, save_to_env
 from utils.common_utils import acquire_lock, release_lock
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import replicate_status_map
@@ -245,6 +246,14 @@ def check_and_update_db():
                         output_details['output'] = result['output'] if (output_details['version'] == \
                             "a4a8bafd6089e1716b06057c42b19378250d008b80fe87caa5cd36d40c1eda90" or \
                                 isinstance(result['output'], str)) else [result['output'][-1]]
+                        
+                        # updating the output url (to prevent file path errors in the runtime)
+                        output = output_details['output']
+                        output = output[0] if isinstance(output, list) else output
+                        file_bytes, file_ext = get_file_bytes_and_extension(output)
+                        file_path = "videos/temp/" + str(uuid.uuid4()) + "." + file_ext
+                        file_path = save_or_host_file_bytes(file_bytes, file_path, file_ext) or file_path
+                        output_details['output'] = file_path
                         
                         update_data = {
                             "status" : log_status,

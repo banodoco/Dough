@@ -22,7 +22,7 @@ def project_settings_page(project_uuid):
     project_settings = data_repo.get_project_setting(project_uuid)
 
 
-    frame_sizes = ["512x512", "768x512", "512x768"]
+    frame_sizes = ["512x512", "768x512", "512x768", "512x896", "896x512", "512x1024", "1024x512"]
     current_size = f"{project_settings.width}x{project_settings.height}"
     current_index = frame_sizes.index(current_size) if current_size in frame_sizes else 0
 

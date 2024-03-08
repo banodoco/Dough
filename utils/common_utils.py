@@ -176,7 +176,8 @@ def reset_project_state():
         "promote_new_generation",
         "use_new_settings",
         "shot_uuid",
-        "maintain_state"
+        "maintain_state",
+        "status_optn_index"
     ]
 
     for k in keys_to_delete:

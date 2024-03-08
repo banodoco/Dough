@@ -144,8 +144,6 @@ class DataRepo:
         if not (image_uuid_list and len(image_uuid_list)):
             return []
         image_list = self.db_repo.get_image_list_from_uuid_list(image_uuid_list, file_type=file_type).data['data']
-        
-        print("--------------- ", image_list[0]['project']['uuid'])
         return [InternalFileObject(**image) for image in image_list] if image_list else []
     
     def update_file(self, file_uuid, **kwargs):
@@ -246,6 +244,10 @@ class DataRepo:
     
     def update_inference_log(self, uuid, **kwargs):
         res = self.db_repo.update_inference_log(uuid, **kwargs)
+        return res.status
+    
+    def update_inference_log_list(self, uuid_list, **kwargs):
+        res = self.db_repo.update_inference_log_list(uuid_list, **kwargs)
         return res.status
     
     def update_inference_log_origin_data(self, uuid, **kwargs):
@@ -426,6 +428,7 @@ class DataRepo:
     # lock
     def acquire_lock(self, key):
         retry_count = 0
+        res = None
         while retry_count < 3:
             try:
                 res = self.db_repo.acquire_lock(key)

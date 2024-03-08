@@ -93,41 +93,11 @@ Then go to this URL, and it should be running!
 
 ## Instructions for Linux:
 
-### Clone the repository
+### Install the app
 
+This commands sets up the app. Run this only the first time, after that you can simply start the app using the next command.
 ```bash
-git clone --depth 1 -b staging https://github.com/banodoco/Dough.git
-```
-
-### Install packages
-
-Create a visual environment using:
-
-```bash
-python3 -m venv dough-env
-source ./dough-env/bin/activate
-cd Dough
-```
-
-NOTE: the app will break for python versions other than python3.10 and using the app **without** the virtual environment can cause issues/conflicts with other packages. 
-
-```bash
-apt-get update
-apt install libpq-dev python3.10-dev -y
-```
-
-install requirements
-
-```bash
-pip install -r requirements.txt
-```
-
-### Copy the env file
-
-copy the “.env.sample” file and rename it to “.env”
-
-```jsx
-cp .env.sample .env
+curl -sSL https://raw.githubusercontent.com/banodoco/Dough/green-head/linux_setup.sh | bash
 ```
 
 ### Run the app
@@ -135,46 +105,26 @@ cp .env.sample .env
 you can run the app using 
 
 ```bash
-sh entrypoint.sh
+source ./dough-env/bin/activate && sh entrypoint.sh
 ```
 
 ## Instructions for Windows:
 
-### Clone the git Repo
-
-```bash
-git clone --depth 1 -b staging https://github.com/banodoco/Dough.git
-```
-
-### Install packages
+### Install the app
 
 - Install MS C++ Redistributable (if not already present) - https://aka.ms/vs/16/release/vc_redist.x64.exe
 
-Create a virtual environment and install dependencies
+Run the setup script
 
 ```bash
-python -m venv venv # don't use python3
-.\venv\Scripts\activate
-pip install -r requirements.txt
-pip install websocket # extra dependency
-```
-
-install torch dependencies (if not already present)
-
-```bash
-pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-```
-
-### Copy the env file
-
-```bash
-copy .env.sample .env
+iwr -useb "https://raw.githubusercontent.com/banodoco/Dough/green-head/windows_setup.bat" -OutFile "script.bat"
+Start-Process "cmd.exe" -ArgumentList "/c script.bat"
 ```
 
 ### Run the app
 
 ```bash
-.\entrypoint.bat
+. .\dough-env\Scripts\activate ; .\entrypoint.bat
 ```
 
 If you're having any issues, please share them in our [Discord](https://discord.com/invite/8Wx9dFu5tP).

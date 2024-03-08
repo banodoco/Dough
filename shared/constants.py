@@ -89,6 +89,7 @@ class InferenceStatus(ExtendedEnum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELED = "canceled"
+    BACKLOG = "backlog"
 
 class InferenceParamType(ExtendedEnum):
     REPLICATE_INFERENCE = "replicate_inference"     # replicate url for queue inference and other data

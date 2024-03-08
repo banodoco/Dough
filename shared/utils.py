@@ -22,3 +22,18 @@ def is_url_valid(url):
         return final_response.status_code in [200, 201, 307]   # TODO: handle all possible status codes
     except Exception as e:
         return False
+
+def get_file_type(url):
+    try:
+        response = requests.head(url)
+        content_type = response.headers.get('Content-Type')
+        
+        if content_type and 'image' in content_type:
+            return 'image'
+        elif content_type and 'video' in content_type:
+            return 'video'
+        else:
+            return 'unknown'
+    except Exception as e:
+        print("Error:", e)
+        return 'unknown'

@@ -57,7 +57,7 @@ def start_runner():
             pass
 
 def main():
-    st.set_page_config(page_title="Banodoco", page_icon="🎨", layout="wide")
+    st.set_page_config(page_title="Dough", layout="wide", page_icon="🎨")
 
     auth_details = get_url_param(AUTH_TOKEN)
     if (not auth_details or auth_details == 'None')\
