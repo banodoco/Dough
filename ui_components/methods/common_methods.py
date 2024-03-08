@@ -237,6 +237,81 @@ def apply_image_transformations(image: Image, zoom_level, rotation_angle, x_shif
         cropped_image = cropped_image.transpose(Image.FLIP_LEFT_RIGHT)
 
     return cropped_image
+
+def apply_coord_transformations(initial_coords, zoom_level, rotation_angle, x_shift, y_shift, flip_vertically, flip_horizontally):
+    x1, y1 = initial_coords[0]
+    x2, y2 = initial_coords[1]
+    x3, y3 = initial_coords[2]
+    x4, y4 = initial_coords[3]
+    
+    center_x = (x1 + x2 + x3 + x4) / 4
+    center_y = (y1 + y2 + y3 + y4) / 4
+    
+    # zoom
+    x1_zoomed = center_x + zoom_level * (x1 - center_x) / 100
+    y1_zoomed = center_y + zoom_level * (y1 - center_y) / 100
+    x2_zoomed = center_x + zoom_level * (x2 - center_x) / 100
+    y2_zoomed = center_y + zoom_level * (y2 - center_y) / 100
+    x3_zoomed = center_x + zoom_level * (x3 - center_x) / 100
+    y3_zoomed = center_y + zoom_level * (y3 - center_y) / 100
+    x4_zoomed = center_x + zoom_level * (x4 - center_x) / 100
+    y4_zoomed = center_y + zoom_level * (y4 - center_y) / 100
+    
+    # rotate
+    rotation_angle_rad = math.radians(rotation_angle)
+    x1_rotated = center_x + math.cos(rotation_angle_rad) * (x1_zoomed - center_x) - math.sin(rotation_angle_rad) * (y1_zoomed - center_y)
+    y1_rotated = center_y + math.sin(rotation_angle_rad) * (x1_zoomed - center_x) + math.cos(rotation_angle_rad) * (y1_zoomed - center_y)
+    x2_rotated = center_x + math.cos(rotation_angle_rad) * (x2_zoomed - center_x) - math.sin(rotation_angle_rad) * (y2_zoomed - center_y)
+    y2_rotated = center_y + math.sin(rotation_angle_rad) * (x2_zoomed - center_x) + math.cos(rotation_angle_rad) * (y2_zoomed - center_y)
+    x3_rotated = center_x + math.cos(rotation_angle_rad) * (x3_zoomed - center_x) - math.sin(rotation_angle_rad) * (y3_zoomed - center_y)
+    y3_rotated = center_y + math.sin(rotation_angle_rad) * (x3_zoomed - center_x) + math.cos(rotation_angle_rad) * (y3_zoomed - center_y)
+    x4_rotated = center_x + math.cos(rotation_angle_rad) * (x4_zoomed - center_x) - math.sin(rotation_angle_rad) * (y4_zoomed - center_y)
+    y4_rotated = center_y + math.sin(rotation_angle_rad) * (x4_zoomed - center_x) + math.cos(rotation_angle_rad) * (y4_zoomed - center_y)
+    
+    # shift
+    x1_shifted = x1_rotated + x_shift
+    y1_shifted = y1_rotated + y_shift
+    x2_shifted = x2_rotated + x_shift
+    y2_shifted = y2_rotated + y_shift
+    x3_shifted = x3_rotated + x_shift
+    y3_shifted = y3_rotated + y_shift
+    x4_shifted = x4_rotated + x_shift
+    y4_shifted = y4_rotated + y_shift
+    
+    # flip
+    if flip_vertically:
+        y1_final = 2 * center_y - y1_shifted
+        y2_final = 2 * center_y - y2_shifted
+        y3_final = 2 * center_y - y3_shifted
+        y4_final = 2 * center_y - y4_shifted
+    else:
+        y1_final = y1_shifted
+        y2_final = y2_shifted
+        y3_final = y3_shifted
+        y4_final = y4_shifted
+        
+    if flip_horizontally:
+        x1_final = 2 * center_x - x1_shifted
+        x2_final = 2 * center_x - x2_shifted
+        x3_final = 2 * center_x - x3_shifted
+        x4_final = 2 * center_x - x4_shifted
+    else:
+        x1_final = x1_shifted
+        x2_final = x2_shifted
+        x3_final = x3_shifted
+        x4_final = x4_shifted
+    
+    x1_final = round(x1_final, 2)
+    y1_final = round(y1_final, 2)
+    x2_final = round(x2_final, 2)
+    y2_final = round(y2_final, 2)
+    x3_final = round(x3_final, 2)
+    y3_final = round(y3_final, 2)
+    x4_final = round(x4_final, 2)
+    y4_final = round(y4_final, 2)
+    
+    return [(x1_final, y1_final), (x2_final, y2_final), (x3_final, y3_final), (x4_final, y4_final)]
+
     
 def fetch_image_by_stage(shot_uuid, stage, frame_idx):
     data_repo = DataRepo()
@@ -389,8 +464,9 @@ def combine_mask_and_input_image(mask_path, input_image_path, overlap_color="tra
     mask_image = Image.open(mask_path) if not isinstance(mask_path, Image.Image) else mask_path
     input_image = input_image.convert("RGBA")
 
+    # input_image.save("input_image.png")
+    # mask_image.save("mask_image.png")
     is_white = lambda pixel, threshold=245: all(value > threshold for value in pixel[:3])
-
     fill_color = (0.5,0.5,0.5,1)      # default grey
     if overlap_color == "transparent":
         fill_color = (0,0,0,0)

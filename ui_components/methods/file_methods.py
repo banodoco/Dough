@@ -12,6 +12,7 @@ from typing import Union
 from urllib.parse import urlparse
 import zipfile
 from PIL import Image
+import cv2
 import numpy as np
 import uuid
 from dotenv import set_key, get_key
@@ -370,3 +371,43 @@ def get_file_bytes_and_extension(url):
     except Exception as e:
         print("Error:", e)
         return None, None
+
+# adds a white border around the polygon to minimize irregularities
+def detect_and_draw_contour(image):
+    # Convert PIL Image to OpenCV format (BGR)
+    img_np = np.array(image)
+    img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+    
+    # Convert image to grayscale
+    g = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+
+    # Threshold the grayscale image to get a binary mask
+    th, im_th = cv2.threshold(g, 220, 250, cv2.THRESH_BINARY_INV)
+
+    # Morphological opening to separate each component and have delimited edges
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+    im_th2 = cv2.morphologyEx(im_th, cv2.MORPH_OPEN, kernel)
+
+    # Connected Components segmentation
+    maxLabels, labels = cv2.connectedComponents(im_th2)
+
+    # Iterate through each component and find its contour
+    for label in range(1, maxLabels):
+        # Create a mask for the current component
+        mask = np.uint8(labels == label) * 255
+
+        # Find contours in the mask
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Approximate the contours with straight lines
+        epsilon = 0.01 * cv2.arcLength(contours[0], True)
+        approx = cv2.approxPolyDP(contours[0], epsilon, True)
+
+        # Draw contours on the original image with white color
+        cv2.drawContours(img_bgr, [approx], -1, (255, 255, 255), 2)
+
+    # Convert the modified image back to PIL format (RGB)
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    output_image = Image.fromarray(img_rgb)
+    
+    return output_image

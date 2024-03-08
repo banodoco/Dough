@@ -2,12 +2,12 @@ from math import gcd
 import time
 import uuid
 import streamlit as st
-from PIL import ImageOps, Image
+from PIL import ImageOps, Image, ImageDraw
 from streamlit_cropper import st_cropper
 from backend.models import InternalFileObject
 from shared.constants import InternalFileType
 
-from ui_components.methods.common_methods import apply_image_transformations, fetch_image_by_stage
+from ui_components.methods.common_methods import apply_coord_transformations, apply_image_transformations, fetch_image_by_stage
 from ui_components.constants import WorkflowStageType
 from ui_components.methods.file_methods import generate_pil_image, save_or_host_file
 from ui_components.models import InternalProjectObject
@@ -25,9 +25,7 @@ def cropping_selector_element(shot_uuid):
         crop_stage = "Styled Key Frame"
         # how_to_crop = st_memory.radio("How to crop:", options=["Precision Cropping","Manual Cropping"], key="how_to_crop",horizontal=True)
         how_to_crop = "Precision Cropping"
-    
-        
-                                        
+          
     if crop_stage == "Styled Key Frame":
         stage_name = WorkflowStageType.STYLED.value
     elif crop_stage == "Unedited Key Frame":
@@ -61,31 +59,53 @@ def precision_cropping_element(stage, shot_uuid):
     col1, col2 = st.columns(2)
 
     with col1:
-
         st.subheader("Precision Cropping:")
-
         if st.button("Reset Cropping"):
             reset_zoom_element()
-        
-        
+
         zoom_inputs()
         st.caption("Input Image:")
         st.image(input_image, caption="Input Image", width=300)
 
     with col2:
+        zoom_level = st.session_state['zoom_level_input'] 
+        rotation_angle = st.session_state['rotation_angle_input'] 
+        x_shift = st.session_state['x_shift'] 
+        y_shift = st.session_state['y_shift'] 
+        flip_vertically = st.session_state['flip_vertically'] 
+        flip_horizontally = st.session_state['flip_horizontally']
+        
         st.caption("Output Image:")
         output_image = apply_image_transformations(
-            input_image, st.session_state['zoom_level_input'], st.session_state['rotation_angle_input'], st.session_state['x_shift'], st.session_state['y_shift'], st.session_state['flip_vertically'], st.session_state['flip_horizontally'])
-        st.image(output_image, use_column_width=True)
+            input_image, 
+            zoom_level,
+            rotation_angle,
+            x_shift,
+            y_shift,
+            flip_vertically,
+            flip_horizontally
+        )
+        
+        w, h = input_image.width, input_image.height
+        transformation_data = [
+            (w,h),
+            [(0, h), (w, h), (w, 0), (0,0)],
+            zoom_level,
+            rotation_angle,
+            x_shift,
+            y_shift,
+            flip_vertically,
+            flip_horizontally
+        ]
 
+        st.image(output_image, use_column_width=True)
         if st.button("Save Image"):
             save_zoomed_image(output_image, st.session_state['current_frame_uuid'], stage, promote=True)
             st.success("Image saved successfully!")
             time.sleep(1)
             st.rerun()
 
-        inpaint_in_black_space_element(output_image, shot.project.uuid, stage, shot_uuid)
-
+        inpaint_in_black_space_element(output_image, shot.project.uuid, stage, shot_uuid, transformation_data)
 
 def manual_cropping_element(stage, timing_uuid):
     data_repo = DataRepo()

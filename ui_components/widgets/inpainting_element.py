@@ -1,16 +1,16 @@
 import uuid
 import numpy as np
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageDraw
 import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE, DefaultProjectSettingParams, WorkflowStageType
-from ui_components.methods.file_methods import add_temp_file_to_project, save_or_host_file
+from ui_components.methods.file_methods import add_temp_file_to_project, detect_and_draw_contour, save_or_host_file
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 
 from utils.data_repo.data_repo import DataRepo
-from ui_components.methods.common_methods import add_image_variant, process_inference_output, promote_image_variant
+from ui_components.methods.common_methods import add_image_variant, apply_coord_transformations, process_inference_output, promote_image_variant
 from ui_components.models import InternalProjectObject, InternalSettingObject
 from utils.ml_processor.constants import ML_MODEL
 from utils.ml_processor.ml_interface import get_ml_client
@@ -161,7 +161,8 @@ def replace_with_image(stage, output_file, current_frame_uuid, promote=False):
     st.rerun()
 
 # cropped_img here is a PIL image object
-def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStageType.SOURCE.value, shot_uuid=None):
+def inpaint_in_black_space_element(cropped_img: Image.Image, project_uuid, \
+    stage=WorkflowStageType.SOURCE.value, shot_uuid=None, transformation_data = None):
     data_repo = DataRepo()
     project_settings: InternalSettingObject = data_repo.get_project_setting(
         project_uuid)
@@ -175,22 +176,32 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
     if 'precision_cropping_inpainted_image_uuid' not in st.session_state:
         st.session_state['precision_cropping_inpainted_image_uuid'] = ""
 
-    def inpaint(promote=False):
+    def inpaint(promote=False, transformation_data=transformation_data):
         width = int(project_settings.width)
         height = int(project_settings.height)
 
         saved_cropped_img = cropped_img.resize(
-            (width, height), Image.ANTIALIAS)
+            (width, height), Image.Resampling.BICUBIC)
         
+        rotation_angle = 0
         # removing the mask from this img (as all ml_processors require img, mask separately)
-        mask = Image.new('RGB', cropped_img.size, color='white')
-        for x in range(width):
-            for y in range(height):
-                pixel = saved_cropped_img.getpixel((x, y))
-                if all(value < 10 for value in pixel[:3]):
-                    mask.putpixel((x, y), (0, 0, 0))
+        if not transformation_data:
+            mask = Image.new('RGB', cropped_img.size, color='white')
+            for x in range(width):
+                for y in range(height):
+                    pixel = saved_cropped_img.getpixel((x, y))
+                    if all(value < 10 for value in pixel[:3]):
+                        mask.putpixel((x, y), (0, 0, 0))
+        
+            mask = ImageOps.invert(mask)
+        else:
+            w, h = transformation_data[0]
+            new_coord = apply_coord_transformations(*transformation_data[1:])
+            rotation_angle = transformation_data[3]
+            mask = generate_mask(new_coord, w, h, 3 if rotation_angle != 0 else 1)
 
-        mask = ImageOps.invert(mask)
+        mask = detect_and_draw_contour(mask) if not rotation_angle else mask
+        # mask.save("mask_created.png")
         query_obj = MLQueryObject(
                 timing_uuid=None,
                 model_uuid=None,
@@ -230,3 +241,22 @@ def inpaint_in_black_space_element(cropped_img, project_uuid, stage=WorkflowStag
     with btn2:
         if st.button("Inpaint & Promote",use_container_width=True):
             inpaint(promote=True)
+            
+def generate_mask(vertex_coords, canvas_width, canvas_height, upscale_factor=1):
+    upscale_width = canvas_width * upscale_factor
+    upscale_height = canvas_height * upscale_factor
+    canvas = Image.new("RGB", (upscale_width, upscale_height), "white")
+    draw = ImageDraw.Draw(canvas)
+    upscaled_vertex_coords = [(x * upscale_factor, y * upscale_factor) for x, y in vertex_coords]
+    draw.polygon(upscaled_vertex_coords, fill="black", outline="black")
+    # canvas.save("original_mask.png")
+    canvas = canvas.resize((canvas_width, canvas_height), resample=Image.LANCZOS)
+    
+    # width, height = canvas.size
+    # for y in range(height):
+    #     for x in range(width):
+    #         r, g, b = canvas.getpixel((x, y))
+    #         if r + g + b > 10:
+    #             canvas.putpixel((x, y), (255, 255, 255))
+
+    return canvas
