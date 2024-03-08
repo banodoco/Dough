@@ -683,7 +683,7 @@ def animation_style_element(shot_uuid):
                                         st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = entity_new_val
                                 elif editable_entity == "Seconds to next frames":
                                     for idx, timing in enumerate(timing_list):
-                                        st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = entity_new_val / 2
+                                        st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = entity_new_val
                                 elif editable_entity == "Speed of transitions":
                                     for idx, timing in enumerate(timing_list):
                                         st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'] = entity_new_val
