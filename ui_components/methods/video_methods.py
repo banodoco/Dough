@@ -20,7 +20,7 @@ from utils.media_processor.interpolator import VideoInterpolator
 from utils.media_processor.video import VideoProcessor
 
 
-def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_count=1):
+def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_count=1, backlog=False):
     '''
     - this includes all the animation styles [direct morphing, interpolation, image to video]
     - this stores the newly created video in the interpolated_clip_list and promotes them to
@@ -49,7 +49,8 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
         settings['animation_style'],
         settings,
         variant_count,
-        QUEUE_INFERENCE_QUERIES
+        QUEUE_INFERENCE_QUERIES,
+        backlog
     )
 
     if res:
@@ -137,7 +138,8 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
     project_settings = data_repo.get_project_setting(shot.project.uuid)
 
     # --------- update video duration
-    output_video = update_speed_of_video_clip(video_file, shot.duration)
+    # output_video = update_speed_of_video_clip(video_file, shot.duration)
+    output_video = video_file
 
     # --------- add audio
     temp_file_list = []

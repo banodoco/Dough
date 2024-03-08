@@ -4,8 +4,9 @@ import time
 import zipfile
 import streamlit as st
 from typing import List
-from shared.constants import AnimationStyleType, AnimationToolType
+from shared.constants import AnimationStyleType, AnimationToolType, InferenceParamType
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, DefaultProjectSettingParams, ShotMetaData
+from ui_components.methods.animation_style_methods import load_shot_settings
 from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.motion_module import AnimateDiffCheckpoint
@@ -18,10 +19,12 @@ import requests
 # import re
 import re
 
+default_model = "Deliberate_v2.safetensors"
 
 def animation_style_element(shot_uuid):
     disable_generate = False
     help = ""
+    backlog_help = "This will add the new video generation in the backlog"
     motion_modules = AnimateDiffCheckpoint.get_name_list()
     variant_count = 1
     current_animation_style = AnimationStyleType.CREATIVE_INTERPOLATION.value    # setting a default value
@@ -52,6 +55,7 @@ def animation_style_element(shot_uuid):
         individual_prompts = []
         individual_negative_prompts = []
         motions_during_frames = []
+        shot_meta_data = {}
 
         if len(timing_list) <= 1:
             st.warning("You need at least two frames to generate a video.")
@@ -59,8 +63,7 @@ def animation_style_element(shot_uuid):
 
         open_advanced_settings = st_memory.toggle("Open all advanced settings", key="advanced_settings", value=False)
 
-        # SET DEFAULT VALUES FOR LORA, MODEL, ADHERENCE, PROMPTS, MOTION CONTEXT
-
+        # setting default values to main shot settings
         if f'lora_data_{shot.uuid}' not in st.session_state:
             st.session_state[f'lora_data_{shot.uuid}'] = []
 
@@ -78,8 +81,15 @@ def animation_style_element(shot_uuid):
 
         if f'ckpt_{shot.uuid}' not in st.session_state:
             st.session_state[f'ckpt_{shot.uuid}'] = ""
+            
+        if f"amount_of_motion_{shot.uuid}" not in st.session_state:
+            st.session_state[f"amount_of_motion_{shot.uuid}"] = 1.3
+            
+        # loading settings of the last shot (if this shot is being loaded for the first time)
+        if f'strength_of_frame_{shot_uuid}_0' not in st.session_state:
+            load_shot_settings(shot.uuid)
                 
-        
+        # ------------- Timing Frame and their settings -------------------
         for i in range(0, len(timing_list) , items_per_row):
             with st.container():
                 grid = st.columns([2 if j%2==0 else 1 for j in range(2*items_per_row)])  # Adjust the column widths
@@ -92,21 +102,14 @@ def animation_style_element(shot_uuid):
                             if timing.primary_image and timing.primary_image.location:
                                 st.info(f"**Frame {idx + 1}**")
                                 st.image(timing.primary_image.location, use_column_width=True)
-                                
-                                motion_data = DEFAULT_SHOT_MOTION_VALUES
-                                # setting default parameters (fetching data from the shot if it's present)
-                                if f'strength_of_frame_{shot.uuid}_{idx}' not in st.session_state:
-                                    shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, json.dumps({}))
-                                    timing_data = json.loads(shot_meta_data).get("timing_data", [])
-                                    if timing_data and len(timing_data) >= idx + 1:
-                                        motion_data = timing_data[idx]
-
-                                    for k, v in motion_data.items():
-                                        st.session_state[f'{k}_{shot.uuid}_{idx}'] = v
                                                                                                                             
                                 # settings control
                                 with st.expander("Advanced settings:", expanded=open_advanced_settings):
-                                
+                                    # checking for newly added frames
+                                    if f'individual_prompt_{shot.uuid}_{idx}' not in st.session_state:
+                                        for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
+                                            st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+                                    
                                     individual_prompt = st.text_input("What to include:", key=f"individual_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_prompt_{shot.uuid}_{idx}'], help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
                                     individual_prompts.append(individual_prompt)
                                     individual_negative_prompt = st.text_input("What to avoid:", key=f"negative_prompt_widget_{idx}_{timing.uuid}", value=st.session_state[f'individual_negative_prompt_{shot.uuid}_{idx}'],help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.")
@@ -132,7 +135,7 @@ def animation_style_element(shot_uuid):
                                 if isinstance(st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'], int):
                                     st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = float(st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'])                                    
                                 distance_to_next_frame = st.slider("Seconds to next frame:", min_value=0.25, max_value=6.00, step=0.25, key=f"distance_to_next_frame_widget_{idx}_{timing.uuid}", value=st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'])
-                                distances_to_next_frames.append(distance_to_next_frame)                                    
+                                distances_to_next_frames.append(distance_to_next_frame/2)                                    
                                 speed_of_transition = st.slider("Speed of transition:", min_value=0.45, max_value=0.7, step=0.01, key=f"speed_of_transition_widget_{idx}_{timing.uuid}", value=st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'])
                                 speeds_of_transitions.append(speed_of_transition)                                      
                                 freedom_between_frames = st.slider("Freedom between frames:", min_value=0.05, max_value=0.95, step=0.01, key=f"freedom_between_frames_widget_{idx}_{timing.uuid}", value=st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'])
@@ -146,32 +149,63 @@ def animation_style_element(shot_uuid):
         tab1, tab2   = st.tabs(["Choose Model","Download Models"])
         
         checkpoints_dir = "ComfyUI/models/checkpoints"
-
-        # List all files in the directory
         all_files = os.listdir(checkpoints_dir)
-
-
         if len(all_files) == 0:
-            model_files = ['Realistic_Vision_V5.1.safetensors']
+            model_files = [default_model]
 
         else:
             # Filter files to only include those with .safetensors and .ckpt extensions
-            
             model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
             # drop all files that contain xl
             model_files = [file for file in model_files if "xl" not in file]
 
+        # Mapping of model names to their download URLs
+        sd_model_dict = {
+            "Anything V3 FP16 Pruned": {
+                "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/anything-v3-fp16-pruned.safetensors.tar",
+                "filename": "anything-v3-fp16-pruned.safetensors.tar"
+            },
+            "Deliberate V2": {
+                "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/Deliberate_v2.safetensors.tar",
+                "filename": "Deliberate_v2.safetensors.tar"
+            },
+            "Dreamshaper 8": {
+                "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/dreamshaper_8.safetensors.tar",
+                "filename": "dreamshaper_8.safetensors.tar"
+            },
+            "epicrealism_pureEvolutionV5": {
+                "url": "https://civitai.com/api/download/models/134065", 
+                "filename": "epicrealism_pureEvolutionv5.safetensors"
+            },
+            "majicmixRealistic_v6": {
+                "url": "https://civitai.com/api/download/models/94640", 
+                "filename": "majicmixRealistic_v6.safetensors"
+            },
+        }
 
-        current_model_index = model_files.index(st.session_state[f'ckpt_{shot.uuid}']) if st.session_state[f'ckpt_{shot.uuid}'] in model_files else 0
-
+        cur_model = st.session_state[f'ckpt_{shot.uuid}']
+        current_model_index = model_files.index(cur_model) if (cur_model and cur_model in model_files) else 0
+        # st.session_state['sd_model_video'] = current_model_index
+        # ---------------- SELECT CKPT --------------
         with tab1:
-
             model1, model2 = st.columns([1, 1])
             with model1:
+                sd_model = ""
+                def update_model():
+                    global sd_model
+                    sd_model = checkpoints_dir + "/" + st.session_state['sd_model_video']
+                    
                 if model_files and len(model_files):
-                    sd_model = st_memory.selectbox("Which model would you like to use?", options=model_files, key="sd_model_video",index=current_model_index)
+                    sd_model = st.selectbox(
+                        label="Which model would you like to use?", 
+                        options=model_files, 
+                        key="sd_model_video", 
+                        index=current_model_index,
+                        on_change=update_model
+                    )
                 else:
-                    sd_model = ""
+                    st.write("")
+                    st.info("Default model Deliberate V2 would be selected")
             with model2:
                 if len(all_files) == 0:
                     st.write("")
@@ -181,18 +215,10 @@ def animation_style_element(shot_uuid):
                     st.info("To download more models, go to the Download Models tab.")
 
             # if it's in sd_model-list, just pass the name. If not, stick checkpoints_dir in front of it        
-            sd_model = checkpoints_dir + "/" + sd_model
+            # sd_model = checkpoints_dir + "/" + sd_model
         
+        # ---------------- ADD CKPT ---------------
         with tab2:
-            # Mapping of model names to their download URLs
-            sd_model_dict = {
-                "Anything V3 FP16 Pruned": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/anything-v3-fp16-pruned.safetensors.tar",
-                "Deliberate V2": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/Deliberate_v2.safetensors.tar",
-                "Dreamshaper 8": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/dreamshaper_8.safetensors.tar",
-                "epicrealism_pureEvolutionV5": "https://civitai.com/api/download/models/134065",
-                "majicmixRealistic_v6": "https://civitai.com/api/download/models/94640",            
-            }
-
             where_to_get_model = st.radio("Where would you like to get the model from?", options=["Our list", "Upload a model", "From a URL"], key="where_to_get_model")
 
             if where_to_get_model == "Our list":
@@ -206,11 +232,11 @@ def animation_style_element(shot_uuid):
                         os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
                         
                         # Retrieve the URL using the selected model name
-                        model_url = sd_model_dict[model_name_selected]
+                        model_url = sd_model_dict[model_name_selected]["url"]
                         
                         # Download the model and save it to the directory
                         response = requests.get(model_url, stream=True)
-                        zip_filename = model_url.split("/")[-1]
+                        zip_filename = sd_model_dict[model_name_selected]["filename"]
                         filepath = os.path.join(save_directory, zip_filename)
                         print("filepath: ", filepath)
                         if response.status_code == 200:
@@ -238,10 +264,8 @@ def animation_style_element(shot_uuid):
                                 with tarfile.open(f"{filepath}", "r") as tar_ref:
                                     tar_ref.extractall(new_filepath)
                             
-                            # os.remove(filepath)
-                            st.rerun()
-                        else:
-                            st.error("Failed to download model")
+                            os.remove(filepath)
+                        st.rerun()
 
             elif where_to_get_model == "Upload a model":
                 st.info("It's simpler to just drop this into the ComfyUI/models/checkpoints directory.")
@@ -272,10 +296,10 @@ def animation_style_element(shot_uuid):
 
         lora_data = []
         lora_file_dest = "ComfyUI/models/animatediff_motion_lora"
+        
+        # ---------------- ADD LORA -----------------
         with tab1:
-           
             # Initialize a single list to hold dictionaries for LoRA data
-            #lora_data = []
             # Check if the directory exists and list files, or use a default list
             if os.path.exists(lora_file_dest):
                 files = os.listdir(lora_file_dest)
@@ -290,34 +314,45 @@ def animation_style_element(shot_uuid):
                 if st.button("Check again", key="check_again"):
                     st.rerun()
             else:
+                # cleaning empty lora vals
                 for idx, lora in enumerate(st.session_state[f"lora_data_{shot.uuid}"]):
+                    if not lora:
+                        st.session_state[f"lora_data_{shot.uuid}"].pop(idx)
+                
+                for idx, lora in enumerate(st.session_state[f"lora_data_{shot.uuid}"]):
+                    if not lora:
+                        continue
                     h1, h2, h3, h4 = st.columns([1, 1, 1, 0.5])
                     with h1:
-                        which_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"which_lora_{idx}")                                                    
+                        file_idx = files.index(lora["filename"])
+                        which_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"which_lora_{idx}", index=file_idx)                                                    
+                    
                     with h2:
-                        # User selects the strength for the LoRA
-                        strength_of_lora = st.slider("How strong would you like the LoRA to be?", min_value=0.0, max_value=1.0, value=0.5, step=0.01, key=f"strength_of_lora_{idx}")
-                        
-                        # Append the selected LoRA name and strength as a dictionary to lora_data
+                        strength_of_lora = st.slider("How strong would you like the LoRA to be?", min_value=0.0, max_value=1.0, value=lora["lora_strength"], step=0.01, key=f"strength_of_lora_{idx}")
                         lora_data.append({"filename": which_lora, "lora_strength": strength_of_lora, "filepath": lora_file_dest + "/" + which_lora})
-                        # st.write(lora_data)
+                    
                     with h3:
                         when_to_apply_lora = st.slider("When to apply the LoRA?", min_value=0, max_value=100, value=(0,100), step=1, key=f"when_to_apply_lora_{idx}",disabled=True,help="This feature is not yet available.")
+                    
                     with h4:
-                        # remove button
                         st.write("")
                         if st.button("Remove", key=f"remove_lora_{idx}"):
-                            # pop the current lora from the list
                             st.session_state[f"lora_data_{shot.uuid}"].pop(idx)
                             st.rerun()
-                # st.write(lora_data)
+                
                 if len(st.session_state[f"lora_data_{shot.uuid}"]) == 0:
                     text = "Add a LoRA"
                 else:
                     text = "Add another LoRA"
                 if st.button(text, key="add_motion_guidance"):
-                    st.session_state[f"lora_data_{shot.uuid}"].append("")
-                    st.rerun()
+                    if files and len(files):
+                        st.session_state[f"lora_data_{shot.uuid}"].append({
+                            "filename": files[0],
+                            "lora_strength": 0.5,
+                            "filepath": lora_file_dest + "/" + files[0]
+                        })
+                        st.rerun()
+        # ---------------- DOWNLOAD LORA ---------------
         with tab2:
             text1, text2 = st.columns([1, 1])
             with text1:
@@ -343,19 +378,20 @@ def animation_style_element(shot_uuid):
                         "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_zooming_out_temporal_unet.safetensors"
                     ]
                             
-                    which_would_you_like_to_download = st.selectbox("Which LoRA would you like to download?", options=file_links, key="which_would_you_like_to_download")
+                    selected_lora_optn = st.selectbox("Which LoRA would you like to download?", options=[a.split("/")[-1] for a in file_links], key="selected_lora")
                     if st.button("Download LoRA", key="download_lora"):
                         with st.spinner("Downloading LoRA..."):
                             save_directory = "ComfyUI/models/animatediff_motion_lora"
                             os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
                             
                             # Extract the filename from the URL
-                            filename = which_would_you_like_to_download.split("/")[-1]
+                            selected_lora = next((ele for idx, ele in enumerate(file_links) if selected_lora_optn in ele), None)
+                            filename = selected_lora.split("/")[-1]
                             save_path = os.path.join(save_directory, filename)
                             
                             # Download the file
                             download_lora_bar = st.progress(0, text="")
-                            response = requests.get(which_would_you_like_to_download, stream=True)
+                            response = requests.get(selected_lora, stream=True)
                             if response.status_code == 200:
                                 total_size = int(response.headers.get('content-length', 0))
                                 with open(save_path, 'wb') as f:
@@ -396,6 +432,7 @@ def animation_style_element(shot_uuid):
                                 st.error("Failed to download LoRA")
             elif where_to_download_from == "Upload a LoRA":
                 st.info("It's simpler to just drop this into the ComfyUI/models/animatediff_motion_lora directory.")
+        # ---------------- TRAIN LORA --------------
         with tab3:
             b1, b2 = st.columns([1, 1])
             with b1:
@@ -406,7 +443,6 @@ def animation_style_element(shot_uuid):
 
                 if st.button("Train LoRA", key="train_lora", use_container_width=True):
                     st.write("Training LoRA")
-                                                    
 
         st.markdown("***")
         st.markdown("##### Overall style settings")
@@ -419,20 +455,36 @@ def animation_style_element(shot_uuid):
 
         f1, f2, f3 = st.columns([1, 1, 1])
         with f1:
-            overall_positive_prompt = st.text_area("What would you like to see in the videos?", value=st.session_state[f"positive_prompt_video_{shot.uuid}"])
+            overall_positive_prompt = ""
+            def update_prompt():
+                global overall_positive_prompt
+                overall_positive_prompt = st.session_state[f"positive_prompt_video_{shot.uuid}"]
+
+            overall_positive_prompt = st.text_area(
+                "What would you like to see in the videos?", 
+                key="overall_positive_prompt", 
+                value=st.session_state[f"positive_prompt_video_{shot.uuid}"],
+                on_change=update_prompt
+            )
         with f2:
-            overall_negative_prompt = st.text_area("What would you like to avoid in the videos?", value=st.session_state[f"negative_prompt_video_{shot.uuid}"])
+            overall_negative_prompt = st.text_area(
+                "What would you like to avoid in the videos?", 
+                key="overall_negative_prompt", 
+                value=st.session_state[f"negative_prompt_video_{shot.uuid}"]
+            )
         
         with f3:
             st.write("")
             st.write("")
             st.info("Use these sparingly, as they can have a large impact on the video. You can also edit them for individual frames in the advanced settings above.")
-            soft_scaled_cn_weights_multiplier = ""
 
         st.markdown("***")
         st.markdown("##### Overall motion settings")
         h1, h2, h3 = st.columns([0.5, 1.5, 1])
         with h1:
+            # will fix this later
+            if f"type_of_motion_context_index_{shot.uuid}" in st.session_state and isinstance(st.session_state[f"type_of_motion_context_index_{shot.uuid}"], str):
+                st.session_state[f"type_of_motion_context_index_{shot.uuid}"] = ["Low", "Standard", "High"].index(st.session_state[f"type_of_motion_context_index_{shot.uuid}"])
             type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=False, index=st.session_state[f"type_of_motion_context_index_{shot.uuid}"])
 
         with h2: 
@@ -440,9 +492,9 @@ def animation_style_element(shot_uuid):
         st.write("")
         i1, i3,_ = st.columns([1,2,1])
         with i1:
-            amount_of_motion = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="amount_of_motion")        
+            amount_of_motion = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01, key="amount_of_motion", value=st.session_state[f"amount_of_motion_{shot.uuid}"])        
             st.write("")
-            if st.button("Update amount of motion", key="update_motion"):
+            if st.button("Bulk update amount of motion", key="update_motion", help="This will update this value in all the frames"):
                 for idx, timing in enumerate(timing_list):
                     st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = amount_of_motion                
                 st.success("Updated amount of motion")
@@ -513,14 +565,15 @@ def animation_style_element(shot_uuid):
             individual_negative_prompts=negative_prompt_travel,
             animation_stype=AnimationStyleType.CREATIVE_INTERPOLATION.value,            
             max_frames=str(dynamic_frame_distribution_values[-1]),
-            lora_data=lora_data
+            lora_data=lora_data,
+            shot_data=shot_meta_data
         )
         
         position = "generate_vid"
         st.markdown("***")
         st.markdown("##### Generation Settings")
 
-        animate_col_1, animate_col_2, _ = st.columns([1, 1, 1])
+        animate_col_1, animate_col_2, _ = st.columns([3, 1, 1])
         with animate_col_1:
             variant_count = st.number_input("How many variants?", min_value=1, max_value=5, value=1, step=1, key="variant_count")
             
@@ -528,7 +581,19 @@ def animation_style_element(shot_uuid):
                 # last keyframe position * 16
                 duration = float(dynamic_frame_distribution_values[-1] / 16)
                 data_repo.update_shot(uuid=shot.uuid, duration=duration)
-                update_session_state_with_animation_details(shot.uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts)
+                shot_data = update_session_state_with_animation_details(
+                    shot.uuid, 
+                    timing_list, 
+                    strength_of_frames, 
+                    distances_to_next_frames, 
+                    speeds_of_transitions, 
+                    freedoms_between_frames, 
+                    motions_during_frames, 
+                    individual_prompts, 
+                    individual_negative_prompts,
+                    lora_data
+                )
+                settings.update(shot_data=shot_data)
                 vid_quality = "full"    # TODO: add this if video_resolution == "Full Resolution" else "preview"
                 st.success("Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update.")
 
@@ -545,18 +610,30 @@ def animation_style_element(shot_uuid):
                         st.error("Please generate primary images")
                         time.sleep(0.7)
                         st.rerun()
+                        
+                if f'{shot_uuid}_backlog_enabled' not in st.session_state:
+                    st.session_state[f'{shot_uuid}_backlog_enabled'] = False
 
                 create_single_interpolated_clip(
                     shot_uuid,
                     vid_quality,
                     settings,
-                    variant_count
+                    variant_count,
+                    st.session_state[f'{shot_uuid}_backlog_enabled']
                 )
                 
-                toggle_generate_inference(position)
+                backlog_update = {f'{shot_uuid}_backlog_enabled': False}
+                toggle_generate_inference(position, **backlog_update)
                 st.rerun()
-                
-            st.button("Generate Animation Clip", key="generate_animation_clip", disabled=disable_generate, help=help, on_click=lambda: toggle_generate_inference(position),type="primary")
+            
+            btn1, btn2, btn3  = st.columns([1, 1, 1])
+            backlog_no_update = {f'{shot_uuid}_backlog_enabled': False}
+            with btn1:
+                st.button("Add to queue", key="generate_animation_clip", disabled=disable_generate, help=help, on_click=lambda: toggle_generate_inference(position, **backlog_no_update),type="primary",use_container_width=True)
+            
+            backlog_update = {f'{shot_uuid}_backlog_enabled': True}
+            with btn2:
+                st.button("Add to backlog", key="generate_animation_clip_backlog", disabled=disable_generate, help=backlog_help, on_click=lambda: toggle_generate_inference(position, **backlog_update),type="secondary")
 
 
         with st.sidebar:
@@ -586,36 +663,36 @@ def animation_style_element(shot_uuid):
                                 st.success("All frames have been reset to default values.")
                                 st.rerun()
                                                 
-                        what_would_you_like_to_edit = st.selectbox("What would you like to edit?", options=["Seconds to next frames", "Speed of transitions", "Freedom between frames","Strength of frames","Motion during frames"], key="what_would_you_like_to_edit")
-                        if what_would_you_like_to_edit == "Seconds to next frames":
-                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=6.00, step=0.25, value=1.0, key="what_to_change_it_to")
-                        if what_would_you_like_to_edit == "Strength of frames":
-                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.25, max_value=1.0, step=0.01, value=0.5, key="what_to_change_it_to")
-                        elif what_would_you_like_to_edit == "Speed of transitions":
-                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, value=0.6, key="what_to_change_it_to")
-                        elif what_would_you_like_to_edit == "Freedom between frames":
-                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.05, max_value=0.95, step=0.01, value=0.5, key="what_to_change_it_to")
-                        elif what_would_you_like_to_edit == "Motion during frames":
-                            what_to_change_it_to = st.slider("What would you like to change it to?", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="what_to_change_it_to")
+                        editable_entity = st.selectbox("What would you like to edit?", options=["Seconds to next frames", "Speed of transitions", "Freedom between frames","Strength of frames","Motion during frames"], key="editable_entity")
+                        if editable_entity == "Seconds to next frames":
+                            entity_new_val = st.slider("What would you like to change it to?", min_value=0.25, max_value=6.00, step=0.25, value=1.0, key="entity_new_val")
+                        if editable_entity == "Strength of frames":
+                            entity_new_val = st.slider("What would you like to change it to?", min_value=0.25, max_value=1.0, step=0.01, value=0.5, key="entity_new_val")
+                        elif editable_entity == "Speed of transitions":
+                            entity_new_val = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, value=0.6, key="entity_new_val")
+                        elif editable_entity == "Freedom between frames":
+                            entity_new_val = st.slider("What would you like to change it to?", min_value=0.05, max_value=0.95, step=0.01, value=0.5, key="entity_new_val")
+                        elif editable_entity == "Motion during frames":
+                            entity_new_val = st.slider("What would you like to change it to?", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="entity_new_val")
                         
                         bulk1, bulk2 = st.columns([1, 1])
                         with bulk1:
                             if st.button("Bulk edit", key="bulk_edit", use_container_width=True):
-                                if what_would_you_like_to_edit == "Strength of frames":
+                                if editable_entity == "Strength of frames":
                                     for idx, timing in enumerate(timing_list):
-                                        st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
-                                elif what_would_you_like_to_edit == "Seconds to next frames":
+                                        st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = entity_new_val
+                                elif editable_entity == "Seconds to next frames":
                                     for idx, timing in enumerate(timing_list):
-                                        st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
-                                elif what_would_you_like_to_edit == "Speed of transitions":
+                                        st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = entity_new_val
+                                elif editable_entity == "Speed of transitions":
                                     for idx, timing in enumerate(timing_list):
-                                        st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'] = what_to_change_it_to
-                                elif what_would_you_like_to_edit == "Freedom between frames":
+                                        st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'] = entity_new_val
+                                elif editable_entity == "Freedom between frames":
                                     for idx, timing in enumerate(timing_list):
-                                        st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'] = what_to_change_it_to
-                                elif what_would_you_like_to_edit == "Motion during frames":
+                                        st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'] = entity_new_val
+                                elif editable_entity == "Motion during frames":
                                     for idx, timing in enumerate(timing_list):
-                                        st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = what_to_change_it_to
+                                        st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = entity_new_val
                                 st.rerun()
                         
                         st.markdown("***")
@@ -626,13 +703,16 @@ def animation_style_element(shot_uuid):
                             time.sleep(0.7)
                             st.rerun()
 
-def toggle_generate_inference(position):
+# --------------------- METHODS -----------------------
+def toggle_generate_inference(position, **kwargs):
+    for k,v in kwargs.items():
+        st.session_state[k] = v
     if position + '_generate_inference' not in st.session_state:
         st.session_state[position + '_generate_inference'] = True
     else:
         st.session_state[position + '_generate_inference'] = not st.session_state[position + '_generate_inference']
 
-def update_session_state_with_animation_details(shot_uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts):
+def update_session_state_with_animation_details(shot_uuid, timing_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts, lora_data):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     meta_data = shot.meta_data_dict
@@ -644,7 +724,7 @@ def update_session_state_with_animation_details(shot_uuid, timing_list, strength
             st.session_state[f'individual_negative_prompt_{shot_uuid}_{idx}'] = individual_negative_prompts[idx]
             st.session_state[f'motion_during_frame_{shot_uuid}_{idx}'] = motions_during_frames[idx]
             if idx < len(timing_list) - 1:                             
-                st.session_state[f'distance_to_next_frame_{shot_uuid}_{idx}'] = distances_to_next_frames[idx]
+                st.session_state[f'distance_to_next_frame_{shot_uuid}_{idx}'] = distances_to_next_frames[idx] * 2
                 st.session_state[f'speed_of_transition_{shot_uuid}_{idx}'] = speeds_of_transitions[idx]
                 st.session_state[f'freedom_between_frames_{shot_uuid}_{idx}'] = freedoms_between_frames[idx]
 
@@ -654,16 +734,45 @@ def update_session_state_with_animation_details(shot_uuid, timing_list, strength
             "individual_prompt" : individual_prompts[idx],
             "individual_negative_prompt" : individual_negative_prompts[idx],
             "motion_during_frame" : motions_during_frames[idx],
-            "distance_to_next_frame" : distances_to_next_frames[idx] if idx < len(timing_list) - 1 else DEFAULT_SHOT_MOTION_VALUES["distance_to_next_frame"],
+            "distance_to_next_frame" : distances_to_next_frames[idx] * 2 if idx < len(timing_list) - 1 else DEFAULT_SHOT_MOTION_VALUES["distance_to_next_frame"],
             "speed_of_transition" : speeds_of_transitions[idx] if idx < len(timing_list) - 1 else DEFAULT_SHOT_MOTION_VALUES["speed_of_transition"],
             "freedom_between_frames" : freedoms_between_frames[idx] if idx < len(timing_list) - 1 else DEFAULT_SHOT_MOTION_VALUES["freedom_between_frames"],
         }
 
         timing_data.append(state_data)
 
-    meta_data.update({ShotMetaData.MOTION_DATA.value : json.dumps({"timing_data": timing_data})})
-    data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
+    main_setting_data = {}
+    main_setting_data[f'lora_data_{shot.uuid}'] = lora_data
+    main_setting_data[f"strength_of_adherence_value_{shot.uuid}"] = st.session_state["strength_of_adherence"]
+    main_setting_data[f"type_of_motion_context_index_{shot.uuid}"] = st.session_state["type_of_motion_context"]
+    main_setting_data[f"positive_prompt_video_{shot.uuid}"] = st.session_state["overall_positive_prompt"]
+    main_setting_data[f"negative_prompt_video_{shot.uuid}"] = st.session_state["overall_negative_prompt"]
+    main_setting_data[f"amount_of_motion_{shot.uuid}"] = st.session_state["amount_of_motion"]
+    
+    checkpoints_dir = "ComfyUI/models/checkpoints"
+    all_files = os.listdir(checkpoints_dir)
+    model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
+    model_files = [file for file in model_files if "xl" not in file]
+    
+    if 'sd_model_video' in st.session_state and len(model_files):
+        idx = model_files.index(st.session_state["sd_model_video"]) if st.session_state["sd_model_video"] in model_files else 0
+        main_setting_data[f'ckpt_{shot.uuid}'] = model_files[idx]
+    else:
+        main_setting_data[f'ckpt_{shot.uuid}'] = default_model
+    
+    meta_data.update(
+        {
+            ShotMetaData.MOTION_DATA.value : json.dumps(
+                {
+                    "timing_data": timing_data,
+                    "main_setting_data": main_setting_data
+                }
+            )
+        }
+    )
 
+    data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
+    return meta_data
 
 def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):
     adjusted_frame_numbers = [frame + buffer for frame in frame_numbers]
@@ -698,7 +807,6 @@ def extract_strength_values(type_of_key_frame_influence, dynamic_key_frame_influ
             linear_key_frame_influence_value = (linear_key_frame_influence_value[0], linear_key_frame_influence_value[1], linear_key_frame_influence_value[0])
         return [linear_key_frame_influence_value for _ in range(len(keyframe_positions) - 1)]
 
-
 def update_interpolation_settings(values=None, timing_list=None):
     default_values = {
         'type_of_frame_distribution': 0,
@@ -725,9 +833,7 @@ def update_interpolation_settings(values=None, timing_list=None):
     for key, default_value in default_values.items():
         st.session_state[key] = values.get(key, default_value) if values and values.get(key) is not None else default_value
         # print(f"{key}: {st.session_state[key]}")
-
-
-        
+    
 def extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value):
     # Check and convert linear_key_frame_influence_value if it's a float or string float        
     # if it's a string that starts with a parenthesis, convert it to a tuple
@@ -757,7 +863,6 @@ def extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_infl
         return dynamic_values[:number_of_outputs]
     else:
         return [linear_key_frame_influence_value for _ in range(number_of_outputs)]
-
 
 def get_keyframe_positions(type_of_frame_distribution, dynamic_frame_distribution_values, images, linear_frame_distribution_value):
     if type_of_frame_distribution == "dynamic":
@@ -792,13 +897,10 @@ def calculate_weights(keyframe_positions, strength_values, buffer, key_frame_inf
         return round(influence_frame_number)
 
     def find_curve(batch_index_from, batch_index_to, strength_from, strength_to, interpolation,revert_direction_at_midpoint, last_key_frame_position,i, number_of_items,buffer):
-
         # Initialize variables based on the position of the keyframe
         range_start = batch_index_from
         range_end = batch_index_to
         # if it's the first value, set influence range from 1.0 to 0.0
-
-        
         if i == number_of_items - 1:
             range_end = last_key_frame_position
 
@@ -840,56 +942,36 @@ def calculate_weights(keyframe_positions, strength_values, buffer, key_frame_inf
     
     weights_list = []
     frame_numbers_list = []
-    
 
     for i in range(len(keyframe_positions)):
-
         keyframe_position = keyframe_positions[i]                                    
         interpolation = "ease-in-out"
         # strength_from = strength_to = 1.0
 
         if i == 0: # first image 
-
-            # GET IMAGE AND KEYFRAME INFLUENCE VALUES        
-                       
+            # GET IMAGE AND KEYFRAME INFLUENCE VALUES
             key_frame_influence_from, key_frame_influence_to = key_frame_influence_values[i]      
-                  
             start_strength, mid_strength, end_strength = strength_values[i]
-                            
             keyframe_position = keyframe_positions[i]
             next_key_frame_position = keyframe_positions[i+1]
-            
-            batch_index_from = keyframe_position     
-            
+            batch_index_from = keyframe_position
             batch_index_to_excl = calculate_influence_frame_number(keyframe_position, next_key_frame_position, key_frame_influence_to)
-            
-            
             weights, frame_numbers = find_curve(batch_index_from, batch_index_to_excl, mid_strength, end_strength, interpolation, False, last_key_frame_position, i, len(keyframe_positions), buffer)                                    
             # interpolation = "ease-in"                                
         
         elif i == len(keyframe_positions) - 1:  # last image
-
-            
-            # GET IMAGE AND KEYFRAME INFLUENCE VALUES                           
-
-
+            # GET IMAGE AND KEYFRAME INFLUENCE VALUES
             key_frame_influence_from,key_frame_influence_to = key_frame_influence_values[i]       
             start_strength, mid_strength, end_strength = strength_values[i]
             # strength_from, strength_to = cn_strength_values[i-1]
-
             keyframe_position = keyframe_positions[i]
             previous_key_frame_position = keyframe_positions[i-1]
-
-
             batch_index_from = calculate_influence_frame_number(keyframe_position, previous_key_frame_position, key_frame_influence_from)
-
             batch_index_to_excl = keyframe_position
             weights, frame_numbers = find_curve(batch_index_from, batch_index_to_excl, start_strength, mid_strength, interpolation, False, last_key_frame_position, i, len(keyframe_positions), buffer)                                    
             # interpolation =  "ease-out"                                
         
         else:  # middle images
-            
-
             # GET IMAGE AND KEYFRAME INFLUENCE VALUES              
             key_frame_influence_from,key_frame_influence_to = key_frame_influence_values[i]                              
             start_strength, mid_strength, end_strength = strength_values[i]
@@ -918,8 +1000,6 @@ def calculate_weights(keyframe_positions, strength_values, buffer, key_frame_inf
 
 def plot_weights(weights_list, frame_numbers_list):
     plt.figure(figsize=(12, 6))
-
-
     for i, weights in enumerate(weights_list):
         frame_numbers = frame_numbers_list[i]
         plt.plot(frame_numbers, weights, label=f'Frame {i + 1}')
@@ -933,12 +1013,8 @@ def plot_weights(weights_list, frame_numbers_list):
     st.set_option('deprecation.showPyplotGlobalUse', False)
     st.pyplot()
 
-
-
 def transform_data(strength_of_frames, movements_between_frames, speeds_of_transitions, distances_to_next_frames, type_of_motion_context, strength_of_adherence, individual_prompts, individual_negative_prompts, buffer, motions_during_frames):
-
     # FRAME SETTINGS
-
     def adjust_and_invert_relative_value(middle_value, relative_value):
         if relative_value is not None:
             adjusted_value = middle_value * relative_value
@@ -981,7 +1057,6 @@ def transform_data(strength_of_frames, movements_between_frames, speeds_of_trans
     cumulative_distances = [int(float(value) * 16) for value in cumulative_distances]
 
     # MOTION CONTEXT SETTINGS
-
     if type_of_motion_context == "Low":
         context_length = 16
         context_stride = 1
@@ -998,12 +1073,10 @@ def transform_data(strength_of_frames, movements_between_frames, speeds_of_trans
         context_overlap = 4
 
     # SPARSE CTRL SETTINGS
-
     multipled_base_end_percent = 0.05 * (strength_of_adherence * 10)
     multipled_base_adapter_strength = 0.05 * (strength_of_adherence * 20)
 
     # FRAME PROMPTS FORMATTING
-
     def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):
         adjusted_frame_numbers = [frame + buffer for frame in frame_numbers]
         
@@ -1019,7 +1092,6 @@ def transform_data(strength_of_frames, movements_between_frames, speeds_of_trans
     formatted_individual_negative_prompts = format_frame_prompts_with_buffer(cumulative_distances, individual_negative_prompts, buffer)
 
     # MOTION STRENGTHS FORMATTING
-
     adjusted_frame_numbers = [0] + [frame + buffer for frame in cumulative_distances[1:]]
     
     # Format the adjusted frame numbers and strengths

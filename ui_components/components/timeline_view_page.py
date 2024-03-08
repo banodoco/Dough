@@ -5,6 +5,7 @@ from ui_components.components.explorer_page import gallery_image_view
 from streamlit_option_menu import option_menu
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
+from ui_components.widgets.sidebar_logger import sidebar_logger
 from ui_components.components.explorer_page import generate_images_element
 
 def timeline_view_page(shot_uuid: str, h2):
@@ -19,7 +20,14 @@ def timeline_view_page(shot_uuid: str, h2):
         if "view" not in st.session_state:
             st.session_state["view"] = views[0]
 
-        st.write("")         
+        st.write("")    
+
+        with st.expander("🔍 Generation log", expanded=True):
+            # if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
+            sidebar_logger(st.session_state["shot_uuid"])
+        
+        st.write("")
+
         with st.expander("📋 Explorer shortlist",expanded=True):
             if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
                 gallery_image_view(shot.project.uuid, shortlist=True, view=["add_and_remove_from_shortlist","add_to_any_shot"])
@@ -31,12 +39,7 @@ def timeline_view_page(shot_uuid: str, h2):
         st.markdown(f"### 🪄 '{project.name}' timeline  _________")
         st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
         
-    with slider2:
-        show_video = st.toggle("Show Video:", value=False, key="show_video")
-    if show_video:
-        st.session_state["view"] = "Shots"
-    else:
-        st.session_state["view"] = "Key Frames"
+
     timeline_view(st.session_state["shot_uuid"], st.session_state['view'])
 
 
@@ -44,7 +47,4 @@ def timeline_view_page(shot_uuid: str, h2):
     st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
     
     generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None, shot_uuid=None)
-    
-    
-
     gallery_image_view(project_uuid,False,view=['add_and_remove_from_shortlist','view_inference_details','shot_chooser','add_to_any_shot'])

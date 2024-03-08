@@ -65,8 +65,6 @@ class ComfyDataTransform:
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_IMG2IMG)
 
         # workflow params
-
-        
         positive_prompt, negative_prompt = query.prompt, query.negative_prompt
         steps, cfg = 20, 7      # hardcoding values
         strength = round(query.strength / 100, 1)
@@ -180,7 +178,6 @@ class ComfyDataTransform:
             file_data.update({'local_path': "videos/temp/" + filename})
         
         file = data_repo.create_file(**file_data)
-       
         # adding the combined image in query (and removing io buffers)
         query.data = {
             "data": {
@@ -326,7 +323,9 @@ class ComfyDataTransform:
         workflow['464']['inputs']['height'] = sm_data.get('height')
         workflow['464']['inputs']['width'] = sm_data.get('width')
         
-        workflow['461']['inputs']['ckpt_name'] = sm_data.get('ckpt')
+        ckpt = sm_data.get('ckpt')
+        if "ComfyUI/models/checkpoints/" != ckpt and ckpt:
+            workflow['461']['inputs']['ckpt_name'] = ckpt
         
         workflow['558']['inputs']['buffer'] = sm_data.get('buffer')
         workflow['548']['inputs']['text'] = sm_data.get('motion_scales')

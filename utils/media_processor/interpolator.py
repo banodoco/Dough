@@ -37,7 +37,7 @@ class VideoInterpolator:
         return interpolation_steps
     
     @staticmethod
-    def create_interpolated_clip(img_location_list, animation_style, settings, variant_count=1, queue_inference=False):
+    def create_interpolated_clip(img_location_list, animation_style, settings, variant_count=1, queue_inference=False, backlog=False):
         if not animation_style:
             animation_style = DefaultTimingStyleParams.animation_style
 
@@ -46,19 +46,21 @@ class VideoInterpolator:
                 img_location_list,
                 settings,
                 variant_count,
-                queue_inference
+                queue_inference,
+                backlog
             )
 
         elif animation_style == AnimationStyleType.DIRECT_MORPHING.value:
             return VideoInterpolator.video_through_direct_morphing(
                 img_location_list,
-                settings
+                settings,
+                backlog
                 )
         
 
     # returns a video bytes generated through interpolating frames between the given list of frames
     @staticmethod
-    def video_through_frame_interpolation(img_location_list, settings, variant_count, queue_inference=False):
+    def video_through_frame_interpolation(img_location_list, settings, variant_count, queue_inference=False, backlog=False):
         ml_client = get_ml_client()
         # zip_filename = zip_images(img_location_list)
         # zip_url = ml_client.upload_training_data(zip_filename, delete_after_upload=True)
@@ -119,7 +121,7 @@ class VideoInterpolator:
                     "individual_negative_prompts": settings["individual_negative_prompts"],
                     "max_frames": settings["max_frames"],
                     "lora_data": settings["lora_data"],
-
+                    "shot_data": settings["shot_data"]
                 }
 
                 # adding the input images
@@ -145,7 +147,7 @@ class VideoInterpolator:
                     mask_uuid=None,
                     data=sm_data
                 )
-                res = ml_client.predict_model_output_standardized(ML_MODEL.ad_interpolation, ml_query_object, QUEUE_INFERENCE_QUERIES)
+                res = ml_client.predict_model_output_standardized(ML_MODEL.ad_interpolation, ml_query_object, QUEUE_INFERENCE_QUERIES, backlog)
 
             final_res.append(res)
 
@@ -153,7 +155,7 @@ class VideoInterpolator:
     
 
     @staticmethod
-    def video_through_direct_morphing(img_location_list, settings):
+    def video_through_direct_morphing(img_location_list, settings, backlog=False):
         def load_image(image_path_or_url):
             if image_path_or_url.startswith("http"):
                 response = r.get(image_path_or_url)

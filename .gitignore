@@ -5,6 +5,7 @@ __pycache__/
 comfyui*.log
 
 venv
+dough-env
 .vscode
 
 # system

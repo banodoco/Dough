@@ -1,5 +1,14 @@
+from io import BytesIO
+import os
+import shutil
+from typing import List
+import uuid
+from zipfile import ZipFile
+
+import requests
 import streamlit as st
 from ui_components.methods.common_methods import add_new_shot
+from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from ui_components.widgets.common_element import duplicate_shot_button
 from ui_components.widgets.shot_view import shot_keyframe_element, shot_adjustment_button, shot_animation_button, update_shot_name, update_shot_duration, move_shot_buttons, delete_shot_button, create_video_download_button
 from utils.data_repo.data_repo import DataRepo
@@ -26,7 +35,9 @@ def timeline_view(shot_uuid, stage):
             
         with grid[idx % items_per_row]:
             st.info(f"##### {shot.name}")
-            if stage == "Key Frames":
+            if shot.main_clip and shot.main_clip.location:
+                st.video(shot.main_clip.location)
+            else:            
                 for i in range(0, len(timing_list), items_per_row):
                     if i % items_per_row == 0:
                         grid_timing = st.columns(items_per_row)
@@ -37,13 +48,6 @@ def timeline_view(shot_uuid, stage):
                                 timing = timing_list[ i + j]
                                 if timing.primary_image and timing.primary_image.location:
                                     st.image(timing.primary_image.location, use_column_width=True)
-            else:        
-                
-                if shot.main_clip and shot.main_clip.location:
-                    st.video(shot.main_clip.location)
-                else:
-                    st.warning('''No video present''')
-
 
             switch1,switch2 = st.columns([1,1])
             with switch1:
@@ -53,7 +57,7 @@ def timeline_view(shot_uuid, stage):
 
             with st.expander("Details & settings:", expanded=False):
                 update_shot_name(shot.uuid)    
-                update_shot_duration(shot.uuid)
+                # update_shot_duration(shot.uuid)
                 move_shot_buttons(shot, "side")
                 delete_shot_button(shot.uuid)
                 duplicate_shot_button(shot.uuid, position="timeline_view")
@@ -67,6 +71,46 @@ def timeline_view(shot_uuid, stage):
             with grid[(idx + 1) % items_per_row]:
                 st.markdown("### Add new shot")
                 add_new_shot_element(shot, data_repo)
+                # download_all_video_element(shot_list)
+
+def download_all_video_element(shot_list: List[InternalShotObject]):
+    dwn_key = 'download_all_videos'
+    if dwn_key in st.session_state and st.session_state[dwn_key]:
+        st.session_state[dwn_key] = False
+        temp_dir = 'temp'
+        os.makedirs(temp_dir, exist_ok=True)
+        zip_data = BytesIO()
+        try:
+            paths = [s.main_clip.location for s in shot_list]
+            for idx, path in enumerate(paths):
+                file_name = f'file_{idx}.mp4'
+                file_path = os.path.join(temp_dir, file_name)
+                if path.startswith('http'):
+                    response = requests.get(path)
+                    with open(file_path, 'wb') as f:
+                        f.write(response.content)
+                else:
+                    shutil.copyfile(path, file_path)
+
+            with ZipFile(zip_data, 'w') as zipf:
+                for root, _, files in os.walk(temp_dir):
+                    for file in files:
+                        zipf.write(os.path.join(root, file), file)
+
+            st.download_button(
+                label="Download zip",
+                data=zip_data.getvalue(),
+                file_name="videos.zip",
+                mime='application/zip',
+                key="explorer_download",
+                use_container_width=True
+            )
+        finally:
+            shutil.rmtree(temp_dir)
+            
+    if st.button('Create videos zip'):
+        st.session_state[dwn_key] = True
+        st.rerun()
 
 def add_new_shot_element(shot, data_repo):
     new_shot_name = st.text_input("Shot Name:",max_chars=25)

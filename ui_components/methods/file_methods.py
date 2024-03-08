@@ -12,6 +12,7 @@ from typing import Union
 from urllib.parse import urlparse
 import zipfile
 from PIL import Image
+import cv2
 import numpy as np
 import uuid
 from dotenv import set_key, get_key
@@ -323,11 +324,32 @@ def copy_local_file(filepath, destination_directory, new_name):
 
 def determine_dimensions_for_sdxl(width, height):
     if width == height:
+        # Square aspect ratio
         return 1024, 1024
     elif width > height:
-        return 1216, 832
+        # Landscape orientation
+        aspect_ratio = width / height
+        # Select the size based on the aspect ratio thresholds for landscape orientations
+        if aspect_ratio >= 1.6:
+            return 1536, 640
+        elif aspect_ratio >= 1.4:
+            return 1344, 768
+        elif aspect_ratio >= 1.3:
+            return 1216, 832
+        else:
+            return 1152, 896
     else:
-        return 832, 1216
+        # Portrait orientation
+        aspect_ratio = height / width
+        # Select the size based on the aspect ratio thresholds for portrait orientations
+        if aspect_ratio >= 1.6:
+            return 640, 1536
+        elif aspect_ratio >= 1.4:
+            return 768, 1344
+        elif aspect_ratio >= 1.3:
+            return 832, 1216
+        else:
+            return 896, 1152
 
 def list_files_in_folder(folder_path):
     files = []
@@ -335,3 +357,57 @@ def list_files_in_folder(folder_path):
         if os.path.isfile(os.path.join(folder_path, file)):
             files.append(file)
     return files
+
+def get_file_bytes_and_extension(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()  # non-2xx responses
+        file_bytes = response.content
+        parsed_url = urlparse(url)
+        filename, file_extension = os.path.splitext(parsed_url.path)
+        file_extension = file_extension.lstrip('.')
+        
+        return file_bytes, file_extension
+    except Exception as e:
+        print("Error:", e)
+        return None, None
+
+# adds a white border around the polygon to minimize irregularities
+def detect_and_draw_contour(image):
+    # Convert PIL Image to OpenCV format (BGR)
+    img_np = np.array(image)
+    img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
+    
+    # Convert image to grayscale
+    g = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+
+    # Threshold the grayscale image to get a binary mask
+    th, im_th = cv2.threshold(g, 220, 250, cv2.THRESH_BINARY_INV)
+
+    # Morphological opening to separate each component and have delimited edges
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+    im_th2 = cv2.morphologyEx(im_th, cv2.MORPH_OPEN, kernel)
+
+    # Connected Components segmentation
+    maxLabels, labels = cv2.connectedComponents(im_th2)
+
+    # Iterate through each component and find its contour
+    for label in range(1, maxLabels):
+        # Create a mask for the current component
+        mask = np.uint8(labels == label) * 255
+
+        # Find contours in the mask
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Approximate the contours with straight lines
+        epsilon = 0.01 * cv2.arcLength(contours[0], True)
+        approx = cv2.approxPolyDP(contours[0], epsilon, True)
+
+        # Draw contours on the original image with white color
+        cv2.drawContours(img_bgr, [approx], -1, (255, 255, 255), 2)
+
+    # Convert the modified image back to PIL format (RGB)
+    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    output_image = Image.fromarray(img_rgb)
+    
+    return output_image

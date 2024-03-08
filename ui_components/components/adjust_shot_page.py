@@ -5,6 +5,7 @@ from ui_components.components.explorer_page import generate_images_element
 from ui_components.components.frame_styling_page import frame_styling_page
 from ui_components.widgets.frame_selector import frame_selector_widget
 from utils import st_memory
+from ui_components.widgets.sidebar_logger import sidebar_logger
 from utils.data_repo.data_repo import DataRepo
 
 
@@ -16,7 +17,13 @@ def adjust_shot_page(shot_uuid: str, h2):
     shot = data_repo.get_shot_from_uuid(shot_uuid)
 
     if frame_selection == "":
-        with st.sidebar:       
+        with st.sidebar:  
+            st.write("")
+                                
+            with st.expander("🔍 Generation log", expanded=True):
+                # if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
+                sidebar_logger(st.session_state["shot_uuid"])
+                
             # frame_view(view='Video',show_current_frames=False)
             st.write("")
             with st.expander("📋 Explorer shortlist",expanded=True):
