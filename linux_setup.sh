@@ -12,6 +12,7 @@ if [ ! -d "$project_dir" ] && [ "$(basename "$current_dir")" != "Dough" ]; then
     git clone --depth 1 -b main https://github.com/banodoco/Dough.git "$project_dir"
     cd "$project_dir"
     git clone --depth 1 -b feature/package https://github.com/piyushK52/comfy_runner.git
+    git clone https://github.com/comfyanonymous/ComfyUI.git
 
     # Create virtual environment
     python3 -m venv "dough-env"
@@ -27,6 +28,7 @@ if [ ! -d "$project_dir" ] && [ "$(basename "$current_dir")" != "Dough" ]; then
     echo $(pwd)
     . ./dough-env/bin/activate && pip install -r "requirements.txt"
     . ./dough-env/bin/activate && pip install -r "comfy_runner/requirements.txt"
+    . ./dough-env/bin/activate && pip install -r "ComfyUI/requirements.txt"
 
     # Copy the environment file
     cp "$project_dir/.env.sample" "$project_dir/.env"
