@@ -124,7 +124,7 @@ Start-Process "cmd.exe" -ArgumentList "/c script.bat"
 ### Run the app
 
 ```bash
-.\dough-env\Scripts\activate && call .\entrypoint.bat
+. .\dough-env\Scripts\activate ; .\entrypoint.bat
 ```
 
 If you're having any issues, please share them in our [Discord](https://discord.com/invite/8Wx9dFu5tP).
