@@ -29,6 +29,7 @@ def add_key_frame_section(shot_uuid, individual_view=True):
     if st.button(f"Add key frame(s)",use_container_width=True, key=f"add_key_frame_btn_{shot_uuid}",type="primary"):
         if uploaded_images:
             progress_bar = st.progress(0)
+            uploaded_images = sorted(uploaded_images, key=lambda x: x.name)
             for i, uploaded_image in enumerate(uploaded_images):
                 image = Image.open(uploaded_image)
                 file_location = f"videos/{shot.uuid}/assets/frames/1_selected/{uploaded_image.name}"
@@ -39,8 +40,6 @@ def add_key_frame_section(shot_uuid, individual_view=True):
         else:
             st.error("Please generate new images or upload them")
             time.sleep(0.7)
-            # Add a frame with no image or a default image
-            # add_key_frame(None, "No", shot_uuid, refresh_state=False)
         st.rerun()
 
 def display_selected_key_frame(selected_image_location, apply_zoom_effects):
