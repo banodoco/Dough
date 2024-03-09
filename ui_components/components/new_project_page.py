@@ -67,14 +67,14 @@ def new_project_page():
             initial_frame = data_repo.get_timing_from_frame_number(shot.uuid, 0)
             data_repo.delete_timing_from_uuid(initial_frame.uuid)
             
-            if uploaded_audio:
-                try:
-                    if save_audio_file(uploaded_audio, new_project.uuid):
-                        st.success("Audio file saved and attached successfully.")
-                    else:
-                        st.error("Failed to save and attach the audio file.")  
-                except Exception as e:
-                    st.error(f"Failed to save the uploaded audio due to {str(e)}")
+            # if uploaded_audio:
+            #     try:
+            #         if save_audio_file(uploaded_audio, new_project.uuid):
+            #             st.success("Audio file saved and attached successfully.")
+            #         else:
+            #             st.error("Failed to save and attach the audio file.")  
+            #     except Exception as e:
+            #         st.error(f"Failed to save the uploaded audio due to {str(e)}")
 
             reset_project_state()
 
