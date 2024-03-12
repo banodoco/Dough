@@ -38,8 +38,8 @@ def animation_style_element(shot_uuid):
         'animation_tool': AnimationToolType.ANIMATEDIFF.value,
     }
     
-    st.markdown("### 🎥 Generate animations  _________")  
-    st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+    st.markdown("### 🎥 Generate animations")  
+    st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
     with st.container():
         advanced1, advanced2, advanced3 = st.columns([1.0,1.5, 1.0])
@@ -100,7 +100,9 @@ def animation_style_element(shot_uuid):
                         with grid[2*j]:  # Adjust the index for image column
                             timing = timing_list[idx]
                             if timing.primary_image and timing.primary_image.location:
+
                                 st.info(f"**Frame {idx + 1}**")
+                                
                                 st.image(timing.primary_image.location, use_column_width=True)
                                                                                                                             
                                 # settings control
@@ -127,10 +129,7 @@ def animation_style_element(shot_uuid):
                         # distance, speed and freedom settings (also aggregates them into arrays)
                         with grid[2*j+1]:  # Add the new column after the image column
                             if idx < len(timing_list) - 1:                                                                       
-                                st.write("")
-                                st.write("")
-                                st.write("")
-                                st.write("")                   
+                
                                 # if st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] is a int, make it a float
                                 if isinstance(st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'], int):
                                     st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = float(st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'])                                    

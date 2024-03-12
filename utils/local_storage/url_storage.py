@@ -3,7 +3,7 @@ import streamlit as st
 
 
 def get_url_param(key):
-    params = st.experimental_get_query_params()
+    params = st.query_params.get_all()
     val = params.get(key)
     if isinstance(val, list):
         res = val[0]

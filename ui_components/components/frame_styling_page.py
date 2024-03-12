@@ -75,8 +75,8 @@ def frame_styling_page(shot_uuid: str):
                 inpainting_element(options_width, timing.primary_image.location, position=f"{timing_uuid}")
             
             with options_width:
-                how_many_images = st.slider("How many images to generate", 1, 10, 1, key=f"how_many_images_{timing_uuid}")
-                if st.button("Generate inpainted image", key=f"generate_inpaint_{timing_uuid}"):
+                how_many_images = st.slider("How many images to generate:", 1, 10, 1, key=f"how_many_images_{timing_uuid}")
+                if st.button("Generate", key=f"generate_inpaint_{timing_uuid}"):
                     if ("mask_to_use" in st.session_state and st.session_state["mask_to_use"]):
                         for _ in range(how_many_images):  # Loop based on how_many_images
                             project_settings = data_repo.get_project_setting(shot.project.uuid)
@@ -110,6 +110,7 @@ def frame_styling_page(shot_uuid: str):
                                 }
                                 
                                 process_inference_output(**inference_data)
+                        st.rerun()
                     else:
                         st.error("Please create and save a mask before generation")
                         time.sleep(0.7)

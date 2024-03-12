@@ -36,15 +36,14 @@ def timeline_view_page(shot_uuid: str, h2):
     st.markdown("***")
     slider1, slider2 = st.columns([4,1])
     with slider1:
-        st.markdown(f"### 🪄 '{project.name}' timeline  _________")
-        st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
-        
+        st.markdown(f"### 🪄 '{project.name}' timeline")
+        st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
     timeline_view(st.session_state["shot_uuid"], st.session_state['view'])
 
 
-    st.markdown("### ✨ Generate frames  _________")
-    st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+    st.markdown("### ✨ Generate frames")
+    st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
     
     generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None, shot_uuid=None)
     gallery_image_view(project_uuid,False,view=['add_and_remove_from_shortlist','view_inference_details','shot_chooser','add_to_any_shot'])

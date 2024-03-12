@@ -39,13 +39,13 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         shot_uuid = timing.shot.uuid
         timing_list =""
 
-    col1, col2, col3 = st.columns([1, 1,0.5])
+    col1, col2, col3 = st.columns([1, 0.25,0.5])
     if stage == CreativeProcessType.MOTION.value:
         items_to_show = 2
         num_columns = 3
         with col1:
-            st.markdown(f"### 🎞️ '{shot.name}' options  _________")
-            st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+            st.markdown(f"### 🎞️ '{shot.name}' options")
+            st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
     else:
         items_to_show = 5
         num_columns = 3

@@ -74,7 +74,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
                         if idx == len(timing_list):
                             if position != "Timeline":
 
-                                st.info("**Add new frame(s) to shot**")
+                                # st.info("**Add new frame(s) to shot**")
                                 add_key_frame_section(shot_uuid, False)                           
              
                         else:
