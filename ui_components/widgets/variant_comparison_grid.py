@@ -126,7 +126,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 # Add markdown line if this is not the last variant in page_indices
                 
 def image_variant_details(variant: InternalFileObject):
-    with st.expander("Settings", expanded=False):
+    with st.expander("Inference Details", expanded=False):
         if variant.inference_params and 'query_dict' in variant.inference_params:
             query_dict = json.loads(variant.inference_params['query_dict'])
             st.markdown(f"Prompt:  {query_dict['prompt']}", unsafe_allow_html=True)

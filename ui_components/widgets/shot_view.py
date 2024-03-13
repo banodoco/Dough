@@ -20,7 +20,9 @@ from utils.common_utils import refresh_app
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
 
-def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeline",**kwargs):
+def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timeline", **kwargs):
+    from ui_components.widgets.variant_comparison_grid import image_variant_details
+    
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
     
@@ -30,10 +32,8 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
     if position == "Timeline":
         header_col_0, header_col_1, header_col_2, header_col_3 = st.columns([2,1,1.5,0.5])
-
         with header_col_0:
             update_shot_name(shot.uuid)
-
         with header_col_2:
             st.write("")
             shot_adjustment_button(shot, show_label=True)
@@ -44,7 +44,6 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
     else:
         with column:
             col1, col2, col3, col4, col5 = st.columns([1,1,1,1,1])
-
             with col1:
                 delete_frames_toggle = st_memory.toggle("Delete Frames", value=True, key="delete_frames_toggle")
             with col2:
@@ -57,7 +56,6 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
                 shift_frame_toggle = st_memory.toggle("Shift Frames", value=False, key="shift_frame_toggle")
                                             
     st.markdown("***")
-
     for i in range(0, len(timing_list) + 1, items_per_row):
         with st.container():
             grid = st.columns(items_per_row)
@@ -72,6 +70,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
                             timing = timing_list[idx]
                             if timing.primary_image and timing.primary_image.location:
                                 st.image(timing.primary_image.location, use_column_width=True)
+                                image_variant_details(timing.primary_image)
                             else:                        
                                 st.warning("No primary image present.")       
                                 jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}",uuid=shot.uuid)

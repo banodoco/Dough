@@ -35,18 +35,13 @@ def adjust_shot_page(shot_uuid: str, h2):
         
         column1, column2 = st.columns([0.8,1.35])
         with column1:
-            
-            
             st.markdown(f"### 🎬 '{shot.name}' frames")
             st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
-
         shot_keyframe_element(st.session_state["shot_uuid"], 4, column2, position="Individual")
 
         # sparkle emoji with Generate Frames
         st.markdown("### ✨ Generate frames")
         st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
-        
-        
         generate_images_element(position='explorer', project_uuid=shot.project.uuid, timing_uuid=None, shot_uuid=shot.uuid)
 
         # st.markdown("***")
