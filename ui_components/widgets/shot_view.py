@@ -26,19 +26,13 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
     
     if "open_shot" not in st.session_state:
         st.session_state["open_shot"] = None
-    
 
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
-                
     if position == "Timeline":
-
         header_col_0, header_col_1, header_col_2, header_col_3 = st.columns([2,1,1.5,0.5])
-            
+
         with header_col_0:
-            update_shot_name(shot.uuid)                 
-                           
-        # with header_col_1:   
-        #     update_shot_duration(shot.uuid)
+            update_shot_name(shot.uuid)
 
         with header_col_2:
             st.write("")
@@ -73,10 +67,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
                     with grid[j]:
                         if idx == len(timing_list):
                             if position != "Timeline":
-
-                                # st.info("**Add new frame(s) to shot**")
-                                add_key_frame_section(shot_uuid, False)                           
-             
+                                add_key_frame_section(shot_uuid)
                         else:
                             timing = timing_list[idx]
                             if timing.primary_image and timing.primary_image.location:
@@ -88,17 +79,13 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
                                 timeline_view_buttons(idx, shot_uuid, copy_frame_toggle, move_frames_toggle,delete_frames_toggle, change_shot_toggle, shift_frame_toggle)
             if (i < len(timing_list) - 1) or (st.session_state["open_shot"] == shot.uuid) or (len(timing_list) % items_per_row != 0 and st.session_state["open_shot"] != shot.uuid) or len(timing_list) % items_per_row == 0:
                 st.markdown("***")
-    # st.markdown("***")
 
-    if position == "Timeline":      
-        # st.markdown("***")      
+    if position == "Timeline":
         bottom1, bottom2, bottom3, bottom4,_ = st.columns([1,1,1,1,2])
         with bottom1:            
             delete_shot_button(shot.uuid)
-                            
         with bottom2:            
-            duplicate_shot_button(shot.uuid)     
-                    
+            duplicate_shot_button(shot.uuid)
         with bottom3:
             move_shot_buttons(shot, "up")
 
@@ -319,7 +306,7 @@ def timeline_view_buttons(idx, shot_uuid, copy_frame_toggle, move_frames_toggle,
         with btn3:
             if st.button("🔁", key=f"copy_frame_{timing_list[idx].uuid}", use_container_width=True):
                 pil_image = generate_pil_image(timing_list[idx].primary_image.location)
-                add_key_frame(pil_image, False, st.session_state['shot_uuid'], timing_list[idx].aux_frame_index+1, refresh_state=False)
+                add_key_frame(pil_image, st.session_state['shot_uuid'], timing_list[idx].aux_frame_index+1, refresh_state=False)
                 refresh_app(maintain_state=True)
 
     if delete_frames_toggle:

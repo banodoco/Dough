@@ -1,3 +1,4 @@
+import time
 import streamlit as st
 from ui_components.constants import CreativeProcessType
 from ui_components.widgets.timeline_view import timeline_view
@@ -39,11 +40,16 @@ def timeline_view_page(shot_uuid: str, h2):
         st.markdown(f"### 🪄 '{project.name}' timeline")
         st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
+    # start_time = time.time()
     timeline_view(st.session_state["shot_uuid"], st.session_state['view'])
-
-
     st.markdown("### ✨ Generate frames")
     st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
     
+    # end_time = time.time()
+    # print("///////////////// timeline laoded in: ", end_time - start_time)
     generate_images_element(position='explorer', project_uuid=project_uuid, timing_uuid=None, shot_uuid=None)
+    # end_time = time.time()
+    # print("///////////////// generate img laoded in: ", end_time - start_time)
     gallery_image_view(project_uuid,False,view=['add_and_remove_from_shortlist','view_inference_details','shot_chooser','add_to_any_shot'])
+    # end_time = time.time()
+    # print("///////////////// gallery laoded in: ", end_time - start_time)

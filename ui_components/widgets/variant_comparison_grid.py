@@ -310,5 +310,5 @@ def add_variant_to_shot_element(file: InternalFileObject, project_uuid):
             shot_uuid = shot_list[shot_number].uuid
 
             duplicate_file = create_duplicate_file(file, project_uuid)
-            add_key_frame(duplicate_file, False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
+            add_key_frame(duplicate_file, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
             st.rerun()
