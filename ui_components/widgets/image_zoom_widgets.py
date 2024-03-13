@@ -33,7 +33,6 @@ def zoom_inputs(position='in-frame', horizontal=False):
     col6.checkbox(
         "Flip Horizontally ↔️", key=f"flip_horizontally", value=False)
 
-    
 
 def save_zoomed_image(image, timing_uuid, stage, promote=False):
     data_repo = DataRepo()
@@ -58,7 +57,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
 
         source_image: InternalFileObject = data_repo.create_file(**file_data)
         data_repo.update_specific_timing(
-            st.session_state['current_frame_uuid'], source_image_id=source_image.uuid)
+            st.session_state['current_frame_uuid'], source_image_id=source_image.uuid, update_in_place=True)
     elif stage == WorkflowStageType.STYLED.value:
         save_location = f"videos/{project_uuid}/assets/frames/2_character_pipeline_completed/{file_name}"
         hosted_url = save_or_host_file(image, save_location)
@@ -74,29 +73,11 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
             file_data.update({'local_path': save_location})
             
         styled_image: InternalFileObject = data_repo.create_file(**file_data)
-
         number_of_image_variants = add_image_variant(
             styled_image.uuid, timing_uuid)
         if promote:
             promote_image_variant(timing_uuid, number_of_image_variants - 1)
-    '''
-    project_update_data = {
-        "zoom_level": st.session_state['zoom_level_input'],
-        "rotation_angle_value": st.session_state['rotation_angle_input'],
-        "x_shift": st.session_state['x_shift'],
-        "y_shift": st.session_state['y_shift']
-    }
 
-    data_repo.update_project_setting(project_uuid, **project_update_data)
-
-    # TODO: **CORRECT-CODE - make a proper column for zoom details
-    timing_update_data = {
-        "zoom_details": f"{st.session_state['zoom_level_input']},{st.session_state['rotation_angle_input']},{st.session_state['x_shift']},{st.session_state['y_shift']}",
-
-    }
-    
-    data_repo.update_specific_timing(timing_uuid, **timing_update_data)
-    '''
 
 def reset_zoom_element():
     st.session_state['zoom_level_input_key'] = 100

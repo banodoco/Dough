@@ -65,7 +65,7 @@ def save_and_promote_image(image, shot_uuid, timing_uuid, stage):
         saved_image = save_new_image(image, shot.project.uuid)
         # Update records based on stage
         if stage == WorkflowStageType.SOURCE.value:
-            data_repo.update_specific_timing(timing_uuid, source_image_id=saved_image.uuid)
+            data_repo.update_specific_timing(timing_uuid, source_image_id=saved_image.uuid, update_in_place=True)
         elif stage == WorkflowStageType.STYLED.value:
             number_of_image_variants = add_image_variant(saved_image.uuid, timing_uuid)
             promote_image_variant(timing_uuid, number_of_image_variants - 1)
@@ -328,7 +328,7 @@ def save_uploaded_image(image: Union[Image.Image, str, np.ndarray, io.BytesIO, I
         
         # Update records based on stage_type
         if stage_type ==  WorkflowStageType.SOURCE.value:
-            data_repo.update_specific_timing(frame_uuid, source_image_id=saved_image.uuid)
+            data_repo.update_specific_timing(frame_uuid, source_image_id=saved_image.uuid, update_in_place=True)
         elif stage_type ==  WorkflowStageType.STYLED.value:
             number_of_image_variants = add_image_variant(saved_image.uuid, frame_uuid)
             promote_image_variant(frame_uuid, number_of_image_variants - 1)
@@ -349,7 +349,7 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
 
     # promoting variant
     variant_to_promote = timing.alternative_images_list[variant_to_promote_frame_number]
-    data_repo.update_specific_timing(timing_uuid, primary_image_id=variant_to_promote.uuid)
+    data_repo.update_specific_timing(timing_uuid, primary_image_id=variant_to_promote.uuid, update_in_place=True)
     _ = data_repo.get_timing_list_from_shot(timing.shot.uuid)
 
 
@@ -474,7 +474,7 @@ def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
             file_data.update({'local_path': file_location})
 
         mask_file: InternalFileObject = data_repo.create_file(**file_data)
-        data_repo.update_specific_timing(timing_uuid, mask_id=mask_file.uuid)
+        data_repo.update_specific_timing(timing_uuid, mask_id=mask_file.uuid, update_in_place=True)
     else:
         # if it is already present then just updating the file location
         if hosted_url:
@@ -512,11 +512,11 @@ def add_image_variant(image_file_uuid: str, timing_uuid: str):
     alternative_image_uuid_list = json.dumps(alternative_image_uuid_list)
 
     data_repo.update_specific_timing(
-        timing_uuid, alternative_images=alternative_image_uuid_list)
+        timing_uuid, alternative_images=alternative_image_uuid_list, update_in_place=True)
 
     if not timing.primary_image:
         data_repo.update_specific_timing(
-            timing_uuid, primary_image_id=primary_image_uuid)
+            timing_uuid, primary_image_id=primary_image_uuid, update_in_place=True)
 
     return len(alternative_image_list)
 
@@ -811,7 +811,7 @@ def process_inference_output(**kwargs):
             )
 
             if stage == WorkflowStageType.SOURCE.value:
-                data_repo.update_specific_timing(current_frame_uuid, source_image_id=output_file.uuid)
+                data_repo.update_specific_timing(current_frame_uuid, source_image_id=output_file.uuid, update_in_place=True)
             elif stage == WorkflowStageType.STYLED.value:
                 number_of_image_variants = add_image_variant(output_file.uuid, current_frame_uuid)
                 if promote:
