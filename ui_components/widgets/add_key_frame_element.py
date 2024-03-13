@@ -119,8 +119,8 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
             st.session_state['current_frame_index'] = min(len(timing_list), target_aux_frame_index + 1)
             st.session_state['current_frame_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].uuid
 
-        st.session_state['current_subpage'] = AppSubPage.KEYFRAME.value
-        st.session_state['section_index'] = 0
+        # st.session_state['current_subpage'] = AppSubPage.KEYFRAME.value
+        # st.session_state['section_index'] = 0
     
     if refresh_state:
         refresh_app(maintain_state=True)

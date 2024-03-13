@@ -28,9 +28,6 @@ def adjust_shot_page(shot_uuid: str, h2):
             st.write("")
             with st.expander("📋 Explorer shortlist",expanded=True):
                 if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
-                    project_setting = data_repo.get_project_setting(shot.project.uuid)
-                    number_of_pages = project_setting.total_shortlist_gallery_pages
-                    page_number = 0
                     gallery_image_view(shot.project.uuid, shortlist=True,view=['add_and_remove_from_shortlist','add_to_this_shot'], shot=shot, sidebar=True)
         
         st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['page']}] > :blue[{shot.name}]")
