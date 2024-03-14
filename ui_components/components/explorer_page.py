@@ -530,6 +530,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                     
                                 else:
                                     if st.button(f"Add to shot", key=f"add_{gallery_image_list[i + j].uuid}", use_container_width=True):
+
                                         shot_number = shot_names.index(shot_name)
                                         st.session_state["last_shot_number"] = shot_number 
                                         shot_uuid = shot_list[shot_number].uuid
@@ -537,7 +538,9 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                         add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
                                         # removing this from the gallery view
                                         data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                        refresh_app(maintain_state=True)                  
+                                        st.session_state[f"move_frame_mode_{shot.uuid}"] = False    
+                                        refresh_app(maintain_state=True)       
+                                               
                         # else:
                         #     st.error("The image is truncated and cannot be displayed.")
                         if 'add_and_remove_from_shortlist' in view:

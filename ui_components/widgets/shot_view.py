@@ -36,9 +36,9 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
 
     with column:
-        col1, col2 = st.columns([1, 1])
+        col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
-            move_frame_mode = st_memory.toggle("Enter 'move frame' mode", value=False, key=f"move_frame_mode_{shot.uuid}")
+            move_frame_mode = st_memory.toggle("Enter Frame Changer™ mode", value=False, key=f"move_frame_mode_{shot.uuid}")
             if st.session_state[f"move_frame_mode_{shot.uuid}"]:
                 st.warning("You are in 'move frame' mode. You have to press 'Save' below to save the changes.")
                 if st.button("Save", key=f"save_move_frame_{shot.uuid}", help="Save the changes made in 'move frame' mode", use_container_width=True):
@@ -53,11 +53,52 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
                         "position": idx
                     } for idx, timing in enumerate(timing_list)]
                     st.session_state[f"shot_data_{shot_uuid}"] = pd.DataFrame(shot_data)
+            else:
+                st.session_state[f"shot_data_{shot_uuid}"] = None
+
                                                  
     st.markdown("***")
 
     if move_frame_mode:
+
+        with column:
+            if f'list_to_move_{shot.uuid}' not in st.session_state:
+                st.session_state[f'list_to_move_{shot.uuid}'] = []
+            with col2:
+                frame_to_move_to = st.selectbox("Bulk move frames to:", [f"{i + 1}" for i in range(len(timing_list))], key=f"frame_to_move_to_{shot.uuid}")
+            with col3:
+                if st.session_state[f"move_frame_mode_{shot.uuid}"]:
+
+                    if st.session_state[f'list_to_move_{shot.uuid}'] == []:
+                        st.write("")
+                        st.info("No frames selected to move. Select them below.")
+                    else:                
+                        st.info(f"Selected frames to move: {st.session_state[f'list_to_move_{shot.uuid}']}")
+                if st.session_state[f'list_to_move_{shot.uuid}'] != []:
+                    if st.button("Remove all selected", key=f"remove_all_selected_{shot.uuid}", help="Remove all selected frames to move"):
+                        st.session_state[f'list_to_move_{shot.uuid}'] = []
+                        st.rerun()
+                    
+                    
+            with col2:
+                    
+                if st.session_state[f'list_to_move_{shot.uuid}'] != []:
+                    if st.button("Move selected", key=f"move_frame_to_{shot.uuid}", help="Move the frame to the selected position", use_container_width=True):
+                        # order list to move in ascending order
+                        list_to_move = sorted(st.session_state[f'list_to_move_{shot.uuid}'])
+
+                        st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frames_to_positions(st.session_state[f"shot_data_{shot_uuid}"], list_to_move, int(frame_to_move_to)-1)
+                        st.session_state[f'list_to_move_{shot.uuid}'] = []
+                        st.rerun()
+                    if st.button("Delete selected", key=f"delete_frame_to_{shot.uuid}", help="Delete the selected frames"):
+                        
+                        st.session_state[f"shot_data_{shot_uuid}"] = bulk_delete_temp_frames(st.session_state[f"shot_data_{shot_uuid}"], st.session_state[f'list_to_move_{shot.uuid}'])
+                        st.session_state[f'list_to_move_{shot.uuid}'] = []
+                        st.rerun()
+                else:
+                    st.button("Move selected", key=f"move_frame_to_{shot.uuid}", use_container_width=True,disabled=True, help="No frames selected to move.")
                 
+            
         for i in range(0, len(st.session_state[f"shot_data_{shot_uuid}"]), items_per_row):
             with st.container():
                 grid = st.columns(items_per_row)
@@ -74,7 +115,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
                             else:
                                 st.warning("No primary image present.")
 
-                            btn1, btn2, btn3, btn4 = st.columns([1, 1, 1, 1])
+                            btn1, btn2, btn3, btn4, btn5 = st.columns([1, 1, 1, 1, 1.25])
                             
                             with btn1:        
                                 if st.button("⬅️", key=f"move_frame_back_{idx}", help="Move frame back", use_container_width=True):
@@ -92,6 +133,19 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
                                 if st.button("❌", key=f"delete_frame_{idx}", use_container_width=True):
                                     st.session_state[f"shot_data_{shot_uuid}"] = delete_temp_frame(st.session_state[f"shot_data_{shot_uuid}"], idx)
                                     st.rerun()
+                            with btn5:
+                                if idx not in st.session_state[f'list_to_move_{shot.uuid}']:
+                                    if st.button("Select", key=f"select_frame_{idx}", use_container_width=True):
+                                        st.session_state[f'list_to_move_{shot.uuid}'].append(idx)
+                                        st.rerun()
+                                else:
+                                    if st.button("Deselect", key=f"deselect_frame_{idx}", use_container_width=True,type='primary'):
+                                        st.session_state[f'list_to_move_{shot.uuid}'].remove(idx)
+                                        st.rerun()
+
+                                
+
+                                    
 
                             header1, header2 = st.columns([1, 1.5])
                             with header1:
@@ -162,7 +216,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
         bottom1, bottom2 = st.columns([1, 1])
         with bottom1:
             st.warning("You are in 'move frame' mode. You have to press 'Save' below to save the changes.")
-            if st.button("Save", key=f"save_move_frame_{shot.uuid}_bottom", help="Save the changes made in 'move frame' mode", use_container_width=True):
+            if st.button("Save", key=f"save_move_frame_{shot.uuid}_bottom", help="Save the changes made in 'move frame' mode", use_container_width=True):                
                 update_shot_frames(shot_uuid, timing_list)
                 st.rerun()
         st.markdown("***")
@@ -363,7 +417,10 @@ def copy_temp_frame(df, position_to_copy):
     new_row = df.loc[position_to_copy].copy()
     new_row['uuid'] = f"Copy_of_{new_row['uuid']}"
     df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-    df['position'] = range(len(df))
+    # make the position current frame + 1 and all the frames after it + 1
+    df.loc[position_to_copy + 1:, 'position'] = df.loc[position_to_copy + 1:, 'position'] + 1
+    
+    
     return df.sort_values('position').reset_index(drop=True)
 
 # Function to delete a frame in the dataframe
@@ -372,17 +429,21 @@ def delete_temp_frame(df, position_to_delete):
     df['position'] = range(len(df))
     return df
 
-
+def bulk_delete_temp_frames(df, positions_to_delete):
+    # Ensure positions_to_delete is a list
+    if not isinstance(positions_to_delete, list):
+        positions_to_delete = [positions_to_delete]
+    
+    # Drop the rows from their positions
+    df = df.drop(positions_to_delete).reset_index(drop=True)
+    
+    # Correct the 'position' column to reflect the new order
+    df['position'] = range(len(df))
+    
+    return df
 
 def update_shot_frames(shot_uuid, timing_list):
-    """
-    Updates the frames for a given shot by deleting existing frames and adding them again.
-    Displays a progress bar and random emojis to indicate progress.
 
-    Parameters:
-    - shot_uuid: UUID of the shot to update.
-    - timing_list: List of timing objects associated with the shot.
-    """
     # Ensure the move frame mode is turned off
     st.session_state[f"move_frame_mode_{shot_uuid}"] = False
 
@@ -409,3 +470,36 @@ def update_shot_frames(shot_uuid, timing_list):
         random_emoji = random.choice(random_list_of_emojis)
         st.caption(f"Saving frame {idx + 1} of {total_items} {random_emoji}")
         progress_bar.progress(progress)
+    
+    st.session_state[f"shot_data_{shot_uuid}"] = None
+
+
+
+def move_temp_frames_to_positions(df, current_positions, new_start_position):
+    # Ensure current_positions is a list
+    if not isinstance(current_positions, list):
+        current_positions = [current_positions]
+    
+    # Sort current_positions to handle them in order
+    current_positions = sorted(current_positions)
+    
+    # Extract rows to move
+    rows_to_move = df.iloc[current_positions]
+    
+    # Drop the rows from their current positions
+    df = df.drop(df.index[current_positions]).reset_index(drop=True)
+    
+    # Calculate new positions considering the removals
+    new_positions = range(new_start_position, new_start_position + len(rows_to_move))
+    
+    # Split the DataFrame into parts before and after the new start position
+    df_before = df.iloc[:new_start_position]
+    df_after = df.iloc[new_start_position:]
+    
+    # Reassemble the DataFrame with rows inserted at their new positions
+    df = pd.concat([df_before, rows_to_move, df_after]).reset_index(drop=True)
+    
+    # Correct the 'position' column to reflect the new order
+    df['position'] = range(len(df))
+    
+    return df
