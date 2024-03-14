@@ -104,7 +104,7 @@ def precision_cropping_element(stage, shot_uuid):
             st.success("Image saved successfully!")
             time.sleep(1)
             st.rerun()
-
+        
         inpaint_in_black_space_element(output_image, shot.project.uuid, stage, shot_uuid, transformation_data)
 
 def manual_cropping_element(stage, timing_uuid):

@@ -27,14 +27,14 @@ from ui_components.methods.file_methods import save_or_host_file
 from utils import st_memory
 from ui_components.widgets.image_zoom_widgets import reset_zoom_element, save_zoomed_image, zoom_inputs
 
-def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeline",**kwargs):
+def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timeline", **kwargs):
+    from ui_components.widgets.variant_comparison_grid import image_variant_details
+    
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
     project_uuid = shot.project.uuid
 
-    
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
-
     with column:
         col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
@@ -58,9 +58,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
 
                                                  
     st.markdown("***")
-
     if move_frame_mode:
-
         with column:
             if f'list_to_move_{shot.uuid}' not in st.session_state:
                 st.session_state[f'list_to_move_{shot.uuid}'] = []
@@ -81,7 +79,6 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
                     
                     
             with col2:
-                    
                 if st.session_state[f'list_to_move_{shot.uuid}'] != []:
                     if st.button("Move selected", key=f"move_frame_to_{shot.uuid}", help="Move the frame to the selected position", use_container_width=True):
                         # order list to move in ascending order
@@ -142,10 +139,6 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
                                     if st.button("Deselect", key=f"deselect_frame_{idx}", use_container_width=True,type='primary'):
                                         st.session_state[f'list_to_move_{shot.uuid}'].remove(idx)
                                         st.rerun()
-
-                                
-
-                                    
 
                             header1, header2 = st.columns([1, 1.5])
                             with header1:
@@ -220,11 +213,8 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
                 update_shot_frames(shot_uuid, timing_list)
                 st.rerun()
         st.markdown("***")
-                                    
-
 
     else:
-    
         for i in range(0, len(timing_list) + 1, items_per_row):
             with st.container():
                 grid = st.columns(items_per_row)
@@ -234,18 +224,14 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeli
                         with grid[j]:
                             if idx == len(timing_list):
                                 if position != "Timeline":
-
-                                    # st.info("**Add new frame(s) to shot**")
-                                    add_key_frame_section(shot_uuid, False)                           
-                
+                                    add_key_frame_section(shot_uuid, False)
                             else:
                                 timing = timing_list[idx]
                                 if timing.primary_image and timing.primary_image.location:
                                     st.image(timing.primary_image.location, use_column_width=True)                                                    
                                     jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}",uuid=shot.uuid)
                                 else:                        
-                                    st.warning("No primary image present.")       
-                                    # jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}",uuid=shot.uuid)
+                                    st.warning("No primary image present.")
 
                 st.markdown("***")
 

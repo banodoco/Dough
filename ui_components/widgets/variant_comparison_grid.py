@@ -126,7 +126,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 # Add markdown line if this is not the last variant in page_indices
                 
 def image_variant_details(variant: InternalFileObject):
-    with st.expander("Settings", expanded=False):
+    with st.expander("Inference Details", expanded=False):
         if variant.inference_params and 'query_dict' in variant.inference_params:
             query_dict = json.loads(variant.inference_params['query_dict'])
             st.markdown(f"Prompt:  {query_dict['prompt']}", unsafe_allow_html=True)
@@ -310,5 +310,5 @@ def add_variant_to_shot_element(file: InternalFileObject, project_uuid):
             shot_uuid = shot_list[shot_number].uuid
 
             duplicate_file = create_duplicate_file(file, project_uuid)
-            add_key_frame(duplicate_file, False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
+            add_key_frame(duplicate_file, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
             st.rerun()

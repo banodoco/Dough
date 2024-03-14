@@ -483,11 +483,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                         button_text = "Pull new images"
                     else:
                         st.info(f"###### {explorer_stats['pending_image_count']} images pending generation and {explorer_stats['temp_image_count']} ready to be fetched")
-                        button_text = "Check for/pull new images"
-                    
-                # st.info(f"###### {total_number_pending} images pending generation")
-                # st.info(f"###### {explorer_stats['temp_image_count']} new images generated")     
-                # st.info(f"###### {explorer_stats['pending_image_count']} images pending generation")     
+                        button_text = "Check for/pull new images" 
             
             with fetch3:
                     if st.button(f"{button_text}", key=f"check_for_new_images_", use_container_width=True):
@@ -523,7 +519,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                     shot_name = st.text_input("New shot name:", max_chars=40, key=f"shot_name_{gallery_image_list[i+j].uuid}")
                                     if st.button("Create new shot", key=f"create_new_{gallery_image_list[i + j].uuid}", use_container_width=True):
                                         new_shot = add_new_shot(project_uuid, name=shot_name)
-                                        add_key_frame(gallery_image_list[i + j], False, new_shot.uuid, len(data_repo.get_timing_list_from_shot(new_shot.uuid)), refresh_state=False)
+                                        add_key_frame(gallery_image_list[i + j], new_shot.uuid, len(data_repo.get_timing_list_from_shot(new_shot.uuid)), refresh_state=False)
                                         # removing this from the gallery view
                                         data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
                                         st.rerun()
@@ -535,7 +531,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                         st.session_state["last_shot_number"] = shot_number 
                                         shot_uuid = shot_list[shot_number].uuid
 
-                                        add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
+                                        add_key_frame(gallery_image_list[i + j], shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
                                         # removing this from the gallery view
                                         data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
                                         st.session_state[f"move_frame_mode_{shot.uuid}"] = False    

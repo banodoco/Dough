@@ -152,7 +152,7 @@ def replace_with_image(stage, output_file, current_frame_uuid, promote=False):
     data_repo = DataRepo()
 
     if stage == WorkflowStageType.SOURCE.value:
-        data_repo.update_specific_timing(current_frame_uuid, source_image_id=output_file.uuid)
+        data_repo.update_specific_timing(current_frame_uuid, source_image_id=output_file.uuid, update_in_place=True)
     elif stage == WorkflowStageType.STYLED.value:
         number_of_image_variants = add_image_variant(output_file.uuid, current_frame_uuid)
         if promote:
@@ -164,8 +164,6 @@ def replace_with_image(stage, output_file, current_frame_uuid, promote=False):
 def inpaint_in_black_space_element(cropped_img: Image.Image, project_uuid, \
     stage=WorkflowStageType.SOURCE.value, shot_uuid=None, transformation_data = None):
     data_repo = DataRepo()
-    project_settings: InternalSettingObject = data_repo.get_project_setting(
-        project_uuid)
 
     st.markdown("##### Inpaint in black space:")
 
@@ -177,6 +175,8 @@ def inpaint_in_black_space_element(cropped_img: Image.Image, project_uuid, \
         st.session_state['precision_cropping_inpainted_image_uuid'] = ""
 
     def inpaint(promote=False, transformation_data=transformation_data):
+        project_settings: InternalSettingObject = data_repo.get_project_setting(
+        project_uuid)
         width = int(project_settings.width)
         height = int(project_settings.height)
 
