@@ -23,7 +23,8 @@ MODEL_PATH_DICT = {
     ComfyWorkflow.IP_ADAPTER_PLUS: {"workflow_path": 'comfy_workflows/ipadapter_plus_api.json', "output_node_id": 29},
     ComfyWorkflow.IP_ADAPTER_FACE: {"workflow_path": 'comfy_workflows/ipadapter_face_api.json', "output_node_id": 29},
     ComfyWorkflow.IP_ADAPTER_FACE_PLUS: {"workflow_path": 'comfy_workflows/ipadapter_face_plus_api.json', "output_node_id": 29},
-    ComfyWorkflow.STEERABLE_MOTION: {"workflow_path": 'comfy_workflows/steerable_motion_api.json', "output_node_id": 281}
+    ComfyWorkflow.STEERABLE_MOTION: {"workflow_path": 'comfy_workflows/steerable_motion_api.json', "output_node_id": 281},
+    ComfyWorkflow.UPSCALER: {"workflow_path": 'comfy_workflows/video_upscaler_api.json', "output_node_id": 243}
 }
 
 
@@ -368,6 +369,62 @@ class ComfyDataTransform:
 
         ignore_list = sm_data.get("lora_data", [])
         return json.dumps(workflow), output_node_ids, [], ignore_list
+    
+    @staticmethod
+    def transform_video_upscaler_workflow(query: MLQueryObject):
+        data_repo = DataRepo()
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.UPSCALER)
+        data = query.data.get("data", {})
+        video_uuid = data.get("file_video", None)
+        video = data_repo.get_file_from_uuid(video_uuid)
+        model = data.get("model", None)
+        upscaler_type = data.get("upscaler_type", None)
+        upscale_factor = data.get("upscale_factor", None)
+        upscale_strength = data.get("upscale_strength", None)
+        
+        workflow["302"]["inputs"]["video"] =  os.path.basename(video.filename)
+        workflow["244"]["inputs"]["ckpt_name"] = model
+        workflow["241"]["inputs"]["upscale_by"] = upscale_factor
+        
+        extra_models_list = [
+            {
+                "filename": "controlnet_checkpoint.ckpt",
+                "url": "https://huggingface.co/crishhh/animatediff_controlnet/resolve/main/controlnet_checkpoint.ckpt",
+                "dest": "./ComfyUI/models/controlnet/"
+            },
+            {
+                "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
+                "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
+                "dest": "./ComfyUI/models/loras/"
+            },
+            {
+                "filename": "AnimateLCM_sd15_t2v.ckpt",
+                "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v.ckpt?download=true",
+                "dest": "./ComfyUI/models/animatediff_models/"
+            },
+            {
+                "filename": "4x_RealisticRescaler_100000_G.pth",
+                "url": "https://huggingface.co/holwech/realistic-rescaler-real-esrgan/resolve/main/4x_RealisticRescaler_100000_G.pth?download=true",
+                "dest": "./ComfyUI/models/upscale_models/"
+            },
+            {
+                "filename": "4xLexicaHAT.pth",
+                "url": "https://github.com/Phhofm/models/raw/main/4xLexicaHAT/4xLexicaHAT.pth",
+                "dest": "./ComfyUI/models/upscale_models/"
+            },
+            {
+                "filename": "2x_AstroManLite_266k.pth",
+                "url": "https://huggingface.co/lone682/upscaler_models/resolve/main/2x_AstroManLite_266k.pth?download=true",
+                "dest": "./ComfyUI/models/upscale_models/"
+            },
+            {
+                "filename": "4x_IllustrationJaNai_V1_ESRGAN_135k.pth",
+                "url": "https://huggingface.co/lone682/upscaler_models/resolve/main/4x_IllustrationJaNai_V1_ESRGAN_135k.pth?download=true",
+                "dest": "./ComfyUI/models/upscale_models/"
+            }
+        ]
+        
+        return json.dumps(workflow), output_node_ids, extra_models_list, []
 
 
 # NOTE: only populating with models currently in use
@@ -381,7 +438,8 @@ MODEL_WORKFLOW_MAP = {
     ML_MODEL.ipadapter_face.workflow_name: ComfyDataTransform.transform_ipadaptor_face_workflow,
     ML_MODEL.ipadapter_face_plus.workflow_name: ComfyDataTransform.transform_ipadaptor_face_plus_workflow,
     ML_MODEL.ad_interpolation.workflow_name: ComfyDataTransform.transform_steerable_motion_workflow,
-    ML_MODEL.sdxl_img2img.workflow_name: ComfyDataTransform.transform_sdxl_img2img_workflow
+    ML_MODEL.sdxl_img2img.workflow_name: ComfyDataTransform.transform_sdxl_img2img_workflow,
+    ML_MODEL.video_upscaler.workflow_name: ComfyDataTransform.transform_video_upscaler_workflow
 }
 
 # returns stringified json of the workflow

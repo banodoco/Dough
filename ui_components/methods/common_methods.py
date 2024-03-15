@@ -750,7 +750,7 @@ def process_inference_output(**kwargs):
                 inference_log_id=log_uuid
             )
 
-            if not shot.main_clip:
+            if not shot.main_clip or settings.get("promote_to_main_variant", False):
                 output_video = sync_audio_and_duration(video, shot_uuid)
                 data_repo.update_shot(uuid=shot_uuid, main_clip_id=output_video.uuid)
                 data_repo.add_interpolated_clip(shot_uuid, interpolated_clip_id=output_video.uuid)

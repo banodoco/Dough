@@ -318,7 +318,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_inpainting, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
-                    
 
                 if log:
                     inference_data = {

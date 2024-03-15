@@ -14,6 +14,7 @@ class ComfyWorkflow(ExtendedEnum):
     SDXL_INPAINTING = "sdxl-inpainting"
     STEERABLE_MOTION = "steerable_motion"
     SDXL_IMG2IMG = "sdxl_img2img"
+    UPSCALER = "upscale"
 
 @dataclass
 class MLModel:
@@ -91,6 +92,8 @@ class ML_MODEL:
     ipadapter_plus = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IP_ADAPTER_PLUS)
     ipadapter_face = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IP_ADAPTER_FACE)
     ipadapter_face_plus = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IP_ADAPTER_FACE_PLUS)
+    video_upscaler = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.UPSCALER)
+    
 
     @staticmethod
     def get_model_by_db_obj(model_db_obj):

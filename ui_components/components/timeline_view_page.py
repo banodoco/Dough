@@ -6,9 +6,9 @@ import shutil
 from zipfile import ZipFile
 from io import BytesIO
 from ui_components.constants import CreativeProcessType
+from ui_components.methods.video_methods import upscale_video
 from ui_components.widgets.timeline_view import timeline_view
 from ui_components.components.explorer_page import gallery_image_view
-from streamlit_option_menu import option_menu
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 from ui_components.widgets.sidebar_logger import sidebar_logger
@@ -119,9 +119,19 @@ def timeline_view_page(shot_uuid: str, h2):
             if not len(main_clip_list):
                 st.info("No videos to upscale")
             else:
-                styling_model, type_of_upscaler, upscale_by, strength_of_upscale, set_upscaled_to_main_variant = upscale_settings()
-                st.button("Upscale All Main Variants")
-
+                styling_model, upscaler_type, upscale_factor, upscale_strength, promote_to_main_variant = upscale_settings()
+                if st.button("Upscale All Main Variants"):
+                    for shot in shot_list:
+                        if shot.main_clip and shot.main_clip.location:
+                            upscale_video(
+                                shot.uuid,
+                                styling_model, 
+                                upscaler_type, 
+                                upscale_factor, 
+                                upscale_strength, 
+                                promote_to_main_variant
+                            )
+                            
     # start_time = time.time()
     timeline_view(st.session_state["shot_uuid"], st.session_state['view'])
     st.markdown("### ✨ Generate frames")
