@@ -10,6 +10,7 @@ from ui_components.methods.video_methods import render_video
 from ui_components.models import InternalFileObject, InternalFrameTimingObject
 from ui_components.widgets.attach_audio_element import attach_audio_element
 
+from ui_components.widgets.display_element import individual_video_display_element
 from utils.data_repo.data_repo import DataRepo
 
 
@@ -51,7 +52,7 @@ def video_rendering_page(project_uuid):
         except Exception as e:
             st.write(datetime.datetime.strptime(video.created_on, '%Y-%m-%dT%H:%M:%S.%fZ'))
 
-        st.video(video.location)
+        individual_video_display_element(video)
 
         col1, col2 = st.columns(2)
 

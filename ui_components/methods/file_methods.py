@@ -358,14 +358,22 @@ def list_files_in_folder(folder_path):
             files.append(file)
     return files
 
-def get_file_bytes_and_extension(url):
+def get_file_bytes_and_extension(path_or_url):
     try:
-        response = requests.get(url)
-        response.raise_for_status()  # non-2xx responses
-        file_bytes = response.content
-        parsed_url = urlparse(url)
-        filename, file_extension = os.path.splitext(parsed_url.path)
-        file_extension = file_extension.lstrip('.')
+        if urlparse(path_or_url).scheme:
+            # URL
+            response = requests.get(path_or_url)
+            response.raise_for_status()  # non-2xx responses
+            file_bytes = response.content
+            parsed_url = urlparse(path_or_url)
+            filename, file_extension = os.path.splitext(parsed_url.path)
+            file_extension = file_extension.lstrip('.')
+        else:
+            # Local file path
+            with open(path_or_url, 'rb') as file:
+                file_bytes = file.read()
+            filename, file_extension = os.path.splitext(path_or_url)
+            file_extension = file_extension.lstrip('.')
         
         return file_bytes, file_extension
     except Exception as e:
@@ -411,3 +419,19 @@ def detect_and_draw_contour(image):
     output_image = Image.fromarray(img_rgb)
     
     return output_image
+
+def get_file_size(file_path):
+    file_size = 0
+    if file_path.startswith('http://') or file_path.startswith('https://'):
+        response = requests.head(file_path)
+        if response.status_code == 200:
+            file_size = int(response.headers.get('content-length', 0))
+        else:
+            print("Failed to fetch file from URL:", file_path)
+    else:
+        if os.path.exists(file_path):
+            file_size = os.path.getsize(file_path)
+        else:
+            print("File does not exist:", file_path)
+    
+    return int(file_size / (1024 * 1024))

@@ -10,6 +10,7 @@ import streamlit as st
 from ui_components.methods.common_methods import add_new_shot
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from ui_components.widgets.common_element import duplicate_shot_button
+from ui_components.widgets.display_element import individual_video_display_element
 from ui_components.widgets.shot_view import shot_keyframe_element, shot_adjustment_button, shot_animation_button, update_shot_name, update_shot_duration, move_shot_buttons, delete_shot_button, create_video_download_button
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
@@ -36,7 +37,7 @@ def timeline_view(shot_uuid, stage):
         with grid[idx % items_per_row]:
             st.info(f"##### {shot.name}")
             if shot.main_clip and shot.main_clip.location:
-                st.video(shot.main_clip.location)
+                individual_video_display_element(shot.main_clip)
             else:            
                 for i in range(0, len(timing_list), items_per_row):
                     if i % items_per_row == 0:

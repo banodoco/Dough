@@ -106,7 +106,7 @@ def timeline_view_page(shot_uuid: str, h2):
                     model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
                     # drop all files that contain xl
                     model_files = [file for file in model_files if "xl" not in file]
-                    model_files.insert(0, "None")  # Add "None" option at the beginning
+                    # model_files.insert(0, "None")  # Add "None" option at the beginning
                     styling_model = st.selectbox("Styling model", model_files, key="styling_model")
 
                 type_of_upscaler = st.selectbox("Type of upscaler", ["Dreamy", "Realistic", "Anime", "Cartoon"], key="type_of_upscaler")

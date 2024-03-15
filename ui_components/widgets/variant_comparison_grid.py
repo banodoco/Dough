@@ -11,6 +11,7 @@ from ui_components.methods.animation_style_methods import get_generation_setting
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
 from ui_components.methods.file_methods import create_duplicate_file
 from ui_components.methods.video_methods import sync_audio_and_duration, upscale_video
+from ui_components.widgets.display_element import individual_video_display_element
 from ui_components.widgets.shot_view import create_video_download_button
 from ui_components.models import InternalAIModelObject, InternalFileObject
 from ui_components.widgets.add_key_frame_element import add_key_frame
@@ -75,7 +76,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 st.success("**Main variant**")
             # Display the main variant
             if stage == CreativeProcessType.MOTION.value:
-                st.video(variants[current_variant].location, format='mp4', start_time=0) if (current_variant != -1 and variants[current_variant]) else st.error("No video present")
+                if current_variant != -1 and variants[current_variant]:
+                    individual_video_display_element(variants[current_variant])
                 with st.expander("Upscale settings", expanded=False):
                     styling_model, upscaler_type, upscale_factor, upscale_strength, promote_to_main_variant = upscale_settings()
                     if st.button("Upscale Main Variant", key=f"upscale_main_variant_{shot_uuid}", help="Upscale the main variant with the selected settings", use_container_width=True):
@@ -116,8 +118,11 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                             promote_image_variant(timing.uuid, variant_index)                    
                         st.rerun()
 
-                if stage == CreativeProcessType.MOTION.value:                    
-                    st.video(variants[variant_index].location, format='mp4', start_time=0) if variants[variant_index] else st.error("No video present")
+                if stage == CreativeProcessType.MOTION.value:
+                    if variants[variant_index]:
+                        individual_video_display_element(variants[variant_index])
+                    else: 
+                        st.error("No video present")
                     create_video_download_button(variants[variant_index].location, tag="var_details")
                     variant_inference_detail_element(variants[variant_index], stage, shot_uuid, timing_list, tag="var_details")
 
@@ -292,7 +297,7 @@ def upscale_settings():
         model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
         # drop all files that contain xl
         model_files = [file for file in model_files if "xl" not in file]
-        model_files.insert(0, "None")  # Add "None" option at the beginning
+        # model_files.insert(0, "None")  # Add "None" option at the beginning
         styling_model = st.selectbox("Styling model", model_files, key="styling_model")
 
     type_of_upscaler = st.selectbox("Type of upscaler", ["Dreamy", "Realistic", "Anime", "Cartoon"], key="type_of_upscaler")
