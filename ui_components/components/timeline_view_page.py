@@ -45,48 +45,54 @@ def timeline_view_page(shot_uuid: str, h2):
         st.markdown(f"### 🪄 '{project.name}' timeline")
         st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
+    shot_list = data_repo.get_shot_list(project_uuid)
+    main_clip_list = []
+    for shot in shot_list:
+        if shot.main_clip and shot.main_clip.location:
+            main_clip_list.append(shot.main_clip.location)
+    
     with slider3:
         with st.expander("Export all main variants", expanded=False):
-            shot_list = data_repo.get_shot_list(project_uuid)
-            if not shot_list:
-                st.info("No shots available in the project.")
-                return
+            if not len(main_clip_list):
+                st.info("No videos available in the project.")
+            
+            else:
+                if st.button('Prepare videos for download'):
+                    temp_dir = 'temp_main_variants'
+                    os.makedirs(temp_dir, exist_ok=True)
+                    zip_data = BytesIO()
+                    st.info("Preparing videos for download. This may take a while.")                    
+                    time.sleep(0.4)
+                    try:
+                        for idx, shot in enumerate(shot_list):
+                            if shot.main_clip and shot.main_clip.location:
+                                # Prepend the shot number (idx + 1) to the filename
+                                file_name = f'{idx + 1:03d}_{shot.name}.mp4'  # Using :03d to ensure the number is zero-padded to 3 digits
+                                file_path = os.path.join(temp_dir, file_name)
+                                if shot.main_clip.location.startswith('http'):
+                                    response = requests.get(shot.main_clip.location)
+                                    with open(file_path, 'wb') as f:
+                                        f.write(response.content)
+                                else:
+                                    shutil.copyfile(shot.main_clip.location, file_path)
 
-            if st.button('Prepare videos for download'):
-                temp_dir = 'temp_main_variants'
-                os.makedirs(temp_dir, exist_ok=True)
-                zip_data = BytesIO()
-                st.info("Preparing videos for download. This may take a while.")                    
-                time.sleep(0.4)
-                try:
-                    for idx, shot in enumerate(shot_list):
-                        if shot.main_clip and shot.main_clip.location:
-                            # Prepend the shot number (idx + 1) to the filename
-                            file_name = f'{idx + 1:03d}_{shot.name}.mp4'  # Using :03d to ensure the number is zero-padded to 3 digits
-                            file_path = os.path.join(temp_dir, file_name)
-                            if shot.main_clip.location.startswith('http'):
-                                response = requests.get(shot.main_clip.location)
-                                with open(file_path, 'wb') as f:
-                                    f.write(response.content)
-                            else:
-                                shutil.copyfile(shot.main_clip.location, file_path)
+                        with ZipFile(zip_data, 'w') as zipf:
+                            for root, _, files in os.walk(temp_dir):
+                                for file in files:
+                                    zipf.write(os.path.join(root, file), file)
 
-                    with ZipFile(zip_data, 'w') as zipf:
-                        for root, _, files in os.walk(temp_dir):
-                            for file in files:
-                                zipf.write(os.path.join(root, file), file)
-
-                    st.download_button(
-                        label="Download Main Variant Videos zip",
-                        data=zip_data.getvalue(),
-                        file_name="main_variant_videos.zip",
-                        mime='application/zip',
-                        key="main_variant_download",
-                        use_container_width=True,
-                        type="primary"
-                    )
-                finally:
-                    shutil.rmtree(temp_dir)
+                        st.download_button(
+                            label="Download Main Variant Videos zip",
+                            data=zip_data.getvalue(),
+                            file_name="main_variant_videos.zip",
+                            mime='application/zip',
+                            key="main_variant_download",
+                            use_container_width=True,
+                            type="primary"
+                        )
+                    finally:
+                        shutil.rmtree(temp_dir)
+    
     with slider2:
         with st.expander("Bulk upscale", expanded=False):
             def upscale_settings():
@@ -110,9 +116,11 @@ def timeline_view_page(shot_uuid: str, h2):
                 
                 return styling_model, type_of_upscaler, upscale_by, strength_of_upscale, set_upscaled_to_main_variant
             
-            styling_model, type_of_upscaler, upscale_by, strength_of_upscale, set_upscaled_to_main_variant = upscale_settings()
-                        
-            st.button("Upscale All Main Variants")
+            if not len(main_clip_list):
+                st.info("No videos to upscale")
+            else:
+                styling_model, type_of_upscaler, upscale_by, strength_of_upscale, set_upscaled_to_main_variant = upscale_settings()
+                st.button("Upscale All Main Variants")
 
     # start_time = time.time()
     timeline_view(st.session_state["shot_uuid"], st.session_state['view'])
