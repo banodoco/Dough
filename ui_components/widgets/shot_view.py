@@ -108,6 +108,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
                             row = st.session_state[f"shot_data_{shot_uuid}"].loc[idx]
                             
                             if row['image_location']:
+                                st.caption(f"Frame {idx + 1}")
                                 st.image(row['image_location'], use_column_width=True)
                             else:
                                 st.warning("No primary image present.")
@@ -224,7 +225,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
                         with grid[j]:
                             if idx == len(timing_list):
                                 if position != "Timeline":
-                                    add_key_frame_section(shot_uuid, False)
+                                    add_key_frame_section(shot_uuid)
                             else:
                                 timing = timing_list[idx]
                                 if timing.primary_image and timing.primary_image.location:

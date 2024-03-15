@@ -3,6 +3,8 @@ import time
 import ast
 import streamlit as st
 import re
+import os
+from PIL import Image
 from shared.constants import AIModelCategory, InferenceParamType, InternalFileTag
 from ui_components.constants import CreativeProcessType
 from ui_components.methods.animation_style_methods import get_generation_settings_from_log, load_shot_settings
@@ -74,6 +76,12 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             # Display the main variant
             if stage == CreativeProcessType.MOTION.value:
                 st.video(variants[current_variant].location, format='mp4', start_time=0) if (current_variant != -1 and variants[current_variant]) else st.error("No video present")
+                with st.expander("Upscale settings", expanded=False):
+                    styling_model, type_of_upscaler, upscale_by, strength_of_upscale, set_upscaled_to_main_variant = upscale_settings()
+                    if st.button("Upscale Main Variant", key=f"upscale_main_variant_{shot_uuid}", help="Upscale the main variant with the selected settings", use_container_width=True):
+                        st.success("Upscaling started")
+                    
+
                 create_video_download_button(variants[current_variant].location, tag="var_compare")
                 variant_inference_detail_element(variants[current_variant], stage, shot_uuid, timing_list, tag="var_compare")                        
 
@@ -266,6 +274,27 @@ def prepare_values(inf_data, timing_list):
             values[f'dynamic_cn_strength_values_{idx}'] = value_tuple
 
     return values
+
+def upscale_settings():
+    checkpoints_dir = "ComfyUI/models/checkpoints"
+    all_files = os.listdir(checkpoints_dir)
+    if len(all_files) == 0:
+        st.info("No models found in the checkpoints directory")
+        styling_model = "None"
+    else:
+        # Filter files to only include those with .safetensors and .ckpt extensions
+        model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
+        # drop all files that contain xl
+        model_files = [file for file in model_files if "xl" not in file]
+        model_files.insert(0, "None")  # Add "None" option at the beginning
+        styling_model = st.selectbox("Styling model", model_files, key="styling_model")
+
+    type_of_upscaler = st.selectbox("Type of upscaler", ["Dreamy", "Realistic", "Anime", "Cartoon"], key="type_of_upscaler")
+    upscale_by = st.slider("Upscale by", min_value=1.0, max_value=3.0, step=0.1, key="upscale_by", value=2.0)
+    strength_of_upscale = st.slider("Strength of upscale", min_value=1.0, max_value=3.0, step=0.1, key="strength_of_upscale", value=2.0)
+    set_upscaled_to_main_variant = st.checkbox("Set upscaled to main variant", key="set_upscaled_to_main_variant", value=True)
+    
+    return styling_model, type_of_upscaler, upscale_by, strength_of_upscale, set_upscaled_to_main_variant
 
 def fetch_inference_data(file: InternalFileObject):
     if not file:
