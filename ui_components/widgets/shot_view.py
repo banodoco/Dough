@@ -351,7 +351,7 @@ def create_video_download_button(video_location, tag="temp"):
     file_name = os.path.basename(video_location)
 
     if get_file_size(video_location) > 5:
-        if st.button("Prepare video for download", use_container_width=True):
+        if st.button("Prepare video for download", use_container_width=True, key=tag + str(file_name)):
             file_bytes, file_ext = get_file_bytes_and_extension(video_location)
             # file_bytes = base64.b64encode(file_bytes).decode('utf-8')
             st.download_button(
