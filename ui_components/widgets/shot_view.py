@@ -350,39 +350,18 @@ def create_video_download_button(video_location, tag="temp"):
     # Extract the file name from the video location
     file_name = os.path.basename(video_location)
 
-    if get_file_size(video_location) > 5:
-        if st.button("Prepare video for download", use_container_width=True, key=tag + str(file_name)):
-            file_bytes, file_ext = get_file_bytes_and_extension(video_location)
-            # file_bytes = base64.b64encode(file_bytes).decode('utf-8')
-            st.download_button(
-                label="Download video",
-                data=file_bytes,
-                file_name=file_name,
-                mime='video/mp4',
-                key=tag + str(file_name),
-                use_container_width=True
-            )
-    else:
-        if video_location.startswith('http'):  # cloud file
-            response = requests.get(video_location)
-            st.download_button(
-                label="Download video",
-                data=response.content,
-                file_name=file_name,
-                mime='video/mp4',
-                key=tag + str(file_name),
-                use_container_width=True
-            )
-        else:  # local file
-            with open(video_location, 'rb') as file:
-                st.download_button(
-                    label="Download video",
-                    data=file,
-                    file_name=file_name,
-                    mime='video/mp4',
-                    key=tag + str(file_name),
-                    use_container_width=True
-                )
+    # if get_file_size(video_location) > 5:
+    if st.button("Prepare video for download", use_container_width=True, key=tag + str(file_name)):
+        file_bytes, file_ext = get_file_bytes_and_extension(video_location)
+        # file_bytes = base64.b64encode(file_bytes).decode('utf-8')
+        st.download_button(
+            label="Download video",
+            data=file_bytes,
+            file_name=file_name,
+            mime='video/mp4',
+            key=tag + str(file_name) + "_download_gen",
+            use_container_width=True
+        )
 
 def shot_adjustment_button(shot, show_label=False):
     button_label = "Shot Adjustment 🔧" if show_label else "🔧"
