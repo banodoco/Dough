@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "ckpt_name": "Realistic_Vision_V5.0.safetensors"
+      "ckpt_name": "Realistic_Vision_V5.1.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
