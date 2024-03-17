@@ -15,6 +15,7 @@ class ComfyWorkflow(ExtendedEnum):
     STEERABLE_MOTION = "steerable_motion"
     SDXL_IMG2IMG = "sdxl_img2img"
     UPSCALER = "upscale"
+    IPADAPTER_COMPOSITION = "ipadapter_composition"
 
 @dataclass
 class MLModel:
@@ -93,6 +94,9 @@ class ML_MODEL:
     ipadapter_face = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IP_ADAPTER_FACE)
     ipadapter_face_plus = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IP_ADAPTER_FACE_PLUS)
     video_upscaler = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.UPSCALER)
+    ipadapter_composition = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IPADAPTER_COMPOSITION)
+    
+    
     
 
     @staticmethod
@@ -112,7 +116,8 @@ MODEL_FILTERS = [
     ML_MODEL.ad_interpolation,
     ML_MODEL.ipadapter_face,
     ML_MODEL.ipadapter_face_plus,
-    ML_MODEL.ipadapter_plus
+    ML_MODEL.ipadapter_plus,
+    ML_MODEL.padapter_composition,
 ]
 
 DEFAULT_LORA_MODEL_URL = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
