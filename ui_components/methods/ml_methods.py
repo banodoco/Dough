@@ -188,7 +188,7 @@ from utils.ml_processor.constants import ML_MODEL, MLModel
 #         emotion = (f"neutral expression")
 #     return emotion
 
-def inpainting(input_image: str, prompt, negative_prompt, width, height, shot_uuid,project_uuid) -> InternalFileObject:
+def inpainting(input_image: str, prompt, negative_prompt, width, height, shot_uuid, project_uuid) -> InternalFileObject:
     data_repo = DataRepo()
     # timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 

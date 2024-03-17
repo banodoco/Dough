@@ -75,7 +75,7 @@ def main():
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server_socket.bind(("localhost", RUNNER_PROCESS_PORT))
-        server_socket.listen(1)
+        server_socket.listen(100)     # hacky fix
     
     print('runner running')
     while True:

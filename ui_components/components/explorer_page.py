@@ -2,6 +2,7 @@ import json
 import streamlit as st
 from ui_components.constants import GalleryImageViewType
 from ui_components.methods.common_methods import get_canny_img, process_inference_output,add_new_shot, save_new_image
+from ui_components.methods.file_methods import zoom_and_crop
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.inpainting_element import inpainting_image_input
 from utils.common_utils import refresh_app
@@ -14,6 +15,7 @@ from utils.enum import ExtendedEnum
 from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.constants import ML_MODEL
 import numpy as np
+from PIL import Image
 from utils import st_memory
 
 
@@ -89,7 +91,12 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                             st.session_state[f"uploaded_image_{output_value_name}"] = f"0_{output_value_name}"
                             
                         if source_of_starting_image == "Upload":
-                            st.session_state['uploaded_image'] = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=st.session_state[f"uploaded_image_{output_value_name}"], help="This will be the base image for the generation.")
+                            uploaded_image = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=st.session_state[f"uploaded_image_{output_value_name}"], help="This will be the base image for the generation.")
+                            if uploaded_image:
+                                uploaded_image = Image.open(uploaded_image) if not isinstance(uploaded_image, Image.Image) else uploaded_image
+                                uploaded_image = zoom_and_crop(uploaded_image, project_settings.width, project_settings.height)
+                            
+                            st.session_state['uploaded_image'] = uploaded_image
                         
                         else:
                             # taking image from shots
@@ -318,7 +325,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_inpainting, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
-                    
 
                 if log:
                     inference_data = {
@@ -526,7 +532,6 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                     
                                 else:
                                     if st.button(f"Add to shot", key=f"add_{gallery_image_list[i + j].uuid}", use_container_width=True):
-
                                         shot_number = shot_names.index(shot_name)
                                         st.session_state["last_shot_number"] = shot_number 
                                         shot_uuid = shot_list[shot_number].uuid
@@ -534,7 +539,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                         add_key_frame(gallery_image_list[i + j], shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
                                         # removing this from the gallery view
                                         data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                        st.session_state[f"move_frame_mode_{shot.uuid}"] = False    
+                                        st.session_state[f"move_frame_mode_{shot_uuid}"] = False
                                         refresh_app(maintain_state=True)       
                                                
                         # else:
