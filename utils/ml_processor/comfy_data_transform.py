@@ -17,7 +17,7 @@ MODEL_PATH_DICT = {
     ComfyWorkflow.SDXL: {"workflow_path": 'comfy_workflows/sdxl_workflow_api.json', "output_node_id": 19},
     ComfyWorkflow.SDXL_IMG2IMG: {"workflow_path": 'comfy_workflows/sdxl_img2img_workflow_api.json', "output_node_id": 31},
     ComfyWorkflow.SDXL_CONTROLNET: {"workflow_path": 'comfy_workflows/sdxl_controlnet_workflow_api.json', "output_node_id": 9},
-    ComfyWorkflow.IPADAPTER_COMPOSITION: {"workflow_path": 'comfy_workflows/ipa_composition_workflow_api.json', "output_node_id": 27},
+    ComfyWorkflow.IPADAPTER_COMPOSITION: {"workflow_path": 'comfy_workflows/ipadapter_composition_workflow_api.json', "output_node_id": 27},
     ComfyWorkflow.SDXL_CONTROLNET_OPENPOSE: {"workflow_path": 'comfy_workflows/sdxl_openpose_workflow_api.json', "output_node_id": 9},
     ComfyWorkflow.LLAMA_2_7B: {"workflow_path": 'comfy_workflows/llama_workflow_api.json', "output_node_id": 14},
     ComfyWorkflow.SDXL_INPAINTING: {"workflow_path": 'comfy_workflows/sdxl_inpainting_workflow_api.json', "output_node_id": 56},
@@ -112,7 +112,7 @@ class ComfyDataTransform:
 
     
     @staticmethod
-    def transform_ipadaptor_composition_workflow(query: MLQueryObject):
+    def transform_ipadapter_composition_workflow(query: MLQueryObject):
         data_repo = DataRepo()
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IPADAPTER_COMPOSITION)
 
@@ -461,7 +461,7 @@ MODEL_WORKFLOW_MAP = {
     ML_MODEL.sdxl.workflow_name: ComfyDataTransform.transform_sdxl_workflow,
     ML_MODEL.sdxl_controlnet.workflow_name: ComfyDataTransform.transform_sdxl_controlnet_workflow,
     ML_MODEL.sdxl_controlnet_openpose.workflow_name: ComfyDataTransform.transform_sdxl_controlnet_openpose_workflow,
-    ML_MODEL.ipaadapter_compotion.workflow_name: ComfyDataTransform.transform_ipadaptor_composition_workflow,
+    ML_MODEL.ipadapter_composition.workflow_name: ComfyDataTransform.transform_ipadapter_composition_workflow,
     ML_MODEL.llama_2_7b.workflow_name: ComfyDataTransform.transform_llama_2_7b_workflow,
     ML_MODEL.sdxl_inpainting.workflow_name: ComfyDataTransform.transform_sdxl_inpainting_workflow,
     ML_MODEL.ipadapter_plus.workflow_name: ComfyDataTransform.transform_ipadaptor_plus_workflow,
