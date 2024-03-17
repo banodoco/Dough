@@ -117,7 +117,7 @@ MODEL_FILTERS = [
     ML_MODEL.ipadapter_face,
     ML_MODEL.ipadapter_face_plus,
     ML_MODEL.ipadapter_plus,
-    ML_MODEL.padapter_composition,
+    ML_MODEL.ipadapter_composition,
 ]
 
 DEFAULT_LORA_MODEL_URL = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"
