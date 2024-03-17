@@ -42,7 +42,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
             move_frame_mode = st_memory.toggle("Enter Frame Changer™ mode", value=False, key=f"move_frame_mode_{shot.uuid}")
             if st.session_state[f"move_frame_mode_{shot.uuid}"]:
                 st.warning("You are in 'move frame' mode. You have to press 'Save' below to save the changes.")
-                if st.button("Save", key=f"save_move_frame_{shot.uuid}", help="Save the changes made in 'move frame' mode", use_container_width=True):
+                if st.button("Save", key=f"save_move_frame_{shot.uuid}", help="Save the changes made in 'move frame' mode", use_container_width=True):                                        
                     update_shot_frames(shot_uuid, timing_list)
                     st.rerun()
                 if f"shot_data_{shot_uuid}" not in st.session_state:
@@ -423,7 +423,7 @@ def bulk_delete_temp_frames(df, positions_to_delete):
     return df
 
 def update_shot_frames(shot_uuid, timing_list):
-
+    
     # Ensure the move frame mode is turned off
     st.session_state[f"move_frame_mode_{shot_uuid}"] = False
 
@@ -443,7 +443,8 @@ def update_shot_frames(shot_uuid, timing_list):
     # Add frames again and update progress
     for idx, (index, row) in enumerate(st.session_state[f"shot_data_{shot_uuid}"].iterrows()):
         selected_image_location = row['image_location']
-        add_key_frame(selected_image_location, "No", shot_uuid, refresh_state=False)
+        # def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], shot_uuid, target_frame_position=None, refresh_state=True, update_cur_frame_idx=True):
+        add_key_frame(selected_image_location, shot_uuid, refresh_state=False)
 
         # Update the progress bar
         progress = (idx + 1) / total_items
