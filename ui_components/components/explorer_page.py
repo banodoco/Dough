@@ -227,7 +227,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                         data={'condition_scale': 1, "shot_uuid": shot_uuid}
                     )
 
-                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.IPADAPTER_COMPOSITION, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_composition, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
                 
                 elif generation_method == InputImageStyling.IPADAPTER_FACE.value:
                     # validation
