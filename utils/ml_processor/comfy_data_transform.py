@@ -14,17 +14,19 @@ import json
 
 
 MODEL_PATH_DICT = {
-    ComfyWorkflow.SDXL: {"workflow_path": 'comfy_workflows/sdxl_workflow_api.json', "output_node_id": 19},
-    ComfyWorkflow.SDXL_IMG2IMG: {"workflow_path": 'comfy_workflows/sdxl_img2img_workflow_api.json', "output_node_id": 31},
-    ComfyWorkflow.SDXL_CONTROLNET: {"workflow_path": 'comfy_workflows/sdxl_controlnet_workflow_api.json', "output_node_id": 9},
-    ComfyWorkflow.SDXL_CONTROLNET_OPENPOSE: {"workflow_path": 'comfy_workflows/sdxl_openpose_workflow_api.json', "output_node_id": 9},
-    ComfyWorkflow.LLAMA_2_7B: {"workflow_path": 'comfy_workflows/llama_workflow_api.json', "output_node_id": 14},
-    ComfyWorkflow.SDXL_INPAINTING: {"workflow_path": 'comfy_workflows/sdxl_inpainting_workflow_api.json', "output_node_id": 56},
-    ComfyWorkflow.IP_ADAPTER_PLUS: {"workflow_path": 'comfy_workflows/ipadapter_plus_api.json', "output_node_id": 29},
-    ComfyWorkflow.IP_ADAPTER_FACE: {"workflow_path": 'comfy_workflows/ipadapter_face_api.json', "output_node_id": 29},
-    ComfyWorkflow.IP_ADAPTER_FACE_PLUS: {"workflow_path": 'comfy_workflows/ipadapter_face_plus_api.json', "output_node_id": 29},
-    ComfyWorkflow.STEERABLE_MOTION: {"workflow_path": 'comfy_workflows/steerable_motion_api.json', "output_node_id": 281},
-    ComfyWorkflow.UPSCALER: {"workflow_path": 'comfy_workflows/video_upscaler_api.json', "output_node_id": 243}
+    ComfyWorkflow.SDXL: {"workflow_path": 'comfy_workflows/sdxl_workflow_api.json', "output_node_id": [19]},
+    ComfyWorkflow.SDXL_IMG2IMG: {"workflow_path": 'comfy_workflows/sdxl_img2img_workflow_api.json', "output_node_id": [31]},
+    ComfyWorkflow.SDXL_CONTROLNET: {"workflow_path": 'comfy_workflows/sdxl_controlnet_workflow_api.json', "output_node_id": [9]},
+    ComfyWorkflow.SDXL_CONTROLNET_OPENPOSE: {"workflow_path": 'comfy_workflows/sdxl_openpose_workflow_api.json', "output_node_id": [9]},
+    ComfyWorkflow.LLAMA_2_7B: {"workflow_path": 'comfy_workflows/llama_workflow_api.json', "output_node_id": [14]},
+    ComfyWorkflow.SDXL_INPAINTING: {"workflow_path": 'comfy_workflows/sdxl_inpainting_workflow_api.json', "output_node_id": [56]},
+    ComfyWorkflow.IP_ADAPTER_PLUS: {"workflow_path": 'comfy_workflows/ipadapter_plus_api.json', "output_node_id": [29]},
+    ComfyWorkflow.IP_ADAPTER_FACE: {"workflow_path": 'comfy_workflows/ipadapter_face_api.json', "output_node_id": [29]},
+    ComfyWorkflow.IP_ADAPTER_FACE_PLUS: {"workflow_path": 'comfy_workflows/ipadapter_face_plus_api.json', "output_node_id": [29]},
+    ComfyWorkflow.STEERABLE_MOTION: {"workflow_path": 'comfy_workflows/steerable_motion_api.json', "output_node_id": [281]},
+    ComfyWorkflow.UPSCALER: {"workflow_path": 'comfy_workflows/video_upscaler_api.json', "output_node_id": [243]},
+    ComfyWorkflow.MOTION_LORA: {"workflow_path": 'comfy_workflows/motion_lora_api.json', "output_node_id": [11, 14, 26, 30, 34]},
+    # ComfyWorkflow.MOTION_LORA: {"workflow_path": 'comfy_workflows/motion_lora_test_api.json', "output_node_id": [11, 14]},
 }
 
 
@@ -36,7 +38,7 @@ class ComfyDataTransform:
         # Specify encoding as 'utf-8' when opening the file
         with open(json_file_path, 'r', encoding='utf-8') as f:
             json_data = json.load(f)
-            return json_data, [MODEL_PATH_DICT[model]['output_node_id']]
+            return json_data, MODEL_PATH_DICT[model]['output_node_id']
 
     @staticmethod
     def transform_sdxl_workflow(query: MLQueryObject):
@@ -426,6 +428,41 @@ class ComfyDataTransform:
         
         return json.dumps(workflow), output_node_ids, extra_models_list, []
 
+    @staticmethod
+    def transform_motion_lora_workflow(query: MLQueryObject):
+        data_repo = DataRepo()
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.MOTION_LORA)
+        data = query.data.get("data", {})
+        video_uuid = data.get("file_video", None)
+        video = data_repo.get_file_from_uuid(video_uuid)
+        lora_name = data.get("lora_name", "")
+        
+        workflow["5"]["inputs"]["video"] = os.path.basename(video.filename)
+        workflow["5"]["inputs"]["custom_width"] = query.width
+        workflow["5"]["inputs"]["custom_height"] = query.height
+        workflow["4"]["inputs"]["lora_name"] = lora_name
+        workflow["4"]["inputs"]["prompt"] = query.prompt
+        workflow["15"]["inputs"]["validation_prompt"] = query.prompt
+        
+        ckpt = data.get('ckpt')
+        if "ComfyUI/models/checkpoints/" != ckpt and ckpt:
+            workflow['1']['inputs']['ckpt_name'] = ckpt
+        
+        extra_models_list = [
+            {
+                "filename": "v3_sd15_mm.ckpt",
+                "url": "https://huggingface.co/guoyww/animatediff/resolve/main/v3_sd15_mm.ckpt?download=true",
+                "dest": "./ComfyUI/models/animatediff_models/"
+            },
+            {
+                "filename": "v3_sd15_adapter.ckpt",
+                "url": "https://huggingface.co/guoyww/animatediff/resolve/main/v3_sd15_adapter.ckpt?download=true",
+                "dest": "./ComfyUI/models/loras/"
+            },
+        ]
+        
+        return json.dumps(workflow), output_node_ids, extra_models_list, []
+        
 
 # NOTE: only populating with models currently in use
 MODEL_WORKFLOW_MAP = {
@@ -439,7 +476,8 @@ MODEL_WORKFLOW_MAP = {
     ML_MODEL.ipadapter_face_plus.workflow_name: ComfyDataTransform.transform_ipadaptor_face_plus_workflow,
     ML_MODEL.ad_interpolation.workflow_name: ComfyDataTransform.transform_steerable_motion_workflow,
     ML_MODEL.sdxl_img2img.workflow_name: ComfyDataTransform.transform_sdxl_img2img_workflow,
-    ML_MODEL.video_upscaler.workflow_name: ComfyDataTransform.transform_video_upscaler_workflow
+    ML_MODEL.video_upscaler.workflow_name: ComfyDataTransform.transform_video_upscaler_workflow,
+    ML_MODEL.motion_lora_trainer.workflow_name: ComfyDataTransform.transform_motion_lora_workflow
 }
 
 # returns stringified json of the workflow

@@ -15,6 +15,7 @@ class ComfyWorkflow(ExtendedEnum):
     STEERABLE_MOTION = "steerable_motion"
     SDXL_IMG2IMG = "sdxl_img2img"
     UPSCALER = "upscale"
+    MOTION_LORA = "motion_lora"
 
 @dataclass
 class MLModel:
@@ -93,6 +94,7 @@ class ML_MODEL:
     ipadapter_face = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IP_ADAPTER_FACE)
     ipadapter_face_plus = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IP_ADAPTER_FACE_PLUS)
     video_upscaler = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.UPSCALER)
+    motion_lora_trainer = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.MOTION_LORA)
     
 
     @staticmethod

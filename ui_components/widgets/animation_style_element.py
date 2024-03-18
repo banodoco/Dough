@@ -1,14 +1,20 @@
 import json
+import random
+import string
 import tarfile
 import time
+import uuid
 import zipfile
+from ui_components.methods.ml_methods import train_motion_lora
 import streamlit as st
 from typing import List
-from shared.constants import AnimationStyleType, AnimationToolType, InferenceParamType
+from shared.constants import AnimationStyleType, AnimationToolType, InferenceParamType, InternalFileType
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, DefaultProjectSettingParams, ShotMetaData
 from ui_components.methods.animation_style_methods import load_shot_settings
+from ui_components.methods.file_methods import get_files_in_a_directory, get_media_dimensions, save_or_host_file
 from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils.data_repo.data_repo import DataRepo
+from utils.local_storage.local_storage import read_from_motion_lora_local_db
 from utils.ml_processor.motion_module import AnimateDiffCheckpoint
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from utils import st_memory
@@ -298,14 +304,7 @@ def animation_style_element(shot_uuid):
         
         # ---------------- ADD LORA -----------------
         with tab1:
-            # Initialize a single list to hold dictionaries for LoRA data
-            # Check if the directory exists and list files, or use a default list
-            if os.path.exists(lora_file_dest):
-                files = os.listdir(lora_file_dest)
-                # remove files that start with a dot
-                files = [file for file in files if not file.startswith(".")]
-            else:
-                files = []
+            files = get_files_in_a_directory(lora_file_dest, ['safetensors', 'ckpt'])
 
             # Iterate through each current LoRA in session state
             if len(files) == 0:
@@ -313,6 +312,7 @@ def animation_style_element(shot_uuid):
                 if st.button("Check again", key="check_again"):
                     st.rerun()
             else:
+                filename_video_dict = read_from_motion_lora_local_db()
                 # cleaning empty lora vals
                 for idx, lora in enumerate(st.session_state[f"lora_data_{shot.uuid}"]):
                     if not lora:
@@ -324,11 +324,11 @@ def animation_style_element(shot_uuid):
                     h1, h2, h3, h4 = st.columns([1, 1, 1, 0.5])
                     with h1:
                         file_idx = files.index(lora["filename"])
-                        which_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"which_lora_{idx}", index=file_idx)                                                    
+                        motion_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"motion_lora_{idx}", index=file_idx)                                                    
                     
                     with h2:
                         strength_of_lora = st.slider("How strong would you like the LoRA to be?", min_value=0.0, max_value=1.0, value=lora["lora_strength"], step=0.01, key=f"strength_of_lora_{idx}")
-                        lora_data.append({"filename": which_lora, "lora_strength": strength_of_lora, "filepath": lora_file_dest + "/" + which_lora})
+                        lora_data.append({"filename": motion_lora, "lora_strength": strength_of_lora, "filepath": lora_file_dest + "/" + motion_lora})
                     
                     with h3:
                         when_to_apply_lora = st.slider("When to apply the LoRA?", min_value=0, max_value=100, value=(0,100), step=1, key=f"when_to_apply_lora_{idx}",disabled=True,help="This feature is not yet available.")
@@ -338,6 +338,10 @@ def animation_style_element(shot_uuid):
                         if st.button("Remove", key=f"remove_lora_{idx}"):
                             st.session_state[f"lora_data_{shot.uuid}"].pop(idx)
                             st.rerun()
+                    
+                    # displaying preview
+                    if motion_lora and motion_lora in filename_video_dict:
+                        st.image(filename_video_dict[motion_lora])
                 
                 if len(st.session_state[f"lora_data_{shot.uuid}"]) == 0:
                     text = "Add a LoRA"
@@ -435,13 +439,48 @@ def animation_style_element(shot_uuid):
         with tab3:
             b1, b2 = st.columns([1, 1])
             with b1:
-                st.error("This feature is not yet available.")
-                name_this_lora = st.text_input("Name this LoRA", key="name_this_lora")
-                describe_the_motion = st.text_area("Describe the motion", key="describe_the_motion")
+                lora_name = st.text_input("Name this LoRA", key="lora_name")
+                if model_files and len(model_files):
+                    base_sd_model = st.selectbox(
+                            label="Select base sd model for training", 
+                            options=model_files, 
+                            key="base_sd_model_video", 
+                            index=current_model_index,
+                            on_change=update_model
+                        )
+                else:
+                    base_sd_model = ""
+                    st.info("Default model Deliberate V2 would be selected")
+
+                lora_prompt = st.text_area("Describe the motion", key="lora_prompt")
                 training_video = st.file_uploader("Upload a video to train a new LoRA", type=["mp4"])
 
                 if st.button("Train LoRA", key="train_lora", use_container_width=True):
-                    st.write("Training LoRA")
+                    filename = str(uuid.uuid4()) + ".mp4"
+                    hosted_url = save_or_host_file(training_video, "videos/temp/" + filename, "video/mp4")
+
+                    file_data = {
+                        "name": filename,
+                        "type": InternalFileType.VIDEO.value,
+                        "project_id": shot.project.uuid,
+                    }
+                    
+                    if hosted_url:
+                        file_data.update({'hosted_url': hosted_url})
+                    else:
+                        file_data.update({'local_path': "videos/temp/" + filename})
+                    
+                    video_file = data_repo.create_file(**file_data)
+                    video_width, video_height = get_media_dimensions(video_file.location)
+                    unique_file_tag = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+                    train_motion_lora(
+                        video_file,
+                        lora_prompt,
+                        lora_name + "_" + unique_file_tag,
+                        video_width,
+                        video_height,
+                        base_sd_model
+                    )
 
         st.markdown("***")
         st.markdown("##### Overall style settings")
