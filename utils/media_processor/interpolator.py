@@ -54,6 +54,8 @@ class VideoInterpolator:
             return VideoInterpolator.video_through_direct_morphing(
                 img_location_list,
                 settings,
+                variant_count,
+                queue_inference,                
                 backlog
                 )
         
@@ -62,26 +64,10 @@ class VideoInterpolator:
     @staticmethod
     def video_through_frame_interpolation(img_location_list, settings, variant_count, queue_inference=False, backlog=False):
         ml_client = get_ml_client()
-        # zip_filename = zip_images(img_location_list)
-        # zip_url = ml_client.upload_training_data(zip_filename, delete_after_upload=True)
-        # print("zipped file url: ", zip_url)
-        # animation_tool = settings['animation_tool'] if 'animation_tool' in settings else AnimationToolType.G_FILM.value
 
         final_res = []
         for _ in range(variant_count):
-            # if animation_tool == AnimationToolType.G_FILM.value:
-            #     res = ml_client.predict_model_output(
-            #                         ML_MODEL.google_frame_interpolation, 
-            #                         frame1=img1, 
-            #                         frame2=img2,
-            #                         times_to_interpolate=settings['interpolation_steps'], 
-            #                         queue_inference=queue_inference
-            #                     )
-            
-            # since workflows can have multiple input params it's not standardized yet
-            # elif animation_tool == AnimationToolType.ANIMATEDIFF.value:
 
-            # defaulting to animatediff interpolation
             if True:
                 # NOTE: @Peter these are all the settings you passed in from the UI
                 sm_data = {
@@ -155,37 +141,42 @@ class VideoInterpolator:
     
 
     @staticmethod
-    def video_through_direct_morphing(img_location_list, settings, backlog=False):
-        def load_image(image_path_or_url):
-            if image_path_or_url.startswith("http"):
-                response = r.get(image_path_or_url)
-                image = np.asarray(bytearray(response.content), dtype="uint8")
-                image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-            else:
-                image = cv2.imread(image_path_or_url)
+    def video_through_direct_morphing(img_location_list, settings, variant_count, queue_inference=False, backlog=False):
+        ml_client = get_ml_client()
 
-            return image
-        
-        img1 = load_image(img_location_list[0])
-        img2 = load_image(img_location_list[1])
+        final_res = []
+        for _ in range(variant_count):
 
-        if img1 is None or img2 is None:
-            raise ValueError("Could not read one or both of the images.")
-        
-        num_frames = settings['interpolation_steps']  # Number of frames in the video
-        video_frames = []
+            if True:
+                # NOTE: @Peter these are all the settings you passed in from the UI
+                sm_data = {
+                    "width": settings['width']
+                }
 
-        for alpha in np.linspace(0, 1, num_frames):
-            morphed_image = cv2.addWeighted(img1, alpha, img2, 1 - alpha, 0)
-            video_frames.append(morphed_image)
+                for idx, img_uuid in enumerate(settings['file_uuid_list']):
+                    sm_data[f"file_image_{padded_integer(idx+1)}" + "_uuid"] = img_uuid
 
-        fourcc = cv2.VideoWriter_fourcc(*"avc1")
-        video_bytes = []
-        for frame in video_frames:
-            ret, frame_bytes = cv2.imencode('.mp4', frame, fourcc)
-            if not ret:
-                raise ValueError("Failed to encode video frame")
-            video_bytes.append(frame_bytes.tobytes())
+                ml_query_object = MLQueryObject(
+                    prompt="SM",  # hackish fix
+                    timing_uuid=None,
+                    model_uuid=None,
+                    guidance_scale=None,
+                    seed=None,
+                    num_inference_steps=None,            
+                    strength=None,
+                    adapter_type=None,
+                    negative_prompt="",
+                    height=512,
+                    width=512,                       
+                    image_uuid=None,
+                    mask_uuid=None,
+                    data=sm_data
+                )
+                res = ml_client.predict_model_output_standardized(ML_MODEL.dynamicrafter, ml_query_object, QUEUE_INFERENCE_QUERIES, backlog)
 
-        video_data = b''.join(video_bytes)
-        return [(video_data, InferenceLogObject({}))]    # returning None for inference log
+            final_res.append(res)
+
+        return final_res
+    
+
+

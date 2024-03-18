@@ -25,7 +25,8 @@ MODEL_PATH_DICT = {
     ComfyWorkflow.IP_ADAPTER_FACE: {"workflow_path": 'comfy_workflows/ipadapter_face_api.json', "output_node_id": 29},
     ComfyWorkflow.IP_ADAPTER_FACE_PLUS: {"workflow_path": 'comfy_workflows/ipadapter_face_plus_api.json', "output_node_id": 29},
     ComfyWorkflow.STEERABLE_MOTION: {"workflow_path": 'comfy_workflows/steerable_motion_api.json', "output_node_id": 281},
-    ComfyWorkflow.UPSCALER: {"workflow_path": 'comfy_workflows/video_upscaler_api.json', "output_node_id": 243}
+    ComfyWorkflow.UPSCALER: {"workflow_path": 'comfy_workflows/video_upscaler_api.json', "output_node_id": 243},
+    ComfyWorkflow.DYNAMICRAFTER: {"workflow_path": 'comfy_workflows/dynamicrafter_api.json', "output_node_id": 2}
 }
 
 
@@ -348,8 +349,7 @@ class ComfyDataTransform:
         sm_data = query.data.get('data', {})
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.STEERABLE_MOTION)
         workflow = update_json_with_loras(workflow, sm_data.get('lora_data'))
-
-        print(sm_data)
+    
         workflow['464']['inputs']['height'] = sm_data.get('height')
         workflow['464']['inputs']['width'] = sm_data.get('width')
         
@@ -399,6 +399,24 @@ class ComfyDataTransform:
         ignore_list = sm_data.get("lora_data", [])
         return json.dumps(workflow), output_node_ids, [], ignore_list
     
+
+    @staticmethod
+    def transform_dynamicrafter_workflow(query: MLQueryObject):
+        data_repo = DataRepo()
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.DYNAMICRAFTER)
+        sm_data = query.data.get('data', {})
+        # get the first images from settings - it was put there in a list like this: settings.update(file_uuid_list=[t.primary_image.uuid for t in timing_list])
+        import streamlit as st
+        st.write(sm_data)
+        # wriet file_image_0001_uuid to file_image_0005_uuid
+        st.write(sm_data.get('file_image_0001_uuid'))
+        image_1 = data_repo.get_file_from_uuid(sm_data.get('file_image_0001_uuid'))
+        image_2 = data_repo.get_file_from_uuid(sm_data.get('file_image_0002_uuid'))
+
+        
+
+
+
     @staticmethod
     def transform_video_upscaler_workflow(query: MLQueryObject):
         data_repo = DataRepo()
@@ -468,6 +486,7 @@ MODEL_WORKFLOW_MAP = {
     ML_MODEL.ipadapter_face.workflow_name: ComfyDataTransform.transform_ipadaptor_face_workflow,
     ML_MODEL.ipadapter_face_plus.workflow_name: ComfyDataTransform.transform_ipadaptor_face_plus_workflow,
     ML_MODEL.ad_interpolation.workflow_name: ComfyDataTransform.transform_steerable_motion_workflow,
+    ML_MODEL.dynamicrafter.workflow_name: ComfyDataTransform.transform_dynamicrafter_workflow,
     ML_MODEL.sdxl_img2img.workflow_name: ComfyDataTransform.transform_sdxl_img2img_workflow,
     ML_MODEL.video_upscaler.workflow_name: ComfyDataTransform.transform_video_upscaler_workflow
 }
