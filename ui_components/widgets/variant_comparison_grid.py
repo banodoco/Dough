@@ -18,7 +18,7 @@ from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.animation_style_element import update_interpolation_settings
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.constants import ML_MODEL
+from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow
 
 
 
@@ -78,18 +78,21 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             if stage == CreativeProcessType.MOTION.value:
                 if current_variant != -1 and variants[current_variant]:
                     individual_video_display_element(variants[current_variant])
-                with st.expander("Upscale settings", expanded=False):
-                    styling_model, upscaler_type, upscale_factor, upscale_strength, promote_to_main_variant = upscale_settings()
-                    if st.button("Upscale Main Variant", key=f"upscale_main_variant_{shot_uuid}", help="Upscale the main variant with the selected settings", use_container_width=True):
-                        upscale_video(
-                            shot_uuid,
-                            styling_model, 
-                            upscaler_type, 
-                            upscale_factor, 
-                            upscale_strength, 
-                            promote_to_main_variant
-                        )
-
+                
+                if not is_upscaled_video(variants[current_variant]):
+                    with st.expander("Upscale settings", expanded=False):
+                        styling_model, upscaler_type, upscale_factor, upscale_strength, promote_to_main_variant = upscale_settings()
+                        if st.button("Upscale Main Variant", key=f"upscale_main_variant_{shot_uuid}", help="Upscale the main variant with the selected settings", use_container_width=True):
+                            upscale_video(
+                                shot_uuid,
+                                styling_model, 
+                                upscaler_type, 
+                                upscale_factor, 
+                                upscale_strength, 
+                                promote_to_main_variant
+                            )
+                else:
+                    st.info("Upscaled video")
                 create_video_download_button(variants[current_variant].location, tag="var_compare")
                 variant_inference_detail_element(variants[current_variant], stage, shot_uuid, timing_list, tag="var_compare")                        
 
@@ -123,6 +126,9 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                         individual_video_display_element(variants[variant_index])
                     else: 
                         st.error("No video present")
+                    
+                    if is_upscaled_video(variants[variant_index]):
+                        st.info("Upscaled video")
                     create_video_download_button(variants[variant_index].location, tag="var_details")
                     variant_inference_detail_element(variants[variant_index], stage, shot_uuid, timing_list, tag="var_details")
 
@@ -143,7 +149,14 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 st.markdown("***")  # Add markdown line
                 cols = st.columns(num_columns)  # Prepare for the next row            
                 # Add markdown line if this is not the last variant in page_indices
-                
+
+def is_upscaled_video(variant: InternalFileObject):
+    log = variant.inference_log
+    if log.output_details and json.loads(log.output_details).get("model_name", "") == ComfyWorkflow.UPSCALER.value:
+        return True
+    return False
+
+
 def image_variant_details(variant: InternalFileObject):
     with st.expander("Inference Details", expanded=False):
         if variant.inference_params and 'query_dict' in variant.inference_params:
@@ -213,8 +226,6 @@ def variant_inference_detail_element(variant: InternalFileObject, stage, shot_uu
                 st.markdown("##### Frame settings ---")
                 st.write("To see the settings for each frame, click on the 'Boot up settings' button above and they'll load below.")
                 st.button("Close settings", key=f"close_{tag}_{variant.name}", help="Close this section", use_container_width=True)
-            
-
 
     if stage != CreativeProcessType.MOTION.value:
         h1, h2 = st.columns([1, 1])

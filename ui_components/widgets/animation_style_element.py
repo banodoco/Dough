@@ -13,6 +13,7 @@ from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, DefaultProjectSe
 from ui_components.methods.animation_style_methods import load_shot_settings
 from ui_components.methods.file_methods import get_files_in_a_directory, get_media_dimensions, save_or_host_file
 from ui_components.methods.video_methods import create_single_interpolated_clip
+from ui_components.widgets.display_element import display_motion_lora
 from utils.data_repo.data_repo import DataRepo
 from utils.local_storage.local_storage import read_from_motion_lora_local_db
 from utils.ml_processor.motion_module import AnimateDiffCheckpoint
@@ -301,6 +302,23 @@ def animation_style_element(shot_uuid):
 
         lora_data = []
         lora_file_dest = "ComfyUI/models/animatediff_motion_lora"
+        lora_file_links = {
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_tony_stark_r64_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_train_r128_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/300_car_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_desert_48_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_jeep_driving_r32_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_man_running_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_rotation_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
+            "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/750_jeep_driving_r32_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
+            "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/300_zooming_in_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
+            "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_cat_walking_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
+            "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_playing_banjo_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
+            "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_woman_dancing_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
+            "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_zooming_out_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif"
+        }
         
         # ---------------- ADD LORA -----------------
         with tab1:
@@ -312,7 +330,6 @@ def animation_style_element(shot_uuid):
                 if st.button("Check again", key="check_again"):
                     st.rerun()
             else:
-                filename_video_dict = read_from_motion_lora_local_db()
                 # cleaning empty lora vals
                 for idx, lora in enumerate(st.session_state[f"lora_data_{shot.uuid}"]):
                     if not lora:
@@ -340,8 +357,7 @@ def animation_style_element(shot_uuid):
                             st.rerun()
                     
                     # displaying preview
-                    if motion_lora and motion_lora in filename_video_dict:
-                        st.image(filename_video_dict[motion_lora])
+                    display_motion_lora(motion_lora, lora_file_links)
                 
                 if len(st.session_state[f"lora_data_{shot.uuid}"]) == 0:
                     text = "Add a LoRA"
@@ -362,33 +378,18 @@ def animation_style_element(shot_uuid):
                 where_to_download_from = st.radio("Where would you like to get the LoRA from?", options=["Our list", "From a URL","Upload a LoRA"], key="where_to_download_from", horizontal=True)
 
             if where_to_download_from == "Our list":
-                with text1:
-                    file_links = [
-                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors",
-                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_tony_stark_r64_temporal_unet.safetensors",
-                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_train_r128_temporal_unet.safetensors",
-                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/300_car_temporal_unet.safetensors",
-                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_desert_48_temporal_unet.safetensors",
-                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_temporal_unet.safetensors",
-                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_jeep_driving_r32_temporal_unet.safetensors",
-                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_man_running_temporal_unet.safetensors",
-                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_rotation_temporal_unet.safetensors",
-                        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/750_jeep_driving_r32_temporal_unet.safetensors",
-                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/300_zooming_in_temporal_unet.safetensors",
-                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_cat_walking_temporal_unet.safetensors",
-                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_playing_banjo_temporal_unet.safetensors",
-                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_woman_dancing_temporal_unet.safetensors",
-                        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_zooming_out_temporal_unet.safetensors"
-                    ]
-                            
-                    selected_lora_optn = st.selectbox("Which LoRA would you like to download?", options=[a.split("/")[-1] for a in file_links], key="selected_lora")
+                with text1: 
+                    selected_lora_optn = st.selectbox("Which LoRA would you like to download?", options=[a.split("/")[-1] for a in lora_file_links], key="selected_lora")
+                    # Display selected Lora
+                    display_motion_lora(selected_lora_optn, lora_file_links)
+                    
                     if st.button("Download LoRA", key="download_lora"):
                         with st.spinner("Downloading LoRA..."):
                             save_directory = "ComfyUI/models/animatediff_motion_lora"
                             os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
                             
                             # Extract the filename from the URL
-                            selected_lora = next((ele for idx, ele in enumerate(file_links) if selected_lora_optn in ele), None)
+                            selected_lora, lora_idx = next(((ele, idx) for idx, ele in enumerate(lora_file_links.keys()) if selected_lora_optn in ele), None)
                             filename = selected_lora.split("/")[-1]
                             save_path = os.path.join(save_directory, filename)
                             
@@ -413,7 +414,6 @@ def animation_style_element(shot_uuid):
                                 st.error("Failed to download LoRA")
             
             elif where_to_download_from == "From a URL":
-                
                 with text1:
                     text_input = st.text_input("Enter the URL of the LoRA", key="text_input_lora")
                 with text2:
