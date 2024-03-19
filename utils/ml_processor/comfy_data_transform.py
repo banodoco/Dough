@@ -404,18 +404,27 @@ class ComfyDataTransform:
     def transform_dynamicrafter_workflow(query: MLQueryObject):
         data_repo = DataRepo()
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.DYNAMICRAFTER)
-        sm_data = query.data.get('data', {})
-        # get the first images from settings - it was put there in a list like this: settings.update(file_uuid_list=[t.primary_image.uuid for t in timing_list])
-        import streamlit as st
-        st.write(sm_data)
-        # wriet file_image_0001_uuid to file_image_0005_uuid
-        st.write(sm_data.get('file_image_0001_uuid'))
+        sm_data = query.data.get('data', {})        
+                        
         image_1 = data_repo.get_file_from_uuid(sm_data.get('file_image_0001_uuid'))
         image_2 = data_repo.get_file_from_uuid(sm_data.get('file_image_0002_uuid'))
+                
+        workflow['16']['inputs']['image'] = image_1.filename
+        workflow['17']['inputs']['image'] = image_2.filename
+        workflow['12']['inputs']['seed'] = random_seed()
+        workflow['12']['inputs']['steps'] = 50
+        workflow['12']['inputs']['cfg'] = 4
+        workflow['12']['inputs']['prompt'] = sm_data.get('prompt')
 
+
+        extra_models_list = [
+            {
+                "filename": "dynamicrafter_512_interp_v1.ckpt",
+                "url": "https://huggingface.co/Doubiiu/DynamiCrafter_512_Interp/resolve/main/model.ckpt?download=true",
+                "dest": "./ComfyUI/models/checkpoints/"
+            }]
         
-
-
+        return json.dumps(workflow), output_node_ids, extra_models_list, []
 
     @staticmethod
     def transform_video_upscaler_workflow(query: MLQueryObject):

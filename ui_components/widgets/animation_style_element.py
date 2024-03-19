@@ -712,7 +712,7 @@ def animation_style_element(shot_uuid):
     elif type_of_animation == "2-Image Realistic Interpolation":
 
         col1, col2, col3 = st.columns([1, 1, 1])
-        for i in range(0, len(timing_list), 2):  # Iterate two items at a time
+        for i in range(0, 2, 2):  # Iterate two items at a time
             if i < len(timing_list):
                 timing_first = timing_list[i]
                 if timing_first.primary_image and timing_first.primary_image.location:
@@ -731,6 +731,7 @@ def animation_style_element(shot_uuid):
             
         variant_count = 1  # Assuming a default value for variant_count, adjust as necessary
         vid_quality = "full"  # Assuming full quality, adjust as necessary based on your requirements
+        position = "generate_vid"
 
         if "generate_vid_generate_inference" in st.session_state and st.session_state["generate_vid_generate_inference"]:
 
@@ -769,12 +770,15 @@ def animation_style_element(shot_uuid):
 
         # Buttons for adding to queue or backlog, assuming these are still relevant
         btn1, btn2, btn3 = st.columns([1, 1, 1])
+        backlog_no_update = {f'{shot_uuid}_backlog_enabled': False}
         with btn1:
-            st.button("Add to queue", key="generate_2_image_interpolation_clip", disabled=False, help="Generate the interpolation clip based on the two images and described motion.", on_click=lambda: toggle_generate_inference("generate_vid"), type="primary", use_container_width=True)
+            st.button("Add to queue", key="generate_animation_clip", disabled=False, help="Generate the interpolation clip based on the two images and described motion.", on_click=lambda: toggle_generate_inference(position, **backlog_no_update), type="primary", use_container_width=True)
 
         backlog_update = {f'{shot_uuid}_backlog_enabled': True}
         with btn2:
-            st.button("Add to backlog", key="generate_2_image_interpolation_clip_backlog", disabled=False, help="Add the 2-Image Realistic Interpolation to the backlog.", on_click=lambda: toggle_generate_inference("generate_vid", **backlog_update), type="secondary")
+            st.button("Add to backlog", key="generate_animation_clip_backlog", disabled=False, help="Add the 2-Image Realistic Interpolation to the backlog.", on_click=lambda: toggle_generate_inference(position, **backlog_update), type="secondary")
+
+
 # --------------------- METHODS -----------------------
 def toggle_generate_inference(position, **kwargs):
     for k,v in kwargs.items():

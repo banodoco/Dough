@@ -150,7 +150,9 @@ class VideoInterpolator:
             if True:
                 # NOTE: @Peter these are all the settings you passed in from the UI
                 sm_data = {
-                    "width": settings['width']
+                    "width": settings['width'],
+                    "height": settings['height'],
+                    "prompt": settings["prompt"]
                 }
 
                 for idx, img_uuid in enumerate(settings['file_uuid_list']):
@@ -166,8 +168,8 @@ class VideoInterpolator:
                     strength=None,
                     adapter_type=None,
                     negative_prompt="",
-                    height=512,
-                    width=512,                       
+                    height=settings['height'],
+                    width=settings['width'],                       
                     image_uuid=None,
                     mask_uuid=None,
                     data=sm_data
