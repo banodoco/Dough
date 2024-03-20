@@ -7,16 +7,20 @@ from typing import List
 from shared.constants import AnimationStyleType, AnimationToolType, InferenceParamType
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, DefaultProjectSettingParams, ShotMetaData
 from ui_components.methods.animation_style_methods import load_shot_settings
+from ui_components.methods.common_methods import save_new_image
 from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.motion_module import AnimateDiffCheckpoint
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
+from ui_components.methods.file_methods import save_or_host_file
 from utils import st_memory
 import numpy as np
 import matplotlib.pyplot as plt
 import os
 import requests
+from PIL import Image
 # import re
+import uuid
 import re
 
 default_model = "Deliberate_v2.safetensors"
@@ -41,7 +45,7 @@ def animation_style_element(shot_uuid):
     st.markdown("### 🎥 Generate animations")  
     st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
-    type_of_animation = st.radio("What type of animation would you like to generate?", options=["Batch Creative Interpolation", "2-Image Realistic Interpolation"], key="type_of_animation",horizontal=True, help="**Batch Creative Interpolaton** lets you input multple images and control the motion and style of each frame - resulting in a fluid, surreal and highly-controllable motion. \n\n **2-Image Realistic Interpolation** is a simpler way to generate animations - it generates a video by interpolating between two images, and is best for realistic motion.")
+    type_of_animation = st_memory.radio("What type of animation would you like to generate?", options=["Batch Creative Interpolation", "2-Image Realistic Interpolation"],horizontal=True, help="**Batch Creative Interpolaton** lets you input multple images and control the motion and style of each frame - resulting in a fluid, surreal and highly-controllable motion. \n\n **2-Image Realistic Interpolation** is a simpler way to generate animations - it generates a video by interpolating between two images, and is best for realistic motion.",key=f"type_of_animation_{shot.uuid}")
 
     if type_of_animation == "Batch Creative Interpolation":
 
@@ -452,10 +456,8 @@ def animation_style_element(shot_uuid):
 
             e1, e2, e3 = st.columns([1, 1,1])
             with e1:        
-                strength_of_adherence = st.slider("How much would you like to force adherence to the input images?", min_value=0.0, max_value=1.0, step=0.01, key="strength_of_adherence", value=st.session_state[f"strength_of_adherence_value_{shot.uuid}"])
-            with e2:
-                st.info("Higher values may cause flickering and sudden changes in the video. Lower values may cause the video to be less influenced by the input images but can lead to smoother motion and better colours.")
-
+                strength_of_adherence = st.slider("How much would you like to force adherence to the input images?", min_value=0.0, max_value=1.0, step=0.01, key="strength_of_adherence", value=st.session_state[f"strength_of_adherence_value_{shot.uuid}"], help="Higher values may cause flickering and sudden changes in the video. Lower values may cause the video to be less influenced by the input images but can lead to smoother motion and better colours.")
+      
             f1, f2, f3 = st.columns([1, 1, 1])
             with f1:
                 overall_positive_prompt = ""
@@ -483,31 +485,63 @@ def animation_style_element(shot_uuid):
 
             st.markdown("***")
             st.markdown("##### Overall motion settings")
-            h1, h2, h3 = st.columns([0.5, 1.5, 1])
+            h1, h2, h3 = st.columns([1, 0.5, 2])
             with h1:
                 # will fix this later
                 if f"type_of_motion_context_index_{shot.uuid}" in st.session_state and isinstance(st.session_state[f"type_of_motion_context_index_{shot.uuid}"], str):
                     st.session_state[f"type_of_motion_context_index_{shot.uuid}"] = ["Low", "Standard", "High"].index(st.session_state[f"type_of_motion_context_index_{shot.uuid}"])
-                type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=False, index=st.session_state[f"type_of_motion_context_index_{shot.uuid}"])
+                type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=True, index=st.session_state[f"type_of_motion_context_index_{shot.uuid}"], help="This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.")
 
-            with h2: 
-                st.info("This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.")
-            st.write("")
-            i1, i3,_ = st.columns([1,2,1])
+                st.session_state[f"amount_of_motion_{shot.uuid}"] = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01,value=1.3, key="amount_of_motion_overall", on_change=lambda: update_motion_for_all_frames(shot.uuid, timing_list), help="You can also tweak this on an individual frame level in the advanced settings above.")
+                 
+
+            i1, i2, i3 = st.columns([1, 0.5, 1.5])
+
             with i1:
-                amount_of_motion = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01, key="amount_of_motion", value=st.session_state[f"amount_of_motion_{shot.uuid}"])        
-                st.write("")
-                if st.button("Bulk update amount of motion", key="update_motion", help="This will update this value in all the frames"):
-                    for idx, timing in enumerate(timing_list):
-                        st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = amount_of_motion                
-                    st.success("Updated amount of motion")
-                    time.sleep(0.3)
-                    st.rerun()
-            with i3:
-                st.write("")
-                st.write("")
-                st.info("This actually updates the motion during frames in the advanced settings above - but we put it here because it has a big impact on the video. You can scroll up to see the changes and tweak for individual frames.")
+                if f'structure_control_image_{shot.uuid}' not in st.session_state:
+                    st.session_state[f"structure_control_image_{shot.uuid}"] = None
 
+                if f"strength_of_structure_control_image_{shot.uuid}" not in st.session_state:
+                    st.session_state[f"strength_of_structure_control_image_{shot.uuid}"] = None
+                control_motion_with_image = st_memory.toggle("Control motion with an image", help="This will allow you to upload images to control the motion of the video.",key=f"control_motion_with_image_{shot.uuid}")
+
+                if control_motion_with_image:
+                    uploaded_image = st.file_uploader("Upload images to control motion", type=["png", "jpg", "jpeg"], accept_multiple_files=False)
+                    if st.button("Add image", key="add_images"):
+                        if uploaded_image:
+                            
+                            
+                            project_settings = data_repo.get_project_setting(shot.project.uuid)
+                            
+                            width, height = project_settings.width, project_settings.height
+                            # Convert the uploaded image file to PIL Image
+                            uploaded_image_pil = Image.open(uploaded_image)
+                            uploaded_image_pil = uploaded_image_pil.resize((width, height))
+                            image = save_new_image(uploaded_image_pil, shot.project.uuid)
+                            image_location = image.local_path
+            
+
+                            # Update session state with the URL of the uploaded image                            
+                            st.success("Image uploaded")
+                            st.session_state[f"structure_control_image_{shot.uuid}"] = image_location
+                            
+
+                        else:
+                            st.warning("No images uploaded")
+                else:
+                    st.session_state[f"structure_control_image_{shot.uuid}"] = None
+            with i2:
+                if st.session_state[f"structure_control_image_{shot.uuid}"]:
+                    st.info("Control image:")                    
+                    st.image(st.session_state[f"structure_control_image_{shot.uuid}"], use_column_width=True)
+                    st.session_state[f"strength_of_structure_control_image_{shot.uuid}"] = st.slider("Strength of control image:", min_value=0.0, max_value=1.0, step=0.01, key="strength_of_structure_control_image", value=0.5, help="This is how much the control image will influence the motion of the video.")
+                    if st.button("Remove image", key="remove_images"):
+                        st.session_state[f"structure_control_image_{shot.uuid}"] = None
+                        st.success("Image removed")
+                        st.rerun()
+            
+                    
+    
             type_of_frame_distribution = "dynamic"
             type_of_key_frame_influence = "dynamic"
             type_of_strength_distribution = "dynamic"
@@ -523,6 +557,7 @@ def animation_style_element(shot_uuid):
             motion_scale = 1.3
             interpolation_style = 'ease-in-out'
             buffer = 4
+            amount_of_motion = 1.3
 
 
             (dynamic_strength_values, dynamic_key_frame_influence_values, dynamic_frame_distribution_values, 
@@ -570,7 +605,11 @@ def animation_style_element(shot_uuid):
                 animation_stype=AnimationStyleType.CREATIVE_INTERPOLATION.value,            
                 max_frames=str(dynamic_frame_distribution_values[-1]),
                 lora_data=lora_data,
-                shot_data=shot_meta_data
+                shot_data=shot_meta_data,
+                structure_control_image=st.session_state[f"structure_control_image_{shot.uuid}"],
+                strength_of_structure_control_image=st.session_state[f"strength_of_structure_control_image_{shot.uuid}"],
+
+
             )
             
             position = "generate_vid"
@@ -726,7 +765,7 @@ def animation_style_element(shot_uuid):
                         st.image(timing_second.primary_image.location, use_column_width=True)
 
         with col2:
-            description_of_motion = st.text_area("Describe the motion you want between the frames:", key="description_of_motion")
+            description_of_motion = st_memory.text_area("Describe the motion you want between the frames:", key=f"description_of_motion_{shot.uuid}", value=st.session_state[f"description_of_motion_{shot.uuid}"])
             st.info("This is very important and will likely require some iteration.")
             
         variant_count = 1  # Assuming a default value for variant_count, adjust as necessary
@@ -823,7 +862,7 @@ def update_session_state_with_animation_details(shot_uuid, timing_list, strength
     main_setting_data[f"type_of_motion_context_index_{shot.uuid}"] = st.session_state["type_of_motion_context"]
     main_setting_data[f"positive_prompt_video_{shot.uuid}"] = st.session_state["overall_positive_prompt"]
     main_setting_data[f"negative_prompt_video_{shot.uuid}"] = st.session_state["overall_negative_prompt"]
-    main_setting_data[f"amount_of_motion_{shot.uuid}"] = st.session_state["amount_of_motion"]
+    # main_setting_data[f"amount_of_motion_{shot.uuid}"] = st.session_state["amount_of_motion"]
     
     checkpoints_dir = "ComfyUI/models/checkpoints"
     all_files = os.listdir(checkpoints_dir)
@@ -849,6 +888,13 @@ def update_session_state_with_animation_details(shot_uuid, timing_list, strength
 
     data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
     return meta_data
+
+
+def update_motion_for_all_frames(shot_uuid, timing_list):
+    amount_of_motion = st.session_state.get("amount_of_motion_overall", 1.0)  # Default to 1.0 if not set
+    for idx, _ in enumerate(timing_list):
+        st.session_state[f'motion_during_frame_{shot_uuid}_{idx}'] = amount_of_motion
+    
 
 def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):
     adjusted_frame_numbers = [frame + buffer for frame in frame_numbers]

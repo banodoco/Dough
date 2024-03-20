@@ -190,6 +190,7 @@ def variant_inference_detail_element(variant: InternalFileObject, stage, shot_uu
                 shot_meta_data = get_generation_settings_from_log(variant.inference_log.uuid)
                 if shot_meta_data and shot_meta_data.get("main_setting_data", None):
                     st.markdown("##### Main settings ---")
+                    st.write(shot_meta_data)
                     for k, v in shot_meta_data.get("main_setting_data", {}).items():
                         # Bold the title
                         title = f"**{k.split(str(shot.uuid))[0][:-1]}:**"
