@@ -116,6 +116,12 @@ class VideoInterpolator:
                 for idx, img_uuid in enumerate(settings['file_uuid_list']):
                     sm_data[f"file_image_{padded_integer(idx+1)}" + "_uuid"] = img_uuid
 
+
+                if settings["structure_control_image"] is not None:
+                    # add to file_image__{padded_integer(idx+1)}_uuid
+                    sm_data[f"file_image_{padded_integer(len(settings['file_uuid_list'])+1)}" + "_uuid"] = settings["structure_control_image"]
+                                    
+
                 # NOTE: @Peter all the above settings are put in the 'data' parameter below
                 ml_query_object = MLQueryObject(
                     prompt="SM",  # hackish fix

@@ -33,14 +33,15 @@
   "12": {
     "inputs": {
       "steps": 50,
-      "cfg": 4,
+      "cfg": 5,
       "eta": 1,
       "frames": 16,
-      "prompt": "dolly zoom",
-      "seed": 898857724114134,
+      "prompt": "dolly zoom out",
+      "seed": 262623773159722,
       "fs": 10,
       "keep_model_loaded": true,
       "vae_dtype": "auto",
+      "cut_near_keyframes": 0,
       "model": [
         "11",
         0
@@ -58,11 +59,11 @@
   "15": {
     "inputs": {
       "image1": [
-        "16",
+        "37",
         0
       ],
       "image2": [
-        "17",
+        "38",
         0
       ]
     },
@@ -73,7 +74,7 @@
   },
   "16": {
     "inputs": {
-      "image": "ComfyUI_temp_fshjc_00001_.png",
+      "image": "ea47a572b4e5b52ea7da22384232381b3e62048fa715f042b38b4da9 (1) (2).jpg",
       "upload": "image"
     },
     "class_type": "LoadImage",
@@ -83,7 +84,7 @@
   },
   "17": {
     "inputs": {
-      "image": "ComfyUI_temp_fshjc_00002_ (1).png",
+      "image": "2193d9ded46130b41d09133b4b1d2502f0eaa19ea1762252c6581e86 (1) (1).jpg",
       "upload": "image"
     },
     "class_type": "LoadImage",
@@ -104,6 +105,60 @@
     "class_type": "FILM VFI",
     "_meta": {
       "title": "FILM VFI"
+    }
+  },
+  "35": {
+    "inputs": {
+      "frame_rate": 8,
+      "loop_count": 0,
+      "filename_prefix": "AnimateDiff",
+      "format": "image/gif",
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Video Combine 🎥🅥🅗🅢"
+    }
+  },
+  "37": {
+    "inputs": {
+      "mode": "rescale",
+      "supersample": "true",
+      "resampling": "lanczos",
+      "rescale_factor": 0.7000000000000001,
+      "resize_width": 1024,
+      "resize_height": 1536,
+      "image": [
+        "16",
+        0
+      ]
+    },
+    "class_type": "Image Resize",
+    "_meta": {
+      "title": "Image Resize"
+    }
+  },
+  "38": {
+    "inputs": {
+      "mode": "rescale",
+      "supersample": "true",
+      "resampling": "lanczos",
+      "rescale_factor": 0.7000000000000001,
+      "resize_width": 1024,
+      "resize_height": 1536,
+      "image": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "Image Resize",
+    "_meta": {
+      "title": "Image Resize"
     }
   }
 }

@@ -518,14 +518,14 @@ def animation_style_element(shot_uuid):
                             uploaded_image_pil = Image.open(uploaded_image)
                             uploaded_image_pil = uploaded_image_pil.resize((width, height))
                             image = save_new_image(uploaded_image_pil, shot.project.uuid)
-                            image_location = image.local_path
-            
-
+                            # image_location = image.local_path
+                                
                             # Update session state with the URL of the uploaded image                            
                             st.success("Image uploaded")
-                            st.session_state[f"structure_control_image_{shot.uuid}"] = image_location
+                            st.session_state[f"structure_control_image_{shot.uuid}"] = image.uuid
+                            st.rerun()
                             
-
+                            
                         else:
                             st.warning("No images uploaded")
                 else:
@@ -533,7 +533,10 @@ def animation_style_element(shot_uuid):
             with i2:
                 if st.session_state[f"structure_control_image_{shot.uuid}"]:
                     st.info("Control image:")                    
-                    st.image(st.session_state[f"structure_control_image_{shot.uuid}"], use_column_width=True)
+                    file = data_repo.get_file_from_uuid(st.session_state[f"structure_control_image_{shot.uuid}"])
+                    image = file.local_path
+                    st.image(image)                    
+                    
                     st.session_state[f"strength_of_structure_control_image_{shot.uuid}"] = st.slider("Strength of control image:", min_value=0.0, max_value=1.0, step=0.01, key="strength_of_structure_control_image", value=0.5, help="This is how much the control image will influence the motion of the video.")
                     if st.button("Remove image", key="remove_images"):
                         st.session_state[f"structure_control_image_{shot.uuid}"] = None
@@ -765,7 +768,7 @@ def animation_style_element(shot_uuid):
                         st.image(timing_second.primary_image.location, use_column_width=True)
 
         with col2:
-            description_of_motion = st_memory.text_area("Describe the motion you want between the frames:", key=f"description_of_motion_{shot.uuid}", value=st.session_state[f"description_of_motion_{shot.uuid}"])
+            description_of_motion = st_memory.text_area("Describe the motion you want between the frames:", key=f"description_of_motion_{shot.uuid}")
             st.info("This is very important and will likely require some iteration.")
             
         variant_count = 1  # Assuming a default value for variant_count, adjust as necessary

@@ -314,7 +314,10 @@ class ComfyDataTransform:
 
         def update_structure_control_image(json, image, weight):
             # Integrate all updates including new nodes and modifications in a single step
-            image = os.path.basename(image)
+            data_repo = DataRepo()
+            image = data_repo.get_file_from_uuid(image)
+            image = image.filename
+            # image = os.path.basename(image)
 
             json.update({
                 "560": {
