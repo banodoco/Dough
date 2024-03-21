@@ -135,9 +135,9 @@ class VideoInterpolator:
                     negative_prompt="",
                     height=512,
                     width=512,
+                    image_uuid=settings["structure_control_image"],
                     low_threshold=100,
-                    high_threshold=200,
-                    image_uuid=None,
+                    high_threshold=200,                    
                     mask_uuid=None,
                     data=sm_data
                 )

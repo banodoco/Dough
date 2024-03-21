@@ -449,6 +449,7 @@ class ComfyDataTransform:
         workflow["543"]["inputs"]["text"] = sm_data.get('individual_negative_prompts')
 
         if sm_data.get('structure_control_image'):
+            
             workflow = update_structure_control_image(workflow, sm_data.get('structure_control_image'), sm_data.get('strength_of_structure_control_image'))
 
         ignore_list = sm_data.get("lora_data", [])

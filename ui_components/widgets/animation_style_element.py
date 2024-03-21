@@ -42,10 +42,14 @@ def animation_style_element(shot_uuid):
         'animation_tool': AnimationToolType.ANIMATEDIFF.value,
     }
     
-    st.markdown("### 🎥 Generate animations")  
-    st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+    headline1, headline2, headline3 = st.columns([1, 1, 1])
+    with headline1:
 
-    type_of_animation = st_memory.radio("What type of animation would you like to generate?", options=["Batch Creative Interpolation", "2-Image Realistic Interpolation"],horizontal=True, help="**Batch Creative Interpolaton** lets you input multple images and control the motion and style of each frame - resulting in a fluid, surreal and highly-controllable motion. \n\n **2-Image Realistic Interpolation** is a simpler way to generate animations - it generates a video by interpolating between two images, and is best for realistic motion.",key=f"type_of_animation_{shot.uuid}")
+        st.markdown("### 🎥 Generate animations")  
+        st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+    with headline3:
+        with st.expander("", expanded=False):
+            type_of_animation = st_memory.radio("What type of animation would you like to generate?", options=["Batch Creative Interpolation", "2-Image Realistic Interpolation (beta)"],horizontal=True, help="**Batch Creative Interpolaton** lets you input multple images and control the motion and style of each frame - resulting in a fluid, surreal and highly-controllable motion. \n\n **2-Image Realistic Interpolation** is a simpler way to generate animations - it generates a video by interpolating between two images, and is best for realistic motion.",key=f"type_of_animation_{shot.uuid}")
 
     if type_of_animation == "Batch Creative Interpolation":
 
@@ -485,7 +489,7 @@ def animation_style_element(shot_uuid):
 
             st.markdown("***")
             st.markdown("##### Overall motion settings")
-            h1, h2, h3 = st.columns([1, 0.5, 2])
+            h1, h2, h3 = st.columns([1, 0.5, 1.0])
             with h1:
                 # will fix this later
                 if f"type_of_motion_context_index_{shot.uuid}" in st.session_state and isinstance(st.session_state[f"type_of_motion_context_index_{shot.uuid}"], str):
@@ -695,6 +699,8 @@ def animation_style_element(shot_uuid):
                             strength_values = extract_strength_values(type_of_strength_distribution, dynamic_strength_values, keyframe_positions, linear_cn_strength_value)
                             key_frame_influence_values = extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value)                                                                                                            
                             weights_list, frame_numbers_list = calculate_weights(keyframe_positions, strength_values, 4, key_frame_influence_values,last_key_frame_position)                                                    
+                            # s
+                            
                             plot_weights(weights_list, frame_numbers_list)
                         
                             st.markdown("***")
@@ -707,41 +713,44 @@ def animation_style_element(shot_uuid):
                                     for idx, timing in enumerate(timing_list):                                    
                                         for k, v in DEFAULT_SHOT_MOTION_VALUES.items():                                        
                                             st.session_state[f'{k}_{shot.uuid}_{idx}'] = v
-                                                                            
+                                                                                                    
                                     st.success("All frames have been reset to default values.")
                                     st.rerun()
-                                                    
-                            editable_entity = st.selectbox("What would you like to edit?", options=["Seconds to next frames", "Speed of transitions", "Freedom between frames","Strength of frames","Motion during frames"], key="editable_entity")
-                            if editable_entity == "Seconds to next frames":
-                                entity_new_val = st.slider("What would you like to change it to?", min_value=0.25, max_value=6.00, step=0.25, value=1.0, key="entity_new_val")
-                            if editable_entity == "Strength of frames":
-                                entity_new_val = st.slider("What would you like to change it to?", min_value=0.25, max_value=1.0, step=0.01, value=0.5, key="entity_new_val")
-                            elif editable_entity == "Speed of transitions":
-                                entity_new_val = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, value=0.6, key="entity_new_val")
-                            elif editable_entity == "Freedom between frames":
-                                entity_new_val = st.slider("What would you like to change it to?", min_value=0.15, max_value=0.85, step=0.01, value=0.5, key="entity_new_val")
-                            elif editable_entity == "Motion during frames":
-                                entity_new_val = st.slider("What would you like to change it to?", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="entity_new_val")
+
+                            # New feature: Selecting a range to edit
+                            range_to_edit = st.slider("Select the range of frames you would like to edit:",
+                                                    min_value=1, max_value=len(timing_list),
+                                                    value=(1, len(timing_list)), step=1, key="range_to_edit")
+                            edit1, edit2 = st.columns([1, 1])
+                            with edit1:
+                                editable_entity = st.selectbox("What would you like to edit?", options=["Seconds to next frames", "Speed of transitions", "Freedom between frames","Strength of frames","Motion during frames"], key="editable_entity")
+                            with edit2:
+                                if editable_entity == "Seconds to next frames":
+                                    entity_new_val = st.slider("What would you like to change it to?", min_value=0.25, max_value=6.00, step=0.25, value=1.0, key="entity_new_val_seconds")
+                                elif editable_entity == "Strength of frames":
+                                    entity_new_val = st.slider("What would you like to change it to?", min_value=0.25, max_value=1.0, step=0.01, value=0.5, key="entity_new_val_strength")
+                                elif editable_entity == "Speed of transitions":
+                                    entity_new_val = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, value=0.6, key="entity_new_val_speed")
+                                elif editable_entity == "Freedom between frames":
+                                    entity_new_val = st.slider("What would you like to change it to?", min_value=0.15, max_value=0.85, step=0.01, value=0.5, key="entity_new_val_freedom")
+                                elif editable_entity == "Motion during frames":
+                                    entity_new_val = st.slider("What would you like to change it to?", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="entity_new_val_motion")
                             
-                            bulk1, bulk2 = st.columns([1, 1])
-                            with bulk1:
-                                if st.button("Bulk edit", key="bulk_edit", use_container_width=True):
+                            if st.button("Bulk edit", key="bulk_edit", use_container_width=True):
+                                start_idx, end_idx = range_to_edit
+                                for idx in range(start_idx - 1, end_idx): # Adjusting index to be 0-based
                                     if editable_entity == "Strength of frames":
-                                        for idx, timing in enumerate(timing_list):
-                                            st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = entity_new_val
+                                        st.session_state[f'strength_of_frame_{shot.uuid}_{idx}'] = entity_new_val
                                     elif editable_entity == "Seconds to next frames":
-                                        for idx, timing in enumerate(timing_list):
-                                            st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = entity_new_val
+                                        st.session_state[f'distance_to_next_frame_{shot.uuid}_{idx}'] = entity_new_val
                                     elif editable_entity == "Speed of transitions":
-                                        for idx, timing in enumerate(timing_list):
-                                            st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'] = entity_new_val
+                                        st.session_state[f'speed_of_transition_{shot.uuid}_{idx}'] = entity_new_val
                                     elif editable_entity == "Freedom between frames":
-                                        for idx, timing in enumerate(timing_list):
-                                            st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'] = entity_new_val
+                                        st.session_state[f'freedom_between_frames_{shot.uuid}_{idx}'] = entity_new_val
                                     elif editable_entity == "Motion during frames":
-                                        for idx, timing in enumerate(timing_list):
-                                            st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = entity_new_val
-                                    st.rerun()
+                                        st.session_state[f'motion_during_frame_{shot.uuid}_{idx}'] = entity_new_val
+                                st.rerun()
+
                             
                             st.markdown("***")
                             st.markdown("### Save current settings")
@@ -751,7 +760,7 @@ def animation_style_element(shot_uuid):
                                 time.sleep(0.7)
                                 st.rerun()
 
-    elif type_of_animation == "2-Image Realistic Interpolation":
+    elif type_of_animation == "2-Image Realistic Interpolation (beta)":
 
         col1, col2, col3 = st.columns([1, 1, 1])
         for i in range(0, 2, 2):  # Iterate two items at a time
@@ -1126,11 +1135,13 @@ def calculate_weights(keyframe_positions, strength_values, buffer, key_frame_inf
 def plot_weights(weights_list, frame_numbers_list):
     plt.figure(figsize=(12, 6))
     for i, weights in enumerate(weights_list):
-        frame_numbers = frame_numbers_list[i]
+        # Divide each frame number by 100
+        frame_numbers = [frame_number / 100 for frame_number in frame_numbers_list[i]]
+        
         plt.plot(frame_numbers, weights, label=f'Frame {i + 1}')
 
     # Plot settings
-    plt.xlabel('Frame Number')
+    plt.xlabel('Seconds')  # Updated to represent seconds
     plt.ylabel('Weight')
     plt.legend()
     plt.ylim(0, 1.0)
