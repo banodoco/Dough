@@ -6,8 +6,10 @@ import requests
 import random
 import string
 import tarfile
+from PIL import Image
 import streamlit as st
 from shared.constants import InternalFileType
+from ui_components.methods.common_methods import save_new_image
 from utils import st_memory
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES
 from ui_components.methods.animation_style_methods import calculate_weights, extract_influence_values, \
@@ -48,37 +50,39 @@ def animation_sidebar(shot_uuid, img_list, type_of_frame_distribution, dynamic_f
                         st.success("All frames have been reset to default values.")
                         st.rerun()
                                         
-                editable_entity = st.selectbox("What would you like to edit?", options=["Seconds to next frames", "Speed of transitions", "Freedom between frames","Strength of frames","Motion during frames"], key="editable_entity")
-                if editable_entity == "Seconds to next frames":
-                    entity_new_val = st.slider("What would you like to change it to?", min_value=0.25, max_value=6.00, step=0.25, value=1.0, key="entity_new_val")
-                if editable_entity == "Strength of frames":
-                    entity_new_val = st.slider("What would you like to change it to?", min_value=0.25, max_value=1.0, step=0.01, value=0.5, key="entity_new_val")
-                elif editable_entity == "Speed of transitions":
-                    entity_new_val = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, value=0.6, key="entity_new_val")
-                elif editable_entity == "Freedom between frames":
-                    entity_new_val = st.slider("What would you like to change it to?", min_value=0.15, max_value=0.85, step=0.01, value=0.5, key="entity_new_val")
-                elif editable_entity == "Motion during frames":
-                    entity_new_val = st.slider("What would you like to change it to?", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="entity_new_val")
+                # New feature: Selecting a range to edit
+                range_to_edit = st.slider("Select the range of frames you would like to edit:",
+                                        min_value=1, max_value=len(img_list),
+                                        value=(1, len(img_list)), step=1, key="range_to_edit")
+                edit1, edit2 = st.columns([1, 1])
+                with edit1:
+                    editable_entity = st.selectbox("What would you like to edit?", options=["Seconds to next frames", "Speed of transitions", "Freedom between frames","Strength of frames","Motion during frames"], key="editable_entity")
+                with edit2:
+                    if editable_entity == "Seconds to next frames":
+                        entity_new_val = st.slider("What would you like to change it to?", min_value=0.25, max_value=6.00, step=0.25, value=1.0, key="entity_new_val_seconds")
+                    elif editable_entity == "Strength of frames":
+                        entity_new_val = st.slider("What would you like to change it to?", min_value=0.25, max_value=1.0, step=0.01, value=0.5, key="entity_new_val_strength")
+                    elif editable_entity == "Speed of transitions":
+                        entity_new_val = st.slider("What would you like to change it to?", min_value=0.45, max_value=0.7, step=0.01, value=0.6, key="entity_new_val_speed")
+                    elif editable_entity == "Freedom between frames":
+                        entity_new_val = st.slider("What would you like to change it to?", min_value=0.15, max_value=0.85, step=0.01, value=0.5, key="entity_new_val_freedom")
+                    elif editable_entity == "Motion during frames":
+                        entity_new_val = st.slider("What would you like to change it to?", min_value=0.5, max_value=1.5, step=0.01, value=1.3, key="entity_new_val_motion")
                 
-                bulk1, bulk2 = st.columns([1, 1])
-                with bulk1:
-                    if st.button("Bulk edit", key="bulk_edit", use_container_width=True):
+                if st.button("Bulk edit", key="bulk_edit", use_container_width=True):
+                    start_idx, end_idx = range_to_edit
+                    for idx in range(start_idx - 1, end_idx): # Adjusting index to be 0-based
                         if editable_entity == "Strength of frames":
-                            for idx, _ in enumerate(img_list):
-                                st.session_state[f'strength_of_frame_{shot_uuid}_{idx}'] = entity_new_val
+                            st.session_state[f'strength_of_frame_{shot_uuid}_{idx}'] = entity_new_val
                         elif editable_entity == "Seconds to next frames":
-                            for idx, _ in enumerate(img_list):
-                                st.session_state[f'distance_to_next_frame_{shot_uuid}_{idx}'] = entity_new_val
+                            st.session_state[f'distance_to_next_frame_{shot_uuid}_{idx}'] = entity_new_val
                         elif editable_entity == "Speed of transitions":
-                            for idx, _ in enumerate(img_list):
-                                st.session_state[f'speed_of_transition_{shot_uuid}_{idx}'] = entity_new_val
+                            st.session_state[f'speed_of_transition_{shot_uuid}_{idx}'] = entity_new_val
                         elif editable_entity == "Freedom between frames":
-                            for idx, _ in enumerate(img_list):
-                                st.session_state[f'freedom_between_frames_{shot_uuid}_{idx}'] = entity_new_val
+                            st.session_state[f'freedom_between_frames_{shot_uuid}_{idx}'] = entity_new_val
                         elif editable_entity == "Motion during frames":
-                            for idx, _ in enumerate(img_list):
-                                st.session_state[f'motion_during_frame_{shot_uuid}_{idx}'] = entity_new_val
-                        st.rerun()
+                            st.session_state[f'motion_during_frame_{shot_uuid}_{idx}'] = entity_new_val
+                    st.rerun()
                 
                 st.markdown("***")
                 st.markdown("### Save current settings")
@@ -102,14 +106,15 @@ def animation_sidebar(shot_uuid, img_list, type_of_frame_distribution, dynamic_f
 
                       
 def video_motion_settings(shot_uuid, img_list):
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+
     st.markdown("***")
     st.markdown("##### Overall style settings")
 
-    e1, e2, e3 = st.columns([1, 1,1])
+    e1, _, _ = st.columns([1, 1,1])
     with e1:        
         strength_of_adherence = st.slider("How much would you like to force adherence to the input images?", min_value=0.0, max_value=1.0, step=0.01, key="strength_of_adherence", value=st.session_state[f"strength_of_adherence_value_{shot_uuid}"])
-    with e2:
-        st.info("Higher values may cause flickering and sudden changes in the video. Lower values may cause the video to be less influenced by the input images but can lead to smoother motion and better colours.")
 
     f1, f2, f3 = st.columns([1, 1, 1])
     with f1:
@@ -138,31 +143,54 @@ def video_motion_settings(shot_uuid, img_list):
 
     st.markdown("***")
     st.markdown("##### Overall motion settings")
-    h1, h2, h3 = st.columns([0.5, 1.5, 1])
+    h1, h2, h3 = st.columns([1, 0.5, 1.0])
     with h1:
         # will fix this later
+        def update_motion_for_all_frames(shot_uuid, timing_list):
+            amount_of_motion = st.session_state.get("amount_of_motion_overall", 1.0)  # Default to 1.0 if not set
+            for idx, _ in enumerate(timing_list):
+                st.session_state[f'motion_during_frame_{shot_uuid}_{idx}'] = amount_of_motion
+
         if f"type_of_motion_context_index_{shot_uuid}" in st.session_state and isinstance(st.session_state[f"type_of_motion_context_index_{shot_uuid}"], str):
             st.session_state[f"type_of_motion_context_index_{shot_uuid}"] = ["Low", "Standard", "High"].index(st.session_state[f"type_of_motion_context_index_{shot_uuid}"])
-        type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=False, index=st.session_state[f"type_of_motion_context_index_{shot_uuid}"])
-
-    with h2: 
-        st.info("This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.")
-    st.write("")
-    i1, i3,_ = st.columns([1,2,1])
+        type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=True, index=st.session_state[f"type_of_motion_context_index_{shot.uuid}"], help="This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.")
+        st.session_state[f"amount_of_motion_{shot_uuid}"] = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01,value=1.3, key="amount_of_motion_overall", on_change=lambda: update_motion_for_all_frames(shot.uuid, img_list), help="You can also tweak this on an individual frame level in the advanced settings above.")
+                 
+    i1, i2, i3 = st.columns([1, 0.5, 1.5])
     with i1:
-        amount_of_motion = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01, key="amount_of_motion", value=st.session_state[f"amount_of_motion_{shot_uuid}"])        
-        st.write("")
-        if st.button("Bulk update amount of motion", key="update_motion", help="This will update this value in all the frames"):
-            for idx, _ in enumerate(img_list):
-                st.session_state[f'motion_during_frame_{shot_uuid}_{idx}'] = amount_of_motion                
-            st.success("Updated amount of motion")
-            time.sleep(0.3)
-            st.rerun()
-    with i3:
-        st.write("")
-        st.write("")
-        st.info("This actually updates the motion during frames in the advanced settings above - but we put it here because it has a big impact on the video. You can scroll up to see the changes and tweak for individual frames.")
+        if f'structure_control_image_{shot_uuid}' not in st.session_state:
+            st.session_state[f"structure_control_image_{shot_uuid}"] = None
 
+        if f"strength_of_structure_control_image_{shot_uuid}" not in st.session_state:
+            st.session_state[f"strength_of_structure_control_image_{shot_uuid}"] = None
+        control_motion_with_image = st_memory.toggle("Control motion with an image", help="This will allow you to upload images to control the motion of the video.",key=f"control_motion_with_image_{shot_uuid}")
+
+        if control_motion_with_image:
+            uploaded_image = st.file_uploader("Upload images to control motion", type=["png", "jpg", "jpeg"], accept_multiple_files=False)
+            if st.button("Add image", key="add_images"):
+                if uploaded_image:
+                    project_settings = data_repo.get_project_setting(shot.project.uuid)
+                    width, height = project_settings.width, project_settings.height
+                    # Convert the uploaded image file to PIL Image
+                    uploaded_image_pil = Image.open(uploaded_image)
+                    uploaded_image_pil = uploaded_image_pil.resize((width, height))
+                    st.session_state[f"structure_control_image_{shot.uuid}"] = uploaded_image_pil
+                    st.rerun()
+                else:
+                    st.warning("No images uploaded")
+        else:
+            st.session_state[f"structure_control_image_{shot_uuid}"] = None
+    
+    with i2:
+        if f"structure_control_image_{shot_uuid}" in st.session_state and st.session_state[f"structure_control_image_{shot_uuid}"]:
+            st.info("Control image:")                    
+            st.image(st.session_state[f"structure_control_image_{shot_uuid}"])        
+            st.session_state[f"strength_of_structure_control_image_{shot_uuid}"] = st.slider("Strength of control image:", min_value=0.0, max_value=1.0, step=0.01, key="strength_of_structure_control_image", value=0.5, help="This is how much the control image will influence the motion of the video.")
+            if st.button("Remove image", key="remove_images"):
+                st.session_state[f"structure_control_image_{shot_uuid}"] = None
+                st.success("Image removed")
+                st.rerun()
+                
     return strength_of_adherence, overall_positive_prompt, overall_negative_prompt, type_of_motion_context
 
 def select_motion_lora_element(shot_uuid, model_files):

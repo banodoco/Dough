@@ -33,6 +33,12 @@ MODEL_PATH_DICT = {
 
 # these methods return the workflow along with the output node class name
 class ComfyDataTransform:
+    # there are certain files which need to be stored in a subfolder
+    # creating a dict of filename <-> subfolder_name
+    filename_subfolder_dict = {
+        "structure_control_img": "sci"
+    }
+
     @staticmethod
     def get_workflow_json(model: ComfyWorkflow):
         json_file_path = "./utils/ml_processor/" + MODEL_PATH_DICT[model]["workflow_path"]
@@ -86,7 +92,6 @@ class ComfyDataTransform:
 
         return json.dumps(workflow), output_node_ids, [], []
 
-
     @staticmethod
     def transform_sdxl_controlnet_workflow(query: MLQueryObject):
         data_repo = DataRepo()
@@ -112,7 +117,6 @@ class ComfyDataTransform:
 
         return json.dumps(workflow), output_node_ids, [], []
 
-    
     @staticmethod
     def transform_ipadapter_composition_workflow(query: MLQueryObject):
         data_repo = DataRepo()
@@ -311,19 +315,15 @@ class ComfyDataTransform:
 
     @staticmethod
     def transform_steerable_motion_workflow(query: MLQueryObject):
-
-
-        def update_structure_control_image(json, image, weight):
+        def update_structure_control_image(json, image_uuid, weight):
             # Integrate all updates including new nodes and modifications in a single step
             data_repo = DataRepo()
-            image = data_repo.get_file_from_uuid(image)
-            image = image.filename
-            # image = os.path.basename(image)
+            image = data_repo.get_file_from_uuid(image_uuid)
 
             json.update({
                 "560": {
                     "inputs": {
-                        "image": image,
+                        "image": "sci/" + image.filename,    # TODO: hardcoding for now, pick a proper flow later
                         "upload": "image"
                     },
                     "class_type": "LoadImage",
@@ -366,7 +366,6 @@ class ComfyDataTransform:
                 json["207"]["inputs"]["model"] = ["563", 0]
             
             return json
-
 
         def update_json_with_loras(json_data, loras):
             start_id = 536
@@ -449,13 +448,11 @@ class ComfyDataTransform:
         workflow["543"]["inputs"]["max_frames"] = int(float(sm_data.get('max_frames')))
         workflow["543"]["inputs"]["text"] = sm_data.get('individual_negative_prompts')
 
-        if sm_data.get('structure_control_image'):
-            
-            workflow = update_structure_control_image(workflow, sm_data.get('structure_control_image'), sm_data.get('strength_of_structure_control_image'))
+        if sm_data.get('file_structure_control_img_uuid'):
+            workflow = update_structure_control_image(workflow, sm_data.get('file_structure_control_img_uuid'), sm_data.get('strength_of_structure_control_image'))
 
         ignore_list = sm_data.get("lora_data", [])
         return json.dumps(workflow), output_node_ids, [], ignore_list
-    
 
     @staticmethod
     def transform_dynamicrafter_workflow(query: MLQueryObject):
@@ -477,7 +474,7 @@ class ComfyDataTransform:
         extra_models_list = [
             {
                 "filename": "dynamicrafter_512_interp_v1.ckpt",
-                "url": "https://huggingface.co/Kijai/DynamiCrafter_pruned/blob/resolve/dynamicrafter_512_interp_v1_bf16.safetensors?download=true",
+                "url": "https://huggingface.co/Doubiiu/DynamiCrafter_512_Interp/resolve/main/model.ckpt?download=true",
                 "dest": "./ComfyUI/models/checkpoints/"
             }]
         
@@ -614,18 +611,28 @@ def get_workflow_json_url(workflow_json):
 
 def get_file_list_from_query_obj(query_obj: MLQueryObject):
     file_uuid_list = []
-
+    custom_dest = {}
+    
     if query_obj.image_uuid:
         file_uuid_list.append(query_obj.image_uuid)
     
     if query_obj.mask_uuid:
         file_uuid_list.append(query_obj.mask_uuid)
     
-    for k, v in query_obj.data.get('data', {}).items():
-        if k.startswith("file_"):
-            file_uuid_list.append(v)
+    for file_key, file_uuid in query_obj.data.get('data', {}).items():
+        if file_key.startswith("file_"):
+            dest = ""
+            for filename in ComfyDataTransform.filename_subfolder_dict.keys():
+                if filename in file_key:
+                    dest = ComfyDataTransform.filename_subfolder_dict[filename]
+                    break
+
+            if dest:
+                custom_dest[str(file_uuid)] = dest
+
+            file_uuid_list.append(file_uuid)
     
-    return file_uuid_list
+    return file_uuid_list, custom_dest
 
 # returns the zip file which can be passed to the comfy_runner replicate endpoint
 def get_file_zip_url(file_uuid_list, index_files=False) -> str:

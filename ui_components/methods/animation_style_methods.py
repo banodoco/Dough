@@ -72,11 +72,11 @@ def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):
 def plot_weights(weights_list, frame_numbers_list):
     plt.figure(figsize=(12, 6))
     for i, weights in enumerate(weights_list):
-        frame_numbers = frame_numbers_list[i]
+        frame_numbers = [frame_number / 100 for frame_number in frame_numbers_list[i]]
         plt.plot(frame_numbers, weights, label=f'Frame {i + 1}')
 
     # Plot settings
-    plt.xlabel('Frame Number')
+    plt.xlabel('Seconds')
     plt.ylabel('Weight')
     plt.legend()
     plt.ylim(0, 1.0)
@@ -398,7 +398,7 @@ def update_session_state_with_animation_details(shot_uuid, img_list: List[Intern
     main_setting_data[f"type_of_motion_context_index_{shot.uuid}"] = st.session_state["type_of_motion_context"]
     main_setting_data[f"positive_prompt_video_{shot.uuid}"] = st.session_state["overall_positive_prompt"]
     main_setting_data[f"negative_prompt_video_{shot.uuid}"] = st.session_state["overall_negative_prompt"]
-    main_setting_data[f"amount_of_motion_{shot.uuid}"] = st.session_state["amount_of_motion"]
+    # main_setting_data[f"amount_of_motion_{shot.uuid}"] = st.session_state["amount_of_motion"]
     
     checkpoints_dir = "ComfyUI/models/checkpoints"
     all_files = os.listdir(checkpoints_dir)

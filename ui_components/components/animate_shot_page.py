@@ -1,10 +1,11 @@
 import json
 import streamlit as st
 from shared.constants import InternalFileType
-from ui_components.components.video_rendering_page import sm_video_rendering_page
+from ui_components.components.video_rendering_page import sm_video_rendering_page, two_img_realistic_interpolation_page
 from ui_components.models import InternalShotObject
 from ui_components.widgets.frame_selector import frame_selector_widget
 from ui_components.widgets.variant_comparison_grid import variant_comparison_grid
+from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 from ui_components.widgets.sidebar_logger import sidebar_logger
 
@@ -26,6 +27,13 @@ def animate_shot_page(shot_uuid: str, h2):
     st.markdown("***")
     
     selected_variant = variant_comparison_grid(shot_uuid, stage="Shots")
+    video_rendering_page(shot_uuid, selected_variant)
+    
+
+def video_rendering_page(shot_uuid, selected_variant):
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+
     file_uuid_list = []
     # loading images from a particular video variant
     if selected_variant:
@@ -39,6 +47,18 @@ def animate_shot_page(shot_uuid: str, h2):
                 file_uuid_list.append(timing.primary_image.uuid)
     
     img_list = data_repo.get_all_file_list(uuid__in=file_uuid_list, file_type=InternalFileType.IMAGE.value)[0]
-    sm_video_rendering_page(shot_uuid, img_list)
+    
+    headline1, _, headline3 = st.columns([1, 1, 1])
+    with headline1:
+        st.markdown("### 🎥 Generate animations")  
+        st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+    with headline3:
+        with st.expander("Type of animation", expanded=False):
+            type_of_animation = st_memory.radio("What type of animation would you like to generate?", options=["Batch Creative Interpolation", "2-Image Realistic Interpolation (beta)"],horizontal=True, help="**Batch Creative Interpolaton** lets you input multple images and control the motion and style of each frame - resulting in a fluid, surreal and highly-controllable motion. \n\n **2-Image Realistic Interpolation** is a simpler way to generate animations - it generates a video by interpolating between two images, and is best for realistic motion.",key=f"type_of_animation_{shot.uuid}")
+    
+    if type_of_animation == "Batch Creative Interpolation":
+        sm_video_rendering_page(shot_uuid, img_list)
+    else:
+        two_img_realistic_interpolation_page(shot_uuid, img_list)
 
     st.markdown("***")

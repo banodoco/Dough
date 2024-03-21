@@ -9,6 +9,7 @@ from ui_components.models import InternalFileObject, InternalShotObject
 from ui_components.methods.animation_style_methods import toggle_generate_inference, transform_data, \
     update_session_state_with_animation_details
 from ui_components.methods.video_methods import create_single_interpolated_clip
+from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 
 default_model = "Deliberate_v2.safetensors"
@@ -16,9 +17,6 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
 
-    st.markdown("### 🎥 Generate animations")  
-    st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
-    
     settings = {
         'animation_tool': AnimationToolType.ANIMATEDIFF.value,
     }
@@ -58,6 +56,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
         motion_scale = 1.3
         interpolation_style = 'ease-in-out'
         buffer = 4
+        amount_of_motion = 1.3
 
         (dynamic_strength_values, dynamic_key_frame_influence_values, dynamic_frame_distribution_values, 
         context_length, context_stride, context_overlap, multipled_base_end_percent, multipled_base_adapter_strength, 
@@ -111,14 +110,16 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             animation_stype=AnimationStyleType.CREATIVE_INTERPOLATION.value,            
             max_frames=str(dynamic_frame_distribution_values[-1]),
             lora_data=lora_data,
-            shot_data=shot_meta_data
+            shot_data=shot_meta_data,
+            pil_img_structure_control_image=st.session_state[f"structure_control_image_{shot.uuid}"],   # this is a PIL object
+            strength_of_structure_control_image=st.session_state[f"strength_of_structure_control_image_{shot.uuid}"],
         )
         
         position = "generate_vid"
         st.markdown("***")
         st.markdown("##### Generation Settings")
 
-        animate_col_1, animate_col_2, _ = st.columns([3, 1, 1])
+        animate_col_1, _, _ = st.columns([3, 1, 1])
         with animate_col_1:
             variant_count = st.number_input("How many variants?", min_value=1, max_value=5, value=1, step=1, key="variant_count")
             
@@ -207,3 +208,72 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             individual_negative_prompts, 
             default_model
         )
+        
+
+def two_img_realistic_interpolation_page(shot_uuid, img_list):
+    if not (img_list and len(img_list) >= 2):
+        st.error("You need two images for this interpolation")
+        return
+    
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    
+    settings = {}
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col1:                        
+        st.image(img_list[0].location, use_column_width=True)
+    
+    with col3:                        
+        st.image(img_list[1].location, use_column_width=True)
+
+    with col2:
+        description_of_motion = st_memory.text_area("Describe the motion you want between the frames:", key=f"description_of_motion_{shot.uuid}")
+        st.info("This is very important and will likely require some iteration.")
+        
+    variant_count = 1  # Assuming a default value for variant_count, adjust as necessary
+    vid_quality = "full"  # Assuming full quality, adjust as necessary based on your requirements
+    position = "dynamiccrafter"
+
+    if f"{position}_generate_inference" in st.session_state and st.session_state[f"{position}_generate_inference"]:
+
+        st.success("Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update.")
+        # Assuming the logic to generate the clip based on two images, the described motion, and fixed duration
+        duration = 4  # Fixed duration of 4 seconds
+        data_repo.update_shot(uuid=shot.uuid, duration=duration)
+
+        project_settings = data_repo.get_project_setting(shot.project.uuid)
+        
+        settings.update(
+            duration= duration,
+            animation_style=AnimationStyleType.DIRECT_MORPHING.value,                   
+            output_format="video/h264-mp4",
+            width=project_settings.width,
+            height=project_settings.height,
+            prompt=description_of_motion                
+        )
+
+        create_single_interpolated_clip(
+            shot_uuid,
+            vid_quality,
+            settings,
+            variant_count,
+            st.session_state[f'{shot_uuid}_backlog_enabled']
+        )
+
+        backlog_update = {f'{shot_uuid}_backlog_enabled': False}
+        toggle_generate_inference(position, **backlog_update)
+        st.rerun()
+        
+        
+        # Placeholder for the logic to generate the clip and update session state as needed
+        # This should include calling the function that handles the interpolation process with the updated settings
+
+    # Buttons for adding to queue or backlog, assuming these are still relevant
+    btn1, btn2, btn3 = st.columns([1, 1, 1])
+    backlog_no_update = {f'{shot_uuid}_backlog_enabled': False}
+    with btn1:
+        st.button("Add to queue", key="generate_animation_clip", disabled=False, help="Generate the interpolation clip based on the two images and described motion.", on_click=lambda: toggle_generate_inference(position, **backlog_no_update), type="primary", use_container_width=True)
+
+    backlog_update = {f'{shot_uuid}_backlog_enabled': True}
+    with btn2:
+        st.button("Add to backlog", key="generate_animation_clip_backlog", disabled=False, help="Add the 2-Image Realistic Interpolation to the backlog.", on_click=lambda: toggle_generate_inference(position, **backlog_update), type="secondary")

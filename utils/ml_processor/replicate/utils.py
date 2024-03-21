@@ -34,7 +34,6 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
 
     # handling comfy_runner workflows 
     if model.name == ComfyRunnerModel.name:
-        # TODO: add custom model download option in the replicate cog
         workflow_json, output_node_ids, extra_model_list, ignore_list = get_model_workflow_from_query(model, query_obj)
         workflow_file = get_workflow_json_url(workflow_json)
 
@@ -49,7 +48,7 @@ def get_model_params_from_query_obj(model,  query_obj: MLQueryObject):
             ]
 
         # resizing image for sdxl
-        file_uuid_list = get_file_list_from_query_obj(query_obj)
+        file_uuid_list, custom_dest = get_file_list_from_query_obj(query_obj)   # TODO: handle custom_dest
         if model.display_name() in models_using_sdxl and len(file_uuid_list):
             new_uuid_list = []
             for file_uuid in file_uuid_list:
