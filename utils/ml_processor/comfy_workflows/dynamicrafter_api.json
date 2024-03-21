@@ -1,0 +1,164 @@
+{
+  "2": {
+    "inputs": {
+      "frame_rate": 12,
+      "loop_count": 0,
+      "filename_prefix": "AnimateDiff",
+      "format": "video/h264-mp4",
+      "pix_fmt": "yuv420p",
+      "crf": 19,
+      "save_metadata": true,
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "34",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Video Combine 🎥🅥🅗🅢"
+    }
+  },
+  "11": {
+    "inputs": {
+      "ckpt_name": "dynamicrafter_512_interp_v1.ckpt",
+      "dtype": "auto"
+    },
+    "class_type": "DynamiCrafterModelLoader",
+    "_meta": {
+      "title": "DynamiCrafterModelLoader"
+    }
+  },
+  "12": {
+    "inputs": {
+      "steps": 50,
+      "cfg": 5,
+      "eta": 1,
+      "frames": 16,
+      "prompt": "dolly zoom out",
+      "seed": 262623773159722,
+      "fs": 10,
+      "keep_model_loaded": true,
+      "vae_dtype": "auto",
+      "cut_near_keyframes": 0,
+      "model": [
+        "11",
+        0
+      ],
+      "images": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "DynamiCrafterBatchInterpolation",
+    "_meta": {
+      "title": "DynamiCrafterBatchInterpolation"
+    }
+  },
+  "15": {
+    "inputs": {
+      "image1": [
+        "37",
+        0
+      ],
+      "image2": [
+        "38",
+        0
+      ]
+    },
+    "class_type": "ImageBatch",
+    "_meta": {
+      "title": "Batch Images"
+    }
+  },
+  "16": {
+    "inputs": {
+      "image": "ea47a572b4e5b52ea7da22384232381b3e62048fa715f042b38b4da9 (1) (2).jpg",
+      "upload": "image"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "17": {
+    "inputs": {
+      "image": "2193d9ded46130b41d09133b4b1d2502f0eaa19ea1762252c6581e86 (1) (1).jpg",
+      "upload": "image"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "34": {
+    "inputs": {
+      "ckpt_name": "film_net_fp32.pt",
+      "clear_cache_after_n_frames": 10,
+      "multiplier": 3,
+      "frames": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "FILM VFI",
+    "_meta": {
+      "title": "FILM VFI"
+    }
+  },
+  "35": {
+    "inputs": {
+      "frame_rate": 8,
+      "loop_count": 0,
+      "filename_prefix": "AnimateDiff",
+      "format": "image/gif",
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Video Combine 🎥🅥🅗🅢"
+    }
+  },
+  "37": {
+    "inputs": {
+      "mode": "rescale",
+      "supersample": "true",
+      "resampling": "lanczos",
+      "rescale_factor": 0.7000000000000001,
+      "resize_width": 1024,
+      "resize_height": 1536,
+      "image": [
+        "16",
+        0
+      ]
+    },
+    "class_type": "Image Resize",
+    "_meta": {
+      "title": "Image Resize"
+    }
+  },
+  "38": {
+    "inputs": {
+      "mode": "rescale",
+      "supersample": "true",
+      "resampling": "lanczos",
+      "rescale_factor": 0.7000000000000001,
+      "resize_width": 1024,
+      "resize_height": 1536,
+      "image": [
+        "17",
+        0
+      ]
+    },
+    "class_type": "Image Resize",
+    "_meta": {
+      "title": "Image Resize"
+    }
+  }
+}

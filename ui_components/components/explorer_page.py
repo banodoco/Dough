@@ -22,7 +22,8 @@ from utils import st_memory
 class InputImageStyling(ExtendedEnum):
     TEXT2IMAGE = "Text to Image"
     IMAGE2IMAGE = "Image to Image"
-    CONTROLNET_CANNY = "ControlNet Canny"
+    # CONTROLNET_CANNY = "ControlNet Canny"
+    IPADAPTER_COMPOSITION = "IP-Adapter Composition"
     IPADAPTER_FACE = "IP-Adapter Face"
     IPADAPTER_PLUS = "IP-Adapter Plus"
     IPADPTER_FACE_AND_PLUS = "IP-Adapter Face & Plus"
@@ -207,6 +208,27 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_img2img, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
+                elif generation_method == InputImageStyling.IPADAPTER_COMPOSITION.value:
+                    input_img = st.session_state["input_image_1"]
+                    input_image_file = save_new_image(input_img, project_uuid)
+                    query_obj = MLQueryObject(
+                        timing_uuid=None,
+                        model_uuid=None,
+                        image_uuid=input_image_file.uuid,
+                        guidance_scale=5,
+                        seed=-1,
+                        num_inference_steps=30,
+                        strength=strength_of_image/100,
+                        adapter_type=None,
+                        prompt=prompt,                                                
+                        negative_prompt=negative_prompt,
+                        height=project_settings.height,
+                        width=project_settings.width,
+                        data={'condition_scale': 1, "shot_uuid": shot_uuid}
+                    )
+
+                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_composition, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                
                 elif generation_method == InputImageStyling.CONTROLNET_CANNY.value:
                     edge_pil_img = get_canny_img(st.session_state["input_image_1"], low_threshold=50, high_threshold=150)    # redundant incase of local inference
                     input_img = edge_pil_img if not GPU_INFERENCE_ENABLED else st.session_state["input_image_1"]
@@ -349,7 +371,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please enter a prompt to generate images")
         elif type_of_generation == InputImageStyling.IMAGE2IMAGE.value and st.session_state["input_image_1"] is None:
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
-        elif type_of_generation == InputImageStyling.CONTROLNET_CANNY.value and st.session_state["input_image_1"] is None:
+        elif type_of_generation == InputImageStyling.IPADAPTER_COMPOSITION.value and st.session_state["input_image_1"] is None:
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
         elif type_of_generation == InputImageStyling.IPADAPTER_FACE.value and st.session_state["input_image_1"] is None:
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")

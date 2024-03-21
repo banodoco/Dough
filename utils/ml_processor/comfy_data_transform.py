@@ -27,6 +27,7 @@ MODEL_PATH_DICT = {
     ComfyWorkflow.UPSCALER: {"workflow_path": 'comfy_workflows/video_upscaler_api.json', "output_node_id": [243]},
     ComfyWorkflow.MOTION_LORA: {"workflow_path": 'comfy_workflows/motion_lora_api.json', "output_node_id": [11, 14, 26, 30, 34]},
     # ComfyWorkflow.MOTION_LORA: {"workflow_path": 'comfy_workflows/motion_lora_test_api.json', "output_node_id": [11, 14]},
+    ComfyWorkflow.DYNAMICRAFTER: {"workflow_path": 'comfy_workflows/dynamicrafter_api.json', "output_node_id": [2]}
 }
 
 
@@ -84,7 +85,8 @@ class ComfyDataTransform:
         workflow["42:2"]["inputs"]["seed"] = random_seed()
 
         return json.dumps(workflow), output_node_ids, [], []
-    
+
+
     @staticmethod
     def transform_sdxl_controlnet_workflow(query: MLQueryObject):
         data_repo = DataRepo()
@@ -107,6 +109,33 @@ class ComfyDataTransform:
         workflow["12"]["inputs"]["low_threshold"], workflow["12"]["inputs"]["high_threshold"] = low_threshold, high_threshold
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["13"]["inputs"]["image"] = image_name
+
+        return json.dumps(workflow), output_node_ids, [], []
+
+    
+    @staticmethod
+    def transform_ipadapter_composition_workflow(query: MLQueryObject):
+        data_repo = DataRepo()
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IPADAPTER_COMPOSITION)
+
+        # workflow params
+        width, height = query.width, query.height
+        # width, height = determine_dimensions_for_sdxl(width, height)
+        positive_prompt, negative_prompt = query.prompt, query.negative_prompt
+        steps, cfg = query.num_inference_steps, query.guidance_scale
+        # low_threshold, high_threshold = query.low_threshold, query.high_threshold
+        image = data_repo.get_file_from_uuid(query.image_uuid)
+        image_name = image.filename
+
+        # updating params
+        workflow["9"]["inputs"]["seed"] = random_seed()
+        workflow["10"]["width"], workflow["10"]["height"] = width, height
+        # workflow["17"]["width"], workflow["17"]["height"] = width, height
+        workflow["7"]["inputs"]["text"], workflow["8"]["inputs"]["text"] = positive_prompt, negative_prompt
+        # workflow["12"]["inputs"]["low_threshold"], workflow["12"]["inputs"]["high_threshold"] = low_threshold, high_threshold
+        workflow["9"]["inputs"]["steps"], workflow["9"]["inputs"]["cfg"] = steps, cfg
+        workflow["6"]["inputs"]["image"] = image_name
+        workflow["28"]["inputs"]["weight"] = query.strength
 
         return json.dumps(workflow), output_node_ids, [], []
 
@@ -283,6 +312,62 @@ class ComfyDataTransform:
     @staticmethod
     def transform_steerable_motion_workflow(query: MLQueryObject):
 
+
+        def update_structure_control_image(json, image, weight):
+            # Integrate all updates including new nodes and modifications in a single step
+            data_repo = DataRepo()
+            image = data_repo.get_file_from_uuid(image)
+            image = image.filename
+            # image = os.path.basename(image)
+
+            json.update({
+                "560": {
+                    "inputs": {
+                        "image": image,
+                        "upload": "image"
+                    },
+                    "class_type": "LoadImage",
+                    "_meta": {
+                        "title": "Load Image"
+                    }
+                },
+                "563": {
+                    "inputs": {
+                        "weight": weight,
+                        "noise": 0.3,
+                        "weight_type": "original",
+                        "start_at": 0,
+                        "end_at": 1,
+                        "short_side_tiles": 2,
+                        "tile_weight": 0.6,
+                        "ipadapter": ["564", 0],
+                        "clip_vision": ["370", 0],
+                        "image": ["560", 0],
+                        "model": ["558", 3]
+                    },
+                    "class_type": "IPAdapterTilesMasked",
+                    "_meta": {
+                        "title": "IPAdapter Masked Tiles (experimental)"
+                    }
+                },
+                "564": {
+                    "inputs": {
+                        "ipadapter_file": "ip_plus_composition_sd15.safetensors"
+                    },
+                    "class_type": "IPAdapterModelLoader",
+                    "_meta": {
+                        "title": "Load IPAdapter Model"
+                    }
+                }
+            })
+
+            # Update the "207" node's model pair to point to "563"
+            if "207" in json:
+                json["207"]["inputs"]["model"] = ["563", 0]
+            
+            return json
+
+
         def update_json_with_loras(json_data, loras):
             start_id = 536
             new_ids = []
@@ -321,8 +406,7 @@ class ComfyDataTransform:
         sm_data = query.data.get('data', {})
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.STEERABLE_MOTION)
         workflow = update_json_with_loras(workflow, sm_data.get('lora_data'))
-
-        print(sm_data)
+    
         workflow['464']['inputs']['height'] = sm_data.get('height')
         workflow['464']['inputs']['width'] = sm_data.get('width')
         
@@ -365,13 +449,40 @@ class ComfyDataTransform:
         workflow["543"]["inputs"]["max_frames"] = int(float(sm_data.get('max_frames')))
         workflow["543"]["inputs"]["text"] = sm_data.get('individual_negative_prompts')
 
-        # download the json file as text.json
-        # with open("text.json", "w") as f:
-        #     f.write(json.dumps(workflow))
+        if sm_data.get('structure_control_image'):
+            
+            workflow = update_structure_control_image(workflow, sm_data.get('structure_control_image'), sm_data.get('strength_of_structure_control_image'))
 
         ignore_list = sm_data.get("lora_data", [])
         return json.dumps(workflow), output_node_ids, [], ignore_list
     
+
+    @staticmethod
+    def transform_dynamicrafter_workflow(query: MLQueryObject):
+        data_repo = DataRepo()
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.DYNAMICRAFTER)
+        sm_data = query.data.get('data', {})        
+                        
+        image_1 = data_repo.get_file_from_uuid(sm_data.get('file_image_0001_uuid'))
+        image_2 = data_repo.get_file_from_uuid(sm_data.get('file_image_0002_uuid'))
+                
+        workflow['16']['inputs']['image'] = image_1.filename
+        workflow['17']['inputs']['image'] = image_2.filename
+        workflow['12']['inputs']['seed'] = random_seed()
+        workflow['12']['inputs']['steps'] = 50
+        workflow['12']['inputs']['cfg'] = 4
+        workflow['12']['inputs']['prompt'] = sm_data.get('prompt')
+
+
+        extra_models_list = [
+            {
+                "filename": "dynamicrafter_512_interp_v1.ckpt",
+                "url": "https://huggingface.co/Kijai/DynamiCrafter_pruned/blob/resolve/dynamicrafter_512_interp_v1_bf16.safetensors?download=true",
+                "dest": "./ComfyUI/models/checkpoints/"
+            }]
+        
+        return json.dumps(workflow), output_node_ids, extra_models_list, []
+
     @staticmethod
     def transform_video_upscaler_workflow(query: MLQueryObject):
         data_repo = DataRepo()
@@ -469,12 +580,14 @@ MODEL_WORKFLOW_MAP = {
     ML_MODEL.sdxl.workflow_name: ComfyDataTransform.transform_sdxl_workflow,
     ML_MODEL.sdxl_controlnet.workflow_name: ComfyDataTransform.transform_sdxl_controlnet_workflow,
     ML_MODEL.sdxl_controlnet_openpose.workflow_name: ComfyDataTransform.transform_sdxl_controlnet_openpose_workflow,
+    ML_MODEL.ipadapter_composition.workflow_name: ComfyDataTransform.transform_ipadapter_composition_workflow,
     ML_MODEL.llama_2_7b.workflow_name: ComfyDataTransform.transform_llama_2_7b_workflow,
     ML_MODEL.sdxl_inpainting.workflow_name: ComfyDataTransform.transform_sdxl_inpainting_workflow,
     ML_MODEL.ipadapter_plus.workflow_name: ComfyDataTransform.transform_ipadaptor_plus_workflow,
     ML_MODEL.ipadapter_face.workflow_name: ComfyDataTransform.transform_ipadaptor_face_workflow,
     ML_MODEL.ipadapter_face_plus.workflow_name: ComfyDataTransform.transform_ipadaptor_face_plus_workflow,
     ML_MODEL.ad_interpolation.workflow_name: ComfyDataTransform.transform_steerable_motion_workflow,
+    ML_MODEL.dynamicrafter.workflow_name: ComfyDataTransform.transform_dynamicrafter_workflow,
     ML_MODEL.sdxl_img2img.workflow_name: ComfyDataTransform.transform_sdxl_img2img_workflow,
     ML_MODEL.video_upscaler.workflow_name: ComfyDataTransform.transform_video_upscaler_workflow,
     ML_MODEL.motion_lora_trainer.workflow_name: ComfyDataTransform.transform_motion_lora_workflow
