@@ -401,7 +401,44 @@ class ComfyDataTransform:
                     json_data["545"]["inputs"]["motion_lora"][0] = "536"
 
             return json_data
-    
+
+        def convert_to_animate_lcm(json_data):
+            json_data.update(
+                {
+                    "565": {
+                        "inputs": {
+                        "lora_name": "AnimateLCM_sd15_t2v_lora.safetensors",
+                        "strength_model": 0.8,
+                        "strength_clip": 1,
+                        "model": [
+                            "470",
+                            0
+                        ],
+                        "clip": [
+                            "470",
+                            1
+                        ]
+                        },
+                        "class_type": "LoraLoader",
+                        "_meta": {
+                        "title": "Load LoRA"
+                        }
+                    }
+                }
+            )
+            
+            json_data["558"]["inputs"]["model"] = ["565", 0]
+            json_data["541"]["inputs"]["clip"] = ["565", 1]
+            json_data["547"]["inputs"]["beta_schedule"] = "lcm avg(sqrt_linear,linear)"
+            
+            json_data["207"]["inputs"]["sample_name"] = "lcm"
+            json_data["207"]["inputs"]["steps"] = 8
+            json_data["207"]["inputs"]["cfg"] = 2.2
+            json_data["207"]["inputs"]["sample_name"] = "sgm_uniform"
+            
+            return json_data
+        
+        extra_models_list = []
         sm_data = query.data.get('data', {})
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.STEERABLE_MOTION)
         workflow = update_json_with_loras(workflow, sm_data.get('lora_data'))
@@ -451,8 +488,18 @@ class ComfyDataTransform:
         if sm_data.get('file_structure_control_img_uuid'):
             workflow = update_structure_control_image(workflow, sm_data.get('file_structure_control_img_uuid'), sm_data.get('strength_of_structure_control_image'))
 
+        if sm_data.get("use_ad_lcm", False):
+            workflow = convert_to_animate_lcm(workflow)
+            extra_models_list = [
+                {
+                    "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
+                    "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
+                    "dest": "./ComfyUI/models/loras/"
+                }
+            ]
+        
         ignore_list = sm_data.get("lora_data", [])
-        return json.dumps(workflow), output_node_ids, [], ignore_list
+        return json.dumps(workflow), output_node_ids, extra_models_list, ignore_list
 
     @staticmethod
     def transform_dynamicrafter_workflow(query: MLQueryObject):

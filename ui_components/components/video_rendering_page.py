@@ -119,6 +119,20 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
         st.markdown("***")
         st.markdown("##### Generation Settings")
 
+        if f"type_of_generation_index_{shot.uuid}" not in st.session_state or \
+            not isinstance(st.session_state[f"type_of_generation_index_{shot.uuid}"], int):
+            st.session_state[f"type_of_generation_index_{shot.uuid}"] = 0
+
+        generation_types = ["Fast", "Detailed"]
+        type_of_generation = st.radio(
+            "Type of generation:", 
+            options=generation_types, 
+            key="creative_interpolation_type", 
+            horizontal=True, 
+            index=st.session_state[f"type_of_generation_index_{shot.uuid}"], 
+            help=""
+        )
+        
         animate_col_1, _, _ = st.columns([3, 1, 1])
         with animate_col_1:
             variant_count = st.number_input("How many variants?", min_value=1, max_value=5, value=1, step=1, key="variant_count")
@@ -151,9 +165,12 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     lora_data,
                     default_model,
                     image.uuid if image else None,
-                    settings["strength_of_structure_control_image"]
+                    settings["strength_of_structure_control_image"],
+                    generation_types.index(st.session_state['creative_interpolation_type'])
                 )
                 settings.update(shot_data=shot_data)
+                settings.update(type_of_generation=type_of_generation)
+
                 vid_quality = "full"
                 st.success("Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update.")
 

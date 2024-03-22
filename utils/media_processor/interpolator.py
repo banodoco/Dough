@@ -94,7 +94,8 @@ class VideoInterpolator:
                 "max_frames": settings["max_frames"],
                 "lora_data": settings["lora_data"],
                 "shot_data": settings["shot_data"],
-                "strength_of_structure_control_image": settings["strength_of_structure_control_image"]
+                "strength_of_structure_control_image": settings["strength_of_structure_control_image"],
+                "use_ad_lcm": True if settings["type_of_generation"] == "Fast" else False
             }
 
             # adding the input images
