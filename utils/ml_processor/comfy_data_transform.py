@@ -394,62 +394,6 @@ class ComfyDataTransform:
             
             return json
 
-
-        def update_structure_control_image(json, image, weight):
-            # Integrate all updates including new nodes and modifications in a single step
-            data_repo = DataRepo()
-            image = data_repo.get_file_from_uuid(image)
-            image = image.filename
-            # image = os.path.basename(image)
-
-            json.update({
-                "560": {
-                    "inputs": {
-                        "image": image,
-                        "upload": "image"
-                    },
-                    "class_type": "LoadImage",
-                    "_meta": {
-                        "title": "Load Image"
-                    }
-                },
-                "563": {
-                    "inputs": {
-                        "weight": weight,
-                        "noise": 0.3,
-                        "weight_type": "original",
-                        "start_at": 0,
-                        "end_at": 1,
-                        "short_side_tiles": 2,
-                        "tile_weight": 0.6,
-                        "ipadapter": ["564", 0],
-                        "clip_vision": ["370", 0],
-                        "image": ["560", 0],
-                        "model": ["558", 3]
-                    },
-                    "class_type": "IPAdapterTilesMasked",
-                    "_meta": {
-                        "title": "IPAdapter Masked Tiles (experimental)"
-                    }
-                },
-                "564": {
-                    "inputs": {
-                        "ipadapter_file": "ip_plus_composition_sd15.safetensors"
-                    },
-                    "class_type": "IPAdapterModelLoader",
-                    "_meta": {
-                        "title": "Load IPAdapter Model"
-                    }
-                }
-            })
-
-            # Update the "207" node's model pair to point to "563"
-            if "207" in json:
-                json["207"]["inputs"]["model"] = ["563", 0]
-            
-            return json
-
-
         def update_json_with_loras(json_data, loras):
             start_id = 536
             new_ids = []
