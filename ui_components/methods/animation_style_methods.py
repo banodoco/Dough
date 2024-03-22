@@ -64,6 +64,10 @@ def load_shot_settings(shot_uuid, log_uuid=None):
                 st.session_state[key] = main_setting_data[key]
                 if key == f"structure_control_image_uuid_{shot_uuid}" and not main_setting_data[key]:   # hackish sol, will fix later
                     st.session_state[f"structure_control_image_{shot_uuid}"] = None
+                elif key == f"type_of_generation_index_{shot.uuid}":
+                    if not isinstance(st.session_state[key], int):
+                        st.session_state[key] = 0
+                    st.session_state["creative_interpolation_type"] = ["Fast", "Detailed"][st.session_state[key]]
                     
             st.rerun()
         elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
@@ -393,7 +397,8 @@ def update_session_state_with_animation_details(shot_uuid,
         lora_data, 
         default_model,
         structure_control_img_uuid = None,
-        strength_of_structure_control_img = None
+        strength_of_structure_control_img = None,
+        type_of_generation_index = 0
     ):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
@@ -432,6 +437,7 @@ def update_session_state_with_animation_details(shot_uuid,
     main_setting_data[f"amount_of_motion_{shot.uuid}"] = st.session_state["amount_of_motion_overall"]
     main_setting_data[f"structure_control_image_uuid_{shot.uuid}"] = structure_control_img_uuid
     main_setting_data[f"saved_strength_of_structure_control_image_{shot.uuid}"] = strength_of_structure_control_img
+    main_setting_data[f"type_of_generation_index_{shot.uuid}"] = type_of_generation_index
     
     checkpoints_dir = "ComfyUI/models/checkpoints"
     all_files = os.listdir(checkpoints_dir)
