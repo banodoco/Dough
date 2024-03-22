@@ -55,6 +55,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
                     } for idx, timing in enumerate(timing_list)]
                     st.session_state[f"shot_data_{shot_uuid}"] = pd.DataFrame(shot_data)
             else:
+                st.info("Use this to move frames")
                 st.session_state[f"shot_data_{shot_uuid}"] = None
 
                                                  

@@ -98,18 +98,9 @@ def create_new_user_data(user: InternalUserObject):
 def create_new_project(user: InternalUserObject, project_name: str, width=512, height=512):
     data_repo = DataRepo()
 
-    # Use get_all_project_list to check for existing projects for the user
     existing_projects_list = data_repo.get_all_project_list(user.uuid)
+    add_initial_frames = False if (existing_projects_list and len(existing_projects_list)) else True
 
-    # If no projects are returned, set existing_projects_list to an empty list
-    existing_projects_list = existing_projects_list if existing_projects_list is not None else []
-
-    # Determine if initial frames should be added based on whether any projects are returned
-    add_initial_frames = len(existing_projects_list) == 0
-
-    # Determine if initial frames should be added based on whether any projects are returned    
-
-    # Proceed with creating a new project
     project_data = {
         "user_id": user.uuid,
         "name": project_name,

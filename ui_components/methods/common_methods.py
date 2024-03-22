@@ -3,6 +3,7 @@ import random
 from typing import List
 import os
 from PIL import Image, ImageDraw, ImageFilter
+from utils.local_storage.local_storage import write_to_motion_lora_local_db
 from moviepy.editor import *
 import cv2
 import requests as r
@@ -824,12 +825,66 @@ def process_inference_output(**kwargs):
             del kwargs['log_uuid']
             data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
 
+    # --------------------- MOTION LORA TRAINING --------------------------
+    elif inference_type == InferenceType.MOTION_LORA_TRAINING.value:
+        output = kwargs.get('output')
+        log_uuid = kwargs.get('log_uuid')
+        
+        if output and len(output):
+            # output is a list of generated videos
+            # we store video_url <--> motion_lora map in a json file
+            
+            # NOTE: need to convert 'lora_trainer' into a separate module if it needs to work on hosted version
+            # fetching the current generated loras
+            spatial_lora_path = os.path.join('ComfyUI', 'models', 'loras', 'trained_spatial')
+            temporal_lora_path = os.path.join('ComfyUI', 'models', 'animatediff_motion_lora')
+            lora_path = temporal_lora_path
+            _, latest_trained_files = get_latest_project_files(lora_path)
+            
+            cur_idx, data = 0, {}
+            for vid in output:
+                if vid.endswith(".gif"):
+                    data[latest_trained_files[cur_idx]] = vid
+                    cur_idx += 1
+                    
+            write_to_motion_lora_local_db(data)
+        else:
+            del kwargs['log_uuid']
+            data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
+        
     if inference_time:
         credits_used = round(inference_time * 0.004, 3)     # make this more granular for different models
         data_repo.update_usage_credits(-credits_used, log_uuid)
 
     return True
 
+def get_latest_project_files(parent_directory):
+    latest_project = None
+    latest_time = 0
+
+    for date_folder in os.listdir(parent_directory):
+        date_folder_path = os.path.join(parent_directory, date_folder)
+
+        if os.path.isdir(date_folder_path):
+            for time_folder in os.listdir(date_folder_path):
+                time_folder_path = os.path.join(date_folder_path, time_folder)
+
+                if os.path.isdir(time_folder_path):
+                    for project_name_folder in os.listdir(time_folder_path):
+                        project_folder_path = os.path.join(time_folder_path, project_name_folder)
+                        
+                        if os.path.isdir(project_folder_path):
+                            creation_time = os.path.getctime(project_folder_path)
+                            
+                            if creation_time > latest_time:
+                                latest_time = creation_time
+                                latest_project = project_folder_path
+
+    if latest_project:
+        latest_files = sorted(os.listdir(latest_project))
+        return latest_project, latest_files
+    else:
+        return None, None
 
 def check_project_meta_data(project_uuid):
     '''

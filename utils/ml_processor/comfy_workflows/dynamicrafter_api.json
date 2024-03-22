@@ -23,7 +23,8 @@
   "11": {
     "inputs": {
       "ckpt_name": "dynamicrafter_512_interp_v1.ckpt",
-      "dtype": "auto"
+      "dtype": "auto",
+      "fp8_unet": false
     },
     "class_type": "DynamiCrafterModelLoader",
     "_meta": {

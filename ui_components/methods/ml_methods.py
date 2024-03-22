@@ -188,12 +188,51 @@ from utils.ml_processor.constants import ML_MODEL, MLModel
 #         emotion = (f"neutral expression")
 #     return emotion
 
+# NOTE: don't update max_step, its logic is hardcoded at the moment
+def train_motion_lora(input_video: InternalFileObject, lora_prompt: str, lora_name: str, width, height, ckpt, max_step = 500):
+    query_obj = MLQueryObject(
+        timing_uuid=None,
+        model_uuid=None,
+        guidance_scale=7.5,
+        seed=-1,
+        num_inference_steps=25,            
+        strength=0.7,
+        adapter_type=None,
+        prompt=lora_prompt,
+        negative_prompt="",
+        width=width,
+        height=height,
+        low_threshold=100,
+        high_threshold=200,
+        image_uuid=None,
+        mask_uuid=None,
+        data={
+            "file_video":  input_video.uuid,
+            "max_step": max_step,
+            "lora_name": lora_name,
+            "ckpt": ckpt
+        }
+    )
+    
+    ml_client = get_ml_client()
+    output, log = ml_client.predict_model_output_standardized(
+        ML_MODEL.motion_lora_trainer, 
+        query_obj,
+        QUEUE_INFERENCE_QUERIES
+    )
+
+    if log:
+        inference_data = {
+            "inference_type": InferenceType.MOTION_LORA_TRAINING.value,
+            "output": output,
+            "log_uuid": log.uuid,
+            "settings": {}
+        }
+        
+        process_inference_output(**inference_data)
+
 def inpainting(input_image: str, prompt, negative_prompt, width, height, shot_uuid, project_uuid) -> InternalFileObject:
     data_repo = DataRepo()
-    # timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
-
-  
-    project = data_repo.get_project_from_uuid(project_uuid)
     mask = st.session_state['mask_to_use']
 
     if not mask.startswith("http"):

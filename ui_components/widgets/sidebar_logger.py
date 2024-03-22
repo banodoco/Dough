@@ -194,6 +194,10 @@ def sidebar_logger(shot_uuid):
                                 st.session_state['frame_styling_view_type'] = "Explorer"
                                 
                                 st.rerun()
+                                
+                shot_data = origin_data.get("shot_data", None)
+                if shot_data:
+                    pass        # add jump_to_shot element
                 
             # if it's not the last log
             #if _ != len(log_list) - 1:
