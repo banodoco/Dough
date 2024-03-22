@@ -42,18 +42,8 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
     elif quality == 'preview':
         interpolation_steps = 3
 
-    img_list = [t.primary_image.location for t in timing_list]
     settings.update(interpolation_steps=interpolation_steps)
     settings.update(file_uuid_list=[t.primary_image.uuid for t in timing_list])
-    
-    # converting PIL imgs to InternalFileObject
-    from ui_components.methods.common_methods import save_new_image
-    for key in settings.keys():
-        if key.startswith("pil_img_") and settings[key]:
-            image = save_new_image(settings[key], shot.project.uuid)
-            del settings[key]
-            new_key = key.replace("pil_img_", "") + "_uuid"
-            settings[new_key] = image.uuid
 
     # res is an array of tuples (video_bytes, log)
     res = VideoInterpolator.create_interpolated_clip(

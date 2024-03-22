@@ -6,6 +6,7 @@ import streamlit as st
 from backend.models import InternalFileObject
 from shared.constants import InferenceParamType
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, ShotMetaData
+from utils.constants import AnimateShotMethod
 from utils.data_repo.data_repo import DataRepo
 import numpy as np
 import matplotlib.pyplot as plt
@@ -17,10 +18,15 @@ def get_generation_settings_from_log(log_uuid=None):
     input_params = json.loads(log.input_params) if log.input_params else {}
     query_obj = json.loads(input_params.get(InferenceParamType.QUERY_DICT.value, json.dumps({})))
     shot_meta_data = query_obj['data'].get('data', {}).get("shot_data", {})
-    shot_meta_data = json.loads(shot_meta_data.get("motion_data")) if shot_meta_data \
-        and "motion_data" in shot_meta_data else None
+    data_type = None
+    if shot_meta_data and ShotMetaData.MOTION_DATA.value in shot_meta_data:
+        data_type = ShotMetaData.MOTION_DATA.value
+    elif shot_meta_data and ShotMetaData.DYNAMICRAFTER_DATA.value in shot_meta_data:
+        data_type = ShotMetaData.DYNAMICRAFTER_DATA.value
     
-    return shot_meta_data
+    shot_meta_data = json.loads(shot_meta_data.get(data_type)) if data_type else None
+    
+    return shot_meta_data, data_type
 
 def load_shot_settings(shot_uuid, log_uuid=None):
     data_repo = DataRepo()
@@ -31,29 +37,41 @@ def load_shot_settings(shot_uuid, log_uuid=None):
     if not log_uuid:
         shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, json.dumps({}))
         shot_meta_data = json.loads(shot_meta_data)
+        data_type = None
         st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
                     
     # loading settings from that particular log
     else:
-        shot_meta_data = get_generation_settings_from_log(log_uuid)
+        shot_meta_data, data_type = get_generation_settings_from_log(log_uuid)
         st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = log_uuid
     
     if shot_meta_data:
-        # updating timing data
-        timing_data = shot_meta_data.get("timing_data", [])
-        for idx, _ in enumerate(shot.timing_list):  # fix: check how the image list is being stored here and use that instead
-            # setting default parameters (fetching data from the shot if it's present)
-            if timing_data and len(timing_data) >= idx + 1:
-                motion_data = timing_data[idx]
+        if not data_type or data_type == ShotMetaData.MOTION_DATA.value:
+            st.session_state[f"type_of_animation_{shot.uuid}"] = 0
+            # updating timing data
+            timing_data = shot_meta_data.get("timing_data", [])
+            for idx, _ in enumerate(shot.timing_list):  # fix: check how the image list is being stored here and use that instead
+                # setting default parameters (fetching data from the shot if it's present)
+                if timing_data and len(timing_data) >= idx + 1:
+                    motion_data = timing_data[idx]
 
-            for k, v in motion_data.items():
-                st.session_state[f'{k}_{shot_uuid}_{idx}'] = v
-        
-        # updating other settings main settings
-        main_setting_data = shot_meta_data.get("main_setting_data", {})
-        for key in main_setting_data:
+                for k, v in motion_data.items():
+                    st.session_state[f'{k}_{shot_uuid}_{idx}'] = v
+            
+            # updating other settings main settings
+            main_setting_data = shot_meta_data.get("main_setting_data", {})
+            for key in main_setting_data:
                 st.session_state[key] = main_setting_data[key]
-        st.rerun()
+                if key == f"structure_control_image_uuid_{shot_uuid}" and not main_setting_data[key]:   # hackish sol, will fix later
+                    st.session_state[f"structure_control_image_{shot_uuid}"] = None
+                    
+            st.rerun()
+        elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
+            st.session_state[f"type_of_animation_{shot.uuid}"] = 1
+            main_setting_data = shot_meta_data.get("main_setting_data", {})
+            for key in main_setting_data:
+                st.session_state[key] = main_setting_data[key]
+            st.rerun()
     else:
         for idx, _ in enumerate(shot.timing_list):  # fix: check how the image list is being stored here
             for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
@@ -363,7 +381,20 @@ def transform_data(strength_of_frames, movements_between_frames, speeds_of_trans
             
     return output_strength, output_speeds, cumulative_distances, context_length, context_stride, context_overlap, multipled_base_end_percent, multipled_base_adapter_strength, formatted_individual_prompts, formatted_individual_negative_prompts,motions_during_frames
 
-def update_session_state_with_animation_details(shot_uuid, img_list: List[InternalFileObject], strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts, lora_data, default_model):
+def update_session_state_with_animation_details(shot_uuid, 
+        img_list: List[InternalFileObject], 
+        strength_of_frames, 
+        distances_to_next_frames, 
+        speeds_of_transitions, 
+        freedoms_between_frames, 
+        motions_during_frames, 
+        individual_prompts, 
+        individual_negative_prompts, 
+        lora_data, 
+        default_model,
+        structure_control_img_uuid = None,
+        strength_of_structure_control_img = None
+    ):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     meta_data = shot.meta_data_dict
@@ -398,7 +429,9 @@ def update_session_state_with_animation_details(shot_uuid, img_list: List[Intern
     main_setting_data[f"type_of_motion_context_index_{shot.uuid}"] = st.session_state["type_of_motion_context"]
     main_setting_data[f"positive_prompt_video_{shot.uuid}"] = st.session_state["overall_positive_prompt"]
     main_setting_data[f"negative_prompt_video_{shot.uuid}"] = st.session_state["overall_negative_prompt"]
-    # main_setting_data[f"amount_of_motion_{shot.uuid}"] = st.session_state["amount_of_motion"]
+    main_setting_data[f"amount_of_motion_{shot.uuid}"] = st.session_state["amount_of_motion_overall"]
+    main_setting_data[f"structure_control_image_uuid_{shot.uuid}"] = structure_control_img_uuid
+    main_setting_data[f"saved_strength_of_structure_control_image_{shot.uuid}"] = strength_of_structure_control_img
     
     checkpoints_dir = "ComfyUI/models/checkpoints"
     all_files = os.listdir(checkpoints_dir)
@@ -411,8 +444,7 @@ def update_session_state_with_animation_details(shot_uuid, img_list: List[Intern
     else:
         main_setting_data[f'ckpt_{shot.uuid}'] = default_model
     
-    meta_data.update(
-        {
+    update_data = {
             ShotMetaData.MOTION_DATA.value : json.dumps(
                 {
                     "timing_data": timing_data,
@@ -420,7 +452,32 @@ def update_session_state_with_animation_details(shot_uuid, img_list: List[Intern
                 }
             )
         }
-    )
 
+    meta_data.update(update_data)
     data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
-    return meta_data
+    return update_data
+
+# saving dynamic crafter generation details
+def update_session_state_with_dc_details(
+    shot_uuid,
+    img_list,
+    video_desc
+):
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    meta_data = shot.meta_data_dict
+    main_setting_data = {}
+    for idx, img in enumerate(img_list):
+        main_setting_data[f'img{idx+1}_uuid_{shot_uuid}'] = img.uuid
+
+    main_setting_data[f'video_desc_{shot_uuid}'] = video_desc
+    update_data = {
+            ShotMetaData.DYNAMICRAFTER_DATA.value : json.dumps(
+                {
+                    "main_setting_data": main_setting_data
+                }
+            )
+        }
+    meta_data.update(update_data)
+    data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
+    return update_data

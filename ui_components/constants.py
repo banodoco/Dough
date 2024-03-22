@@ -17,7 +17,8 @@ class CreativeProcessType(ExtendedEnum):
     MOTION = "Shots"
 
 class ShotMetaData(ExtendedEnum):
-    MOTION_DATA = "motion_data"     # {"timing_data": [...]}
+    MOTION_DATA = "motion_data"     # {"timing_data": [...], "main_setting_data": {}}
+    DYNAMICRAFTER_DATA = "dynamicrafter_data"
     
 class GalleryImageViewType(ExtendedEnum):
     EXPLORER_ONLY = "explorer"

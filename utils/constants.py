@@ -16,6 +16,9 @@ class ImageStage(ExtendedEnum):
     MAIN_VARIANT = 'Main Variant'
     NONE = 'None'
 
+class AnimateShotMethod(ExtendedEnum):  # remove this and have a common nomenclature throughout
+    BATCH_CREATIVE_INTERPOLATION = "Batch Creative Interpolation"
+    DYNAMICRAFTER_INTERPOLATION = "2-Image Realistic Interpolation (beta)"
 
 # single template for passing query params
 class MLQueryObject:

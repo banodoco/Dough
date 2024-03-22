@@ -7,7 +7,7 @@ from ui_components.widgets.sm_animation_style_element import animation_sidebar, 
     select_motion_lora_element, select_sd_model_element, video_motion_settings
 from ui_components.models import InternalFileObject, InternalShotObject
 from ui_components.methods.animation_style_methods import toggle_generate_inference, transform_data, \
-    update_session_state_with_animation_details
+    update_session_state_with_animation_details, update_session_state_with_dc_details
 from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
@@ -39,7 +39,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
         
         # ----------- OTHER SETTINGS ------------
         strength_of_adherence, overall_positive_prompt, \
-            overall_negative_prompt, type_of_motion_context = video_motion_settings(shot_uuid, img_list)
+            overall_negative_prompt, type_of_motion_context, amount_of_motion = video_motion_settings(shot_uuid, img_list)
         
         type_of_frame_distribution = "dynamic"
         type_of_key_frame_influence = "dynamic"
@@ -56,7 +56,6 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
         motion_scale = 1.3
         interpolation_style = 'ease-in-out'
         buffer = 4
-        amount_of_motion = 1.3
 
         (dynamic_strength_values, dynamic_key_frame_influence_values, dynamic_frame_distribution_values, 
         context_length, context_stride, context_overlap, multipled_base_end_percent, multipled_base_adapter_strength, 
@@ -109,6 +108,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             individual_negative_prompts=negative_prompt_travel,
             animation_stype=AnimationStyleType.CREATIVE_INTERPOLATION.value,            
             max_frames=str(dynamic_frame_distribution_values[-1]),
+            amount_of_motion=amount_of_motion,
             lora_data=lora_data,
             shot_data=shot_meta_data,
             pil_img_structure_control_image=st.session_state[f"structure_control_image_{shot.uuid}"],   # this is a PIL object
@@ -127,6 +127,17 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                 # last keyframe position * 16
                 duration = float(dynamic_frame_distribution_values[-1] / 16)
                 data_repo.update_shot(uuid=shot_uuid, duration=duration)
+
+                # converting PIL imgs to InternalFileObject
+                from ui_components.methods.common_methods import save_new_image
+                key = "pil_img_structure_control_image"
+                image = None
+                if settings[key]:
+                    image = save_new_image(settings[key], shot.project.uuid)
+                    del settings[key]
+                    new_key = key.replace("pil_img_", "") + "_uuid"
+                    settings[new_key] = image.uuid
+                
                 shot_data = update_session_state_with_animation_details(
                     shot_uuid, 
                     img_list, 
@@ -138,7 +149,9 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     individual_prompts, 
                     individual_negative_prompts,
                     lora_data,
-                    default_model
+                    default_model,
+                    image.uuid if image else None,
+                    settings["strength_of_structure_control_image"]
                 )
                 settings.update(shot_data=shot_data)
                 vid_quality = "full"
@@ -227,7 +240,8 @@ def two_img_realistic_interpolation_page(shot_uuid, img_list):
         st.image(img_list[1].location, use_column_width=True)
 
     with col2:
-        description_of_motion = st_memory.text_area("Describe the motion you want between the frames:", key=f"description_of_motion_{shot.uuid}")
+        description_of_motion = st.text_area("Describe the motion you want between the frames:", \
+            key=f"description_of_motion_{shot.uuid}", value=st.session_state[f'video_desc_{shot_uuid}'])
         st.info("This is very important and will likely require some iteration.")
         
     variant_count = 1  # Assuming a default value for variant_count, adjust as necessary
@@ -235,14 +249,18 @@ def two_img_realistic_interpolation_page(shot_uuid, img_list):
     position = "dynamiccrafter"
 
     if f"{position}_generate_inference" in st.session_state and st.session_state[f"{position}_generate_inference"]:
-
         st.success("Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update.")
         # Assuming the logic to generate the clip based on two images, the described motion, and fixed duration
         duration = 4  # Fixed duration of 4 seconds
         data_repo.update_shot(uuid=shot.uuid, duration=duration)
 
         project_settings = data_repo.get_project_setting(shot.project.uuid)
-        
+        meta_data = update_session_state_with_dc_details(
+            shot_uuid,
+            img_list,
+            description_of_motion,
+        )
+        settings.update(shot_data=meta_data)
         settings.update(
             duration= duration,
             animation_style=AnimationStyleType.DIRECT_MORPHING.value,                   
@@ -263,10 +281,6 @@ def two_img_realistic_interpolation_page(shot_uuid, img_list):
         backlog_update = {f'{shot_uuid}_backlog_enabled': False}
         toggle_generate_inference(position, **backlog_update)
         st.rerun()
-        
-        
-        # Placeholder for the logic to generate the clip and update session state as needed
-        # This should include calling the function that handles the interpolation process with the updated settings
 
     # Buttons for adding to queue or backlog, assuming these are still relevant
     btn1, btn2, btn3 = st.columns([1, 1, 1])

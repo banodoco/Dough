@@ -154,7 +154,7 @@ def video_motion_settings(shot_uuid, img_list):
         if f"type_of_motion_context_index_{shot_uuid}" in st.session_state and isinstance(st.session_state[f"type_of_motion_context_index_{shot_uuid}"], str):
             st.session_state[f"type_of_motion_context_index_{shot_uuid}"] = ["Low", "Standard", "High"].index(st.session_state[f"type_of_motion_context_index_{shot_uuid}"])
         type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=True, index=st.session_state[f"type_of_motion_context_index_{shot.uuid}"], help="This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.")
-        st.session_state[f"amount_of_motion_{shot_uuid}"] = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01,value=1.3, key="amount_of_motion_overall", on_change=lambda: update_motion_for_all_frames(shot.uuid, img_list), help="You can also tweak this on an individual frame level in the advanced settings above.")
+        amount_of_motion = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01, value=st.session_state[f"amount_of_motion_{shot_uuid}"], key="amount_of_motion_overall", on_change=lambda: update_motion_for_all_frames(shot.uuid, img_list), help="You can also tweak this on an individual frame level in the advanced settings above.")
                  
     i1, i2, i3 = st.columns([1, 0.5, 1.5])
     with i1:
@@ -166,18 +166,27 @@ def video_motion_settings(shot_uuid, img_list):
         control_motion_with_image = st_memory.toggle("Control motion with an image", help="This will allow you to upload images to control the motion of the video.",key=f"control_motion_with_image_{shot_uuid}")
 
         if control_motion_with_image:
-            uploaded_image = st.file_uploader("Upload images to control motion", type=["png", "jpg", "jpeg"], accept_multiple_files=False)
-            if st.button("Add image", key="add_images"):
-                if uploaded_image:
-                    project_settings = data_repo.get_project_setting(shot.project.uuid)
-                    width, height = project_settings.width, project_settings.height
-                    # Convert the uploaded image file to PIL Image
-                    uploaded_image_pil = Image.open(uploaded_image)
-                    uploaded_image_pil = uploaded_image_pil.resize((width, height))
-                    st.session_state[f"structure_control_image_{shot.uuid}"] = uploaded_image_pil
-                    st.rerun()
-                else:
-                    st.warning("No images uploaded")
+            project_settings = data_repo.get_project_setting(shot.project.uuid)
+            width, height = project_settings.width, project_settings.height
+            if f"structure_control_image_uuid_{shot_uuid}" in st.session_state and st.session_state[f"structure_control_image_uuid_{shot_uuid}"]:
+                uploaded_image = data_repo.get_file_from_uuid(st.session_state[f"structure_control_image_uuid_{shot_uuid}"])
+                uploaded_image_pil = Image.open(uploaded_image.location)
+                uploaded_image_pil = uploaded_image_pil.resize((width, height))
+                st.session_state[f"structure_control_image_{shot.uuid}"] = uploaded_image_pil
+            else:
+                st.session_state[f"structure_control_image_uuid_{shot_uuid}"] = None
+                st.session_state[f"saved_strength_of_structure_control_image_{shot_uuid}"] = None
+                uploaded_image = st.file_uploader("Upload images to control motion", type=["png", "jpg", "jpeg"], accept_multiple_files=False)
+            
+                if st.button("Add image", key="add_images"):
+                    if uploaded_image:
+                        # Convert the uploaded image file to PIL Image
+                        uploaded_image_pil = Image.open(uploaded_image) if not isinstance(uploaded_image, Image.Image) else uploaded_image
+                        uploaded_image_pil = uploaded_image_pil.resize((width, height))
+                        st.session_state[f"structure_control_image_{shot.uuid}"] = uploaded_image_pil
+                        st.rerun()
+                    else:
+                        st.warning("No images uploaded")
         else:
             st.session_state[f"structure_control_image_{shot_uuid}"] = None
     
@@ -185,13 +194,22 @@ def video_motion_settings(shot_uuid, img_list):
         if f"structure_control_image_{shot_uuid}" in st.session_state and st.session_state[f"structure_control_image_{shot_uuid}"]:
             st.info("Control image:")                    
             st.image(st.session_state[f"structure_control_image_{shot_uuid}"])        
-            st.session_state[f"strength_of_structure_control_image_{shot_uuid}"] = st.slider("Strength of control image:", min_value=0.0, max_value=1.0, step=0.01, key="strength_of_structure_control_image", value=0.5, help="This is how much the control image will influence the motion of the video.")
+            st.session_state[f"strength_of_structure_control_image_{shot_uuid}"] = st.slider(
+                "Strength of control image:", 
+                min_value=0.0, 
+                max_value=1.0, 
+                step=0.01, 
+                key="strength_of_structure_control_image", 
+                value=st.session_state[f"saved_strength_of_structure_control_image_{shot_uuid}"], 
+                help="This is how much the control image will influence the motion of the video."
+            )
             if st.button("Remove image", key="remove_images"):
                 st.session_state[f"structure_control_image_{shot_uuid}"] = None
+                st.session_state[f"structure_control_image_uuid_{shot_uuid}"] = None
                 st.success("Image removed")
                 st.rerun()
                 
-    return strength_of_adherence, overall_positive_prompt, overall_negative_prompt, type_of_motion_context
+    return strength_of_adherence, overall_positive_prompt, overall_negative_prompt, type_of_motion_context, amount_of_motion
 
 def select_motion_lora_element(shot_uuid, model_files):
     data_repo = DataRepo()
@@ -399,7 +417,8 @@ def select_sd_model_element(shot_uuid, default_model):
 
     else:
         model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
-        model_files = [file for file in model_files if "xl" not in file]
+        ignored_model_list = ["dynamicrafter_512_interp_v1.ckpt"]
+        model_files = [file for file in model_files if "xl" not in file and file not in ignored_model_list]
 
     sd_model_dict = {
         "Anything V3 FP16 Pruned": {

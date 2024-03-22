@@ -6,7 +6,7 @@ import re
 import os
 from PIL import Image
 from shared.constants import AIModelCategory, InferenceParamType, InternalFileTag
-from ui_components.constants import CreativeProcessType
+from ui_components.constants import CreativeProcessType, ShotMetaData
 from ui_components.methods.animation_style_methods import get_generation_settings_from_log, load_shot_settings
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
 from ui_components.methods.file_methods import create_duplicate_file
@@ -205,28 +205,31 @@ def variant_inference_detail_element(variant: InternalFileObject, stage, shot_uu
         
         if open_data:
             with st.expander("Settings", expanded=False):
-                shot_meta_data = get_generation_settings_from_log(variant.inference_log.uuid)
+                shot_meta_data, data_type = get_generation_settings_from_log(variant.inference_log.uuid)
                 if shot_meta_data and shot_meta_data.get("main_setting_data", None):
                     st.markdown("##### Main settings ---")
-                    for k, v in shot_meta_data.get("main_setting_data", {}).items():
-                        # Bold the title
-                        title = f"**{k.split(str(shot.uuid))[0][:-1]}:**"
-                        
-                        # Check if the key starts with 'lora_data'
-                        if k.startswith('lora_data'):
-                            if isinstance(v, list) and len(v) > 0:  # Check if v is a list and has more than 0 items
-                                # Handle lora_data differently to format each item in the list
-                                lora_items = [f"- {item.get('filename', 'No filename')} - {item.get('lora_strength', 'No strength')} strength" for item in v]
-                                lora_data_formatted = "\n".join(lora_items)
-                                st.markdown(f"{title} \n{lora_data_formatted}", unsafe_allow_html=True)
-                            # If there are no items in the list, do not display anything for lora_data
-                        else:
-                            # For other keys, display as before but with the title in bold and using a colon
-                            if v:  # Check if v is not empty or None
-                                st.markdown(f"{title} {v}", unsafe_allow_html=True)
+                    if data_type == ShotMetaData.MOTION_DATA.value:
+                        for k, v in shot_meta_data.get("main_setting_data", {}).items():
+                            # Bold the title
+                            title = f"**{k.split(str(shot.uuid))[0][:-1]}:**"
+                            
+                            # Check if the key starts with 'lora_data'
+                            if k.startswith('lora_data'):
+                                if isinstance(v, list) and len(v) > 0:  # Check if v is a list and has more than 0 items
+                                    # Handle lora_data differently to format each item in the list
+                                    lora_items = [f"- {item.get('filename', 'No filename')} - {item.get('lora_strength', 'No strength')} strength" for item in v]
+                                    lora_data_formatted = "\n".join(lora_items)
+                                    st.markdown(f"{title} \n{lora_data_formatted}", unsafe_allow_html=True)
+                                # If there are no items in the list, do not display anything for lora_data
                             else:
-                                # Optionally handle empty or None values differently here
-                                pass
+                                # For other keys, display as before but with the title in bold and using a colon
+                                if v:  # Check if v is not empty or None
+                                    st.markdown(f"{title} {v}", unsafe_allow_html=True)
+                                else:
+                                    # Optionally handle empty or None values differently here
+                                    pass
+                    elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
+                        st.markdown(shot_meta_data.get("main_setting_data", {}).get(f"video_desc_{shot_uuid}", ""))
 
                 st.markdown("##### Frame settings ---")
                 st.write("To see the settings for each frame, click on the 'Boot up settings' button above and they'll load below.")
