@@ -123,19 +123,19 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             not isinstance(st.session_state[f"type_of_generation_index_{shot.uuid}"], int):
             st.session_state[f"type_of_generation_index_{shot.uuid}"] = 0
 
-        generation_types = ["Fast", "Detailed"]
+        generation_types = ["Detailed", "Fast"]
         type_of_generation = st.radio(
             "Type of generation:", 
             options=generation_types, 
             key="creative_interpolation_type", 
             horizontal=True, 
             index=st.session_state[f"type_of_generation_index_{shot.uuid}"], 
-            help=""
+            help="Detailed generation will around twice as long but provide more detailed results."
         )
         
         animate_col_1, _, _ = st.columns([3, 1, 1])
         with animate_col_1:
-            variant_count = st.number_input("How many variants?", min_value=1, max_value=5, value=1, step=1, key="variant_count")
+            variant_count = 1
             
             if "generate_vid_generate_inference" in st.session_state and st.session_state["generate_vid_generate_inference"]:
                 # last keyframe position * 16
@@ -240,7 +240,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
         )
         
 
-def two_img_realistic_interpolation_page(shot_uuid, img_list):
+def two_img_realistic_interpolation_page(shot_uuid, img_list: List[InternalFileObject]):
     if not (img_list and len(img_list) >= 2):
         st.error("You need two images for this interpolation")
         return
@@ -249,6 +249,7 @@ def two_img_realistic_interpolation_page(shot_uuid, img_list):
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     
     settings = {}
+    st.markdown("***")
     col1, col2, col3 = st.columns([1, 1, 1])
     with col1:                        
         st.image(img_list[0].location, use_column_width=True)
@@ -257,6 +258,8 @@ def two_img_realistic_interpolation_page(shot_uuid, img_list):
         st.image(img_list[1].location, use_column_width=True)
 
     with col2:
+        if f'video_desc_{shot_uuid}' not in st.session_state:
+            st.session_state[f'video_desc_{shot_uuid}'] = ""
         description_of_motion = st.text_area("Describe the motion you want between the frames:", \
             key=f"description_of_motion_{shot.uuid}", value=st.session_state[f'video_desc_{shot_uuid}'])
         st.info("This is very important and will likely require some iteration.")
@@ -300,8 +303,10 @@ def two_img_realistic_interpolation_page(shot_uuid, img_list):
         st.rerun()
 
     # Buttons for adding to queue or backlog, assuming these are still relevant
+    st.markdown("***")
     btn1, btn2, btn3 = st.columns([1, 1, 1])
     backlog_no_update = {f'{shot_uuid}_backlog_enabled': False}
+    
     with btn1:
         st.button("Add to queue", key="generate_animation_clip", disabled=False, help="Generate the interpolation clip based on the two images and described motion.", on_click=lambda: toggle_generate_inference(position, **backlog_no_update), type="primary", use_container_width=True)
 

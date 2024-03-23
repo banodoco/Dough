@@ -40,27 +40,19 @@ def video_rendering_page(shot_uuid, selected_variant):
     file_uuid_list = []
     if f"type_of_animation_{shot.uuid}" not in st.session_state:
         st.session_state[f"type_of_animation_{shot.uuid}"] = 0
-    if st.session_state[f"type_of_animation_{shot.uuid}"] == 0:     # AnimateShotMethod.BATCH_CREATIVE_INTERPOLATION.value
+       # AnimateShotMethod.BATCH_CREATIVE_INTERPOLATION.value
         # loading images from a particular video variant
-        if selected_variant:
-            log = data_repo.get_inference_log_from_uuid(selected_variant)
-            shot_data = json.loads(log.input_params)
-            file_uuid_list = shot_data.get('origin_data', json.dumps({})).get('settings', {}).get('file_uuid_list', [])
-        # picking current images if no variant is selected
-        else:
-            for timing in shot.timing_list:
-                if timing.primary_image and timing.primary_image.location:
-                    file_uuid_list.append(timing.primary_image.uuid)
-    else:                                                           # AnimateShotMethod.DYNAMICRAFTER_INTERPOLATION.value
-        # hackish sol, will fix later
-        for idx in range(2):
-            if f'img{idx+1}_uuid_{shot_uuid}' in st.session_state and st.session_state[f'img{idx+1}_uuid_{shot_uuid}']:
-                file_uuid_list.append(st.session_state[f'img{idx+1}_uuid_{shot_uuid}'])
-                
-        if not (f'video_desc_{shot_uuid}' in st.session_state and st.session_state[f'video_desc_{shot_uuid}']):
-            st.session_state[f'video_desc_{shot_uuid}'] = ""
+    if selected_variant:
+        log = data_repo.get_inference_log_from_uuid(selected_variant)
+        shot_data = json.loads(log.input_params)
+        file_uuid_list = shot_data.get('origin_data', json.dumps({})).get('settings', {}).get('file_uuid_list', [])
+    # picking current images if no variant is selected
+    else:
+        for timing in shot.timing_list:
+            if timing.primary_image and timing.primary_image.location:
+                file_uuid_list.append(timing.primary_image.uuid)
     
-    img_list = data_repo.get_all_file_list(uuid__in=file_uuid_list, file_type=InternalFileType.IMAGE.value)[0]
+    img_list = data_repo.get_all_file_list(uuid__in=file_uuid_list, file_type=InternalFileType.IMAGE.value)[0]    
     
     headline1, _, headline3 = st.columns([1, 1, 1])
     with headline1:
@@ -74,7 +66,7 @@ def video_rendering_page(shot_uuid, selected_variant):
     
     if type_of_animation == AnimateShotMethod.BATCH_CREATIVE_INTERPOLATION.value:
         sm_video_rendering_page(shot_uuid, img_list)
-    else:
+    else:        
         two_img_realistic_interpolation_page(shot_uuid, img_list)
 
     st.markdown("***")

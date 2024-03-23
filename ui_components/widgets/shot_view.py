@@ -37,12 +37,13 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
 
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
     with column:
-        col1, col2, col3 = st.columns([1, 1, 1])
+        col1, col2, col3 = st.columns([1.25, 0.75, 1])
         with col1:
-            move_frame_mode = st_memory.toggle("Enter Frame Changer™ mode", value=False, key=f"move_frame_mode_{shot.uuid}")
+            
+            move_frame_mode = st_memory.toggle("Open Frame Changer™", value=False, key=f"move_frame_mode_{shot.uuid}", help="Enable to move frames around")
             if st.session_state[f"move_frame_mode_{shot.uuid}"]:
-                st.warning("You are in 'move frame' mode. You have to press 'Save' below to save the changes.")
-                if st.button("Save", key=f"save_move_frame_{shot.uuid}", help="Save the changes made in 'move frame' mode", use_container_width=True):                                        
+                st.warning("You're in frame moving mode. You must press 'Save' to save changes.")
+                if st.button("Save", key=f"save_move_frame_{shot.uuid}", help="Save the changes made in 'move frame' mode", use_container_width=True, type="primary"):
                     update_shot_frames(shot_uuid, timing_list)
                     st.rerun()
                 if f"shot_data_{shot_uuid}" not in st.session_state:
@@ -54,8 +55,10 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
                         "position": idx
                     } for idx, timing in enumerate(timing_list)]
                     st.session_state[f"shot_data_{shot_uuid}"] = pd.DataFrame(shot_data)
-            else:
-                st.info("Use this to move frames")
+                if st.button("Discard changes", key=f"discard_changes_{shot.uuid}", help="Discard all changes made in 'move frame' mode", use_container_width=True):
+                    st.session_state[f"move_frame_mode_{shot.uuid}"] = False
+                    st.rerun()
+            else:                
                 st.session_state[f"shot_data_{shot_uuid}"] = None
 
                                                  
@@ -100,9 +103,10 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
             
         for i in range(0, len(st.session_state[f"shot_data_{shot_uuid}"]), items_per_row):
             with st.container():
-                grid = st.columns(items_per_row)
+                grid = st.columns(items_per_row)                
                 for j in range(items_per_row):                    
                     idx = i + j
+
                     if idx < len(st.session_state[f"shot_data_{shot_uuid}"]):  # Ensure idx does not exceed the length of shot_df
                         
                         with grid[j % items_per_row]:  # Use modulo for column indexingr
@@ -143,20 +147,30 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
                                         st.session_state[f'list_to_move_{shot.uuid}'].remove(idx)
                                         st.rerun()
 
-                            header1, header2 = st.columns([1, 1.5])
-                            with header1:
-                                st_memory.toggle("Open Zoom", key=f"open_zoom_{shot.uuid}_{idx}", value=False)
+                            if 'zoom_to_open' not in st.session_state:
+                                st.session_state['zoom_to_open'] = None
+        
+                            header1, header2 = st.columns([1.5, 1])
+
+                            with header1:      
+
+                                if f'open_zoom_{shot.uuid}_{idx}' not in st.session_state:
+                                    st.session_state[f'open_zoom_{shot.uuid}_{idx}'] = False
+
+
+                                if st.button("Open zoom", key=f"open_zoom_{shot.uuid}_{idx}"):                                             
+                                    st.session_state['zoom_to_open'] = idx 
+                                    st.rerun()         
+                                                                      
                              
-                            if st.session_state[f"open_zoom_{shot.uuid}_{idx}"]:
+                            if st.session_state['zoom_to_open'] == idx:
                                 with header2:
-                                    if st.button("Reset",use_container_width=True):
+                                    if st.button("Reset",use_container_width=True,key=f"reset_zoom_{shot.uuid}_{idx}"):
                                         reset_zoom_element()
                                         st.rerun()
 
-                                # close all other zooms
-                                for i in range(0, len(st.session_state[f"shot_data_{shot_uuid}"])):
-                                    if i != idx:
-                                        st.session_state[f"open_zoom_{shot.uuid}_{i}"] = False
+                                
+                                        
 
                                 input_image = generate_pil_image(st.session_state[f"shot_data_{shot_uuid}"].loc[idx]['image_location'])
 
@@ -168,7 +182,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
                                     st.session_state['flip_vertically'] = False
                                     st.session_state['flip_horizontally'] = False              
                                 
-                                zoom_inputs(horizontal=True)
+                                zoom_inputs(horizontal=True, shot_uuid=f"{shot_uuid}_{idx}")
 
                                 st.caption("Output Image:")
 
@@ -185,7 +199,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
                                 st.image(output_image, use_column_width=True)
                                 
                                
-                                if st.button("Save", key=f"save_zoom_{idx}", help="Save the changes made in 'move frame' mode",type="primary",use_container_width=True):
+                                if st.button("Save", key=f"save_zoom_{idx}", help="Save the changes made in 'move frame' mode",use_container_width=True,type="primary"):
                                     # make file_name into a random uuid using uuid
                                     file_name = f"{uuid.uuid4()}.png"
                                     
@@ -205,14 +219,15 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
                                         location = save_location
 
                                     st.session_state[f"shot_data_{shot_uuid}"].loc[idx, 'image_location'] = location
-                                    st.session_state[f'open_zoom_{shot.uuid}_{idx}'] = False
+                                    #st.session_state[f'open_zoom_{shot.uuid}_{idx}'] = False
+                                    st.session_state['zoom_to_open'] = None
                                     st.rerun()
                                                                                        
                 st.markdown("***")
-        bottom1, bottom2 = st.columns([1, 1])
+        bottom1, bottom2 = st.columns([1, 2])
         with bottom1:
-            st.warning("You are in 'move frame' mode. You have to press 'Save' below to save the changes.")
-            if st.button("Save", key=f"save_move_frame_{shot.uuid}_bottom", help="Save the changes made in 'move frame' mode", use_container_width=True):                
+            st.warning("You're in frame moving mode. You must press 'Save' to save changes.")
+            if st.button("Save", key=f"save_move_frame_{shot.uuid}_bottom", help="Save the changes made in 'move frame' mode", use_container_width=True,type="primary"):          
                 update_shot_frames(shot_uuid, timing_list)
                 st.rerun()
         st.markdown("***")

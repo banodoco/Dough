@@ -139,7 +139,7 @@ def video_motion_settings(shot_uuid, img_list):
     with f3:
         st.write("")
         st.write("")
-        st.info("Use these sparingly, as they can have a large impact on the video. You can also edit them for individual frames in the advanced settings above.")
+        st.info("Use these sparingly, as they can have a large impact on the video. You can also edit them for individual frames above.")
 
     st.markdown("***")
     st.markdown("##### Overall motion settings")
@@ -223,21 +223,22 @@ def select_motion_lora_element(shot_uuid, model_files):
     lora_data = []
     lora_file_dest = "ComfyUI/models/animatediff_motion_lora"
     lora_file_links = {
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_tony_stark_r64_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_train_r128_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/300_car_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_desert_48_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_jeep_driving_r32_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_man_running_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_rotation_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/750_jeep_driving_r32_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/300_zooming_in_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_cat_walking_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_playing_banjo_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_woman_dancing_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_zooming_out_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif"
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_tony_stark_r64_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_train_r128_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/300_car_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_desert_48_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_jeep_driving_r32_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_man_running_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_rotation_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/750_jeep_driving_r32_temporal_unet.safetensors" :"",
+        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/300_zooming_in_temporal_unet.safetensors" :"",
+        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_cat_walking_temporal_unet.safetensors" :"",
+        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_playing_banjo_temporal_unet.safetensors" :"",
+        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_woman_dancing_temporal_unet.safetensors" :"",
+        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_zooming_out_temporal_unet.safetensors" :"",
+
     }
     
     # ---------------- ADD LORA -----------------
@@ -258,26 +259,29 @@ def select_motion_lora_element(shot_uuid, model_files):
             for idx, lora in enumerate(st.session_state[f"lora_data_{shot_uuid}"]):
                 if not lora:
                     continue
-                h1, h2, h3, h4 = st.columns([1, 1, 1, 0.5])
+                h1, h2, h3, h4, h5, h6, h7 = st.columns([1, 0.25, 1,0.25, 1, 0.25,0.5])
                 with h1:
                     file_idx = files.index(lora["filename"])
                     motion_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"motion_lora_{idx}", index=file_idx)                                                    
                 
                 with h2:
-                    strength_of_lora = st.slider("How strong would you like the LoRA to be?", min_value=0.0, max_value=1.0, value=lora["lora_strength"], step=0.01, key=f"strength_of_lora_{idx}")
-                    lora_data.append({"filename": motion_lora, "lora_strength": strength_of_lora, "filepath": lora_file_dest + "/" + motion_lora})
+                    display_motion_lora(motion_lora, lora_file_links)
                 
                 with h3:
-                    when_to_apply_lora = st.slider("When to apply the LoRA?", min_value=0, max_value=100, value=(0,100), step=1, key=f"when_to_apply_lora_{idx}",disabled=True,help="This feature is not yet available.")
+                    strength_of_lora = st.slider("Strength:", min_value=0.0, max_value=1.0, value=lora["lora_strength"], step=0.01, key=f"strength_of_lora_{idx}")
+                    lora_data.append({"filename": motion_lora, "lora_strength": strength_of_lora, "filepath": lora_file_dest + "/" + motion_lora})
                 
-                with h4:
+                with h5:
+                    when_to_apply_lora = st.slider("When to apply:", min_value=0, max_value=100, value=(0,100), step=1, key=f"when_to_apply_lora_{idx}",disabled=True,help="This feature is not yet available.")
+                
+                with h7:
                     st.write("")
                     if st.button("Remove", key=f"remove_lora_{idx}"):
                         st.session_state[f"lora_data_{shot_uuid}"].pop(idx)
                         st.rerun()
                 
                 # displaying preview
-                display_motion_lora(motion_lora, lora_file_links)
+                
             
             if len(st.session_state[f"lora_data_{shot_uuid}"]) == 0:
                 text = "Add a LoRA"
@@ -359,12 +363,12 @@ def select_motion_lora_element(shot_uuid, model_files):
     
     # ---------------- TRAIN LORA --------------
     with tab3:
-        b1, b2 = st.columns([1, 1])
+        b1, b2, b3 = st.columns([1, 1, 0.5])
         with b1:
             lora_name = st.text_input("Name this LoRA", key="lora_name")
             if model_files and len(model_files):
                 base_sd_model = st.selectbox(
-                        label="Select base sd model for training", 
+                        label="Select base:", 
                         options=model_files, 
                         key="base_sd_model_video", 
                         index=0
@@ -402,7 +406,8 @@ def select_motion_lora_element(shot_uuid, model_files):
                     video_height,
                     base_sd_model
                 )
-
+    with b2:
+        st.info("This takes around 30 minutes to train.")
     return lora_data
 
 

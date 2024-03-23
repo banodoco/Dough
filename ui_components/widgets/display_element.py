@@ -16,12 +16,15 @@ def individual_video_display_element(file: Union[InternalFileObject, str]):
 def display_motion_lora(motion_lora, lora_file_dict = {}):
     filename_video_dict = read_from_motion_lora_local_db()
     
-    if motion_lora and motion_lora in filename_video_dict:
+    if motion_lora and motion_lora in filename_video_dict and filename_video_dict[motion_lora]:
         st.image(filename_video_dict[motion_lora])
-    else:
+    elif motion_lora in lora_file_dict:
         loras = [ele.split("/")[-1] for ele in lora_file_dict.keys()]
-        idx = loras.index(motion_lora)
-        if idx >= 0:
-            st.image(lora_file_dict[list(lora_file_dict.keys())[idx]])
-        else:
-            st.warning("No preview video available")
+        try:
+            idx = loras.index(motion_lora)
+            if lora_file_dict[list(lora_file_dict.keys())[idx]]:
+                st.image(lora_file_dict[list(lora_file_dict.keys())[idx]])                            
+        except ValueError:
+            st.write("")
+
+
