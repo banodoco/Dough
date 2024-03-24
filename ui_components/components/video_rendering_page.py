@@ -130,7 +130,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             key="creative_interpolation_type", 
             horizontal=True, 
             index=st.session_state[f"type_of_generation_index_{shot.uuid}"], 
-            help="Detailed generation will around twice as long but provide more detailed results."
+            help="Detailed generation will be around twice as long but provide more detailed results."
         )
         
         animate_col_1, _, _ = st.columns([3, 1, 1])

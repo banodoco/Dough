@@ -111,12 +111,11 @@
   },
   "27": {
     "inputs": {
-      "weight": 0.65,
-      "noise": 0.3,
-      "weight_type": "original",
+      "weight": 1,
+      "weight_type": "linear",
+      "combine_embeds": "concat",
       "start_at": 0,
-      "end_at": 0.396,
-      "unfold_batch": false,
+      "end_at": 1,
       "ipadapter": [
         "26",
         0
@@ -134,9 +133,9 @@
         0
       ]
     },
-    "class_type": "IPAdapterApply",
+    "class_type": "IPAdapterAdvanced",
     "_meta": {
-      "title": "Apply IPAdapter"
+      "title": "IPAdapter Advanced"
     }
   },
   "28": {
@@ -165,7 +164,7 @@
   "39": {
     "inputs": {
       "interpolation": "LANCZOS",
-      "crop_position": "pad",
+      "crop_position": "top",
       "sharpening": 0,
       "image": [
         "28",

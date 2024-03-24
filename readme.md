@@ -97,7 +97,7 @@ Then go to this URL, and it should be running!
 
 This commands sets up the app. Run this only the first time, after that you can simply start the app using the next command.
 ```bash
-curl -sSL https://raw.githubusercontent.com/banodoco/Dough/green-head/linux_setup.sh | bash
+curl -sSL https://raw.githubusercontent.com/banodoco/Dough/green-head/scripts/linux_setup.sh | bash
 ```
 
 ### Run the app
@@ -105,7 +105,7 @@ curl -sSL https://raw.githubusercontent.com/banodoco/Dough/green-head/linux_setu
 you can run the app using 
 
 ```bash
-source ./dough-env/bin/activate && sh entrypoint.sh
+source ./dough-env/bin/activate && sh ./scripts/entrypoint.sh
 ```
 
 ## Instructions for Windows:
@@ -117,14 +117,14 @@ source ./dough-env/bin/activate && sh entrypoint.sh
 Run the setup script
 
 ```bash
-iwr -useb "https://raw.githubusercontent.com/banodoco/Dough/green-head/windows_setup.bat" -OutFile "script.bat"
+iwr -useb "https://raw.githubusercontent.com/banodoco/Dough/green-head/scripts/windows_setup.bat" -OutFile "script.bat"
 Start-Process "cmd.exe" -ArgumentList "/c script.bat"
 ```
 
 ### Run the app
 
 ```bash
-. .\dough-env\Scripts\activate ; .\entrypoint.bat
+. .\dough-env\Scripts\activate ; .\scripts\entrypoint.bat
 ```
 
 If you're having any issues, please share them in our [Discord](https://discord.com/invite/8Wx9dFu5tP).
