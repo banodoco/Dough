@@ -2,7 +2,8 @@ import io
 import random
 from typing import List
 import os
-from PIL import Image, ImageDraw, ImageOps, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter
+from utils.local_storage.local_storage import write_to_motion_lora_local_db
 from moviepy.editor import *
 import cv2
 import requests as r
@@ -12,15 +13,14 @@ import time
 import uuid
 from io import BytesIO
 import numpy as np
-import urllib3
-from shared.constants import OFFLINE_MODE, SERVER, InferenceType, InternalFileTag, InternalFileType, ProjectMetaData, ServerType
+from shared.constants import OFFLINE_MODE, SERVER, InferenceType, InternalFileTag, InternalFileType, ProjectMetaData
 from pydub import AudioSegment
 from backend.models import InternalFileObject
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
-from ui_components.constants import SECOND_MASK_FILE, SECOND_MASK_FILE_PATH, WorkflowStageType
-from ui_components.methods.file_methods import add_temp_file_to_project, convert_bytes_to_file, generate_pil_image, generate_temp_file, save_or_host_file, save_or_host_file_bytes
-from ui_components.methods.video_methods import sync_audio_and_duration, update_speed_of_video_clip
+from ui_components.constants import SECOND_MASK_FILE, WorkflowStageType
+from ui_components.methods.file_methods import convert_bytes_to_file, generate_pil_image, generate_temp_file, save_or_host_file, save_or_host_file_bytes
+from ui_components.methods.video_methods import sync_audio_and_duration
 from ui_components.models import InternalFrameTimingObject, InternalSettingObject
 from utils.common_utils import acquire_lock, release_lock
 from utils.data_repo.data_repo import DataRepo
@@ -29,34 +29,7 @@ from shared.constants import AnimationStyleType
 from ui_components.models import InternalFileObject
 from typing import Union
 
-from utils.media_processor.video import VideoProcessor
 
-
-
-
-def clone_styling_settings(source_frame_number, target_frame_uuid):
-    data_repo = DataRepo()
-    target_timing = data_repo.get_timing_from_uuid(target_frame_uuid)
-    timing_list = data_repo.get_timing_list_from_shot(
-        target_timing.shot.uuid)
-    
-    source_timing = timing_list[source_frame_number]
-    params = source_timing.primary_image.inference_params
-
-    if params:
-        target_timing.prompt = params['prompt'] if 'prompt' in params else source_timing.prompt
-        target_timing.negative_prompt = params['negative_prompt'] if 'negative_prompt' in params else source_timing.negative_prompt
-        target_timing.guidance_scale = params['guidance_scale'] if 'guidance_scale' in params else source_timing.guidance_scale
-        target_timing.seed = params['seed'] if 'seed' in params else source_timing.seed
-        target_timing.num_inference_steps = params['num_inference_steps'] if 'num_inference_steps' in params else source_timing.num_inference_steps
-        target_timing.strength = params['strength'] if 'strength' in params else source_timing.strength
-        target_timing.adapter_type = params['adapter_type'] if 'adapter_type' in params else source_timing.adapter_type
-        target_timing.low_threshold = params['low_threshold'] if 'low_threshold' in params else source_timing.low_threshold
-        target_timing.high_threshold = params['high_threshold'] if 'high_threshold' in params else source_timing.high_threshold
-    
-        if 'model_uuid' in params and params['model_uuid']:
-            model = data_repo.get_ai_model_from_uuid(params['model_uuid'])
-            target_timing.model = model
 
 # TODO: image format is assumed to be PNG, change this later
 def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project_uuid) -> InternalFileObject:
@@ -93,7 +66,7 @@ def save_and_promote_image(image, shot_uuid, timing_uuid, stage):
         saved_image = save_new_image(image, shot.project.uuid)
         # Update records based on stage
         if stage == WorkflowStageType.SOURCE.value:
-            data_repo.update_specific_timing(timing_uuid, source_image_id=saved_image.uuid)
+            data_repo.update_specific_timing(timing_uuid, source_image_id=saved_image.uuid, update_in_place=True)
         elif stage == WorkflowStageType.STYLED.value:
             number_of_image_variants = add_image_variant(saved_image.uuid, timing_uuid)
             promote_image_variant(timing_uuid, number_of_image_variants - 1)
@@ -356,7 +329,7 @@ def save_uploaded_image(image: Union[Image.Image, str, np.ndarray, io.BytesIO, I
         
         # Update records based on stage_type
         if stage_type ==  WorkflowStageType.SOURCE.value:
-            data_repo.update_specific_timing(frame_uuid, source_image_id=saved_image.uuid)
+            data_repo.update_specific_timing(frame_uuid, source_image_id=saved_image.uuid, update_in_place=True)
         elif stage_type ==  WorkflowStageType.STYLED.value:
             number_of_image_variants = add_image_variant(saved_image.uuid, frame_uuid)
             promote_image_variant(frame_uuid, number_of_image_variants - 1)
@@ -377,7 +350,7 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
 
     # promoting variant
     variant_to_promote = timing.alternative_images_list[variant_to_promote_frame_number]
-    data_repo.update_specific_timing(timing_uuid, primary_image_id=variant_to_promote.uuid)
+    data_repo.update_specific_timing(timing_uuid, primary_image_id=variant_to_promote.uuid, update_in_place=True)
     _ = data_repo.get_timing_list_from_shot(timing.shot.uuid)
 
 
@@ -502,7 +475,7 @@ def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
             file_data.update({'local_path': file_location})
 
         mask_file: InternalFileObject = data_repo.create_file(**file_data)
-        data_repo.update_specific_timing(timing_uuid, mask_id=mask_file.uuid)
+        data_repo.update_specific_timing(timing_uuid, mask_id=mask_file.uuid, update_in_place=True)
     else:
         # if it is already present then just updating the file location
         if hosted_url:
@@ -540,11 +513,11 @@ def add_image_variant(image_file_uuid: str, timing_uuid: str):
     alternative_image_uuid_list = json.dumps(alternative_image_uuid_list)
 
     data_repo.update_specific_timing(
-        timing_uuid, alternative_images=alternative_image_uuid_list)
+        timing_uuid, alternative_images=alternative_image_uuid_list, update_in_place=True)
 
     if not timing.primary_image:
         data_repo.update_specific_timing(
-            timing_uuid, primary_image_id=primary_image_uuid)
+            timing_uuid, primary_image_id=primary_image_uuid, update_in_place=True)
 
     return len(alternative_image_list)
 
@@ -778,7 +751,7 @@ def process_inference_output(**kwargs):
                 inference_log_id=log_uuid
             )
 
-            if not shot.main_clip:
+            if not shot.main_clip or settings.get("promote_to_main_variant", False):
                 output_video = sync_audio_and_duration(video, shot_uuid)
                 data_repo.update_shot(uuid=shot_uuid, main_clip_id=output_video.uuid)
                 data_repo.add_interpolated_clip(shot_uuid, interpolated_clip_id=output_video.uuid)
@@ -839,7 +812,7 @@ def process_inference_output(**kwargs):
             )
 
             if stage == WorkflowStageType.SOURCE.value:
-                data_repo.update_specific_timing(current_frame_uuid, source_image_id=output_file.uuid)
+                data_repo.update_specific_timing(current_frame_uuid, source_image_id=output_file.uuid, update_in_place=True)
             elif stage == WorkflowStageType.STYLED.value:
                 number_of_image_variants = add_image_variant(output_file.uuid, current_frame_uuid)
                 if promote:
@@ -852,12 +825,66 @@ def process_inference_output(**kwargs):
             del kwargs['log_uuid']
             data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
 
+    # --------------------- MOTION LORA TRAINING --------------------------
+    elif inference_type == InferenceType.MOTION_LORA_TRAINING.value:
+        output = kwargs.get('output')
+        log_uuid = kwargs.get('log_uuid')
+        
+        if output and len(output):
+            # output is a list of generated videos
+            # we store video_url <--> motion_lora map in a json file
+            
+            # NOTE: need to convert 'lora_trainer' into a separate module if it needs to work on hosted version
+            # fetching the current generated loras
+            spatial_lora_path = os.path.join('ComfyUI', 'models', 'loras', 'trained_spatial')
+            temporal_lora_path = os.path.join('ComfyUI', 'models', 'animatediff_motion_lora')
+            lora_path = temporal_lora_path
+            _, latest_trained_files = get_latest_project_files(lora_path)
+            
+            cur_idx, data = 0, {}
+            for vid in output:
+                if vid.endswith(".gif"):
+                    data[latest_trained_files[cur_idx]] = vid
+                    cur_idx += 1
+                    
+            write_to_motion_lora_local_db(data)
+        else:
+            del kwargs['log_uuid']
+            data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
+        
     if inference_time:
         credits_used = round(inference_time * 0.004, 3)     # make this more granular for different models
         data_repo.update_usage_credits(-credits_used, log_uuid)
 
     return True
 
+def get_latest_project_files(parent_directory):
+    latest_project = None
+    latest_time = 0
+
+    for date_folder in os.listdir(parent_directory):
+        date_folder_path = os.path.join(parent_directory, date_folder)
+
+        if os.path.isdir(date_folder_path):
+            for time_folder in os.listdir(date_folder_path):
+                time_folder_path = os.path.join(date_folder_path, time_folder)
+
+                if os.path.isdir(time_folder_path):
+                    for project_name_folder in os.listdir(time_folder_path):
+                        project_folder_path = os.path.join(time_folder_path, project_name_folder)
+                        
+                        if os.path.isdir(project_folder_path):
+                            creation_time = os.path.getctime(project_folder_path)
+                            
+                            if creation_time > latest_time:
+                                latest_time = creation_time
+                                latest_project = project_folder_path
+
+    if latest_project:
+        latest_files = sorted(os.listdir(latest_project))
+        return latest_project, latest_files
+    else:
+        return None, None
 
 def check_project_meta_data(project_uuid):
     '''

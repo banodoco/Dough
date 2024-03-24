@@ -98,7 +98,9 @@ def create_new_user_data(user: InternalUserObject):
 def create_new_project(user: InternalUserObject, project_name: str, width=512, height=512):
     data_repo = DataRepo()
 
-    # creating a new project for this user
+    existing_projects_list = data_repo.get_all_project_list(user.uuid)
+    add_initial_frames = False if (existing_projects_list and len(existing_projects_list)) else True
+
     project_data = {
         "user_id": user.uuid,
         "name": project_name,
@@ -115,43 +117,46 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     }
 
     shot = data_repo.create_shot(**shot_data)
-
-    # create timings for init_images 
-    init_images_path = os.path.join("sample_assets", "sample_images", "init_frames")
-    init_image_list = list_files_in_folder(init_images_path)
     st.session_state["project_uuid"] = project.uuid
-    
-    for idx, img_path in enumerate(init_image_list):
-        img_path = os.path.join(init_images_path, img_path)
-        img = Image.open(img_path)
-        img = img.resize((width, height))
 
-        unique_file_name = f"{str(uuid.uuid4())}.png"
-        file_location = f"videos/{project.uuid}/resources/prompt_images/{unique_file_name}"
-        hosted_url = save_or_host_file(img, file_location, mime_type='image/png', dim=(width, height))
-        file_data = {
-            "name": str(uuid.uuid4()),
-            "type": InternalFileType.IMAGE.value,
-            "project_id": project.uuid,
-            "dim": (width, height),
-        }
+    # Add initial frames only if there are no existing projects (i.e., it's the user's first project)
+    if add_initial_frames:
+        init_images_path = os.path.join("sample_assets", "sample_images", "init_frames")
+        init_image_list = list_files_in_folder(init_images_path)
+        image_extensions = {'.png', '.jpg', '.jpeg', '.gif'}
+        init_image_list = [img for img in init_image_list if os.path.splitext(img)[1].lower() in image_extensions]
+        
+        for idx, img_path in enumerate(init_image_list):
+            img_path = os.path.join(init_images_path, img_path)
+            img = Image.open(img_path)
+            img = img.resize((width, height))
 
-        if hosted_url:
-            file_data.update({'hosted_url': hosted_url})
-        else:
-            file_data.update({'local_path': file_location})
+            unique_file_name = f"{str(uuid.uuid4())}.png"
+            file_location = f"videos/{project.uuid}/resources/prompt_images/{unique_file_name}"
+            hosted_url = save_or_host_file(img, file_location, mime_type='image/png', dim=(width, height))
+            file_data = {
+                "name": str(uuid.uuid4()),
+                "type": InternalFileType.IMAGE.value,
+                "project_id": project.uuid,
+                "dim": (width, height),
+            }
 
-        source_image = data_repo.create_file(**file_data)
+            if hosted_url:
+                file_data.update({'hosted_url': hosted_url})
+            else:
+                file_data.update({'local_path': file_location})
 
-        timing_data = {
-            "frame_time": 0.0,
-            "aux_frame_index": idx,
-            "source_image_id": source_image.uuid,
-            "shot_id": shot.uuid,
-        }
-        timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
+            source_image = data_repo.create_file(**file_data)
 
-        add_image_variant(source_image.uuid, timing.uuid)
+            timing_data = {
+                "frame_time": 0.0,
+                "aux_frame_index": idx,
+                "source_image_id": source_image.uuid,
+                "shot_id": shot.uuid,
+            }
+            timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
+
+            add_image_variant(source_image.uuid, timing.uuid)
 
     # create default ai models
     model_list = create_predefined_models(user)

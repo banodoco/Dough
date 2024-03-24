@@ -1,0 +1,459 @@
+{
+    "1": {
+      "inputs": {
+        "ckpt_name": "Deliberate_v2.safetensors",
+        "scheduler": "DDIMScheduler",
+        "use_xformers": false,
+        "additional_models": [
+          "2",
+          0
+        ]
+      },
+      "class_type": "ADMD_CheckpointLoader",
+      "_meta": {
+        "title": "ADMD_CheckpointLoader"
+      }
+    },
+    "2": {
+      "inputs": {
+        "motion_module": "v3_sd15_mm.ckpt",
+        "use_adapter_lora": true,
+        "optional_adapter_lora": "v3_sd15_adapter.ckpt"
+      },
+      "class_type": "ADMD_AdditionalModelSelect",
+      "_meta": {
+        "title": "ADMD_AdditionalModelSelect"
+      }
+    },
+    "4": {
+      "inputs": {
+        "lora_name": "motion_director_lora",
+        "prompt": "car is driving in desert",
+        "max_train_steps": 500,
+        "learning_rate": 0.0005,
+        "learning_rate_spatial": 0.0001,
+        "lora_rank": 64,
+        "seed": 817550656066000,
+        "optimization_method": "Lion",
+        "include_resnet": true,
+        "pipeline": [
+          "1",
+          0
+        ],
+        "images": [
+          "6",
+          0
+        ]
+      },
+      "class_type": "ADMD_InitializeTraining",
+      "_meta": {
+        "title": "ADMD_InitializeTraining"
+      }
+    },
+    "5": {
+      "inputs": {
+        "video": "AD__00003_.mp4",
+        "force_rate": 0,
+        "force_size": "Disabled",
+        "custom_width": 512,
+        "custom_height": 512,
+        "frame_load_cap": 16,
+        "skip_first_frames": 0,
+        "select_every_nth": 2
+      },
+      "class_type": "VHS_LoadVideo",
+      "_meta": {
+        "title": "Load Video (Upload) 🎥🅥🅗🅢"
+      }
+    },
+    "6": {
+      "inputs": {
+        "width": 512,
+        "height": 512,
+        "interpolation": "nearest",
+        "keep_proportion": false,
+        "condition": "always",
+        "multiple_of": 0,
+        "image": [
+          "5",
+          0
+        ]
+      },
+      "class_type": "ImageResize+",
+      "_meta": {
+        "title": "🔧 Image Resize"
+      }
+    },
+    "7": {
+      "inputs": {
+        "frame_rate": 10,
+        "loop_count": 0,
+        "filename_prefix": "AnimateDiff",
+        "format": "image/gif",
+        "pingpong": false,
+        "save_output": true,
+        "images": [
+          "4",
+          0
+        ]
+      },
+      "class_type": "VHS_VideoCombine",
+      "_meta": {
+        "title": "Video Combine 🎥🅥🅗🅢"
+      }
+    },
+    "8": {
+      "inputs": {
+        "steps": 100,
+        "admd_pipeline": [
+          "4",
+          1
+        ]
+      },
+      "class_type": "ADMD_TrainLora",
+      "_meta": {
+        "title": "ADMD_TrainLora"
+      }
+    },
+    "9": {
+      "inputs": {
+        "validation_settings": [
+          "15",
+          0
+        ],
+        "admd_pipeline": [
+          "8",
+          0
+        ]
+      },
+      "class_type": "ADMD_ValidationSampler",
+      "_meta": {
+        "title": "ADMD_ValidationSampler"
+      }
+    },
+    "11": {
+      "inputs": {
+        "frame_rate": 10,
+        "loop_count": 0,
+        "filename_prefix": "AnimateDiff",
+        "format": "image/gif",
+        "pingpong": false,
+        "save_output": true,
+        "images": [
+          "9",
+          1
+        ]
+      },
+      "class_type": "VHS_VideoCombine",
+      "_meta": {
+        "title": "Video Combine 🎥🅥🅗🅢"
+      }
+    },
+    "12": {
+      "inputs": {
+        "steps": 100,
+        "admd_pipeline": [
+          "54",
+          1
+        ]
+      },
+      "class_type": "ADMD_TrainLora",
+      "_meta": {
+        "title": "ADMD_TrainLora"
+      }
+    },
+    "13": {
+      "inputs": {
+        "validation_settings": [
+          "15",
+          0
+        ],
+        "admd_pipeline": [
+          "12",
+          0
+        ]
+      },
+      "class_type": "ADMD_ValidationSampler",
+      "_meta": {
+        "title": "ADMD_ValidationSampler"
+      }
+    },
+    "14": {
+      "inputs": {
+        "frame_rate": 10,
+        "loop_count": 0,
+        "filename_prefix": "AnimateDiff",
+        "format": "image/gif",
+        "pingpong": false,
+        "save_output": true,
+        "images": [
+          "13",
+          1
+        ]
+      },
+      "class_type": "VHS_VideoCombine",
+      "_meta": {
+        "title": "Video Combine 🎥🅥🅗🅢"
+      }
+    },
+    "15": {
+      "inputs": {
+        "seed": 584873287563136,
+        "inference_steps": 25,
+        "guidance_scale": 8,
+        "spatial_scale": 0.5,
+        "validation_prompt": "a hippo is walking in a jungle"
+      },
+      "class_type": "ADMD_ValidationSettings",
+      "_meta": {
+        "title": "ADMD_ValidationSettings"
+      }
+    },
+    "16": {
+      "inputs": {
+        "input": [
+          "5",
+          1
+        ],
+        "output": ""
+      },
+      "class_type": "Display Int (rgthree)",
+      "_meta": {
+        "title": "Display Int (rgthree)"
+      }
+    },
+    "24": {
+      "inputs": {
+        "steps": 100,
+        "admd_pipeline": [
+          "56",
+          1
+        ]
+      },
+      "class_type": "ADMD_TrainLora",
+      "_meta": {
+        "title": "ADMD_TrainLora"
+      }
+    },
+    "25": {
+      "inputs": {
+        "validation_settings": [
+          "15",
+          0
+        ],
+        "admd_pipeline": [
+          "24",
+          0
+        ]
+      },
+      "class_type": "ADMD_ValidationSampler",
+      "_meta": {
+        "title": "ADMD_ValidationSampler"
+      }
+    },
+    "26": {
+      "inputs": {
+        "frame_rate": 10,
+        "loop_count": 0,
+        "filename_prefix": "AnimateDiff",
+        "format": "image/gif",
+        "pingpong": false,
+        "save_output": true,
+        "images": [
+          "25",
+          1
+        ]
+      },
+      "class_type": "VHS_VideoCombine",
+      "_meta": {
+        "title": "Video Combine 🎥🅥🅗🅢"
+      }
+    },
+    "28": {
+      "inputs": {
+        "steps": 100,
+        "admd_pipeline": [
+          "58",
+          1
+        ]
+      },
+      "class_type": "ADMD_TrainLora",
+      "_meta": {
+        "title": "ADMD_TrainLora"
+      }
+    },
+    "29": {
+      "inputs": {
+        "validation_settings": [
+          "15",
+          0
+        ],
+        "admd_pipeline": [
+          "28",
+          0
+        ]
+      },
+      "class_type": "ADMD_ValidationSampler",
+      "_meta": {
+        "title": "ADMD_ValidationSampler"
+      }
+    },
+    "30": {
+      "inputs": {
+        "frame_rate": 10,
+        "loop_count": 0,
+        "filename_prefix": "AnimateDiff",
+        "format": "image/gif",
+        "pingpong": false,
+        "save_output": true,
+        "images": [
+          "29",
+          1
+        ]
+      },
+      "class_type": "VHS_VideoCombine",
+      "_meta": {
+        "title": "Video Combine 🎥🅥🅗🅢"
+      }
+    },
+    "32": {
+      "inputs": {
+        "steps": 100,
+        "admd_pipeline": [
+          "60",
+          1
+        ]
+      },
+      "class_type": "ADMD_TrainLora",
+      "_meta": {
+        "title": "ADMD_TrainLora"
+      }
+    },
+    "33": {
+      "inputs": {
+        "validation_settings": [
+          "15",
+          0
+        ],
+        "admd_pipeline": [
+          "32",
+          0
+        ]
+      },
+      "class_type": "ADMD_ValidationSampler",
+      "_meta": {
+        "title": "ADMD_ValidationSampler"
+      }
+    },
+    "34": {
+      "inputs": {
+        "frame_rate": 10,
+        "loop_count": 0,
+        "filename_prefix": "AnimateDiff",
+        "format": "image/gif",
+        "pingpong": false,
+        "save_output": true,
+        "images": [
+          "33",
+          1
+        ]
+      },
+      "class_type": "VHS_VideoCombine",
+      "_meta": {
+        "title": "Video Combine 🎥🅥🅗🅢"
+      }
+    },
+    "54": {
+      "inputs": {
+        "admd_pipeline": [
+          "9",
+          0
+        ],
+        "lora_info": [
+          "4",
+          2
+        ]
+      },
+      "class_type": "ADMD_SaveLora",
+      "_meta": {
+        "title": "ADMD_SaveLora"
+      }
+    },
+    "56": {
+      "inputs": {
+        "admd_pipeline": [
+          "13",
+          0
+        ],
+        "lora_info": [
+          "4",
+          2
+        ]
+      },
+      "class_type": "ADMD_SaveLora",
+      "_meta": {
+        "title": "ADMD_SaveLora"
+      }
+    },
+    "58": {
+      "inputs": {
+        "admd_pipeline": [
+          "25",
+          0
+        ],
+        "lora_info": [
+          "4",
+          2
+        ]
+      },
+      "class_type": "ADMD_SaveLora",
+      "_meta": {
+        "title": "ADMD_SaveLora"
+      }
+    },
+    "60": {
+      "inputs": {
+        "admd_pipeline": [
+          "29",
+          0
+        ],
+        "lora_info": [
+          "4",
+          2
+        ]
+      },
+      "class_type": "ADMD_SaveLora",
+      "_meta": {
+        "title": "ADMD_SaveLora"
+      }
+    },
+    "62": {
+      "inputs": {
+        "admd_pipeline": [
+          "33",
+          0
+        ],
+        "lora_info": [
+          "4",
+          2
+        ]
+      },
+      "class_type": "ADMD_SaveLora",
+      "_meta": {
+        "title": "ADMD_SaveLora"
+      }
+    },
+    "64": {
+      "inputs": {
+        "output": "",
+        "source": [
+          "62",
+          0
+        ]
+      },
+      "class_type": "Display Any (rgthree)",
+      "_meta": {
+        "title": "Display Any (rgthree)"
+      }
+    }
+  }

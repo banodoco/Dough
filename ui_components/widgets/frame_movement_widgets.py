@@ -95,12 +95,11 @@ def delete_frame(timing_uuid):
     timing_list = data_repo.get_timing_list_from_shot(timing.shot.uuid)
 
 
-
     data_repo.delete_timing_from_uuid(timing.uuid)
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
     
     if len(timing_list) == 0:
-        st.success("Frame deleted!")
+        print("No more frames in this shot")
     # this is the last frame
     elif not next_timing:
         st.session_state['current_frame_index'] = max(1, st.session_state['current_frame_index'] - 1)

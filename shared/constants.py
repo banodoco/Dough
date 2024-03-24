@@ -82,6 +82,7 @@ class InferenceType(ExtendedEnum):
     FRAME_INTERPOLATION = "frame_interpolation"                     # for generating single/multiple interpolated videos
     GALLERY_IMAGE_GENERATION = "gallery_image_generation"           # for generating gallery images
     FRAME_INPAINTING = "frame_inpainting"                           # for generating inpainted frames
+    MOTION_LORA_TRAINING = "motion_lora_training"                   # for training new motion loras
 
 class InferenceStatus(ExtendedEnum):
     QUEUED = "queued"

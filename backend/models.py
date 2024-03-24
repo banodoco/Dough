@@ -321,6 +321,10 @@ class Timing(BaseModel):
             self.aux_frame_index = new_index
             timing_list.update(aux_frame_index=F('aux_frame_index') - 1)
 
+        # --------------- adding alternative images ----------
+        if not (self.alternative_images and len(self.alternative_images)) and self.primary_image:
+            self.alternative_images = json.dumps([str(self.primary_image.uuid)])
+
         super().save(*args, **kwargs)
 
 

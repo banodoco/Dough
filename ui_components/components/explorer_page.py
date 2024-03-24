@@ -2,6 +2,7 @@ import json
 import streamlit as st
 from ui_components.constants import GalleryImageViewType
 from ui_components.methods.common_methods import get_canny_img, process_inference_output,add_new_shot, save_new_image
+from ui_components.methods.file_methods import zoom_and_crop
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.inpainting_element import inpainting_image_input
 from utils.common_utils import refresh_app
@@ -14,13 +15,15 @@ from utils.enum import ExtendedEnum
 from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.constants import ML_MODEL
 import numpy as np
+from PIL import Image
 from utils import st_memory
 
 
 class InputImageStyling(ExtendedEnum):
     TEXT2IMAGE = "Text to Image"
     IMAGE2IMAGE = "Image to Image"
-    CONTROLNET_CANNY = "ControlNet Canny"
+    # CONTROLNET_CANNY = "ControlNet Canny"
+    IPADAPTER_COMPOSITION = "IP-Adapter Composition"
     IPADAPTER_FACE = "IP-Adapter Face"
     IPADAPTER_PLUS = "IP-Adapter Plus"
     IPADPTER_FACE_AND_PLUS = "IP-Adapter Face & Plus"
@@ -89,7 +92,12 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                             st.session_state[f"uploaded_image_{output_value_name}"] = f"0_{output_value_name}"
                             
                         if source_of_starting_image == "Upload":
-                            st.session_state['uploaded_image'] = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=st.session_state[f"uploaded_image_{output_value_name}"], help="This will be the base image for the generation.")
+                            uploaded_image = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=st.session_state[f"uploaded_image_{output_value_name}"], help="This will be the base image for the generation.")
+                            if uploaded_image:
+                                uploaded_image = Image.open(uploaded_image) if not isinstance(uploaded_image, Image.Image) else uploaded_image
+                                uploaded_image = zoom_and_crop(uploaded_image, project_settings.width, project_settings.height)
+                            
+                            st.session_state['uploaded_image'] = uploaded_image
                         
                         else:
                             # taking image from shots
@@ -200,29 +208,48 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_img2img, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
 
-                elif generation_method == InputImageStyling.CONTROLNET_CANNY.value:
-                    edge_pil_img = get_canny_img(st.session_state["input_image_1"], low_threshold=50, high_threshold=150)    # redundant incase of local inference
-                    input_img = edge_pil_img if not GPU_INFERENCE_ENABLED else st.session_state["input_image_1"]
+                elif generation_method == InputImageStyling.IPADAPTER_COMPOSITION.value:
+                    input_img = st.session_state["input_image_1"]
                     input_image_file = save_new_image(input_img, project_uuid)
                     query_obj = MLQueryObject(
                         timing_uuid=None,
                         model_uuid=None,
                         image_uuid=input_image_file.uuid,
-                        guidance_scale=8,
+                        guidance_scale=5,
                         seed=-1,
                         num_inference_steps=30,
                         strength=strength_of_image/100,
                         adapter_type=None,
-                        prompt=prompt,
-                        low_threshold=0.2,
-                        high_threshold=0.7,
+                        prompt=prompt,                                                
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
                         data={'condition_scale': 1, "shot_uuid": shot_uuid}
                     )
 
-                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_composition, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                
+                # elif generation_method == InputImageStyling.CONTROLNET_CANNY.value:
+                #     edge_pil_img = get_canny_img(st.session_state["input_image_1"], low_threshold=50, high_threshold=150)    # redundant incase of local inference
+                #     input_img = edge_pil_img if not GPU_INFERENCE_ENABLED else st.session_state["input_image_1"]
+                #     input_image_file = save_new_image(input_img, project_uuid)
+                #     query_obj = MLQueryObject(
+                #         timing_uuid=None,
+                #         model_uuid=None,
+                #         image_uuid=input_image_file.uuid,
+                #         guidance_scale=5,
+                #         seed=-1,
+                #         num_inference_steps=30,
+                #         strength=strength_of_image/100,
+                #         adapter_type=None,
+                #         prompt=prompt,                                                
+                #         negative_prompt=negative_prompt,
+                #         height=project_settings.height,
+                #         width=project_settings.width,
+                #         data={'condition_scale': 1, "shot_uuid": shot_uuid}
+                #     )
+
+                #     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
                 
                 elif generation_method == InputImageStyling.IPADAPTER_FACE.value:
                     # validation
@@ -305,7 +332,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     query_obj = MLQueryObject(
                         timing_uuid=None,
                         model_uuid=None,
-                        guidance_scale=8,
+                        guidance_scale=6,
                         seed=-1,                            
                         num_inference_steps=25,            
                         strength=0.5,
@@ -318,7 +345,6 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     )
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_inpainting, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
-                    
 
                 if log:
                     inference_data = {
@@ -343,7 +369,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please enter a prompt to generate images")
         elif type_of_generation == InputImageStyling.IMAGE2IMAGE.value and st.session_state["input_image_1"] is None:
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
-        elif type_of_generation == InputImageStyling.CONTROLNET_CANNY.value and st.session_state["input_image_1"] is None:
+        elif type_of_generation == InputImageStyling.IPADAPTER_COMPOSITION.value and st.session_state["input_image_1"] is None:
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
         elif type_of_generation == InputImageStyling.IPADAPTER_FACE.value and st.session_state["input_image_1"] is None:
             st.button("Generate images", key="generate_images", use_container_width=True, type="primary", disabled=True, help="Please upload an image")
@@ -371,8 +397,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     
     if shortlist is False:
         st.markdown("***")
-        st.markdown("### 🖼️ Gallery _________")
-        st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+        st.markdown("### 🖼️ Gallery")
+        st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
     h1,h2,h3,h4 = st.columns([3, 1, 1, 1])
        # by default only showing explorer views
@@ -483,11 +509,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                         button_text = "Pull new images"
                     else:
                         st.info(f"###### {explorer_stats['pending_image_count']} images pending generation and {explorer_stats['temp_image_count']} ready to be fetched")
-                        button_text = "Check for/pull new images"
-                    
-                # st.info(f"###### {total_number_pending} images pending generation")
-                # st.info(f"###### {explorer_stats['temp_image_count']} new images generated")     
-                # st.info(f"###### {explorer_stats['pending_image_count']} images pending generation")     
+                        button_text = "Check for/pull new images" 
             
             with fetch3:
                     if st.button(f"{button_text}", key=f"check_for_new_images_", use_container_width=True):
@@ -523,7 +545,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                     shot_name = st.text_input("New shot name:", max_chars=40, key=f"shot_name_{gallery_image_list[i+j].uuid}")
                                     if st.button("Create new shot", key=f"create_new_{gallery_image_list[i + j].uuid}", use_container_width=True):
                                         new_shot = add_new_shot(project_uuid, name=shot_name)
-                                        add_key_frame(gallery_image_list[i + j], False, new_shot.uuid, len(data_repo.get_timing_list_from_shot(new_shot.uuid)), refresh_state=False)
+                                        add_key_frame(gallery_image_list[i + j], new_shot.uuid, len(data_repo.get_timing_list_from_shot(new_shot.uuid)), refresh_state=False)
                                         # removing this from the gallery view
                                         data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
                                         st.rerun()
@@ -534,10 +556,12 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                         st.session_state["last_shot_number"] = shot_number 
                                         shot_uuid = shot_list[shot_number].uuid
 
-                                        add_key_frame(gallery_image_list[i + j], False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
+                                        add_key_frame(gallery_image_list[i + j], shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
                                         # removing this from the gallery view
                                         data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                        refresh_app(maintain_state=True)                  
+                                        st.session_state[f"move_frame_mode_{shot_uuid}"] = False
+                                        refresh_app(maintain_state=True)       
+                                               
                         # else:
                         #     st.error("The image is truncated and cannot be displayed.")
                         if 'add_and_remove_from_shortlist' in view:

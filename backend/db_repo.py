@@ -194,6 +194,7 @@ class DBRepo:
 
             kwargs['project_id'] = project.id
 
+        # hackish sol: you can pass custom params as long as 'page' is not in the kwargs
         if 'page' in kwargs and kwargs['page']:
             page = kwargs['page']
             del kwargs['page']

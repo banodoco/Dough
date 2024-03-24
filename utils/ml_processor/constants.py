@@ -14,6 +14,10 @@ class ComfyWorkflow(ExtendedEnum):
     SDXL_INPAINTING = "sdxl-inpainting"
     STEERABLE_MOTION = "steerable_motion"
     SDXL_IMG2IMG = "sdxl_img2img"
+    UPSCALER = "upscale"
+    MOTION_LORA = "motion_lora"
+    IPADAPTER_COMPOSITION = "ipadapter_composition"
+    DYNAMICRAFTER = "dynamicrafter"
 
 @dataclass
 class MLModel:
@@ -80,6 +84,7 @@ class ML_MODEL:
     sdxl_controlnet = MLModel("lucataco/sdxl-controlnet", "db2ffdbdc7f6cb4d6dab512434679ee3366ae7ab84f89750f8947d5594b79a47", ComfyWorkflow.SDXL_CONTROLNET)
     realistic_vision_v5_img2img = MLModel("lucataco/realistic-vision-v5-img2img", "82bbb4595458d6be142450fc6d8c4d79c936b92bd184dd2d6dd71d0796159819")
     ad_interpolation = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.STEERABLE_MOTION)
+    dynamicrafter = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.DYNAMICRAFTER)
 
     # addition 17/10/2023
     llama_2_7b = MLModel("meta/llama-2-7b", "527827021d8756c7ab79fde0abbfaac885c37a3ed5fe23c7465093f0878d55ef", ComfyWorkflow.LLAMA_2_7B)
@@ -91,6 +96,10 @@ class ML_MODEL:
     ipadapter_plus = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IP_ADAPTER_PLUS)
     ipadapter_face = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IP_ADAPTER_FACE)
     ipadapter_face_plus = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IP_ADAPTER_FACE_PLUS)
+    video_upscaler = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.UPSCALER)
+    motion_lora_trainer = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.MOTION_LORA)
+    ipadapter_composition = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IPADAPTER_COMPOSITION)
+
 
     @staticmethod
     def get_model_by_db_obj(model_db_obj):
@@ -107,9 +116,11 @@ MODEL_FILTERS = [
     ML_MODEL.sdxl_img2img,
     ML_MODEL.sdxl_inpainting,
     ML_MODEL.ad_interpolation,
+    ML_MODEL.dynamicrafter,
     ML_MODEL.ipadapter_face,
     ML_MODEL.ipadapter_face_plus,
-    ML_MODEL.ipadapter_plus
+    ML_MODEL.ipadapter_plus,
+    ML_MODEL.ipadapter_composition,
 ]
 
 DEFAULT_LORA_MODEL_URL = "https://replicate.delivery/pbxt/nWm6eP9ojwVvBCaWoWZVawOKRfgxPJmkVk13ES7PX36Y66kQA/tmpxuz6k_k2datazip.safetensors"

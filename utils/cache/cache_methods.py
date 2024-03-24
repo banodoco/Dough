@@ -300,25 +300,23 @@ def cache_data(cls):
         status = original_func(self, *args, **kwargs)
         
         if status:
-            StCache.delete_all(CacheKey.TIMING_DETAILS.value)
-            # deleting shots as well. for e.g. timing update can be moving it from
-            # one shot to another
-            StCache.delete_all(CacheKey.SHOT.value)
+            timing_func = getattr(cls, '_original_get_timing_from_uuid')
+            timing = timing_func(self, args[0])
+            if kwargs.get('update_in_place', False):
+                # these changes contains updates which don't require a complete cache refresh
+                StCache.update(timing, CacheKey.TIMING_DETAILS.value)
+            else:
+                StCache.delete_all(CacheKey.TIMING_DETAILS.value)
+                # deleting shots as well. for e.g. timing update can be moving it from
+                # one shot to another
+                StCache.delete_all(CacheKey.SHOT.value)
 
-        # updating the timing list
-        timing_func = getattr(cls, '_original_get_timing_from_uuid')
-        timing = timing_func(self, args[0])
-        if timing and timing.shot.project:
-            # original_func = getattr(cls, '_original_get_timing_list_from_project')
-            # timing_list = original_func(self, timing.shot.project.uuid)
-            # if timing_list and len(timing_list):
-            #     StCache.add_all(timing_list, CacheKey.TIMING_DETAILS.value)
-
-            # updating shot list
-            original_func = getattr(cls, '_original_get_shot_list')
-            shot_list = original_func(self, timing.shot.project.uuid)
-            if shot_list:
-                StCache.add_all(shot_list, CacheKey.SHOT.value)
+                if timing and timing.shot.project:
+                    # updating shot list
+                    original_func = getattr(cls, '_original_get_shot_list')
+                    shot_list = original_func(self, timing.shot.project.uuid)
+                    if shot_list:
+                        StCache.add_all(shot_list, CacheKey.SHOT.value)
     
     setattr(cls, '_original_update_specific_timing', cls.update_specific_timing)
     setattr(cls, "update_specific_timing", _cache_update_specific_timing)

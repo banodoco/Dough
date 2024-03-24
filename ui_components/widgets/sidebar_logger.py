@@ -2,6 +2,7 @@ import time
 import streamlit as st
 
 from shared.constants import InferenceParamType, InferenceStatus, InternalFileTag, InternalFileType
+from ui_components.widgets.display_element import individual_video_display_element
 from ui_components.widgets.frame_movement_widgets import jump_to_single_frame_view_button
 import json
 import math
@@ -130,7 +131,7 @@ def sidebar_logger(shot_uuid):
                     if output_url.endswith('png') or output_url.endswith('jpg') or output_url.endswith('jpeg') or output_url.endswith('gif'):
                         st.image(output_url)
                     elif output_url.endswith('mp4'):
-                        st.video(output_url, format='mp4', start_time=0)
+                        individual_video_display_element(output_url)
                     else:
                         st.info("No data to display")         
         
@@ -193,6 +194,10 @@ def sidebar_logger(shot_uuid):
                                 st.session_state['frame_styling_view_type'] = "Explorer"
                                 
                                 st.rerun()
+                                
+                shot_data = origin_data.get("shot_data", None)
+                if shot_data:
+                    pass        # add jump_to_shot element
                 
             # if it's not the last log
             #if _ != len(log_list) - 1:

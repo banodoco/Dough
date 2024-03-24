@@ -130,12 +130,11 @@
     },
     "27": {
       "inputs": {
-        "weight": 0.65,
-        "noise": 0.3,
-        "weight_type": "original",
+        "weight": 1,
+        "weight_type": "linear",
+        "combine_embeds": "concat",
         "start_at": 0,
-        "end_at": 0.396,
-        "unfold_batch": false,
+        "end_at": 1,
         "ipadapter": [
           "26",
           0
@@ -153,9 +152,9 @@
           0
         ]
       },
-      "class_type": "IPAdapterApply",
+      "class_type": "IPAdapterAdvanced",
       "_meta": {
-        "title": "Apply IPAdapter"
+        "title": "IPAdapter Advanced"
       }
     },
     "28": {
@@ -185,12 +184,11 @@
       "inputs": {
         "weight": 0.75,
         "noise": 0.3,
+        "weight_faceidv2": 0.75,
         "weight_type": "linear",
+        "combine_embeds": "concat",
         "start_at": 0,
         "end_at": 1,
-        "faceid_v2": true,
-        "weight_v2": 0.75,
-        "unfold_batch": false,
         "ipadapter": [
           "21",
           0
@@ -212,24 +210,24 @@
           0
         ]
       },
-      "class_type": "IPAdapterApplyFaceID",
+      "class_type": "IPAdapterFaceID",
       "_meta": {
-        "title": "Apply IPAdapter FaceID"
+        "title": "IPAdapter FaceID"
       }
     },
     "37": {
       "inputs": {
         "provider": "CUDA"
       },
-      "class_type": "InsightFaceLoader",
+      "class_type": "IPAdapterInsightFaceLoader",
       "_meta": {
-        "title": "Load InsightFace"
+        "title": "IPAdapter InsightFace Loader"
       }
     },
     "39": {
       "inputs": {
         "interpolation": "LANCZOS",
-        "crop_position": "pad",
+        "crop_position": "top",
         "sharpening": 0,
         "image": [
           "28",
@@ -243,17 +241,17 @@
     },
     "40": {
       "inputs": {
-        "crop_position": "center",
+        "interpolation": "LANCZOS",
+        "crop_position": "top",
         "sharpening": 0,
-        "pad_around": true,
         "image": [
           "24",
           0
         ]
       },
-      "class_type": "PrepImageForInsightFace",
+      "class_type": "PrepImageForClipVision",
       "_meta": {
-        "title": "Prepare Image For InsightFace"
+        "title": "Prep Image For ClipVision"
       }
     },
     "41": {

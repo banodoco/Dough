@@ -8,32 +8,42 @@ from ui_components.methods.file_methods import save_or_host_file
 
 from utils.data_repo.data_repo import DataRepo
 
-def zoom_inputs(position='in-frame', horizontal=False):
+def zoom_inputs(position='in-frame', horizontal=False, shot_uuid=None):
     if horizontal:
-        col1, col2, col3, col4, col5, col6 = st.columns(6)
+        col1, col2 = st.columns(2)
+        col3, col4 = st.columns(2)
+        col5, col6 = st.columns(2)
     else:
         col1 = col2 = col3 = col4 = col5 = col6 = st
 
+    if 'zoom_level_input_default' not in st.session_state:
+        st.session_state['zoom_level_input_default'] = 100
+        st.session_state['rotation_angle_input_default'] = 0
+        st.session_state['x_shift_default'] = 0
+        st.session_state['y_shift_default'] = 0
+        st.session_state['flip_vertically_default'] = False
+        st.session_state['flip_horizontally_default'] = False
+  
+
     col1.number_input(
-        "Zoom In/Out", min_value=10, max_value=1000, step=10, key=f"zoom_level_input", value=100)
+        "Zoom In/Out", min_value=10, max_value=1000, step=1, key=f"zoom_level_input", value=st.session_state['zoom_level_input_default'])
     
-    # col2.number_input(
-    #     "Rotate Counterclockwise/Clockwise", min_value=-360, max_value=360, step=5, key="rotation_angle_input", value=0)
-    st.session_state['rotation_angle_input'] = 0
+    col2.number_input(
+        "Rotate", min_value=-360, max_value=360, step=5, key="rotation_angle_input", value=st.session_state['rotation_angle_input_default'])
+    # st.session_state['rotation_angle_input'] = 0
     
     col3.number_input(
-        "Shift Left/Right", min_value=-1000, max_value=1000, step=5, key=f"x_shift", value=0)
+        "Shift Left/Right", min_value=-1000, max_value=1000, step=5, key=f"x_shift", value=st.session_state['x_shift_default'])
     
     col4.number_input(
-        "Shift Down/Up", min_value=-1000, max_value=1000, step=5, key=f"y_shift", value=0)
+        "Shift Down/Up", min_value=-1000, max_value=1000, step=5, key=f"y_shift", value=st.session_state['y_shift_default'])
 
     col5.checkbox(
-        "Flip Vertically ↕️", key=f"flip_vertically", value=False)
+        "Flip Vertically ↕️", key=f"flip_vertically", value=str(st.session_state['flip_vertically_default']))
 
     col6.checkbox(
-        "Flip Horizontally ↔️", key=f"flip_horizontally", value=False)
+        "Flip Horizontally ↔️", key=f"flip_horizontally", value=str(st.session_state['flip_horizontally_default']))
 
-    
 
 def save_zoomed_image(image, timing_uuid, stage, promote=False):
     data_repo = DataRepo()
@@ -58,7 +68,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
 
         source_image: InternalFileObject = data_repo.create_file(**file_data)
         data_repo.update_specific_timing(
-            st.session_state['current_frame_uuid'], source_image_id=source_image.uuid)
+            st.session_state['current_frame_uuid'], source_image_id=source_image.uuid, update_in_place=True)
     elif stage == WorkflowStageType.STYLED.value:
         save_location = f"videos/{project_uuid}/assets/frames/2_character_pipeline_completed/{file_name}"
         hosted_url = save_or_host_file(image, save_location)
@@ -74,39 +84,23 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
             file_data.update({'local_path': save_location})
             
         styled_image: InternalFileObject = data_repo.create_file(**file_data)
-
         number_of_image_variants = add_image_variant(
             styled_image.uuid, timing_uuid)
         if promote:
             promote_image_variant(timing_uuid, number_of_image_variants - 1)
-    '''
-    project_update_data = {
-        "zoom_level": st.session_state['zoom_level_input'],
-        "rotation_angle_value": st.session_state['rotation_angle_input'],
-        "x_shift": st.session_state['x_shift'],
-        "y_shift": st.session_state['y_shift']
-    }
 
-    data_repo.update_project_setting(project_uuid, **project_update_data)
-
-    # TODO: **CORRECT-CODE - make a proper column for zoom details
-    timing_update_data = {
-        "zoom_details": f"{st.session_state['zoom_level_input']},{st.session_state['rotation_angle_input']},{st.session_state['x_shift']},{st.session_state['y_shift']}",
-
-    }
-    
-    data_repo.update_specific_timing(timing_uuid, **timing_update_data)
-    '''
 
 def reset_zoom_element():
-    st.session_state['zoom_level_input_key'] = 100
-    st.session_state['rotation_angle_input_key'] = 0
-    st.session_state['x_shift_key'] = 0
-    st.session_state['y_shift_key'] = 0
+    st.session_state['zoom_level_input_default'] = 100
     st.session_state['zoom_level_input'] = 100
+    st.session_state['rotation_angle_input_default'] = 0
     st.session_state['rotation_angle_input'] = 0
+    st.session_state['x_shift_default'] = 0
     st.session_state['x_shift'] = 0
+    st.session_state['y_shift_default'] = 0
     st.session_state['y_shift'] = 0
+    st.session_state['flip_vertically_default'] = False
     st.session_state['flip_vertically'] = False
+    st.session_state['flip_horizontally_default'] = False
     st.session_state['flip_horizontally'] = False
-    st.rerun()
+    
