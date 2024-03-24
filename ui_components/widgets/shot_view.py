@@ -1,3 +1,4 @@
+import base64
 import json
 import time
 from typing import List
@@ -7,100 +8,322 @@ import shutil
 from PIL import Image
 import requests
 from io import BytesIO
+import pandas as pd
 import streamlit as st
+import uuid
+import random
 from shared.constants import AppSubPage, InferenceParamType
 from ui_components.constants import WorkflowStageType
-from ui_components.methods.file_methods import generate_pil_image
+from ui_components.methods.file_methods import generate_pil_image, get_file_bytes_and_extension, get_file_size
 from streamlit_option_menu import option_menu
+from shared.constants import InternalFileType
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from ui_components.widgets.add_key_frame_element import add_key_frame,add_key_frame_section
 from ui_components.widgets.common_element import duplicate_shot_button
-from ui_components.widgets.frame_movement_widgets import change_frame_shot, delete_frame_button, jump_to_single_frame_view_button, move_frame_back_button, move_frame_forward_button, replace_image_widget
+from ui_components.methods.common_methods import apply_coord_transformations, apply_image_transformations
+from ui_components.widgets.frame_movement_widgets import change_frame_shot, delete_frame_button, jump_to_single_frame_view_button, move_frame_back_button, move_frame_forward_button, replace_image_widget,delete_frame
 from utils.common_utils import refresh_app
 from utils.data_repo.data_repo import DataRepo
+from ui_components.methods.file_methods import save_or_host_file
 from utils import st_memory
+from ui_components.widgets.image_zoom_widgets import reset_zoom_element, save_zoomed_image, zoom_inputs
 
-def shot_keyframe_element(shot_uuid, items_per_row, column=None,position="Timeline",**kwargs):
+def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timeline", **kwargs):
+    from ui_components.widgets.variant_comparison_grid import image_variant_details
+    
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
-    
-    if "open_shot" not in st.session_state:
-        st.session_state["open_shot"] = None
-    
+    project_uuid = shot.project.uuid
 
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
-                
-    if position == "Timeline":
-
-        header_col_0, header_col_1, header_col_2, header_col_3 = st.columns([2,1,1.5,0.5])
+    with column:
+        col1, col2, col3 = st.columns([1.25, 0.75, 1])
+        with col1:
             
-        with header_col_0:
-            update_shot_name(shot.uuid)                 
-                           
-        # with header_col_1:   
-        #     update_shot_duration(shot.uuid)
+            move_frame_mode = st_memory.toggle("Open Frame Changer™", value=False, key=f"move_frame_mode_{shot.uuid}", help="Enable to move frames around")
+            if st.session_state[f"move_frame_mode_{shot.uuid}"]:
+                st.warning("You're in frame moving mode. You must press 'Save' to save changes.")
+                if st.button("Save", key=f"save_move_frame_{shot.uuid}", help="Save the changes made in 'move frame' mode", use_container_width=True, type="primary"):
+                    update_shot_frames(shot_uuid, timing_list)
+                    st.rerun()
+                if f"shot_data_{shot_uuid}" not in st.session_state:
+                    st.session_state[f"shot_data_{shot_uuid}"] = None
+                if st.session_state[f"shot_data_{shot_uuid}"] is None:
+                    shot_data = [{
+                        "uuid": timing.uuid,
+                        "image_location": timing.primary_image.location if timing.primary_image and timing.primary_image.location else None,
+                        "position": idx
+                    } for idx, timing in enumerate(timing_list)]
+                    st.session_state[f"shot_data_{shot_uuid}"] = pd.DataFrame(shot_data)
+                if st.button("Discard changes", key=f"discard_changes_{shot.uuid}", help="Discard all changes made in 'move frame' mode", use_container_width=True):
+                    st.session_state[f"move_frame_mode_{shot.uuid}"] = False
+                    st.rerun()
+            else:                
+                st.session_state[f"shot_data_{shot_uuid}"] = None
 
-        with header_col_2:
-            st.write("")
-            shot_adjustment_button(shot, show_label=True)
-        with header_col_3:           
-            st.write("")                     
-            shot_animation_button(shot, show_label=True)   
+                                                 
+    st.markdown("***")
+    if move_frame_mode:
+        with column:
+            if f'list_to_move_{shot.uuid}' not in st.session_state:
+                st.session_state[f'list_to_move_{shot.uuid}'] = []
+            with col2:
+                frame_to_move_to = st.selectbox("Bulk move frames to:", [f"{i + 1}" for i in range(len(timing_list))], key=f"frame_to_move_to_{shot.uuid}")
+            with col3:
+                if st.session_state[f"move_frame_mode_{shot.uuid}"]:
+
+                    if st.session_state[f'list_to_move_{shot.uuid}'] == []:
+                        st.write("")
+                        st.info("No frames selected to move. Select them below.")
+                    else:                
+                        st.info(f"Selected frames to move: {st.session_state[f'list_to_move_{shot.uuid}']}")
+                if st.session_state[f'list_to_move_{shot.uuid}'] != []:
+                    if st.button("Remove all selected", key=f"remove_all_selected_{shot.uuid}", help="Remove all selected frames to move"):
+                        st.session_state[f'list_to_move_{shot.uuid}'] = []
+                        st.rerun()
+                    
+                    
+            with col2:
+                if st.session_state[f'list_to_move_{shot.uuid}'] != []:
+                    if st.button("Move selected", key=f"move_frame_to_{shot.uuid}", help="Move the frame to the selected position", use_container_width=True):
+                        # order list to move in ascending order
+                        list_to_move = sorted(st.session_state[f'list_to_move_{shot.uuid}'])
+
+                        st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frames_to_positions(st.session_state[f"shot_data_{shot_uuid}"], list_to_move, int(frame_to_move_to)-1)
+                        st.session_state[f'list_to_move_{shot.uuid}'] = []
+                        st.rerun()
+                    if st.button("Delete selected", key=f"delete_frame_to_{shot.uuid}", help="Delete the selected frames"):
+                        
+                        st.session_state[f"shot_data_{shot_uuid}"] = bulk_delete_temp_frames(st.session_state[f"shot_data_{shot_uuid}"], st.session_state[f'list_to_move_{shot.uuid}'])
+                        st.session_state[f'list_to_move_{shot.uuid}'] = []
+                        st.rerun()
+                else:
+                    st.button("Move selected", key=f"move_frame_to_{shot.uuid}", use_container_width=True,disabled=True, help="No frames selected to move.")
+                
+            
+        for i in range(0, len(st.session_state[f"shot_data_{shot_uuid}"]), items_per_row):
+            with st.container():
+                grid = st.columns(items_per_row)                
+                for j in range(items_per_row):                    
+                    idx = i + j
+
+                    if idx < len(st.session_state[f"shot_data_{shot_uuid}"]):  # Ensure idx does not exceed the length of shot_df
+                        
+                        with grid[j % items_per_row]:  # Use modulo for column indexingr
+                            
+                            row = st.session_state[f"shot_data_{shot_uuid}"].loc[idx]
+                            
+                            if row['image_location']:
+                                st.caption(f"Frame {idx + 1}")
+                                st.image(row['image_location'], use_column_width=True)
+                            else:
+                                st.warning("No primary image present.")
+
+                            btn1, btn2, btn3, btn4, btn5 = st.columns([1, 1, 1, 1, 3.5])
+                            
+                            with btn1:        
+                                if st.button("⬅️", key=f"move_frame_back_{idx}", help="Move frame back", use_container_width=True):
+                                    st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frame(st.session_state[f"shot_data_{shot_uuid}"], idx, 'backward')           
+                                    st.rerun()
+                            with btn2:
+                                if st.button("➡️", key=f"move_frame_forward_{idx}", help="Move frame forward", use_container_width=True):
+                                    st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frame(st.session_state[f"shot_data_{shot_uuid}"], idx, 'forward')
+                                    st.rerun()
+                            with btn3:
+                                if st.button("🔁", key=f"copy_frame_{idx}", use_container_width=True):
+                                    st.session_state[f"shot_data_{shot_uuid}"] = copy_temp_frame(st.session_state[f"shot_data_{shot_uuid}"], idx)
+                                    st.rerun()
+                            with btn4:
+                                if st.button("❌", key=f"delete_frame_{idx}", use_container_width=True):
+                                    st.session_state[f"shot_data_{shot_uuid}"] = delete_temp_frame(st.session_state[f"shot_data_{shot_uuid}"], idx)
+                                    st.rerun()
+                            with btn5:
+                                if idx not in st.session_state[f'list_to_move_{shot.uuid}']:
+                                    if st.button("Select", key=f"select_frame_{idx}", use_container_width=True):
+                                        st.session_state[f'list_to_move_{shot.uuid}'].append(idx)
+                                        st.rerun()
+                                else:
+                                    if st.button("Deselect", key=f"deselect_frame_{idx}", use_container_width=True,type='primary'):
+                                        st.session_state[f'list_to_move_{shot.uuid}'].remove(idx)
+                                        st.rerun()
+
+                            if 'zoom_to_open' not in st.session_state:
+                                st.session_state['zoom_to_open'] = None
+        
+                            header1, header2 = st.columns([1.5, 1])
+
+                            with header1:      
+
+                                if f'open_zoom_{shot.uuid}_{idx}' not in st.session_state:
+                                    st.session_state[f'open_zoom_{shot.uuid}_{idx}'] = False
+
+                                if idx != st.session_state['zoom_to_open']:
+                                    if st.button("Open zoom", key=f"open_zoom_{shot.uuid}_{idx}_button"):                                             
+                                        st.session_state['zoom_level_input'] = 100
+                                        st.session_state['rotation_angle_input'] = 0
+                                        st.session_state['x_shift'] = 0
+                                        st.session_state['y_shift'] = 0
+                                        st.session_state['flip_vertically'] = False
+                                        st.session_state['flip_horizontally'] = False            
+
+                                        st.session_state['zoom_to_open'] = idx 
+                                        st.rerun()         
+                                else:
+                                    if st.button("Close zoom", key=f"close_zoom_{shot.uuid}_{idx}_button"):                                             
+                                        st.session_state['zoom_to_open'] = None 
+                                        st.rerun()
+                                                                      
+                             
+                            if st.session_state['zoom_to_open'] == idx:
+                                with header2:
+                                    if st.button("Reset",use_container_width=True,key=f"reset_zoom_{shot.uuid}_{idx}"):
+                                        reset_zoom_element()
+                                        st.rerun()
+
+                                
+                                        
+
+                                input_image = generate_pil_image(st.session_state[f"shot_data_{shot_uuid}"].loc[idx]['image_location'])
+
+                                if 'zoom_level_input' not in st.session_state:
+                                    st.session_state['zoom_level_input'] = 100
+                                    st.session_state['rotation_angle_input'] = 0
+                                    st.session_state['x_shift'] = 0
+                                    st.session_state['y_shift'] = 0
+                                    st.session_state['flip_vertically'] = False
+                                    st.session_state['flip_horizontally'] = False            
+
+                                st.caption("Zoom and Rotate:")
+                                h1, h2, h3, h4 = st.columns([1, 1, 1, 1])
+
+                                with h1:
+                                    # zoom in with emoji button that increases zoom level by 10
+                                    if st.button("➕", key=f"zoom_in_{idx}", help="Zoom in by 10%", use_container_width=True):
+                                        st.session_state['zoom_level_input'] += 10                                        
+                                    # zoom out with emoji button that decreases zoom level by 10
+                                    if st.button("➖", key=f"zoom_out_{idx}", help="Zoom out by 10%", use_container_width=True):
+                                        st.session_state['zoom_level_input'] -= 10          
+
+                                with h2:
+                                    # shift up with emoji button that decreases y shift by 10
+                                    if st.button("⬆️", key=f"shift_up_{idx}", help="Shift up by 10px", use_container_width=True):
+                                        st.session_state['y_shift'] += 10
+                                        
+                                    # shift down with emoji button that increases y shift by 10
+                                    if st.button("⬇️", key=f"shift_down_{idx}", help="Shift down by 10px", use_container_width=True):
+                                        st.session_state['y_shift'] -= 10                              
+                                    
+                                with h3:
+
+                                     # shift left with emoji button that decreases x shift by 10
+                                    if st.button("⬅️", key=f"shift_left_{idx}", help="Shift left by 10px", use_container_width=True):
+                                        st.session_state['x_shift'] -= 10
+                                    # rotate left with emoji button that decreases rotation angle by 90
+                                    if st.button("↩️", key=f"rotate_left_{idx}", help="Rotate left by 5°", use_container_width=True):
+                                        st.session_state['rotation_angle_input'] -= 5                                        
+                                              
+
+                                with h4:
+                            
+                                        
+                                    # shift right with emoji button that increases x shift by 10
+                                    if st.button("➡️", key=f"shift_right_{idx}", help="Shift right by 10px", use_container_width=True):
+                                        st.session_state['x_shift'] += 10
+
+                                                                 # rotate right with emoji button that increases rotation angle by 90
+                                    if st.button("↪️", key=f"rotate_right_{idx}", help="Rotate right by 5°", use_container_width=True):
+                                        st.session_state['rotation_angle_input'] += 5     
+                                        
+                                
+     
+                                        
+
+                                i1, i2 = st.columns([1, 1])
+                                with i1:
+                                    if st.button("↕️", key=f"flip_vertically_{idx}", help="Flip vertically", use_container_width=True):
+                                        
+                                        st.session_state['flip_vertically'] = not st.session_state['flip_vertically']
+
+                                with i2:
+                                    if st.button("↔️", key=f"flip_horizontally_{idx}", help="Flip horizontally", use_container_width=True):
+                                        st.session_state['flip_horizontally'] = not st.session_state['flip_horizontally']
+
+                     
+
+                                
+#                                  zoom_inputs(horizontal=True, shot_uuid=f"{shot_uuid}_{idx}")
+
+                                st.caption("Output Image:")
+
+                                output_image = apply_image_transformations(
+                                    input_image,
+                                    st.session_state['zoom_level_input'],
+                                    st.session_state['rotation_angle_input'],
+                                    st.session_state['x_shift'] ,
+                                    st.session_state['y_shift'] ,
+                                    st.session_state['flip_vertically'] ,
+                                    st.session_state['flip_horizontally']
+                                )
+
+                                st.image(output_image, use_column_width=True)
+                                
+                               
+                                if st.button("Save", key=f"save_zoom_{idx}", help="Save the changes made in 'move frame' mode",use_container_width=True,type="primary"):
+                                    # make file_name into a random uuid using uuid
+                                    file_name = f"{uuid.uuid4()}.png"
+                                    
+                                    save_location = f"videos/{project_uuid}/assets/frames/2_character_pipeline_completed/{file_name}"
+                                    hosted_url = save_or_host_file(output_image, save_location)
+                                    file_data = {
+                                        "name": file_name,
+                                        "type": InternalFileType.IMAGE.value,
+                                        "project_id": project_uuid
+                                    }
+
+                                    if hosted_url:
+                                        file_data.update({'hosted_url': hosted_url})
+                                        location = hosted_url
+                                    else:
+                                        file_data.update({'local_path': save_location})
+                                        location = save_location
+
+                                    st.session_state[f"shot_data_{shot_uuid}"].loc[idx, 'image_location'] = location
+                                    #st.session_state[f'open_zoom_{shot.uuid}_{idx}'] = False
+                                    st.session_state['zoom_to_open'] = None
+                                    st.rerun()
+                                                                                       
+                st.markdown("***")
+        bottom1, bottom2 = st.columns([1, 2])
+        with bottom1:
+            st.warning("You're in frame moving mode. You must press 'Save' to save changes.")
+            if st.button("Save", key=f"save_move_frame_{shot.uuid}_bottom", help="Save the changes made in 'move frame' mode", use_container_width=True,type="primary"):          
+                update_shot_frames(shot_uuid, timing_list)
+                st.rerun()
+            if st.button("Discard changes", key=f"discard_changes_{shot.uuid}_2", help="Discard all changes made in 'move frame' mode", use_container_width=True):
+                st.session_state[f"move_frame_mode_{shot.uuid}"] = False
+                st.rerun()
+        st.markdown("***")
 
     else:
-        with column:
-            col1, col2, col3, col4, col5 = st.columns([1,1,1,1,1])
+        for i in range(0, len(timing_list) + 1, items_per_row):
+            with st.container():
+                grid = st.columns(items_per_row)
+                for j in range(items_per_row):
+                    idx = i + j
+                    if idx <= len(timing_list):
+                        with grid[j]:
+                            if idx == len(timing_list):
+                                if position != "Timeline":
+                                    add_key_frame_section(shot_uuid)
+                            else:
+                                timing = timing_list[idx]
+                                if timing.primary_image and timing.primary_image.location:
+                                    st.image(timing.primary_image.location, use_column_width=True)                                                    
+                                    jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}",uuid=shot.uuid)
+                                else:                        
+                                    st.warning("No primary image present.")
 
-            with col1:
-                delete_frames_toggle = st_memory.toggle("Delete Frames", value=True, key="delete_frames_toggle")
-            with col2:
-                copy_frame_toggle = st_memory.toggle("Copy Frame", value=True, key="copy_frame_toggle")
-            with col3:
-                move_frames_toggle = st_memory.toggle("Move Frames", value=True, key="move_frames_toggle")
-            with col4:
-                change_shot_toggle = st_memory.toggle("Change Shot", value=False, key="change_shot_toggle")                
-            with col5:
-                shift_frame_toggle = st_memory.toggle("Shift Frames", value=False, key="shift_frame_toggle")
-                                            
-    st.markdown("***")
-
-    for i in range(0, len(timing_list) + 1, items_per_row):
-        with st.container():
-            grid = st.columns(items_per_row)
-            for j in range(items_per_row):
-                idx = i + j
-                if idx <= len(timing_list):
-                    with grid[j]:
-                        if idx == len(timing_list):
-                            if position != "Timeline":
-
-                                st.info("**Add new frame(s) to shot**")
-                                add_key_frame_section(shot_uuid, False)                           
-             
-                        else:
-                            timing = timing_list[idx]
-                            if timing.primary_image and timing.primary_image.location:
-                                st.image(timing.primary_image.location, use_column_width=True)
-                            else:                        
-                                st.warning("No primary image present.")       
-                                jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}",uuid=shot.uuid)
-                            if position != "Timeline":
-                                timeline_view_buttons(idx, shot_uuid, copy_frame_toggle, move_frames_toggle,delete_frames_toggle, change_shot_toggle, shift_frame_toggle)
-            if (i < len(timing_list) - 1) or (st.session_state["open_shot"] == shot.uuid) or (len(timing_list) % items_per_row != 0 and st.session_state["open_shot"] != shot.uuid) or len(timing_list) % items_per_row == 0:
                 st.markdown("***")
-    # st.markdown("***")
-
-    if position == "Timeline":      
-        # st.markdown("***")      
-        bottom1, bottom2, bottom3, bottom4,_ = st.columns([1,1,1,1,2])
-        with bottom1:            
-            delete_shot_button(shot.uuid)
-                            
-        with bottom2:            
-            duplicate_shot_button(shot.uuid)     
-                    
-        with bottom3:
-            move_shot_buttons(shot, "up")
 
 
 def move_shot_buttons(shot, direction):
@@ -215,26 +438,18 @@ def create_video_download_button(video_location, tag="temp"):
     # Extract the file name from the video location
     file_name = os.path.basename(video_location)
 
-    if video_location.startswith('http'):  # cloud file
-        response = requests.get(video_location)
+    # if get_file_size(video_location) > 5:
+    if st.button("Prepare video for download", use_container_width=True, key=tag + str(file_name)):
+        file_bytes, file_ext = get_file_bytes_and_extension(video_location)
+        # file_bytes = base64.b64encode(file_bytes).decode('utf-8')
         st.download_button(
             label="Download video",
-            data=response.content,
+            data=file_bytes,
             file_name=file_name,
             mime='video/mp4',
-            key=tag + str(file_name),
+            key=tag + str(file_name) + "_download_gen",
             use_container_width=True
         )
-    else:  # local file
-        with open(video_location, 'rb') as file:
-            st.download_button(
-                label="Download video",
-                data=file,
-                file_name=file_name,
-                mime='video/mp4',
-                key=tag + str(file_name),
-                use_container_width=True
-            )
 
 def shot_adjustment_button(shot, show_label=False):
     button_label = "Shot Adjustment 🔧" if show_label else "🔧"
@@ -257,79 +472,103 @@ def shot_animation_button(shot, show_label=False):
 
 
 
-def shift_frame_to_position(timing_uuid, target_position):
-    '''
-    Shifts the frame to the specified target position within the list of frames.
+
+def move_temp_frame(df, current_position, direction):
+    if direction == 'forward' and current_position < len(df) - 1:
+        df.loc[current_position, 'position'], df.loc[current_position + 1, 'position'] = df.loc[current_position + 1, 'position'], df.loc[current_position, 'position']
+    elif direction == 'backward' and current_position > 0:
+        df.loc[current_position, 'position'], df.loc[current_position - 1, 'position'] = df.loc[current_position - 1, 'position'], df.loc[current_position, 'position']
+    return df.sort_values('position').reset_index(drop=True)
+
+# Function to copy a frame in the dataframe
+def copy_temp_frame(df, position_to_copy):
+    new_row = df.loc[position_to_copy].copy()
+    new_row['uuid'] = f"Copy_of_{new_row['uuid']}"
+    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+    # make the position current frame + 1 and all the frames after it + 1
+    df.loc[position_to_copy + 1:, 'position'] = df.loc[position_to_copy + 1:, 'position'] + 1
     
-    Note: target_position is expected to be 1-based for user convenience (e.g., position 1 is the first position).
-    '''
-    data_repo = DataRepo()
-    timing = data_repo.get_timing_from_uuid(timing_uuid)
-    timing_list = data_repo.get_timing_list_from_shot(timing.shot.uuid)
-
-    # Adjusting target_position to 0-based indexing for internal logic
-    target_position -= 1
-
-    current_position = timing.aux_frame_index
-    total_frames = len(timing_list)
-
-    # Check if the target position is valid
-    if target_position < 0 or target_position >= total_frames:
-        st.error("Invalid target position")
-        time.sleep(0.5)
-        return
     
-    # Check if the frame is already at the target position
-    if current_position == target_position:
-        st.error("That's already your position")
-        time.sleep(0.5)
-        return
+    return df.sort_values('position').reset_index(drop=True)
 
-    # Update the position of the current frame
-    data_repo.update_specific_timing(timing.uuid, aux_frame_index=target_position)
+# Function to delete a frame in the dataframe
+def delete_temp_frame(df, position_to_delete):
+    df = df.drop(position_to_delete).reset_index(drop=True)
+    df['position'] = range(len(df))
+    return df
 
-
-def shift_frame_button(idx,shot):
-    timing_list: List[InternalFrameTimingObject] = shot.timing_list
-    col1, col2 = st.columns([1,1])
-    with col1:
-        position_to_shift_to = st.number_input("Shift to position:", value=timing_list[idx].aux_frame_index+1, key=f"shift_to_position_{timing_list[idx].uuid}",min_value=1, max_value=len(timing_list))
-    with col2:
-        st.write("")
-        if st.button("Shift", key=f"shift_frame_{timing_list[idx].uuid}", use_container_width=True):
-            shift_frame_to_position(timing_list[idx].uuid, position_to_shift_to)
-            st.rerun()
-            
-
-def timeline_view_buttons(idx, shot_uuid, copy_frame_toggle, move_frames_toggle, delete_frames_toggle, change_shot_toggle, shift_frame_toggle):
-    data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
-    timing_list = shot.timing_list
-
+def bulk_delete_temp_frames(df, positions_to_delete):
+    # Ensure positions_to_delete is a list
+    if not isinstance(positions_to_delete, list):
+        positions_to_delete = [positions_to_delete]
     
-    btn1, btn2, btn3, btn4 = st.columns([1, 1, 1, 1])
+    # Drop the rows from their positions
+    df = df.drop(positions_to_delete).reset_index(drop=True)
     
-    if move_frames_toggle:
-        with btn1:                                            
-            move_frame_back_button(timing_list[idx].uuid, "side-to-side")
-        with btn2:   
-            move_frame_forward_button(timing_list[idx].uuid, "side-to-side")
+    # Correct the 'position' column to reflect the new order
+    df['position'] = range(len(df))
     
-    if copy_frame_toggle:
-        with btn3:
-            if st.button("🔁", key=f"copy_frame_{timing_list[idx].uuid}", use_container_width=True):
-                pil_image = generate_pil_image(timing_list[idx].primary_image.location)
-                add_key_frame(pil_image, False, st.session_state['shot_uuid'], timing_list[idx].aux_frame_index+1, refresh_state=False)
-                refresh_app(maintain_state=True)
+    return df
 
-    if delete_frames_toggle:
-        with btn4:
-            delete_frame_button(timing_list[idx].uuid)
+def update_shot_frames(shot_uuid, timing_list):
     
-    if change_shot_toggle:
-        change_frame_shot(timing_list[idx].uuid, "side-to-side")
-    
-    jump_to_single_frame_view_button(idx + 1, timing_list, 'timeline_btn_'+str(timing_list[idx].uuid))        
+    # Ensure the move frame mode is turned off
+    st.session_state[f"move_frame_mode_{shot_uuid}"] = False
 
-    if shift_frame_toggle:
-        shift_frame_button(idx,shot)
+    # Delete all existing frames first
+    for timing in timing_list:
+        delete_frame(timing.uuid)
+
+    # Initialize the progress bar
+    progress_bar = st.progress(0)
+
+    # Calculate the total number of items for accurate progress update
+    total_items = len(st.session_state[f"shot_data_{shot_uuid}"])
+
+    # List of happy emojis
+    random_list_of_emojis = ["🎉", "🎊", "🎈", "🎁", "🎀", "🎆", "🎇", "🧨", "🪅"]
+
+    # Add frames again and update progress
+    for idx, (index, row) in enumerate(st.session_state[f"shot_data_{shot_uuid}"].iterrows()):
+        selected_image_location = row['image_location']
+        # def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], shot_uuid, target_frame_position=None, refresh_state=True, update_cur_frame_idx=True):
+        add_key_frame(selected_image_location, shot_uuid, refresh_state=False)
+
+        # Update the progress bar
+        progress = (idx + 1) / total_items
+        random_emoji = random.choice(random_list_of_emojis)
+        st.caption(f"Saving frame {idx + 1} of {total_items} {random_emoji}")
+        progress_bar.progress(progress)
+    
+    st.session_state[f"shot_data_{shot_uuid}"] = None
+
+
+
+def move_temp_frames_to_positions(df, current_positions, new_start_position):
+    # Ensure current_positions is a list
+    if not isinstance(current_positions, list):
+        current_positions = [current_positions]
+    
+    # Sort current_positions to handle them in order
+    current_positions = sorted(current_positions)
+    
+    # Extract rows to move
+    rows_to_move = df.iloc[current_positions]
+    
+    # Drop the rows from their current positions
+    df = df.drop(df.index[current_positions]).reset_index(drop=True)
+    
+    # Calculate new positions considering the removals
+    new_positions = range(new_start_position, new_start_position + len(rows_to_move))
+    
+    # Split the DataFrame into parts before and after the new start position
+    df_before = df.iloc[:new_start_position]
+    df_after = df.iloc[new_start_position:]
+    
+    # Reassemble the DataFrame with rows inserted at their new positions
+    df = pd.concat([df_before, rows_to_move, df_after]).reset_index(drop=True)
+    
+    # Correct the 'position' column to reflect the new order
+    df['position'] = range(len(df))
+    
+    return df

@@ -50,8 +50,10 @@ def start_runner():
             app_logger.info("Starting runner")
             python_executable = sys.executable
             _ = subprocess.Popen([python_executable, "banodoco_runner.py"])
-            while not is_process_active(RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT):
+            max_retries = 6
+            while not is_process_active(RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT) and max_retries:
                 time.sleep(0.1)
+                max_retries -= 1
         else:
             # app_logger.debug("Runner already running")
             pass

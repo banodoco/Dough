@@ -15,6 +15,7 @@ from PIL import Image
 import cv2
 import numpy as np
 import uuid
+from moviepy.editor import VideoFileClip
 from dotenv import set_key, get_key
 import requests
 import streamlit as st
@@ -27,29 +28,35 @@ from utils.data_repo.data_repo import DataRepo
 def save_or_host_file(file, path, mime_type='image/png', dim=None):
     data_repo = DataRepo()
     uploaded_url = None
+    file_type, file_ext = mime_type.split("/")
     try:
-        # TODO: fix session state management, remove direct access outside the main code
-        if dim:
-            width, height = dim[0], dim[1]
-        elif 'project_uuid' in st.session_state and st.session_state['project_uuid']:
-            project_setting = data_repo.get_project_setting(st.session_state['project_uuid'])
-            width, height = project_setting.width, project_setting.height
-        else:
-            # Default dimensions for new project
-            width, height = 512, 512        
-        # Apply zoom and crop based on determined dimensions            
-        file = zoom_and_crop(file, width, height)
-        # download PIL image to bytee        
+        if file_type == "image":
+            # TODO: fix session state management, remove direct access outside the main code
+            if dim:
+                width, height = dim[0], dim[1]
+            elif 'project_uuid' in st.session_state and st.session_state['project_uuid']:
+                project_setting = data_repo.get_project_setting(st.session_state['project_uuid'])
+                width, height = project_setting.width, project_setting.height
+            else:
+                # Default dimensions for new project
+                width, height = 512, 512        
+            # Apply zoom and crop based on determined dimensions            
+            file = zoom_and_crop(file, width, height)     
 
         if SERVER != ServerType.DEVELOPMENT.value:
-            image_bytes = BytesIO()
-            file.save(image_bytes, format=mime_type.split('/')[1])
-            image_bytes.seek(0)
+            file_bytes = BytesIO()
+            file.save(file_bytes, format=file_ext)
+            file_bytes.seek(0)
 
-            uploaded_url = data_repo.upload_file(image_bytes, '.png')
+            uploaded_url = data_repo.upload_file(file_bytes, '.' + file_ext)
         else:
             os.makedirs(os.path.dirname(path), exist_ok=True)
-            file.save(path)
+            if file_type == "image":
+                file.save(path)
+            else:
+                with open(path, "wb") as f:
+                    f.write(file.read())
+
     except Exception as e:
         # Log the error. You can replace 'print' with logging to a file or external logging service.
         print(f"Error saving or hosting file: {e}")
@@ -358,14 +365,22 @@ def list_files_in_folder(folder_path):
             files.append(file)
     return files
 
-def get_file_bytes_and_extension(url):
+def get_file_bytes_and_extension(path_or_url):
     try:
-        response = requests.get(url)
-        response.raise_for_status()  # non-2xx responses
-        file_bytes = response.content
-        parsed_url = urlparse(url)
-        filename, file_extension = os.path.splitext(parsed_url.path)
-        file_extension = file_extension.lstrip('.')
+        if urlparse(path_or_url).scheme:
+            # URL
+            response = requests.get(path_or_url)
+            response.raise_for_status()  # non-2xx responses
+            file_bytes = response.content
+            parsed_url = urlparse(path_or_url)
+            filename, file_extension = os.path.splitext(parsed_url.path)
+            file_extension = file_extension.lstrip('.')
+        else:
+            # Local file path
+            with open(path_or_url, 'rb') as file:
+                file_bytes = file.read()
+            filename, file_extension = os.path.splitext(path_or_url)
+            file_extension = file_extension.lstrip('.')
         
         return file_bytes, file_extension
     except Exception as e:
@@ -411,3 +426,46 @@ def detect_and_draw_contour(image):
     output_image = Image.fromarray(img_rgb)
     
     return output_image
+
+def get_file_size(file_path):
+    file_size = 0
+    if file_path.startswith('http://') or file_path.startswith('https://'):
+        response = requests.head(file_path)
+        if response.status_code == 200:
+            file_size = int(response.headers.get('content-length', 0))
+        else:
+            print("Failed to fetch file from URL:", file_path)
+    else:
+        if os.path.exists(file_path):
+            file_size = os.path.getsize(file_path)
+        else:
+            print("File does not exist:", file_path)
+    
+    return int(file_size / (1024 * 1024))
+
+def get_media_dimensions(media_path):
+    try:
+        if media_path.endswith(('.mp4', '.avi', '.mov', '.mkv')):
+            video_clip = VideoFileClip(media_path)
+            width = video_clip.size[0]
+            height = video_clip.size[1]
+            return width, height
+        else:
+            with Image.open(media_path) as img:
+                width, height = img.size
+                return width, height
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
+
+# fetches all the files (including subfolders) in a directory
+def get_files_in_a_directory(directory, ext_list=[]):
+    res = []
+    
+    if os.path.exists(directory):
+        for root, _, files in os.walk(directory):
+            for file in files:
+                if ext_list and len(ext_list) and file.split(".")[-1] in ext_list:
+                    res.append(file)  #(os.path.join(root, file))
+                
+    return res

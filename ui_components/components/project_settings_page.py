@@ -43,6 +43,3 @@ def project_settings_page(project_uuid):
                 data_repo.update_project_setting(project_uuid, width=width)
                 data_repo.update_project_setting(project_uuid, height=height)
                 st.experimental_rerun()      
-        
-    st.write("")
-    attach_audio_element(project_uuid, True)

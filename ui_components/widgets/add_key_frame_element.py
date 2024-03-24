@@ -1,27 +1,19 @@
 import time
 from typing import Union
 import streamlit as st
-from shared.constants import AnimationStyleType, AppSubPage
-from ui_components.constants import CreativeProcessType, WorkflowStageType
+from shared.constants import AnimationStyleType
 from ui_components.models import InternalFileObject, InternalFrameTimingObject
-from ui_components.widgets.image_zoom_widgets import zoom_inputs
-
-from utils import st_memory
 from utils.common_utils import refresh_app
-
 from utils.data_repo.data_repo import DataRepo
-
-from utils.constants import ImageStage
 from ui_components.methods.file_methods import generate_pil_image,save_or_host_file
-from ui_components.methods.common_methods import add_image_variant, apply_image_transformations, clone_styling_settings, create_frame_inside_shot, save_new_image, save_uploaded_image
+from ui_components.methods.common_methods import add_image_variant, save_new_image
 from PIL import Image
 
 
 
-def add_key_frame_section(shot_uuid, individual_view=True):
+def add_key_frame_section(shot_uuid):
     data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
-    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)    
+    shot = data_repo.get_shot_from_uuid(shot_uuid) 
     selected_image_location = ""
     
     uploaded_images = st.file_uploader("Upload images:", type=["png", "jpg", "jpeg"], key=f"uploaded_image_{shot_uuid}", help="You can upload multiple images", accept_multiple_files=True)
@@ -35,7 +27,7 @@ def add_key_frame_section(shot_uuid, individual_view=True):
                 file_location = f"videos/{shot.uuid}/assets/frames/1_selected/{uploaded_image.name}"
                 selected_image_location = save_or_host_file(image, file_location)
                 selected_image_location = selected_image_location or file_location
-                add_key_frame(selected_image_location, "No", shot_uuid,refresh_state=False)
+                add_key_frame(selected_image_location, shot_uuid,refresh_state=False)
                 progress_bar.progress((i + 1) / len(uploaded_images))
         else:
             st.error("Please generate new images or upload them")
@@ -67,7 +59,7 @@ def add_key_frame_element(shot_uuid):
     return selected_image, inherit_styling_settings
 
 
-def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inherit_styling_settings, shot_uuid, target_frame_position=None, refresh_state=True, update_cur_frame_idx=True):
+def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], shot_uuid, target_frame_position=None, refresh_state=True, update_cur_frame_idx=True):
     '''
     either a pil image or a internalfileobject can be passed to this method, for adding it inside a shot
     '''
@@ -75,12 +67,11 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
 
     # checking if the shot has reached the max frame limit
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
-    project_settings = data_repo.get_project_setting(shot.project.uuid)
-    if len(shot.timing_list) >= project_settings.max_frames_per_shot:
-        st.error(f'Only {project_settings.max_frames_per_shot} frames allowed per shot')
-        time.sleep(0.3)
-        st.rerun()
+    # project_settings = data_repo.get_project_setting(shot.project.uuid)
+    # if len(shot.timing_list) >= project_settings.max_frames_per_shot:
+    #     st.error(f'Only {project_settings.max_frames_per_shot} frames allowed per shot')
+    #     time.sleep(0.3)
+    #     st.rerun()
 
     # creating frame inside the shot at target_frame_position
     len_shot_timing_list = len(timing_list) if len(timing_list) > 0 else 0
@@ -89,10 +80,9 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
 
     if isinstance(selected_image, InternalFileObject):
         saved_image = selected_image
-        print("selected_image is an instance of InternalFileObject")
     else:
+        shot = data_repo.get_shot_from_uuid(shot_uuid)
         saved_image = save_new_image(selected_image, shot.project.uuid)
-        print("selected_image is an instance of Image.Image")
 
     timing_data = {
         "shot_id": shot_uuid,
@@ -101,16 +91,11 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
         "source_image_id": saved_image.uuid,
         "primary_image_id": saved_image.uuid,
     }
-    timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
+    _: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
 
-    add_image_variant(saved_image.uuid, timing.uuid)
-
-    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
     if update_cur_frame_idx:
+        timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
         # this part of code updates current_frame_index when a new keyframe is added
-        if inherit_styling_settings == "Yes" and st.session_state['current_frame_index']:    
-            clone_styling_settings(st.session_state['current_frame_index'] - 1, timing_list[target_aux_frame_index-1].uuid)
-
         if len(timing_list) <= 1:
             st.session_state['current_frame_index'] = 1
             st.session_state['current_frame_uuid'] = timing_list[0].uuid
@@ -119,8 +104,8 @@ def add_key_frame(selected_image: Union[Image.Image, InternalFileObject], inheri
             st.session_state['current_frame_index'] = min(len(timing_list), target_aux_frame_index + 1)
             st.session_state['current_frame_uuid'] = timing_list[st.session_state['current_frame_index'] - 1].uuid
 
-        st.session_state['current_subpage'] = AppSubPage.KEYFRAME.value
-        st.session_state['section_index'] = 0
-    
+        # st.session_state['current_subpage'] = AppSubPage.KEYFRAME.value
+        # st.session_state['section_index'] = 0
+
     if refresh_state:
         refresh_app(maintain_state=True)

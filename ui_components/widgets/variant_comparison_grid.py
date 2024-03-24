@@ -3,19 +3,21 @@ import time
 import ast
 import streamlit as st
 import re
+import os
+from PIL import Image
 from shared.constants import AIModelCategory, InferenceParamType, InternalFileTag
-from ui_components.constants import CreativeProcessType
+from ui_components.constants import CreativeProcessType, ShotMetaData
 from ui_components.methods.animation_style_methods import get_generation_settings_from_log, load_shot_settings
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
 from ui_components.methods.file_methods import create_duplicate_file
-from ui_components.methods.video_methods import sync_audio_and_duration
+from ui_components.methods.video_methods import sync_audio_and_duration, upscale_video
+from ui_components.widgets.display_element import individual_video_display_element
 from ui_components.widgets.shot_view import create_video_download_button
 from ui_components.models import InternalAIModelObject, InternalFileObject
 from ui_components.widgets.add_key_frame_element import add_key_frame
-from ui_components.widgets.animation_style_element import update_interpolation_settings
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.constants import ML_MODEL
+from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow
 
 
 
@@ -32,6 +34,9 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         shot = data_repo.get_shot_from_uuid(shot_uuid)
         variants = shot.interpolated_clip_list
         timing_list = data_repo.get_timing_list_from_shot(shot.uuid)
+        
+        if not (f"{shot_uuid}_selected_variant_log_uuid" in st.session_state and st.session_state[f"{shot_uuid}_selected_variant_log_uuid"]):
+            st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
     else:
         timing_uuid = ele_uuid        
         timing = data_repo.get_timing_from_uuid(timing_uuid)
@@ -39,13 +44,13 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         shot_uuid = timing.shot.uuid
         timing_list =""
 
-    col1, col2, col3 = st.columns([1, 1,0.5])
+    col1, col2, col3 = st.columns([1, 0.25,0.5])
     if stage == CreativeProcessType.MOTION.value:
         items_to_show = 2
         num_columns = 3
         with col1:
-            st.markdown(f"### 🎞️ '{shot.name}' options  _________")
-            st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+            st.markdown(f"### 🎞️ '{shot.name}' options")
+            st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
     else:
         items_to_show = 5
         num_columns = 3
@@ -73,7 +78,23 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 st.success("**Main variant**")
             # Display the main variant
             if stage == CreativeProcessType.MOTION.value:
-                st.video(variants[current_variant].location, format='mp4', start_time=0) if (current_variant != -1 and variants[current_variant]) else st.error("No video present")
+                if current_variant != -1 and variants[current_variant]:
+                    individual_video_display_element(variants[current_variant])
+                
+                if not is_upscaled_video(variants[current_variant]):
+                    with st.expander("Upscale settings", expanded=False):
+                        styling_model, upscaler_type, upscale_factor, upscale_strength, promote_to_main_variant = upscale_settings()
+                        if st.button("Upscale Main Variant", key=f"upscale_main_variant_{shot_uuid}", help="Upscale the main variant with the selected settings", use_container_width=True):
+                            upscale_video(
+                                shot_uuid,
+                                styling_model, 
+                                upscaler_type, 
+                                upscale_factor, 
+                                upscale_strength, 
+                                promote_to_main_variant
+                            )
+                else:
+                    st.info("Upscaled video")
                 create_video_download_button(variants[current_variant].location, tag="var_compare")
                 variant_inference_detail_element(variants[current_variant], stage, shot_uuid, timing_list, tag="var_compare")                        
 
@@ -102,8 +123,14 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                             promote_image_variant(timing.uuid, variant_index)                    
                         st.rerun()
 
-                if stage == CreativeProcessType.MOTION.value:                    
-                    st.video(variants[variant_index].location, format='mp4', start_time=0) if variants[variant_index] else st.error("No video present")
+                if stage == CreativeProcessType.MOTION.value:
+                    if variants[variant_index]:
+                        individual_video_display_element(variants[variant_index])
+                    else: 
+                        st.error("No video present")
+                    
+                    if is_upscaled_video(variants[variant_index]):
+                        st.info("Upscaled video")
                     create_video_download_button(variants[variant_index].location, tag="var_details")
                     variant_inference_detail_element(variants[variant_index], stage, shot_uuid, timing_list, tag="var_details")
 
@@ -125,8 +152,18 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 cols = st.columns(num_columns)  # Prepare for the next row            
                 # Add markdown line if this is not the last variant in page_indices
                 
+        return st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] if \
+            f"{shot_uuid}_selected_variant_log_uuid" in st.session_state else None
+
+def is_upscaled_video(variant: InternalFileObject):
+    log = variant.inference_log
+    if log.output_details and json.loads(log.output_details).get("model_name", "") == ComfyWorkflow.UPSCALER.value:
+        return True
+    return False
+
+
 def image_variant_details(variant: InternalFileObject):
-    with st.expander("Settings", expanded=False):
+    with st.expander("Inference Details", expanded=False):
         if variant.inference_params and 'query_dict' in variant.inference_params:
             query_dict = json.loads(variant.inference_params['query_dict'])
             st.markdown(f"Prompt:  {query_dict['prompt']}", unsafe_allow_html=True)
@@ -168,34 +205,35 @@ def variant_inference_detail_element(variant: InternalFileObject, stage, shot_uu
         
         if open_data:
             with st.expander("Settings", expanded=False):
-                shot_meta_data = get_generation_settings_from_log(variant.inference_log.uuid)
+                shot_meta_data, data_type = get_generation_settings_from_log(variant.inference_log.uuid)
                 if shot_meta_data and shot_meta_data.get("main_setting_data", None):
                     st.markdown("##### Main settings ---")
-                    for k, v in shot_meta_data.get("main_setting_data", {}).items():
-                        # Bold the title
-                        title = f"**{k.split(str(shot.uuid))[0][:-1]}:**"
-                        
-                        # Check if the key starts with 'lora_data'
-                        if k.startswith('lora_data'):
-                            if isinstance(v, list) and len(v) > 0:  # Check if v is a list and has more than 0 items
-                                # Handle lora_data differently to format each item in the list
-                                lora_items = [f"- {item.get('filename', 'No filename')} - {item.get('lora_strength', 'No strength')} strength" for item in v]
-                                lora_data_formatted = "\n".join(lora_items)
-                                st.markdown(f"{title} \n{lora_data_formatted}", unsafe_allow_html=True)
-                            # If there are no items in the list, do not display anything for lora_data
-                        else:
-                            # For other keys, display as before but with the title in bold and using a colon
-                            if v:  # Check if v is not empty or None
-                                st.markdown(f"{title} {v}", unsafe_allow_html=True)
+                    if data_type == ShotMetaData.MOTION_DATA.value:
+                        for k, v in shot_meta_data.get("main_setting_data", {}).items():
+                            # Bold the title
+                            title = f"**{k.split(str(shot.uuid))[0][:-1]}:**"
+                            
+                            # Check if the key starts with 'lora_data'
+                            if k.startswith('lora_data'):
+                                if isinstance(v, list) and len(v) > 0:  # Check if v is a list and has more than 0 items
+                                    # Handle lora_data differently to format each item in the list
+                                    lora_items = [f"- {item.get('filename', 'No filename')} - {item.get('lora_strength', 'No strength')} strength" for item in v]
+                                    lora_data_formatted = "\n".join(lora_items)
+                                    st.markdown(f"{title} \n{lora_data_formatted}", unsafe_allow_html=True)
+                                # If there are no items in the list, do not display anything for lora_data
                             else:
-                                # Optionally handle empty or None values differently here
-                                pass
+                                # For other keys, display as before but with the title in bold and using a colon
+                                if v:  # Check if v is not empty or None
+                                    st.markdown(f"{title} {v}", unsafe_allow_html=True)
+                                else:
+                                    # Optionally handle empty or None values differently here
+                                    pass
+                    elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
+                        st.markdown(shot_meta_data.get("main_setting_data", {}).get(f"video_desc_{shot_uuid}", ""))
 
                 st.markdown("##### Frame settings ---")
                 st.write("To see the settings for each frame, click on the 'Boot up settings' button above and they'll load below.")
                 st.button("Close settings", key=f"close_{tag}_{variant.name}", help="Close this section", use_container_width=True)
-            
-
 
     if stage != CreativeProcessType.MOTION.value:
         h1, h2 = st.columns([1, 1])
@@ -267,6 +305,27 @@ def prepare_values(inf_data, timing_list):
 
     return values
 
+def upscale_settings():
+    checkpoints_dir = "ComfyUI/models/checkpoints"
+    all_files = os.listdir(checkpoints_dir)
+    if len(all_files) == 0:
+        st.info("No models found in the checkpoints directory")
+        styling_model = "None"
+    else:
+        # Filter files to only include those with .safetensors and .ckpt extensions
+        model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
+        # drop all files that contain xl
+        model_files = [file for file in model_files if "xl" not in file]
+        # model_files.insert(0, "None")  # Add "None" option at the beginning
+        styling_model = st.selectbox("Styling model", model_files, key="styling_model")
+
+    type_of_upscaler = st.selectbox("Type of upscaler", ["Dreamy", "Realistic", "Anime", "Cartoon"], key="type_of_upscaler")
+    upscale_by = st.slider("Upscale by", min_value=1.0, max_value=3.0, step=0.1, key="upscale_by", value=2.0)
+    strength_of_upscale = st.slider("Strength of upscale", min_value=1.0, max_value=3.0, step=0.1, key="strength_of_upscale", value=2.0)
+    set_upscaled_to_main_variant = st.checkbox("Set upscaled to main variant", key="set_upscaled_to_main_variant", value=True)
+    
+    return styling_model, type_of_upscaler, upscale_by, strength_of_upscale, set_upscaled_to_main_variant
+
 def fetch_inference_data(file: InternalFileObject):
     if not file:
         return
@@ -310,5 +369,5 @@ def add_variant_to_shot_element(file: InternalFileObject, project_uuid):
             shot_uuid = shot_list[shot_number].uuid
 
             duplicate_file = create_duplicate_file(file, project_uuid)
-            add_key_frame(duplicate_file, False, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
+            add_key_frame(duplicate_file, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
             st.rerun()

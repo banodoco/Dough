@@ -10,14 +10,17 @@ import streamlit as st
 from moviepy.editor import concatenate_videoclips, concatenate_audioclips, VideoFileClip, AudioFileClip, CompositeVideoClip
 from pydub import AudioSegment
 
-from shared.constants import InferenceType, InternalFileTag
+from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType, InternalFileTag
 from shared.file_upload.s3 import is_s3_image_url
 from ui_components.methods.file_methods import save_or_host_file_bytes
 from ui_components.models import InternalFileObject, InternalFrameTimingObject, InternalShotObject
 from utils.common_utils import padded_integer
+from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from utils.media_processor.interpolator import VideoInterpolator
 from utils.media_processor.video import VideoProcessor
+from utils.ml_processor.constants import ML_MODEL
+from utils.ml_processor.ml_interface import get_ml_client
 
 
 def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_count=1, backlog=False):
@@ -39,13 +42,11 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
     elif quality == 'preview':
         interpolation_steps = 3
 
-    img_list = [t.primary_image.location for t in timing_list]
     settings.update(interpolation_steps=interpolation_steps)
     settings.update(file_uuid_list=[t.primary_image.uuid for t in timing_list])
 
     # res is an array of tuples (video_bytes, log)
     res = VideoInterpolator.create_interpolated_clip(
-        img_list,
         settings['animation_style'],
         settings,
         variant_count,
@@ -68,6 +69,48 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
         st.error("Failed to create interpolated clip")
         time.sleep(0.5)
         st.rerun()
+        
+def upscale_video(shot_uuid, styling_model, upscaler_type, upscale_factor, upscale_strength, promote_to_main_variant):
+    from ui_components.methods.common_methods import process_inference_output
+    from shared.constants import QUEUE_INFERENCE_QUERIES
+    
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+
+    query_obj = MLQueryObject(
+        timing_uuid=None,
+        model_uuid=None,
+        guidance_scale=8,
+        seed=-1,                            
+        num_inference_steps=25,            
+        strength=0.5,
+        adapter_type=None,
+        prompt="upscale",
+        negative_prompt="",
+        height=512,     # these are dummy values, not used
+        width=512,
+        data={
+            "file_video": shot.main_clip.uuid,
+            "model": styling_model, 
+            "upscaler_type": upscaler_type, 
+            "upscale_factor": upscale_factor, 
+            "upscale_strength": upscale_strength
+        }
+    )
+    
+    ml_client = get_ml_client()
+    output, log = ml_client.predict_model_output_standardized(ML_MODEL.video_upscaler, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+    if log:
+        inference_data = {
+            "inference_type": InferenceType.FRAME_INTERPOLATION.value,
+            "output": output,
+            "log_uuid": log.uuid,
+            "settings": {"promote_to_main_variant": promote_to_main_variant},
+            "shot_uuid": str(shot_uuid)
+        }
+
+        process_inference_output(**inference_data)
+
 
 def update_speed_of_video_clip(video_file: InternalFileObject, duration) -> InternalFileObject:
     from ui_components.methods.file_methods import generate_temp_file, convert_bytes_to_file

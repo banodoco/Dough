@@ -1,3 +1,4 @@
+import io
 import uuid
 import numpy as np
 from PIL import Image, ImageOps, ImageDraw
@@ -5,7 +6,7 @@ import streamlit as st
 from streamlit_drawable_canvas import st_canvas
 from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType
 from ui_components.constants import CROPPED_IMG_LOCAL_PATH, MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE, DefaultProjectSettingParams, WorkflowStageType
-from ui_components.methods.file_methods import add_temp_file_to_project, detect_and_draw_contour, save_or_host_file
+from ui_components.methods.file_methods import add_temp_file_to_project, detect_and_draw_contour, save_or_host_file, zoom_and_crop
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 
@@ -38,7 +39,7 @@ def inpainting_element(options_width, image, position="explorer"):
                 st.rerun()
     else:
         with main_col_1:
-            canvas_image = Image.open(image)
+            canvas_image = image if isinstance(image, Image.Image) else Image.open(image)
             if 'drawing_input' not in st.session_state:
                 st.session_state['drawing_input'] = 'Magic shapes 🪄'
 
@@ -100,7 +101,7 @@ def inpainting_element(options_width, image, position="explorer"):
                 im_rgb.paste(im, mask=im.split()[3])  # Paste the mask onto the RGB image
                 im = im_rgb
                 im = ImageOps.invert(im)  # Inverting for sdxl inpainting
-                st.session_state['editing_image'] = image
+                st.session_state['editing_image'] = image if isinstance(image, Image.Image) else Image.open(image)
                 mask_file_path = "videos/temp/" + str(uuid.uuid4()) + ".png"
                 mask_file_path = save_or_host_file(im, mask_file_path) or mask_file_path
                 st.session_state['mask_to_use'] = mask_file_path
@@ -119,6 +120,7 @@ def inpainting_element(options_width, image, position="explorer"):
 def inpainting_image_input(project_uuid, position="explorer"):
     data_repo = DataRepo()
     options_width, canvas_width = st.columns([1.2, 3])
+    project_settings: InternalSettingObject = data_repo.get_project_setting(project_uuid)
     if not ('uploaded_image' in st.session_state and st.session_state["uploaded_image"]):
         st.session_state['uploaded_image'] = ""
         with options_width:
@@ -128,6 +130,8 @@ def inpainting_image_input(project_uuid, position="explorer"):
                     uploaded_image = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=f"uploaded_image_{position}", help="This will be the base image for the generation.")
                     if uploaded_image:
                         if st.button("Select as base image", key=f"inpainting_base_image_{position}"):
+                            uploaded_image = Image.open(uploaded_image)
+                            uploaded_image = zoom_and_crop(uploaded_image, project_settings.width, project_settings.height)
                             st.session_state['uploaded_image'] = uploaded_image
                 else:
                     # taking image from shots
@@ -152,7 +156,7 @@ def replace_with_image(stage, output_file, current_frame_uuid, promote=False):
     data_repo = DataRepo()
 
     if stage == WorkflowStageType.SOURCE.value:
-        data_repo.update_specific_timing(current_frame_uuid, source_image_id=output_file.uuid)
+        data_repo.update_specific_timing(current_frame_uuid, source_image_id=output_file.uuid, update_in_place=True)
     elif stage == WorkflowStageType.STYLED.value:
         number_of_image_variants = add_image_variant(output_file.uuid, current_frame_uuid)
         if promote:
@@ -164,8 +168,6 @@ def replace_with_image(stage, output_file, current_frame_uuid, promote=False):
 def inpaint_in_black_space_element(cropped_img: Image.Image, project_uuid, \
     stage=WorkflowStageType.SOURCE.value, shot_uuid=None, transformation_data = None):
     data_repo = DataRepo()
-    project_settings: InternalSettingObject = data_repo.get_project_setting(
-        project_uuid)
 
     st.markdown("##### Inpaint in black space:")
 
@@ -177,6 +179,8 @@ def inpaint_in_black_space_element(cropped_img: Image.Image, project_uuid, \
         st.session_state['precision_cropping_inpainted_image_uuid'] = ""
 
     def inpaint(promote=False, transformation_data=transformation_data):
+        project_settings: InternalSettingObject = data_repo.get_project_setting(
+        project_uuid)
         width = int(project_settings.width)
         height = int(project_settings.height)
 

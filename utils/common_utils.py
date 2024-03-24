@@ -230,8 +230,10 @@ def is_process_active(custom_process_name, custom_process_port):
                 client_socket = socket.create_connection(("localhost", custom_process_port))
                 client_socket.close()
                 res = True
+                # print("----------------- process is active")
             except ConnectionRefusedError:
                 res = False
+                # print("----------------- process is NOT active")
         else:
             # Use 'ps' for Unix/Linux
             ps_output = subprocess.check_output(["ps", "aux"]).decode("utf-8")

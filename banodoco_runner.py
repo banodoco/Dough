@@ -21,7 +21,7 @@ from shared.utils import get_file_type
 from ui_components.methods.file_methods import get_file_bytes_and_extension, load_from_env, save_or_host_file_bytes, save_to_env
 from utils.common_utils import acquire_lock, release_lock
 from utils.data_repo.data_repo import DataRepo
-from utils.ml_processor.constants import replicate_status_map
+from utils.ml_processor.constants import ComfyWorkflow, replicate_status_map
 
 from utils.constants import RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT, AUTH_TOKEN, REFRESH_AUTH_TOKEN
 from utils.ml_processor.gpu.utils import is_comfy_runner_present, predict_gpu_output, setup_comfy_runner
@@ -75,7 +75,7 @@ def main():
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server_socket.bind(("localhost", RUNNER_PROCESS_PORT))
-        server_socket.listen(1)
+        server_socket.listen(100)     # hacky fix
     
     print('runner running')
     while True:
@@ -176,13 +176,19 @@ def find_process_by_port(port):
         
         return pid
     
-def stop_server(self, port):
+def stop_server(port):
         pid = find_process_by_port(port)
         if pid:
             app_logger.log(LoggingType.DEBUG, "comfy server stopped")
             process = psutil.Process(pid)
             process.terminate()
             process.wait()
+            
+def format_model_output(output, model_display_name):
+    if model_display_name and model_display_name == ComfyWorkflow.MOTION_LORA.value:
+        return output
+    else:
+        return [output[-1]]
 
 def check_and_update_db():
     # print("updating logs")
@@ -308,11 +314,15 @@ def check_and_update_db():
                     data['output_node_ids'], data.get("extra_model_list", []), data.get("ignore_model_list", []))
                 end_time = time.time()
 
-                output = output[-1]     # TODO: different models can have different logic
-                destination_path = "./videos/temp/" + str(uuid.uuid4()) + "." + output.split(".")[-1]
-                shutil.copy2("./output/" + output, destination_path)
+                res_output = format_model_output(output, log.model_name)
+                destination_path_list = []
+                for output in res_output:
+                    destination_path = "./videos/temp/" + str(uuid.uuid4()) + "." + output.split(".")[-1]
+                    shutil.copy2("./output/" + output, destination_path)
+                    destination_path_list.append(destination_path)
+                    
                 output_details = json.loads(log.output_details)
-                output_details['output'] = destination_path
+                output_details['output'] = destination_path_list[0] if len(destination_path_list) == 1 else destination_path_list
                 update_data = {
                     "status" : InferenceStatus.COMPLETED.value,
                     "output_details" : json.dumps(output_details),
@@ -321,7 +331,7 @@ def check_and_update_db():
 
                 InferenceLog.objects.filter(id=log.id).update(**update_data)
                 origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, {})
-                origin_data['output'] = destination_path
+                origin_data['output'] = destination_path_list[0] if len(destination_path_list) == 1 else destination_path_list
                 origin_data['log_uuid'] = log.uuid
                 print("processing inference output")
 

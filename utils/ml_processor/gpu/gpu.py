@@ -36,7 +36,7 @@ class GPUProcessor(MachineLearningProcessor):
         workflow_json, output_node_ids, extra_model_list, ignore_list = get_model_workflow_from_query(model, query_obj)
         file_uuid_list = []
 
-        file_uuid_list = get_file_list_from_query_obj(query_obj)
+        file_uuid_list, custom_dest = get_file_list_from_query_obj(query_obj)
         file_list = data_repo.get_image_list_from_uuid_list(file_uuid_list)
 
         models_using_sdxl = [
@@ -55,7 +55,6 @@ class GPUProcessor(MachineLearningProcessor):
             res = []
             for file in file_list:
                 new_width, new_height = determine_dimensions_for_sdxl(query_obj.width, query_obj.height)
-                
                 # although the new_file created using create_new_file has the same location as the original file, it is 
                 # scaled to the original resolution after inference save (so resize has no effect)
                 new_file = normalize_size_internal_file_obj(file, dim=[new_width, new_height], create_new_file=True)
@@ -67,10 +66,14 @@ class GPUProcessor(MachineLearningProcessor):
         file_path_list = []
         for idx, file in enumerate(file_list):
             _, filename = os.path.split(file.local_path)
-            new_filename = f"{padded_integer(idx+1)}_" + filename \
-                if model.display_name() == ComfyWorkflow.STEERABLE_MOTION.value else filename
+            if str(file.uuid) not in custom_dest:
+                new_filename = f"{padded_integer(idx+1)}_" + filename \
+                    if model.display_name() == ComfyWorkflow.STEERABLE_MOTION.value else filename
+                file_path_list.append("videos/temp/" + new_filename)
+            else:
+                new_filename = filename
+                file_path_list.append({"filepath": "videos/temp/" + new_filename, "dest_folder": custom_dest[str(file.uuid)]})
             copy_local_file(file.local_path, "videos/temp/", new_filename)
-            file_path_list.append("videos/temp/" + new_filename)
 
         # replacing old files with resized files
         # if len(new_file_map.keys()):

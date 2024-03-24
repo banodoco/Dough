@@ -12,7 +12,6 @@ from ui_components.components.explorer_page import explorer_page
 
 from ui_components.components.new_project_page import new_project_page
 from ui_components.components.project_settings_page import project_settings_page
-from ui_components.components.video_rendering_page import video_rendering_page
 from streamlit_option_menu import option_menu
 from utils.common_utils import set_default_values
 
@@ -220,11 +219,7 @@ def setup_app_ui():
                     animate_shot_page(st.session_state["shot_uuid"], h2)
 
             elif st.session_state["main_view_type"] == "Project Settings":
-
                 project_settings_page(st.session_state["project_uuid"])
-
-            elif st.session_state["main_view_type"] == "Video Rendering":
-                video_rendering_page(st.session_state["project_uuid"])
 
     elif st.session_state["section"] == "App Settings":
         app_settings_page()
