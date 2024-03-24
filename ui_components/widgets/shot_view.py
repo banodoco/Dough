@@ -119,7 +119,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
                             else:
                                 st.warning("No primary image present.")
 
-                            btn1, btn2, btn3, btn4, btn5 = st.columns([1, 1, 1, 1, 1.25])
+                            btn1, btn2, btn3, btn4, btn5 = st.columns([1, 1, 1, 1, 3.5])
                             
                             with btn1:        
                                 if st.button("⬅️", key=f"move_frame_back_{idx}", help="Move frame back", use_container_width=True):
@@ -157,10 +157,21 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
                                 if f'open_zoom_{shot.uuid}_{idx}' not in st.session_state:
                                     st.session_state[f'open_zoom_{shot.uuid}_{idx}'] = False
 
+                                if idx != st.session_state['zoom_to_open']:
+                                    if st.button("Open zoom", key=f"open_zoom_{shot.uuid}_{idx}_button"):                                             
+                                        st.session_state['zoom_level_input'] = 100
+                                        st.session_state['rotation_angle_input'] = 0
+                                        st.session_state['x_shift'] = 0
+                                        st.session_state['y_shift'] = 0
+                                        st.session_state['flip_vertically'] = False
+                                        st.session_state['flip_horizontally'] = False            
 
-                                if st.button("Open zoom", key=f"open_zoom_{shot.uuid}_{idx}"):                                             
-                                    st.session_state['zoom_to_open'] = idx 
-                                    st.rerun()         
+                                        st.session_state['zoom_to_open'] = idx 
+                                        st.rerun()         
+                                else:
+                                    if st.button("Close zoom", key=f"close_zoom_{shot.uuid}_{idx}_button"):                                             
+                                        st.session_state['zoom_to_open'] = None 
+                                        st.rerun()
                                                                       
                              
                             if st.session_state['zoom_to_open'] == idx:
@@ -180,9 +191,67 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
                                     st.session_state['x_shift'] = 0
                                     st.session_state['y_shift'] = 0
                                     st.session_state['flip_vertically'] = False
-                                    st.session_state['flip_horizontally'] = False              
+                                    st.session_state['flip_horizontally'] = False            
+
+                                st.caption("Zoom and Rotate:")
+                                h1, h2, h3, h4 = st.columns([1, 1, 1, 1])
+
+                                with h1:
+                                    # zoom in with emoji button that increases zoom level by 10
+                                    if st.button("➕", key=f"zoom_in_{idx}", help="Zoom in by 10%", use_container_width=True):
+                                        st.session_state['zoom_level_input'] += 10                                        
+                                    # zoom out with emoji button that decreases zoom level by 10
+                                    if st.button("➖", key=f"zoom_out_{idx}", help="Zoom out by 10%", use_container_width=True):
+                                        st.session_state['zoom_level_input'] -= 10          
+
+                                with h2:
+                                    # shift up with emoji button that decreases y shift by 10
+                                    if st.button("⬆️", key=f"shift_up_{idx}", help="Shift up by 10px", use_container_width=True):
+                                        st.session_state['y_shift'] += 10
+                                        
+                                    # shift down with emoji button that increases y shift by 10
+                                    if st.button("⬇️", key=f"shift_down_{idx}", help="Shift down by 10px", use_container_width=True):
+                                        st.session_state['y_shift'] -= 10                              
+                                    
+                                with h3:
+
+                                     # shift left with emoji button that decreases x shift by 10
+                                    if st.button("⬅️", key=f"shift_left_{idx}", help="Shift left by 10px", use_container_width=True):
+                                        st.session_state['x_shift'] -= 10
+                                    # rotate left with emoji button that decreases rotation angle by 90
+                                    if st.button("↩️", key=f"rotate_left_{idx}", help="Rotate left by 5°", use_container_width=True):
+                                        st.session_state['rotation_angle_input'] -= 5                                        
+                                              
+
+                                with h4:
+                            
+                                        
+                                    # shift right with emoji button that increases x shift by 10
+                                    if st.button("➡️", key=f"shift_right_{idx}", help="Shift right by 10px", use_container_width=True):
+                                        st.session_state['x_shift'] += 10
+
+                                                                 # rotate right with emoji button that increases rotation angle by 90
+                                    if st.button("↪️", key=f"rotate_right_{idx}", help="Rotate right by 5°", use_container_width=True):
+                                        st.session_state['rotation_angle_input'] += 5     
+                                        
                                 
-                                zoom_inputs(horizontal=True, shot_uuid=f"{shot_uuid}_{idx}")
+     
+                                        
+
+                                i1, i2 = st.columns([1, 1])
+                                with i1:
+                                    if st.button("↕️", key=f"flip_vertically_{idx}", help="Flip vertically", use_container_width=True):
+                                        
+                                        st.session_state['flip_vertically'] = not st.session_state['flip_vertically']
+
+                                with i2:
+                                    if st.button("↔️", key=f"flip_horizontally_{idx}", help="Flip horizontally", use_container_width=True):
+                                        st.session_state['flip_horizontally'] = not st.session_state['flip_horizontally']
+
+                     
+
+                                
+#                                  zoom_inputs(horizontal=True, shot_uuid=f"{shot_uuid}_{idx}")
 
                                 st.caption("Output Image:")
 
@@ -229,6 +298,9 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timel
             st.warning("You're in frame moving mode. You must press 'Save' to save changes.")
             if st.button("Save", key=f"save_move_frame_{shot.uuid}_bottom", help="Save the changes made in 'move frame' mode", use_container_width=True,type="primary"):          
                 update_shot_frames(shot_uuid, timing_list)
+                st.rerun()
+            if st.button("Discard changes", key=f"discard_changes_{shot.uuid}_2", help="Discard all changes made in 'move frame' mode", use_container_width=True):
+                st.session_state[f"move_frame_mode_{shot.uuid}"] = False
                 st.rerun()
         st.markdown("***")
 
