@@ -27,7 +27,8 @@ MODEL_PATH_DICT = {
     ComfyWorkflow.UPSCALER: {"workflow_path": 'comfy_workflows/video_upscaler_api.json', "output_node_id": [243]},
     ComfyWorkflow.MOTION_LORA: {"workflow_path": 'comfy_workflows/motion_lora_api.json', "output_node_id": [11, 14, 26, 30, 34]},
     # ComfyWorkflow.MOTION_LORA: {"workflow_path": 'comfy_workflows/motion_lora_test_api.json', "output_node_id": [11, 14]},
-    ComfyWorkflow.DYNAMICRAFTER: {"workflow_path": 'comfy_workflows/dynamicrafter_api.json', "output_node_id": [2]}
+    ComfyWorkflow.DYNAMICRAFTER: {"workflow_path": 'comfy_workflows/dynamicrafter_api.json', "output_node_id": [2]},
+    ComfyWorkflow.IPADAPTER_COMPOSITION: {"workflow_path": 'comfy_workflows/ipadapter_composition_workflow_api.json', "output_node_id": [27]}
 }
 
 
