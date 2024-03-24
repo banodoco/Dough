@@ -185,11 +185,10 @@
     "301": {
       "inputs": {
         "weight": 1,
-        "noise": 0.3,
-        "weight_type": "original",
+        "weight_type": "linear",
+        "combine_embeds": "concat",
         "start_at": 0,
         "end_at": 1,
-        "unfold_batch": true,
         "ipadapter": [
           "250",
           0
@@ -207,9 +206,9 @@
           0
         ]
       },
-      "class_type": "IPAdapterApply",
+      "class_type": "IPAdapterAdvanced",
       "_meta": {
-        "title": "Apply IPAdapter"
+        "title": "IPAdapter Advanced"
       }
     },
     "302": {

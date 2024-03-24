@@ -229,27 +229,27 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
 
                     output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_composition, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
                 
-                elif generation_method == InputImageStyling.CONTROLNET_CANNY.value:
-                    edge_pil_img = get_canny_img(st.session_state["input_image_1"], low_threshold=50, high_threshold=150)    # redundant incase of local inference
-                    input_img = edge_pil_img if not GPU_INFERENCE_ENABLED else st.session_state["input_image_1"]
-                    input_image_file = save_new_image(input_img, project_uuid)
-                    query_obj = MLQueryObject(
-                        timing_uuid=None,
-                        model_uuid=None,
-                        image_uuid=input_image_file.uuid,
-                        guidance_scale=5,
-                        seed=-1,
-                        num_inference_steps=30,
-                        strength=strength_of_image/100,
-                        adapter_type=None,
-                        prompt=prompt,                                                
-                        negative_prompt=negative_prompt,
-                        height=project_settings.height,
-                        width=project_settings.width,
-                        data={'condition_scale': 1, "shot_uuid": shot_uuid}
-                    )
+                # elif generation_method == InputImageStyling.CONTROLNET_CANNY.value:
+                #     edge_pil_img = get_canny_img(st.session_state["input_image_1"], low_threshold=50, high_threshold=150)    # redundant incase of local inference
+                #     input_img = edge_pil_img if not GPU_INFERENCE_ENABLED else st.session_state["input_image_1"]
+                #     input_image_file = save_new_image(input_img, project_uuid)
+                #     query_obj = MLQueryObject(
+                #         timing_uuid=None,
+                #         model_uuid=None,
+                #         image_uuid=input_image_file.uuid,
+                #         guidance_scale=5,
+                #         seed=-1,
+                #         num_inference_steps=30,
+                #         strength=strength_of_image/100,
+                #         adapter_type=None,
+                #         prompt=prompt,                                                
+                #         negative_prompt=negative_prompt,
+                #         height=project_settings.height,
+                #         width=project_settings.width,
+                #         data={'condition_scale': 1, "shot_uuid": shot_uuid}
+                #     )
 
-                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.ipadapter_composition, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                #     output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl_controlnet, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
                 
                 elif generation_method == InputImageStyling.IPADAPTER_FACE.value:
                     # validation
@@ -332,7 +332,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                     query_obj = MLQueryObject(
                         timing_uuid=None,
                         model_uuid=None,
-                        guidance_scale=8,
+                        guidance_scale=6,
                         seed=-1,                            
                         num_inference_steps=25,            
                         strength=0.5,
