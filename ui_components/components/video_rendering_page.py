@@ -263,6 +263,7 @@ def two_img_realistic_interpolation_page(shot_uuid, img_list: List[InternalFileO
         description_of_motion = st.text_area("Describe the motion you want between the frames:", \
             key=f"description_of_motion_{shot.uuid}", value=st.session_state[f'video_desc_{shot_uuid}'])
         st.info("This is very important and will likely require some iteration.")
+        st.info("NOTE: The model for this animation is 10.5 GB in size, which can take some time to download")
         
     variant_count = 1  # Assuming a default value for variant_count, adjust as necessary
     vid_quality = "full"  # Assuming full quality, adjust as necessary based on your requirements

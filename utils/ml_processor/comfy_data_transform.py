@@ -361,22 +361,52 @@ class ComfyDataTransform:
                 "563": {
                     "inputs": {
                         "weight": weight,
-                        "noise": 0.3,
-                        "weight_type": "original",
+                        "weight_type": "linear",
+                        "combine_embeds": "concat",
                         "start_at": 0,
                         "end_at": 1,
-                        "short_side_tiles": 2,
-                        "tile_weight": 0.6,
-                        "ipadapter": ["564", 0],
-                        "clip_vision": ["370", 0],
-                        "image": ["560", 0],
-                        "model": ["558", 3]
-                    },
-                    "class_type": "IPAdapterTilesMasked",
-                    "_meta": {
-                        "title": "IPAdapter Masked Tiles (experimental)"
+                        "sharpening": 0,
+                        "model": [
+                            "558",
+                            3
+                        ],
+                        "ipadapter": [
+                            "564",
+                            0
+                        ],
+                        "image": [
+                            "560",
+                            0
+                        ],
+                        "clip_vision": [
+                            "370",
+                            0
+                        ]
+                        },
+                        "class_type": "IPAdapterTiled",
+                        "_meta": {
+                        "title": "IPAdapter Tiled"
                     }
                 },
+                # "563": {
+                #     "inputs": {
+                #         "weight": weight,
+                #         "noise": 0.3,
+                #         "weight_type": "original",
+                #         "start_at": 0,
+                #         "end_at": 1,
+                #         "short_side_tiles": 2,
+                #         "tile_weight": 0.6,
+                #         "ipadapter": ["564", 0],
+                #         "clip_vision": ["370", 0],
+                #         "image": ["560", 0],
+                #         "model": ["558", 3]
+                #     },
+                #     "class_type": "IPAdapterTilesMasked",
+                #     "_meta": {
+                #         "title": "IPAdapter Masked Tiles (experimental)"
+                #     }
+                # },
                 "564": {
                     "inputs": {
                         "ipadapter_file": "ip_plus_composition_sd15.safetensors"

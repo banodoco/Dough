@@ -40,14 +40,25 @@ def video_rendering_page(shot_uuid, selected_variant):
     file_uuid_list = []
     if f"type_of_animation_{shot.uuid}" not in st.session_state:
         st.session_state[f"type_of_animation_{shot.uuid}"] = 0
-       # AnimateShotMethod.BATCH_CREATIVE_INTERPOLATION.value
+    if st.session_state[f"type_of_animation_{shot.uuid}"] == 0:   # AnimateShotMethod.BATCH_CREATIVE_INTERPOLATION.value
         # loading images from a particular video variant
-    if selected_variant:
-        log = data_repo.get_inference_log_from_uuid(selected_variant)
-        shot_data = json.loads(log.input_params)
-        file_uuid_list = shot_data.get('origin_data', json.dumps({})).get('settings', {}).get('file_uuid_list', [])
-    # picking current images if no variant is selected
+        if selected_variant:
+            log = data_repo.get_inference_log_from_uuid(selected_variant)
+            shot_data = json.loads(log.input_params)
+            file_uuid_list = shot_data.get('origin_data', json.dumps({})).get('settings', {}).get('file_uuid_list', [])
+
     else:
+        # hackish sol, will fix later
+        for idx in range(2):
+            if f'img{idx+1}_uuid_{shot_uuid}' in st.session_state and st.session_state[f'img{idx+1}_uuid_{shot_uuid}']:
+                file_uuid_list.append(st.session_state[f'img{idx+1}_uuid_{shot_uuid}'])            
+                
+        if not (f'video_desc_{shot_uuid}' in st.session_state and st.session_state[f'video_desc_{shot_uuid}']):
+            st.session_state[f'video_desc_{shot_uuid}'] = ""
+    
+    # picking current images if no file_uuids are found 
+    # (either no variant was selected or no prev img in session_state was present)
+    if not (file_uuid_list and len(file_uuid_list)):
         for timing in shot.timing_list:
             if timing.primary_image and timing.primary_image.location:
                 file_uuid_list.append(timing.primary_image.uuid)

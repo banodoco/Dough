@@ -163,12 +163,19 @@ def video_motion_settings(shot_uuid, img_list):
 
         if f"strength_of_structure_control_image_{shot_uuid}" not in st.session_state:
             st.session_state[f"strength_of_structure_control_image_{shot_uuid}"] = None
-        control_motion_with_image = st_memory.toggle("Control motion with an image", help="This will allow you to upload images to control the motion of the video.",key=f"control_motion_with_image_{shot_uuid}")
 
-        if control_motion_with_image:
+        img_loaded_from_settings = f"structure_control_image_uuid_{shot_uuid}" in st.session_state and st.session_state[f"structure_control_image_uuid_{shot_uuid}"]
+        control_motion_with_image = st.toggle(
+            "Control motion with an image", 
+            help="This will allow you to upload images to control the motion of the video.",
+            key=f"control_motion_with_image_{shot_uuid}",
+            value=img_loaded_from_settings
+        )
+
+        if control_motion_with_image or img_loaded_from_settings:
             project_settings = data_repo.get_project_setting(shot.project.uuid)
             width, height = project_settings.width, project_settings.height
-            if f"structure_control_image_uuid_{shot_uuid}" in st.session_state and st.session_state[f"structure_control_image_uuid_{shot_uuid}"]:
+            if img_loaded_from_settings:
                 uploaded_image = data_repo.get_file_from_uuid(st.session_state[f"structure_control_image_uuid_{shot_uuid}"])
                 uploaded_image_pil = Image.open(uploaded_image.location)
                 uploaded_image_pil = uploaded_image_pil.resize((width, height))
