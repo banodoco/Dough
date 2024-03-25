@@ -13,7 +13,6 @@ from ui_components.methods.common_methods import add_new_shot
 
 def frame_selector_widget(show_frame_selector=True):
     data_repo = DataRepo()
-
     timing_list = data_repo.get_timing_list_from_shot(st.session_state["shot_uuid"])
     shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
     shot_list = data_repo.get_shot_list(shot.project.uuid)
@@ -51,9 +50,7 @@ def frame_selector_widget(show_frame_selector=True):
     if not ('current_shot_index' in st.session_state and st.session_state['current_shot_index']):
         st.session_state['current_shot_index'] = shot_names.index(st.session_state['shot_name']) + 1
         update_current_shot_index(st.session_state['current_shot_index'])
-    # st.write if frame_selector is present
-    
-    
+
     if st.session_state['page'] == "Key Frames":
         if st.session_state['current_frame_index'] > len_timing_list:            
             update_current_frame_index(len_timing_list)
@@ -69,14 +66,11 @@ def frame_selector_widget(show_frame_selector=True):
 
             # Create a list of frames with a blank value as the first item
             frame_list = [''] + [f'{i+1}' for i in range(len(timing_list))]
-
-
             with shot2:          
                 frame_selection = st_memory.selectbox('Frame:', frame_list, key="current_frame_sidebar_selector")
             
             # Only trigger the frame number extraction and current frame index update if a non-empty value is selected
             if frame_selection != '':
-
                 if st.button("Jump to shot view",use_container_width=True):
                     st.session_state['current_frame_sidebar_selector'] = 0
                     st.rerun()
@@ -93,14 +87,11 @@ def frame_selector_widget(show_frame_selector=True):
 
 def frame_view(view="Key Frame",show_current_frames=True):
     data_repo = DataRepo()
-    # time1, time2 = st.columns([1,1])
-    # st.markdown("***")
     st.write("")
 
     timing_list = data_repo.get_timing_list_from_shot(st.session_state["shot_uuid"])
     shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])    
     if view == "Key Frame":
-
         with st.expander(f"🖼️ Frame #{st.session_state['current_frame_index']} Details", expanded=True):
             if st_memory.toggle("Open", value=True, key="frame_toggle"):                
                 a1, a2 = st.columns([3,2])
@@ -114,21 +105,14 @@ def frame_view(view="Key Frame",show_current_frames=True):
                 st.markdown("---")
 
                 st.info("In Context:")
-                shot_list = data_repo.get_shot_list(shot.project.uuid)
                 shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
-
-                # shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
                 timing_list: List[InternalFrameTimingObject] = shot.timing_list
-
                 display_shot_frames(timing_list, False)
-
                 st.markdown("---")
-
                 delete_frame_button(st.session_state['current_frame_uuid'])
                 
 
     else:
-        shot_list = data_repo.get_shot_list(shot.project.uuid)
         shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
         
         with st.expander(f"🎬 {shot.name} Details",expanded=True):
@@ -136,26 +120,19 @@ def frame_view(view="Key Frame",show_current_frames=True):
                 a1,a2 = st.columns([2,2])
                 with a1:
                     update_shot_name(shot.uuid)
-                # with a2:
-                #     update_shot_duration(shot.uuid)
                 
                 if show_current_frames:
                     st.markdown("---")
-
                     timing_list: List[InternalFrameTimingObject] = shot.timing_list
-
                     display_shot_frames(timing_list, False)
 
                 st.markdown("---")
-
                 delete_shot_button(shot.uuid)
 
 def update_current_frame_index(index):
     data_repo = DataRepo()
     timing_list = data_repo.get_timing_list_from_shot(st.session_state["shot_uuid"])
-
     st.session_state['current_frame_uuid'] = timing_list[index - 1].uuid
-        
     if st.session_state['prev_frame_index'] != index or st.session_state['current_frame_index'] != index:
         st.session_state['prev_frame_index'] = index
         st.session_state['current_frame_index'] = index
@@ -170,9 +147,7 @@ def update_current_frame_index(index):
 def update_current_shot_index(index):
     data_repo = DataRepo()
     shot_list = data_repo.get_shot_list(st.session_state["project_uuid"])
-
     st.session_state['shot_uuid'] = shot_list[index - 1].uuid
-        
     if st.session_state['prev_shot_index'] != index or st.session_state['current_shot_index'] != index:
         st.session_state['current_shot_index'] = index
         st.session_state['prev_shot_index'] = index

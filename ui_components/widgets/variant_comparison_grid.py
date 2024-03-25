@@ -1,6 +1,7 @@
 import json
 import time
 import ast
+from typing import List
 import streamlit as st
 import re
 import os
@@ -32,11 +33,14 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     if stage == CreativeProcessType.MOTION.value:
         shot_uuid = ele_uuid
         shot = data_repo.get_shot_from_uuid(shot_uuid)
-        variants = shot.interpolated_clip_list
+        variants: List[InternalFileObject] = shot.interpolated_clip_list
         timing_list = data_repo.get_timing_list_from_shot(shot.uuid)
         
         if not (f"{shot_uuid}_selected_variant_log_uuid" in st.session_state and st.session_state[f"{shot_uuid}_selected_variant_log_uuid"]):
-            st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
+            if variants and len(variants):
+                st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = variants[-1].inference_log.uuid
+            else:
+                st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
     else:
         timing_uuid = ele_uuid        
         timing = data_repo.get_timing_from_uuid(timing_uuid)
