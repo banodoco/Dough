@@ -239,11 +239,12 @@ def sidebar_logger(shot_uuid):
                         #         st.rerun()
 
                     elif inference_type == InferenceType.FRAME_INTERPOLATION.value:
-                        jump_to_shot_button(origin_data.get('shot_uuid', ''))
+                        jump_to_shot_button(origin_data.get('shot_uuid', ''), log.uuid)
 
 def video_inference_image_grid(origin_data):
     if origin_data:
-        if 'settings' in origin_data and origin_data['settings']['file_uuid_list']:
+        if 'settings' in origin_data and 'file_uuid_list' in origin_data['settings'] \
+            and origin_data['settings']['file_uuid_list']:
             data_repo = DataRepo()
             total_size = len(origin_data['settings']['file_uuid_list'])
             file_uuid_list = origin_data['settings']['file_uuid_list'][:3]
@@ -258,9 +259,9 @@ def video_inference_image_grid(origin_data):
                     if pending_count:
                         st.info('+' + str(pending_count))
 
-def jump_to_shot_button(shot_uuid):
+def jump_to_shot_button(shot_uuid, log_uuid):
     if shot_uuid:
-        if st.button("Jump to Shot"):
+        if st.button("Jump to Shot", key=f"sidebar_btn_{shot_uuid}_{log_uuid}"):
             st.session_state['current_frame_sidebar_selector'] = 0
             st.session_state['page'] = CreativeProcessPage.ANIMATE_SHOT.value
             st.session_state['current_subpage'] = AppSubPage.ANIMATE_SHOT.value
