@@ -155,7 +155,15 @@ def video_motion_settings(shot_uuid, img_list):
             st.session_state[f"type_of_motion_context_index_{shot_uuid}"] = ["Low", "Standard", "High"].index(st.session_state[f"type_of_motion_context_index_{shot_uuid}"])
         type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=True, index=st.session_state[f"type_of_motion_context_index_{shot.uuid}"], help="This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.")
         amount_of_motion = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01, value=st.session_state[f"amount_of_motion_{shot_uuid}"], key="amount_of_motion_overall", on_change=lambda: update_motion_for_all_frames(shot.uuid, img_list), help="You can also tweak this on an individual frame level in the advanced settings above.")
-                 
+    
+    high_detail_mode_val = f"high_detail_mode_val_{shot_uuid}" in st.session_state and st.session_state[f"high_detail_mode_val_{shot_uuid}"]
+    high_detail_mode = st.toggle(
+        "Enable high detail mode", 
+        help="High detail mode",
+        key=f"high_detail_mode_{shot_uuid}",
+        value=high_detail_mode_val
+    )
+    
     i1, i2, i3 = st.columns([1, 0.5, 1.5])
     with i1:
         if f'structure_control_image_{shot_uuid}' not in st.session_state:
@@ -216,7 +224,7 @@ def video_motion_settings(shot_uuid, img_list):
                 st.success("Image removed")
                 st.rerun()
                 
-    return strength_of_adherence, overall_positive_prompt, overall_negative_prompt, type_of_motion_context, amount_of_motion
+    return strength_of_adherence, overall_positive_prompt, overall_negative_prompt, type_of_motion_context, amount_of_motion, high_detail_mode
 
 def select_motion_lora_element(shot_uuid, model_files):
     data_repo = DataRepo()
@@ -417,7 +425,6 @@ def select_motion_lora_element(shot_uuid, model_files):
         st.info("This takes around 30 minutes to train.")
     return lora_data
 
-
 def select_sd_model_element(shot_uuid, default_model):
     st.markdown("##### Style model")
     tab1, tab2 = st.tabs(["Choose Model","Download Models"])
@@ -560,7 +567,6 @@ def select_sd_model_element(shot_uuid, default_model):
                         st.error("Failed to download model")
                         
     return sd_model, model_files, 
-          
 
 def individual_frame_settings_element(shot_uuid, img_list, display_indent):
     with display_indent:

@@ -17,11 +17,11 @@
         0
       ],
       "positive": [
-        "505",
+        "468",
         0
       ],
       "negative": [
-        "505",
+        "468",
         1
       ],
       "latent_image": [
@@ -95,7 +95,7 @@
     },
     "class_type": "IPAdapterModelLoader",
     "_meta": {
-      "title": "Load IPAdapter Model"
+      "title": "IPAdapter Model Loader"
     }
   },
   "370": {
@@ -164,12 +164,12 @@
   "464": {
     "inputs": {
       "width": [
-        "508",
+        "584",
         0
       ],
       "height": [
-        "508",
-        1
+        "585",
+        0
       ],
       "batch_size": [
         "558",
@@ -185,7 +185,7 @@
     "inputs": {
       "sparsectrl_name": "v3_sd15_sparsectrl_rgb.ckpt",
       "use_motion": true,
-      "motion_strength": 1,
+      "motion_strength": 1.04,
       "motion_scale": 1,
       "sparse_method": [
         "558",
@@ -199,9 +199,9 @@
   },
   "468": {
     "inputs": {
-      "strength": 0.6,
+      "strength": 1,
       "start_percent": 0,
-      "end_percent": 0.3,
+      "end_percent": 0.35000000000000003,
       "positive": [
         "558",
         1
@@ -244,64 +244,6 @@
       "title": "RGB SparseCtrl 🛂🅐🅒🅝"
     }
   },
-  "470": {
-    "inputs": {
-      "lora_name": "v3_sd15_adapter.ckpt",
-      "strength_model": 0.05,
-      "strength_clip": 0.25,
-      "model": [
-        "461",
-        0
-      ],
-      "clip": [
-        "461",
-        1
-      ]
-    },
-    "class_type": "LoraLoader",
-    "_meta": {
-      "title": "Load LoRA"
-    }
-  },
-  "505": {
-    "inputs": {
-      "strength": 0.5,
-      "start_percent": 0.6,
-      "end_percent": 0.675,
-      "positive": [
-        "468",
-        0
-      ],
-      "negative": [
-        "468",
-        1
-      ],
-      "control_net": [
-        "467",
-        0
-      ],
-      "image": [
-        "469",
-        0
-      ]
-    },
-    "class_type": "ACN_AdvancedControlNetApply",
-    "_meta": {
-      "title": "Apply Advanced ControlNet 🛂🅐🅒🅝"
-    }
-  },
-  "508": {
-    "inputs": {
-      "image": [
-        "401",
-        0
-      ]
-    },
-    "class_type": "GetImageSize+",
-    "_meta": {
-      "title": "🔧 Get Image Size"
-    }
-  },
   "541": {
     "inputs": {
       "text": "\"4\": \"\", \"36\": \"\", \"68\": \"\"",
@@ -315,7 +257,7 @@
       "pw_c": 0,
       "pw_d": 0,
       "clip": [
-        "470",
+        "461",
         1
       ]
     },
@@ -337,7 +279,7 @@
       "pw_c": 0,
       "pw_d": 0,
       "clip": [
-        "470",
+        "461",
         1
       ]
     },
@@ -408,7 +350,7 @@
   },
   "548": {
     "inputs": {
-      "text": "0:(1.3)",
+      "text": "0:(1.5)",
       "print_output": true,
       "num_latents": [
         "464",
@@ -422,25 +364,18 @@
   },
   "558": {
     "inputs": {
-      "control_net_name": "SD1.5/animatediff/v3_sd15_sparsectrl_rgb.ckpt",
       "type_of_frame_distribution": "linear",
       "linear_frame_distribution_value": 16,
-      "dynamic_frame_distribution_values": "0,10,26,40",
+      "dynamic_frame_distribution_values": "0,16,59",
       "type_of_key_frame_influence": "linear",
-      "linear_key_frame_influence_value": "(1.0,1.0)",
-      "dynamic_key_frame_influence_values": "(1.0,1.0),(1.0,1.5)(1.0,0.5)",
+      "linear_key_frame_influence_value": "0.8",
+      "dynamic_key_frame_influence_values": "1.0,1.0,1.0",
       "type_of_strength_distribution": "linear",
-      "linear_strength_value": "(0.3,0.4)",
-      "dynamic_strength_values": "(0.0,1.0),(0.0,1.0),(0.0,1.0),(0.0,1.0)",
-      "soft_scaled_cn_weights_multiplier": 0.85,
+      "linear_strength_value": "(0.3,1.0)",
+      "dynamic_strength_values": "(0.3,0.4),(0.3,0.4)",
+      "high_detail_mode": 3,
+      "ipa_weight": 1,
       "buffer": 4,
-      "relative_cn_strength": 0,
-      "relative_ipadapter_strength": 1,
-      "ipadapter_noise": 0.3,
-      "ipadapter_start_at": 0,
-      "ipadapter_end_at": 0.75,
-      "cn_start_at": 0,
-      "cn_end_at": 0.75,
       "positive": [
         "541",
         0
@@ -454,7 +389,7 @@
         0
       ],
       "model": [
-        "470",
+        "461",
         0
       ],
       "ipadapter": [
@@ -484,6 +419,24 @@
     "class_type": "FILM VFI",
     "_meta": {
       "title": "FILM VFI"
+    }
+  },
+  "584": {
+    "inputs": {
+      "Value": 512
+    },
+    "class_type": "Integer",
+    "_meta": {
+      "title": "Integer"
+    }
+  },
+  "585": {
+    "inputs": {
+      "Value": 768
+    },
+    "class_type": "Integer",
+    "_meta": {
+      "title": "Integer"
     }
   }
 }
