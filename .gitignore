@@ -28,6 +28,7 @@ comfy_runner/
 ComfyUI/
 output/
 images.zip
+python-3.10.10-embed-amd64*
 
 # generated file TODO: move inside videos
 depth.png
