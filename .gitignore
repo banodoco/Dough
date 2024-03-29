@@ -24,11 +24,14 @@ test.py
 doc.py
 .env
 data.json
-comfy_runner/
-ComfyUI/
 output/
 images.zip
 python-3.10.10-embed-amd64*
+
+# helper files
+comfy_runner/
+ComfyUI/
+*get-pip.py
 
 # generated file TODO: move inside videos
 depth.png
