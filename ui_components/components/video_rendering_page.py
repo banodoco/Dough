@@ -39,7 +39,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
         
         # ----------- OTHER SETTINGS ------------
         strength_of_adherence, overall_positive_prompt, \
-            overall_negative_prompt, type_of_motion_context, amount_of_motion = video_motion_settings(shot_uuid, img_list)
+            overall_negative_prompt, type_of_motion_context, amount_of_motion, high_detail_mode = video_motion_settings(shot_uuid, img_list)
         
         type_of_frame_distribution = "dynamic"
         type_of_key_frame_influence = "dynamic"
@@ -79,6 +79,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             buffer=4,
             motion_scale=motion_scale,
             motion_scales=motion_scales,
+            high_detail_mode=high_detail_mode,
             image_dimension=img_dimension,
             output_format="video/h264-mp4",
             prompt=overall_positive_prompt,
@@ -164,6 +165,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     individual_negative_prompts,
                     lora_data,
                     default_model,
+                    high_detail_mode,
                     image.uuid if image else None,
                     settings["strength_of_structure_control_image"],
                     generation_types.index(st.session_state['creative_interpolation_type'])
