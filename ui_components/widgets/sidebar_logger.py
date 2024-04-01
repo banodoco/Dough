@@ -68,7 +68,7 @@ def sidebar_logger(shot_uuid):
             st.session_state["status_optn_index"] = 0
 
         status_option = st.radio(
-            "Statuses to display:",
+            "Status to display:",
             options=display_options,
             key="status_option",
             index=st.session_state["status_optn_index"],
@@ -247,7 +247,7 @@ def video_inference_image_grid(origin_data):
             and origin_data['settings']['file_uuid_list']:
             data_repo = DataRepo()
             total_size = len(origin_data['settings']['file_uuid_list'])
-            file_uuid_list = origin_data['settings']['file_uuid_list'][:3]
+            file_uuid_list = origin_data['settings']['file_uuid_list'][:2]
             image_list, _ = data_repo.get_all_file_list(uuid__in=file_uuid_list, file_type=InternalFileType.IMAGE.value)    # extra element for displaying pending count
             
             num_images = len(image_list)
@@ -257,7 +257,7 @@ def video_inference_image_grid(origin_data):
                 else:
                     pending_count = total_size - len(image_list)
                     if pending_count:
-                        st.info('+' + str(pending_count))
+                        st.caption('+' + str(pending_count))
 
 def jump_to_shot_button(shot_uuid, log_uuid):
     if shot_uuid:

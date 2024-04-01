@@ -141,6 +141,14 @@ def video_motion_settings(shot_uuid, img_list):
         st.write("")
         st.info("Use these sparingly, as they can have a large impact on the video. You can also edit them for individual frames above.")
 
+    high_detail_mode_val = f"high_detail_mode_val_{shot_uuid}" in st.session_state and st.session_state[f"high_detail_mode_val_{shot_uuid}"]
+    high_detail_mode = st.toggle(
+        "Enable high detail mode", 
+        help="This improves the detail of the video, but doubles the amount of VRAM used per input frame.",
+        key=f"high_detail_mode_{shot_uuid}",
+        value=high_detail_mode_val
+    )
+
     st.markdown("***")
     st.markdown("##### Overall motion settings")
     h1, h2, h3 = st.columns([1, 0.5, 1.0])
@@ -156,13 +164,7 @@ def video_motion_settings(shot_uuid, img_list):
         type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=True, index=st.session_state[f"type_of_motion_context_index_{shot.uuid}"], help="This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.")
         amount_of_motion = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01, value=st.session_state[f"amount_of_motion_{shot_uuid}"], key="amount_of_motion_overall", on_change=lambda: update_motion_for_all_frames(shot.uuid, img_list), help="You can also tweak this on an individual frame level in the advanced settings above.")
     
-    high_detail_mode_val = f"high_detail_mode_val_{shot_uuid}" in st.session_state and st.session_state[f"high_detail_mode_val_{shot_uuid}"]
-    high_detail_mode = st.toggle(
-        "Enable high detail mode", 
-        help="High detail mode",
-        key=f"high_detail_mode_{shot_uuid}",
-        value=high_detail_mode_val
-    )
+
     
     i1, i2, i3 = st.columns([1, 0.5, 1.5])
     with i1:
