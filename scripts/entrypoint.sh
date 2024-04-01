@@ -1,37 +1,47 @@
-#!/bin/bash
+#!/bin/sh
 
 COMMAND="streamlit run app.py --runner.fastReruns false --server.port 5500"
 
 compare_versions() {
-    local IFS='.'
-    local i ver1=($1) ver2=($2)
+    IFS='.' read -r -a ver1 << EOF
+$(echo "$1")
+EOF
+    IFS='.' read -r -a ver2 << EOF
+$(echo "$2")
+EOF
 
     # Fill empty fields with zeros
-    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++)); do
+    i=${#ver1[@]}
+    while [ $i -lt ${#ver2[@]} ]; do
         ver1[i]=0
+        i=$((i + 1))
     done
-    for ((i=0; i<${#ver2[@]}; i++)); do
-        if [[ -z ${ver1[i]} ]]; then
+    i=0
+    while [ $i -lt ${#ver2[@]} ]; do
+        if [ -z "${ver1[i]}" ]; then
             ver1[i]=0
         fi
+        i=$((i + 1))
     done
 
     # Compare major and minor versions
-    for ((i=0; i<${#ver1[@]}-1; i++)); do
-        if ((10#${ver1[i]} > 10#${ver2[i]})); then
+    i=0
+    while [ $i -lt $((${#ver1[@]} - 1)) ]; do
+        if [ $((10#${ver1[i]})) -gt $((10#${ver2[i]})) ]; then
             echo "1"
             return
-        elif ((10#${ver1[i]} < 10#${ver2[i]})); then
+        elif [ $((10#${ver1[i]})) -lt $((10#${ver2[i]})) ]; then
             echo "-1"
             return
         fi
+        i=$((i + 1))
     done
 
     # Compare patch versions
-    if ((10#${ver1[2]} > 10#${ver2[2]})); then
+    if [ $((10#${ver1[2]})) -gt $((10#${ver2[2]})) ]; then
         echo "1"
         return
-    elif ((10#${ver1[2]} < 10#${ver2[2]})); then
+    elif [ $((10#${ver1[2]})) -lt $((10#${ver2[2]})) ]; then
         echo "-1"
         return
     fi
@@ -63,7 +73,7 @@ update_app() {
         echo "A newer version ($CURRENT_VERSION) is available. Updating..."
 
         git stash
-        Step 1: Pull from the current branch
+        # Step 1: Pull from the current branch
         git pull origin "$(git rev-parse --abbrev-ref HEAD)"
 
         # Step 2: Check if the comfy_runner folder is present
@@ -71,6 +81,7 @@ update_app() {
             # Step 3a: If comfy_runner is present, pull from the feature/package branch
             echo "comfy_runner folder found. Pulling from feature/package branch."
             cd comfy_runner && git pull origin feature/package
+            cd ..
         else
             # Step 3b: If comfy_runner is not present, clone the repository
             echo "comfy_runner folder not found. Cloning repository."
