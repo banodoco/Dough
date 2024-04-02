@@ -47,4 +47,4 @@ def setup_comfy_runner():
     Repo.clone_from(comfy_repo_url, COMFY_RUNNER_PATH[2:], single_branch=True, branch='feature/package')
 
     # installing dependencies
-    subprocess.run(['pip', 'install', '-r', COMFY_RUNNER_PATH + '/requirements.txt'], check=True)
+    subprocess.run([sys.executable, '-m', 'pip', 'install', '-r', COMFY_RUNNER_PATH + '/requirements.txt'], check=True)

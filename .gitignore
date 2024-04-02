@@ -27,6 +27,7 @@ data.json
 output/
 images.zip
 python-3.10.10-embed-amd64*
+python_embed*
 
 # helper files
 comfy_runner/
