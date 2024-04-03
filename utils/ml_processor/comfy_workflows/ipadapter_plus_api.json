@@ -114,6 +114,7 @@
       "weight": 1,
       "weight_type": "linear",
       "combine_embeds": "concat",
+      "embeds_scaling": "V only",
       "start_at": 0,
       "end_at": 1,
       "ipadapter": [
