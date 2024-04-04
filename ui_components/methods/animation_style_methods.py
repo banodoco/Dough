@@ -4,7 +4,7 @@ import time
 from typing import List
 import streamlit as st
 from backend.models import InternalFileObject
-from shared.constants import InferenceParamType
+from shared.constants import COMFY_BASE_PATH, InferenceParamType
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, ShotMetaData
 from utils.constants import AnimateShotMethod
 from utils.data_repo.data_repo import DataRepo
@@ -441,7 +441,7 @@ def update_session_state_with_animation_details(shot_uuid,
     main_setting_data[f"type_of_generation_index_{shot.uuid}"] = type_of_generation_index
     main_setting_data[f"high_detail_mode_val_{shot.uuid}"] = high_detail_mode
     
-    checkpoints_dir = "ComfyUI/models/checkpoints"
+    checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
     all_files = os.listdir(checkpoints_dir)
     model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
     model_files = [file for file in model_files if "xl" not in file]

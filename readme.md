@@ -105,7 +105,7 @@ curl -sSL https://raw.githubusercontent.com/banodoco/Dough/green-head/scripts/li
 you can run the app using 
 
 ```bash
-source ./dough-env/bin/activate && sh ./scripts/entrypoint.sh
+source ./dough-env/bin/activate && ./scripts/entrypoint.sh
 ```
 
 ## Instructions for Windows:
