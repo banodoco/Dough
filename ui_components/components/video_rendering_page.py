@@ -124,16 +124,17 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             not isinstance(st.session_state[f"type_of_generation_index_{shot.uuid}"], int):
             st.session_state[f"type_of_generation_index_{shot.uuid}"] = 0
 
-        generation_types = ["Detailed", "Fast"]
+        generation_types = ["Normal", "Fast"]
         type_of_generation = st.radio(
             "Type of generation:", 
             options=generation_types, 
             key="creative_interpolation_type", 
             horizontal=True, 
             index=st.session_state[f"type_of_generation_index_{shot.uuid}"], 
-            help="Detailed generation will be around twice as long but provide more detailed results."
+            help="Normal generations take around twice as long but provide more detailed results."
         )
-        
+        if type_of_generation == "Normal":
+            type_of_generation = "Detailed"
         animate_col_1, _, _ = st.columns([3, 1, 1])
         with animate_col_1:
             variant_count = 1

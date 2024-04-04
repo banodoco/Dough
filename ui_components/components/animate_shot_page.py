@@ -30,33 +30,10 @@ def animate_shot_page(shot_uuid: str, h2):
     st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['page']}] > :blue[{shot.name}]")
     st.markdown("***")
     
-    video_generation_counter(shot_uuid)
     selected_variant = variant_comparison_grid(shot_uuid, stage="Shots")
     video_rendering_page(shot_uuid, selected_variant)
 
-# TODO: very inefficient operation.. add shot_id as a foreign in logs table for better search
-def video_generation_counter(shot_uuid):
-    data_repo = DataRepo()
-    log_list, page_count = data_repo.get_all_inference_log_list(
-        status_list=[InferenceStatus.IN_PROGRESS.value],
-        data_per_page=1000,
-        page=1
-    )
-    log_list = log_list or []
-    res = []
-    for log in log_list:
-        origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
-        inference_type = origin_data.get("inference_type", "")
-        if inference_type == InferenceType.FRAME_INTERPOLATION.value and \
-            origin_data.get("shot_uuid", "") == shot_uuid:
-            res.append(log)
 
-    h1, h2 = st.columns([1, 1])
-    with h1:
-        st.info(f"{len(res)} video(s) generation pending for this shot")
-    with h2:
-        if st.button("Refresh", key=f"refresh_{shot_uuid}", use_container_width=True):
-            st.rerun()
             
 
 def video_rendering_page(shot_uuid, selected_variant):
