@@ -4,6 +4,7 @@ import sys
 import subprocess
 import time
 from git import Repo
+from shared.constants import COMFY_BASE_PATH
 from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
 
@@ -40,6 +41,7 @@ def is_comfy_runner_present():
 # TODO: convert comfy_runner into a package for easy import
 def setup_comfy_runner():
     if is_comfy_runner_present():
+        update_comfy_runner_env(COMFY_BASE_PATH)
         return
     
     app_logger.log(LoggingType.INFO, 'cloning comfy runner')
@@ -48,3 +50,12 @@ def setup_comfy_runner():
 
     # installing dependencies
     subprocess.run(['pip', 'install', '-r', COMFY_RUNNER_PATH + '/requirements.txt'], check=True)
+    update_comfy_runner_env(COMFY_BASE_PATH)
+    
+def update_comfy_runner_env(comfy_base_path):
+    if comfy_base_path != 'ComfyUI':
+        with open('comfy_runner/.env', 'w', encoding='utf-8') as f:
+            f.write(f"COMFY_BASE_PATH={comfy_base_path}")
+    else:
+        with open('comfy_runner/.env', 'w', encoding='utf-8') as f:
+            f.write("")

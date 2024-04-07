@@ -13,7 +13,7 @@ import time
 import uuid
 from io import BytesIO
 import numpy as np
-from shared.constants import OFFLINE_MODE, SERVER, InferenceType, InternalFileTag, InternalFileType, ProjectMetaData
+from shared.constants import COMFY_BASE_PATH, OFFLINE_MODE, SERVER, InferenceType, InternalFileTag, InternalFileType, ProjectMetaData
 from pydub import AudioSegment
 from backend.models import InternalFileObject
 from shared.logging.constants import LoggingType
@@ -836,8 +836,8 @@ def process_inference_output(**kwargs):
             
             # NOTE: need to convert 'lora_trainer' into a separate module if it needs to work on hosted version
             # fetching the current generated loras
-            spatial_lora_path = os.path.join('ComfyUI', 'models', 'loras', 'trained_spatial')
-            temporal_lora_path = os.path.join('ComfyUI', 'models', 'animatediff_motion_lora')
+            spatial_lora_path = os.path.join(COMFY_BASE_PATH, 'models', 'loras', 'trained_spatial')
+            temporal_lora_path = os.path.join(COMFY_BASE_PATH, 'models', 'animatediff_motion_lora')
             lora_path = temporal_lora_path
             _, latest_trained_files = get_latest_project_files(lora_path)
             

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 COMMAND="streamlit run app.py --runner.fastReruns false --server.port 5500"
 
