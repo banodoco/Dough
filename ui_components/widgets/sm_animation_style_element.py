@@ -8,7 +8,7 @@ import string
 import tarfile
 from PIL import Image
 import streamlit as st
-from shared.constants import InternalFileType
+from shared.constants import COMFY_BASE_PATH, InternalFileType
 from ui_components.methods.common_methods import save_new_image
 from utils import st_memory
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES
@@ -238,7 +238,7 @@ def select_motion_lora_element(shot_uuid, model_files):
     tab1, tab2, tab3  = st.tabs(["Apply LoRAs","Download LoRAs","Train LoRAs"])
 
     lora_data = []
-    lora_file_dest = "ComfyUI/models/animatediff_motion_lora"
+    lora_file_dest = os.path.join(COMFY_BASE_PATH, "models", "animatediff_motion_lora")
     lora_file_links = {
         "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors" :"",
         "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_tony_stark_r64_temporal_unet.safetensors" :"",
@@ -327,7 +327,7 @@ def select_motion_lora_element(shot_uuid, model_files):
                 
                 if st.button("Download LoRA", key="download_lora"):
                     with st.spinner("Downloading LoRA..."):
-                        save_directory = "ComfyUI/models/animatediff_motion_lora"
+                        save_directory = os.path.join(COMFY_BASE_PATH, "models", "animatediff_motion_lora")
                         os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
                         
                         # Extract the filename from the URL
@@ -366,7 +366,7 @@ def select_motion_lora_element(shot_uuid, model_files):
             with text1:
                 if st.button("Download LoRA", key="download_lora"):
                     with st.spinner("Downloading LoRA..."):
-                        save_directory = "ComfyUI/models/animatediff_motion_lora"
+                        save_directory = os.path.join(COMFY_BASE_PATH, "models", "animatediff_motion_lora")
                         os.makedirs(save_directory, exist_ok=True)
                         response = requests.get(text_input)
                         if response.status_code == 200:
@@ -431,7 +431,7 @@ def select_sd_model_element(shot_uuid, default_model):
     st.markdown("##### Style model")
     tab1, tab2 = st.tabs(["Choose Model","Download Models"])
     
-    checkpoints_dir = "ComfyUI/models/checkpoints"
+    checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
     all_files = os.listdir(checkpoints_dir)
     if len(all_files) == 0:
         model_files = [default_model]
@@ -507,7 +507,7 @@ def select_sd_model_element(shot_uuid, default_model):
             if st.button("Download Model", key="download_model"):
                 with st.spinner("Downloading model..."):
                     download_bar = st.progress(0, text="")
-                    save_directory = "ComfyUI/models/checkpoints"
+                    save_directory = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
                     os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
                     
                     # Retrieve the URL using the selected model name
@@ -558,7 +558,7 @@ def select_sd_model_element(shot_uuid, default_model):
             
             if st.button("Download Model", key="download_model"):
                 with st.spinner("Downloading model..."):
-                    save_directory = "ComfyUI/models/checkpoints"
+                    save_directory = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
                     os.makedirs(save_directory, exist_ok=True)
                     response = requests.get(text_input)
                     if response.status_code == 200:

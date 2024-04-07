@@ -6,7 +6,7 @@ import streamlit as st
 import re
 import os
 from PIL import Image
-from shared.constants import AIModelCategory, InferenceParamType, InternalFileTag, InferenceParamType, InferenceStatus, InferenceType, InternalFileType
+from shared.constants import COMFY_BASE_PATH, InferenceParamType, InternalFileTag, InferenceParamType, InferenceStatus, InferenceType
 from ui_components.constants import CreativeProcessType, ShotMetaData
 from ui_components.methods.animation_style_methods import get_generation_settings_from_log, load_shot_settings
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
@@ -340,7 +340,7 @@ def prepare_values(inf_data, timing_list):
     return values
 
 def upscale_settings():
-    checkpoints_dir = "ComfyUI/models/checkpoints"
+    checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
     all_files = os.listdir(checkpoints_dir)
     if len(all_files) == 0:
         st.info("No models found in the checkpoints directory")

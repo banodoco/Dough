@@ -2,7 +2,7 @@ import os
 import random
 import tempfile
 import uuid
-from shared.constants import InternalFileType
+from shared.constants import COMFY_BASE_PATH, InternalFileType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
 from ui_components.methods.common_methods import combine_mask_and_input_image, random_seed
@@ -550,7 +550,7 @@ class ComfyDataTransform:
                 {
                     "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
                     "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
-                    "dest": "./ComfyUI/models/loras/"
+                    "dest": os.path.join(COMFY_BASE_PATH, "models", "loras")
                 }
             ]
         
@@ -578,7 +578,7 @@ class ComfyDataTransform:
             {
                 "filename": "dynamicrafter_512_interp_v1.ckpt",
                 "url": "https://huggingface.co/Doubiiu/DynamiCrafter_512_Interp/resolve/main/model.ckpt?download=true",
-                "dest": "./ComfyUI/models/checkpoints/"
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
             }]
         
         return json.dumps(workflow), output_node_ids, extra_models_list, []
@@ -603,37 +603,37 @@ class ComfyDataTransform:
             {
                 "filename": "controlnet_checkpoint.ckpt",
                 "url": "https://huggingface.co/crishhh/animatediff_controlnet/resolve/main/controlnet_checkpoint.ckpt",
-                "dest": "./ComfyUI/models/controlnet/"
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "controlnet")
             },
             {
                 "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
                 "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
-                "dest": "./ComfyUI/models/loras/"
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "loras")
             },
             {
                 "filename": "AnimateLCM_sd15_t2v.ckpt",
                 "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v.ckpt?download=true",
-                "dest": "./ComfyUI/models/animatediff_models/"
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models")
             },
             {
                 "filename": "4x_RealisticRescaler_100000_G.pth",
                 "url": "https://huggingface.co/holwech/realistic-rescaler-real-esrgan/resolve/main/4x_RealisticRescaler_100000_G.pth?download=true",
-                "dest": "./ComfyUI/models/upscale_models/"
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "upscale_models")
             },
             {
                 "filename": "4xLexicaHAT.pth",
                 "url": "https://github.com/Phhofm/models/raw/main/4xLexicaHAT/4xLexicaHAT.pth",
-                "dest": "./ComfyUI/models/upscale_models/"
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "upscale_models")
             },
             {
                 "filename": "2x_AstroManLite_266k.pth",
                 "url": "https://huggingface.co/lone682/upscaler_models/resolve/main/2x_AstroManLite_266k.pth?download=true",
-                "dest": "./ComfyUI/models/upscale_models/"
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "upscale_models")
             },
             {
                 "filename": "4x_IllustrationJaNai_V1_ESRGAN_135k.pth",
                 "url": "https://huggingface.co/lone682/upscaler_models/resolve/main/4x_IllustrationJaNai_V1_ESRGAN_135k.pth?download=true",
-                "dest": "./ComfyUI/models/upscale_models/"
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "upscale_models")
             }
         ]
         
@@ -663,12 +663,12 @@ class ComfyDataTransform:
             {
                 "filename": "v3_sd15_mm.ckpt",
                 "url": "https://huggingface.co/guoyww/animatediff/resolve/main/v3_sd15_mm.ckpt?download=true",
-                "dest": "./ComfyUI/models/animatediff_models/"
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models")
             },
             {
                 "filename": "v3_sd15_adapter.ckpt",
                 "url": "https://huggingface.co/guoyww/animatediff/resolve/main/v3_sd15_adapter.ckpt?download=true",
-                "dest": "./ComfyUI/models/loras/"
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "loras")
             },
         ]
         
