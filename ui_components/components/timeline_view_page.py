@@ -1,4 +1,5 @@
 import time
+from shared.constants import COMFY_BASE_PATH
 import streamlit as st
 import os
 import requests
@@ -96,7 +97,7 @@ def timeline_view_page(shot_uuid: str, h2):
     with slider2:
         with st.expander("Bulk upscale", expanded=False):
             def upscale_settings():
-                checkpoints_dir = "ComfyUI/models/checkpoints"
+                checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
                 all_files = os.listdir(checkpoints_dir)
                 if len(all_files) == 0:
                     st.info("No models found in the checkpoints directory")
