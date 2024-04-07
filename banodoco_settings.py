@@ -9,7 +9,7 @@ from PIL import Image
 from shared.constants import SERVER, AIModelCategory, GuidanceType, InternalFileType, ServerType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
-from shared.constants import AnimationStyleType
+from shared.constants import COMFY_BASE_PATH
 from ui_components.methods.common_methods import add_image_variant
 from ui_components.methods.file_methods import list_files_in_folder, save_or_host_file
 from ui_components.models import InternalAppSettingObject, InternalFrameTimingObject, InternalProjectObject, InternalUserObject
@@ -60,6 +60,36 @@ def project_init():
     if not os.path.exists("ComfyUI"):
         app_logger.log(LoggingType.DEBUG, "cloning comfy repo")
         Repo.clone_from(comfy_repo_url, "ComfyUI")
+        
+    # updating extra_model_path.yaml
+    if COMFY_BASE_PATH != "ComfyUI":
+        yaml_template = """
+            comfyui:
+                base_path: {base_path}
+                checkpoints: models/checkpoints/
+                clip: models/clip/
+                clip_vision: models/clip_vision/
+                configs: models/configs/
+                controlnet: models/controlnet/
+                embeddings: models/embeddings/
+                loras: models/loras/
+                upscale_models: models/upscale_models/
+                vae: models/vae/
+                ipadapter: models/ipadapter/
+                animatediff_motion_lora: models/animatediff_motion_lora/
+                animatediff_models: models/animatediff_models/
+            """
+        yaml_data = yaml_template.format(base_path=COMFY_BASE_PATH)
+        with open("ComfyUI/extra_model_paths.yaml", "w", encoding='utf-8') as f:
+            f.write(yaml_data)
+    else:
+        file_path = "ComfyUI/extra_model_paths.yaml"
+        try:
+            os.remove(file_path)
+            print(f"File {file_path} has been deleted.")
+        except OSError as e:
+            pass
+        
     if not os.path.exists("./ComfyUI/custom_nodes/ComfyUI-Manager"):
         os.chdir("./ComfyUI/custom_nodes/")
         Repo.clone_from(comfy_manager_url, "ComfyUI-Manager")
