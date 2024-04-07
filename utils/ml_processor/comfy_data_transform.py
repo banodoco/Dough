@@ -27,7 +27,8 @@ MODEL_PATH_DICT = {
     ComfyWorkflow.UPSCALER: {"workflow_path": 'comfy_workflows/video_upscaler_api.json', "output_node_id": [243]},
     ComfyWorkflow.MOTION_LORA: {"workflow_path": 'comfy_workflows/motion_lora_api.json', "output_node_id": [11, 14, 26, 30, 34]},
     # ComfyWorkflow.MOTION_LORA: {"workflow_path": 'comfy_workflows/motion_lora_test_api.json', "output_node_id": [11, 14]},
-    ComfyWorkflow.DYNAMICRAFTER: {"workflow_path": 'comfy_workflows/dynamicrafter_api.json', "output_node_id": [2]}
+    ComfyWorkflow.DYNAMICRAFTER: {"workflow_path": 'comfy_workflows/dynamicrafter_api.json', "output_node_id": [2]},
+    ComfyWorkflow.IPADAPTER_COMPOSITION: {"workflow_path": 'comfy_workflows/ipadapter_composition_workflow_api.json', "output_node_id": [27]}
 }
 
 
@@ -350,47 +351,73 @@ class ComfyDataTransform:
             json.update({
                 "560": {
                     "inputs": {
-                        "image": "sci/" + image.filename,    # TODO: hardcoding for now, pick a proper flow later
-                        "upload": "image"
+                    "image": "sci/" + image.filename,    # TODO: hardcoding for now, pick a proper flow later
+                    "upload": "image"
                     },
                     "class_type": "LoadImage",
                     "_meta": {
-                        "title": "Load Image"
+                    "title": "Load Image"
                     }
                 },
-                "563": {
+                "561": {
                     "inputs": {
-                        "weight": weight,
-                        "noise": 0.3,
-                        "weight_type": "original",
-                        "start_at": 0,
-                        "end_at": 1,
-                        "short_side_tiles": 2,
-                        "tile_weight": 0.6,
-                        "ipadapter": ["564", 0],
-                        "clip_vision": ["370", 0],
-                        "image": ["560", 0],
-                        "model": ["558", 3]
+                    "interpolation": "LANCZOS",
+                    "crop_position": "top",
+                    "sharpening": 0,
+                    "image": [
+                        "560",
+                        0
+                    ]
                     },
-                    "class_type": "IPAdapterTilesMasked",
+                    "class_type": "PrepImageForClipVision",
                     "_meta": {
-                        "title": "IPAdapter Masked Tiles (experimental)"
+                    "title": "Prep Image For ClipVision"
                     }
                 },
-                "564": {
+                "578": {
                     "inputs": {
-                        "ipadapter_file": "ip_plus_composition_sd15.safetensors"
+                    "ipadapter_file": "ip_plus_composition_sd15.safetensors"
                     },
                     "class_type": "IPAdapterModelLoader",
                     "_meta": {
-                        "title": "Load IPAdapter Model"
+                    "title": "IPAdapter Model Loader"
                     }
-                }
+                },
+                "581": {
+                    "inputs": {
+                    "weight": weight,
+                    "weight_type": "ease in-out",
+                    "combine_embeds": "concat",
+                    "start_at": 0,
+                    "end_at": 0.75,
+                    "embeds_scaling": "V only",
+                    "model": [
+                        "461",
+                        0
+                    ],
+                    "ipadapter": [
+                        "578",
+                        0
+                    ],
+                    "image": [
+                        "561",
+                        0
+                    ],
+                    "clip_vision": [
+                        "370",
+                        0
+                    ]
+                    },
+                    "class_type": "IPAdapterAdvanced",
+                    "_meta": {
+                    "title": "IPAdapter Advanced"
+                    }
+                },
             })
 
-            # Update the "207" node's model pair to point to "563"
-            if "207" in json:
-                json["207"]["inputs"]["model"] = ["563", 0]
+            # Update the "558" node's model pair to point to "581"
+            if "558" in json:
+                json["558"]["inputs"]["model"] = ["581", 0]
             
             return json
 
@@ -438,11 +465,11 @@ class ComfyDataTransform:
                         "strength_model": 0.8,
                         "strength_clip": 1,
                         "model": [
-                            "470",
+                            "461",
                             0
                         ],
                         "clip": [
-                            "470",
+                            "461",
                             1
                         ]
                         },
@@ -456,12 +483,13 @@ class ComfyDataTransform:
             
             json_data["558"]["inputs"]["model"] = ["565", 0]
             json_data["541"]["inputs"]["clip"] = ["565", 1]
+            json_data["543"]["inputs"]["clip"] = ["565", 1]
             json_data["547"]["inputs"]["beta_schedule"] = "lcm avg(sqrt_linear,linear)"
             
             json_data["207"]["inputs"]["sample_name"] = "lcm"
             json_data["207"]["inputs"]["steps"] = 8
             json_data["207"]["inputs"]["cfg"] = 2.2
-            json_data["207"]["inputs"]["sample_name"] = "sgm_uniform"
+            # json_data["207"]["inputs"]["sampler_name"] = "sgm_uniform"
             
             return json_data
         
@@ -472,43 +500,44 @@ class ComfyDataTransform:
     
         workflow['464']['inputs']['height'] = sm_data.get('height')
         workflow['464']['inputs']['width'] = sm_data.get('width')
+        workflow['584']['inputs']['value'] = sm_data.get('width')
+        workflow['585']['inputs']['value'] = sm_data.get('height')
         
         ckpt = sm_data.get('ckpt')
         if "ComfyUI/models/checkpoints/" != ckpt and ckpt:
             workflow['461']['inputs']['ckpt_name'] = ckpt
         
-        workflow['558']['inputs']['buffer'] = sm_data.get('buffer')
         workflow['548']['inputs']['text'] = sm_data.get('motion_scales')
-        # workflow['548']['inputs']['text'] = sm_data.get('motion_scales')
+
         workflow['281']['inputs']['format'] = sm_data.get('output_format')
-        workflow['541']['inputs']['pre_text'] = sm_data.get('prompt')
-        workflow['543']['inputs']['pre_text'] = sm_data.get('negative_prompt')
-        workflow['559']['inputs']['multiplier'] = sm_data.get('stmfnet_multiplier')
-        workflow['558']['inputs']['relative_ipadapter_strength'] = sm_data.get('relative_ipadapter_strength')
-        workflow['558']['inputs']['relative_cn_strength'] = sm_data.get('relative_cn_strength')        
+
+        workflow['559']['inputs']['multiplier'] = sm_data.get('stmfnet_multiplier') 
+        
+        workflow['558']['inputs']['buffer'] = sm_data.get('buffer')      
         workflow['558']['inputs']['type_of_strength_distribution'] = sm_data.get('type_of_strength_distribution')
         workflow['558']['inputs']['linear_strength_value'] = sm_data.get('linear_strength_value')
-        
         workflow['558']['inputs']['dynamic_strength_values'] = str(sm_data.get('dynamic_strength_values'))[1:-1]
         workflow['558']['inputs']['linear_frame_distribution_value'] = sm_data.get('linear_frame_distribution_value')
         workflow['558']['inputs']['dynamic_frame_distribution_values'] = ', '.join(str(int(value)) for value in sm_data.get('dynamic_frame_distribution_values'))        
         workflow['558']['inputs']['type_of_frame_distribution'] = sm_data.get('type_of_frame_distribution')
         workflow['558']['inputs']['type_of_key_frame_influence'] = sm_data.get('type_of_key_frame_influence')
         workflow['558']['inputs']['linear_key_frame_influence_value'] = sm_data.get('linear_key_frame_influence_value')
-        
-        # print(dynamic_key_frame_influence_values)
+        workflow['558']['inputs']['high_detail_mode'] = sm_data.get('high_detail_mode')
         workflow['558']['inputs']['dynamic_key_frame_influence_values'] = str(sm_data.get('dynamic_key_frame_influence_values'))[1:-1]
-        workflow['558']['inputs']['ipadapter_noise'] = sm_data.get('ipadapter_noise')
+        
         workflow['342']['inputs']['context_length'] = sm_data.get('context_length')
         workflow['342']['inputs']['context_stride'] = sm_data.get('context_stride')
         workflow['342']['inputs']['context_overlap'] = sm_data.get('context_overlap')
-        workflow['468']['inputs']['end_percent'] = sm_data.get('multipled_base_end_percent')
-        workflow['470']['inputs']['strength_model'] = sm_data.get('multipled_base_adapter_strength')
-        workflow["207"]["inputs"]["noise_seed"] = random_seed()
-        workflow["541"]["inputs"]["text"] = sm_data.get('individual_prompts')
         
-        # make max_frames an int
+        workflow['468']['inputs']['end_percent'] = sm_data.get('multipled_base_end_percent')
+        
+        workflow["207"]["inputs"]["noise_seed"] = random_seed()
+        
+        workflow['541']['inputs']['pre_text'] = sm_data.get('prompt')
+        workflow["541"]["inputs"]["text"] = sm_data.get('individual_prompts')
         workflow["541"]["inputs"]["max_frames"] = int(float(sm_data.get('max_frames')))
+        
+        workflow['543']['inputs']['pre_text'] = sm_data.get('negative_prompt')
         workflow["543"]["inputs"]["max_frames"] = int(float(sm_data.get('max_frames')))
         workflow["543"]["inputs"]["text"] = sm_data.get('individual_negative_prompts')
 

@@ -1,6 +1,7 @@
 import json
+import time
 import streamlit as st
-from shared.constants import InternalFileType
+from shared.constants import InferenceParamType, InferenceStatus, InferenceType, InternalFileType
 from ui_components.components.video_rendering_page import sm_video_rendering_page, two_img_realistic_interpolation_page
 from ui_components.models import InternalShotObject
 from ui_components.widgets.frame_selector import frame_selector_widget
@@ -31,7 +32,9 @@ def animate_shot_page(shot_uuid: str, h2):
     
     selected_variant = variant_comparison_grid(shot_uuid, stage="Shots")
     video_rendering_page(shot_uuid, selected_variant)
-    
+
+
+            
 
 def video_rendering_page(shot_uuid, selected_variant):
     data_repo = DataRepo()
@@ -40,27 +43,30 @@ def video_rendering_page(shot_uuid, selected_variant):
     file_uuid_list = []
     if f"type_of_animation_{shot.uuid}" not in st.session_state:
         st.session_state[f"type_of_animation_{shot.uuid}"] = 0
-    if st.session_state[f"type_of_animation_{shot.uuid}"] == 0:     # AnimateShotMethod.BATCH_CREATIVE_INTERPOLATION.value
+    if st.session_state[f"type_of_animation_{shot.uuid}"] == 0:   # AnimateShotMethod.BATCH_CREATIVE_INTERPOLATION.value
         # loading images from a particular video variant
         if selected_variant:
             log = data_repo.get_inference_log_from_uuid(selected_variant)
             shot_data = json.loads(log.input_params)
             file_uuid_list = shot_data.get('origin_data', json.dumps({})).get('settings', {}).get('file_uuid_list', [])
-        # picking current images if no variant is selected
-        else:
-            for timing in shot.timing_list:
-                if timing.primary_image and timing.primary_image.location:
-                    file_uuid_list.append(timing.primary_image.uuid)
-    else:                                                           # AnimateShotMethod.DYNAMICRAFTER_INTERPOLATION.value
+
+    else:
         # hackish sol, will fix later
         for idx in range(2):
             if f'img{idx+1}_uuid_{shot_uuid}' in st.session_state and st.session_state[f'img{idx+1}_uuid_{shot_uuid}']:
-                file_uuid_list.append(st.session_state[f'img{idx+1}_uuid_{shot_uuid}'])
+                file_uuid_list.append(st.session_state[f'img{idx+1}_uuid_{shot_uuid}'])            
                 
         if not (f'video_desc_{shot_uuid}' in st.session_state and st.session_state[f'video_desc_{shot_uuid}']):
             st.session_state[f'video_desc_{shot_uuid}'] = ""
     
-    img_list = data_repo.get_all_file_list(uuid__in=file_uuid_list, file_type=InternalFileType.IMAGE.value)[0]
+    # picking current images if no file_uuids are found 
+    # (either no variant was selected or no prev img in session_state was present)
+    if not (file_uuid_list and len(file_uuid_list)):
+        for timing in shot.timing_list:
+            if timing.primary_image and timing.primary_image.location:
+                file_uuid_list.append(timing.primary_image.uuid)
+    
+    img_list = data_repo.get_all_file_list(uuid__in=file_uuid_list, file_type=InternalFileType.IMAGE.value)[0]    
     
     headline1, _, headline3 = st.columns([1, 1, 1])
     with headline1:
@@ -74,7 +80,7 @@ def video_rendering_page(shot_uuid, selected_variant):
     
     if type_of_animation == AnimateShotMethod.BATCH_CREATIVE_INTERPOLATION.value:
         sm_video_rendering_page(shot_uuid, img_list)
-    else:
+    else:        
         two_img_realistic_interpolation_page(shot_uuid, img_list)
 
     st.markdown("***")

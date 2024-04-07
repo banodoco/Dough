@@ -67,7 +67,7 @@ def load_shot_settings(shot_uuid, log_uuid=None):
                 elif key == f"type_of_generation_index_{shot.uuid}":
                     if not isinstance(st.session_state[key], int):
                         st.session_state[key] = 0
-                    st.session_state["creative_interpolation_type"] = ["Fast", "Detailed"][st.session_state[key]]
+                    st.session_state["creative_interpolation_type"] = ["Detailed", "Fast"][st.session_state[key]]
                     
             st.rerun()
         elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
@@ -396,6 +396,7 @@ def update_session_state_with_animation_details(shot_uuid,
         individual_negative_prompts, 
         lora_data, 
         default_model,
+        high_detail_mode = False,
         structure_control_img_uuid = None,
         strength_of_structure_control_img = None,
         type_of_generation_index = 0
@@ -438,6 +439,7 @@ def update_session_state_with_animation_details(shot_uuid,
     main_setting_data[f"structure_control_image_uuid_{shot.uuid}"] = structure_control_img_uuid
     main_setting_data[f"saved_strength_of_structure_control_image_{shot.uuid}"] = strength_of_structure_control_img
     main_setting_data[f"type_of_generation_index_{shot.uuid}"] = type_of_generation_index
+    main_setting_data[f"high_detail_mode_val_{shot.uuid}"] = high_detail_mode
     
     checkpoints_dir = "ComfyUI/models/checkpoints"
     all_files = os.listdir(checkpoints_dir)

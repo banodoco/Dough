@@ -1,11 +1,12 @@
 import json
 import time
 import ast
+from typing import List
 import streamlit as st
 import re
 import os
 from PIL import Image
-from shared.constants import AIModelCategory, InferenceParamType, InternalFileTag
+from shared.constants import AIModelCategory, InferenceParamType, InternalFileTag, InferenceParamType, InferenceStatus, InferenceType, InternalFileType
 from ui_components.constants import CreativeProcessType, ShotMetaData
 from ui_components.methods.animation_style_methods import get_generation_settings_from_log, load_shot_settings
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
@@ -19,7 +20,33 @@ from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow
 
-
+# TODO: very inefficient operation.. add shot_id as a foreign in logs table for better search
+def video_generation_counter(shot_uuid):
+    data_repo = DataRepo()
+    log_list, page_count = data_repo.get_all_inference_log_list(
+        status_list=[InferenceStatus.IN_PROGRESS.value],
+        data_per_page=1000,
+        page=1
+    )
+    log_list = log_list or []
+    res = []
+    for log in log_list:
+        origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
+        inference_type = origin_data.get("inference_type", "")
+        if inference_type == InferenceType.FRAME_INTERPOLATION.value and \
+            origin_data.get("shot_uuid", "") == shot_uuid:
+            res.append(log)
+    
+    if len(res) > 0:
+        h1, h2 = st.columns([1, 1])
+        with h1:
+            if len(res) == 1:
+                st.info(f"{len(res)} video generation pending for this shot.")
+            else:
+                st.info(f"{len(res)} video generations pending for this shot.")
+        with h2:
+            if st.button("Refresh", key=f"refresh_{shot_uuid}", use_container_width=True):
+                st.rerun()
 
 def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     '''
@@ -32,11 +59,14 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     if stage == CreativeProcessType.MOTION.value:
         shot_uuid = ele_uuid
         shot = data_repo.get_shot_from_uuid(shot_uuid)
-        variants = shot.interpolated_clip_list
+        variants: List[InternalFileObject] = shot.interpolated_clip_list
         timing_list = data_repo.get_timing_list_from_shot(shot.uuid)
         
         if not (f"{shot_uuid}_selected_variant_log_uuid" in st.session_state and st.session_state[f"{shot_uuid}_selected_variant_log_uuid"]):
-            st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
+            if variants and len(variants):
+                st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = variants[-1].inference_log.uuid
+            else:
+                st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
     else:
         timing_uuid = ele_uuid        
         timing = data_repo.get_timing_from_uuid(timing_uuid)
@@ -66,9 +96,12 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         st.info("No options created yet.")
         st.markdown("***")
     else:
+
         current_variant = shot.primary_interpolated_video_index if stage == CreativeProcessType.MOTION.value else int(timing.primary_variant_index)
 
         st.markdown("***")
+        if stage == CreativeProcessType.MOTION.value:
+            video_generation_counter(shot_uuid)
         cols = st.columns(num_columns)
         with cols[0]:
             h1, h2 = st.columns([1, 1])
@@ -76,12 +109,13 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 st.info(f"###### Variant #{current_variant + 1}")
             with h2:
                 st.success("**Main variant**")
+            is_video_upscaled = is_upscaled_video(variants[current_variant])
             # Display the main variant
-            if stage == CreativeProcessType.MOTION.value:
+            if stage == CreativeProcessType.MOTION.value:                
                 if current_variant != -1 and variants[current_variant]:
-                    individual_video_display_element(variants[current_variant])
+                    individual_video_display_element(variants[current_variant], is_video_upscaled)
                 
-                if not is_upscaled_video(variants[current_variant]):
+                if not is_video_upscaled:
                     with st.expander("Upscale settings", expanded=False):
                         styling_model, upscaler_type, upscale_factor, upscale_strength, promote_to_main_variant = upscale_settings()
                         if st.button("Upscale Main Variant", key=f"upscale_main_variant_{shot_uuid}", help="Upscale the main variant with the selected settings", use_container_width=True):
@@ -110,7 +144,6 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
         next_col = 1
         for i, variant_index in enumerate(page_indices):
-
             with cols[next_col]:
                 h1, h2 = st.columns([1, 1])
                 with h1:
@@ -123,13 +156,14 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                             promote_image_variant(timing.uuid, variant_index)                    
                         st.rerun()
 
+                is_upscaled_variant = is_upscaled_video(variants[variant_index])
                 if stage == CreativeProcessType.MOTION.value:
                     if variants[variant_index]:
-                        individual_video_display_element(variants[variant_index])
+                        individual_video_display_element(variants[variant_index], is_upscaled_variant)
                     else: 
                         st.error("No video present")
                     
-                    if is_upscaled_video(variants[variant_index]):
+                    if is_upscaled_variant:
                         st.info("Upscaled video")
                     create_video_download_button(variants[variant_index].location, tag="var_details")
                     variant_inference_detail_element(variants[variant_index], stage, shot_uuid, timing_list, tag="var_details")

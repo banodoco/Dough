@@ -139,7 +139,15 @@ def video_motion_settings(shot_uuid, img_list):
     with f3:
         st.write("")
         st.write("")
-        st.info("Use these sparingly, as they can have a large impact on the video. You can also edit them for individual frames in the advanced settings above.")
+        st.info("Use these sparingly, as they can have a large impact on the video. You can also edit them for individual frames above.")
+
+    high_detail_mode_val = f"high_detail_mode_val_{shot_uuid}" in st.session_state and st.session_state[f"high_detail_mode_val_{shot_uuid}"]
+    high_detail_mode = st.toggle(
+        "Enable high detail mode", 
+        help="This improves the detail of the video, but doubles the amount of VRAM used per input frame.",
+        key=f"high_detail_mode_{shot_uuid}",
+        value=high_detail_mode_val
+    )
 
     st.markdown("***")
     st.markdown("##### Overall motion settings")
@@ -155,7 +163,9 @@ def video_motion_settings(shot_uuid, img_list):
             st.session_state[f"type_of_motion_context_index_{shot_uuid}"] = ["Low", "Standard", "High"].index(st.session_state[f"type_of_motion_context_index_{shot_uuid}"])
         type_of_motion_context = st.radio("Type of motion context:", options=["Low", "Standard", "High"], key="type_of_motion_context", horizontal=True, index=st.session_state[f"type_of_motion_context_index_{shot.uuid}"], help="This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.")
         amount_of_motion = st.slider("Amount of motion:", min_value=0.5, max_value=1.5, step=0.01, value=st.session_state[f"amount_of_motion_{shot_uuid}"], key="amount_of_motion_overall", on_change=lambda: update_motion_for_all_frames(shot.uuid, img_list), help="You can also tweak this on an individual frame level in the advanced settings above.")
-                 
+    
+
+    
     i1, i2, i3 = st.columns([1, 0.5, 1.5])
     with i1:
         if f'structure_control_image_{shot_uuid}' not in st.session_state:
@@ -163,12 +173,19 @@ def video_motion_settings(shot_uuid, img_list):
 
         if f"strength_of_structure_control_image_{shot_uuid}" not in st.session_state:
             st.session_state[f"strength_of_structure_control_image_{shot_uuid}"] = None
-        control_motion_with_image = st_memory.toggle("Control motion with an image", help="This will allow you to upload images to control the motion of the video.",key=f"control_motion_with_image_{shot_uuid}")
 
-        if control_motion_with_image:
+        img_loaded_from_settings = f"structure_control_image_uuid_{shot_uuid}" in st.session_state and st.session_state[f"structure_control_image_uuid_{shot_uuid}"]
+        control_motion_with_image = st.toggle(
+            "Control motion with an image", 
+            help="This will allow you to upload images to control the motion of the video.",
+            key=f"control_motion_with_image_{shot_uuid}",
+            value=img_loaded_from_settings
+        )
+
+        if control_motion_with_image or img_loaded_from_settings:
             project_settings = data_repo.get_project_setting(shot.project.uuid)
             width, height = project_settings.width, project_settings.height
-            if f"structure_control_image_uuid_{shot_uuid}" in st.session_state and st.session_state[f"structure_control_image_uuid_{shot_uuid}"]:
+            if img_loaded_from_settings:
                 uploaded_image = data_repo.get_file_from_uuid(st.session_state[f"structure_control_image_uuid_{shot_uuid}"])
                 uploaded_image_pil = Image.open(uploaded_image.location)
                 uploaded_image_pil = uploaded_image_pil.resize((width, height))
@@ -209,7 +226,7 @@ def video_motion_settings(shot_uuid, img_list):
                 st.success("Image removed")
                 st.rerun()
                 
-    return strength_of_adherence, overall_positive_prompt, overall_negative_prompt, type_of_motion_context, amount_of_motion
+    return strength_of_adherence, overall_positive_prompt, overall_negative_prompt, type_of_motion_context, amount_of_motion, high_detail_mode
 
 def select_motion_lora_element(shot_uuid, model_files):
     data_repo = DataRepo()
@@ -223,21 +240,22 @@ def select_motion_lora_element(shot_uuid, model_files):
     lora_data = []
     lora_file_dest = "ComfyUI/models/animatediff_motion_lora"
     lora_file_links = {
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_tony_stark_r64_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_train_r128_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/300_car_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_desert_48_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_jeep_driving_r32_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_man_running_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_rotation_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/750_jeep_driving_r32_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/300_zooming_in_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_cat_walking_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_playing_banjo_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_woman_dancing_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif",
-        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_zooming_out_temporal_unet.safetensors" :"https://cdn.pixabay.com/animation/2023/06/17/16/02/16-02-33-34_512.gif"
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_tony_stark_r64_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/250_train_r128_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/300_car_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_desert_48_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_car_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_jeep_driving_r32_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_man_running_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/500_rotation_temporal_unet.safetensors" :"",
+        "https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/750_jeep_driving_r32_temporal_unet.safetensors" :"",
+        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/300_zooming_in_temporal_unet.safetensors" :"",
+        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_cat_walking_temporal_unet.safetensors" :"",
+        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_playing_banjo_temporal_unet.safetensors" :"",
+        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_woman_dancing_temporal_unet.safetensors" :"",
+        "https://huggingface.co/peteromallet/ad_motion_loras/resolve/main/400_zooming_out_temporal_unet.safetensors" :"",
+
     }
     
     # ---------------- ADD LORA -----------------
@@ -258,26 +276,29 @@ def select_motion_lora_element(shot_uuid, model_files):
             for idx, lora in enumerate(st.session_state[f"lora_data_{shot_uuid}"]):
                 if not lora:
                     continue
-                h1, h2, h3, h4 = st.columns([1, 1, 1, 0.5])
+                h1, h2, h3, h4, h5, h6, h7 = st.columns([1, 0.25, 1,0.25, 1, 0.25,0.5])
                 with h1:
                     file_idx = files.index(lora["filename"])
                     motion_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"motion_lora_{idx}", index=file_idx)                                                    
                 
                 with h2:
-                    strength_of_lora = st.slider("How strong would you like the LoRA to be?", min_value=0.0, max_value=1.0, value=lora["lora_strength"], step=0.01, key=f"strength_of_lora_{idx}")
-                    lora_data.append({"filename": motion_lora, "lora_strength": strength_of_lora, "filepath": lora_file_dest + "/" + motion_lora})
+                    display_motion_lora(motion_lora, lora_file_links)
                 
                 with h3:
-                    when_to_apply_lora = st.slider("When to apply the LoRA?", min_value=0, max_value=100, value=(0,100), step=1, key=f"when_to_apply_lora_{idx}",disabled=True,help="This feature is not yet available.")
+                    strength_of_lora = st.slider("Strength:", min_value=0.0, max_value=1.0, value=lora["lora_strength"], step=0.01, key=f"strength_of_lora_{idx}")
+                    lora_data.append({"filename": motion_lora, "lora_strength": strength_of_lora, "filepath": lora_file_dest + "/" + motion_lora})
                 
-                with h4:
+                with h5:
+                    when_to_apply_lora = st.slider("When to apply:", min_value=0, max_value=100, value=(0,100), step=1, key=f"when_to_apply_lora_{idx}",disabled=True,help="This feature is not yet available.")
+                
+                with h7:
                     st.write("")
                     if st.button("Remove", key=f"remove_lora_{idx}"):
                         st.session_state[f"lora_data_{shot_uuid}"].pop(idx)
                         st.rerun()
                 
                 # displaying preview
-                display_motion_lora(motion_lora, lora_file_links)
+                
             
             if len(st.session_state[f"lora_data_{shot_uuid}"]) == 0:
                 text = "Add a LoRA"
@@ -359,12 +380,12 @@ def select_motion_lora_element(shot_uuid, model_files):
     
     # ---------------- TRAIN LORA --------------
     with tab3:
-        b1, b2 = st.columns([1, 1])
+        b1, b2, b3 = st.columns([1, 1, 0.5])
         with b1:
             lora_name = st.text_input("Name this LoRA", key="lora_name")
             if model_files and len(model_files):
                 base_sd_model = st.selectbox(
-                        label="Select base sd model for training", 
+                        label="Select base:", 
                         options=model_files, 
                         key="base_sd_model_video", 
                         index=0
@@ -402,9 +423,9 @@ def select_motion_lora_element(shot_uuid, model_files):
                     video_height,
                     base_sd_model
                 )
-
+    with b2:
+        st.info("This takes around 30 minutes to train.")
     return lora_data
-
 
 def select_sd_model_element(shot_uuid, default_model):
     st.markdown("##### Style model")
@@ -548,7 +569,6 @@ def select_sd_model_element(shot_uuid, default_model):
                         st.error("Failed to download model")
                         
     return sd_model, model_files, 
-          
 
 def individual_frame_settings_element(shot_uuid, img_list, display_indent):
     with display_indent:

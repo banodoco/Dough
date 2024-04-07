@@ -8,7 +8,7 @@ from ui_components.methods.file_methods import save_or_host_file
 
 from utils.data_repo.data_repo import DataRepo
 
-def zoom_inputs(position='in-frame', horizontal=False):
+def zoom_inputs(position='in-frame', horizontal=False, shot_uuid=None):
     if horizontal:
         col1, col2 = st.columns(2)
         col3, col4 = st.columns(2)
@@ -26,7 +26,7 @@ def zoom_inputs(position='in-frame', horizontal=False):
   
 
     col1.number_input(
-        "Zoom In/Out", min_value=10, max_value=1000, step=10, key=f"zoom_level_input", value=st.session_state['zoom_level_input_default'])
+        "Zoom In/Out", min_value=10, max_value=1000, step=1, key=f"zoom_level_input", value=st.session_state['zoom_level_input_default'])
     
     col2.number_input(
         "Rotate", min_value=-360, max_value=360, step=5, key="rotation_angle_input", value=st.session_state['rotation_angle_input_default'])

@@ -127,12 +127,12 @@
     "inputs": {
       "weight": 0.75,
       "noise": 0.3,
+      "weight_faceidv2": 0.75,
       "weight_type": "linear",
+      "combine_embeds": "concat",
+      "embeds_scaling": "V only",
       "start_at": 0,
       "end_at": 1,
-      "faceid_v2": true,
-      "weight_v2": 0.75,
-      "unfold_batch": false,
       "ipadapter": [
         "21",
         0
@@ -154,33 +154,33 @@
         0
       ]
     },
-    "class_type": "IPAdapterApplyFaceID",
+    "class_type": "IPAdapterFaceID",
     "_meta": {
-      "title": "Apply IPAdapter FaceID"
+      "title": "IPAdapter FaceID"
     }
   },
   "37": {
     "inputs": {
       "provider": "CUDA"
     },
-    "class_type": "InsightFaceLoader",
+    "class_type": "IPAdapterInsightFaceLoader",
     "_meta": {
-      "title": "Load InsightFace"
+      "title": "IPAdapter InsightFace Loader"
     }
   },
   "40": {
     "inputs": {
-      "crop_position": "center",
+      "interpolation": "LANCZOS",
+      "crop_position": "top",
       "sharpening": 0,
-      "pad_around": true,
       "image": [
         "24",
         0
       ]
     },
-    "class_type": "PrepImageForInsightFace",
+    "class_type": "PrepImageForClipVision",
     "_meta": {
-      "title": "Prepare Image For InsightFace"
+      "title": "Prep Image For ClipVision"
     }
   },
   "41": {

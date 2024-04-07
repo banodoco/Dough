@@ -95,7 +95,8 @@ class VideoInterpolator:
                 "lora_data": settings["lora_data"],
                 "shot_data": settings["shot_data"],
                 "strength_of_structure_control_image": settings["strength_of_structure_control_image"],
-                "use_ad_lcm": True if settings["type_of_generation"] == "Fast" else False
+                "use_ad_lcm": True if settings["type_of_generation"] == "Fast" else False,
+                "high_detail_mode": settings.get("high_detail_mode", False)
             }
 
             # adding the input images
