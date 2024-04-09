@@ -99,9 +99,9 @@ def main():
         
         data_repo = DataRepo()
         app_setting = data_repo.get_app_setting_from_uuid()
-        if app_setting.welcome_state != 0:
+        if app_setting.welcome_state == 2:
             setup_app_ui()
-        else:
+        else:            
             welcome_page()
 
         st.session_state['maintain_state'] = False
