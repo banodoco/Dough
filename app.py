@@ -7,6 +7,7 @@ import django
 from shared.constants import HOSTED_BACKGROUND_RUNNER_MODE, OFFLINE_MODE, SERVER, ServerType
 import sentry_sdk
 from shared.logging.logging import AppLogger
+from utils.app_update_utils import check_for_updates
 from utils.common_utils import is_process_active
 
 from utils.constants import AUTH_TOKEN, RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT
@@ -91,6 +92,7 @@ def main():
             st.markdown(auth_url, unsafe_allow_html=True)
             
     else:
+        check_for_updates() # enabling auto updates only for local version
         start_runner()
         project_init()
         
