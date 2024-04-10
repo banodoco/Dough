@@ -261,7 +261,21 @@ def select_motion_lora_element(shot_uuid, model_files):
     # ---------------- ADD LORA -----------------
     with tab1:
         files = get_files_in_a_directory(lora_file_dest, ['safetensors', 'ckpt'])
+        # add WAS26.safetensors to the start of the list
+        if "WAS26.safetensors" in files:
+            files.remove("WAS26.safetensors")
+            files.insert(0, "WAS26.safetensors")
+        else:
+            files.insert(0, "WAS26.safetensors")
 
+
+        if f"lora_data_{shot_uuid}" not in st.session_state or not st.session_state[f"lora_data_{shot_uuid}"]:
+            st.session_state[f"lora_data_{shot_uuid}"] = [{
+                "filename": "WAS26.safetensors",
+                "lora_strength": 0.9,  # Default strength value
+                "filepath": os.path.join(lora_file_dest, "WAS26.safetensors")
+            }]
+        
         # Iterate through each current LoRA in session state
         if len(files) == 0:
             st.error("No LoRAs found in the directory - go to Explore to download some, or drop them into ComfyUI/models/animatediff_motion_lora")                    
@@ -278,8 +292,9 @@ def select_motion_lora_element(shot_uuid, model_files):
                     continue
                 h1, h2, h3, h4, h5, h6, h7 = st.columns([1, 0.25, 1,0.25, 1, 0.25,0.5])
                 with h1:
-                    file_idx = files.index(lora["filename"])
-                    motion_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"motion_lora_{idx}", index=file_idx)                                                    
+                    # file_idx = files.index(lora["filename"])
+                    default_index = files.index(lora["filename"]) if lora["filename"] in files else 0
+                    motion_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"motion_lora_{idx}", index=default_index)                                                    
                 
                 with h2:
                     display_motion_lora(motion_lora, lora_file_links)
