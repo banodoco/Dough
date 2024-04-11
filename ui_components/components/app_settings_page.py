@@ -39,4 +39,17 @@ def app_settings_page():
                         payment_link = f"""<a target='_self' href='{payment_link}'> PAYMENT LINK </a>"""
                         st.markdown(payment_link, unsafe_allow_html=True)
     
-    query_logger_page()
+    # TODO: rn storing 'update_state' in replicate_username inside app_setting to bypass db changes, will change this later
+    app_setting = data_repo.get_app_setting_from_uuid()
+    update_enabled = True if app_setting.replicate_username and app_setting.replicate_username == 'update' else False
+    with st.expander("App Update", expanded=True):
+        
+        st.info("We recommend auto-updating the app to get the latest features and bug fixes. However, if you'd like to update manually, you can turn this off and use './scripts/entrypoint.sh --update' when you're starting the app to update.")
+        st.toggle("Auto-update app upon restart", key='enable_app_update', value=update_enabled, on_change=update_toggle, help="This will update the app automatically when a new version is available.")
+
+    with st.expander("Inference Logs", expanded=False):
+        query_logger_page()
+
+def update_toggle():
+    data_repo = DataRepo()
+    data_repo.update_app_setting(replicate_username='update' if st.session_state['enable_app_update'] else 'no_update')

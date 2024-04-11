@@ -37,7 +37,7 @@ def new_project_page():
     with v2:                              
         # is width or height > 767
         if width > 769 or height > 769:
-            st.warning("There can be animation issue w/ wider or higher sizes.")
+            st.warning("There may be issues with very wide or high frames.")
         img = Image.new('RGB', (width, height), color = (73, 109, 137))
         st.image(img, use_column_width=True)        
         # st.info("Uploaded images will be resized to the selected dimensions.")

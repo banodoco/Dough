@@ -111,10 +111,18 @@ def video_motion_settings(shot_uuid, img_list):
 
     st.markdown("***")
     st.markdown("##### Overall style settings")
-
-    e1, _, _ = st.columns([1, 1,1])
+    high_detail_mode_val = st.session_state.get(f"high_detail_mode_val_{shot_uuid}", True)
+    high_detail_mode = st.checkbox(
+        "Enable high detail mode", 
+        help="This improves the detail of the video, but doubles the amount of VRAM used per input frame.",
+        key=f"high_detail_mode_{shot_uuid}",
+        value=high_detail_mode_val
+    )
+    e1, _, _ = st.columns([2, 1,1])
     with e1:        
         strength_of_adherence = st.slider("How much would you like to force adherence to the input images?", min_value=0.0, max_value=1.0, step=0.01, key="strength_of_adherence", value=st.session_state[f"strength_of_adherence_value_{shot_uuid}"])
+    
+
 
     f1, f2, f3 = st.columns([1, 1, 1])
     with f1:
@@ -141,13 +149,6 @@ def video_motion_settings(shot_uuid, img_list):
         st.write("")
         st.info("Use these sparingly, as they can have a large impact on the video. You can also edit them for individual frames above.")
 
-    high_detail_mode_val = f"high_detail_mode_val_{shot_uuid}" in st.session_state and st.session_state[f"high_detail_mode_val_{shot_uuid}"]
-    high_detail_mode = st.toggle(
-        "Enable high detail mode", 
-        help="This improves the detail of the video, but doubles the amount of VRAM used per input frame.",
-        key=f"high_detail_mode_{shot_uuid}",
-        value=high_detail_mode_val
-    )
 
     st.markdown("***")
     st.markdown("##### Overall motion settings")
@@ -261,7 +262,23 @@ def select_motion_lora_element(shot_uuid, model_files):
     # ---------------- ADD LORA -----------------
     with tab1:
         files = get_files_in_a_directory(lora_file_dest, ['safetensors', 'ckpt'])
+        # add WAS26.safetensors to the start of the list
+        if "WAS26.safetensors" in files:
+            files.remove("WAS26.safetensors")
+            files.insert(0, "WAS26.safetensors")
+        else:
+            files.insert(0, "WAS26.safetensors")
 
+
+        if f"lora_data_{shot_uuid}" not in st.session_state or not st.session_state[f"lora_data_{shot_uuid}"]:
+            if 'default_lora_added' not in st.session_state:
+                st.session_state[f"lora_data_{shot_uuid}"] = [{
+                    "filename": "WAS26.safetensors",
+                    "lora_strength": 0.9,  # Default strength value
+                    "filepath": os.path.join(lora_file_dest, "WAS26.safetensors")
+                }]
+                st.session_state['default_lora_added'] = True
+            
         # Iterate through each current LoRA in session state
         if len(files) == 0:
             st.error("No LoRAs found in the directory - go to Explore to download some, or drop them into ComfyUI/models/animatediff_motion_lora")                    
@@ -278,8 +295,9 @@ def select_motion_lora_element(shot_uuid, model_files):
                     continue
                 h1, h2, h3, h4, h5, h6, h7 = st.columns([1, 0.25, 1,0.25, 1, 0.25,0.5])
                 with h1:
-                    file_idx = files.index(lora["filename"])
-                    motion_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"motion_lora_{idx}", index=file_idx)                                                    
+                    # file_idx = files.index(lora["filename"])
+                    default_index = files.index(lora["filename"]) if lora["filename"] in files else 0
+                    motion_lora = st.selectbox("Which LoRA would you like to use?", options=files, key=f"motion_lora_{idx}", index=default_index)                                                    
                 
                 with h2:
                     display_motion_lora(motion_lora, lora_file_links)

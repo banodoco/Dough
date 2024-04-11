@@ -543,16 +543,26 @@ class ComfyDataTransform:
 
         if sm_data.get('file_structure_control_img_uuid'):
             workflow = update_structure_control_image(workflow, sm_data.get('file_structure_control_img_uuid'), sm_data.get('strength_of_structure_control_image'))
-
+        
+        extra_models_list = [
+            {
+                "filename": "WAS26.safetensors",
+                "url": "https://huggingface.co/peteromallet/poms-funtime-mlora-emporium/resolve/main/WAS26.safetensors?download=true",
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_motion_lora")
+            }
+        ]
+        
         if sm_data.get("use_ad_lcm", False):
             workflow = convert_to_animate_lcm(workflow)
-            extra_models_list = [
+            # Append the AnimateLCM model to the existing list
+            extra_models_list.append(
                 {
                     "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
                     "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
                     "dest": os.path.join(COMFY_BASE_PATH, "models", "loras")
                 }
-            ]
+            )
+        
         
         ignore_list = sm_data.get("lora_data", [])
         return json.dumps(workflow), output_node_ids, extra_models_list, ignore_list

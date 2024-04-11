@@ -396,7 +396,7 @@ def update_session_state_with_animation_details(shot_uuid,
         individual_negative_prompts, 
         lora_data, 
         default_model,
-        high_detail_mode = False,
+        high_detail_mode = True,
         structure_control_img_uuid = None,
         strength_of_structure_control_img = None,
         type_of_generation_index = 0
