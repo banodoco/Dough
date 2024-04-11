@@ -60,7 +60,7 @@ def update_dough():
         python_executable = sys.executable
         completed_process = subprocess.run([python_executable, 'manage.py', 'migrate'], capture_output=True, text=True)
         if completed_process.returncode == 0:
-            print("Databse migration successful")
+            print("Database migration successful")
     
     if os.path.exists(".env"):
         sample_env = dotenv_values('.env.sample')
@@ -74,7 +74,7 @@ def update_dough():
             for key, value in env.items():
                 f.write(f"{key}={value}\n")
                 
-        print("env update successfully")
+        print("env update successful")
     
     move_to_root()
 

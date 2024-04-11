@@ -940,7 +940,7 @@ def update_app_setting_keys():
         return
 
     app_logger.log(LoggingType.DEBUG, 'setting keys', None)
-    data_repo.update_app_setting(replicate_username='bn')
+    data_repo.update_app_setting(replicate_username='update')
     data_repo.update_app_setting(replicate_key=key)
 
 

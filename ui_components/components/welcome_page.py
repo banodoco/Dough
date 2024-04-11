@@ -67,11 +67,12 @@ def welcome_page():
             st.markdown('''             
             
             1. The first shot you animate will probably look crap. Using Dough is a skill - you'll need to experiment, iterate and learn - but you'll learn quickly.        
-            2. Dough won't work well for all styles - for example, realism tends to bring out the flaws in SD1.5-based models. (note: realism is boring anyway)
+            2. Dough won't work well for all styles - for example, realism tends to bring out the flaws in SD1.5-based models. It also won't work very well for realistic motion.
             3. The app will be slow the first time you use each function. It needs to download models and install stuff. Please be patient - but check your Terminal for error messages if it's taking more than 15 minutes.
             4. This is a beta - **please** share any feedback you have - especially negative stuff. We're relentlessly focused on making this better and we can't do that without your help. We won't be offended by anything you say!
             5. Our ultimate goal is to create a tool-builder that makes it easy for anyone to build artistic tools. While you're using this, think of what tool you would create if it were ridiculously easy to do so.
             6. The 'r' key on your keyboard is your friend - this will refresh the app, updating the generated frames and inference log!
+            7. To make something great, you will need to use a video editor like DaVinci Resolve, Adobe Premiere or even iMovie. Dough is just the first step in the process.
             
             ''')
 
