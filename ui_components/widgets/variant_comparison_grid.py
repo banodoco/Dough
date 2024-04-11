@@ -191,8 +191,10 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
 def is_upscaled_video(variant: InternalFileObject):
     log = variant.inference_log
-    if log.output_details and json.loads(log.output_details).get("model_name", "") == ComfyWorkflow.UPSCALER.value:
-        return True
+    # if  output_details 
+    if log:
+        if log.output_details and json.loads(log.output_details).get("model_name", "") == ComfyWorkflow.UPSCALER.value:
+            return True
     return False
 
 
