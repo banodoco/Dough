@@ -54,7 +54,10 @@ def update_comfy_runner():
 def update_dough():
     print("Updating the app...")
     subprocess.run(["git", "stash"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    subprocess.run(["git", "pull", "origin", "green-head"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    
+    completed_process = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], check=True, capture_output=True, text=True)
+    current_branch = completed_process.stdout.strip()
+    subprocess.run(["git", "pull", "origin", current_branch], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     
     if os.path.exists("banodoco_local.db"):
         python_executable = sys.executable
@@ -129,7 +132,9 @@ def get_local_version():
         return None
     
 def get_remote_version():
-    url = "https://raw.githubusercontent.com/banodoco/Dough/green-head/scripts/app_version.txt"
+    completed_process = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], check=True, capture_output=True, text=True)
+    current_branch = completed_process.stdout.strip()
+    url = f"https://raw.githubusercontent.com/banodoco/Dough/{current_branch}/scripts/app_version.txt"
     try:
         response = requests.get(url)
         response.raise_for_status()
