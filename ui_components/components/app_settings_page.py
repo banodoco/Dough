@@ -43,7 +43,7 @@ def app_settings_page():
     update_enabled = True if app_setting.replicate_username and app_setting.replicate_username in ['update', 'bn'] else False
     with st.expander("App Update", expanded=True):
         
-        st.info("We recommend auto-updating the app to get the latest features and bug fixes. However, if you'd like to update manually, you can turn this off and use './scripts/entrypoint.sh --update' when you're starting the app to update.")
+        # st.info("We recommend auto-updating the app to get the latest features and bug fixes. However, if you'd like to update manually, you can turn this off and use './scripts/entrypoint.sh --update' when you're starting the app to update.")
         st.toggle("Auto-update app upon restart", key='enable_app_update', value=update_enabled, on_change=update_toggle, help="This will update the app automatically when a new version is available.")
 
     with st.expander("Inference Logs", expanded=False):
