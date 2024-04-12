@@ -72,12 +72,14 @@ def video_rendering_page(shot_uuid, selected_variant):
     with headline1:
         st.markdown("### 🎥 Generate animations")  
         st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+    '''
     with headline3:
         with st.expander("Type of animation", expanded=False):
             type_of_animation = st_memory.radio("What type of animation would you like to generate?", \
                 options=AnimateShotMethod.value_list(), horizontal=True, \
                     help="**Batch Creative Interpolaton** lets you input multple images and control the motion and style of each frame - resulting in a fluid, surreal and highly-controllable motion. \n\n **2-Image Realistic Interpolation** is a simpler way to generate animations - it generates a video by interpolating between two images, and is best for realistic motion.",key=f"type_of_animation_{shot.uuid}")
-    
+    '''
+    type_of_animation = AnimateShotMethod.BATCH_CREATIVE_INTERPOLATION.value
     if type_of_animation == AnimateShotMethod.BATCH_CREATIVE_INTERPOLATION.value:
         sm_video_rendering_page(shot_uuid, img_list)
     else:        

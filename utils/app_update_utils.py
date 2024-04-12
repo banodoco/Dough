@@ -20,7 +20,7 @@ def check_for_updates():
         global update_event
         data_repo = DataRepo()
         app_setting = data_repo.get_app_setting_from_uuid()
-        update_enabled = True if app_setting.replicate_username and app_setting.replicate_username == 'update' else False
+        update_enabled = True if app_setting.replicate_username and app_setting.replicate_username in ['bn', 'update'] else False
         current_version = get_local_version()
         remote_version = get_remote_version()
         if current_version and remote_version and compare_versions(remote_version, current_version) == 1 and update_enabled\

@@ -133,8 +133,6 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             index=st.session_state[f"type_of_generation_index_{shot.uuid}"], 
             help="Normal generations take around twice as long but provide more detailed results."
         )
-        if type_of_generation == "Normal":
-            type_of_generation = "Detailed"
         animate_col_1, _, _ = st.columns([3, 1, 1])
         with animate_col_1:
             variant_count = 1
@@ -199,7 +197,8 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     vid_quality,
                     settings,
                     variant_count,
-                    st.session_state[f'{shot_uuid}_backlog_enabled']
+                    st.session_state[f'{shot_uuid}_backlog_enabled'],
+                    img_list
                 )
                 
                 backlog_update = {f'{shot_uuid}_backlog_enabled': False}
@@ -299,7 +298,8 @@ def two_img_realistic_interpolation_page(shot_uuid, img_list: List[InternalFileO
             vid_quality,
             settings,
             variant_count,
-            st.session_state[f'{shot_uuid}_backlog_enabled']
+            st.session_state[f'{shot_uuid}_backlog_enabled'],
+            img_list
         )
 
         backlog_update = {f'{shot_uuid}_backlog_enabled': False}
