@@ -100,6 +100,13 @@ This commands sets up the app. Run this only the first time, after that you can 
 curl -sSL https://raw.githubusercontent.com/banodoco/Dough/green-head/scripts/linux_setup.sh | bash
 ```
 
+### Enter the folder
+
+In terminal, run:
+```bash
+cd Dough
+```
+
 ### Run the app
 
 you can run the app using 
@@ -110,9 +117,19 @@ source ./dough-env/bin/activate && ./scripts/entrypoint.sh
 
 ## Instructions for Windows:
 
+### Open Powershell in Administrator mode
+
+Open the Start menu, type Windows PowerShell, right-click on Windows PowerShell, and then select Run as administrator.
+
 ### Install the app
 
 - Install MS C++ Redistributable (if not already present) - https://aka.ms/vs/16/release/vc_redist.x64.exe
+
+### Enter the folder
+In Powershell, run:
+```bash
+cd Dough
+```
 
 Run the setup script
 
