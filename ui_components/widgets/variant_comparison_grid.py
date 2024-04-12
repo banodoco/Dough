@@ -63,10 +63,10 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         timing_list = data_repo.get_timing_list_from_shot(shot.uuid)
         
         if not (f"{shot_uuid}_selected_variant_log_uuid" in st.session_state and st.session_state[f"{shot_uuid}_selected_variant_log_uuid"]):
-            if variants and len(variants):
-                st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = variants[-1].inference_log.uuid
-            else:
-                st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
+            # if variants and len(variants):
+            #     st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = variants[-1].inference_log.uuid
+            # else:
+            st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
     else:
         timing_uuid = ele_uuid        
         timing = data_repo.get_timing_from_uuid(timing_uuid)
@@ -81,6 +81,10 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         with col1:
             st.markdown(f"### 🎞️ '{shot.name}' options")
             st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+            if st.button("Refresh Shot"):
+                st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
+                st.rerun()
+
     else:
         items_to_show = 5
         num_columns = 3
@@ -191,8 +195,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
 def is_upscaled_video(variant: InternalFileObject):
     log = variant.inference_log
-    if log.output_details and json.loads(log.output_details).get("model_name", "") == ComfyWorkflow.UPSCALER.value:
-        return True
+    if log and log.output_details and json.loads(log.output_details).get("model_name", "") == ComfyWorkflow.UPSCALER.value:
+            return True
     return False
 
 

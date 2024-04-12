@@ -54,11 +54,11 @@ def sidebar_logger(shot_uuid):
                 [l.uuid for l in backlog_log_list], status=InferenceStatus.QUEUED.value
             )
             if status:
-                st.success("success")
+                st.success("Running backlog")
                 time.sleep(0.7)
                 st.rerun()
         else:
-            st.info("No backlogs")
+            st.error("No backlogs")
             time.sleep(0.7)
             st.rerun()
     y1, y2 = st.columns([1, 1])
@@ -138,9 +138,10 @@ def sidebar_logger(shot_uuid):
             if log.uuid in log_file_dict:
                 output_url = log_file_dict[log.uuid].location
 
-            c0, c1, c2, c3, c4 = st.columns(
-                [0.5, 0.5, 0.7 if output_url else 0.01, 1, 0.01 if output_url else 1]
-            )
+            if output_url:
+                c0, c1, c2, c3, c4 = st.columns([0.5, 0.5, 0.7, 1, 0.01])
+            else:
+                c0, c1, c2, c3 = st.columns([0.5, 0.5, 0.01, 1])
             with c0:
                 input_params = json.loads(log.input_params)
                 prompt = input_params.get("prompt", "No prompt found")
