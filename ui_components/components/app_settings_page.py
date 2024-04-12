@@ -1,6 +1,5 @@
 import time
 import streamlit as st
-import webbrowser
 from shared.constants import SERVER, ServerType
 from utils.common_utils import get_current_user
 from ui_components.components.query_logger_page import query_logger_page
@@ -41,7 +40,7 @@ def app_settings_page():
     
     # TODO: rn storing 'update_state' in replicate_username inside app_setting to bypass db changes, will change this later
     app_setting = data_repo.get_app_setting_from_uuid()
-    update_enabled = True if app_setting.replicate_username and app_setting.replicate_username == 'update' else False
+    update_enabled = True if app_setting.replicate_username and app_setting.replicate_username in ['update', 'bn'] else False
     with st.expander("App Update", expanded=True):
         
         st.info("We recommend auto-updating the app to get the latest features and bug fixes. However, if you'd like to update manually, you can turn this off and use './scripts/entrypoint.sh --update' when you're starting the app to update.")

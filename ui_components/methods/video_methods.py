@@ -23,7 +23,7 @@ from utils.ml_processor.constants import ML_MODEL
 from utils.ml_processor.ml_interface import get_ml_client
 
 
-def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_count=1, backlog=False):
+def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_count=1, backlog=False, img_list=[]):
     '''
     - this includes all the animation styles [direct morphing, interpolation, image to video]
     - this stores the newly created video in the interpolated_clip_list and promotes them to
@@ -35,7 +35,6 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
 
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
-    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
 
     if quality == 'full':
         interpolation_steps = VideoInterpolator.calculate_dynamic_interpolations_steps(shot.duration)
@@ -43,7 +42,10 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
         interpolation_steps = 3
 
     settings.update(interpolation_steps=interpolation_steps)
-    settings.update(file_uuid_list=[t.primary_image.uuid for t in timing_list])
+    if not (img_list and len(img_list)):
+        timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
+        img_list = [t.primary_image for t in timing_list]
+    settings.update(file_uuid_list=[t.uuid for t in img_list])
 
     # res is an array of tuples (video_bytes, log)
     res = VideoInterpolator.create_interpolated_clip(
