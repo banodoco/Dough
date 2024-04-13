@@ -397,7 +397,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     
     if shortlist is False:
         st.markdown("***")
-        st.markdown("### 🖼️ Gallery")
+        st.markdown("### 🖼️ Generated images")
         st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
     h1,h2,h3,h4 = st.columns([3, 1, 1, 1])
@@ -424,7 +424,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                         default_value = 0
                     else:
                         default_value = 1
-                    show_images_associated_with_shots = st.selectbox("Images associated with:", options=options, index=default_value, key=f"show_images_associated_with_shots_explorer_{shortlist}")
+                    show_images_associated_with_shots = st_memory.selectbox("Images associated with:", options=options, index=default_value, key=f"show_images_associated_with_shots_explorer_{shortlist}")
                 with shot_chooser_2:
                     if show_images_associated_with_shots == "Timeline":
                         shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]

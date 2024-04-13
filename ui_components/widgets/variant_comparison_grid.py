@@ -81,9 +81,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         with col1:
             st.markdown(f"### 🎞️ '{shot.name}' options")
             st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
-            if st.button("Refresh Shot"):
-                st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
-                st.rerun()
+
 
     else:
         items_to_show = 5
