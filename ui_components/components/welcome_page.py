@@ -7,47 +7,50 @@ def welcome_page():
     data_repo = DataRepo()
     app_setting = data_repo.get_app_setting_from_uuid()
     if app_setting.welcome_state == 0:
-        st.markdown("# :green[D]:red[o]:blue[u]:orange[g]:green[h] :red[□] :blue[□] :orange[□]")  
-        st.subheader("To start, here are 3 simple examples of the kind of things you can make with Dough:")
-        st.markdown("***")
-        
+        st.markdown("# :green[D]:red[o]:blue[u]:orange[g]:green[h] :red[□] :blue[□] :orange[□]")          
+        st.markdown('#### To start, here are some weird, beautiful, and interesting things people have made with Dough and [Steerable Motion](https://github.com/banodoco/steerable-motion), the technology behind Dough')
 
-        st.subheader("First, look at this guy go!")
-        img1, img2, vid = st.columns([1.5,1.5,3])
-        with img1:
-            st.image("sample_assets/example_generations/guy-1.png")
-        with img2:
-            st.image("sample_assets/example_generations/guy-2.png")
-        with vid:
-            st.video("sample_assets/example_generations/guy-result.mp4", format='mp4', start_time=0)
-        
-        st.markdown("***")
-        st.subheader("Next, check this transformation out!")
-        img1, img2, vid = st.columns([1.5,1.5,3])
-        
-        with img1:
+        vertical1, vertical2, vertical3 = st.columns([1,1,1])
+
+        with vertical1:
+            st.video("https://banodoco.s3.amazonaws.com/dough-website/vertical-3.mp4", format='mp4', start_time=0)
+            st.link_button(url="https://www.youtube.com/watch?v=ETfiUYij5UE", label="By Flipping Sigmas", use_container_width=True)
+
+
+        with vertical2:
+            st.video("https://banodoco.s3.amazonaws.com/dough-website/vertical-2.mp4", format='mp4', start_time=0)
+            st.link_button(url="https://www.instagram.com/midjourney.man/", label="By Midjourney Man", use_container_width=True)
+
+        with vertical3:
+            st.video("https://banodoco.s3.amazonaws.com/dough-website/vertical-1.mp4", format='mp4', start_time=0)
+            st.link_button(url="https://www.instagram.com/superbeasts.ai", label="By Superbeasts", use_container_width=True)
+
+        rectangle1, rectangle2  = st.columns([1,1])
+
+        with rectangle1:
+            st.video("https://banodoco.s3.amazonaws.com/dough-website/horizontal-1.mp4", format='mp4', start_time=0)
+            st.link_button(url="https://twitter.com/I_Han_naH_I", label="By Hannah Submarine", use_container_width=True)
+
+        with rectangle2:
+            st.video("https://banodoco.s3.amazonaws.com/dough-website/horizontal-2.mp4", format='mp4', start_time=0)
+            st.link_button(url="https://www.instagram.com/emma_catnip/?hl=en", label="By Emma Catnip", use_container_width=True)
             
-            # in teh sample_assets/example_generations folder
-            st.image("sample_assets/example_generations/world-1.png")        
-            st.image("sample_assets/example_generations/world-3.png")
-        with img2:
-            st.image("sample_assets/example_generations/world-2.png")
-                                
-            st.image("sample_assets/example_generations/world-4.png")
-        with vid:
-            st.video("sample_assets/example_generations/world-result.mp4", format='mp4', start_time=0)
+        square1, square2, square3 = st.columns([1,1,1])
 
-        st.markdown("***")
-        st.subheader("This is just the same lady over and over again but it still looks pretty cool!")
-        img1, img2, vid = st.columns([1.5,1.5,3])
-        with img1:
-            st.image("sample_assets/example_generations/lady-1.png")
-            st.image("sample_assets/example_generations/lady-1.png")
-        with img2:
-            st.image("sample_assets/example_generations/lady-1.png")
-            st.image("sample_assets/example_generations/lady-1.png")
-        with vid:
-            st.video("sample_assets/example_generations/lady-result.mp4", format='mp4', start_time=0)
+
+        with square1:
+            st.video("https://banodoco.s3.amazonaws.com/dough-website/square-2.mp4", format='mp4', start_time=0)
+            st.link_button(url="https://www.instagram.com/teslanaut/", label="By Teslanaut", use_container_width=True)
+
+        with square2:
+            st.video("https://banodoco.s3.amazonaws.com/dough-website/square-1.mov", format='mp4', start_time=0)
+            st.link_button(url="https://twitter.com/I_Han_naH_I", label="By Hannah Submarine", use_container_width=True)
+
+        with square3:
+            st.video("https://banodoco.s3.amazonaws.com/dough-website/square_4.mp4", format='mp4', start_time=0)
+            st.link_button(url="https://twitter.com/peteromallet", label="By POM", use_container_width=True)
+
+
 
         st.markdown("***")
         footer1, footer2 = st.columns([1,1.5])
