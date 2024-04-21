@@ -15,6 +15,10 @@ class ImageStage(ExtendedEnum):
     SOURCE_IMAGE = 'Source Image'
     MAIN_VARIANT = 'Main Variant'
     NONE = 'None'
+    
+class T2IModel(ExtendedEnum):
+    SDXL = 'SDXL'
+    SD3 = 'SD3'
 
 class AnimateShotMethod(ExtendedEnum):  # remove this and have a common nomenclature throughout
     BATCH_CREATIVE_INTERPOLATION = "Batch Creative Interpolation"

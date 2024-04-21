@@ -46,8 +46,29 @@ def app_settings_page():
         # st.info("We recommend auto-updating the app to get the latest features and bug fixes. However, if you'd like to update manually, you can turn this off and use './scripts/entrypoint.sh --update' when you're starting the app to update.")
         st.toggle("Auto-update app upon restart", key='enable_app_update', value=update_enabled, on_change=update_toggle, help="This will update the app automatically when a new version is available.")
 
+    with st.expander("API Keys", expanded=False):
+        api_key_input_component()
+
     with st.expander("Inference Logs", expanded=False):
         query_logger_page()
+
+def api_key_input_component():
+    data_repo = DataRepo()
+    app_secrets = data_repo.get_app_secrets_from_user_uuid()
+    if 'stability_key' in app_secrets and app_secrets['stability_key']:
+        st.session_state['stability_key'] = app_secrets['stability_key']
+    else:
+        st.session_state['stability_key'] = ""
+    
+    sai_key = st.text_input("Stability AI API Key", st.session_state['stability_key'])
+    
+    if st.button("Update"):
+        if sai_key and sai_key != st.session_state['stability_key']:
+            data_repo.update_app_setting(stability_key=sai_key)
+            st.session_state['stability_key'] = sai_key
+            st.success("API Key updated successfully.")
+            time.sleep(0.7)
+            st.rerun()
 
 def update_toggle():
     data_repo = DataRepo()

@@ -6,17 +6,19 @@ from ui_components.methods.file_methods import zoom_and_crop
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.inpainting_element import inpainting_image_input
 from utils.common_utils import refresh_app
-from utils.constants import MLQueryObject
+from utils.constants import MLQueryObject, T2IModel
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import GPU_INFERENCE_ENABLED, QUEUE_INFERENCE_QUERIES, AIModelType, InferenceType, InternalFileTag, InternalFileType, SortOrder
 from utils import st_memory
 import time
+from utils.encryption import Encryptor
 from utils.enum import ExtendedEnum
 from utils.ml_processor.ml_interface import get_ml_client
 from utils.ml_processor.constants import ML_MODEL
 import numpy as np
 from PIL import Image
 from utils import st_memory
+from utils.ml_processor.sai.sai import StabilityProcessor
 
 
 class InputImageStyling(ExtendedEnum):
@@ -153,13 +155,25 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                             if st.button("Switch images 🔄", key="switch_images", use_container_width=True):
                                 st.session_state["input_image_1"], st.session_state["input_image_2"] = st.session_state["input_image_2"], st.session_state["input_image_1"]
                                 st.rerun()
-
+    else:
+        t2i_model = st.radio("Select Model:", options=T2IModel.value_list(), index=0, key="t2i_model", horizontal=True)
+        if t2i_model == T2IModel.SD3.value:
+            if not st.session_state.get('stability_key', None):
+                app_secrets = data_repo.get_app_secrets_from_user_uuid()
+                if 'stability_key' in app_secrets and app_secrets['stability_key']:
+                    st.session_state['stability_key'] = app_secrets['stability_key']
+                    st.info("Stability API will be used for this generation")
+                else:
+                    st.warning("You need to enter a Stability API key to use SD3 right now - please go to App Settings")
+            else:
+                st.info("Stability API will be used for this generation")
+        
     if position == 'explorer':
         _, d2,d3, _ = st.columns([0.25, 1,1, 0.25])
     else:
         d2, d3 = st.columns([1,1])
     with d2:
-        number_to_generate = st.slider("Number of images to generate:", min_value=4, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
+        number_to_generate = st.slider("Number of images to generate:", min_value=2, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
     
     with d3:
         st.write(" ")
@@ -171,22 +185,43 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                 log = None
                 generation_method = InputImageStyling.value_list()[st.session_state['type_of_generation_key']]
                 if generation_method == InputImageStyling.TEXT2IMAGE.value:
-                    query_obj = MLQueryObject(
-                        timing_uuid=None,
-                        model_uuid=None,
-                        guidance_scale=8,
-                        seed=-1,                            
-                        num_inference_steps=25,            
-                        strength=0.5,
-                        adapter_type=None,
-                        prompt=prompt,
-                        negative_prompt=negative_prompt,
-                        height=project_settings.height,
-                        width=project_settings.width,
-                        data={"shot_uuid": shot_uuid}
-                    )
-                    
-                    output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                    if t2i_model == T2IModel.SDXL.value:
+                        query_obj = MLQueryObject(
+                            timing_uuid=None,
+                            model_uuid=None,
+                            guidance_scale=8,
+                            seed=-1,                            
+                            num_inference_steps=25,            
+                            strength=0.5,
+                            adapter_type=None,
+                            prompt=prompt,
+                            negative_prompt=negative_prompt,
+                            height=project_settings.height,
+                            width=project_settings.width,
+                            data={"shot_uuid": shot_uuid}
+                        )
+                        
+                        output, log = ml_client.predict_model_output_standardized(ML_MODEL.sdxl, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+                    else:
+                        # query for SD3
+                        encryptor = Encryptor()
+                        query_obj = MLQueryObject(
+                            timing_uuid=None,
+                            model_uuid=None,
+                            guidance_scale=8,
+                            seed=-1,                            
+                            num_inference_steps=25,
+                            strength=0.5,
+                            adapter_type=None,
+                            prompt=prompt,
+                            negative_prompt=negative_prompt,
+                            height=project_settings.height,
+                            width=project_settings.width,
+                            data={"shot_uuid": shot_uuid, "stability_key": encryptor.encrypt_json(st.session_state['stability_key'])}
+                        )
+
+                        sai_client = StabilityProcessor()
+                        output, log = sai_client.predict_model_output_standardized(ML_MODEL.sd3, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
                 
                 elif generation_method == InputImageStyling.IMAGE2IMAGE.value:
                     input_image_file = save_new_image(st.session_state["input_image_1"], project_uuid)
