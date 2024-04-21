@@ -97,6 +97,7 @@ class InferenceParamType(ExtendedEnum):
     QUERY_DICT = "query_dict"                       # query dict of standardized inference params
     ORIGIN_DATA = "origin_data"                     # origin data - used to store file once inference is completed
     GPU_INFERENCE = "gpu_inference"                 # gpu inference data
+    SAI_INFERENCE = "sai_inference"                 # stablity ai inference data
 
 class ProjectMetaData(ExtendedEnum):
     DATA_UPDATE = "data_update"                     # info regarding cache/data update when runner updates the db

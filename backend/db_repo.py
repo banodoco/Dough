@@ -1097,7 +1097,8 @@ class DBRepo:
                 'aws_access_key': app_setting.aws_access_key_decrypted,
                 'aws_secret_key': app_setting.aws_secret_access_key_decrypted,
                 'replicate_key': app_setting.replicate_key_decrypted,
-                'replicate_username': app_setting.replicate_username
+                'replicate_username': app_setting.replicate_username,
+                'stability_key': app_setting.stability_key_decrypted,
             }
         }
 

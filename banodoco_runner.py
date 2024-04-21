@@ -25,6 +25,7 @@ from utils.ml_processor.constants import ComfyWorkflow, replicate_status_map
 
 from utils.constants import RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT, AUTH_TOKEN, REFRESH_AUTH_TOKEN
 from utils.ml_processor.gpu.utils import is_comfy_runner_present, predict_gpu_output, setup_comfy_runner
+from utils.ml_processor.sai.utils import predict_sai_output
 
 
 load_dotenv()
@@ -227,6 +228,7 @@ def check_and_update_db():
         input_params = json.loads(log.input_params)
         replicate_data = input_params.get(InferenceParamType.REPLICATE_INFERENCE.value, None)
         local_gpu_data = input_params.get(InferenceParamType.GPU_INFERENCE.value, None)
+        sai_data = input_params.get(InferenceParamType.SAI_INFERENCE.value, None)
         if replicate_data:
             prediction_id = replicate_data['prediction_id']
 
@@ -340,6 +342,48 @@ def check_and_update_db():
                 timing_uuid, shot_uuid = origin_data.get('timing_uuid', None), origin_data.get('shot_uuid', None)
                 update_cache_dict(origin_data.get('inference_type', ''), log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list)
 
+            except Exception as e:
+                print("error occured: ", str(e))
+                # sentry_sdk.capture_exception(e)
+                traceback.print_exc()
+                InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.FAILED.value)
+        elif sai_data:
+            # TODO: a lot of code is being repeated in the different types of inference, will fix this later
+            try:
+                data = sai_data
+                log = InferenceLog.objects.filter(id=log.id).first()
+                cur_status = log.status
+                if cur_status in [InferenceStatus.FAILED.value, InferenceStatus.CANCELED.value]:
+                    return
+                
+                InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.IN_PROGRESS.value)
+                start_time = time.time()
+                output = predict_sai_output(data)
+                end_time = time.time()
+                
+                destination_path_list = []
+                destination_path = "./videos/temp/" + str(uuid.uuid4()) + "." + output.split(".")[-1]
+                shutil.copy2(output, destination_path)
+                destination_path_list.append(destination_path)
+                
+                output_details = json.loads(log.output_details)
+                output_details['output'] = destination_path_list[0] if len(destination_path_list) == 1 else destination_path_list
+                update_data = {
+                    "status" : InferenceStatus.COMPLETED.value,
+                    "output_details" : json.dumps(output_details),
+                    "total_inference_time" : end_time - start_time,
+                }
+                
+                InferenceLog.objects.filter(id=log.id).update(**update_data)
+                origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, {})
+                origin_data['output'] = destination_path_list[0] if len(destination_path_list) == 1 else destination_path_list
+                origin_data['log_uuid'] = log.uuid
+                print("processing inference output")
+
+                from ui_components.methods.common_methods import process_inference_output
+                process_inference_output(**origin_data)
+                timing_uuid, shot_uuid = origin_data.get('timing_uuid', None), origin_data.get('shot_uuid', None)
+                update_cache_dict(origin_data.get('inference_type', ''), log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list)
             except Exception as e:
                 print("error occured: ", str(e))
                 # sentry_sdk.capture_exception(e)
