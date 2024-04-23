@@ -125,6 +125,14 @@ Open the Start menu, type Windows PowerShell, right-click on Windows PowerShell,
 
 Install MS C++ Redistributable (if not already present) - https://aka.ms/vs/16/release/vc_redist.x64.exe
 
+### Navigate to Documents
+
+Make sure you're in the documents folder by running the following command:
+
+```bash
+cd ~\Documents
+```
+
 ### Run the setup script
 
 ```bash
@@ -143,5 +151,7 @@ cd Dough
 ```bash
 . .\dough-env\Scripts\activate ; .\scripts\entrypoint.bat
 ```
+
+---
 
 If you're having any issues, please share them in our [Discord](https://discord.com/invite/8Wx9dFu5tP).
