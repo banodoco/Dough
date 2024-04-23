@@ -123,19 +123,19 @@ Open the Start menu, type Windows PowerShell, right-click on Windows PowerShell,
 
 ### Install the app
 
-- Install MS C++ Redistributable (if not already present) - https://aka.ms/vs/16/release/vc_redist.x64.exe
+Install MS C++ Redistributable (if not already present) - https://aka.ms/vs/16/release/vc_redist.x64.exe
+
+### Run the setup script
+
+```bash
+iwr -useb "https://raw.githubusercontent.com/banodoco/Dough/green-head/scripts/windows_setup.bat" -OutFile "script.bat"
+Start-Process "cmd.exe" -ArgumentList "/c script.bat"
+```
 
 ### Enter the folder
 In Powershell, run:
 ```bash
 cd Dough
-```
-
-Run the setup script
-
-```bash
-iwr -useb "https://raw.githubusercontent.com/banodoco/Dough/green-head/scripts/windows_setup.bat" -OutFile "script.bat"
-Start-Process "cmd.exe" -ArgumentList "/c script.bat"
 ```
 
 ### Run the app
