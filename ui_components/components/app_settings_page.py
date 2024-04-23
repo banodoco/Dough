@@ -58,8 +58,7 @@ def api_key_input_component():
     if 'stability_key' in app_secrets and app_secrets['stability_key']:
         st.session_state['stability_key'] = app_secrets['stability_key']
     else:
-        st.session_state['stability_key'] = ""    
-    st.write(st.session_state['stability_key'])
+        st.session_state['stability_key'] = ""        
     if st.session_state['stability_key'] is None or st.session_state['stability_key'] == "" or 'stability_key' not in st.session_state:
         st.info("""
             Please enter your Stability API key below to use Stable Diffusion 3. To get your API key, you’ll need to:
