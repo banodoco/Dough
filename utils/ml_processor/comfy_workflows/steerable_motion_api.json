@@ -424,7 +424,7 @@
     "inputs": {
       "Value": 512
     },
-    "class_type": "Integer",
+    "class_type": "DF_Integer",
     "_meta": {
       "title": "Integer"
     }
@@ -433,7 +433,7 @@
     "inputs": {
       "Value": 768
     },
-    "class_type": "Integer",
+    "class_type": "DF_Integer",
     "_meta": {
       "title": "Integer"
     }
