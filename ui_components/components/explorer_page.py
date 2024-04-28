@@ -156,24 +156,26 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                                 st.session_state["input_image_1"], st.session_state["input_image_2"] = st.session_state["input_image_2"], st.session_state["input_image_1"]
                                 st.rerun()
     else:
-        t2i_model = st.radio("Select Model:", options=T2IModel.value_list(), index=0, key="t2i_model", horizontal=True)
+        t2i_1, t2i_2 = st.columns([1,1])
+        with t2i_1:
+            t2i_model = st_memory.radio("Select Model:", options=T2IModel.value_list(), index=0, key="t2i_model", horizontal=True)
         if t2i_model == T2IModel.SD3.value:
             if not st.session_state.get('stability_key', None):
                 app_secrets = data_repo.get_app_secrets_from_user_uuid()
                 if 'stability_key' in app_secrets and app_secrets['stability_key']:
-                    st.session_state['stability_key'] = app_secrets['stability_key']
-                    st.info("Stability API will be used for this generation")
+                    st.session_state['stability_key'] = app_secrets['stability_key']                    
                 else:
-                    st.warning("You need to enter a Stability API key to use SD3 right now - please go to App Settings")
+                    st.warning("You need to enter a Stability API key to use SD3 right now - please go to App Settings.")
             else:
-                st.info("Stability API will be used for this generation")
+                with t2i_2:
+                    st.info("Stability API will be used for this generation")
         
     if position == 'explorer':
         _, d2,d3, _ = st.columns([0.25, 1,1, 0.25])
     else:
         d2, d3 = st.columns([1,1])
     with d2:
-        number_to_generate = st.slider("Number of images to generate:", min_value=2, max_value=100, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
+        number_to_generate = st.slider("Number of images to generate:", min_value=4, max_value=36, value=4, step=4, key="number_to_generate", help="It'll generate 4 from each variation.")
     
     with d3:
         st.write(" ")
@@ -459,7 +461,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                         default_value = 0
                     else:
                         default_value = 1
-                    show_images_associated_with_shots = st_memory.selectbox("Images associated with:", options=options, index=default_value, key=f"show_images_associated_with_shots_explorer_{shortlist}")
+                    show_images_associated_with_shots = st.selectbox("Images associated with:", options=options, index=default_value, key=f"show_images_associated_with_shots_explorer_{shortlist}")
                 with shot_chooser_2:
                     if show_images_associated_with_shots == "Timeline":
                         shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]
