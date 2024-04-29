@@ -92,7 +92,11 @@ def main():
             st.markdown(auth_url, unsafe_allow_html=True)
             
     else:
-        check_for_updates() # enabling auto updates only for local version
+        # if it's the first time, 
+        if 'first_load' not in st.session_state:
+            if not is_process_active(RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT):
+                check_for_updates() # enabling auto updates only for local version
+            st.session_state['first_load'] = True
         start_runner()
         project_init()
         
