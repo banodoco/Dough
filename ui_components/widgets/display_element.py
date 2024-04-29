@@ -4,7 +4,7 @@ from ui_components.methods.file_methods import get_file_size
 from ui_components.models import InternalFileObject
 from utils.local_storage.local_storage import read_from_motion_lora_local_db
 
-MAX_LOADING_FILE_SIZE = 10
+MAX_LOADING_FILE_SIZE = 9
 def individual_video_display_element(
         file: Union[InternalFileObject, str], 
         dont_bypass_file_size_check=True

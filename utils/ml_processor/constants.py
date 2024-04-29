@@ -100,6 +100,8 @@ class ML_MODEL:
     motion_lora_trainer = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.MOTION_LORA)
     ipadapter_composition = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.IPADAPTER_COMPOSITION)
 
+    # addition 21/04/2024
+    sd3 = MLModel("stability-ai/sd3", "")
 
     @staticmethod
     def get_model_by_db_obj(model_db_obj):

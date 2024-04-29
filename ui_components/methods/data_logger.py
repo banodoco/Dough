@@ -31,8 +31,11 @@ def log_model_inference(model: MLModel, time_taken, **kwargs):
     user_id = get_current_user_uuid()
     ai_model = data_repo.get_ai_model_from_name(model.name, user_id)
 
+    # TODO: fix this - we were initially storing all the models and their versions in the database but later moved on from it
+    # so earlier models are found when fetching ai_model but for the new models we are adding this hack for adding dummy model_id
     # hackish sol for insuring that inpainting logs don't have an empty model field
-    if ai_model is None and model.name in [ML_MODEL.sdxl_inpainting.name, ML_MODEL.ad_interpolation.name]:
+    if ai_model is None and model.name in [ML_MODEL.sdxl_inpainting.name, ML_MODEL.ad_interpolation.name\
+        , ML_MODEL.sd3.name]:
         ai_model = data_repo.get_ai_model_from_name(ML_MODEL.sdxl.name, user_id)
 
     log_data = {
