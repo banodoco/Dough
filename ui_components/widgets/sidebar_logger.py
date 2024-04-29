@@ -197,29 +197,30 @@ def sidebar_logger(shot_uuid):
                             st.rerun()
                 """
 
-                if log.status in [InferenceStatus.QUEUED.value, InferenceStatus.BACKLOG.value]:
+                if log.status in [InferenceStatus.QUEUED.value, InferenceStatus.BACKLOG.value, InferenceStatus.IN_PROGRESS.value]:
                     if st.button(
                         "Cancel", key=f"cancel_gen_{log.uuid}", use_container_width=True, help="Cancel"
                     ):
                         err_msg = "Generation has already started"
                         success_msg = "Generation cancelled"
                         # fetching the current status as this could have been already started
-                        log = data_repo.get_inference_log_from_uuid(log.uuid)
-                        cur_status = log.status
-                        if cur_status not in [InferenceStatus.QUEUED.value, InferenceStatus.BACKLOG.value]:
+                        # log = data_repo.get_inference_log_from_uuid(log.uuid)
+                        # cur_status = log.status
+                        # if cur_status not in [InferenceStatus.QUEUED.value, InferenceStatus.BACKLOG.value]:
+                        #     st.error(err_msg)
+                        #     time.sleep(0.7)
+                        #     st.rerun()
+                        # else:
+                        
+                        res = data_repo.update_inference_log(
+                            uuid=log.uuid, status=InferenceStatus.CANCELED.value
+                        )
+                        if not res:
                             st.error(err_msg)
-                            time.sleep(0.7)
-                            st.rerun()
                         else:
-                            res = data_repo.update_inference_log(
-                                uuid=log.uuid, status=InferenceStatus.CANCELED.value
-                            )
-                            if not res:
-                                st.error(err_msg)
-                            else:
-                                st.success(success_msg)
-                            time.sleep(0.7)
-                            st.rerun()
+                            st.success(success_msg)
+                        time.sleep(0.7)
+                        st.rerun()
 
                 if output_url and origin_data:
                     if inference_type == InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value:
