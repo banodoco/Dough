@@ -7,11 +7,16 @@ import requests
 import streamlit as st
 import threading
 import sys
+from git import Repo
 from streamlit_server_state import server_state_lock
 
 from utils.data_repo.data_repo import DataRepo
 
 update_event = threading.Event()
+dough_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+comfy_runner_dir = os.path.join(dough_dir, "comfy_runner")
+comfy_ui_dir = os.path.join(dough_dir, 'ComfyUI')
+
 def check_for_updates():
     if not os.path.exists('banodoco_local.db'):
         return
@@ -32,6 +37,7 @@ def check_for_updates():
             update_thread.join()
             update_event.wait()
             st.session_state['update_in_progress'] = False
+            st.session_state['first_load'] = True
             st.rerun()
     
 def update_app():
@@ -39,53 +45,52 @@ def update_app():
         update_dough()
         update_comfy_runner()
         update_comfy_ui()
-    except subprocess.CalledProcessError as e:
+    except Exception as e:
         print("Update failed:", str(e))
 
 def update_comfy_runner():
-    if os.path.exists("comfy_runner/"):
-        os.chdir("comfy_runner/")
-        subprocess.run(["git", "stash"], check=True)
-        completed_process = subprocess.run(["git", "pull", "origin", "feature/package"], check=True)
-        if completed_process.returncode == 0:
-            print("Comfy runner updated")
+    if os.path.exists(comfy_runner_dir):
+        os.chdir(comfy_runner_dir)
+        try:
+            update_git_repo(comfy_runner_dir)
+        except Exception as e:
+            print(f"Error occured: {str(e)}")
+        
+        print("Comfy runner updated")
         move_to_root()
 
 def update_dough():
     print("Updating the app...")
-    subprocess.run(["git", "stash"], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    
-    completed_process = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], check=True, capture_output=True, text=True)
-    current_branch = completed_process.stdout.strip()
-    subprocess.run(["git", "pull", "origin", current_branch], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    
+
+    try:
+        update_git_repo(dough_dir)
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+
     if os.path.exists("banodoco_local.db"):
         python_executable = sys.executable
         completed_process = subprocess.run([python_executable, 'manage.py', 'migrate'], capture_output=True, text=True)
         if completed_process.returncode == 0:
             print("Database migration successful")
-    
+
     if os.path.exists(".env"):
         sample_env = dotenv_values('.env.sample')
         env = dotenv_values('.env')
         missing_keys = [key for key in sample_env if key not in env]
-
         for key in missing_keys:
             env[key] = sample_env[key]
-
         with open(".env", 'w') as f:
             for key, value in env.items():
                 f.write(f"{key}={value}\n")
-                
         print("env update successful")
-    
+
     move_to_root()
 
 def update_comfy_ui():
     global update_event
-    custom_nodes_dir = "ComfyUI/custom_nodes"
+    custom_nodes_dir = os.path.join(comfy_ui_dir, "custom_nodes")
     if os.path.exists(custom_nodes_dir):
-        initial_dir = os.getcwd()
+        initial_dir = dough_dir
         for folder in os.listdir(custom_nodes_dir):
             folder_path = os.path.join(custom_nodes_dir, folder)
             if os.path.isdir(folder_path) and os.path.exists(os.path.join(folder_path, ".git")):
@@ -122,7 +127,13 @@ def update_comfy_ui():
                 
     update_event.set()
     move_to_root()
-    
+
+def update_git_repo(git_dir):
+    repo = Repo(git_dir)
+    current_branch = repo.active_branch
+    repo.git.stash()
+    repo.remotes.origin.pull(current_branch.name)
+
 def get_local_version():
     file_path = "./scripts/app_version.txt"
     try:
@@ -130,10 +141,23 @@ def get_local_version():
             return file.read().strip()
     except Exception as e:
         return None
+
+def get_current_branch(git_dir):
+    if not is_git_initialized(git_dir):
+        init_git("../", "https://github.com/banodoco/Dough.git")
+
+    try:
+        completed_process = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], check=True, capture_output=True, text=True, cwd=git_dir)
+        current_branch = completed_process.stdout.strip()
+    except Exception as e:
+        print("------ exception occured: ", str(e))
+        current_branch = "main"
     
+    return current_branch
+
 def get_remote_version():
-    completed_process = subprocess.run(["git", "rev-parse", "--abbrev-ref", "HEAD"], check=True, capture_output=True, text=True)
-    current_branch = completed_process.stdout.strip()
+    current_branch = get_current_branch(dough_dir)
+    
     url = f"https://raw.githubusercontent.com/banodoco/Dough/{current_branch}/scripts/app_version.txt"
     try:
         response = requests.get(url)
@@ -141,6 +165,26 @@ def get_remote_version():
         return response.text.strip()
     except Exception as e:
         return None
+
+def run_command(command):
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    output, error = process.communicate()
+    return output.decode('utf-8'), error.decode('utf-8')
+
+def is_git_initialized(repo_folder):
+    os.chdir(repo_folder)
+    output, error = run_command("git rev-parse --is-inside-work-tree")
+    os.chdir(dough_dir)
+    return output.strip() == "true"
+
+def init_git(repo_folder, repo_url):
+    os.chdir(repo_folder)
+    run_command("git init")
+    run_command(f"git remote add origin {repo_url}")
+    run_command("git fetch origin")
+    run_command("git reset --hard origin/main")
+
+    os.chdir("..")
     
 def compare_versions(version1, version2):
     ver1 = [int(x) for x in version1.split(".")]
@@ -164,7 +208,8 @@ def compare_versions(version1, version2):
         return 0
     
 def move_to_root():
-    current_dir = os.getcwd()
-    while os.path.basename(current_dir) != "Dough":
-        current_dir = os.path.dirname(current_dir)
-        os.chdir(current_dir)
+    os.chdir(dough_dir)
+    # current_dir = os.getcwd()
+    # while os.path.basename(current_dir) != "Dough":
+    #     current_dir = os.path.dirname(current_dir)
+    #     os.chdir(current_dir)
