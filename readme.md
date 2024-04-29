@@ -123,7 +123,22 @@ Open the Start menu, type Windows PowerShell, right-click on Windows PowerShell,
 
 ### Install the app
 
-- Install MS C++ Redistributable (if not already present) - https://aka.ms/vs/16/release/vc_redist.x64.exe
+Install MS C++ Redistributable (if not already present) - https://aka.ms/vs/16/release/vc_redist.x64.exe
+
+### Navigate to Documents
+
+Make sure you're in the documents folder by running the following command:
+
+```bash
+cd ~\Documents
+```
+
+### Run the setup script
+
+```bash
+iwr -useb "https://raw.githubusercontent.com/banodoco/Dough/green-head/scripts/windows_setup.bat" -OutFile "script.bat"
+Start-Process "cmd.exe" -ArgumentList "/c script.bat"
+```
 
 ### Enter the folder
 In Powershell, run:
@@ -131,17 +146,12 @@ In Powershell, run:
 cd Dough
 ```
 
-Run the setup script
-
-```bash
-iwr -useb "https://raw.githubusercontent.com/banodoco/Dough/green-head/scripts/windows_setup.bat" -OutFile "script.bat"
-Start-Process "cmd.exe" -ArgumentList "/c script.bat"
-```
-
 ### Run the app
 
 ```bash
 . .\dough-env\Scripts\activate ; .\scripts\entrypoint.bat
 ```
+
+---
 
 If you're having any issues, please share them in our [Discord](https://discord.com/invite/8Wx9dFu5tP).

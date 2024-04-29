@@ -5,6 +5,7 @@ import time
 from ui_components.widgets.attach_audio_element import attach_audio_element
 from PIL import Image
 
+from utils.common_utils import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
 
 
@@ -42,4 +43,20 @@ def project_settings_page(project_uuid):
             if st.button("Save"):
                 data_repo.update_project_setting(project_uuid, width=width)
                 data_repo.update_project_setting(project_uuid, height=height)
-                st.experimental_rerun()      
+                st.experimental_rerun()
+
+    st.write("")
+    st.write("")
+    st.write("")
+    delete_proj = st.checkbox("I confirm to delete this project entirely", value=False)             
+    if st.button("Delete Project", disabled=(not delete_proj)):
+        project_list = data_repo.get_all_project_list(user_id=get_current_user_uuid())
+        if project_list and len(project_list) > 1:
+            data_repo.update_project(uuid=project_uuid, is_disabled=True)
+            st.success("Project deleted successfully")
+            st.session_state["index_of_project_name"] = 0
+        else:
+            st.error("You can't delete the only available project")
+        
+        time.sleep(0.7)
+        st.rerun()

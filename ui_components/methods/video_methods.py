@@ -1,11 +1,14 @@
 import os
 import random
 import string
+import subprocess
+import sys
 import tempfile
 import time
 from typing import List
 import uuid
 import ffmpeg
+import pkg_resources
 import streamlit as st
 from moviepy.editor import concatenate_videoclips, concatenate_audioclips, VideoFileClip, AudioFileClip, CompositeVideoClip
 from pydub import AudioSegment
@@ -78,6 +81,17 @@ def upscale_video(shot_uuid, styling_model, upscaler_type, upscale_factor, upsca
     
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
+    
+    # hacky fix to prevent conflicting opencv versions
+    try:
+        pkg_resources.require("opencv-python-headless[ffmpeg]==4.8.0.74")
+    except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
+        # Install the package if it's not installed
+        try:
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "opencv-python-headless[ffmpeg]==4.8.0.74"])
+            print("Package installed successfully.")
+        except subprocess.CalledProcessError as e:
+            print(f"Error installing package: {e}")
 
     query_obj = MLQueryObject(
         timing_uuid=None,

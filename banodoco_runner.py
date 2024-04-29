@@ -325,6 +325,12 @@ def check_and_update_db():
                     
                 output_details = json.loads(log.output_details)
                 output_details['output'] = destination_path_list[0] if len(destination_path_list) == 1 else destination_path_list
+                
+                log = InferenceLog.objects.filter(id=log.id).first()
+                cur_status = log.status
+                if cur_status in [InferenceStatus.FAILED.value, InferenceStatus.CANCELED.value]:
+                    return
+
                 update_data = {
                     "status" : InferenceStatus.COMPLETED.value,
                     "output_details" : json.dumps(output_details),
