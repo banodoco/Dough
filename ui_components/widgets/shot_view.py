@@ -399,6 +399,10 @@ def download_all_images(shot_uuid):
 def delete_shot_button(shot_uuid):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
+    shot_list = data_repo.get_shot_list(shot.project.uuid)
+    if len(shot_list) == 1:
+        st.warning("You can't delete the only shot in a project.")
+        return
     confirm_delete = st.checkbox("Confirm deletion",key=f"confirm_delete_{shot.uuid}") 
     help_text = "Check the box above to enable the delete button." if not confirm_delete else "This will this shot and all the frames and videos within."
     if st.button("Delete shot", disabled=(not confirm_delete), help=help_text, key=f"delete_btn_{shot.uuid}", use_container_width=True):

@@ -263,22 +263,7 @@ def select_motion_lora_element(shot_uuid, model_files):
     with tab1:
         files = get_files_in_a_directory(lora_file_dest, ['safetensors', 'ckpt'])
         # add WAS26.safetensors to the start of the list
-        if "WAS26.safetensors" in files:
-            files.remove("WAS26.safetensors")
-            files.insert(0, "WAS26.safetensors")
-        else:
-            files.insert(0, "WAS26.safetensors")
 
-
-        if f"lora_data_{shot_uuid}" not in st.session_state or not st.session_state[f"lora_data_{shot_uuid}"]:
-            if 'default_lora_added' not in st.session_state:
-                st.session_state[f"lora_data_{shot_uuid}"] = [{
-                    "filename": "WAS26.safetensors",
-                    "lora_strength": 0.9,  # Default strength value
-                    "filepath": os.path.join(lora_file_dest, "WAS26.safetensors")
-                }]
-                st.session_state['default_lora_added'] = True
-            
         # Iterate through each current LoRA in session state
         if len(files) == 0:
             st.error("No LoRAs found in the directory - go to Explore to download some, or drop them into ComfyUI/models/animatediff_motion_lora")                    

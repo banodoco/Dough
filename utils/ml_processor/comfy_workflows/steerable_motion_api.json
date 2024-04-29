@@ -398,6 +398,14 @@
       "clip_vision": [
         "370",
         0
+      ],
+      "base_ipa_advanced_settings": [
+        "593",
+        0
+      ],
+      "detail_ipa_advanced_settings": [
+        "594",
+        0
       ]
     },
     "class_type": "BatchCreativeInterpolation",
@@ -422,20 +430,54 @@
   },
   "584": {
     "inputs": {
-      "Value": 512
+      "value": 512
     },
-    "class_type": "Integer",
+    "class_type": "JWInteger",
     "_meta": {
-      "title": "Integer"
+      "title": "Height"
     }
   },
   "585": {
     "inputs": {
-      "Value": 768
+      "value": 768
     },
-    "class_type": "Integer",
+    "class_type": "JWInteger",
     "_meta": {
-      "title": "Integer"
+      "title": "Width"
+    }
+  },
+  "593": {
+    "inputs": {
+      "ipa_starts_at": 0,
+      "ipa_ends_at": 0.3,
+      "ipa_weight_type": "ease in-out",
+      "ipa_weight": 1,
+      "ipa_embeds_scaling": "V only",
+      "ipa_noise_strength": 0,
+      "use_image_for_noise": false,
+      "type_of_noise": "fade",
+      "noise_blur": 0
+    },
+    "class_type": "IpaConfiguration",
+    "_meta": {
+      "title": "IPA Configuration  🎞️🅢🅜"
+    }
+  },
+  "594": {
+    "inputs": {
+      "ipa_starts_at": 0.2,
+      "ipa_ends_at": 0.75,
+      "ipa_weight_type": "linear",
+      "ipa_weight": 1,
+      "ipa_embeds_scaling": "V only",
+      "ipa_noise_strength": 0,
+      "use_image_for_noise": false,
+      "type_of_noise": "fade",
+      "noise_blur": 0
+    },
+    "class_type": "IpaConfiguration",
+    "_meta": {
+      "title": "IPA Configuration  🎞️🅢🅜"
     }
   }
 }
