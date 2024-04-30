@@ -491,7 +491,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         else:
             with h1:
                 project_setting = data_repo.get_project_setting(project_uuid)
-                page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
+                page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True, key="shortlist_gallery")
                 open_detailed_view_for_all = False     
                 
     else:
