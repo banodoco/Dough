@@ -315,6 +315,18 @@ class DataRepo:
         res = self.db_repo.update_specific_timing(uuid, **kwargs)
         return res.status
     
+    # NOTE: this method focuses on speed and therefore bypasses aux_frame update for individual saves
+    # only use it for updating timings if their relative position is not affected
+    def update_bulk_timing(self, timing_uuid_list, data_list):
+        res = self.db_repo.update_bulk_timing(timing_uuid_list, data_list)
+        return res.status
+    
+    # NOTE: this method focuses on speed and therefore bypasses aux_frame update for individual saves
+    # only use it for updating timings if their relative position is not affected
+    def bulk_create_timing(self, data_list):
+        res = self.db_repo.bulk_create_timing(data_list)
+        return res.status
+    
     def delete_timing_from_uuid(self, uuid):
         res = self.db_repo.delete_timing_from_uuid(uuid)
         return res.status
