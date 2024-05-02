@@ -33,17 +33,30 @@ def project_settings_page(project_uuid):
         with v1:
             st.write("Current Size = ", project_settings.width, "x", project_settings.height)
             
-            frame_size = st.radio("Select frame size:", options=frame_sizes, index=current_index, key="frame_size", horizontal=True)
-            width, height = map(int, frame_size.split('x'))
+            custom_frame_size = st.checkbox("Enter custom frame size", value=False)
+            err = False
+            if not custom_frame_size:
+                frame_size = st.radio("Select frame size:", options=frame_sizes, index=current_index, key="frame_size", horizontal=True)
+                width, height = map(int, frame_size.split('x'))
+            else:
+                st.info("This is an experimental feature")
+                width = st.text_input("Width", value=512)
+                height = st.text_input("Height", value=512)
+                try:
+                    width, height = int(width), int(height)
+                    err = False
+                except Exception as e:
+                    st.error("Please input integer values")
+                    err = True
             
-              
-            img = Image.new('RGB', (width, height), color = (73, 109, 137))
-            st.image(img, width=70)
+            if not err:
+                img = Image.new('RGB', (width, height), color = (73, 109, 137))
+                st.image(img, width=70)
 
-            if st.button("Save"):
-                data_repo.update_project_setting(project_uuid, width=width)
-                data_repo.update_project_setting(project_uuid, height=height)
-                st.experimental_rerun()
+                if st.button("Save"):
+                    data_repo.update_project_setting(project_uuid, width=width)
+                    data_repo.update_project_setting(project_uuid, height=height)
+                    st.experimental_rerun()
 
     st.write("")
     st.write("")

@@ -668,6 +668,30 @@ def cache_data(cls):
     
     setattr(cls, '_original_update_shot', cls.update_shot)
     setattr(cls, "update_shot", _cache_update_shot)
+    
+    def _cache_update_bulk_timing(self, *args, **kwargs):
+        original_func = getattr(cls, '_original_update_bulk_timing')
+        status = original_func(self, *args, **kwargs)
+        
+        if status:
+            StCache.delete_all(CacheKey.SHOT.value)
+        
+        return status
+    
+    setattr(cls, '_original_update_bulk_timing', cls.update_bulk_timing)
+    setattr(cls, "update_bulk_timing", _cache_update_bulk_timing)
+    
+    def _cache_bulk_create_timing(self, *args, **kwargs):
+        original_func = getattr(cls, '_original_bulk_create_timing')
+        status = original_func(self, *args, **kwargs)
+        
+        if status:
+            StCache.delete_all(CacheKey.SHOT.value)
+        
+        return status
+    
+    setattr(cls, '_original_bulk_create_timing', cls.bulk_create_timing)
+    setattr(cls, "bulk_create_timing", _cache_bulk_create_timing)
 
     def _cache_delete_shot(self, *args, **kwargs):
         original_func = getattr(cls, '_original_delete_shot')
