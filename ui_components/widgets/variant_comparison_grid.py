@@ -201,11 +201,14 @@ def is_upscaled_video(variant: InternalFileObject):
 def image_variant_details(variant: InternalFileObject):
     with st.expander("Inference Details", expanded=False):
         if variant.inference_params and 'query_dict' in variant.inference_params:
-            query_dict = json.loads(variant.inference_params['query_dict'])
+            query_dict = json.loads(variant.inference_params['query_dict']) if \
+                isinstance(variant.inference_params['query_dict'], str) else variant.inference_params['query_dict']
             st.markdown(f"Prompt:  {query_dict['prompt']}", unsafe_allow_html=True)
             st.markdown(f"Negative Prompt: {query_dict['negative_prompt']}", unsafe_allow_html=True)
-            st.markdown(f"Dimension: {query_dict['width']}x{query_dict['height']}", unsafe_allow_html=True)
-            st.markdown(f"Guidance scale: {query_dict['guidance_scale']}", unsafe_allow_html=True)
+            if 'width' in query_dict:
+                st.markdown(f"Dimension: {query_dict['width']}x{query_dict['height']}", unsafe_allow_html=True)
+            if 'guidance_scale' in query_dict:
+                st.markdown(f"Guidance scale: {query_dict['guidance_scale']}", unsafe_allow_html=True)
             model_name = variant.inference_log.model_name
             st.markdown(f"Model name: {model_name}", unsafe_allow_html=True)
             if model_name in []:
