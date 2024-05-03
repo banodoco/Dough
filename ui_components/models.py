@@ -179,7 +179,7 @@ class InternalShotObject:
         self.shot_idx = kwargs['shot_idx'] if key_present('shot_idx', kwargs) else 0
         self.duration = kwargs['duration'] if key_present('duration', kwargs) else 0
         self.meta_data = kwargs['meta_data'] if key_present('meta_data', kwargs) else {}
-        self.timing_list = [InternalFrameTimingObject(**timing) for timing in kwargs["timing_list"]] \
+        self.timing_list = [InternalFrameTimingObject(**timing) for timing in sorted(kwargs["timing_list"], key=lambda x: x['aux_frame_index'])] \
             if key_present('timing_list', kwargs) and kwargs["timing_list"] else []
         self.interpolated_clip_list = [InternalFileObject(**vid) for vid in kwargs['interpolated_clip_list']] if key_present('interpolated_clip_list', kwargs) \
                     else []
