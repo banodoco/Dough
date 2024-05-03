@@ -154,3 +154,51 @@ cd Dough
 ---
 
 If you're having any issues, please share them in our [Discord](https://discord.com/invite/8Wx9dFu5tP).
+
+# Troubleshooting
+
+<details>
+  <summary><b>Common problems (click to expand)</b></summary>
+
+<details>
+  <summary><b>Issue during installation</b></summary>
+  
+- Make sure you are using python3.10
+- If you are on Windows, make sure permissions of the Dough folder are not restricted (try to grant full access to everyone)
+- Double-check that you are not inside any system-protected folders like system32
+- Install the app in admin mode. Open the powershell in the admin mode and run "Set-ExecutionPolicy RemoteSigned". Then follow the installation instructions given in the readme
+- If all of the above fail, try to run the following instructions one by one and report which one is throwing the error
+  ```bash
+  call dough-env\Scripts\activate.bat
+  python.exe -m pip install --upgrade pip
+  pip install -r requirements.txt
+  pip install websocket
+  pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+  pip install -r comfy_runner\requirements.txt
+  pip install -r ComfyUI\requirements.txt
+  ```
+</details>
+<details>
+  <summary><b>Unable to locate credentials</b></summary>
+  Make a copy of ".env.sample" and rename it to ".env"
+</details>
+<details>
+  <summary><b>Issue during runtime</b></summary>
+
+- If a particular node inside Comfy is throwing an error then delete that node and restart the app
+- Make sure you are using python3.10 and the virtual environment is activated
+- Try doing "git pull origin main" to get the latest code
+</details>
+<details>
+  <summary><b>Generations are in progress for a long time</b></summary>
+
+- Check the terminal if any progress is being made (they can be very slow, especially in the case of upscaling)
+- Cancel the generations directly from the sidebar if they are stuck
+- If you don't see any logs in the terminal, make sure no other program is running at port 12345 on your machine as Dough uses that port
+</details>
+<details>
+  <summary><b>Some other error?</b></summary>
+  
+  Drop in our [Discord](https://discord.com/invite/8Wx9dFu5tP).
+</details>
+</details>
