@@ -262,6 +262,8 @@ class ComfyDataTransform:
         workflow["50"]["inputs"]["width"] = width
         workflow["52"]["inputs"]["height"] = height
         workflow["52"]["inputs"]["width"] = width
+        workflow["59"]["inputs"]["width"] = width
+        workflow["58"]["inputs"]["width"] = height
 
     
         return json.dumps(workflow), output_node_ids, [], []
