@@ -94,37 +94,43 @@
       "title": "UNETLoader"
     }
   },
-  "33": {
+  "58": {
     "inputs": {
-      "image": [
-        "20",
-        0
-      ]
+      "value": 512
     },
-    "class_type": "Get image size",
+    "class_type": "JWInteger",
     "_meta": {
-      "title": "Get image size"
+      "title": "Height"
+    }
+  },
+  "59": {
+    "inputs": {
+      "value": 512
+    },
+    "class_type": "JWInteger",
+    "_meta": {
+      "title": "Width"
     }
   },
   "34": {
     "inputs": {
       "width": [
-        "33",
+        "59",
         0
       ],
       "height": [
-        "33",
-        1
+        "58",
+        0
       ],
       "crop_w": 0,
       "crop_h": 0,
       "target_width": [
-        "33",
+        "59",
         0
       ],
       "target_height": [
-        "33",
-        1
+        "58",
+        0
       ],
       "text_g": "man fishing, ZipRealism, Zip2D",
       "text_l": "man fishing, ZipRealism, Zip2D",

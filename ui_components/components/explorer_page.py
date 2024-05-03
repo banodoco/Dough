@@ -491,7 +491,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         else:
             with h1:
                 project_setting = data_repo.get_project_setting(project_uuid)
-                page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages), horizontal=True, key="shortlist_gallery")
+                page_number = k1.radio("Select page", options=range(1, project_setting.total_shortlist_gallery_pages + 1), horizontal=True, key="shortlist_gallery")
                 open_detailed_view_for_all = False     
                 
     else:
@@ -620,7 +620,9 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                             log = gallery_image_list[i + j].inference_log # data_repo.get_inference_log_from_uuid(gallery_image_list[i + j].inference_log.uuid)
                             if log:
                                 input_params = json.loads(log.input_params)
-                                prompt = input_params.get('prompt', 'No prompt found')
+                                prompt = input_params.get('prompt', None)
+                                if not prompt:
+                                    prompt = input_params.get("query_dict", {}).get("prompt", "Prompt not found")
                                 model = json.loads(log.output_details)['model_name'].split('/')[-1]
                                 if 'view_inference_details' in view:
                                     with st.expander("Prompt Details", expanded=open_detailed_view_for_all):

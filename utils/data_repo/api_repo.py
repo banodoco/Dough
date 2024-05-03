@@ -385,6 +385,11 @@ class APIRepo:
         kwargs['uuid'] = uuid
         res = self.http_put(url=self.TIMING_URL, data=kwargs)
         return InternalResponse(res['payload'], 'success', res['status'])
+    
+    # TODO: complete this
+    def update_bulk_timing(self, timing_uuid_list, data_list):
+        res = self.http_put(url=self.TIMING_LIST_URL, data=data_list)
+        return InternalResponse(res['payload'], 'success', res['status'])
 
     def delete_timing_from_uuid(self, uuid):
         res = self.http_delete(self.TIMING_URL, params={'uuid': uuid})

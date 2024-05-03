@@ -1,7 +1,7 @@
 import json
 import time
 import streamlit as st
-from shared.constants import InferenceParamType, InferenceStatus, InferenceType, InternalFileType
+from shared.constants import AnimationStyleType, InferenceParamType, InferenceStatus, InferenceType, InternalFileType
 from ui_components.components.video_rendering_page import sm_video_rendering_page, two_img_realistic_interpolation_page
 from ui_components.models import InternalShotObject
 from ui_components.widgets.frame_selector import frame_selector_widget
@@ -49,6 +49,7 @@ def video_rendering_page(shot_uuid, selected_variant):
             log = data_repo.get_inference_log_from_uuid(selected_variant)
             shot_data = json.loads(log.input_params)
             file_uuid_list = shot_data.get('origin_data', json.dumps({})).get('settings', {}).get('file_uuid_list', [])
+            st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
 
     else:
         # hackish sol, will fix later
@@ -65,6 +66,34 @@ def video_rendering_page(shot_uuid, selected_variant):
         for timing in shot.timing_list:
             if timing.primary_image and timing.primary_image.location:
                 file_uuid_list.append(timing.primary_image.uuid)
+    else:
+        # updating the shot timing images
+        shot_timing_list = shot.timing_list
+        img_mismatch = False    # flag to check if shot images need to be updated
+        if len(file_uuid_list) == len(shot_timing_list):
+            for file_uuid, timing in zip(file_uuid_list, shot_timing_list):
+                if timing.primary_image and timing.primary_image.uuid != file_uuid:
+                    img_mismatch = True
+                    break
+        else:
+            img_mismatch = True
+                
+        if img_mismatch or len(file_uuid_list) != len(shot_timing_list):
+            # deleting all the current timings
+            data_repo.update_bulk_timing([timing.uuid for timing in shot_timing_list], [{'is_disabled': True}] * len(shot_timing_list))
+            # adding new timings
+            new_timing_data = []
+            for idx, file_uuid in enumerate(file_uuid_list):
+                new_timing_data.append(
+                    {
+                        'aux_frame_index': idx, 
+                        'shot_id': shot_uuid, 
+                        'primary_image_id': file_uuid,
+                        'is_disabled': False
+                    }
+                )
+                
+            data_repo.bulk_create_timing(new_timing_data)
     
     img_list = data_repo.get_all_file_list(uuid__in=file_uuid_list, file_type=InternalFileType.IMAGE.value)[0]    
     

@@ -917,6 +917,80 @@ class DBRepo:
         
         return InternalResponse(payload, 'timing created successfully', True)
     
+    def bulk_create_timing(self, timing_data_list):
+        primary_image_id_list = []
+        shot_id_list = []
+        model_id_list = []
+        source_image_id_list = []
+        mask_id_list = []
+        canny_image_id_list = []
+        
+        for d in timing_data_list:
+            if 'primary_image_id' in d:
+                primary_image_id_list.append(d['primary_image_id'])
+            if 'shot_id' in d:
+                shot_id_list.append(d['shot_id'])
+            if 'model_id' in d:
+                model_id_list.append(d['model_id'])
+            if 'source_image_id' in d:
+                source_image_id_list.append(d['source_image_id'])
+            if 'mask_id' in d:
+                mask_id_list.append(d['mask_id'])
+            if 'canny_image_id' in d:
+                canny_image_id_list.append(d['canny_image_id'])
+            if 'primary_image_id' in d:
+                primary_image_id_list.append(d['primary_image_id'])
+                
+        primary_image_id_list = list(set(primary_image_id_list))
+        shot_id_list = list(set(shot_id_list))
+        model_id_list = list(set(model_id_list))
+        source_image_id_list = list(set(source_image_id_list))
+        mask_id_list = list(set(mask_id_list))
+        canny_image_id_list = list(set(canny_image_id_list))
+        
+        file_list = InternalFileObject.objects.filter(uuid__in=primary_image_id_list + source_image_id_list + mask_id_list + canny_image_id_list, is_disabled=False).all()
+        model_list = AIModel.objects.filter(uuid__in=model_id_list, is_disabled=False).all()
+        shot_list = Shot.objects.filter(uuid__in=shot_id_list, is_disabled=False).all()
+        
+        file_uuid_id_map = {str(file.uuid): file.id for file in file_list}
+        model_uuid_id_map = {str(model.uuid): model.id for model in model_list}
+        shot_uuid_id_map = {str(shot.uuid): shot.id for shot in shot_list}
+        
+        # print("----- file_uuid_map: ", file_uuid_id_map)
+        res_timing_list = []
+        for data in timing_data_list:
+            kwargs = data
+            if 'primary_image_id' in kwargs and kwargs['primary_image_id'] in file_uuid_id_map:
+                kwargs['primary_image_id'] = file_uuid_id_map[kwargs['primary_image_id']]
+                
+            if 'source_image_id' in kwargs and kwargs['source_image_id'] in file_uuid_id_map:
+                kwargs['source_image_id'] = file_uuid_id_map[kwargs['source_image_id']]
+                
+            if 'mask_id' in kwargs and kwargs['mask_id'] in file_uuid_id_map:
+                kwargs['mask_id'] = file_uuid_id_map[kwargs['mask_id']]
+                
+            if 'canny_image_id' in kwargs and kwargs['canny_image_id'] in file_uuid_id_map:
+                kwargs['canny_image_id'] = file_uuid_id_map[kwargs['canny_image_id']]
+
+            if 'shot_id' in kwargs and kwargs['shot_id'] in shot_uuid_id_map:
+                kwargs['shot_id'] = shot_uuid_id_map[kwargs['shot_id']]
+
+            if 'model_id' in kwargs and kwargs['model_id'] in model_uuid_id_map:
+                kwargs['model_id'] = model_uuid_id_map[kwargs['model_id']]
+
+            # print("---- data: ", kwargs)
+            timing = Timing(**kwargs)
+            res_timing_list.append(timing)
+        
+        with transaction.atomic():
+            for timing in res_timing_list:
+                timing.save()
+        
+        payload = {
+            'data': [TimingDto(timing).data for timing in res_timing_list]
+        }
+        return InternalResponse(payload, 'timing list created successfully', True)
+    
     def remove_existing_timing(self, project_uuid):
         if project_uuid:
             project: Project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
@@ -943,6 +1017,84 @@ class DBRepo:
             shot.save()
 
         return InternalResponse({}, 'success', True)
+    
+    def update_bulk_timing(self, timing_uuid_list, data_list):
+        timing_list = Timing.objects.filter(uuid__in=timing_uuid_list, is_disabled=False).all()
+        if not (timing_list and len(timing_list)) and len(timing_uuid_list):
+            return InternalResponse({}, 'no timing objs found', False)
+        
+        primary_image_id_list = []
+        shot_id_list = []
+        model_id_list = []
+        source_image_id_list = []
+        mask_id_list = []
+        canny_image_id_list = []
+        
+        for d in data_list:
+            if 'primary_image_id' in d:
+                primary_image_id_list.append(d['primary_image_id'])
+            if 'shot_id' in d:
+                shot_id_list.append(d['shot_id'])
+            if 'model_id' in d:
+                model_id_list.append(d['model_id'])
+            if 'source_image_id' in d:
+                source_image_id_list.append(d['source_image_id'])
+            if 'mask_id' in d:
+                mask_id_list.append(d['mask_id'])
+            if 'canny_image_id' in d:
+                canny_image_id_list.append(d['canny_image_id'])
+            if 'primary_image_id' in d:
+                primary_image_id_list.append(d['primary_image_id'])
+                
+        primary_image_id_list = list(set(primary_image_id_list))
+        shot_id_list = list(set(shot_id_list))
+        model_id_list = list(set(model_id_list))
+        source_image_id_list = list(set(source_image_id_list))
+        mask_id_list = list(set(mask_id_list))
+        canny_image_id_list = list(set(canny_image_id_list))
+        
+        file_list = InternalFileObject.objects.filter(uuid__in=primary_image_id_list + source_image_id_list + mask_id_list + canny_image_id_list, is_disabled=False).all()
+        model_list = AIModel.objects.filter(uuid__in=model_id_list, is_disabled=False).all()
+        shot_list = Shot.objects.filter(uuid__in=shot_id_list, is_disabled=False).all()
+        
+        file_uuid_id_map = {file.uuid: file.id for file in file_list}
+        model_uuid_id_map = {model.uuid: model.id for model in model_list}
+        shot_uuid_id_map = {shot.uuid: shot.id for shot in shot_list}
+        
+        res_timing_list = []
+        for timing, update_data in zip(timing_list, data_list):
+            kwargs = update_data
+            if 'primary_image_id' in kwargs and kwargs['primary_image_id'] in file_uuid_id_map:
+                kwargs['primary_image_id'] = file_uuid_id_map[kwargs['primary_image_id']]
+                
+            if 'source_image_id' in kwargs and kwargs['source_image_id'] in file_uuid_id_map:
+                kwargs['source_image_id'] = file_uuid_id_map[kwargs['source_image_id']]
+                
+            if 'mask_id' in kwargs and kwargs['mask_id'] in file_uuid_id_map:
+                kwargs['mask_id'] = file_uuid_id_map[kwargs['mask_id']]
+                
+            if 'canny_image_id' in kwargs and kwargs['canny_image_id'] in file_uuid_id_map:
+                kwargs['canny_image_id'] = file_uuid_id_map[kwargs['canny_image_id']]
+
+            if 'shot_id' in kwargs and kwargs['shot_id'] in shot_uuid_id_map:
+                kwargs['shot_id'] = shot_uuid_id_map[kwargs['shot_id']]
+
+            if 'model_id' in kwargs and kwargs['model_id'] in model_uuid_id_map:
+                kwargs['model_id'] = model_uuid_id_map[kwargs['model_id']]
+                
+            for attr, value in kwargs.items():
+                setattr(timing, attr, value)
+                
+            res_timing_list.append(timing)
+        
+        with transaction.atomic():
+            for timing in res_timing_list:
+                timing.save()
+        
+        payload = {
+            'data': [TimingDto(timing).data for timing in res_timing_list]
+        }
+        return InternalResponse(payload, 'timing list updated successfully', True)
     
     def update_specific_timing(self, uuid, **kwargs):
         timing = Timing.objects.filter(uuid=uuid, is_disabled=False).first()
@@ -999,15 +1151,7 @@ class DBRepo:
                     return InternalResponse({}, 'invalid canny image uuid', False)
                 
                 kwargs['canny_image_id'] = canny_image.id
-        
 
-        if 'primay_image_id' in kwargs:
-            if kwargs['primay_image_id'] != None:
-                primay_image: InternalFileObject = InternalFileObject.objects.filter(uuid=kwargs['primay_image_id'], is_disabled=False).first()
-                if not primay_image:
-                    return InternalResponse({}, 'invalid primary image uuid', False)
-                
-                kwargs['primay_image_id'] = primay_image.id
         
         for attr, value in kwargs.items():
             setattr(timing, attr, value)
