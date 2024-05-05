@@ -10,7 +10,13 @@ import uuid
 import ffmpeg
 import pkg_resources
 import streamlit as st
-from moviepy.editor import concatenate_videoclips, concatenate_audioclips, VideoFileClip, AudioFileClip, CompositeVideoClip
+from moviepy.editor import (
+    concatenate_videoclips,
+    concatenate_audioclips,
+    VideoFileClip,
+    AudioFileClip,
+    CompositeVideoClip,
+)
 from pydub import AudioSegment
 
 from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType, InternalFileTag
@@ -26,12 +32,14 @@ from utils.ml_processor.constants import ML_MODEL
 from utils.ml_processor.ml_interface import get_ml_client
 
 
-def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_count=1, backlog=False, img_list=[]):
-    '''
+def create_single_interpolated_clip(
+    shot_uuid, quality, settings={}, variant_count=1, backlog=False, img_list=[]
+):
+    """
     - this includes all the animation styles [direct morphing, interpolation, image to video]
     - this stores the newly created video in the interpolated_clip_list and promotes them to
     timed_clip (if it's not already present)
-    '''
+    """
 
     from ui_components.methods.common_methods import process_inference_output
     from shared.constants import QUEUE_INFERENCE_QUERIES
@@ -39,9 +47,9 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
 
-    if quality == 'full':
+    if quality == "full":
         interpolation_steps = VideoInterpolator.calculate_dynamic_interpolations_steps(shot.duration)
-    elif quality == 'preview':
+    elif quality == "preview":
         interpolation_steps = 3
 
     settings.update(interpolation_steps=interpolation_steps)
@@ -52,21 +60,17 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
 
     # res is an array of tuples (video_bytes, log)
     res = VideoInterpolator.create_interpolated_clip(
-        settings['animation_style'],
-        settings,
-        variant_count,
-        QUEUE_INFERENCE_QUERIES,
-        backlog
+        settings["animation_style"], settings, variant_count, QUEUE_INFERENCE_QUERIES, backlog
     )
 
     if res:
-        for (output, log) in res:
+        for output, log in res:
             inference_data = {
                 "inference_type": InferenceType.FRAME_INTERPOLATION.value,
                 "output": output,
                 "log_uuid": log.uuid,
                 "settings": settings,
-                "shot_uuid": str(shot_uuid)
+                "shot_uuid": str(shot_uuid),
             }
 
             process_inference_output(**inference_data)
@@ -74,21 +78,26 @@ def create_single_interpolated_clip(shot_uuid, quality, settings={}, variant_cou
         st.error("Failed to create interpolated clip")
         time.sleep(0.5)
         st.rerun()
-        
-def upscale_video(shot_uuid, styling_model, upscaler_type, upscale_factor, upscale_strength, promote_to_main_variant):
+
+
+def upscale_video(
+    shot_uuid, styling_model, upscaler_type, upscale_factor, upscale_strength, promote_to_main_variant
+):
     from ui_components.methods.common_methods import process_inference_output
     from shared.constants import QUEUE_INFERENCE_QUERIES
-    
+
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
-    
+
     # hacky fix to prevent conflicting opencv versions
     try:
         pkg_resources.require("opencv-python-headless[ffmpeg]==4.8.0.74")
     except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
         # Install the package if it's not installed
         try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", "opencv-python-headless[ffmpeg]==4.8.0.74"])
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "opencv-python-headless[ffmpeg]==4.8.0.74"]
+            )
             print("Package installed successfully.")
         except subprocess.CalledProcessError as e:
             print(f"Error installing package: {e}")
@@ -97,32 +106,34 @@ def upscale_video(shot_uuid, styling_model, upscaler_type, upscale_factor, upsca
         timing_uuid=None,
         model_uuid=None,
         guidance_scale=8,
-        seed=-1,                            
-        num_inference_steps=25,            
+        seed=-1,
+        num_inference_steps=25,
         strength=0.5,
         adapter_type=None,
         prompt="upscale",
         negative_prompt="",
-        height=512,     # these are dummy values, not used
+        height=512,  # these are dummy values, not used
         width=512,
         data={
             "file_video": shot.main_clip.uuid,
-            "model": styling_model, 
-            "upscaler_type": upscaler_type, 
-            "upscale_factor": upscale_factor, 
-            "upscale_strength": upscale_strength
-        }
+            "model": styling_model,
+            "upscaler_type": upscaler_type,
+            "upscale_factor": upscale_factor,
+            "upscale_strength": upscale_strength,
+        },
     )
-    
+
     ml_client = get_ml_client()
-    output, log = ml_client.predict_model_output_standardized(ML_MODEL.video_upscaler, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES)
+    output, log = ml_client.predict_model_output_standardized(
+        ML_MODEL.video_upscaler, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES
+    )
     if log:
         inference_data = {
             "inference_type": InferenceType.FRAME_INTERPOLATION.value,
             "output": output,
             "log_uuid": log.uuid,
             "settings": {"promote_to_main_variant": promote_to_main_variant},
-            "shot_uuid": str(shot_uuid)
+            "shot_uuid": str(shot_uuid),
         }
 
         process_inference_output(**inference_data)
@@ -133,19 +144,18 @@ def update_speed_of_video_clip(video_file: InternalFileObject, duration) -> Inte
 
     temp_video_file = None
     if video_file.hosted_url and is_s3_image_url(video_file.hosted_url):
-        temp_video_file = generate_temp_file(video_file.hosted_url, '.mp4')
-    
-    location_of_video = temp_video_file.name if temp_video_file else video_file.local_path
-    
-    new_file_name = ''.join(random.choices(string.ascii_lowercase + string.digits, k=16)) + ".mp4"
-    new_file_location = "videos/" + str(video_file.project.uuid) + "/assets/videos/1_final/" + str(new_file_name)
+        temp_video_file = generate_temp_file(video_file.hosted_url, ".mp4")
 
-    video_bytes = VideoProcessor.update_video_speed(
-        location_of_video,
-        duration
+    location_of_video = temp_video_file.name if temp_video_file else video_file.local_path
+
+    new_file_name = "".join(random.choices(string.ascii_lowercase + string.digits, k=16)) + ".mp4"
+    new_file_location = (
+        "videos/" + str(video_file.project.uuid) + "/assets/videos/1_final/" + str(new_file_name)
     )
 
-    hosted_url = save_or_host_file_bytes(video_bytes, new_file_location, '.mp4')
+    video_bytes = VideoProcessor.update_video_speed(location_of_video, duration)
+
+    hosted_url = save_or_host_file_bytes(video_bytes, new_file_location, ".mp4")
     data_repo = DataRepo()
     if hosted_url:
         data_repo.update_file(video_file.uuid, hosted_url=hosted_url)
@@ -157,11 +167,12 @@ def update_speed_of_video_clip(video_file: InternalFileObject, duration) -> Inte
 
     return video_file
 
+
 def add_audio_to_video_slice(video_file, audio_bytes):
     video_location = video_file.local_path
     # Save the audio bytes to a temporary file
     audio_file = "temp_audio.wav"
-    with open(audio_file, 'wb') as f:
+    with open(audio_file, "wb") as f:
         f.write(audio_bytes.getvalue())
 
     # Create an input video stream
@@ -171,8 +182,14 @@ def add_audio_to_video_slice(video_file, audio_bytes):
     audio_stream = ffmpeg.input(audio_file)
 
     # Add the audio stream to the video stream
-    output_stream = ffmpeg.output(video_stream, audio_stream, "output_with_audio.mp4",
-                                  vcodec='copy', acodec='aac', strict='experimental')
+    output_stream = ffmpeg.output(
+        video_stream,
+        audio_stream,
+        "output_with_audio.mp4",
+        vcodec="copy",
+        acodec="aac",
+        strict="experimental",
+    )
 
     # Run the ffmpeg command
     output_stream.run()
@@ -185,10 +202,11 @@ def add_audio_to_video_slice(video_file, audio_bytes):
     # Rename the output file to have the same name as the original video file
     os.rename("output_with_audio.mp4", video_location)
 
+
 def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_sync_required=False):
-    '''
+    """
     audio_sync_required: this ensures that entire video clip is filled with proper audio
-    '''
+    """
     from ui_components.methods.file_methods import convert_bytes_to_file, generate_temp_file
 
     data_repo = DataRepo()
@@ -210,16 +228,16 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
             return output_video
         else:
             return None
-    
-    if 'http' in project_settings.audio.location:
-        temp_audio_file = generate_temp_file(project_settings.audio.location, '.mp4')
+
+    if "http" in project_settings.audio.location:
+        temp_audio_file = generate_temp_file(project_settings.audio.location, ".mp4")
         temp_file_list.append(temp_audio_file)
 
     audio_location = temp_audio_file.name if temp_audio_file else project_settings.audio.location
-    
+
     temp_video_file = None
     if output_video.hosted_url:
-        temp_video_file = generate_temp_file(output_video.hosted_url, '.mp4')
+        temp_video_file = generate_temp_file(output_video.hosted_url, ".mp4")
         temp_file_list.append(temp_video_file)
 
     video_location = temp_video_file.name if temp_video_file else output_video.local_path
@@ -232,15 +250,14 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
         start_timestamp += round(shot_list[i - 1].duration, 2)
 
     trimmed_audio_clip = None
-    audio_len_overlap = 0   # length of audio that can be added to the video clip
+    audio_len_overlap = 0  # length of audio that can be added to the video clip
     if audio_clip.duration >= start_timestamp:
         audio_len_overlap = round(min(video_clip.duration, audio_clip.duration - start_timestamp), 2)
-        
 
     # audio doesn't fit the video clip
     if audio_len_overlap < video_clip.duration and audio_sync_required:
         return None
-    
+
     if audio_len_overlap:
         trimmed_audio_clip = audio_clip.subclip(start_timestamp, start_timestamp + audio_len_overlap)
         trimmed_audio_clip_duration = round(trimmed_audio_clip.duration, 2)
@@ -256,17 +273,12 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
     else:
         for file in temp_file_list:
             os.remove(file.name)
-        
+
         return output_video
 
     # writing the video to the temp file
     output_temp_video_file = tempfile.NamedTemporaryFile(delete=False, suffix=".mp4")
-    video_clip.write_videofile(
-        output_temp_video_file.name,
-        codec="libx264",
-        audio=True,
-        audio_codec="aac"
-    )
+    video_clip.write_videofile(output_temp_video_file.name, codec="libx264", audio=True, audio_codec="aac")
 
     output_temp_video_file.close()
     video_bytes = None
@@ -286,15 +298,15 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
         os.remove(file.name)
 
     output_video = data_repo.get_file_from_uuid(output_video.uuid)
-    _  = data_repo.get_shot_list(shot.project.uuid, invalidate_cache=True)
+    _ = data_repo.get_shot_list(shot.project.uuid, invalidate_cache=True)
     return output_video
 
 
 def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERATED_VIDEO.value):
-    '''
+    """
     combines the main variant of all the shots to form the final video. no processing happens in this, only
     simple combination
-    '''
+    """
     from ui_components.methods.file_methods import convert_bytes_to_file, generate_temp_file
 
     data_repo = DataRepo()
@@ -315,19 +327,19 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
             st.error("Please generate all videos")
             time.sleep(0.7)
             return False
-        
+
         shot_video = sync_audio_and_duration(shot.main_clip, shot.uuid, audio_sync_required=False)
         if not shot_video:
             st.error("Audio sync failed. Length mismatch")
             time.sleep(0.7)
             return False
-        
+
         data_repo.update_shot(uuid=shot.uuid, main_clip_id=shot_video.uuid)
         data_repo.add_interpolated_clip(shot.uuid, interpolated_clip_id=shot_video.uuid)
 
         temp_video_file = None
         if shot_video.hosted_url:
-            temp_video_file = generate_temp_file(shot_video.hosted_url, '.mp4')
+            temp_video_file = generate_temp_file(shot_video.hosted_url, ".mp4")
             temp_file_list.append(temp_video_file)
 
         file_path = temp_video_file.name if temp_video_file else shot_video.local_path
@@ -344,7 +356,7 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
         audio_bitrate="128k",
         bitrate="5000k",
         codec="libx264",
-        audio_codec="aac"
+        audio_codec="aac",
     )
 
     temp_video_file.close()
@@ -359,7 +371,7 @@ def render_video(final_video_name, project_uuid, file_tag=InternalFileTag.GENERA
         project_uuid=project_uuid,
         inference_log_id=None,
         filename=final_video_name,
-        tag=file_tag
+        tag=file_tag,
     )
 
     for file in temp_file_list:

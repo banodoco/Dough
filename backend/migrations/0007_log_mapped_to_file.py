@@ -7,13 +7,18 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0006_inference_time_converted_to_float'),
+        ("backend", "0006_inference_time_converted_to_float"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='internalfileobject',
-            name='inference_log',
-            field=models.ForeignKey(default=None, null=True, on_delete=django.db.models.deletion.SET_NULL, to='backend.inferencelog'),
+            model_name="internalfileobject",
+            name="inference_log",
+            field=models.ForeignKey(
+                default=None,
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="backend.inferencelog",
+            ),
         ),
     ]

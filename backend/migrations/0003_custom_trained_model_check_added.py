@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0002_temp_file_list_added'),
+        ("backend", "0002_temp_file_list_added"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='aimodel',
-            name='custom_trained',
+            model_name="aimodel",
+            name="custom_trained",
             field=models.BooleanField(default=False),
         ),
     ]

@@ -25,7 +25,7 @@ from utils.data_repo.data_repo import DataRepo
 
 
 # depending on the environment it will either save or host the PIL image object
-def save_or_host_file(file, path, mime_type='image/png', dim=None):
+def save_or_host_file(file, path, mime_type="image/png", dim=None):
     data_repo = DataRepo()
     uploaded_url = None
     file_type, file_ext = mime_type.split("/")
@@ -34,21 +34,21 @@ def save_or_host_file(file, path, mime_type='image/png', dim=None):
             # TODO: fix session state management, remove direct access outside the main code
             if dim:
                 width, height = dim[0], dim[1]
-            elif 'project_uuid' in st.session_state and st.session_state['project_uuid']:
-                project_setting = data_repo.get_project_setting(st.session_state['project_uuid'])
+            elif "project_uuid" in st.session_state and st.session_state["project_uuid"]:
+                project_setting = data_repo.get_project_setting(st.session_state["project_uuid"])
                 width, height = project_setting.width, project_setting.height
             else:
                 # Default dimensions for new project
-                width, height = 512, 512        
-            # Apply zoom and crop based on determined dimensions            
-            file = zoom_and_crop(file, width, height)     
+                width, height = 512, 512
+            # Apply zoom and crop based on determined dimensions
+            file = zoom_and_crop(file, width, height)
 
         if SERVER != ServerType.DEVELOPMENT.value:
             file_bytes = BytesIO()
             file.save(file_bytes, format=file_ext)
             file_bytes.seek(0)
 
-            uploaded_url = data_repo.upload_file(file_bytes, '.' + file_ext)
+            uploaded_url = data_repo.upload_file(file_bytes, "." + file_ext)
         else:
             os.makedirs(os.path.dirname(path), exist_ok=True)
             if file_type == "image":
@@ -65,16 +65,17 @@ def save_or_host_file(file, path, mime_type='image/png', dim=None):
 
     return uploaded_url
 
+
 def zoom_and_crop(file, width, height):
     if file.width == width and file.height == height:
-        return file    
+        return file
     # scaling
     s_x = width / file.width
     s_y = height / file.height
     scale = max(s_x, s_y)
     new_width = int(file.width * scale)
     new_height = int(file.height * scale)
-    file = file.resize((new_width, new_height))    
+    file = file.resize((new_width, new_height))
 
     # cropping
     left = (file.width - width) // 2
@@ -85,32 +86,33 @@ def zoom_and_crop(file, width, height):
 
     return file
 
+
 # resizes file dimensions to current project_settings
 def normalize_size_internal_file_obj(file_obj: InternalFileObject, **kwargs):
     if not file_obj or file_obj.type != InternalFileType.IMAGE.value or not file_obj.project:
         return file_obj
-    
+
     data_repo = DataRepo()
 
-    if 'dim' in kwargs:
-        dim = kwargs['dim']
+    if "dim" in kwargs:
+        dim = kwargs["dim"]
     else:
         project_setting = data_repo.get_project_setting(file_obj.project.uuid)
         dim = (project_setting.width, project_setting.height)
 
-    create_new_file = True if 'create_new_file' in kwargs \
-        and kwargs['create_new_file'] else False
+    create_new_file = True if "create_new_file" in kwargs and kwargs["create_new_file"] else False
 
     if create_new_file:
         file_obj = create_duplicate_file(file_obj)
-    
+
     pil_file = generate_pil_image(file_obj.location)
-    uploaded_url = save_or_host_file(pil_file, file_obj.location, mime_type='image/png', dim=dim)
+    uploaded_url = save_or_host_file(pil_file, file_obj.location, mime_type="image/png", dim=dim)
     if uploaded_url:
         data_repo = DataRepo()
         data_repo.update_file(file_obj.uuid, hosted_url=uploaded_url)
-    
+
     return file_obj
+
 
 def save_or_host_file_bytes(video_bytes, path, ext=".mp4"):
     uploaded_url = None
@@ -119,10 +121,11 @@ def save_or_host_file_bytes(video_bytes, path, ext=".mp4"):
         uploaded_url = data_repo.upload_file(video_bytes, ext)
     else:
         os.makedirs(os.path.dirname(path), exist_ok=True)
-        with open(path, 'wb') as f:
+        with open(path, "wb") as f:
             f.write(video_bytes)
-    
+
     return uploaded_url
+
 
 def add_temp_file_to_project(project_uuid, key, file_path):
     data_repo = DataRepo()
@@ -130,35 +133,34 @@ def add_temp_file_to_project(project_uuid, key, file_path):
     file_data = {
         "name": str(uuid.uuid4()) + ".png",
         "type": InternalFileType.IMAGE.value,
-        "project_id": project_uuid
+        "project_id": project_uuid,
     }
 
-    if file_path.startswith('http'):
-        file_data.update({'hosted_url': file_path})
+    if file_path.startswith("http"):
+        file_data.update({"hosted_url": file_path})
     else:
-        file_data.update({'local_path': file_path})
+        file_data.update({"local_path": file_path})
 
     temp_file = data_repo.create_file(**file_data)
     project = data_repo.get_project_from_uuid(project_uuid)
     temp_file_list = project.project_temp_file_list
     temp_file_list.update({key: temp_file.uuid})
     temp_file_list = json.dumps(temp_file_list)
-    project_data = {
-        'uuid': project_uuid,
-        'temp_file_list': temp_file_list
-    }
+    project_data = {"uuid": project_uuid, "temp_file_list": temp_file_list}
     data_repo.update_project(**project_data)
+
 
 def generate_temp_file(url, ext=".mp4"):
     response = requests.get(url)
     if not response.ok:
         raise ValueError(f"Could not download video from URL: {url}")
 
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=ext, mode='wb')
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=ext, mode="wb")
     temp_file.write(response.content)
     temp_file.close()
 
     return temp_file
+
 
 def generate_pil_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO]):
     # Check if img is a PIL image
@@ -184,9 +186,11 @@ def generate_pil_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO]):
 
     else:
         raise ValueError(
-            "Invalid image input. Must be a PIL image, a URL string, a local file path string or a numpy ndarray.")
+            "Invalid image input. Must be a PIL image, a URL string, a local file path string or a numpy ndarray."
+        )
 
     return img
+
 
 def generate_temp_file_from_uploaded_file(uploaded_file):
     if uploaded_file is not None:
@@ -194,28 +198,36 @@ def generate_temp_file_from_uploaded_file(uploaded_file):
             temp_file.write(uploaded_file.read())
             return temp_file
 
-def convert_bytes_to_file(file_location_to_save, mime_type, file_bytes, project_uuid, inference_log_id=None, filename=None, tag="") -> InternalFileObject:
+
+def convert_bytes_to_file(
+    file_location_to_save, mime_type, file_bytes, project_uuid, inference_log_id=None, filename=None, tag=""
+) -> InternalFileObject:
     data_repo = DataRepo()
 
     hosted_url = save_or_host_file_bytes(file_bytes, file_location_to_save, "." + mime_type.split("/")[1])
     file_data = {
         "name": str(uuid.uuid4()) + "." + mime_type.split("/")[1] if not filename else filename,
-        "type": InternalFileType.VIDEO.value if 'video' in mime_type else (InternalFileType.AUDIO.value if 'audio' in mime_type else InternalFileType.IMAGE.value),
+        "type": (
+            InternalFileType.VIDEO.value
+            if "video" in mime_type
+            else (InternalFileType.AUDIO.value if "audio" in mime_type else InternalFileType.IMAGE.value)
+        ),
         "project_id": project_uuid,
-        "tag": tag
+        "tag": tag,
     }
 
     if inference_log_id:
-        file_data.update({'inference_log_id': str(inference_log_id)})
+        file_data.update({"inference_log_id": str(inference_log_id)})
 
     if hosted_url:
-        file_data.update({'hosted_url': hosted_url})
+        file_data.update({"hosted_url": hosted_url})
     else:
-        file_data.update({'local_path': file_location_to_save})
+        file_data.update({"local_path": file_location_to_save})
 
     file = data_repo.create_file(**file_data)
 
     return file
+
 
 def convert_file_to_base64(fh: io.IOBase) -> str:
     fh.seek(0)
@@ -231,20 +243,26 @@ def convert_file_to_base64(fh: io.IOBase) -> str:
     s = encoded_body.decode("utf-8")
     return f"data:{mime_type};base64,{s}"
 
+
 def resize_io_buffers(io_buffer, target_width, target_height, format="PNG"):
     input_image = Image.open(io_buffer)
     input_image = input_image.resize((target_width, target_height), Image.ANTIALIAS)
     output_image_buffer = io.BytesIO()
-    input_image.save(output_image_buffer, format='PNG')
+    input_image.save(output_image_buffer, format="PNG")
     return output_image_buffer
 
-ENV_FILE_PATH = '.env'
+
+ENV_FILE_PATH = ".env"
+
+
 def save_to_env(key, value):
     set_key(dotenv_path=ENV_FILE_PATH, key_to_set=key, value_to_set=value)
+
 
 def load_from_env(key):
     val = get_key(dotenv_path=ENV_FILE_PATH, key_to_get=key)
     return val
+
 
 import zipfile
 import os
@@ -252,11 +270,12 @@ import requests
 from PIL import Image
 from io import BytesIO
 
-def zip_images(image_locations, zip_filename='images.zip', filename_list=[]):
+
+def zip_images(image_locations, zip_filename="images.zip", filename_list=[]):
     # Calculate the number of digits needed for padding
     num_digits = len(str(len(image_locations) - 1))
 
-    with zipfile.ZipFile(zip_filename, 'w') as zip_file:
+    with zipfile.ZipFile(zip_filename, "w") as zip_file:
         for idx, image_location in enumerate(image_locations):
             # Pad the index with zeros
             padded_idx = str(idx).zfill(num_digits)
@@ -265,56 +284,57 @@ def zip_images(image_locations, zip_filename='images.zip', filename_list=[]):
             else:
                 image_name = f"{padded_idx}.png"
 
-            if image_location.startswith('http'):
+            if image_location.startswith("http"):
                 response = requests.get(image_location)
                 image_data = response.content
 
                 # Open the image for inspection and possible conversion
                 with Image.open(BytesIO(image_data)) as img:
-                    if img.mode != 'RGB':
-                        img = img.convert('RGB')
-                    
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
+
                     # Save the potentially converted image to a byte stream
                     with BytesIO() as output:
-                        img.save(output, format='PNG')
+                        img.save(output, format="PNG")
                         zip_file.writestr(image_name, output.getvalue())
             else:
                 # For local files, open, possibly convert, and then add to zip
                 with Image.open(image_location) as img:
-                    if img.mode != 'RGB':
-                        img = img.convert('RGB')
-                    
-                    img.save(image_name, format='PNG')
+                    if img.mode != "RGB":
+                        img = img.convert("RGB")
+
+                    img.save(image_name, format="PNG")
                     zip_file.write(image_name, image_name)
                     os.remove(image_name)  # Clean up the temporary file
 
     return zip_filename
 
+
 def create_duplicate_file(file: InternalFileObject, project_uuid=None) -> InternalFileObject:
     data_repo = DataRepo()
 
-    unique_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=5))
+    unique_id = "".join(random.choices(string.ascii_lowercase + string.digits, k=5))
     file_data = {
-        "name": unique_id + '_' + file.name,
+        "name": unique_id + "_" + file.name,
         "type": file.type,
     }
 
     if file.hosted_url:
-        file_data.update({'hosted_url': file.hosted_url})
-    
+        file_data.update({"hosted_url": file.hosted_url})
+
     if file.local_path:
-        file_data.update({'local_path': file.local_path})
+        file_data.update({"local_path": file.local_path})
 
     if file.project:
-        file_data.update({'project_id': file.project.uuid})
+        file_data.update({"project_id": file.project.uuid})
     elif project_uuid:
-        file_data.update({'project_id': project_uuid})
+        file_data.update({"project_id": project_uuid})
 
     if file.tag:
-        file_data.update({'tag': file.tag})
+        file_data.update({"tag": file.tag})
 
     if file.inference_log:
-        file_data.update({'inference_log_id': str(file.inference_log.uuid)})
+        file_data.update({"inference_log_id": str(file.inference_log.uuid)})
 
     new_file = data_repo.create_file(**file_data)
     return new_file
@@ -358,12 +378,14 @@ def determine_dimensions_for_sdxl(width, height):
         else:
             return 896, 1152
 
+
 def list_files_in_folder(folder_path):
     files = []
     for file in os.listdir(folder_path):
         if os.path.isfile(os.path.join(folder_path, file)):
             files.append(file)
     return files
+
 
 def get_file_bytes_and_extension(path_or_url):
     try:
@@ -374,25 +396,26 @@ def get_file_bytes_and_extension(path_or_url):
             file_bytes = response.content
             parsed_url = urlparse(path_or_url)
             filename, file_extension = os.path.splitext(parsed_url.path)
-            file_extension = file_extension.lstrip('.')
+            file_extension = file_extension.lstrip(".")
         else:
             # Local file path
-            with open(path_or_url, 'rb') as file:
+            with open(path_or_url, "rb") as file:
                 file_bytes = file.read()
             filename, file_extension = os.path.splitext(path_or_url)
-            file_extension = file_extension.lstrip('.')
-        
+            file_extension = file_extension.lstrip(".")
+
         return file_bytes, file_extension
     except Exception as e:
         print("Error:", e)
         return None, None
+
 
 # adds a white border around the polygon to minimize irregularities
 def detect_and_draw_contour(image):
     # Convert PIL Image to OpenCV format (BGR)
     img_np = np.array(image)
     img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
-    
+
     # Convert image to grayscale
     g = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
 
@@ -424,15 +447,16 @@ def detect_and_draw_contour(image):
     # Convert the modified image back to PIL format (RGB)
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
     output_image = Image.fromarray(img_rgb)
-    
+
     return output_image
+
 
 def get_file_size(file_path):
     file_size = 0
-    if file_path.startswith('http://') or file_path.startswith('https://'):
+    if file_path.startswith("http://") or file_path.startswith("https://"):
         response = requests.head(file_path)
         if response.status_code == 200:
-            file_size = int(response.headers.get('content-length', 0))
+            file_size = int(response.headers.get("content-length", 0))
         else:
             print("Failed to fetch file from URL:", file_path)
     else:
@@ -440,12 +464,13 @@ def get_file_size(file_path):
             file_size = os.path.getsize(file_path)
         else:
             print("File does not exist:", file_path)
-    
+
     return int(file_size / (1024 * 1024))
+
 
 def get_media_dimensions(media_path):
     try:
-        if media_path.endswith(('.mp4', '.avi', '.mov', '.mkv')):
+        if media_path.endswith((".mp4", ".avi", ".mov", ".mkv")):
             video_clip = VideoFileClip(media_path)
             width = video_clip.size[0]
             height = video_clip.size[1]
@@ -458,14 +483,15 @@ def get_media_dimensions(media_path):
         print(f"Error: {e}")
         return None
 
+
 # fetches all the files (including subfolders) in a directory
 def get_files_in_a_directory(directory, ext_list=[]):
     res = []
-    
+
     if os.path.exists(directory):
         for root, _, files in os.walk(directory):
             for file in files:
                 if ext_list and len(ext_list) and file.split(".")[-1] in ext_list:
-                    res.append(file)  #(os.path.join(root, file))
-                
+                    res.append(file)  # (os.path.join(root, file))
+
     return res

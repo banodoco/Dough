@@ -1,4 +1,3 @@
-
 import os
 import tempfile
 import streamlit as st
@@ -8,7 +7,15 @@ from PIL import Image
 import uuid
 import urllib
 from backend.models import InternalFileObject
-from shared.constants import GPU_INFERENCE_ENABLED, QUEUE_INFERENCE_QUERIES, SERVER, AIModelCategory, InferenceType, InternalFileType, ServerType
+from shared.constants import (
+    GPU_INFERENCE_ENABLED,
+    QUEUE_INFERENCE_QUERIES,
+    SERVER,
+    AIModelCategory,
+    InferenceType,
+    InternalFileType,
+    ServerType,
+)
 from ui_components.constants import MASK_IMG_LOCAL_PATH, TEMP_MASK_FILE
 from ui_components.methods.common_methods import combine_mask_and_input_image, process_inference_output
 from ui_components.methods.file_methods import save_or_host_file
@@ -23,18 +30,18 @@ from utils.ml_processor.constants import ML_MODEL, MLModel
 # def trigger_restyling_process(timing_uuid, update_inference_settings, \
 #                               transformation_stage, promote_new_generation, **kwargs):
 #     data_repo = DataRepo()
-    
+
 #     timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 #     project_settings: InternalSettingObject = data_repo.get_project_setting(timing.shot.project.uuid)
-    
+
 #     source_image = timing.source_image if transformation_stage == ImageStage.SOURCE_IMAGE.value else \
 #                             timing.primary_image
 
 #     query_obj = MLQueryObject(
-#         timing_uuid, 
-#         image_uuid=source_image.uuid if 'add_image_in_params' in kwargs and kwargs['add_image_in_params'] else None, 
-#         width=project_settings.width, 
-#         height=project_settings.height, 
+#         timing_uuid,
+#         image_uuid=source_image.uuid if 'add_image_in_params' in kwargs and kwargs['add_image_in_params'] else None,
+#         width=project_settings.width,
+#         height=project_settings.height,
 #         **kwargs
 #     )
 
@@ -83,7 +90,7 @@ from utils.ml_processor.constants import ML_MODEL, MLModel
 #         elif adapter_type == "hed":
 #             model = ML_MODEL.jagilley_controlnet_hed
 #         elif adapter_type == "scribble":
-#             model = ML_MODEL.jagilley_controlnet_scribble 
+#             model = ML_MODEL.jagilley_controlnet_scribble
 #         elif adapter_type == "seg":
 #             model = ML_MODEL.jagilley_controlnet_seg
 #         elif adapter_type == "hough":
@@ -111,9 +118,9 @@ from utils.ml_processor.constants import ML_MODEL, MLModel
 #     if not model_uuid:
 #         st.error('No dreambooth model selected')
 #         return
-    
+
 #     dreambooth_model: InternalAIModelObject = data_repo.get_ai_model_from_uuid(model_uuid)
-    
+
 #     model_name = dreambooth_model.name
 #     model_id = dreambooth_model.replicate_url
 
@@ -188,14 +195,17 @@ from utils.ml_processor.constants import ML_MODEL, MLModel
 #         emotion = (f"neutral expression")
 #     return emotion
 
+
 # NOTE: don't update max_step, its logic is hardcoded at the moment
-def train_motion_lora(input_video: InternalFileObject, lora_prompt: str, lora_name: str, width, height, ckpt, max_step = 500):
+def train_motion_lora(
+    input_video: InternalFileObject, lora_prompt: str, lora_name: str, width, height, ckpt, max_step=500
+):
     query_obj = MLQueryObject(
         timing_uuid=None,
         model_uuid=None,
         guidance_scale=7.5,
         seed=-1,
-        num_inference_steps=25,            
+        num_inference_steps=25,
         strength=0.7,
         adapter_type=None,
         prompt=lora_prompt,
@@ -206,19 +216,12 @@ def train_motion_lora(input_video: InternalFileObject, lora_prompt: str, lora_na
         high_threshold=200,
         image_uuid=None,
         mask_uuid=None,
-        data={
-            "file_video":  input_video.uuid,
-            "max_step": max_step,
-            "lora_name": lora_name,
-            "ckpt": ckpt
-        }
+        data={"file_video": input_video.uuid, "max_step": max_step, "lora_name": lora_name, "ckpt": ckpt},
     )
-    
+
     ml_client = get_ml_client()
     output, log = ml_client.predict_model_output_standardized(
-        ML_MODEL.motion_lora_trainer, 
-        query_obj,
-        QUEUE_INFERENCE_QUERIES
+        ML_MODEL.motion_lora_trainer, query_obj, QUEUE_INFERENCE_QUERIES
     )
 
     if log:
@@ -226,14 +229,17 @@ def train_motion_lora(input_video: InternalFileObject, lora_prompt: str, lora_na
             "inference_type": InferenceType.MOTION_LORA_TRAINING.value,
             "output": output,
             "log_uuid": log.uuid,
-            "settings": {}
+            "settings": {},
         }
-        
+
         process_inference_output(**inference_data)
 
-def inpainting(input_image: str, prompt, negative_prompt, width, height, shot_uuid, project_uuid) -> InternalFileObject:
+
+def inpainting(
+    input_image: str, prompt, negative_prompt, width, height, shot_uuid, project_uuid
+) -> InternalFileObject:
     data_repo = DataRepo()
-    mask = st.session_state['mask_to_use']
+    mask = st.session_state["mask_to_use"]
 
     if not mask.startswith("http"):
         mask = open(mask, "rb")
@@ -246,33 +252,31 @@ def inpainting(input_image: str, prompt, negative_prompt, width, height, shot_uu
         model_uuid=None,
         guidance_scale=7.5,
         seed=-1,
-        num_inference_steps=25,            
+        num_inference_steps=25,
         strength=0.7,
         adapter_type=None,
         prompt=prompt,
         negative_prompt=negative_prompt,
         width=width,
         height=height,
-        
         low_threshold=100,  # update these default values
         high_threshold=200,
         image_uuid=None,
         mask_uuid=None,
         data={
-            "input_image": st.session_state['editing_image'],
-            "mask": st.session_state['mask_to_use'] ,
+            "input_image": st.session_state["editing_image"],
+            "mask": st.session_state["mask_to_use"],
             "shot_uuid": shot_uuid,
-        }
+        },
     )
 
     ml_client = get_ml_client()
     output, log = ml_client.predict_model_output_standardized(
-        ML_MODEL.sdxl_inpainting, 
-        query_obj,
-        QUEUE_INFERENCE_QUERIES
+        ML_MODEL.sdxl_inpainting, query_obj, QUEUE_INFERENCE_QUERIES
     )
 
     return output, log
+
 
 # NOTE: code not is use
 # def remove_background(input_image):
@@ -287,7 +291,7 @@ def inpainting(input_image: str, prompt, negative_prompt, width, height, shot_uu
 # NOTE: code not is use
 # def create_depth_mask_image(input_image, layer, timing_uuid):
 #     from ui_components.methods.common_methods import create_or_update_mask
-    
+
 #     if not input_image.startswith("http"):
 #         input_image = open(input_image, "rb")
 
@@ -361,19 +365,20 @@ def inpainting(input_image: str, prompt, negative_prompt, width, height, shot_uu
 
 #     return prompt
 
+
 def query_llama2(prompt, temperature):
     ml_client = get_ml_client()
-    input={
-            "debug": False,
-            "top_k": 250,
-            "top_p": 0.95,
-            "prompt": prompt,
-            "temperature": temperature,
-            "max_new_tokens": 30,
-            "min_new_tokens": -1,
-            "stop_sequences": "\n"
-        }
-    
+    input = {
+        "debug": False,
+        "top_k": 250,
+        "top_p": 0.95,
+        "prompt": prompt,
+        "temperature": temperature,
+        "max_new_tokens": 30,
+        "min_new_tokens": -1,
+        "stop_sequences": "\n",
+    }
+
     output, log = ml_client.predict_model_output(ML_MODEL.llama_2_7b, **input)
     result = ""
     for item in output:

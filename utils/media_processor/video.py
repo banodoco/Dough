@@ -2,17 +2,18 @@ import os
 import tempfile
 from moviepy.editor import VideoFileClip, vfx
 
+
 class VideoProcessor:
     @staticmethod
     def update_video_speed(video_location, desired_duration):
         clip = VideoFileClip(video_location)
 
         return VideoProcessor.update_clip_speed(clip, desired_duration)
-    
+
     @staticmethod
     def update_video_bytes_speed(video_bytes, desired_duration):
         # Use a context manager for the temporary file to ensure it's deleted when done
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb') as temp_file:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode="wb") as temp_file:
             temp_file.write(video_bytes)
             temp_file_path = temp_file.name  # Store the file name to delete later
 
@@ -28,7 +29,7 @@ class VideoProcessor:
     @staticmethod
     def update_clip_speed(clip: VideoFileClip, desired_duration):
         # Use a context manager to ensure temporary file for output is deleted when done
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode='wb') as temp_output_file:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4", mode="wb") as temp_output_file:
             temp_output_path = temp_output_file.name  # Store the file name for later use
 
         # if animation_style == AnimationStyleType.DIRECT_MORPHING.value:
@@ -50,7 +51,6 @@ class VideoProcessor:
 
         #     output_clip.write_videofile(filename=temp_output_file.name, codec="libx265")
 
-
         # Apply desired video speed change and write to the temporary output file
         input_video_duration = clip.duration
         desired_speed_change = float(input_video_duration) / float(desired_duration)
@@ -59,7 +59,7 @@ class VideoProcessor:
         output_clip.write_videofile(filename=temp_output_path, codec="libx264", preset="fast")
 
         # Read the processed video bytes from the temporary output file
-        with open(temp_output_path, 'rb') as f:
+        with open(temp_output_path, "rb") as f:
             video_bytes = f.read()
 
         # Now it's safe to delete the output temp file since its content is already read
