@@ -144,8 +144,8 @@ def animation_sidebar(
                     elif editable_entity == "Speed of transitions":
                         entity_new_val = st.slider(
                             "What would you like to change it to?",
-                            min_value=0.45,
-                            max_value=0.7,
+                            min_value=0.2,
+                            max_value=0.8,
                             step=0.01,
                             value=0.6,
                             key="entity_new_val_speed",
@@ -165,7 +165,7 @@ def animation_sidebar(
                             min_value=0.5,
                             max_value=1.5,
                             step=0.01,
-                            value=1.3,
+                            value=1.0,
                             key="entity_new_val_motion",
                         )
 
