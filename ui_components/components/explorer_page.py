@@ -638,9 +638,9 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     # by default only showing explorer views
     k1, k2 = st.columns([5, 1])
 
-    if sidebar != True:
-        if shortlist is False:
-            f1, f2 = st.columns([1, 1])
+    if not sidebar:
+        # if this is not the shortlist view then allowing people to choose items per page and num cols
+        if not shortlist:
             with h2:
                 num_columns = st_memory.slider(
                     "Number of columns:", min_value=3, max_value=7, value=4, key="num_columns_explorer"
@@ -653,6 +653,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             num_items_per_page = 4
             num_columns = 2
 
+        # selecting specific shot for adding to the filter
         if "shot_chooser" in view:
             with h1:
                 shot_chooser_1, shot_chooser_2 = st.columns([1, 1])
@@ -695,7 +696,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         else:
             shot_uuid_list = []
 
-        if shortlist is False:
+        if not shortlist:
             with h1:
                 page_number = st.radio(
                     "Select page:",
@@ -723,7 +724,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         project_setting = data_repo.get_project_setting(project_uuid)
         page_number = k1.radio(
             "Select page",
-            options=range(1, project_setting.total_shortlist_gallery_pages),
+            options=range(1, project_setting.total_shortlist_gallery_pages + 1),
             horizontal=True,
             key="shortlist_gallery",
         )
