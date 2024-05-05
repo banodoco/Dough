@@ -67,6 +67,8 @@ def project_init():
     if not os.path.exists("ComfyUI"):
         app_logger.log(LoggingType.DEBUG, "cloning comfy repo")
         Repo.clone_from(comfy_repo_url, "ComfyUI")
+        time.sleep(0.7)
+        
 
     # updating extra_model_path.yaml
     if COMFY_BASE_PATH != "ComfyUI":
@@ -96,7 +98,7 @@ def project_init():
             print(f"File {file_path} has been deleted.")
         except OSError as e:
             pass
-
+    
     if not os.path.exists("./ComfyUI/custom_nodes/ComfyUI-Manager"):
         os.chdir("./ComfyUI/custom_nodes/")
         Repo.clone_from(comfy_manager_url, "ComfyUI-Manager")
