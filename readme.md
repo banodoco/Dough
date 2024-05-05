@@ -1,4 +1,4 @@
-# Welcome to Dough v. 0.9.0 (beta)
+# Welcome to Dough v. 0.9.1 (beta)
 
 **⬇️ Scroll down for Setup Instructions - Currently available on Linux & Windows, hosted version coming soon.**
 
