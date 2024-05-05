@@ -94,7 +94,7 @@ def generate_images_element(position='explorer', project_uuid=None, timing_uuid=
                             st.session_state[f"uploaded_image_{output_value_name}"] = f"0_{output_value_name}"
                             
                         if source_of_starting_image == "Upload":
-                            uploaded_image = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg"], key=st.session_state[f"uploaded_image_{output_value_name}"], help="This will be the base image for the generation.")
+                            uploaded_image = st.file_uploader("Upload a starting image", type=["png", "jpg", "jpeg", "webp"], key=st.session_state[f"uploaded_image_{output_value_name}"], help="This will be the base image for the generation.")
                             if uploaded_image:
                                 uploaded_image = Image.open(uploaded_image) if not isinstance(uploaded_image, Image.Image) else uploaded_image
                                 uploaded_image = zoom_and_crop(uploaded_image, project_settings.width, project_settings.height)
