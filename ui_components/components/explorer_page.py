@@ -596,7 +596,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                         add_key_frame(gallery_image_list[i + j], shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False, update_cur_frame_idx=False)
                                         # removing this from the gallery view
                                         data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                        st.session_state[f"move_frame_mode_{shot_uuid}"] = False
+                                        st.session_state[f"open_frame_changer_{shot_uuid}"] = False
                                         refresh_app(maintain_state=True)       
                                                
                         # else:
