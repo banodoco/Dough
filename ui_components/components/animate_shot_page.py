@@ -95,7 +95,14 @@ def video_rendering_page(shot_uuid, selected_variant):
                 
             data_repo.bulk_create_timing(new_timing_data)
     
-    img_list = data_repo.get_all_file_list(uuid__in=file_uuid_list, file_type=InternalFileType.IMAGE.value)[0]    
+    img_list = data_repo.get_all_file_list(uuid__in=file_uuid_list, file_type=InternalFileType.IMAGE.value)[0]
+    
+    # fixing the order of imgs
+    file_uuid_img_dict = {img.uuid: img for img in img_list}
+    img_list = []
+    for uuid in file_uuid_list:
+        if uuid in file_uuid_img_dict:
+            img_list.append(file_uuid_img_dict[uuid])
     
     headline1, _, headline3 = st.columns([1, 1, 1])
     with headline1:
