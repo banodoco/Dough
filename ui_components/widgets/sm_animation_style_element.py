@@ -917,8 +917,8 @@ def individual_frame_settings_element(shot_uuid, img_list, display_indent):
                             distances_to_next_frames.append(distance_to_next_frame / 2)
                             speed_of_transition = st.slider(
                                 "Speed of transition:",
-                                min_value=0.45,
-                                max_value=0.7,
+                                min_value=0.2,
+                                max_value=0.8,
                                 step=0.01,
                                 key=f"speed_of_transition_widget_{idx}_{img.uuid}",
                                 value=st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"],

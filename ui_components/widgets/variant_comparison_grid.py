@@ -311,7 +311,7 @@ def variant_inference_detail_element(
                 st.rerun()
 
         if open_data:
-            with st.expander("Settings", expanded=False):
+            with st.expander("Settings", expanded=True):
                 shot_meta_data, data_type = get_generation_settings_from_log(variant.inference_log.uuid)
                 if shot_meta_data and shot_meta_data.get("main_setting_data", None):
                     st.markdown("##### Main settings ---")

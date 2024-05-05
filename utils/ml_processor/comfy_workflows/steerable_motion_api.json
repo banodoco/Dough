@@ -78,7 +78,10 @@
   },
   "354": {
     "inputs": {
-      "split_index": 3,
+      "split_index": [
+        "558",
+        6
+      ],
       "images": [
         "207",
         5
@@ -89,6 +92,51 @@
       "title": "Split Image Batch 🎥🅥🅗🅢"
     }
   },
+  "614": {
+    "inputs": {
+      "images": [
+        "354",
+        2
+      ]
+    },
+    "class_type": "VHS_GetImageCount",
+    "_meta": {
+      "title": "Get Image Count 🎥🅥🅗🅢"
+    }
+  },
+  "615": {
+    "inputs": {
+      "split_index": [
+        "616",
+        0
+      ],
+      "images": [
+        "354",
+        2
+      ]
+    },
+    "class_type": "VHS_SplitImages",
+    "_meta": {
+      "title": "Split Image Batch 🎥🅥🅗🅢"
+    }
+  },
+  "616": {
+    "inputs": {
+      "value": "a-b",
+      "a": [
+        "614",
+        0
+      ],
+      "b": [
+        "558",
+        6
+      ]
+    },
+    "class_type": "SimpleMath+",
+    "_meta": {
+      "title": "🔧 Simple Math"
+    }
+  },  
   "369": {
     "inputs": {
       "ipadapter_file": "ip-adapter-plus_sd15.bin"
@@ -419,8 +467,8 @@
       "clear_cache_after_n_frames": 10,
       "multiplier": 2,
       "frames": [
-        "354",
-        2
+        "615",
+        0
       ]
     },
     "class_type": "FILM VFI",
