@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0009_log_status_added'),
+        ("backend", "0009_log_status_added"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='project',
-            name='meta_data',
+            model_name="project",
+            name="meta_data",
             field=models.TextField(default=None, null=True),
         ),
     ]

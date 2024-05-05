@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0012_shot_added_and_redundant_fields_removed'),
+        ("backend", "0012_shot_added_and_redundant_fields_removed"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='inferencelog',
-            name='model_name',
-            field=models.CharField(blank=True, default='', max_length=512),
+            model_name="inferencelog",
+            name="model_name",
+            field=models.CharField(blank=True, default="", max_length=512),
         ),
         migrations.AddField(
-            model_name='internalfileobject',
-            name='shot_uuid',
-            field=models.CharField(blank=True, default='', max_length=255),
+            model_name="internalfileobject",
+            name="shot_uuid",
+            field=models.CharField(blank=True, default="", max_length=255),
         ),
     ]

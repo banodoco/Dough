@@ -2,6 +2,7 @@ import time
 import streamlit as st
 from streamlit import runtime
 
+
 def count_calls(cls):
     class Wrapper(cls):
         def __init__(self, *args, **kwargs):
@@ -11,7 +12,7 @@ def count_calls(cls):
 
         def __getattribute__(self, name):
             attr = super().__getattribute__(name)
-            if callable(attr) and name not in ['__getattribute__', 'call_counts', 'total_count']:
+            if callable(attr) and name not in ["__getattribute__", "call_counts", "total_count"]:
                 if name not in self.call_counts:
                     self.call_counts[name] = 0
 
@@ -26,27 +27,32 @@ def count_calls(cls):
 
     return Wrapper
 
+
 def log_time(func):
     def wrapper(*args, **kwargs):
         start_time = time.time()
         result = func(*args, **kwargs)
         end_time = time.time()
         execution_time = end_time - start_time
-        print(f"{args[1] if args and len(args) >= 2 else kwargs['url']} took {execution_time:.4f} seconds to execute.")
+        print(
+            f"{args[1] if args and len(args) >= 2 else kwargs['url']} took {execution_time:.4f} seconds to execute."
+        )
         return result
+
     return wrapper
+
 
 def measure_execution_time(cls):
     class WrapperClass:
         def __init__(self, *args, **kwargs):
             self.wrapped_instance = cls(*args, **kwargs)
-        
+
         def __getattr__(self, name):
             attr = getattr(self.wrapped_instance, name)
             if callable(attr):
                 return self.measure_method_execution(attr)
             return attr
-        
+
         def measure_method_execution(self, method):
             def wrapper(*args, **kwargs):
                 start_time = time.time()
@@ -55,9 +61,11 @@ def measure_execution_time(cls):
                 execution_time = end_time - start_time
                 print(f"Execution time of {method.__name__}: {execution_time} seconds")
                 return result
+
             return wrapper
-    
+
     return WrapperClass
+
 
 def session_state_attributes(default_value_cls):
     def decorator(cls):
@@ -73,7 +81,7 @@ def session_state_attributes(default_value_cls):
                 return st.session_state[key] if runtime.exists() else getattr(default_value_cls, attr)
             else:
                 return original_getattr(self, attr)
-            
+
         def custom_setattr(self, attr, value):
             if hasattr(default_value_cls, attr):
                 key = f"{self.uuid}_{attr}"

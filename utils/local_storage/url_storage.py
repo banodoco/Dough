@@ -9,11 +9,12 @@ def get_url_param(key):
         res = val[0]
     else:
         res = val
-    
-    if not res and ( key in st.session_state and st.session_state[key]):
+
+    if not res and (key in st.session_state and st.session_state[key]):
         set_url_param(key, st.session_state[key])
         return st.session_state[key]
     return res
+
 
 def set_url_param(key, value):
     st.session_state[key] = value

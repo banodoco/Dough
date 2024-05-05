@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0003_custom_trained_model_check_added'),
+        ("backend", "0003_custom_trained_model_check_added"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='user',
-            name='total_credits',
+            model_name="user",
+            name="total_credits",
             field=models.FloatField(default=0),
         ),
     ]
