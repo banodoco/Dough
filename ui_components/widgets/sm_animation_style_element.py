@@ -153,10 +153,10 @@ def animation_sidebar(
                     elif editable_entity == "Freedom between frames":
                         entity_new_val = st.slider(
                             "What would you like to change it to?",
-                            min_value=0.15,
-                            max_value=0.85,
+                            min_value=0.00,
+                            max_value=1.0,
                             step=0.01,
-                            value=0.5,
+                            value=1.0,
                             key="entity_new_val_freedom",
                         )
                     elif editable_entity == "Motion during frames":
@@ -816,7 +816,7 @@ def individual_frame_settings_element(shot_uuid, img_list, display_indent):
         st.session_state[f"lora_data_{shot_uuid}"] = []
 
     if f"strength_of_adherence_value_{shot_uuid}" not in st.session_state:
-        st.session_state[f"strength_of_adherence_value_{shot_uuid}"] = 0.25
+        st.session_state[f"strength_of_adherence_value_{shot_uuid}"] = 0.3
 
     if f"type_of_motion_context_index_{shot_uuid}" not in st.session_state:
         st.session_state[f"type_of_motion_context_index_{shot_uuid}"] = 1
@@ -831,7 +831,7 @@ def individual_frame_settings_element(shot_uuid, img_list, display_indent):
         st.session_state[f"ckpt_{shot_uuid}"] = ""
 
     if f"amount_of_motion_{shot_uuid}" not in st.session_state:
-        st.session_state[f"amount_of_motion_{shot_uuid}"] = 1.3
+        st.session_state[f"amount_of_motion_{shot_uuid}"] = 1.25
 
     # loading settings of the last shot (if this shot is being loaded for the first time)
     if f"strength_of_frame_{shot_uuid}_0" not in st.session_state:
@@ -926,8 +926,8 @@ def individual_frame_settings_element(shot_uuid, img_list, display_indent):
                             speeds_of_transitions.append(speed_of_transition)
                             freedom_between_frames = st.slider(
                                 "Freedom between frames:",
-                                min_value=0.15,
-                                max_value=0.85,
+                                min_value=0.0,
+                                max_value=1.0,
                                 step=0.01,
                                 key=f"freedom_between_frames_widget_{idx}_{img.uuid}",
                                 value=st.session_state[f"freedom_between_frames_{shot_uuid}_{idx}"],
