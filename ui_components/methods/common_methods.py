@@ -413,8 +413,8 @@ def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
     # promoting variant
     variant_to_promote = timing.alternative_images_list[variant_to_promote_frame_number]
     data_repo.update_specific_timing(
-        timing_uuid, primary_image_id=variant_to_promote.uuid, update_in_place=True
-    )
+        timing_uuid, primary_image_id=variant_to_promote.uuid
+    )  # removing the update_in_place arg for now
     _ = data_repo.get_timing_list_from_shot(timing.shot.uuid)
 
 
