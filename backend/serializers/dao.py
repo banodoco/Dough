@@ -3,13 +3,15 @@ from rest_framework import serializers
 
 from shared.constants import AIModelCategory, AnimationStyleType, GuidanceType, InternalFileType
 
+
 class CreateUserDao(serializers.Serializer):
     name = serializers.CharField(max_length=100)
     email = serializers.EmailField(max_length=100)
     password = serializers.CharField(max_length=100)
-    type = serializers.CharField(max_length=100, default='user')
+    type = serializers.CharField(max_length=100, default="user")
     third_party_id = serializers.CharField(max_length=100, default=None, required=False)
-    
+
+
 class CreateFileDao(serializers.Serializer):
     name = serializers.CharField(max_length=100)
     type = serializers.ChoiceField(choices=InternalFileType.value_list())
@@ -21,22 +23,23 @@ class CreateFileDao(serializers.Serializer):
     inference_log_id = serializers.CharField(max_length=100, allow_null=True, required=False)
 
     def validate(self, data):
-        local_path = data.get('local_path')
-        hosted_url = data.get('hosted_url')
+        local_path = data.get("local_path")
+        hosted_url = data.get("hosted_url")
 
         if not local_path and not hosted_url:
             raise serializers.ValidationError("At least one of local_path or hosted_url is required.")
 
         return data
-    
+
+
 class CreateProjectDao(serializers.Serializer):
     name = serializers.CharField(max_length=100)
-    user_id = serializers.CharField(max_length=100)     # this is user UUID
+    user_id = serializers.CharField(max_length=100)  # this is user UUID
 
 
 class CreateAIModelDao(serializers.Serializer):
     name = serializers.CharField(max_length=100)
-    user_id = serializers.CharField(max_length=100)     # this is user UUID
+    user_id = serializers.CharField(max_length=100)  # this is user UUID
     custom_trained = serializers.BooleanField(default=False, required=False)
     version = serializers.CharField(max_length=100, allow_null=True, required=False)
     replicate_url = serializers.CharField(max_length=512, allow_blank=True, default="", required=False)
@@ -46,10 +49,11 @@ class CreateAIModelDao(serializers.Serializer):
     keyword = serializers.CharField(max_length=255, default="", allow_blank=True, required=False)
     model_type = serializers.CharField(max_length=None)
 
+
 class UpdateAIModelDao(serializers.Serializer):
     uuid = serializers.CharField(max_length=100)
     name = serializers.CharField(max_length=100, required=False)
-    user_id = serializers.CharField(max_length=100, required=False)     # this is user UUID
+    user_id = serializers.CharField(max_length=100, required=False)  # this is user UUID
     custom_trained = serializers.BooleanField(default=False, required=False)
     version = serializers.CharField(max_length=100, required=False)
     replicate_url = serializers.CharField(max_length=512, default="", required=False)
@@ -90,15 +94,15 @@ class CreateTimingDao(serializers.Serializer):
 
 class CreateAppSettingDao(serializers.Serializer):
     user_id = serializers.CharField(max_length=100)
-    replicate_key = serializers.CharField(max_length=100, default="",required=False)
+    replicate_key = serializers.CharField(max_length=100, default="", required=False)
     aws_access_key = serializers.CharField(max_length=100, required=False)
     previous_project = serializers.CharField(max_length=100, required=False)
-    replicate_username = serializers.CharField(max_length=100, default="",required=False)
+    replicate_username = serializers.CharField(max_length=100, default="", required=False)
     welcome_state = serializers.IntegerField(default=0, required=False)
 
 
 class UpdateAppSettingDao(serializers.Serializer):
-    uuid = serializers.CharField(max_length=100, required=False)    # picking the first app setting by defaults
+    uuid = serializers.CharField(max_length=100, required=False)  # picking the first app setting by defaults
     user_id = serializers.CharField(max_length=100, required=False)
     replicate_key = serializers.CharField(max_length=100, required=False)
     aws_access_key = serializers.CharField(max_length=100, required=False)
@@ -106,6 +110,7 @@ class UpdateAppSettingDao(serializers.Serializer):
     previous_project = serializers.CharField(max_length=100, required=False)
     replicate_username = serializers.CharField(max_length=100, required=False)
     welcome_state = serializers.IntegerField(required=False)
+
 
 class CreateSettingDao(serializers.Serializer):
     project_id = serializers.CharField(max_length=255)

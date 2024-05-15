@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0008_interpolated_clip_list_added'),
+        ("backend", "0008_interpolated_clip_list_added"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='inferencelog',
-            name='status',
-            field=models.CharField(default='', max_length=255),
+            model_name="inferencelog",
+            name="status",
+            field=models.CharField(default="", max_length=255),
         ),
     ]

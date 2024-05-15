@@ -17,21 +17,22 @@ def get_generation_settings_from_log(log_uuid=None):
     log = data_repo.get_inference_log_from_uuid(log_uuid)
     input_params = json.loads(log.input_params) if log.input_params else {}
     query_obj = json.loads(input_params.get(InferenceParamType.QUERY_DICT.value, json.dumps({})))
-    shot_meta_data = query_obj['data'].get('data', {}).get("shot_data", {})
+    shot_meta_data = query_obj["data"].get("data", {}).get("shot_data", {})
     data_type = None
     if shot_meta_data and ShotMetaData.MOTION_DATA.value in shot_meta_data:
         data_type = ShotMetaData.MOTION_DATA.value
     elif shot_meta_data and ShotMetaData.DYNAMICRAFTER_DATA.value in shot_meta_data:
         data_type = ShotMetaData.DYNAMICRAFTER_DATA.value
-    
+
     shot_meta_data = json.loads(shot_meta_data.get(data_type)) if data_type else None
-    
+
     return shot_meta_data, data_type
+
 
 def load_shot_settings(shot_uuid, log_uuid=None):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
-    
+
     # loading settings of the last generation (saved in the shot)
     # in case no log_uuid is provided
     if not log_uuid:
@@ -39,36 +40,42 @@ def load_shot_settings(shot_uuid, log_uuid=None):
         shot_meta_data = json.loads(shot_meta_data)
         data_type = None
         st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
-                    
+
     # loading settings from that particular log
     else:
         shot_meta_data, data_type = get_generation_settings_from_log(log_uuid)
         st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = log_uuid
-    
+
     if shot_meta_data:
         if not data_type or data_type == ShotMetaData.MOTION_DATA.value:
             st.session_state[f"type_of_animation_{shot.uuid}"] = 0
             # updating timing data
             timing_data = shot_meta_data.get("timing_data", [])
-            for idx, _ in enumerate(shot.timing_list):  # fix: check how the image list is being stored here and use that instead
+            for idx, _ in enumerate(
+                shot.timing_list
+            ):  # fix: check how the image list is being stored here and use that instead
                 # setting default parameters (fetching data from the shot if it's present)
                 if timing_data and len(timing_data) >= idx + 1:
                     motion_data = timing_data[idx]
 
                 for k, v in motion_data.items():
-                    st.session_state[f'{k}_{shot_uuid}_{idx}'] = v
-            
+                    st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+
             # updating other settings main settings
             main_setting_data = shot_meta_data.get("main_setting_data", {})
             for key in main_setting_data:
                 st.session_state[key] = main_setting_data[key]
-                if key == f"structure_control_image_uuid_{shot_uuid}" and not main_setting_data[key]:   # hackish sol, will fix later
+                if (
+                    key == f"structure_control_image_uuid_{shot_uuid}" and not main_setting_data[key]
+                ):  # hackish sol, will fix later
                     st.session_state[f"structure_control_image_{shot_uuid}"] = None
                 elif key == f"type_of_generation_index_{shot.uuid}":
                     if not isinstance(st.session_state[key], int):
                         st.session_state[key] = 0
-                    st.session_state["creative_interpolation_type"] = ["Normal", "Fast"][st.session_state[key]]
-                    
+                    st.session_state["creative_interpolation_type"] = ["Normal", "Fast"][
+                        st.session_state[key]
+                    ]
+
             st.rerun()
         elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
             st.session_state[f"type_of_animation_{shot.uuid}"] = 1
@@ -81,36 +88,43 @@ def load_shot_settings(shot_uuid, log_uuid=None):
             for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
                 st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
 
+
 def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):
     adjusted_frame_numbers = [frame + buffer for frame in frame_numbers]
-    
+
     # Preprocess prompts to remove any '/' or '"' from the values
-    processed_prompts = [prompt.replace("/", "").replace('"', '') for prompt in individual_prompts]
-    
+    processed_prompts = [prompt.replace("/", "").replace('"', "") for prompt in individual_prompts]
+
     # Format the adjusted frame numbers and processed prompts
-    formatted = ', '.join(f'"{int(frame)}": "{prompt}"' for frame, prompt in zip(adjusted_frame_numbers, processed_prompts))
+    formatted = ", ".join(
+        f'"{int(frame)}": "{prompt}"' for frame, prompt in zip(adjusted_frame_numbers, processed_prompts)
+    )
     return formatted
+
 
 def plot_weights(weights_list, frame_numbers_list):
     plt.figure(figsize=(12, 6))
     for i, weights in enumerate(weights_list):
         frame_numbers = [frame_number / 100 for frame_number in frame_numbers_list[i]]
-        plt.plot(frame_numbers, weights, label=f'Frame {i + 1}')
+        plt.plot(frame_numbers, weights, label=f"Frame {i + 1}")
 
     # Plot settings
-    plt.xlabel('Seconds')
-    plt.ylabel('Weight')
+    plt.xlabel("Seconds")
+    plt.ylabel("Weight")
     plt.legend()
     plt.ylim(0, 1.0)
     plt.show()
-    st.set_option('deprecation.showPyplotGlobalUse', False)
+    st.set_option("deprecation.showPyplotGlobalUse", False)
     st.pyplot()
 
-def calculate_weights(keyframe_positions, strength_values, buffer, key_frame_influence_values,last_key_frame_position):
+
+def calculate_weights(
+    keyframe_positions, strength_values, buffer, key_frame_influence_values, last_key_frame_position
+):
     def calculate_influence_frame_number(key_frame_position, next_key_frame_position, distance):
         # Calculate the absolute distance between key frames
         key_frame_distance = abs(next_key_frame_position - key_frame_position)
-        
+
         # Apply the distance multiplier
         extended_distance = key_frame_distance * distance
 
@@ -121,11 +135,22 @@ def calculate_weights(keyframe_positions, strength_values, buffer, key_frame_inf
         else:
             # Reverse case: influence extends backward
             influence_frame_number = key_frame_position - extended_distance
-        
+
         # Return the result rounded to the nearest integer
         return round(influence_frame_number)
 
-    def find_curve(batch_index_from, batch_index_to, strength_from, strength_to, interpolation,revert_direction_at_midpoint, last_key_frame_position,i, number_of_items,buffer):
+    def find_curve(
+        batch_index_from,
+        batch_index_to,
+        strength_from,
+        strength_to,
+        interpolation,
+        revert_direction_at_midpoint,
+        last_key_frame_position,
+        i,
+        number_of_items,
+        buffer,
+    ):
         # Initialize variables based on the position of the keyframe
         range_start = batch_index_from
         range_end = batch_index_to
@@ -137,7 +162,9 @@ def calculate_weights(keyframe_positions, strength_values, buffer, key_frame_inf
         diff = strength_to - strength_from
 
         # Calculate index for interpolation
-        index = np.linspace(0, 1, steps // 2 + 1) if revert_direction_at_midpoint else np.linspace(0, 1, steps)
+        index = (
+            np.linspace(0, 1, steps // 2 + 1) if revert_direction_at_midpoint else np.linspace(0, 1, steps)
+        )
 
         # Calculate weights based on interpolation type
         if interpolation == "linear":
@@ -148,10 +175,10 @@ def calculate_weights(keyframe_positions, strength_values, buffer, key_frame_inf
             weights = diff * (1 - np.power(1 - index, 2)) + strength_from
         elif interpolation == "ease-in-out":
             weights = diff * ((1 - np.cos(index * np.pi)) / 2) + strength_from
-        
+
         if revert_direction_at_midpoint:
             weights = np.concatenate([weights, weights[::-1]])
-                        
+
         # Generate frame numbers
         frame_numbers = np.arange(range_start, range_start + len(weights))
 
@@ -167,69 +194,126 @@ def calculate_weights(keyframe_positions, strength_values, buffer, key_frame_inf
             weights = weights[:-drop_count]
             frame_numbers = frame_numbers[:-drop_count]
 
-        return weights, frame_numbers 
-    
+        return weights, frame_numbers
+
     weights_list = []
     frame_numbers_list = []
 
     for i in range(len(keyframe_positions)):
-        keyframe_position = keyframe_positions[i]                                    
+        keyframe_position = keyframe_positions[i]
         interpolation = "ease-in-out"
         # strength_from = strength_to = 1.0
 
-        if i == 0: # first image 
+        if i == 0:  # first image
             # GET IMAGE AND KEYFRAME INFLUENCE VALUES
-            key_frame_influence_from, key_frame_influence_to = key_frame_influence_values[i]      
+            key_frame_influence_from, key_frame_influence_to = key_frame_influence_values[i]
             start_strength, mid_strength, end_strength = strength_values[i]
             keyframe_position = keyframe_positions[i]
-            next_key_frame_position = keyframe_positions[i+1]
+            next_key_frame_position = keyframe_positions[i + 1]
             batch_index_from = keyframe_position
-            batch_index_to_excl = calculate_influence_frame_number(keyframe_position, next_key_frame_position, key_frame_influence_to)
-            weights, frame_numbers = find_curve(batch_index_from, batch_index_to_excl, mid_strength, end_strength, interpolation, False, last_key_frame_position, i, len(keyframe_positions), buffer)                                    
-            # interpolation = "ease-in"                                
-        
+            batch_index_to_excl = calculate_influence_frame_number(
+                keyframe_position, next_key_frame_position, key_frame_influence_to
+            )
+            weights, frame_numbers = find_curve(
+                batch_index_from,
+                batch_index_to_excl,
+                mid_strength,
+                end_strength,
+                interpolation,
+                False,
+                last_key_frame_position,
+                i,
+                len(keyframe_positions),
+                buffer,
+            )
+            # interpolation = "ease-in"
+
         elif i == len(keyframe_positions) - 1:  # last image
             # GET IMAGE AND KEYFRAME INFLUENCE VALUES
-            key_frame_influence_from,key_frame_influence_to = key_frame_influence_values[i]       
+            key_frame_influence_from, key_frame_influence_to = key_frame_influence_values[i]
             start_strength, mid_strength, end_strength = strength_values[i]
             # strength_from, strength_to = cn_strength_values[i-1]
             keyframe_position = keyframe_positions[i]
-            previous_key_frame_position = keyframe_positions[i-1]
-            batch_index_from = calculate_influence_frame_number(keyframe_position, previous_key_frame_position, key_frame_influence_from)
+            previous_key_frame_position = keyframe_positions[i - 1]
+            batch_index_from = calculate_influence_frame_number(
+                keyframe_position, previous_key_frame_position, key_frame_influence_from
+            )
             batch_index_to_excl = keyframe_position
-            weights, frame_numbers = find_curve(batch_index_from, batch_index_to_excl, start_strength, mid_strength, interpolation, False, last_key_frame_position, i, len(keyframe_positions), buffer)                                    
-            # interpolation =  "ease-out"                                
-        
+            weights, frame_numbers = find_curve(
+                batch_index_from,
+                batch_index_to_excl,
+                start_strength,
+                mid_strength,
+                interpolation,
+                False,
+                last_key_frame_position,
+                i,
+                len(keyframe_positions),
+                buffer,
+            )
+            # interpolation =  "ease-out"
+
         else:  # middle images
-            # GET IMAGE AND KEYFRAME INFLUENCE VALUES              
-            key_frame_influence_from,key_frame_influence_to = key_frame_influence_values[i]                              
+            # GET IMAGE AND KEYFRAME INFLUENCE VALUES
+            key_frame_influence_from, key_frame_influence_to = key_frame_influence_values[i]
             start_strength, mid_strength, end_strength = strength_values[i]
             keyframe_position = keyframe_positions[i]
-                        
+
             # CALCULATE WEIGHTS FOR FIRST HALF
-            previous_key_frame_position = keyframe_positions[i-1]   
-            batch_index_from = calculate_influence_frame_number(keyframe_position, previous_key_frame_position, key_frame_influence_from)                
-            batch_index_to_excl = keyframe_position                
-            first_half_weights, first_half_frame_numbers = find_curve(batch_index_from, batch_index_to_excl, start_strength, mid_strength, interpolation, False, last_key_frame_position, i, len(keyframe_positions), buffer)                
-            
-            # CALCULATE WEIGHTS FOR SECOND HALF                
-            next_key_frame_position = keyframe_positions[i+1]
+            previous_key_frame_position = keyframe_positions[i - 1]
+            batch_index_from = calculate_influence_frame_number(
+                keyframe_position, previous_key_frame_position, key_frame_influence_from
+            )
+            batch_index_to_excl = keyframe_position
+            first_half_weights, first_half_frame_numbers = find_curve(
+                batch_index_from,
+                batch_index_to_excl,
+                start_strength,
+                mid_strength,
+                interpolation,
+                False,
+                last_key_frame_position,
+                i,
+                len(keyframe_positions),
+                buffer,
+            )
+
+            # CALCULATE WEIGHTS FOR SECOND HALF
+            next_key_frame_position = keyframe_positions[i + 1]
             batch_index_from = keyframe_position
-            batch_index_to_excl = calculate_influence_frame_number(keyframe_position, next_key_frame_position, key_frame_influence_to)                                
-            second_half_weights, second_half_frame_numbers = find_curve(batch_index_from, batch_index_to_excl, mid_strength, end_strength, interpolation, False, last_key_frame_position, i, len(keyframe_positions), buffer)
-            
+            batch_index_to_excl = calculate_influence_frame_number(
+                keyframe_position, next_key_frame_position, key_frame_influence_to
+            )
+            second_half_weights, second_half_frame_numbers = find_curve(
+                batch_index_from,
+                batch_index_to_excl,
+                mid_strength,
+                end_strength,
+                interpolation,
+                False,
+                last_key_frame_position,
+                i,
+                len(keyframe_positions),
+                buffer,
+            )
+
             # COMBINE FIRST AND SECOND HALF
-            weights = np.concatenate([first_half_weights, second_half_weights])                
+            weights = np.concatenate([first_half_weights, second_half_weights])
             frame_numbers = np.concatenate([first_half_frame_numbers, second_half_frame_numbers])
-        
+
         weights_list.append(weights)
         frame_numbers_list.append(frame_numbers)
 
     return weights_list, frame_numbers_list
 
 
-def extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value):
-    # Check and convert linear_key_frame_influence_value if it's a float or string float        
+def extract_influence_values(
+    type_of_key_frame_influence,
+    dynamic_key_frame_influence_values,
+    keyframe_positions,
+    linear_key_frame_influence_value,
+):
+    # Check and convert linear_key_frame_influence_value if it's a float or string float
     # if it's a string that starts with a parenthesis, convert it to a tuple
     if isinstance(linear_key_frame_influence_value, str) and linear_key_frame_influence_value[0] == "(":
         linear_key_frame_influence_value = eval(linear_key_frame_influence_value)
@@ -240,24 +324,38 @@ def extract_influence_values(type_of_key_frame_influence, dynamic_key_frame_infl
                 value = float(linear_key_frame_influence_value)
                 linear_key_frame_influence_value = (value, value)
             except ValueError:
-                raise ValueError("linear_key_frame_influence_value must be a float or a string representing a float")
+                raise ValueError(
+                    "linear_key_frame_influence_value must be a float or a string representing a float"
+                )
 
     number_of_outputs = len(keyframe_positions)
     if type_of_key_frame_influence == "dynamic":
         # Convert list of individual float values into tuples
         if all(isinstance(x, float) for x in dynamic_key_frame_influence_values):
             dynamic_values = [(value, value) for value in dynamic_key_frame_influence_values]
-        elif isinstance(dynamic_key_frame_influence_values[0], str) and dynamic_key_frame_influence_values[0] == "(":
-            string_representation = ''.join(dynamic_key_frame_influence_values)
-            dynamic_values = eval(f'[{string_representation}]')
+        elif (
+            isinstance(dynamic_key_frame_influence_values[0], str)
+            and dynamic_key_frame_influence_values[0] == "("
+        ):
+            string_representation = "".join(dynamic_key_frame_influence_values)
+            dynamic_values = eval(f"[{string_representation}]")
         else:
-            dynamic_values = dynamic_key_frame_influence_values if isinstance(dynamic_key_frame_influence_values, list) else [dynamic_key_frame_influence_values]
+            dynamic_values = (
+                dynamic_key_frame_influence_values
+                if isinstance(dynamic_key_frame_influence_values, list)
+                else [dynamic_key_frame_influence_values]
+            )
         return dynamic_values[:number_of_outputs]
     else:
         return [linear_key_frame_influence_value for _ in range(number_of_outputs)]
 
 
-def extract_strength_values(type_of_key_frame_influence, dynamic_key_frame_influence_values, keyframe_positions, linear_key_frame_influence_value):
+def extract_strength_values(
+    type_of_key_frame_influence,
+    dynamic_key_frame_influence_values,
+    keyframe_positions,
+    linear_key_frame_influence_value,
+):
     if type_of_key_frame_influence == "dynamic":
         # Process the dynamic_key_frame_influence_values depending on its format
         if isinstance(dynamic_key_frame_influence_values, str):
@@ -276,30 +374,51 @@ def extract_strength_values(type_of_key_frame_influence, dynamic_key_frame_influ
     else:
         # Process for linear or other types
         if len(linear_key_frame_influence_value) == 2:
-            linear_key_frame_influence_value = (linear_key_frame_influence_value[0], linear_key_frame_influence_value[1], linear_key_frame_influence_value[0])
+            linear_key_frame_influence_value = (
+                linear_key_frame_influence_value[0],
+                linear_key_frame_influence_value[1],
+                linear_key_frame_influence_value[0],
+            )
         return [linear_key_frame_influence_value for _ in range(len(keyframe_positions) - 1)]
 
 
-def get_keyframe_positions(type_of_frame_distribution, dynamic_frame_distribution_values, images, linear_frame_distribution_value):
+def get_keyframe_positions(
+    type_of_frame_distribution, dynamic_frame_distribution_values, images, linear_frame_distribution_value
+):
     if type_of_frame_distribution == "dynamic":
         if isinstance(dynamic_frame_distribution_values, str):
             # Sort the keyframe positions in numerical order
-            return sorted([int(kf.strip()) for kf in dynamic_frame_distribution_values.split(',')])
+            return sorted([int(kf.strip()) for kf in dynamic_frame_distribution_values.split(",")])
         elif isinstance(dynamic_frame_distribution_values, list):
             return sorted(dynamic_frame_distribution_values)
     else:
         # Calculate the number of keyframes based on the total duration and linear_frames_per_keyframe
         return [i * linear_frame_distribution_value for i in range(len(images))]
 
-def toggle_generate_inference(position, **kwargs):
-    for k,v in kwargs.items():
-        st.session_state[k] = v
-    if position + '_generate_inference' not in st.session_state:
-        st.session_state[position + '_generate_inference'] = True
-    else:
-        st.session_state[position + '_generate_inference'] = not st.session_state[position + '_generate_inference']
 
-def transform_data(strength_of_frames, movements_between_frames, speeds_of_transitions, distances_to_next_frames, type_of_motion_context, strength_of_adherence, individual_prompts, individual_negative_prompts, buffer, motions_during_frames):
+def toggle_generate_inference(position, **kwargs):
+    for k, v in kwargs.items():
+        st.session_state[k] = v
+    if position + "_generate_inference" not in st.session_state:
+        st.session_state[position + "_generate_inference"] = True
+    else:
+        st.session_state[position + "_generate_inference"] = not st.session_state[
+            position + "_generate_inference"
+        ]
+
+
+def transform_data(
+    strength_of_frames,
+    movements_between_frames,
+    speeds_of_transitions,
+    distances_to_next_frames,
+    type_of_motion_context,
+    strength_of_adherence,
+    individual_prompts,
+    individual_negative_prompts,
+    buffer,
+    motions_during_frames,
+):
     # FRAME SETTINGS
     def adjust_and_invert_relative_value(middle_value, relative_value):
         if relative_value is not None:
@@ -352,7 +471,7 @@ def transform_data(strength_of_frames, movements_between_frames, speeds_of_trans
         context_length = 16
         context_stride = 2
         context_overlap = 4
-    
+
     elif type_of_motion_context == "High":
         context_length = 16
         context_stride = 4
@@ -365,127 +484,163 @@ def transform_data(strength_of_frames, movements_between_frames, speeds_of_trans
     # FRAME PROMPTS FORMATTING
     def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):
         adjusted_frame_numbers = [frame + buffer for frame in frame_numbers]
-        
+
         # Preprocess prompts to remove any '/' or '"' from the values
-        processed_prompts = [prompt.replace("/", "").replace('"', '') for prompt in individual_prompts]
-        
+        processed_prompts = [prompt.replace("/", "").replace('"', "") for prompt in individual_prompts]
+
         # Format the adjusted frame numbers and processed prompts
-        formatted = ', '.join(f'"{int(frame)}": "{prompt}"' for frame, prompt in zip(adjusted_frame_numbers, processed_prompts))
+        formatted = ", ".join(
+            f'"{int(frame)}": "{prompt}"' for frame, prompt in zip(adjusted_frame_numbers, processed_prompts)
+        )
         return formatted
 
     # Applying format_frame_prompts_with_buffer
-    formatted_individual_prompts = format_frame_prompts_with_buffer(cumulative_distances, individual_prompts, buffer)
-    formatted_individual_negative_prompts = format_frame_prompts_with_buffer(cumulative_distances, individual_negative_prompts, buffer)
+    formatted_individual_prompts = format_frame_prompts_with_buffer(
+        cumulative_distances, individual_prompts, buffer
+    )
+    formatted_individual_negative_prompts = format_frame_prompts_with_buffer(
+        cumulative_distances, individual_negative_prompts, buffer
+    )
 
     # MOTION STRENGTHS FORMATTING
     adjusted_frame_numbers = [0] + [frame + buffer for frame in cumulative_distances[1:]]
-    
-    # Format the adjusted frame numbers and strengths
-    motions_during_frames = ', '.join(f'{int(frame)}:({strength})' for frame, strength in zip(adjusted_frame_numbers, motions_during_frames))    
-            
-    return output_strength, output_speeds, cumulative_distances, context_length, context_stride, context_overlap, multipled_base_end_percent, multipled_base_adapter_strength, formatted_individual_prompts, formatted_individual_negative_prompts,motions_during_frames
 
-def update_session_state_with_animation_details(shot_uuid, 
-        img_list: List[InternalFileObject], 
-        strength_of_frames, 
-        distances_to_next_frames, 
-        speeds_of_transitions, 
-        freedoms_between_frames, 
-        motions_during_frames, 
-        individual_prompts, 
-        individual_negative_prompts, 
-        lora_data, 
-        default_model,
-        high_detail_mode = True,
-        structure_control_img_uuid = None,
-        strength_of_structure_control_img = None,
-        type_of_generation_index = 0
-    ):
+    # Format the adjusted frame numbers and strengths
+    motions_during_frames = ", ".join(
+        f"{int(frame)}:({strength})" for frame, strength in zip(adjusted_frame_numbers, motions_during_frames)
+    )
+
+    return (
+        output_strength,
+        output_speeds,
+        cumulative_distances,
+        context_length,
+        context_stride,
+        context_overlap,
+        multipled_base_end_percent,
+        multipled_base_adapter_strength,
+        formatted_individual_prompts,
+        formatted_individual_negative_prompts,
+        motions_during_frames,
+    )
+
+
+def update_session_state_with_animation_details(
+    shot_uuid,
+    img_list: List[InternalFileObject],
+    strength_of_frames,
+    distances_to_next_frames,
+    speeds_of_transitions,
+    freedoms_between_frames,
+    motions_during_frames,
+    individual_prompts,
+    individual_negative_prompts,
+    lora_data,
+    default_model,
+    high_detail_mode=True,
+    structure_control_img_uuid=None,
+    strength_of_structure_control_img=None,
+    type_of_generation_index=0,
+):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     meta_data = shot.meta_data_dict
     timing_data = []
     for idx, img in enumerate(img_list):
         if idx < len(img_list):
-            st.session_state[f'strength_of_frame_{shot_uuid}_{idx}'] = strength_of_frames[idx]
-            st.session_state[f'individual_prompt_{shot_uuid}_{idx}'] = individual_prompts[idx]
-            st.session_state[f'individual_negative_prompt_{shot_uuid}_{idx}'] = individual_negative_prompts[idx]
-            st.session_state[f'motion_during_frame_{shot_uuid}_{idx}'] = motions_during_frames[idx]
-            if idx < len(img_list) - 1:                             
-                st.session_state[f'distance_to_next_frame_{shot_uuid}_{idx}'] = distances_to_next_frames[idx] * 2
-                st.session_state[f'speed_of_transition_{shot_uuid}_{idx}'] = speeds_of_transitions[idx]
-                st.session_state[f'freedom_between_frames_{shot_uuid}_{idx}'] = freedoms_between_frames[idx]
+            st.session_state[f"strength_of_frame_{shot_uuid}_{idx}"] = strength_of_frames[idx]
+            st.session_state[f"individual_prompt_{shot_uuid}_{idx}"] = individual_prompts[idx]
+            st.session_state[f"individual_negative_prompt_{shot_uuid}_{idx}"] = individual_negative_prompts[
+                idx
+            ]
+            st.session_state[f"motion_during_frame_{shot_uuid}_{idx}"] = motions_during_frames[idx]
+            if idx < len(img_list) - 1:
+                st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"] = (
+                    distances_to_next_frames[idx] * 2
+                )
+                st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"] = speeds_of_transitions[idx]
+                st.session_state[f"freedom_between_frames_{shot_uuid}_{idx}"] = freedoms_between_frames[idx]
 
         # adding into the meta-data
         state_data = {
-            "strength_of_frame" : strength_of_frames[idx],
-            "individual_prompt" : individual_prompts[idx],
-            "individual_negative_prompt" : individual_negative_prompts[idx],
-            "motion_during_frame" : motions_during_frames[idx],
-            "distance_to_next_frame" : distances_to_next_frames[idx] * 2 if idx < len(img_list) - 1 else DEFAULT_SHOT_MOTION_VALUES["distance_to_next_frame"],
-            "speed_of_transition" : speeds_of_transitions[idx] if idx < len(img_list) - 1 else DEFAULT_SHOT_MOTION_VALUES["speed_of_transition"],
-            "freedom_between_frames" : freedoms_between_frames[idx] if idx < len(img_list) - 1 else DEFAULT_SHOT_MOTION_VALUES["freedom_between_frames"],
+            "strength_of_frame": strength_of_frames[idx],
+            "individual_prompt": individual_prompts[idx],
+            "individual_negative_prompt": individual_negative_prompts[idx],
+            "motion_during_frame": motions_during_frames[idx],
+            "distance_to_next_frame": (
+                distances_to_next_frames[idx] * 2
+                if idx < len(img_list) - 1
+                else DEFAULT_SHOT_MOTION_VALUES["distance_to_next_frame"]
+            ),
+            "speed_of_transition": (
+                speeds_of_transitions[idx]
+                if idx < len(img_list) - 1
+                else DEFAULT_SHOT_MOTION_VALUES["speed_of_transition"]
+            ),
+            "freedom_between_frames": (
+                freedoms_between_frames[idx]
+                if idx < len(img_list) - 1
+                else DEFAULT_SHOT_MOTION_VALUES["freedom_between_frames"]
+            ),
         }
 
         timing_data.append(state_data)
 
     main_setting_data = {}
-    main_setting_data[f'lora_data_{shot.uuid}'] = lora_data
+    main_setting_data[f"lora_data_{shot.uuid}"] = lora_data
     main_setting_data[f"strength_of_adherence_value_{shot.uuid}"] = st.session_state["strength_of_adherence"]
-    main_setting_data[f"type_of_motion_context_index_{shot.uuid}"] = st.session_state["type_of_motion_context"]
+    main_setting_data[f"type_of_motion_context_index_{shot.uuid}"] = st.session_state[
+        "type_of_motion_context"
+    ]
     main_setting_data[f"positive_prompt_video_{shot.uuid}"] = st.session_state["overall_positive_prompt"]
     main_setting_data[f"negative_prompt_video_{shot.uuid}"] = st.session_state["overall_negative_prompt"]
     main_setting_data[f"amount_of_motion_{shot.uuid}"] = st.session_state["amount_of_motion_overall"]
     main_setting_data[f"structure_control_image_uuid_{shot.uuid}"] = structure_control_img_uuid
-    main_setting_data[f"saved_strength_of_structure_control_image_{shot.uuid}"] = strength_of_structure_control_img
+    main_setting_data[f"saved_strength_of_structure_control_image_{shot.uuid}"] = (
+        strength_of_structure_control_img
+    )
     main_setting_data[f"type_of_generation_index_{shot.uuid}"] = type_of_generation_index
     main_setting_data[f"high_detail_mode_val_{shot.uuid}"] = high_detail_mode
-    
+
     checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
     all_files = os.listdir(checkpoints_dir)
-    model_files = [file for file in all_files if file.endswith('.safetensors') or file.endswith('.ckpt')]
+    model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
     model_files = [file for file in model_files if "xl" not in file]
-    
-    if 'sd_model_video' in st.session_state and len(model_files):
-        idx = model_files.index(st.session_state["sd_model_video"]) if st.session_state["sd_model_video"] in model_files else 0
-        main_setting_data[f'ckpt_{shot.uuid}'] = model_files[idx]
+
+    if "sd_model_video" in st.session_state and len(model_files):
+        idx = (
+            model_files.index(st.session_state["sd_model_video"])
+            if st.session_state["sd_model_video"] in model_files
+            else 0
+        )
+        main_setting_data[f"ckpt_{shot.uuid}"] = model_files[idx]
     else:
-        main_setting_data[f'ckpt_{shot.uuid}'] = default_model
-    
+        main_setting_data[f"ckpt_{shot.uuid}"] = default_model
+
     update_data = {
-            ShotMetaData.MOTION_DATA.value : json.dumps(
-                {
-                    "timing_data": timing_data,
-                    "main_setting_data": main_setting_data
-                }
-            )
-        }
+        ShotMetaData.MOTION_DATA.value: json.dumps(
+            {"timing_data": timing_data, "main_setting_data": main_setting_data}
+        )
+    }
 
     meta_data.update(update_data)
     data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
     return update_data
 
+
 # saving dynamic crafter generation details
-def update_session_state_with_dc_details(
-    shot_uuid,
-    img_list,
-    video_desc
-):
+def update_session_state_with_dc_details(shot_uuid, img_list, video_desc):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     meta_data = shot.meta_data_dict
     main_setting_data = {}
     for idx, img in enumerate(img_list):
-        main_setting_data[f'img{idx+1}_uuid_{shot_uuid}'] = img.uuid
+        main_setting_data[f"img{idx+1}_uuid_{shot_uuid}"] = img.uuid
 
-    main_setting_data[f'video_desc_{shot_uuid}'] = video_desc
+    main_setting_data[f"video_desc_{shot_uuid}"] = video_desc
     update_data = {
-            ShotMetaData.DYNAMICRAFTER_DATA.value : json.dumps(
-                {
-                    "main_setting_data": main_setting_data
-                }
-            )
-        }
+        ShotMetaData.DYNAMICRAFTER_DATA.value: json.dumps({"main_setting_data": main_setting_data})
+    }
     meta_data.update(update_data)
     data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
     return update_data

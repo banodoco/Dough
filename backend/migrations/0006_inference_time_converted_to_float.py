@@ -6,18 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0005_model_type_added'),
+        ("backend", "0005_model_type_added"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='inferencelog',
-            name='total_inference_time',
+            model_name="inferencelog",
+            name="total_inference_time",
             field=models.FloatField(default=0),
         ),
         migrations.AlterField(
-            model_name='timing',
-            name='strength',
+            model_name="timing",
+            name="strength",
             field=models.FloatField(default=1),
         ),
     ]
