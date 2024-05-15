@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class ExtendedEnum(Enum):
 
     @classmethod

@@ -132,7 +132,7 @@ def sidebar_logger(shot_uuid):
             origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
             if not log.status:
                 continue
-            
+
             inference_type = origin_data.get("inference_type", "")
             output_url = None
             if log.uuid in log_file_dict:
@@ -150,7 +150,7 @@ def sidebar_logger(shot_uuid):
                     video_inference_image_grid(origin_data)
                 else:
                     st.caption("-\-\-\-\-\-\-\-\-")
-            
+
             with c1:
                 try:
                     model_name = json.loads(log.output_details)["model_name"].split("/")[-1]
@@ -197,7 +197,11 @@ def sidebar_logger(shot_uuid):
                             st.rerun()
                 """
 
-                if log.status in [InferenceStatus.QUEUED.value, InferenceStatus.BACKLOG.value, InferenceStatus.IN_PROGRESS.value]:
+                if log.status in [
+                    InferenceStatus.QUEUED.value,
+                    InferenceStatus.BACKLOG.value,
+                    InferenceStatus.IN_PROGRESS.value,
+                ]:
                     if st.button(
                         "Cancel", key=f"cancel_gen_{log.uuid}", use_container_width=True, help="Cancel"
                     ):
@@ -211,7 +215,7 @@ def sidebar_logger(shot_uuid):
                         #     time.sleep(0.7)
                         #     st.rerun()
                         # else:
-                        
+
                         res = data_repo.update_inference_log(
                             uuid=log.uuid, status=InferenceStatus.CANCELED.value
                         )
@@ -241,17 +245,23 @@ def sidebar_logger(shot_uuid):
                         #         st.rerun()
 
                     elif inference_type == InferenceType.FRAME_INTERPOLATION.value:
-                        jump_to_shot_button(origin_data.get('shot_uuid', ''), log.uuid)
+                        jump_to_shot_button(origin_data.get("shot_uuid", ""), log.uuid)
+
 
 def video_inference_image_grid(origin_data):
     if origin_data:
-        if 'settings' in origin_data and 'file_uuid_list' in origin_data['settings'] \
-            and origin_data['settings']['file_uuid_list']:
+        if (
+            "settings" in origin_data
+            and "file_uuid_list" in origin_data["settings"]
+            and origin_data["settings"]["file_uuid_list"]
+        ):
             data_repo = DataRepo()
-            total_size = len(origin_data['settings']['file_uuid_list'])
-            file_uuid_list = origin_data['settings']['file_uuid_list'][:2]
-            image_list, _ = data_repo.get_all_file_list(uuid__in=file_uuid_list, file_type=InternalFileType.IMAGE.value)    # extra element for displaying pending count
-            
+            total_size = len(origin_data["settings"]["file_uuid_list"])
+            file_uuid_list = origin_data["settings"]["file_uuid_list"][:2]
+            image_list, _ = data_repo.get_all_file_list(
+                uuid__in=file_uuid_list, file_type=InternalFileType.IMAGE.value
+            )  # extra element for displaying pending count
+
             num_images = len(image_list)
             for index in range(num_images + 1):
                 if index < num_images and image_list[index]:
@@ -259,13 +269,14 @@ def video_inference_image_grid(origin_data):
                 else:
                     pending_count = total_size - len(image_list)
                     if pending_count:
-                        st.caption('+' + str(pending_count))
+                        st.caption("+" + str(pending_count))
+
 
 def jump_to_shot_button(shot_uuid, log_uuid):
     if shot_uuid:
         if st.button("Jump to Shot", key=f"sidebar_btn_{shot_uuid}_{log_uuid}"):
-            st.session_state['current_frame_sidebar_selector'] = 0
-            st.session_state['page'] = CreativeProcessPage.ANIMATE_SHOT.value
-            st.session_state['current_subpage'] = AppSubPage.ANIMATE_SHOT.value
+            st.session_state["current_frame_sidebar_selector"] = 0
+            st.session_state["page"] = CreativeProcessPage.ANIMATE_SHOT.value
+            st.session_state["current_subpage"] = AppSubPage.ANIMATE_SHOT.value
             st.session_state["shot_uuid"] = shot_uuid
             st.rerun()

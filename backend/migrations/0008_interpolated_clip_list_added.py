@@ -6,17 +6,17 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0007_log_mapped_to_file'),
+        ("backend", "0007_log_mapped_to_file"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='timing',
-            name='interpolated_clip',
+            model_name="timing",
+            name="interpolated_clip",
         ),
         migrations.AddField(
-            model_name='timing',
-            name='interpolated_clip_list',
+            model_name="timing",
+            name="interpolated_clip_list",
             field=models.TextField(default=None, null=True),
         ),
     ]

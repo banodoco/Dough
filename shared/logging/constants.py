@@ -6,14 +6,16 @@ from utils.enum import ExtendedEnum
 class LoggingPayload:
     message: str
     data: dict = field(default_factory=dict)
-    
+
+
 class LoggingType(ExtendedEnum):
-    INFO = 'info'
-    INFERENCE_CALL = 'inference_call'
-    INFERENCE_RESULT = 'inference_result'
-    ERROR = 'error'
-    DEBUG = 'debug'
+    INFO = "info"
+    INFERENCE_CALL = "inference_call"
+    INFERENCE_RESULT = "inference_result"
+    ERROR = "error"
+    DEBUG = "debug"
+
 
 class LoggingMode(ExtendedEnum):
-    OFFLINE = 'offline'
-    ONLINE = 'online'
+    OFFLINE = "offline"
+    ONLINE = "online"

@@ -7,22 +7,27 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('backend', '0010_project_metadata_added'),
+        ("backend", "0010_project_metadata_added"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Lock',
+            name="Lock",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('uuid', models.UUIDField(default=uuid.uuid4)),
-                ('created_on', models.DateTimeField(auto_now_add=True)),
-                ('updated_on', models.DateTimeField(auto_now=True)),
-                ('is_disabled', models.BooleanField(default=False)),
-                ('row_key', models.CharField(max_length=255, unique=True)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True, primary_key=True, serialize=False, verbose_name="ID"
+                    ),
+                ),
+                ("uuid", models.UUIDField(default=uuid.uuid4)),
+                ("created_on", models.DateTimeField(auto_now_add=True)),
+                ("updated_on", models.DateTimeField(auto_now=True)),
+                ("is_disabled", models.BooleanField(default=False)),
+                ("row_key", models.CharField(max_length=255, unique=True)),
             ],
             options={
-                'db_table': 'lock',
+                "db_table": "lock",
             },
         ),
     ]

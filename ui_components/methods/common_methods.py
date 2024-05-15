@@ -13,13 +13,27 @@ import time
 import uuid
 from io import BytesIO
 import numpy as np
-from shared.constants import COMFY_BASE_PATH, OFFLINE_MODE, SERVER, InferenceType, InternalFileTag, InternalFileType, ProjectMetaData
+from shared.constants import (
+    COMFY_BASE_PATH,
+    OFFLINE_MODE,
+    SERVER,
+    InferenceType,
+    InternalFileTag,
+    InternalFileType,
+    ProjectMetaData,
+)
 from pydub import AudioSegment
 from backend.models import InternalFileObject
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from ui_components.constants import SECOND_MASK_FILE, WorkflowStageType
-from ui_components.methods.file_methods import convert_bytes_to_file, generate_pil_image, generate_temp_file, save_or_host_file, save_or_host_file_bytes
+from ui_components.methods.file_methods import (
+    convert_bytes_to_file,
+    generate_pil_image,
+    generate_temp_file,
+    save_or_host_file,
+    save_or_host_file_bytes,
+)
 from ui_components.methods.video_methods import sync_audio_and_duration
 from ui_components.models import InternalFrameTimingObject, InternalSettingObject
 from utils.common_utils import acquire_lock, release_lock
@@ -30,15 +44,14 @@ from ui_components.models import InternalFileObject
 from typing import Union
 
 
-
 # TODO: image format is assumed to be PNG, change this later
 def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project_uuid) -> InternalFileObject:
-    '''
+    """
     Saves an image into the project. The image is not added into any shot and is without tags.
-    '''
+    """
     data_repo = DataRepo()
     img = generate_pil_image(img)
-    
+
     file_name = str(uuid.uuid4()) + ".png"
     file_path = os.path.join("videos/temp", file_name)
 
@@ -47,16 +60,17 @@ def save_new_image(img: Union[Image.Image, str, np.ndarray, io.BytesIO], project
     file_data = {
         "name": str(uuid.uuid4()) + ".png",
         "type": InternalFileType.IMAGE.value,
-        "project_id": project_uuid
+        "project_id": project_uuid,
     }
 
     if hosted_url:
-        file_data.update({'hosted_url': hosted_url})
+        file_data.update({"hosted_url": hosted_url})
     else:
-        file_data.update({'local_path': file_path})
-    
+        file_data.update({"local_path": file_path})
+
     new_image = data_repo.create_file(**file_data)
     return new_image
+
 
 def save_and_promote_image(image, shot_uuid, timing_uuid, stage):
     data_repo = DataRepo()
@@ -66,7 +80,9 @@ def save_and_promote_image(image, shot_uuid, timing_uuid, stage):
         saved_image = save_new_image(image, shot.project.uuid)
         # Update records based on stage
         if stage == WorkflowStageType.SOURCE.value:
-            data_repo.update_specific_timing(timing_uuid, source_image_id=saved_image.uuid, update_in_place=True)
+            data_repo.update_specific_timing(
+                timing_uuid, source_image_id=saved_image.uuid, update_in_place=True
+            )
         elif stage == WorkflowStageType.STYLED.value:
             number_of_image_variants = add_image_variant(saved_image.uuid, timing_uuid)
             promote_image_variant(timing_uuid, number_of_image_variants - 1)
@@ -76,16 +92,19 @@ def save_and_promote_image(image, shot_uuid, timing_uuid, stage):
         print(f"Failed to save image file due to: {str(e)}")
         return None
 
+
 def create_alpha_mask(size, edge_blur_radius):
-    mask = Image.new('L', size, 0)
+    mask = Image.new("L", size, 0)
     draw = ImageDraw.Draw(mask)
 
     width, height = size
-    draw.rectangle((edge_blur_radius, edge_blur_radius, width -
-                   edge_blur_radius, height - edge_blur_radius), fill=255)
+    draw.rectangle(
+        (edge_blur_radius, edge_blur_radius, width - edge_blur_radius, height - edge_blur_radius), fill=255
+    )
 
     mask = mask.filter(ImageFilter.GaussianBlur(radius=edge_blur_radius))
     return mask
+
 
 # returns a PIL Image object
 def zoom_image(image, zoom_factor, fill_with=None):
@@ -105,34 +124,31 @@ def zoom_image(image, zoom_factor, fill_with=None):
         resized_image = image.resize((new_width, new_height), Image.ANTIALIAS)
 
         if fill_with == "Blur":
-            blurred_image = image.filter(
-                ImageFilter.GaussianBlur(radius=blur_radius))
+            blurred_image = image.filter(ImageFilter.GaussianBlur(radius=blur_radius))
 
             # Resize the blurred image to match the original dimensions
-            blurred_background = blurred_image.resize(
-                (width, height), Image.ANTIALIAS)
+            blurred_background = blurred_image.resize((width, height), Image.ANTIALIAS)
 
             # Create an alpha mask for blending
-            alpha_mask = create_alpha_mask(
-                resized_image.size, edge_blur_radius)
+            alpha_mask = create_alpha_mask(resized_image.size, edge_blur_radius)
 
             # Blend the resized image with the blurred background using the alpha mask
-            blended_image = Image.composite(resized_image, blurred_background.crop(
-                (0, 0, new_width, new_height)), alpha_mask)
+            blended_image = Image.composite(
+                resized_image, blurred_background.crop((0, 0, new_width, new_height)), alpha_mask
+            )
 
             # Calculate the position to paste the blended image at the center of the blurred background
             paste_left = (blurred_background.width - blended_image.width) // 2
             paste_top = (blurred_background.height - blended_image.height) // 2
 
             # Create a new blank image with the size of the blurred background
-            final_image = Image.new('RGBA', blurred_background.size)
+            final_image = Image.new("RGBA", blurred_background.size)
 
             # Paste the blurred background onto the final image
             final_image.paste(blurred_background, (0, 0))
 
             # Paste the blended image onto the final image using the alpha mask
-            final_image.paste(blended_image, (paste_left,
-                              paste_top), mask=alpha_mask)
+            final_image.paste(blended_image, (paste_left, paste_top), mask=alpha_mask)
 
             return final_image
 
@@ -142,7 +158,7 @@ def zoom_image(image, zoom_factor, fill_with=None):
 
         elif fill_with is None:
             # Create an empty background with the original dimensions
-            background = Image.new('RGBA', (width, height))
+            background = Image.new("RGBA", (width, height))
 
             # Calculate the position to paste the resized image at the center of the background
             paste_left = (background.width - resized_image.width) // 2
@@ -154,8 +170,7 @@ def zoom_image(image, zoom_factor, fill_with=None):
             return background
 
         else:
-            raise ValueError(
-                "Invalid fill_with value. Accepted values are 'Blur', 'Inpainting', and None.")
+            raise ValueError("Invalid fill_with value. Accepted values are 'Blur', 'Inpainting', and None.")
 
     else:
         # If zooming in, proceed as before
@@ -169,8 +184,11 @@ def zoom_image(image, zoom_factor, fill_with=None):
         cropped_image = resized_image.crop((left, top, right, bottom))
         return cropped_image
 
+
 # image here is a PIL object
-def apply_image_transformations(image: Image, zoom_level, rotation_angle, x_shift, y_shift, flip_vertically, flip_horizontally) -> Image:
+def apply_image_transformations(
+    image: Image, zoom_level, rotation_angle, x_shift, y_shift, flip_vertically, flip_horizontally
+) -> Image:
     width, height = image.size
 
     # Calculate the diagonal for the rotation
@@ -187,7 +205,7 @@ def apply_image_transformations(image: Image, zoom_level, rotation_angle, x_shif
     # Shift - Invert the direction of the shift
     # Create a new image with black background
     shift_bg = Image.new("RGB", (diagonal, diagonal), "black")
-    shift_bg.paste(rotated_image, (x_shift, -y_shift)) 
+    shift_bg.paste(rotated_image, (x_shift, -y_shift))
 
     # Zoom - No change
     zoomed_width = int(diagonal * (zoom_level / 100))
@@ -211,15 +229,18 @@ def apply_image_transformations(image: Image, zoom_level, rotation_angle, x_shif
 
     return cropped_image
 
-def apply_coord_transformations(initial_coords, zoom_level, rotation_angle, x_shift, y_shift, flip_vertically, flip_horizontally):
+
+def apply_coord_transformations(
+    initial_coords, zoom_level, rotation_angle, x_shift, y_shift, flip_vertically, flip_horizontally
+):
     x1, y1 = initial_coords[0]
     x2, y2 = initial_coords[1]
     x3, y3 = initial_coords[2]
     x4, y4 = initial_coords[3]
-    
+
     center_x = (x1 + x2 + x3 + x4) / 4
     center_y = (y1 + y2 + y3 + y4) / 4
-    
+
     # zoom
     x1_zoomed = center_x + zoom_level * (x1 - center_x) / 100
     y1_zoomed = center_y + zoom_level * (y1 - center_y) / 100
@@ -229,18 +250,50 @@ def apply_coord_transformations(initial_coords, zoom_level, rotation_angle, x_sh
     y3_zoomed = center_y + zoom_level * (y3 - center_y) / 100
     x4_zoomed = center_x + zoom_level * (x4 - center_x) / 100
     y4_zoomed = center_y + zoom_level * (y4 - center_y) / 100
-    
+
     # rotate
     rotation_angle_rad = math.radians(rotation_angle)
-    x1_rotated = center_x + math.cos(rotation_angle_rad) * (x1_zoomed - center_x) - math.sin(rotation_angle_rad) * (y1_zoomed - center_y)
-    y1_rotated = center_y + math.sin(rotation_angle_rad) * (x1_zoomed - center_x) + math.cos(rotation_angle_rad) * (y1_zoomed - center_y)
-    x2_rotated = center_x + math.cos(rotation_angle_rad) * (x2_zoomed - center_x) - math.sin(rotation_angle_rad) * (y2_zoomed - center_y)
-    y2_rotated = center_y + math.sin(rotation_angle_rad) * (x2_zoomed - center_x) + math.cos(rotation_angle_rad) * (y2_zoomed - center_y)
-    x3_rotated = center_x + math.cos(rotation_angle_rad) * (x3_zoomed - center_x) - math.sin(rotation_angle_rad) * (y3_zoomed - center_y)
-    y3_rotated = center_y + math.sin(rotation_angle_rad) * (x3_zoomed - center_x) + math.cos(rotation_angle_rad) * (y3_zoomed - center_y)
-    x4_rotated = center_x + math.cos(rotation_angle_rad) * (x4_zoomed - center_x) - math.sin(rotation_angle_rad) * (y4_zoomed - center_y)
-    y4_rotated = center_y + math.sin(rotation_angle_rad) * (x4_zoomed - center_x) + math.cos(rotation_angle_rad) * (y4_zoomed - center_y)
-    
+    x1_rotated = (
+        center_x
+        + math.cos(rotation_angle_rad) * (x1_zoomed - center_x)
+        - math.sin(rotation_angle_rad) * (y1_zoomed - center_y)
+    )
+    y1_rotated = (
+        center_y
+        + math.sin(rotation_angle_rad) * (x1_zoomed - center_x)
+        + math.cos(rotation_angle_rad) * (y1_zoomed - center_y)
+    )
+    x2_rotated = (
+        center_x
+        + math.cos(rotation_angle_rad) * (x2_zoomed - center_x)
+        - math.sin(rotation_angle_rad) * (y2_zoomed - center_y)
+    )
+    y2_rotated = (
+        center_y
+        + math.sin(rotation_angle_rad) * (x2_zoomed - center_x)
+        + math.cos(rotation_angle_rad) * (y2_zoomed - center_y)
+    )
+    x3_rotated = (
+        center_x
+        + math.cos(rotation_angle_rad) * (x3_zoomed - center_x)
+        - math.sin(rotation_angle_rad) * (y3_zoomed - center_y)
+    )
+    y3_rotated = (
+        center_y
+        + math.sin(rotation_angle_rad) * (x3_zoomed - center_x)
+        + math.cos(rotation_angle_rad) * (y3_zoomed - center_y)
+    )
+    x4_rotated = (
+        center_x
+        + math.cos(rotation_angle_rad) * (x4_zoomed - center_x)
+        - math.sin(rotation_angle_rad) * (y4_zoomed - center_y)
+    )
+    y4_rotated = (
+        center_y
+        + math.sin(rotation_angle_rad) * (x4_zoomed - center_x)
+        + math.cos(rotation_angle_rad) * (y4_zoomed - center_y)
+    )
+
     # shift
     x1_shifted = x1_rotated + x_shift
     y1_shifted = y1_rotated + y_shift
@@ -250,7 +303,7 @@ def apply_coord_transformations(initial_coords, zoom_level, rotation_angle, x_sh
     y3_shifted = y3_rotated + y_shift
     x4_shifted = x4_rotated + x_shift
     y4_shifted = y4_rotated + y_shift
-    
+
     # flip
     if flip_vertically:
         y1_final = 2 * center_y - y1_shifted
@@ -262,7 +315,7 @@ def apply_coord_transformations(initial_coords, zoom_level, rotation_angle, x_sh
         y2_final = y2_shifted
         y3_final = y3_shifted
         y4_final = y4_shifted
-        
+
     if flip_horizontally:
         x1_final = 2 * center_x - x1_shifted
         x2_final = 2 * center_x - x2_shifted
@@ -273,7 +326,7 @@ def apply_coord_transformations(initial_coords, zoom_level, rotation_angle, x_sh
         x2_final = x2_shifted
         x3_final = x3_shifted
         x4_final = x4_shifted
-    
+
     x1_final = round(x1_final, 2)
     y1_final = round(y1_final, 2)
     x2_final = round(x2_final, 2)
@@ -282,10 +335,10 @@ def apply_coord_transformations(initial_coords, zoom_level, rotation_angle, x_sh
     y3_final = round(y3_final, 2)
     x4_final = round(x4_final, 2)
     y4_final = round(y4_final, 2)
-    
+
     return [(x1_final, y1_final), (x2_final, y2_final), (x3_final, y3_final), (x4_final, y4_final)]
 
-    
+
 def fetch_image_by_stage(shot_uuid, stage, frame_idx):
     data_repo = DataRepo()
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
@@ -297,9 +350,10 @@ def fetch_image_by_stage(shot_uuid, stage, frame_idx):
     else:
         return None
 
+
 # returns a PIL image object
 def rotate_image(location, degree):
-    if location.startswith('http') or location.startswith('https'):
+    if location.startswith("http") or location.startswith("https"):
         response = r.get(location)
         image = Image.open(BytesIO(response.content))
     else:
@@ -313,12 +367,17 @@ def rotate_image(location, degree):
     return rotated_image
 
 
-def save_uploaded_image(image: Union[Image.Image, str, np.ndarray, io.BytesIO, InternalFileObject], project_uuid, frame_uuid=None, stage_type=None):
-    '''
+def save_uploaded_image(
+    image: Union[Image.Image, str, np.ndarray, io.BytesIO, InternalFileObject],
+    project_uuid,
+    frame_uuid=None,
+    stage_type=None,
+):
+    """
     saves the image file (which can be a PIL, arr, InternalFileObject or url) into the project, without
     any tags or logs. then adds that file as the source_image/primary_image, depending
     on the stage selected
-    '''
+    """
     data_repo = DataRepo()
 
     try:
@@ -326,11 +385,13 @@ def save_uploaded_image(image: Union[Image.Image, str, np.ndarray, io.BytesIO, I
             saved_image = image
         else:
             saved_image = save_new_image(image, project_uuid)
-        
+
         # Update records based on stage_type
-        if stage_type ==  WorkflowStageType.SOURCE.value:
-            data_repo.update_specific_timing(frame_uuid, source_image_id=saved_image.uuid, update_in_place=True)
-        elif stage_type ==  WorkflowStageType.STYLED.value:
+        if stage_type == WorkflowStageType.SOURCE.value:
+            data_repo.update_specific_timing(
+                frame_uuid, source_image_id=saved_image.uuid, update_in_place=True
+            )
+        elif stage_type == WorkflowStageType.STYLED.value:
             number_of_image_variants = add_image_variant(saved_image.uuid, frame_uuid)
             promote_image_variant(frame_uuid, number_of_image_variants - 1)
 
@@ -339,26 +400,29 @@ def save_uploaded_image(image: Union[Image.Image, str, np.ndarray, io.BytesIO, I
         print(f"Failed to save image file due to: {str(e)}")
         return None
 
+
 # TODO: change variant_to_promote_frame_number to variant_uuid
 def promote_image_variant(timing_uuid, variant_to_promote_frame_number: str):
-    '''
+    """
     this methods promotes the variant to the primary image (also referred to as styled image)
     interpolated_clips/videos of the shot are not cleared
-    '''
+    """
     data_repo = DataRepo()
     timing = data_repo.get_timing_from_uuid(timing_uuid)
 
     # promoting variant
     variant_to_promote = timing.alternative_images_list[variant_to_promote_frame_number]
-    data_repo.update_specific_timing(timing_uuid, primary_image_id=variant_to_promote.uuid, update_in_place=True)
+    data_repo.update_specific_timing(
+        timing_uuid, primary_image_id=variant_to_promote.uuid
+    )  # removing the update_in_place arg for now
     _ = data_repo.get_timing_list_from_shot(timing.shot.uuid)
 
 
 def promote_video_variant(shot_uuid, variant_uuid):
-    '''
+    """
     this first changes the duration of the interpolated_clip to the frame clip_duration
     then adds the clip to the timed_clip (which is considered as the main variant)
-    '''
+    """
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
 
@@ -367,7 +431,7 @@ def promote_video_variant(shot_uuid, variant_uuid):
         if variant.uuid == variant_uuid:
             variant_to_promote = variant
             break
-    
+
     if not variant_to_promote:
         return None
 
@@ -390,6 +454,7 @@ def promote_video_variant(shot_uuid, variant_uuid):
 
     data_repo.update_shot(uuid=shot.uuid, main_clip_id=variant_to_promote.uuid)
 
+
 def get_canny_img(img_obj, low_threshold, high_threshold, invert_img=False):
     if isinstance(img_obj, str):
         if img_obj.startswith("http"):
@@ -408,7 +473,10 @@ def get_canny_img(img_obj, low_threshold, high_threshold, invert_img=False):
     new_canny_image = Image.fromarray(inverted_canny_edges)
     return new_canny_image
 
-def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_threshold=150) -> InternalFileObject:
+
+def extract_canny_lines(
+    image_path_or_url, project_uuid, low_threshold=50, high_threshold=150
+) -> InternalFileObject:
     data_repo = DataRepo()
     new_canny_image = get_canny_img(image_path_or_url, low_threshold, high_threshold)
 
@@ -417,32 +485,31 @@ def extract_canny_lines(image_path_or_url, project_uuid, low_threshold=50, high_
     file_path = f"videos/{project_uuid}/assets/resources/masks/{unique_file_name}"
     hosted_url = save_or_host_file(new_canny_image, file_path)
 
-    file_data = {
-        "name": unique_file_name,
-        "type": InternalFileType.IMAGE.value,
-        "project_id": project_uuid
-    }
+    file_data = {"name": unique_file_name, "type": InternalFileType.IMAGE.value, "project_id": project_uuid}
 
     if hosted_url:
-        file_data.update({'hosted_url': hosted_url})
+        file_data.update({"hosted_url": hosted_url})
     else:
-        file_data.update({'local_path': file_path})
+        file_data.update({"local_path": file_path})
 
     canny_image_file = data_repo.create_file(**file_data)
     return canny_image_file
 
+
 def combine_mask_and_input_image(mask_path, input_image_path, overlap_color="transparent"):
     # Open the input image and the mask
-    input_image = Image.open(input_image_path) if not isinstance(input_image_path, Image.Image) else input_image_path
+    input_image = (
+        Image.open(input_image_path) if not isinstance(input_image_path, Image.Image) else input_image_path
+    )
     mask_image = Image.open(mask_path) if not isinstance(mask_path, Image.Image) else mask_path
     input_image = input_image.convert("RGBA")
 
     # input_image.save("input_image.png")
     # mask_image.save("mask_image.png")
     is_white = lambda pixel, threshold=245: all(value > threshold for value in pixel[:3])
-    fill_color = (0.5,0.5,0.5,1)      # default grey
+    fill_color = (0.5, 0.5, 0.5, 1)  # default grey
     if overlap_color == "transparent":
-        fill_color = (0,0,0,0)
+        fill_color = (0, 0, 0, 0)
     elif overlap_color == "grey":
         fill_color = (0.5, 0.5, 0.5, 1)
 
@@ -452,6 +519,7 @@ def combine_mask_and_input_image(mask_path, input_image_path, overlap_color="tra
                 input_image.putpixel((x, y), fill_color)
 
     return input_image
+
 
 # the input image is an image created by the PIL library
 def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
@@ -464,15 +532,12 @@ def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
     hosted_url = save_or_host_file(image, file_location)
     # if mask is not present than creating a new one
     if not (timing.mask and timing.mask.location):
-        file_data = {
-            "name": unique_file_name,
-            "type": InternalFileType.IMAGE.value
-        }
+        file_data = {"name": unique_file_name, "type": InternalFileType.IMAGE.value}
 
         if hosted_url:
-            file_data.update({'hosted_url': hosted_url})
+            file_data.update({"hosted_url": hosted_url})
         else:
-            file_data.update({'local_path': file_location})
+            file_data.update({"local_path": file_location})
 
         mask_file: InternalFileObject = data_repo.create_file(**file_data)
         data_repo.update_specific_timing(timing_uuid, mask_id=mask_file.uuid, update_in_place=True)
@@ -486,26 +551,21 @@ def create_or_update_mask(timing_uuid, image) -> InternalFileObject:
     timing = data_repo.get_timing_from_uuid(timing_uuid)
     return timing.mask.location
 
+
 def add_new_shot(project_uuid, name=""):
     data_repo = DataRepo()
 
-    shot_data = {
-        "project_uuid": project_uuid,
-        "desc": "",
-        "name": name,
-        "duration": 10
-    }
+    shot_data = {"project_uuid": project_uuid, "desc": "", "name": name, "duration": 10}
 
     shot = data_repo.create_shot(**shot_data)
     return shot
 
+
 # adds the image file in variant (alternative images) list
 def add_image_variant(image_file_uuid: str, timing_uuid: str):
     data_repo = DataRepo()
-    image_file: InternalFileObject = data_repo.get_file_from_uuid(
-        image_file_uuid)
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
+    image_file: InternalFileObject = data_repo.get_file_from_uuid(image_file_uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
 
     alternative_image_list = timing.alternative_images_list + [image_file]
     alternative_image_uuid_list = [img.uuid for img in alternative_image_list]
@@ -513,13 +573,16 @@ def add_image_variant(image_file_uuid: str, timing_uuid: str):
     alternative_image_uuid_list = json.dumps(alternative_image_uuid_list)
 
     data_repo.update_specific_timing(
-        timing_uuid, alternative_images=alternative_image_uuid_list, update_in_place=True)
+        timing_uuid, alternative_images=alternative_image_uuid_list, update_in_place=True
+    )
 
     if not timing.primary_image:
         data_repo.update_specific_timing(
-            timing_uuid, primary_image_id=primary_image_uuid, update_in_place=True)
+            timing_uuid, primary_image_id=primary_image_uuid, update_in_place=True
+        )
 
     return len(alternative_image_list)
+
 
 # image_list is a list of uploaded_obj
 def convert_image_list_to_file_list(image_list):
@@ -536,19 +599,20 @@ def convert_image_list_to_file_list(image_list):
         }
 
         if hosted_url:
-            data['hosted_url'] = hosted_url
+            data["hosted_url"] = hosted_url
         else:
-            data['local_path'] = file_path
+            data["local_path"] = file_path
 
         image_file = data_repo.create_file(**data)
         file_list.append(image_file)
     return file_list
 
+
 def replace_background(project_uuid, bg_img_loc) -> InternalFileObject:
     data_repo = DataRepo()
     project = data_repo.get_project_from_uuid(project_uuid)
     background_image = generate_pil_image(bg_img_loc)
-    
+
     path = project.get_temp_mask_file(SECOND_MASK_FILE).location
     foreground_image = generate_pil_image(path)
 
@@ -556,24 +620,21 @@ def replace_background(project_uuid, bg_img_loc) -> InternalFileObject:
     filename = str(uuid.uuid4()) + ".png"
     background_img_path = f"videos/{project_uuid}/replaced_bg.png"
     hosted_url = save_or_host_file(background_image, background_img_path)
-    file_data = {
-        "name": filename,
-        "type": InternalFileType.IMAGE.value,
-        "project_id": project_uuid
-    }
+    file_data = {"name": filename, "type": InternalFileType.IMAGE.value, "project_id": project_uuid}
 
     if hosted_url:
-        file_data.update({'hosted_url': hosted_url})
+        file_data.update({"hosted_url": hosted_url})
     else:
-        file_data.update({'local_path': background_img_path})
-    
+        file_data.update({"local_path": background_img_path})
+
     image_file = data_repo.create_file(**file_data)
 
     return image_file
 
+
 # TODO: don't save or upload image where just passing the PIL object can work
 def resize_image(video_name, new_width, new_height, image_file: InternalFileObject) -> InternalFileObject:
-    if 'http' in image_file.location:
+    if "http" in image_file.location:
         response = r.get(image_file.location)
         image = Image.open(BytesIO(response.content))
     else:
@@ -583,52 +644,46 @@ def resize_image(video_name, new_width, new_height, image_file: InternalFileObje
     time.sleep(0.1)
 
     unique_id = str(uuid.uuid4())
-    filepath = "videos/" + str(video_name) + \
-        "/temp_image-" + unique_id + ".png"
-    
+    filepath = "videos/" + str(video_name) + "/temp_image-" + unique_id + ".png"
+
     hosted_url = save_or_host_file(resized_image, filepath)
-    file_data = {
-        "name": str(uuid.uuid4()) + ".png",
-        "type": InternalFileType.IMAGE.value
-    }
+    file_data = {"name": str(uuid.uuid4()) + ".png", "type": InternalFileType.IMAGE.value}
 
     if hosted_url:
-        file_data.update({'hosted_url': hosted_url})
+        file_data.update({"hosted_url": hosted_url})
     else:
-        file_data.update({'local_path': filepath})
+        file_data.update({"local_path": filepath})
 
     data_repo = DataRepo()
     image_file = data_repo.create_file(**file_data)
 
     return image_file
 
+
 def get_audio_bytes_for_slice(timing_uuid):
     data_repo = DataRepo()
 
-    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(
-        timing_uuid)
-    project_settings: InternalSettingObject = data_repo.get_project_setting(
-        timing.shot.project.uuid)
+    timing: InternalFrameTimingObject = data_repo.get_timing_from_uuid(timing_uuid)
+    project_settings: InternalSettingObject = data_repo.get_project_setting(timing.shot.project.uuid)
 
     # TODO: add null check for the audio
     audio = AudioSegment.from_file(project_settings.audio.local_path)
 
     # DOUBT: is it checked if it is the last frame or not?
-    audio = audio[timing.frame_time *
-                  1000: data_repo.get_next_timing(timing_uuid)['frame_time'] * 1000]
+    audio = audio[timing.frame_time * 1000 : data_repo.get_next_timing(timing_uuid)["frame_time"] * 1000]
     audio_bytes = BytesIO()
-    audio.export(audio_bytes, format='wav')
+    audio.export(audio_bytes, format="wav")
     audio_bytes.seek(0)
     return audio_bytes
 
 
 def create_frame_inside_shot(shot_uuid, aux_frame_index):
     data_repo = DataRepo()
-    
+
     timing_data = {
         "shot_id": shot_uuid,
         "animation_style": AnimationStyleType.CREATIVE_INTERPOLATION.value,
-        "aux_frame_index": aux_frame_index
+        "aux_frame_index": aux_frame_index,
     }
     timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
 
@@ -638,8 +693,7 @@ def create_frame_inside_shot(shot_uuid, aux_frame_index):
 def save_audio_file(uploaded_file, project_uuid):
     data_repo = DataRepo()
 
-    local_file_location = os.path.join(
-        f"videos/{project_uuid}/assets/resources/audio", uploaded_file.name)
+    local_file_location = os.path.join(f"videos/{project_uuid}/assets/resources/audio", uploaded_file.name)
 
     audio_bytes = uploaded_file.read()
     hosted_url = save_or_host_file_bytes(audio_bytes, local_file_location, ".mp3")
@@ -647,8 +701,7 @@ def save_audio_file(uploaded_file, project_uuid):
     file_data = {
         "name": str(uuid.uuid4()) + ".mp3",
         "type": InternalFileType.AUDIO.value,
-        "project_id": project_uuid
-
+        "project_id": project_uuid,
     }
 
     if hosted_url:
@@ -656,12 +709,11 @@ def save_audio_file(uploaded_file, project_uuid):
     else:
         file_data.update({"local_path": local_file_location})
 
-    audio_file: InternalFileObject = data_repo.create_file(
-        **file_data)
-    data_repo.update_project_setting(
-        project_uuid, audio_id=audio_file.uuid)
-    
+    audio_file: InternalFileObject = data_repo.create_file(**file_data)
+    data_repo.update_project_setting(project_uuid, audio_id=audio_file.uuid)
+
     return audio_file
+
 
 # if the output is present it adds it to the respective place or else it updates the inference log
 # NOTE: every function used in this should not change/modify session state in anyway
@@ -669,34 +721,34 @@ def process_inference_output(**kwargs):
     data_repo = DataRepo()
 
     inference_time = 0.0
-    inference_type = kwargs.get('inference_type')
+    inference_type = kwargs.get("inference_type")
     log_uuid = None
     # ------------------- FRAME TIMING IMAGE INFERENCE -------------------
     if inference_type == InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value:
-        output = kwargs.get('output')
+        output = kwargs.get("output")
         if output:
-            timing_uuid = kwargs.get('timing_uuid')
-            promote_new_generation = kwargs.get('promote_new_generation')
+            timing_uuid = kwargs.get("timing_uuid")
+            promote_new_generation = kwargs.get("promote_new_generation")
 
             timing = data_repo.get_timing_from_uuid(timing_uuid)
             if not timing:
                 return False
-            
+
             filename = str(uuid.uuid4()) + ".png"
-            log_uuid = kwargs.get('log_uuid')
+            log_uuid = kwargs.get("log_uuid")
             log = data_repo.get_inference_log_from_uuid(log_uuid)
             if log and log.total_inference_time:
                 inference_time = log.total_inference_time
 
             output_file = data_repo.create_file(
-                name=filename, 
+                name=filename,
                 type=InternalFileType.IMAGE.value,
-                hosted_url=output[0] if isinstance(output, list) else output, 
+                hosted_url=output[0] if isinstance(output, list) else output,
                 inference_log_id=log.uuid,
                 project_id=timing.shot.project.uuid,
-                shot_uuid=kwargs["shot_uuid"] if "shot_uuid" in kwargs else ""
+                shot_uuid=kwargs["shot_uuid"] if "shot_uuid" in kwargs else "",
             )
-            
+
             add_image_variant(output_file.uuid, timing_uuid)
             if promote_new_generation == True:
                 timing = data_repo.get_timing_from_uuid(timing_uuid)
@@ -709,46 +761,48 @@ def process_inference_output(**kwargs):
             else:
                 print("No new generation to promote")
         else:
-            log_uuid = kwargs.get('log_uuid')
-            del kwargs['log_uuid']
+            log_uuid = kwargs.get("log_uuid")
+            del kwargs["log_uuid"]
             data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
-    
+
     # --------------------- MULTI VIDEO INFERENCE (INTERPOLATION + MORPHING) -------------------
     elif inference_type == InferenceType.FRAME_INTERPOLATION.value:
-        output = kwargs.get('output')
-        log_uuid = kwargs.get('log_uuid')
+        output = kwargs.get("output")
+        log_uuid = kwargs.get("log_uuid")
 
         if output:
-            settings = kwargs.get('settings')
-            shot_uuid = kwargs.get('shot_uuid')
+            settings = kwargs.get("settings")
+            shot_uuid = kwargs.get("shot_uuid")
             shot = data_repo.get_shot_from_uuid(shot_uuid)
             if not shot:
                 return False
-            
+
             output = output[-1] if isinstance(output, list) else output
             # output can also be an url
             if isinstance(output, str):
                 if output.startswith("http"):
-                    temp_output_file = generate_temp_file(output, '.mp4')
+                    temp_output_file = generate_temp_file(output, ".mp4")
                     output = None
-                    with open(temp_output_file.name, 'rb') as f:
+                    with open(temp_output_file.name, "rb") as f:
                         output = f.read()
 
                     os.remove(temp_output_file.name)
                 else:
-                    with open(output, 'rb') as f:
+                    with open(output, "rb") as f:
                         output = f.read()
 
             # if 'normalise_speed' in settings and settings['normalise_speed']:
             #     output = VideoProcessor.update_video_bytes_speed(output, shot.duration)
 
-            video_location = "videos/" + str(shot.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
+            video_location = (
+                "videos/" + str(shot.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
+            )
             video = convert_bytes_to_file(
                 file_location_to_save=video_location,
                 mime_type="video/mp4",
                 file_bytes=output,
                 project_uuid=shot.project.uuid,
-                inference_log_id=log_uuid
+                inference_log_id=log_uuid,
             )
 
             if not shot.main_clip or settings.get("promote_to_main_variant", False):
@@ -762,101 +816,104 @@ def process_inference_output(**kwargs):
             if log and log.total_inference_time:
                 inference_time = log.total_inference_time
         else:
-            del kwargs['log_uuid']
+            del kwargs["log_uuid"]
             data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
 
     # --------------------- GALLERY IMAGE GENERATION ------------------------
     elif inference_type == InferenceType.GALLERY_IMAGE_GENERATION.value:
-        output = kwargs.get('output')
+        output = kwargs.get("output")
 
         if output:
-            log_uuid = kwargs.get('log_uuid')
-            project_uuid = kwargs.get('project_uuid')
+            log_uuid = kwargs.get("log_uuid")
+            project_uuid = kwargs.get("project_uuid")
             log = data_repo.get_inference_log_from_uuid(log_uuid)
             if log and log.total_inference_time:
                 inference_time = log.total_inference_time
 
             filename = str(uuid.uuid4()) + ".png"
             output_file = data_repo.create_file(
-                name=filename, 
+                name=filename,
                 type=InternalFileType.IMAGE.value,
-                hosted_url=output[0] if isinstance(output, list) else output, 
+                hosted_url=output[0] if isinstance(output, list) else output,
                 inference_log_id=log.uuid,
                 project_id=project_uuid,
-                tag=InternalFileTag.TEMP_GALLERY_IMAGE.value,        # will be updated to GALLERY_IMAGE once the user clicks 'check for new images'
-                shot_uuid=kwargs["shot_uuid"] if "shot_uuid" in kwargs else ""
+                tag=InternalFileTag.TEMP_GALLERY_IMAGE.value,  # will be updated to GALLERY_IMAGE once the user clicks 'check for new images'
+                shot_uuid=kwargs["shot_uuid"] if "shot_uuid" in kwargs else "",
             )
         else:
-            log_uuid = kwargs.get('log_uuid')
-            del kwargs['log_uuid']
+            log_uuid = kwargs.get("log_uuid")
+            del kwargs["log_uuid"]
             data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
 
     # --------------------- FRAME INPAINTING ------------------------
     elif inference_type == InferenceType.FRAME_INPAINTING.value:
-        output = kwargs.get('output')
-        log_uuid = kwargs.get('log_uuid')
+        output = kwargs.get("output")
+        log_uuid = kwargs.get("log_uuid")
 
         if output:
-            stage = kwargs.get('stage', WorkflowStageType.STYLED.value)
-            promote = kwargs.get('promote_generation', False)
-            current_frame_uuid = kwargs.get('timing_uuid')
+            stage = kwargs.get("stage", WorkflowStageType.STYLED.value)
+            promote = kwargs.get("promote_generation", False)
+            current_frame_uuid = kwargs.get("timing_uuid")
             timing = data_repo.get_timing_from_uuid(current_frame_uuid)
 
             file_name = str(uuid.uuid4()) + ".png"
             output_file = data_repo.create_file(
-                name=file_name, 
-                type=InternalFileType.IMAGE.value, 
-                hosted_url=output[0] if isinstance(output, list) else output, 
+                name=file_name,
+                type=InternalFileType.IMAGE.value,
+                hosted_url=output[0] if isinstance(output, list) else output,
                 inference_log_id=str(log_uuid),
-                project_id=timing.shot.project.uuid
+                project_id=timing.shot.project.uuid,
             )
 
             if stage == WorkflowStageType.SOURCE.value:
-                data_repo.update_specific_timing(current_frame_uuid, source_image_id=output_file.uuid, update_in_place=True)
+                data_repo.update_specific_timing(
+                    current_frame_uuid, source_image_id=output_file.uuid, update_in_place=True
+                )
             elif stage == WorkflowStageType.STYLED.value:
                 number_of_image_variants = add_image_variant(output_file.uuid, current_frame_uuid)
                 if promote:
                     promote_image_variant(current_frame_uuid, number_of_image_variants - 1)
-            
+
             log = data_repo.get_inference_log_from_uuid(log_uuid)
             if log and log.total_inference_time:
                 inference_time = log.total_inference_time
         else:
-            del kwargs['log_uuid']
+            del kwargs["log_uuid"]
             data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
 
     # --------------------- MOTION LORA TRAINING --------------------------
     elif inference_type == InferenceType.MOTION_LORA_TRAINING.value:
-        output = kwargs.get('output')
-        log_uuid = kwargs.get('log_uuid')
-        
+        output = kwargs.get("output")
+        log_uuid = kwargs.get("log_uuid")
+
         if output and len(output):
             # output is a list of generated videos
             # we store video_url <--> motion_lora map in a json file
-            
+
             # NOTE: need to convert 'lora_trainer' into a separate module if it needs to work on hosted version
             # fetching the current generated loras
-            spatial_lora_path = os.path.join(COMFY_BASE_PATH, 'models', 'loras', 'trained_spatial')
-            temporal_lora_path = os.path.join(COMFY_BASE_PATH, 'models', 'animatediff_motion_lora')
+            spatial_lora_path = os.path.join(COMFY_BASE_PATH, "models", "loras", "trained_spatial")
+            temporal_lora_path = os.path.join(COMFY_BASE_PATH, "models", "animatediff_motion_lora")
             lora_path = temporal_lora_path
             _, latest_trained_files = get_latest_project_files(lora_path)
-            
+
             cur_idx, data = 0, {}
             for vid in output:
                 if vid.endswith(".gif"):
                     data[latest_trained_files[cur_idx]] = vid
                     cur_idx += 1
-                    
+
             write_to_motion_lora_local_db(data)
         else:
-            del kwargs['log_uuid']
+            del kwargs["log_uuid"]
             data_repo.update_inference_log_origin_data(log_uuid, **kwargs)
-        
+
     if inference_time:
-        credits_used = round(inference_time * 0.004, 3)     # make this more granular for different models
+        credits_used = round(inference_time * 0.004, 3)  # make this more granular for different models
         data_repo.update_usage_credits(-credits_used, log_uuid)
 
     return True
+
 
 def get_latest_project_files(parent_directory):
     latest_project = None
@@ -872,10 +929,10 @@ def get_latest_project_files(parent_directory):
                 if os.path.isdir(time_folder_path):
                     for project_name_folder in os.listdir(time_folder_path):
                         project_folder_path = os.path.join(time_folder_path, project_name_folder)
-                        
+
                         if os.path.isdir(project_folder_path):
                             creation_time = os.path.getctime(project_folder_path)
-                            
+
                             if creation_time > latest_time:
                                 latest_time = creation_time
                                 latest_project = project_folder_path
@@ -886,41 +943,51 @@ def get_latest_project_files(parent_directory):
     else:
         return None, None
 
+
 def check_project_meta_data(project_uuid):
-    '''
+    """
     checking for project metadata (like cache updates - we update specific entities using this flag)
     project_update_data is of the format {"data_update": [timing_uuid], "gallery_update": True/False, "background_img_list": []}
-    '''
+    """
     data_repo = DataRepo()
-    
+
     key = project_uuid
     if acquire_lock(key):
         project = data_repo.get_project_from_uuid(project_uuid)
-        timing_update_data = json.loads(project.meta_data).\
-            get(ProjectMetaData.DATA_UPDATE.value, None) if project.meta_data else None
+        timing_update_data = (
+            json.loads(project.meta_data).get(ProjectMetaData.DATA_UPDATE.value, None)
+            if project.meta_data
+            else None
+        )
         if timing_update_data and len(timing_update_data):
             for timing_uuid in timing_update_data:
                 _ = data_repo.get_timing_from_uuid(timing_uuid, invalidate_cache=True)
 
-        gallery_update_data = json.loads(project.meta_data).\
-            get(ProjectMetaData.GALLERY_UPDATE.value, False) if project.meta_data else False
+        gallery_update_data = (
+            json.loads(project.meta_data).get(ProjectMetaData.GALLERY_UPDATE.value, False)
+            if project.meta_data
+            else False
+        )
         if gallery_update_data:
             pass
 
-        shot_update_data = json.loads(project.meta_data).\
-            get(ProjectMetaData.SHOT_VIDEO_UPDATE.value, []) if project.meta_data else []
+        shot_update_data = (
+            json.loads(project.meta_data).get(ProjectMetaData.SHOT_VIDEO_UPDATE.value, [])
+            if project.meta_data
+            else []
+        )
         if shot_update_data and len(shot_update_data):
             for shot_uuid in shot_update_data:
                 _ = data_repo.get_shot_list(shot_uuid, invalidate_cache=True)
-        
+
         # clearing update data from cache
         meta_data = {
             ProjectMetaData.DATA_UPDATE.value: [],
             ProjectMetaData.GALLERY_UPDATE.value: False,
-            ProjectMetaData.SHOT_VIDEO_UPDATE.value: []
+            ProjectMetaData.SHOT_VIDEO_UPDATE.value: [],
         }
         data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
-        
+
         release_lock(key)
 
 
@@ -929,18 +996,19 @@ def update_app_setting_keys():
     app_logger = AppLogger()
 
     if OFFLINE_MODE:
-        key = os.getenv('REPLICATE_KEY', None)
+        key = os.getenv("REPLICATE_KEY", None)
     else:
         import boto3
+
         ssm = boto3.client("ssm", region_name="ap-south-1")
-        key = ssm.get_parameter(Name='/backend/banodoco/replicate/key')['Parameter']['Value']
+        key = ssm.get_parameter(Name="/backend/banodoco/replicate/key")["Parameter"]["Value"]
 
     app_setting = data_repo.get_app_secrets_from_user_uuid()
-    if app_setting and app_setting['replicate_key'] == key:
+    if app_setting and app_setting["replicate_key"] == key:
         return
 
-    app_logger.log(LoggingType.DEBUG, 'setting keys', None)
-    data_repo.update_app_setting(replicate_username='update')
+    app_logger.log(LoggingType.DEBUG, "setting keys", None)
+    data_repo.update_app_setting(replicate_username="update")
     data_repo.update_app_setting(replicate_key=key)
 
 

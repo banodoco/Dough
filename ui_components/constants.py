@@ -6,24 +6,28 @@ from utils.enum import ExtendedEnum
 class WorkflowStageType(ExtendedEnum):
     SOURCE = "source"
     STYLED = "styled"
-    
+
 
 class VideoQuality(ExtendedEnum):
     HIGH = "High-Quality"
     LOW = "Low"
 
+
 class CreativeProcessType(ExtendedEnum):
     STYLING = "Key Frames"
     MOTION = "Shots"
 
+
 class ShotMetaData(ExtendedEnum):
-    MOTION_DATA = "motion_data"     # {"timing_data": [...], "main_setting_data": {}}
+    MOTION_DATA = "motion_data"  # {"timing_data": [...], "main_setting_data": {}}
     DYNAMICRAFTER_DATA = "dynamicrafter_data"
-    
+
+
 class GalleryImageViewType(ExtendedEnum):
     EXPLORER_ONLY = "explorer"
     SHOT_ONLY = "shot"
     ANY = "any"
+
 
 class DefaultTimingStyleParams:
     prompt = ""
@@ -42,6 +46,7 @@ class DefaultTimingStyleParams:
     animation_style = AnimationStyleType.CREATIVE_INTERPOLATION.value
     model = None
     total_log_table_pages = 1
+
 
 class DefaultProjectSettingParams:
     batch_prompt = ""
@@ -64,24 +69,25 @@ class DefaultProjectSettingParams:
     total_shortlist_gallery_pages = 1
     max_frames_per_shot = 30
 
+
 DEFAULT_SHOT_MOTION_VALUES = {
-    "strength_of_frame" : 0.8,
-    "distance_to_next_frame" : 2.0,
-    "speed_of_transition" : 0.5,
-    "freedom_between_frames" : 0.7,
-    "individual_prompt" : "",
-    "individual_negative_prompt" : "",
-    "motion_during_frame" : 1.25,
+    "strength_of_frame": 0.8,
+    "distance_to_next_frame": 2.0,
+    "speed_of_transition": 0.5,
+    "freedom_between_frames": 1.0,
+    "individual_prompt": "",
+    "individual_negative_prompt": "",
+    "motion_during_frame": 1.0,
 }
 
 # TODO: make proper paths for every file
 CROPPED_IMG_LOCAL_PATH = "videos/temp/cropped.png"
 
 MASK_IMG_LOCAL_PATH = "videos/temp/mask.png"
-TEMP_MASK_FILE = 'temp_mask_file'
+TEMP_MASK_FILE = "temp_mask_file"
 
-SECOND_MASK_FILE_PATH = 'videos/temp/second_mask.png'
-SECOND_MASK_FILE = 'second_mask_file'
+SECOND_MASK_FILE_PATH = "videos/temp/second_mask.png"
+SECOND_MASK_FILE = "second_mask_file"
 
-AUDIO_FILE_PATH = 'videos/temp/audio.mp3'
-AUDIO_FILE = 'audio_file'
+AUDIO_FILE_PATH = "videos/temp/audio.mp3"
+AUDIO_FILE = "audio_file"

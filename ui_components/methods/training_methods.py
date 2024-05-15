@@ -30,14 +30,14 @@ from utils.ml_processor.constants import ML_MODEL
 # INFO: images_list passed here are converted to internal files after they are used for training
 # def train_dreambooth_model(instance_prompt, class_prompt, training_file_url, max_train_steps, model_name, images_list: List[str], controller_type, model_type_list):
 #     from ui_components.methods.common_methods import convert_image_list_to_file_list
-    
+
 #     ml_client = get_ml_client()
 #     app_setting = DataRepo().get_app_setting_from_uuid()
 
 #     response = ml_client.dreambooth_training(
 #         training_file_url, instance_prompt, class_prompt, max_train_steps, model_name, controller_type, len(images_list), app_setting.replicate_username)
 #     training_status = response["status"]
-    
+
 #     model_id = response["id"]
 #     if training_status == "queued":
 #         file_list = convert_image_list_to_file_list(images_list)

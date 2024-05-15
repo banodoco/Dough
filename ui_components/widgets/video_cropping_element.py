@@ -5,6 +5,7 @@ import numpy as np
 import tempfile
 from moviepy.editor import VideoFileClip
 
+
 def video_cropping_element(shot_uuid):
     st.title("Video Cropper")
 
@@ -12,7 +13,7 @@ def video_cropping_element(shot_uuid):
     video_url = st.text_input("...or enter a video URL")
 
     if video_file or video_url:
-        tfile = tempfile.NamedTemporaryFile(delete=False) 
+        tfile = tempfile.NamedTemporaryFile(delete=False)
         if video_file:
             tfile.write(video_file.read())
             video_path = tfile.name
@@ -28,23 +29,20 @@ def video_cropping_element(shot_uuid):
         start_time = st.slider("Start Time", 0.0, float(duration), 0.0, 0.1)
         end_time = st.slider("End Time", 0.0, float(duration), float(duration), 0.1)
 
-        
         starting1, starting2 = st.columns(2)
         with starting1:
-            starting_frame_number = int(start_time * fps)            
+            starting_frame_number = int(start_time * fps)
             display_frame(video_path, starting_frame_number)
         with starting2:
             ending_frame_number = int(end_time * fps)
             display_frame(video_path, ending_frame_number)
 
         if st.button("Save New Video"):
-            with st.spinner('Processing...'):
+            with st.spinner("Processing..."):
                 clip = VideoFileClip(video_path).subclip(start_time, end_time)
-                output_file = video_path.split('.')[0] + "_cropped.mp4"
+                output_file = video_path.split(".")[0] + "_cropped.mp4"
                 clip.write_videofile(output_file)
                 st.success("Saved as {}".format(output_file))
-
-
 
 
 def display_frame(video_path, frame_number):

@@ -6,7 +6,7 @@ comfyui*.log
 
 venv
 dough-env
-.vscode
+.vscode/launch.json
 
 # system
 .DS_Store

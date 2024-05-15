@@ -14,46 +14,47 @@ from utils.cache.cache import CacheKey, StCache
 from utils.data_repo.data_repo import DataRepo
 from ui_components.constants import DefaultProjectSettingParams
 
+
 def set_default_values(shot_uuid):
     data_repo = DataRepo()
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
 
-    if 'selected_page_idx' not in st.session_state:
-        st.session_state['selected_page_idx'] = 0
-    
+    if "selected_page_idx" not in st.session_state:
+        st.session_state["selected_page_idx"] = 0
+
     if "page" not in st.session_state:
-        st.session_state['page'] = CreativeProcessPage.value_list()[st.session_state['selected_page_idx']]
+        st.session_state["page"] = CreativeProcessPage.value_list()[st.session_state["selected_page_idx"]]
 
     if "strength" not in st.session_state:
-        st.session_state['strength'] = DefaultProjectSettingParams.batch_strength
-        st.session_state['prompt_value'] = DefaultProjectSettingParams.batch_prompt
-        st.session_state['model'] = None
-        st.session_state['negative_prompt_value'] = DefaultProjectSettingParams.batch_negative_prompt
-        st.session_state['guidance_scale'] = DefaultProjectSettingParams.batch_guidance_scale
-        st.session_state['seed'] = DefaultProjectSettingParams.batch_seed
-        st.session_state['num_inference_steps'] = DefaultProjectSettingParams.batch_num_inference_steps
-        st.session_state['transformation_stage'] = DefaultProjectSettingParams.batch_transformation_stage
-        
+        st.session_state["strength"] = DefaultProjectSettingParams.batch_strength
+        st.session_state["prompt_value"] = DefaultProjectSettingParams.batch_prompt
+        st.session_state["model"] = None
+        st.session_state["negative_prompt_value"] = DefaultProjectSettingParams.batch_negative_prompt
+        st.session_state["guidance_scale"] = DefaultProjectSettingParams.batch_guidance_scale
+        st.session_state["seed"] = DefaultProjectSettingParams.batch_seed
+        st.session_state["num_inference_steps"] = DefaultProjectSettingParams.batch_num_inference_steps
+        st.session_state["transformation_stage"] = DefaultProjectSettingParams.batch_transformation_stage
+
     if "current_frame_uuid" not in st.session_state and len(timing_list) > 0:
         timing = timing_list[0]
-        st.session_state['current_frame_uuid'] = timing.uuid
-        st.session_state['current_frame_index'] = timing.aux_frame_index + 1
-    
-    if 'frame_styling_view_type' not in st.session_state:
-        st.session_state['frame_styling_view_type'] = "Generate"
-        st.session_state['frame_styling_view_type_index'] = 0
+        st.session_state["current_frame_uuid"] = timing.uuid
+        st.session_state["current_frame_index"] = timing.aux_frame_index + 1
+
+    if "frame_styling_view_type" not in st.session_state:
+        st.session_state["frame_styling_view_type"] = "Generate"
+        st.session_state["frame_styling_view_type_index"] = 0
 
     if "explorer_view" not in st.session_state:
-        st.session_state['explorer_view'] = "Explorations"
-        st.session_state['explorer_view_index'] = 0
+        st.session_state["explorer_view"] = "Explorations"
+        st.session_state["explorer_view_index"] = 0
 
     if "shot_view" not in st.session_state:
-        st.session_state['shot_view'] = "Animate Frames"
-        st.session_state['shot_view_index'] = 0
-    
+        st.session_state["shot_view"] = "Animate Frames"
+        st.session_state["shot_view_index"] = 0
+
     if "styling_view" not in st.session_state:
-        st.session_state['styling_view'] = "Generate"
-        st.session_state['styling_view_index'] = 0
+        st.session_state["styling_view"] = "Generate"
+        st.session_state["styling_view_index"] = 0
 
 
 def copy_sample_assets(project_uuid):
@@ -64,12 +65,13 @@ def copy_sample_assets(project_uuid):
     dest = "videos/" + project_uuid + "/assets/resources/input_videos/sample.mp4"
     shutil.copyfile(source, dest)
 
+
 def create_working_assets(project_uuid):
     if SERVER != ServerType.DEVELOPMENT.value:
         return
 
     new_project = True
-    if os.path.exists("videos/"+project_uuid):
+    if os.path.exists("videos/" + project_uuid):
         new_project = False
 
     directory_list = [
@@ -96,9 +98,9 @@ def create_working_assets(project_uuid):
         "inference_log",
         # temp folder
         "videos/temp",
-        "videos/temp/assets/videos/0_raw/"
+        "videos/temp/assets/videos/0_raw/",
     ]
-    
+
     for directory in directory_list:
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -107,8 +109,9 @@ def create_working_assets(project_uuid):
     # if new_project:
     #     copy_sample_assets(project_uuid)
 
+
 def truncate_decimal(num: float, n: int = 2) -> float:
-    return int(num * 10 ** n) / 10 ** n
+    return int(num * 10**n) / 10**n
 
 
 def get_current_user(invalidate_cache=False) -> InternalUserObject:
@@ -116,15 +119,17 @@ def get_current_user(invalidate_cache=False) -> InternalUserObject:
     user = data_repo.get_first_active_user(invalidate_cache=invalidate_cache)
     return user
 
+
 def user_credits_available():
     current_user = get_current_user()
     return True if (current_user and current_user.total_credits > 0) else False
+
 
 def get_current_user_uuid():
     current_user = get_current_user()
     if current_user:
         return current_user.uuid
-    else: 
+    else:
         return None
 
 
@@ -150,7 +155,7 @@ def reset_project_state():
         "which_layer_index",
         "drawing_input",
         "image_created",
-        "precision_cropping_inpainted_image_uuid",        
+        "precision_cropping_inpainted_image_uuid",
         "transformation_stage",
         "custom_pipeline",
         "index_of_last_custom_pipeline",
@@ -177,7 +182,7 @@ def reset_project_state():
         "use_new_settings",
         "shot_uuid",
         "maintain_state",
-        "status_optn_index"
+        "status_optn_index",
     ]
 
     for k in keys_to_delete:
@@ -185,10 +190,7 @@ def reset_project_state():
             del st.session_state[k]
 
     # numbered keys
-    numbered_keys_to_delete = [
-        'animation_style_index_',
-        'animation_style_'
-    ]
+    numbered_keys_to_delete = ["animation_style_index_", "animation_style_"]
 
     # TODO: remove hardcoded 20, find a better way to clear numbered state
     for i in range(20):
@@ -196,7 +198,6 @@ def reset_project_state():
             key = k + str(i)
             if key in st.session_state:
                 del st.session_state[key]
-
 
     # reset cache
     StCache.clear_entire_cache()
@@ -208,7 +209,7 @@ def reset_styling_settings(timing_uuid):
         "index_of_default_model",
         "index_of_controlnet_adapter_type",
         "index_of_dreambooth_model",
-        f'prompt_value_{timing_uuid}',
+        f"prompt_value_{timing_uuid}",
         "negative_prompt_value",
     ]
 
@@ -238,7 +239,7 @@ def is_process_active(custom_process_name, custom_process_port):
             # Use 'ps' for Unix/Linux
             ps_output = subprocess.check_output(["ps", "aux"]).decode("utf-8")
             res = True if custom_process_name in ps_output else False
-            
+
         if res:
             st.session_state[cache_key] = True
         return res
@@ -259,6 +260,7 @@ def acquire_lock(key):
         retries += 1
         time.sleep(0.2)
     return False
+
 
 def release_lock(key):
     data_repo = DataRepo()
