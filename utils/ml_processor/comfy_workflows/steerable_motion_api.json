@@ -501,8 +501,8 @@
       "ipa_weight_type": "ease in-out",
       "ipa_weight": 1,
       "ipa_embeds_scaling": "V only",
-      "ipa_noise_strength": 0.8,
-      "use_image_for_noise": false,
+      "ipa_noise_strength": 0.9,
+      "use_image_for_noise": true,
       "type_of_noise": "shuffle",
       "noise_blur": 0
     },
@@ -516,9 +516,9 @@
       "ipa_starts_at": 0.0,
       "ipa_ends_at": 1.00,
       "ipa_weight_type": "ease in-out",
-      "ipa_weight": 0.85,
+      "ipa_weight": 1.0,
       "ipa_embeds_scaling": "V only",
-      "ipa_noise_strength": 0.8,
+      "ipa_noise_strength": 0.0,
       "use_image_for_noise": false,
       "type_of_noise": "shuffle",
       "noise_blur": 0
