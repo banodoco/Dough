@@ -529,11 +529,11 @@ class ComfyDataTransform:
                 json_data["543"]["inputs"]["clip"] = ["565", 1]
                 json_data["547"]["inputs"]["beta_schedule"] = "lcm avg(sqrt_linear,linear)"
 
-                json_data["207"]["inputs"]["sample_name"] = "lcm"
+                json_data["207"]["inputs"]["sampler_name"] = "lcm"
                 json_data["207"]["inputs"]["steps"] = 8
                 json_data["207"]["inputs"]["cfg"] = 2.2
                 json_data["546"]["inputs"]["model_name"] = "AnimateLCM_sd15_t2v.ckpt"
-                json_data["207"]["inputs"]["sampler_name"] = "sgm_uniform"
+                json_data["207"]["inputs"]["scheduler"] = "sgm_uniform"
 
                 extra_models_list.append(
                     {
@@ -553,7 +553,7 @@ class ComfyDataTransform:
                 return json_data, extra_models_list
 
             elif type_of_generation == "Smooth n' Steady":
-                pass
+                return json_data, extra_models_list
 
             elif type_of_generation == "Liquidy Loop":
                 json_data.update(
@@ -577,16 +577,11 @@ class ComfyDataTransform:
                 json_data["543"]["inputs"]["clip"] = ["565", 1]
                 json_data["547"]["inputs"]["beta_schedule"] = "lcm avg(sqrt_linear,linear)"
 
-                # update workflow["541"]["inputs"]["text"] to put 'fluid dynamics, masterpiece' in front of the prompt
-                json_data["541"]["inputs"]["text"] = (
-                    "fluid dynamics, masterpiece " + json_data["541"]["inputs"]["text"]
-                )
-
-                json_data["207"]["inputs"]["sample_name"] = "lcm"
+                json_data["207"]["inputs"]["sampler_name"] = "lcm"
                 json_data["207"]["inputs"]["steps"] = 20
-                json_data["207"]["inputs"]["cfg"] = 1
+                json_data["207"]["inputs"]["cfg"] = 1.0
                 json_data["546"]["inputs"]["model_name"] = "AnimateLCM_sd15_t2v.ckpt"
-                json_data["207"]["inputs"]["sampler_name"] = "sgm_uniform"
+                json_data["207"]["inputs"]["scheduler"] = "sgm_uniform"
 
                 json_data["593"]["inputs"]["ipa_starts_at"] = 0
                 json_data["593"]["inputs"]["ipa_ends_at"] = 0.55

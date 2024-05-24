@@ -77,7 +77,7 @@ DEFAULT_SHOT_MOTION_VALUES = {
     "freedom_between_frames": 1.0,
     "individual_prompt": "",
     "individual_negative_prompt": "",
-    "motion_during_frame": 1.0,
+    "motion_during_frame": 1.25,
 }
 
 # TODO: make proper paths for every file
