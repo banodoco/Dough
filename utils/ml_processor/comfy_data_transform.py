@@ -470,8 +470,7 @@ class ComfyDataTransform:
 
             return json_data
 
-        def convert_to_specific_workflow(json_data, type_of_generation="Fast With A Price", extra_models_list):
-
+        def convert_to_specific_workflow(json_data, type_of_generation, extra_models_list):
 
             if type_of_generation == "Slurshy Realistiche":
                 json_data["593"] = {
@@ -482,14 +481,12 @@ class ComfyDataTransform:
                         "ipa_weight": 1,
                         "ipa_embeds_scaling": "K+mean(V) w/ C penalty",
                         "ipa_noise_strength": 0.9,
-                        "use_image_for_noise": false,
+                        "use_image_for_noise": False,
                         "type_of_noise": "gaussian",
-                        "noise_blur": 0
+                        "noise_blur": 0,
                     },
                     "class_type": "IpaConfiguration",
-                    "_meta": {
-                        "title": "IPA Configuration  🎞️🅢🅜"
-                    }
+                    "_meta": {"title": "IPA Configuration  🎞️🅢🅜"},
                 }
 
                 json_data["594"] = {
@@ -500,18 +497,15 @@ class ComfyDataTransform:
                         "ipa_weight": 1,
                         "ipa_embeds_scaling": "V only",
                         "ipa_noise_strength": 0.9,
-                        "use_image_for_noise": true,
+                        "use_image_for_noise": True,
                         "type_of_noise": "fade",
-                        "noise_blur": 1
+                        "noise_blur": 1,
                     },
                     "class_type": "IpaConfiguration",
-                    "_meta": {
-                        "title": "IPA Configuration  🎞️🅢🅜"
-                    }
-                }        
+                    "_meta": {"title": "IPA Configuration  🎞️🅢🅜"},
+                }
 
-                return json_data, extra_models_list        
-
+                return json_data, extra_models_list
 
             elif type_of_generation == "Fast With A Price":
                 json_data.update(
@@ -542,24 +536,26 @@ class ComfyDataTransform:
                 json_data["207"]["inputs"]["sampler_name"] = "sgm_uniform"
 
                 extra_models_list.append(
-                {
-                    "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
-                    "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
-                    "dest": os.path.join(COMFY_BASE_PATH, "models", "loras"),
-                })
+                    {
+                        "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
+                        "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
+                        "dest": os.path.join(COMFY_BASE_PATH, "models", "loras"),
+                    }
+                )
                 extra_models_list.append(
-                {
-                    "filename": "AnimateLCM_sd15_t2v.ckpt",
-                    "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v.ckpt",
-                    "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models"),
-                })
+                    {
+                        "filename": "AnimateLCM_sd15_t2v.ckpt",
+                        "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v.ckpt",
+                        "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models"),
+                    }
+                )
 
                 return json_data, extra_models_list
-            
+
             elif type_of_generation == "Smooth n' Steady":
                 pass
 
-            elif type_of_generation == "Liquidy Loop":            
+            elif type_of_generation == "Liquidy Loop":
                 json_data.update(
                     {
                         "565": {
@@ -582,7 +578,9 @@ class ComfyDataTransform:
                 json_data["547"]["inputs"]["beta_schedule"] = "lcm avg(sqrt_linear,linear)"
 
                 # update workflow["541"]["inputs"]["text"] to put 'fluid dynamics, masterpiece' in front of the prompt
-                json_data["541"]["inputs"]["text"] = "fluid dynamics, masterpiece " + json_data["541"]["inputs"]["text"]
+                json_data["541"]["inputs"]["text"] = (
+                    "fluid dynamics, masterpiece " + json_data["541"]["inputs"]["text"]
+                )
 
                 json_data["207"]["inputs"]["sample_name"] = "lcm"
                 json_data["207"]["inputs"]["steps"] = 20
@@ -596,7 +594,7 @@ class ComfyDataTransform:
                 json_data["593"]["inputs"]["ipa_weight"] = 1
                 json_data["593"]["inputs"]["ipa_embeds_scaling"] = "K+mean(V) w/ C penalty"
                 json_data["593"]["inputs"]["ipa_noise_strength"] = 0.1
-                json_data["593"]["inputs"]["use_image_for_noise"] = true
+                json_data["593"]["inputs"]["use_image_for_noise"] = True
                 json_data["593"]["inputs"]["type_of_noise"] = "fade"
                 json_data["593"]["inputs"]["noise_blur"] = 0
 
@@ -606,26 +604,28 @@ class ComfyDataTransform:
                 json_data["594"]["inputs"]["ipa_weight"] = 1
                 json_data["594"]["inputs"]["ipa_embeds_scaling"] = "K+mean(V) w/ C penalty"
                 json_data["594"]["inputs"]["ipa_noise_strength"] = 0.1
-                json_data["594"]["inputs"]["use_image_for_noise"] = true
+                json_data["594"]["inputs"]["use_image_for_noise"] = True
                 json_data["594"]["inputs"]["type_of_noise"] = "fade"
                 json_data["594"]["inputs"]["noise_blur"] = 0
 
                 extra_models_list.append(
-                {
-                    "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
-                    "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
-                    "dest": os.path.join(COMFY_BASE_PATH, "models", "loras"),
-                })
+                    {
+                        "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
+                        "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
+                        "dest": os.path.join(COMFY_BASE_PATH, "models", "loras"),
+                    }
+                )
                 extra_models_list.append(
-                {
-                    "filename": "AnimateLCM_sd15_t2v.ckpt",
-                    "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v.ckpt",
-                    "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models"),
-                })
+                    {
+                        "filename": "AnimateLCM_sd15_t2v.ckpt",
+                        "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v.ckpt",
+                        "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models"),
+                    }
+                )
 
                 return json_data, extra_models_list
-            
-            elif type_of_generation == "Chocky Realistiche":     
+
+            elif type_of_generation == "Chocky Realistiche":
 
                 json_data["593"]["inputs"]["ipa_starts_at"] = 0
                 json_data["593"]["inputs"]["ipa_ends_at"] = 0.28
@@ -633,7 +633,7 @@ class ComfyDataTransform:
                 json_data["593"]["inputs"]["ipa_weight"] = 1
                 json_data["593"]["inputs"]["ipa_embeds_scaling"] = "V only"
                 json_data["593"]["inputs"]["ipa_noise_strength"] = 0
-                json_data["593"]["inputs"]["use_image_for_noise"] = true
+                json_data["593"]["inputs"]["use_image_for_noise"] = True
                 json_data["593"]["inputs"]["type_of_noise"] = "shuffle"
                 json_data["593"]["inputs"]["noise_blur"] = 0
 
@@ -643,12 +643,11 @@ class ComfyDataTransform:
                 json_data["594"]["inputs"]["ipa_weight"] = 0.7000000000000001
                 json_data["594"]["inputs"]["ipa_embeds_scaling"] = "V only"
                 json_data["594"]["inputs"]["ipa_noise_strength"] = 0.75
-                json_data["594"]["inputs"]["use_image_for_noise"] = true
+                json_data["594"]["inputs"]["use_image_for_noise"] = True
                 json_data["594"]["inputs"]["type_of_noise"] = "fade"
                 json_data["594"]["inputs"]["noise_blur"] = 0
 
                 return json_data, extra_models_list
-                
 
         extra_models_list = []
         sm_data = query.data.get("data", {})
@@ -716,11 +715,10 @@ class ComfyDataTransform:
                 sm_data.get("file_structure_control_img_uuid"),
                 sm_data.get("strength_of_structure_control_image"),
             )
-      
-        
-        workflow, extra_models_list = convert_to_specific_workflow(workflow, sm_data.get("type_of_generation", "Fast With A Price"), extra_models_list)
 
-        
+        workflow, extra_models_list = convert_to_specific_workflow(
+            workflow, sm_data.get("type_of_generation", "Fast With A Price"), extra_models_list
+        )
 
         ignore_list = sm_data.get("lora_data", [])
         return json.dumps(workflow), output_node_ids, extra_models_list, ignore_list
