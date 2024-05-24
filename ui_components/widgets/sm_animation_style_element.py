@@ -216,6 +216,8 @@ def video_motion_settings(shot_uuid, img_list):
 
     st.markdown("***")
     st.markdown("##### Overall style settings")
+
+    """
     high_detail_mode_val = st.session_state.get(f"high_detail_mode_val_{shot_uuid}", True)
     high_detail_mode = st.checkbox(
         "Enable high detail mode",
@@ -223,6 +225,8 @@ def video_motion_settings(shot_uuid, img_list):
         key=f"high_detail_mode_{shot_uuid}",
         value=high_detail_mode_val,
     )
+    """
+    high_detail_mode = True
     e1, _, _ = st.columns([2, 1, 1])
     with e1:
         strength_of_adherence = st.slider(
@@ -288,6 +292,7 @@ def video_motion_settings(shot_uuid, img_list):
             index=st.session_state[f"type_of_motion_context_index_{shot.uuid}"],
             help="This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.",
         )
+        """
         amount_of_motion = st.slider(
             "Amount of motion:",
             min_value=0.5,
@@ -298,6 +303,7 @@ def video_motion_settings(shot_uuid, img_list):
             on_change=lambda: update_motion_for_all_frames(shot.uuid, img_list),
             help="You can also tweak this on an individual frame level in the advanced settings above.",
         )
+        """
 
     i1, i2, i3 = st.columns([1, 0.5, 1.5])
     with i1:
@@ -311,47 +317,16 @@ def video_motion_settings(shot_uuid, img_list):
             f"structure_control_image_uuid_{shot_uuid}" in st.session_state
             and st.session_state[f"structure_control_image_uuid_{shot_uuid}"]
         )
+        """
         control_motion_with_image = st.toggle(
             "Control motion with an image",
             help="This will allow you to upload images to control the motion of the video.",
             key=f"control_motion_with_image_{shot_uuid}",
             value=img_loaded_from_settings,
         )
-
-        if control_motion_with_image or img_loaded_from_settings:
-            project_settings = data_repo.get_project_setting(shot.project.uuid)
-            width, height = project_settings.width, project_settings.height
-            if img_loaded_from_settings:
-                uploaded_image = data_repo.get_file_from_uuid(
-                    st.session_state[f"structure_control_image_uuid_{shot_uuid}"]
-                )
-                uploaded_image_pil = Image.open(uploaded_image.location)
-                uploaded_image_pil = uploaded_image_pil.resize((width, height))
-                st.session_state[f"structure_control_image_{shot.uuid}"] = uploaded_image_pil
-            else:
-                st.session_state[f"structure_control_image_uuid_{shot_uuid}"] = None
-                st.session_state[f"saved_strength_of_structure_control_image_{shot_uuid}"] = None
-                uploaded_image = st.file_uploader(
-                    "Upload images to control motion",
-                    type=["png", "jpg", "jpeg"],
-                    accept_multiple_files=False,
-                )
-
-                if st.button("Add image", key="add_images"):
-                    if uploaded_image:
-                        # Convert the uploaded image file to PIL Image
-                        uploaded_image_pil = (
-                            Image.open(uploaded_image)
-                            if not isinstance(uploaded_image, Image.Image)
-                            else uploaded_image
-                        )
-                        uploaded_image_pil = uploaded_image_pil.resize((width, height))
-                        st.session_state[f"structure_control_image_{shot.uuid}"] = uploaded_image_pil
-                        st.rerun()
-                    else:
-                        st.warning("No images uploaded")
-        else:
-            st.session_state[f"structure_control_image_{shot_uuid}"] = None
+        """
+        control_motion_with_image = False
+        st.session_state[f"structure_control_image_{shot_uuid}"] = None
 
     with i2:
         if (
@@ -380,7 +355,6 @@ def video_motion_settings(shot_uuid, img_list):
         overall_positive_prompt,
         overall_negative_prompt,
         type_of_motion_context,
-        amount_of_motion,
         high_detail_mode,
     )
 

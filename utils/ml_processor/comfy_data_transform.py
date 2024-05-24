@@ -470,34 +470,185 @@ class ComfyDataTransform:
 
             return json_data
 
-        def convert_to_animate_lcm(json_data):
-            json_data.update(
-                {
-                    "565": {
-                        "inputs": {
-                            "lora_name": "AnimateLCM_sd15_t2v_lora.safetensors",
-                            "strength_model": 0.8,
-                            "strength_clip": 1,
-                            "model": ["461", 0],
-                            "clip": ["461", 1],
-                        },
-                        "class_type": "LoraLoader",
-                        "_meta": {"title": "Load LoRA"},
+        def convert_to_specific_workflow(json_data, type_of_generation="Fast With A Price", extra_models_list):
+
+
+            if type_of_generation == "Slurshy Realistiche":
+                json_data["593"] = {
+                    "inputs": {
+                        "ipa_starts_at": 0,
+                        "ipa_ends_at": 0.5,
+                        "ipa_weight_type": "ease in-out",
+                        "ipa_weight": 1,
+                        "ipa_embeds_scaling": "K+mean(V) w/ C penalty",
+                        "ipa_noise_strength": 0.9,
+                        "use_image_for_noise": false,
+                        "type_of_noise": "gaussian",
+                        "noise_blur": 0
+                    },
+                    "class_type": "IpaConfiguration",
+                    "_meta": {
+                        "title": "IPA Configuration  🎞️🅢🅜"
                     }
                 }
-            )
 
-            json_data["558"]["inputs"]["model"] = ["565", 0]
-            json_data["541"]["inputs"]["clip"] = ["565", 1]
-            json_data["543"]["inputs"]["clip"] = ["565", 1]
-            json_data["547"]["inputs"]["beta_schedule"] = "lcm avg(sqrt_linear,linear)"
+                json_data["594"] = {
+                    "inputs": {
+                        "ipa_starts_at": 0,
+                        "ipa_ends_at": 1,
+                        "ipa_weight_type": "ease out",
+                        "ipa_weight": 1,
+                        "ipa_embeds_scaling": "V only",
+                        "ipa_noise_strength": 0.9,
+                        "use_image_for_noise": true,
+                        "type_of_noise": "fade",
+                        "noise_blur": 1
+                    },
+                    "class_type": "IpaConfiguration",
+                    "_meta": {
+                        "title": "IPA Configuration  🎞️🅢🅜"
+                    }
+                }        
 
-            json_data["207"]["inputs"]["sample_name"] = "lcm"
-            json_data["207"]["inputs"]["steps"] = 8
-            json_data["207"]["inputs"]["cfg"] = 2.2
-            # json_data["207"]["inputs"]["sampler_name"] = "sgm_uniform"
+                return json_data, extra_models_list        
 
-            return json_data
+
+            elif type_of_generation == "Fast With A Price":
+                json_data.update(
+                    {
+                        "565": {
+                            "inputs": {
+                                "lora_name": "AnimateLCM_sd15_t2v_lora.safetensors",
+                                "strength_model": 0.8,
+                                "strength_clip": 1,
+                                "model": ["461", 0],
+                                "clip": ["461", 1],
+                            },
+                            "class_type": "LoraLoader",
+                            "_meta": {"title": "Load LoRA"},
+                        }
+                    }
+                )
+
+                json_data["558"]["inputs"]["model"] = ["565", 0]
+                json_data["541"]["inputs"]["clip"] = ["565", 1]
+                json_data["543"]["inputs"]["clip"] = ["565", 1]
+                json_data["547"]["inputs"]["beta_schedule"] = "lcm avg(sqrt_linear,linear)"
+
+                json_data["207"]["inputs"]["sample_name"] = "lcm"
+                json_data["207"]["inputs"]["steps"] = 8
+                json_data["207"]["inputs"]["cfg"] = 2.2
+                json_data["546"]["inputs"]["model_name"] = "AnimateLCM_sd15_t2v.ckpt"
+                json_data["207"]["inputs"]["sampler_name"] = "sgm_uniform"
+
+                extra_models_list.append(
+                {
+                    "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
+                    "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
+                    "dest": os.path.join(COMFY_BASE_PATH, "models", "loras"),
+                })
+                extra_models_list.append(
+                {
+                    "filename": "AnimateLCM_sd15_t2v.ckpt",
+                    "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v.ckpt",
+                    "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models"),
+                })
+
+                return json_data, extra_models_list
+            
+            elif type_of_generation == "Smooth n' Steady":
+                pass
+
+            elif type_of_generation == "Liquidy Loop":            
+                json_data.update(
+                    {
+                        "565": {
+                            "inputs": {
+                                "lora_name": "AnimateLCM_sd15_t2v_lora.safetensors",
+                                "strength_model": 1.05,
+                                "strength_clip": 1,
+                                "model": ["461", 0],
+                                "clip": ["461", 1],
+                            },
+                            "class_type": "LoraLoader",
+                            "_meta": {"title": "Load LoRA"},
+                        }
+                    }
+                )
+
+                json_data["558"]["inputs"]["model"] = ["565", 0]
+                json_data["541"]["inputs"]["clip"] = ["565", 1]
+                json_data["543"]["inputs"]["clip"] = ["565", 1]
+                json_data["547"]["inputs"]["beta_schedule"] = "lcm avg(sqrt_linear,linear)"
+
+                # update workflow["541"]["inputs"]["text"] to put 'fluid dynamics, masterpiece' in front of the prompt
+                json_data["541"]["inputs"]["text"] = "fluid dynamics, masterpiece " + json_data["541"]["inputs"]["text"]
+
+                json_data["207"]["inputs"]["sample_name"] = "lcm"
+                json_data["207"]["inputs"]["steps"] = 20
+                json_data["207"]["inputs"]["cfg"] = 1
+                json_data["546"]["inputs"]["model_name"] = "AnimateLCM_sd15_t2v.ckpt"
+                json_data["207"]["inputs"]["sampler_name"] = "sgm_uniform"
+
+                json_data["593"]["inputs"]["ipa_starts_at"] = 0
+                json_data["593"]["inputs"]["ipa_ends_at"] = 0.55
+                json_data["593"]["inputs"]["ipa_weight_type"] = "ease in-out"
+                json_data["593"]["inputs"]["ipa_weight"] = 1
+                json_data["593"]["inputs"]["ipa_embeds_scaling"] = "K+mean(V) w/ C penalty"
+                json_data["593"]["inputs"]["ipa_noise_strength"] = 0.1
+                json_data["593"]["inputs"]["use_image_for_noise"] = true
+                json_data["593"]["inputs"]["type_of_noise"] = "fade"
+                json_data["593"]["inputs"]["noise_blur"] = 0
+
+                json_data["594"]["inputs"]["ipa_starts_at"] = 0
+                json_data["594"]["inputs"]["ipa_ends_at"] = 1
+                json_data["594"]["inputs"]["ipa_weight_type"] = "strong middle"
+                json_data["594"]["inputs"]["ipa_weight"] = 1
+                json_data["594"]["inputs"]["ipa_embeds_scaling"] = "K+mean(V) w/ C penalty"
+                json_data["594"]["inputs"]["ipa_noise_strength"] = 0.1
+                json_data["594"]["inputs"]["use_image_for_noise"] = true
+                json_data["594"]["inputs"]["type_of_noise"] = "fade"
+                json_data["594"]["inputs"]["noise_blur"] = 0
+
+                extra_models_list.append(
+                {
+                    "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
+                    "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
+                    "dest": os.path.join(COMFY_BASE_PATH, "models", "loras"),
+                })
+                extra_models_list.append(
+                {
+                    "filename": "AnimateLCM_sd15_t2v.ckpt",
+                    "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v.ckpt",
+                    "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models"),
+                })
+
+                return json_data, extra_models_list
+            
+            elif type_of_generation == "Chocky Realistiche":     
+
+                json_data["593"]["inputs"]["ipa_starts_at"] = 0
+                json_data["593"]["inputs"]["ipa_ends_at"] = 0.28
+                json_data["593"]["inputs"]["ipa_weight_type"] = "ease in-out"
+                json_data["593"]["inputs"]["ipa_weight"] = 1
+                json_data["593"]["inputs"]["ipa_embeds_scaling"] = "V only"
+                json_data["593"]["inputs"]["ipa_noise_strength"] = 0
+                json_data["593"]["inputs"]["use_image_for_noise"] = true
+                json_data["593"]["inputs"]["type_of_noise"] = "shuffle"
+                json_data["593"]["inputs"]["noise_blur"] = 0
+
+                json_data["594"]["inputs"]["ipa_starts_at"] = 0
+                json_data["594"]["inputs"]["ipa_ends_at"] = 1
+                json_data["594"]["inputs"]["ipa_weight_type"] = "strong middle"
+                json_data["594"]["inputs"]["ipa_weight"] = 0.7000000000000001
+                json_data["594"]["inputs"]["ipa_embeds_scaling"] = "V only"
+                json_data["594"]["inputs"]["ipa_noise_strength"] = 0.75
+                json_data["594"]["inputs"]["use_image_for_noise"] = true
+                json_data["594"]["inputs"]["type_of_noise"] = "fade"
+                json_data["594"]["inputs"]["noise_blur"] = 0
+
+                return json_data, extra_models_list
+                
 
         extra_models_list = []
         sm_data = query.data.get("data", {})
@@ -565,25 +716,11 @@ class ComfyDataTransform:
                 sm_data.get("file_structure_control_img_uuid"),
                 sm_data.get("strength_of_structure_control_image"),
             )
+      
+        
+        workflow, extra_models_list = convert_to_specific_workflow(workflow, sm_data.get("type_of_generation", "Fast With A Price"), extra_models_list)
 
-        extra_models_list = [
-            {
-                "filename": "WAS26.safetensors",
-                "url": "https://huggingface.co/peteromallet/poms-funtime-mlora-emporium/resolve/main/WAS26.safetensors?download=true",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_motion_lora"),
-            }
-        ]
-
-        if sm_data.get("use_ad_lcm", False):
-            workflow = convert_to_animate_lcm(workflow)
-            # Append the AnimateLCM model to the existing list
-            extra_models_list.append(
-                {
-                    "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
-                    "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
-                    "dest": os.path.join(COMFY_BASE_PATH, "models", "loras"),
-                }
-            )
+        
 
         ignore_list = sm_data.get("lora_data", [])
         return json.dumps(workflow), output_node_ids, extra_models_list, ignore_list
