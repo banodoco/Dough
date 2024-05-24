@@ -154,8 +154,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
         st.markdown("***")
         st.markdown("##### Generation Settings")
 
-        if f"type_of_generation_index_{shot.uuid}" not in st.session_state or not isinstance(ipa_starts_at
-                                                                                             1
+        if f"type_of_generation_index_{shot.uuid}" not in st.session_state or not isinstance(
             st.session_state[f"type_of_generation_index_{shot.uuid}"], int
         ):
             st.session_state[f"type_of_generation_index_{shot.uuid}"] = 0
