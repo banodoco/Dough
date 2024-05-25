@@ -78,6 +78,7 @@ class VideoInterpolator:
                 "normalise_speed": settings["normalise_speed"],
                 "ipadapter_noise": settings["ipadapter_noise"],
                 "queue_inference": True,
+                "amount_of_motion": 1.25,
                 "context_length": settings["context_length"],
                 "context_stride": settings["context_stride"],
                 "context_overlap": settings["context_overlap"],

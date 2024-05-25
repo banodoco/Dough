@@ -173,6 +173,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             horizontal=True,
             index=st.session_state[f"type_of_generation_index_{shot.uuid}"],
             help="""
+            
         **Slurshy Realistiche**: good for simple realistic motion.
 
         **Smooth n' Steady**: good for slow, smooth transitions. 
