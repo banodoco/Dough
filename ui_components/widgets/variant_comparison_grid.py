@@ -85,7 +85,13 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
     col1, col2, col3 = st.columns([1, 0.25, 0.5])
     if stage == CreativeProcessType.MOTION.value:
-        items_to_show = st.selectbox("Items per page:", options=[3, 6, 9], index=0)
+        # have a toggle for open details
+        with col2:
+            open_generaton_details = st_memory.toggle(
+                "Open generation details", key=f"open_details_{shot_uuid}"
+            )
+        with col3:
+            items_to_show = st.selectbox("Items per page:", options=[3, 6, 9], index=0)
         items_to_show = items_to_show - 1
         num_columns = 3
         with col1:
@@ -157,7 +163,12 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                     st.info("Upscaled video")
                 create_video_download_button(variants[current_variant].location, tag="var_compare")
                 variant_inference_detail_element(
-                    variants[current_variant], stage, shot_uuid, timing_list, tag="var_compare"
+                    variants[current_variant],
+                    stage,
+                    shot_uuid,
+                    timing_list,
+                    tag="var_compare",
+                    open_generaton_details=open_generaton_details,
                 )
 
             else:
@@ -200,7 +211,12 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                         st.info("Upscaled video")
                     create_video_download_button(variants[variant_index].location, tag="var_details")
                     variant_inference_detail_element(
-                        variants[variant_index], stage, shot_uuid, timing_list, tag="var_details"
+                        variants[variant_index],
+                        stage,
+                        shot_uuid,
+                        timing_list,
+                        tag="var_details",
+                        open_generaton_details=open_generaton_details,
                     )
 
                 else:
@@ -281,13 +297,13 @@ def image_variant_details(variant: InternalFileObject):
 
 
 def variant_inference_detail_element(
-    variant: InternalFileObject, stage, shot_uuid, timing_list="", tag="temp"
+    variant: InternalFileObject, stage, shot_uuid, timing_list="", tag="temp", open_generaton_details=False
 ):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     if stage == CreativeProcessType.MOTION.value:
 
-        with st.expander("Settings", expanded=True):
+        with st.expander("Settings", expanded=open_generaton_details):
             shot_meta_data, data_type = get_generation_settings_from_log(variant.inference_log.uuid)
             if shot_meta_data and shot_meta_data.get("main_setting_data", None):
                 for k, v in shot_meta_data.get("main_setting_data", {}).items():

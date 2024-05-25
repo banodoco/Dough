@@ -166,7 +166,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             "Liquidy Loop",
             "Fast With A Price",
         ]
-        type_of_generation = st_memory.radio(
+        type_of_generation = st.radio(
             "Type of generation:",
             options=generation_types,
             key="creative_interpolation_type",

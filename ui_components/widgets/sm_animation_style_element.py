@@ -292,18 +292,6 @@ def video_motion_settings(shot_uuid, img_list):
             index=st.session_state[f"type_of_motion_context_index_{shot.uuid}"],
             help="This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.",
         )
-        """
-        amount_of_motion = st.slider(
-            "Amount of motion:",
-            min_value=0.5,
-            max_value=1.5,
-            step=0.01,
-            value=st.session_state[f"amount_of_motion_{shot_uuid}"],
-            key="amount_of_motion_overall",
-            on_change=lambda: update_motion_for_all_frames(shot.uuid, img_list),
-            help="You can also tweak this on an individual frame level in the advanced settings above.",
-        )
-        """
 
     i1, i2, i3 = st.columns([1, 0.5, 1.5])
     with i1:
