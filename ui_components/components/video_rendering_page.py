@@ -59,7 +59,6 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             overall_positive_prompt,
             overall_negative_prompt,
             type_of_motion_context,
-            amount_of_motion,
             high_detail_mode,
         ) = video_motion_settings(shot_uuid, img_list)
 
@@ -141,7 +140,6 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             individual_negative_prompts=negative_prompt_travel,
             animation_stype=AnimationStyleType.CREATIVE_INTERPOLATION.value,
             max_frames=str(dynamic_frame_distribution_values[-1]),
-            amount_of_motion=amount_of_motion,
             lora_data=lora_data,
             shot_data=shot_meta_data,
             pil_img_structure_control_image=st.session_state[
@@ -161,14 +159,29 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
         ):
             st.session_state[f"type_of_generation_index_{shot.uuid}"] = 0
 
-        generation_types = ["Normal", "Fast"]
+        generation_types = [
+            "Slurshy Realistiche",
+            "Smooth n' Steady",
+            "Chocky Realistiche",
+            "Liquidy Loop",
+            "Fast With A Price",
+        ]
         type_of_generation = st.radio(
             "Type of generation:",
             options=generation_types,
             key="creative_interpolation_type",
             horizontal=True,
             index=st.session_state[f"type_of_generation_index_{shot.uuid}"],
-            help="Normal generations take around twice as long but provide more detailed results.",
+            help="""
+        **Slurshy Realistiche**: good for simple realistic motion.
+
+        **Smooth n' Steady**: good for slow, smooth transitions. 
+        
+        **Chocky Realistiche**: good for realistic motion and chaotic transitions. 
+
+        **Liquidy Loop**: good for liquid-like motion with slick transitions. Also loops!
+        
+        **Fast With A Price**: runs fast but with a lot of detail loss.""",
         )
         animate_col_1, _, _ = st.columns([3, 1, 1])
         with animate_col_1:

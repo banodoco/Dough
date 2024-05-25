@@ -85,12 +85,11 @@ class VideoInterpolator:
                 "multipled_base_adapter_strength": settings["multipled_base_adapter_strength"],
                 "individual_prompts": settings["individual_prompts"],
                 "individual_negative_prompts": settings["individual_negative_prompts"],
-                "amount_of_motion": settings["amount_of_motion"],
                 "max_frames": settings["max_frames"],
                 "lora_data": settings["lora_data"],
                 "shot_data": settings["shot_data"],
                 "strength_of_structure_control_image": settings["strength_of_structure_control_image"],
-                "use_ad_lcm": True if settings["type_of_generation"] == "Fast" else False,
+                "type_of_generation": settings["type_of_generation"],
                 "high_detail_mode": settings.get("high_detail_mode", False),
             }
 

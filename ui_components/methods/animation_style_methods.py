@@ -594,7 +594,6 @@ def update_session_state_with_animation_details(
     ]
     main_setting_data[f"positive_prompt_video_{shot.uuid}"] = st.session_state["overall_positive_prompt"]
     main_setting_data[f"negative_prompt_video_{shot.uuid}"] = st.session_state["overall_negative_prompt"]
-    main_setting_data[f"amount_of_motion_{shot.uuid}"] = st.session_state["amount_of_motion_overall"]
     main_setting_data[f"structure_control_image_uuid_{shot.uuid}"] = structure_control_img_uuid
     main_setting_data[f"saved_strength_of_structure_control_image_{shot.uuid}"] = (
         strength_of_structure_control_img
