@@ -271,12 +271,6 @@ def video_motion_settings(shot_uuid, img_list):
     h1, h2, h3 = st.columns([1, 0.5, 1.0])
     with h1:
         # will fix this later
-        def update_motion_for_all_frames(shot_uuid, timing_list):
-            amount_of_motion = st.session_state.get(
-                "amount_of_motion_overall", 1.0
-            )  # Default to 1.0 if not set
-            for idx, _ in enumerate(timing_list):
-                st.session_state[f"motion_during_frame_{shot_uuid}_{idx}"] = amount_of_motion
 
         if f"type_of_motion_context_index_{shot_uuid}" in st.session_state and isinstance(
             st.session_state[f"type_of_motion_context_index_{shot_uuid}"], str
