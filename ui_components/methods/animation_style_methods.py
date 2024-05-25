@@ -70,11 +70,16 @@ def load_shot_settings(shot_uuid, log_uuid=None):
                 ):  # hackish sol, will fix later
                     st.session_state[f"structure_control_image_{shot_uuid}"] = None
                 elif key == f"type_of_generation_index_{shot.uuid}":
+
                     if not isinstance(st.session_state[key], int):
                         st.session_state[key] = 0
-                    st.session_state["creative_interpolation_type"] = ["Normal", "Fast"][
-                        st.session_state[key]
-                    ]
+                    st.session_state["creative_interpolation_type"] = [
+                        "Slurshy Realistiche",
+                        "Smooth n' Steady",
+                        "Chocky Realistiche",
+                        "Liquidy Loop",
+                        "Fast With A Price",
+                    ][st.session_state[key]]
 
             st.rerun()
         elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
