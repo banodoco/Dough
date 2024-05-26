@@ -4,7 +4,7 @@ import time
 from typing import List
 import streamlit as st
 from backend.models import InternalFileObject
-from shared.constants import COMFY_BASE_PATH, InferenceParamType
+from shared.constants import COMFY_BASE_PATH, InferenceParamType, STEERABLE_MOTION_WORKFLOWS
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, ShotMetaData
 from utils.constants import AnimateShotMethod
 from utils.data_repo.data_repo import DataRepo
@@ -73,13 +73,9 @@ def load_shot_settings(shot_uuid, log_uuid=None):
 
                     if not isinstance(st.session_state[key], int):
                         st.session_state[key] = 0
-                    st.session_state["creative_interpolation_type"] = [
-                        "Slurshy Realistiche",
-                        "Smooth n' Steady",
-                        "Chocky Realistiche",
-                        "Liquidy Loop",
-                        "Fast With A Price",
-                    ][st.session_state[key]]
+                    st.session_state["creative_interpolation_type"] = STEERABLE_MOTION_WORKFLOWS[
+                        st.session_state[key]
+                    ]
 
             st.rerun()
         elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:

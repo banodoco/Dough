@@ -1,7 +1,7 @@
 from typing import List
 import time
 import streamlit as st
-from shared.constants import AnimationStyleType, AnimationToolType
+from shared.constants import AnimationStyleType, AnimationToolType, STEERABLE_MOTION_WORKFLOWS
 import time
 from ui_components.widgets.sm_animation_style_element import (
     animation_sidebar,
@@ -159,15 +159,10 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
         ):
             st.session_state[f"type_of_generation_index_{shot.uuid}"] = 0
 
-        generation_types = [
-            "Slurshy Realistiche",
-            "Smooth n' Steady",
-            "Chocky Realistiche",
-            "Liquidy Loop",
-            "Fast With A Price",
-        ]
+        generation_types = STEERABLE_MOTION_WORKFLOWS
+
         type_of_generation = st.radio(
-            "Type of generation:",
+            "Workflow:",
             options=generation_types,
             key="creative_interpolation_type",
             horizontal=True,

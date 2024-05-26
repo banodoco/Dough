@@ -865,7 +865,7 @@ def individual_frame_settings_element(shot_uuid, img_list, display_indent):
                             distance_to_next_frame = st.slider(
                                 "Seconds to next frame:",
                                 min_value=0.25,
-                                max_value=6.00,
+                                max_value=12.00,
                                 step=0.25,
                                 key=f"distance_to_next_frame_widget_{idx}_{img.uuid}",
                                 value=st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"],

@@ -142,6 +142,13 @@ class AppSubPage(ExtendedEnum):
     SHOT = "Shots"
 
 
+STEERABLE_MOTION_WORKFLOWS = [
+    "Slurshy Realistiche",
+    "Smooth n' Steady",
+    "Chocky Realistiche",
+    "Liquidy Loop",
+    "Fast With A Price",
+]
 ##################### global constants #####################
 SERVER = os.getenv("SERVER", ServerType.PRODUCTION.value)
 
