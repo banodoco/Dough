@@ -21,7 +21,7 @@ from ui_components.methods.video_methods import create_single_interpolated_clip
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 
-default_model = "Deliberate_v2.safetensors"
+default_model = "dreamshaper_8.safetensors"
 
 
 def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
