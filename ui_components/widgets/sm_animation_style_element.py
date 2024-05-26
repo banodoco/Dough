@@ -624,6 +624,10 @@ def select_sd_model_element(shot_uuid, default_model):
             "url": "https://civitai.com/api/download/models/94640",
             "filename": "majicmixRealistic_v6.safetensors",
         },
+        "Realistic_Vision_V5.1.safetensors": {
+            "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/Realistic_Vision_V5.1.safetensors.tar",
+            "filename": "Realistic_Vision_V5.1.safetensors.tar",
+        },
     }
 
     cur_model = st.session_state[f"ckpt_{shot_uuid}"]
@@ -865,7 +869,7 @@ def individual_frame_settings_element(shot_uuid, img_list, display_indent):
                             distance_to_next_frame = st.slider(
                                 "Seconds to next frame:",
                                 min_value=0.25,
-                                max_value=6.00,
+                                max_value=12.00,
                                 step=0.25,
                                 key=f"distance_to_next_frame_widget_{idx}_{img.uuid}",
                                 value=st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"],
