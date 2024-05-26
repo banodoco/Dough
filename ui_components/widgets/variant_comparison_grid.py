@@ -13,6 +13,7 @@ from shared.constants import (
     InferenceParamType,
     InferenceStatus,
     InferenceType,
+    STEERABLE_MOTION_WORKFLOWS,
 )
 from ui_components.constants import CreativeProcessType, ShotMetaData
 from ui_components.methods.animation_style_methods import get_generation_settings_from_log, load_shot_settings
@@ -88,10 +89,10 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         # have a toggle for open details
         with col2:
             open_generaton_details = st_memory.toggle(
-                "Open generation details", key=f"open_details_{shot_uuid}"
+                "Open generation details", key=f"open_details_{shot_uuid}", value=False
             )
         with col3:
-            items_to_show = st.selectbox("Items per page:", options=[3, 6, 9], index=0)
+            items_to_show = st_memory.selectbox("Items per page:", options=[3, 6, 9], index=0)
         items_to_show = items_to_show - 1
         num_columns = 3
         with col1:
@@ -307,24 +308,34 @@ def variant_inference_detail_element(
             shot_meta_data, data_type = get_generation_settings_from_log(variant.inference_log.uuid)
             if shot_meta_data and shot_meta_data.get("main_setting_data", None):
                 for k, v in shot_meta_data.get("main_setting_data", {}).items():
-                    # Bold the title
-                    title = f"**{k.split(str(shot.uuid))[0][:-1]}:**"
+                    # Custom title formatting based on the key
+                    if k.startswith("strength_of_adherence_value"):
+                        title = "**Strength of adherence:**"
+                    elif k.startswith("type_of_motion_context_index"):
+                        title = "**Type of motion context:**"
+                    elif k.startswith("ckpt"):
+                        title = "**Model:**"
+                    elif k.startswith("high_detail_mode_val"):
+                        continue  # Skip displaying this key
+                    else:
+                        title = f"**{k.split(str(shot.uuid))[0][:-1]}:**"
 
                     # Check if the key starts with 'lora_data'
                     if k.startswith("lora_data"):
-                        if (
-                            isinstance(v, list) and len(v) > 0
-                        ):  # Check if v is a list and has more than 0 items
-                            # Handle lora_data differently to format each item in the list
+                        if isinstance(v, list) and len(v) > 0:
                             lora_items = [
                                 f"- {item.get('filename', 'No filename')} - {item.get('lora_strength', 'No strength')} strength"
                                 for item in v
                             ]
                             lora_data_formatted = "\n".join(lora_items)
                             st.markdown(f"{title} \n{lora_data_formatted}", unsafe_allow_html=True)
-                        # If there are no items in the list, do not display anything for lora_data
+
+                    elif k.startswith("type_of_generation_index"):
+                        if v is not None:
+                            st.markdown(
+                                f"**Workflow:** {STEERABLE_MOTION_WORKFLOWS[v]}", unsafe_allow_html=True
+                            )
                     else:
-                        # For other keys, display as before but with the title in bold and using a colon
                         if v:  # Check if v is not empty or None
                             st.markdown(f"{title} {v}", unsafe_allow_html=True)
                         else:
