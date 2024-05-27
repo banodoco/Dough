@@ -169,6 +169,7 @@
       "start_at": 0,
       "end_at": 0.3,
       "embeds_scaling": "V only",
+      "encode_batch_size": 0,
       "model": [
         "400",
         0
@@ -199,6 +200,7 @@
       "end_at": 1,
       "sharpening": 0,
       "embeds_scaling": "V only",
+      "encode_batch_size": 0,
       "model": [
         "395",
         0
