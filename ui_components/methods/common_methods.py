@@ -194,8 +194,8 @@ def apply_image_transformations(
     # Calculate the diagonal for the rotation
     diagonal = math.ceil(math.sqrt(width**2 + height**2))
 
-    # Create a new image with black background for rotation
-    rotation_bg = Image.new("RGB", (diagonal, diagonal), "black")
+    # Create a new image with white background for rotation
+    rotation_bg = Image.new("RGB", (diagonal, diagonal), "white")
     rotation_offset = ((diagonal - width) // 2, (diagonal - height) // 2)
     rotation_bg.paste(image, rotation_offset)
 
@@ -203,31 +203,33 @@ def apply_image_transformations(
     rotated_image = rotation_bg.rotate(-rotation_angle)
 
     # Shift - Invert the direction of the shift
-    # Create a new image with black background
-    shift_bg = Image.new("RGB", (diagonal, diagonal), "black")
+    shift_bg = Image.new("RGB", (diagonal, diagonal), "white")
     shift_bg.paste(rotated_image, (x_shift, -y_shift))
 
-    # Zoom - No change
+    # Zoom - Adjust zoom level
     zoomed_width = int(diagonal * (zoom_level / 100))
     zoomed_height = int(diagonal * (zoom_level / 100))
-    zoomed_image = shift_bg.resize((zoomed_width, zoomed_height))
+    zoomed_image = shift_bg.resize((zoomed_width, zoomed_height), Image.ANTIALIAS)
 
-    # Crop the zoomed image back to original size
-    crop_x1 = (zoomed_width - width) // 2
-    crop_y1 = (zoomed_height - height) // 2
-    crop_x2 = crop_x1 + width
-    crop_y2 = crop_y1 + height
-    cropped_image = zoomed_image.crop((crop_x1, crop_y1, crop_x2, crop_y2))
+    # Create a new image with white background to accommodate the zoomed image
+    final_image = Image.new("RGB", (width, height), "white")
+
+    # Calculate the position to paste the zoomed image at the center of the final image
+    paste_x = (width - zoomed_width) // 2
+    paste_y = (height - zoomed_height) // 2
+
+    # Paste the zoomed image onto the final image
+    final_image.paste(zoomed_image, (paste_x, paste_y))
 
     # Flip vertically - No change
     if flip_vertically:
-        cropped_image = cropped_image.transpose(Image.FLIP_TOP_BOTTOM)
+        final_image = final_image.transpose(Image.FLIP_TOP_BOTTOM)
 
     # Flip horizontally - No change
     if flip_horizontally:
-        cropped_image = cropped_image.transpose(Image.FLIP_LEFT_RIGHT)
+        final_image = final_image.transpose(Image.FLIP_LEFT_RIGHT)
 
-    return cropped_image
+    return final_image
 
 
 def apply_coord_transformations(

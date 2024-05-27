@@ -141,9 +141,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                     with st.expander("Upscale settings", expanded=False):
                         (
                             styling_model,
-                            upscaler_type,
                             upscale_factor,
-                            upscale_strength,
                             promote_to_main_variant,
                         ) = upscale_settings()
                         if st.button(
@@ -155,9 +153,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                             upscale_video(
                                 shot_uuid,
                                 styling_model,
-                                upscaler_type,
                                 upscale_factor,
-                                upscale_strength,
                                 promote_to_main_variant,
                             )
                 else:
@@ -190,7 +186,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                     st.info(f"###### Variant #{variant_index + 1}")
                 with h2:
                     if st.button(
-                        f"Promote Variant #{variant_index + 1}",
+                        f"Promote variant #{variant_index + 1}",
                         key=f"Promote Variant #{variant_index + 1} for {st.session_state['current_frame_index']}",
                         help="Promote this variant to the primary image",
                         use_container_width=True,
@@ -332,9 +328,12 @@ def variant_inference_detail_element(
 
                     elif k.startswith("type_of_generation_index"):
                         if v is not None:
-                            st.markdown(
-                                f"**Workflow:** {STEERABLE_MOTION_WORKFLOWS[v]}", unsafe_allow_html=True
-                            )
+                            # Ensure 'v' is within the valid index range to avoid index errors
+                            if 0 <= v < len(STEERABLE_MOTION_WORKFLOWS):
+                                workflow_name = STEERABLE_MOTION_WORKFLOWS[v]["name"]
+                                st.markdown(f"**Workflow:** {workflow_name}", unsafe_allow_html=True)
+                            else:
+                                st.error("Invalid workflow index")
                     else:
                         if v:  # Check if v is not empty or None
                             st.markdown(f"{title} {v}", unsafe_allow_html=True)
@@ -457,18 +456,13 @@ def upscale_settings():
         # model_files.insert(0, "None")  # Add "None" option at the beginning
         styling_model = st.selectbox("Styling model", model_files, key="styling_model")
 
-    type_of_upscaler = st.selectbox(
-        "Type of upscaler", ["Dreamy", "Realistic", "Anime", "Cartoon"], key="type_of_upscaler"
-    )
-    upscale_by = st.slider("Upscale by", min_value=1.0, max_value=3.0, step=0.1, key="upscale_by", value=2.0)
-    strength_of_upscale = st.slider(
-        "Strength of upscale", min_value=1.0, max_value=3.0, step=0.1, key="strength_of_upscale", value=2.0
-    )
+    upscale_by = st.slider("Upscale by", min_value=1.0, max_value=3.0, step=0.1, key="upscale_by", value=1.5)
+
     set_upscaled_to_main_variant = st.checkbox(
         "Set upscaled to main variant", key="set_upscaled_to_main_variant", value=True
     )
 
-    return styling_model, type_of_upscaler, upscale_by, strength_of_upscale, set_upscaled_to_main_variant
+    return styling_model, upscale_by, set_upscaled_to_main_variant
 
 
 def fetch_inference_data(file: InternalFileObject):

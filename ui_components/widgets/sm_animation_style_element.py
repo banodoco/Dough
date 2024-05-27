@@ -86,128 +86,6 @@ def animation_sidebar(
                 )
                 plot_weights(weights_list, frame_numbers_list)
 
-                st.markdown("***")
-
-                bulk1, bulk2 = st.columns([1, 1])
-                with bulk1:
-                    st.markdown("### Bulk edit frame settings")
-                with bulk2:
-                    if st.button("Reset to Default", use_container_width=True, key="reset_to_default"):
-                        for idx, _ in enumerate(img_list):
-                            for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
-                                st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
-
-                        st.success("All frames have been reset to default values.")
-                        st.rerun()
-
-                # New feature: Selecting a range to edit
-                range_to_edit = st.slider(
-                    "Select the range of frames you would like to edit:",
-                    min_value=1,
-                    max_value=len(img_list),
-                    value=(1, len(img_list)),
-                    step=1,
-                    key="range_to_edit",
-                )
-                edit1, edit2 = st.columns([1, 1])
-                with edit1:
-                    editable_entity = st.selectbox(
-                        "What would you like to edit?",
-                        options=[
-                            "Seconds to next frames",
-                            "Speed of transitions",
-                            "Freedom between frames",
-                            "Strength of frames",
-                            "Motion during frames",
-                        ],
-                        key="editable_entity",
-                    )
-                with edit2:
-                    if editable_entity == "Seconds to next frames":
-                        entity_new_val = st.slider(
-                            "What would you like to change it to?",
-                            min_value=0.25,
-                            max_value=12.00,
-                            step=0.25,
-                            value=DEFAULT_SHOT_MOTION_VALUES["distance_to_next_frame"],
-                            key="entity_new_val_seconds",
-                        )
-                    elif editable_entity == "Strength of frames":
-                        entity_new_val = st.slider(
-                            "What would you like to change it to?",
-                            min_value=0.25,
-                            max_value=1.0,
-                            step=0.01,
-                            value=DEFAULT_SHOT_MOTION_VALUES["strength_of_frame"],
-                            key="entity_new_val_strength",
-                        )
-                    elif editable_entity == "Speed of transitions":
-                        entity_new_val = st.slider(
-                            "What would you like to change it to?",
-                            min_value=0.2,
-                            max_value=0.8,
-                            step=0.01,
-                            value=DEFAULT_SHOT_MOTION_VALUES["speed_of_transition"],
-                            key="entity_new_val_speed",
-                        )
-                    elif editable_entity == "Freedom between frames":
-                        entity_new_val = st.slider(
-                            "What would you like to change it to?",
-                            min_value=0.00,
-                            max_value=1.0,
-                            step=0.01,
-                            value=DEFAULT_SHOT_MOTION_VALUES["freedom_between_frames"],
-                            key="entity_new_val_freedom",
-                        )
-                    elif editable_entity == "Motion during frames":
-                        entity_new_val = st.slider(
-                            "What would you like to change it to?",
-                            min_value=0.5,
-                            max_value=1.5,
-                            step=0.01,
-                            value=DEFAULT_SHOT_MOTION_VALUES["motion_during_frame"],
-                            key="entity_new_val_motion",
-                        )
-                if st.button("Bulk edit", key="bulk_edit", use_container_width=True):
-                    start_idx, end_idx = range_to_edit
-                    for idx in range(start_idx - 1, end_idx):  # Adjusting index to be 0-based
-                        if editable_entity == "Strength of frames":
-                            st.session_state[f"strength_of_frame_{shot_uuid}_{idx}"] = entity_new_val
-                        elif editable_entity == "Seconds to next frames":
-                            st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"] = entity_new_val
-                        elif editable_entity == "Speed of transitions":
-                            st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"] = entity_new_val
-                        elif editable_entity == "Freedom between frames":
-                            st.session_state[f"freedom_between_frames_{shot_uuid}_{idx}"] = entity_new_val
-                        elif editable_entity == "Motion during frames":
-                            st.session_state[f"motion_during_frame_{shot_uuid}_{idx}"] = entity_new_val
-                    st.rerun()
-
-                st.markdown("***")
-                st.markdown("### Save current settings")
-                if st.button(
-                    "Save current settings",
-                    key="save_current_settings",
-                    use_container_width=True,
-                    help="Settings will also be saved when you generate the animation.",
-                ):
-                    update_session_state_with_animation_details(
-                        shot_uuid,
-                        img_list,
-                        strength_of_frames,
-                        distances_to_next_frames,
-                        speeds_of_transitions,
-                        freedoms_between_frames,
-                        motions_during_frames,
-                        individual_prompts,
-                        individual_negative_prompts,
-                        [],
-                        default_model,
-                    )
-                    st.success("Settings saved successfully.")
-                    time.sleep(0.7)
-                    st.rerun()
-
 
 def video_motion_settings(shot_uuid, img_list):
     data_repo = DataRepo()
@@ -229,7 +107,7 @@ def video_motion_settings(shot_uuid, img_list):
     e1, _, _ = st.columns([2, 1, 1])
     with e1:
         strength_of_adherence = st.slider(
-            "How much would you like to force adherence to the input images?",
+            "Adherence to input frames:",
             min_value=0.0,
             max_value=1.0,
             step=0.01,
@@ -246,23 +124,16 @@ def video_motion_settings(shot_uuid, img_list):
             overall_positive_prompt = st.session_state[f"positive_prompt_video_{shot_uuid}"]
 
         overall_positive_prompt = st.text_area(
-            "What would you like to see in the videos?",
+            "Overall prompt:",
             key="overall_positive_prompt",
             value=st.session_state[f"positive_prompt_video_{shot_uuid}"],
             on_change=update_prompt,
         )
     with f2:
         overall_negative_prompt = st.text_area(
-            "What would you like to avoid in the videos?",
+            "Overall negative prompt:",
             key="overall_negative_prompt",
             value=st.session_state[f"negative_prompt_video_{shot_uuid}"],
-        )
-
-    with f3:
-        st.write("")
-        st.write("")
-        st.info(
-            "Use these sparingly, as they can have a large impact on the video. You can also edit them for individual frames above."
         )
 
     st.markdown("***")
@@ -286,50 +157,11 @@ def video_motion_settings(shot_uuid, img_list):
             help="This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.",
         )
 
-    i1, i2, i3 = st.columns([1, 0.5, 1.5])
-    with i1:
-        if f"structure_control_image_{shot_uuid}" not in st.session_state:
-            st.session_state[f"structure_control_image_{shot_uuid}"] = None
-
-        if f"strength_of_structure_control_image_{shot_uuid}" not in st.session_state:
-            st.session_state[f"strength_of_structure_control_image_{shot_uuid}"] = None
-
-        img_loaded_from_settings = (
-            f"structure_control_image_uuid_{shot_uuid}" in st.session_state
-            and st.session_state[f"structure_control_image_uuid_{shot_uuid}"]
-        )
-        """
-        control_motion_with_image = st.toggle(
-            "Control motion with an image",
-            help="This will allow you to upload images to control the motion of the video.",
-            key=f"control_motion_with_image_{shot_uuid}",
-            value=img_loaded_from_settings,
-        )
-        """
-        control_motion_with_image = False
+    if f"structure_control_image_{shot_uuid}" not in st.session_state:
         st.session_state[f"structure_control_image_{shot_uuid}"] = None
 
-    with i2:
-        if (
-            f"structure_control_image_{shot_uuid}" in st.session_state
-            and st.session_state[f"structure_control_image_{shot_uuid}"]
-        ):
-            st.info("Control image:")
-            st.image(st.session_state[f"structure_control_image_{shot_uuid}"])
-            st.session_state[f"strength_of_structure_control_image_{shot_uuid}"] = st.slider(
-                "Strength of control image:",
-                min_value=0.0,
-                max_value=1.0,
-                step=0.01,
-                key="strength_of_structure_control_image",
-                value=st.session_state[f"saved_strength_of_structure_control_image_{shot_uuid}"],
-                help="This is how much the control image will influence the motion of the video.",
-            )
-            if st.button("Remove image", key="remove_images"):
-                st.session_state[f"structure_control_image_{shot_uuid}"] = None
-                st.session_state[f"structure_control_image_uuid_{shot_uuid}"] = None
-                st.success("Image removed")
-                st.rerun()
+    if f"strength_of_structure_control_image_{shot_uuid}" not in st.session_state:
+        st.session_state[f"strength_of_structure_control_image_{shot_uuid}"] = None
 
     return (
         strength_of_adherence,
@@ -376,11 +208,13 @@ def select_motion_lora_element(shot_uuid, model_files):
 
         # Iterate through each current LoRA in session state
         if len(files) == 0:
-            st.error(
-                "No LoRAs found in the directory - go to Explore to download some, or drop them into ComfyUI/models/animatediff_motion_lora"
-            )
-            if st.button("Check again", key="check_again"):
-                st.rerun()
+            lora1, lora2 = st.columns([1, 1])
+            with lora1:
+                st.error(
+                    "No LoRAs found in the directory - go to Download LoRAs to download some, or drop them into: ComfyUI/models/animatediff_motion_lora"
+                )
+                if st.button("Check again", key="check_again"):
+                    st.rerun()
         else:
             # cleaning empty lora vals
             for idx, lora in enumerate(st.session_state[f"lora_data_{shot_uuid}"]):
@@ -603,6 +437,10 @@ def select_sd_model_element(shot_uuid, default_model):
         model_files = [file for file in model_files if "xl" not in file and file not in ignored_model_list]
 
     sd_model_dict = {
+        "Realistic_Vision_V5.1.safetensors": {
+            "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/Realistic_Vision_V5.1.safetensors.tar",
+            "filename": "Realistic_Vision_V5.1.safetensors.tar",
+        },
         "Anything V3 FP16 Pruned": {
             "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/anything-v3-fp16-pruned.safetensors.tar",
             "filename": "anything-v3-fp16-pruned.safetensors.tar",
@@ -623,10 +461,6 @@ def select_sd_model_element(shot_uuid, default_model):
             "url": "https://civitai.com/api/download/models/94640",
             "filename": "majicmixRealistic_v6.safetensors",
         },
-        "Realistic_Vision_V5.1.safetensors": {
-            "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/Realistic_Vision_V5.1.safetensors.tar",
-            "filename": "Realistic_Vision_V5.1.safetensors.tar",
-        },
     }
 
     cur_model = st.session_state[f"ckpt_{shot_uuid}"]
@@ -644,7 +478,7 @@ def select_sd_model_element(shot_uuid, default_model):
 
             if model_files and len(model_files):
                 sd_model = st.selectbox(
-                    label="Which model would you like to use?",
+                    label="Styling model:",
                     options=model_files,
                     key="sd_model_video",
                     index=current_model_index,
@@ -652,7 +486,8 @@ def select_sd_model_element(shot_uuid, default_model):
                 )
             else:
                 st.write("")
-                st.info("Default model Deliberate V2 would be selected")
+                st.info("Default model Dreamshaper 8 would be selected")
+                sd_model = default_model
 
         with col2:
             if len(all_files) == 0:
@@ -749,10 +584,10 @@ def select_sd_model_element(shot_uuid, default_model):
     )
 
 
-def individual_frame_settings_element(shot_uuid, img_list, display_indent):
-    with display_indent:
-        st.markdown("##### Individual frame settings")
+def individual_frame_settings_element(shot_uuid, img_list):
+    header_col_1, _, header_col_3, header_col_4 = st.columns([1.0, 1.5, 1.0, 1.0])
 
+    st.write("")
     items_per_row = 3
     strength_of_frames = []
     distances_to_next_frames = []
@@ -765,10 +600,6 @@ def individual_frame_settings_element(shot_uuid, img_list, display_indent):
     if len(img_list) <= 1:
         st.warning("You need at least two frames to generate a video.")
         st.stop()
-
-    open_advanced_settings = st_memory.toggle(
-        "Open all advanced settings", key="advanced_settings", value=False
-    )
 
     # setting default values to main shot settings
     if f"lora_data_{shot_uuid}" not in st.session_state:
@@ -797,104 +628,257 @@ def individual_frame_settings_element(shot_uuid, img_list, display_indent):
         load_shot_settings(shot_uuid)
 
     # ------------- Timing Frame and their settings -------------------
+
+    def bulk_updater(label, key_suffix, idx, uuid, img_list):
+        key = f"{key_suffix}_{uuid}_{idx}"
+        # st.write(key)
+        # st.write(st.session_state[key])
+        # st.write(st.session_state[f"last_frame_changed"])
+        if "last_frame_changed" in st.session_state and st.session_state["last_frame_changed"] == key:
+            with st.expander(f"Set all '{label}' to {st.session_state['last_value_set']}", expanded=True):
+                range_to_edit = (1, len(img_list))
+                """
+                st.slider(
+                    f"Range to update:",
+                    min_value=1,
+                    max_value=len(img_list),
+                    value=(1, len(img_list)),
+                    key="range_to_edit",
+                    help="Select the range of frames you want to update.",
+                )
+                """
+                if st.button(
+                    f"Update",
+                    key=f"button",
+                    use_container_width=True,
+                    type="primary",
+                    help=f"This will set all the '{label}'.",
+                ):
+                    queue_updates(key_suffix, st.session_state[key], idx, uuid, range_to_edit)
+                    st.session_state["last_frame_changed"] = None
+                    st.session_state["last_value_set"] = None
+                    st.rerun()
+
+    def update_last_changed(key, value):
+        st.session_state["last_frame_changed"] = key
+        st.session_state["last_value_set"] = value
+
+    def queue_updates(key_suffix, value, idx, uuid, range_to_edit):
+        # This will set a flag to update all values on the next run
+        st.session_state["update_values"] = (key_suffix, value, uuid, range_to_edit)
+
+    def apply_updates(key_suffix, value, uuid, range_to_edit):
+
+        # Update all sliders with the same suffix
+        for k in list(st.session_state.keys()):
+            if key_suffix in k and not k.endswith(uuid):  # Ensure not to affect the original slider
+                st.session_state[k] = value
+
+    # In your main loop, check if updates need to be applied:
+    if "update_values" in st.session_state:
+        key_suffix, value, uuid, range_to_edit = st.session_state["update_values"]
+        apply_updates(key_suffix, value, uuid, range_to_edit)
+        del st.session_state["update_values"]  # Clear the update instruction after applying
+
     for i in range(0, len(img_list), items_per_row):
         with st.container():
-            grid = st.columns(
-                [2 if j % 2 == 0 else 1 for j in range(2 * items_per_row)]
-            )  # Adjust the column widths
+            grid = st.columns([2 if j % 2 == 0 else 1 for j in range(2 * items_per_row)])
+
             for j in range(items_per_row):
                 idx = i + j
-                if idx < len(img_list):
-                    with grid[2 * j]:  # Adjust the index for image column
-                        img = img_list[idx]
-                        if img.location:
-                            st.info(f"**Frame {idx + 1}**")
-                            st.image(img.location, use_column_width=True)
+                img = img_list[idx] if idx < len(img_list) else None
 
-                            # settings control
-                            with st.expander("Advanced settings:", expanded=open_advanced_settings):
-                                # checking for newly added frames
-                                if f"individual_prompt_{shot_uuid}_{idx}" not in st.session_state:
-                                    for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
-                                        st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+                if img and img.location:
+                    with grid[2 * j]:
+                        st.info(f"**Frame {idx + 1}**")
+                        st.image(img.location, use_column_width=True)
 
-                                individual_prompt = st.text_input(
-                                    "What to include:",
-                                    key=f"individual_prompt_widget_{idx}_{img.uuid}",
-                                    value=st.session_state[f"individual_prompt_{shot_uuid}_{idx}"],
-                                    help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.",
-                                )
-                                individual_prompts.append(individual_prompt)
-                                individual_negative_prompt = st.text_input(
-                                    "What to avoid:",
-                                    key=f"negative_prompt_widget_{idx}_{img.uuid}",
-                                    value=st.session_state[f"individual_negative_prompt_{shot_uuid}_{idx}"],
-                                    help="Use this sparingly, as it can have a large impact on the video and cause weird distortions.",
-                                )
-                                individual_negative_prompts.append(individual_negative_prompt)
-                                strength1, strength2 = st.columns([1, 1])
-                                with strength1:
-                                    strength_of_frame = st.slider(
-                                        "Strength of current frame:",
-                                        min_value=0.25,
-                                        max_value=1.0,
-                                        step=0.01,
-                                        key=f"strength_of_frame_widget_{shot_uuid}_{idx}",
-                                        value=st.session_state[f"strength_of_frame_{shot_uuid}_{idx}"],
-                                    )
-                                    strength_of_frames.append(strength_of_frame)
-                                with strength2:
-                                    motion_during_frame = st.slider(
-                                        "Motion during frame:",
-                                        min_value=0.5,
-                                        max_value=1.5,
-                                        step=0.01,
-                                        key=f"motion_during_frame_widget_{idx}_{img.uuid}",
-                                        value=st.session_state[f"motion_during_frame_{shot_uuid}_{idx}"],
-                                    )
-                                    motions_during_frames.append(motion_during_frame)
-                        else:
-                            st.warning("No primary image present.")
+                # Create a new grid for each row of images
+                if img and img.location:
+                    # Ensure the grid is created only once per row outside the inner loop
+                    if j == 0:
+                        cols2 = st.columns(3)  # Create a grid with 3 columns
 
-                    # distance, speed and freedom settings (also aggregates them into arrays)
-                    with grid[2 * j + 1]:  # Add the new column after the image column
-                        if idx < len(img_list) - 1:
-
-                            # if st.session_state[f'distance_to_next_frame_{shot_uuid}_{idx}'] is a int, make it a float
-                            if isinstance(st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"], int):
-                                st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"] = float(
-                                    st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"]
-                                )
-                            distance_to_next_frame = st.slider(
-                                "Seconds to next frame:",
-                                min_value=0.25,
-                                max_value=12.00,
-                                step=0.25,
-                                key=f"distance_to_next_frame_widget_{idx}_{img.uuid}",
-                                value=st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"],
+                    # Place each item in the correct column based on its position in the row
+                    with cols2[j]:  # Use modulo to cycle through the 3 columns
+                        # Your existing code to display content in the grid
+                        if f"individual_prompt_{shot_uuid}_{idx}" not in st.session_state:
+                            for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
+                                st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+                        sub1, sub2 = st.columns([1, 1])
+                        with sub1:
+                            individual_prompt = st.text_input(
+                                "Prompt:",
+                                key=f"individual_prompt_widget_{idx}_{img.uuid}",
+                                value=st.session_state[f"individual_prompt_{shot_uuid}_{idx}"],
+                                help="This wll bias the video towards the words you enter for this segment.",
                             )
-                            distances_to_next_frames.append(distance_to_next_frame / 2)
-                            speed_of_transition = st.slider(
-                                "Speed of transition:",
-                                min_value=0.2,
-                                max_value=0.8,
-                                step=0.01,
-                                key=f"speed_of_transition_widget_{idx}_{img.uuid}",
-                                value=st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"],
+                            individual_prompts.append(individual_prompt)
+                        with sub2:
+                            individual_negative_prompt = st.text_input(
+                                "Negative prompt:",
+                                key=f"negative_prompt_widget_{idx}_{img.uuid}",
+                                value=st.session_state[f"individual_negative_prompt_{shot_uuid}_{idx}"],
+                                help="This will bias the video away from the words you enter for this segment.",
                             )
-                            speeds_of_transitions.append(speed_of_transition)
-                            freedom_between_frames = st.slider(
-                                "Freedom between frames:",
+                            individual_negative_prompts.append(individual_negative_prompt)
+                        advanced1, advanced2, _ = st.columns([1, 1, 0.5])
+                        with advanced1:
+
+                            def create_slider(
+                                label,
+                                min_value,
+                                max_value,
+                                step,
+                                key_suffix,
+                                default_value,
+                                idx,
+                                uuid,
+                                help_text=None,
+                            ):
+                                value_key = f"{key_suffix}_{uuid}_{idx}"
+                                widget_key = f"{key_suffix}_widget_{uuid}_{idx}"
+
+                                if value_key not in st.session_state:
+                                    st.session_state[value_key] = default_value
+
+                                slider_value = st.slider(
+                                    label,
+                                    min_value=min_value,
+                                    max_value=max_value,
+                                    step=step,
+                                    key=widget_key,
+                                    value=st.session_state[value_key],
+                                    help=help_text,
+                                )
+
+                                if slider_value != st.session_state[value_key]:
+                                    st.session_state[value_key] = slider_value
+                                    update_last_changed(value_key, slider_value)
+                                    st.rerun()
+                                return slider_value
+
+                            def update_last_changed(key, value):
+                                st.session_state["last_frame_changed"] = key
+                                st.session_state["last_value_set"] = value
+
+                            strength_of_frame = create_slider(
+                                label="Strength of frame:",
                                 min_value=0.0,
                                 max_value=1.0,
                                 step=0.01,
-                                key=f"freedom_between_frames_widget_{idx}_{img.uuid}",
-                                value=st.session_state[f"freedom_between_frames_{shot_uuid}_{idx}"],
+                                key_suffix="strength_of_frame",
+                                default_value=st.session_state[f"strength_of_frame_{shot_uuid}_{idx}"],
+                                idx=idx,
+                                uuid=shot_uuid,
+                            )
+
+                            strength_of_frames.append(strength_of_frame)
+
+                            bulk_updater("Strength of frames", "strength_of_frame", idx, shot_uuid, img_list)
+
+                        with advanced2:
+                            motion_during_frame = create_slider(
+                                label="Motion during frame:",
+                                min_value=0.5,
+                                max_value=1.5,
+                                step=0.01,
+                                key_suffix="motion_during_frame",
+                                default_value=st.session_state[f"motion_during_frame_{shot_uuid}_{idx}"],
+                                idx=idx,
+                                uuid=shot_uuid,
+                            )
+
+                            motions_during_frames.append(motion_during_frame)
+
+                            bulk_updater(
+                                "Motion during frames", "motion_during_frame", idx, shot_uuid, img_list
+                            )
+
+                    with grid[2 * j + 1]:
+                        if idx < len(img_list) - 1:
+                            distance_to_next_frame = create_slider(
+                                label="Seconds to next frame:",
+                                min_value=0.25,
+                                max_value=30.00,
+                                step=0.25,
+                                key_suffix="distance_to_next_frame",
+                                default_value=st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"],
+                                idx=idx,
+                                uuid=shot_uuid,
+                            )
+                            distances_to_next_frames.append(distance_to_next_frame)
+                            bulk_updater(
+                                "Distance to next frames", "distance_to_next_frame", idx, shot_uuid, img_list
+                            )
+
+                            speed_of_transition = create_slider(
+                                label="Speed of transition:",
+                                min_value=0.2,
+                                max_value=0.8,
+                                step=0.01,
+                                key_suffix="speed_of_transition",
+                                default_value=st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"],
+                                idx=idx,
+                                uuid=shot_uuid,
+                            )
+
+                            bulk_updater(
+                                "Speed of transitions", "speed_of_transition", idx, shot_uuid, img_list
+                            )
+                            speeds_of_transitions.append(speed_of_transition)
+                            freedom_between_frames = create_slider(
+                                label="Freedom between frames:",
+                                min_value=0.0,
+                                max_value=1.0,
+                                step=0.01,
+                                key_suffix="freedom_between_frames",
+                                default_value=st.session_state[f"freedom_between_frames_{shot_uuid}_{idx}"],
+                                idx=idx,
+                                uuid=shot_uuid,
+                            )
+
+                            bulk_updater(
+                                "Freedom between frames", "freedom_between_frames", idx, shot_uuid, img_list
                             )
                             freedoms_between_frames.append(freedom_between_frames)
 
             if (i < len(img_list) - 1) or (len(img_list) % items_per_row != 0):
                 st.markdown("***")
+
+    with header_col_1:
+        st.markdown("##### Individual frame settings")
+    with header_col_4:
+        if st.button(
+            "Save current settings",
+            key="save_current_settings",
+            use_container_width=True,
+            help="Settings will also be saved when you generate the animation.",
+        ):
+            update_session_state_with_animation_details(
+                shot_uuid,
+                img_list,
+                strength_of_frames,
+                distances_to_next_frames,
+                speeds_of_transitions,
+                freedoms_between_frames,
+                motions_during_frames,
+                individual_prompts,
+                individual_negative_prompts,
+                [],
+                sd_model,
+            )
+            st.success("Settings saved successfully.")
+            time.sleep(0.7)
+            st.rerun()
+
+        if st.button("Reset to default", use_container_width=True, key="reset_to_default"):
+            for idx, _ in enumerate(img_list):
+                for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
+                    st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+
+            st.success("All frames have been reset to default values.")
+            st.rerun()
 
     return (
         strength_of_frames,

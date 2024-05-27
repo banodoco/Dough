@@ -53,7 +53,7 @@ MODEL_PATH_DICT = {
     },
     ComfyWorkflow.UPSCALER: {
         "workflow_path": "comfy_workflows/video_upscaler_api.json",
-        "output_node_id": [243],
+        "output_node_id": [402],
     },
     ComfyWorkflow.MOTION_LORA: {
         "workflow_path": "comfy_workflows/motion_lora_api.json",
@@ -644,6 +644,76 @@ class ComfyDataTransform:
 
                 return json_data, extra_models_list
 
+            elif type_of_generation == "Rad Attack":
+
+                json_data.update(
+                    {
+                        "565": {
+                            "inputs": {
+                                "lora_name": "AnimateLCM_sd15_t2v_lora.safetensors",
+                                "strength_model": 1.05,
+                                "strength_clip": 1,
+                                "model": ["461", 0],
+                                "clip": ["461", 1],
+                            },
+                            "class_type": "LoraLoader",
+                            "_meta": {"title": "Load LoRA"},
+                        }
+                    }
+                )
+
+                json_data["558"]["inputs"]["model"] = ["565", 0]
+                json_data["541"]["inputs"]["clip"] = ["565", 1]
+                json_data["543"]["inputs"]["clip"] = ["565", 1]
+
+                json_data["207"]["inputs"]["steps"] = 20
+                json_data["207"]["inputs"]["cfg"] = 1.2
+                json_data["207"]["inputs"]["sampler_name"] = "lcm"
+                json_data["207"]["inputs"]["scheduler"] = "sgm_uniform"
+
+                json_data["546"]["inputs"]["model_name"] = "AnimateLCM_sd15_t2v.ckpt"
+
+                json_data["342"]["inputs"]["fuse_method"] = "pyramid"
+
+                json_data["547"]["inputs"]["beta_schedule"] = "lcm avg(sqrt_linear,linear)"
+
+                json_data["593"]["inputs"]["ipa_starts_at"] = 0
+                json_data["593"]["inputs"]["ipa_ends_at"] = 0.3
+                json_data["593"]["inputs"]["ipa_weight_type"] = "ease in-out"
+                json_data["593"]["inputs"]["ipa_weight"] = 1
+                json_data["593"]["inputs"]["ipa_embeds_scaling"] = "V only"
+                json_data["593"]["inputs"]["ipa_noise_strength"] = 0.5
+                json_data["593"]["inputs"]["use_image_for_noise"] = True
+                json_data["593"]["inputs"]["type_of_noise"] = "shuffle"
+                json_data["593"]["inputs"]["noise_blur"] = 0
+
+                json_data["594"]["inputs"]["ipa_starts_at"] = 0
+                json_data["594"]["inputs"]["ipa_ends_at"] = 1
+                json_data["594"]["inputs"]["ipa_weight_type"] = "ease in-out"
+                json_data["594"]["inputs"]["ipa_weight"] = 1
+                json_data["594"]["inputs"]["ipa_embeds_scaling"] = "K+mean(V) w/ C penalty"
+                json_data["594"]["inputs"]["ipa_noise_strength"] = 0.0
+                json_data["594"]["inputs"]["use_image_for_noise"] = False
+                json_data["594"]["inputs"]["type_of_noise"] = "shuffle"
+                json_data["594"]["inputs"]["noise_blur"] = 0
+
+                extra_models_list.append(
+                    {
+                        "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
+                        "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
+                        "dest": os.path.join(COMFY_BASE_PATH, "models", "loras"),
+                    }
+                )
+                extra_models_list.append(
+                    {
+                        "filename": "AnimateLCM_sd15_t2v.ckpt",
+                        "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v.ckpt",
+                        "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models"),
+                    }
+                )
+
+                return json_data, extra_models_list
+
         extra_models_list = []
         sm_data = query.data.get("data", {})
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.STEERABLE_MOTION)
@@ -752,20 +822,14 @@ class ComfyDataTransform:
         video_uuid = data.get("file_video", None)
         video = data_repo.get_file_from_uuid(video_uuid)
         model = data.get("model", None)
-        upscaler_type = data.get("upscaler_type", None)
+
         upscale_factor = data.get("upscale_factor", None)
-        upscale_strength = data.get("upscale_strength", None)
 
         workflow["302"]["inputs"]["video"] = os.path.basename(video.filename)
-        workflow["244"]["inputs"]["ckpt_name"] = model
-        workflow["241"]["inputs"]["upscale_by"] = upscale_factor
+        workflow["362"]["inputs"]["ckpt_name"] = model
+        workflow["391"]["inputs"]["upscale_by"] = upscale_factor
 
         extra_models_list = [
-            {
-                "filename": "controlnet_checkpoint.ckpt",
-                "url": "https://huggingface.co/crishhh/animatediff_controlnet/resolve/main/controlnet_checkpoint.ckpt",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "controlnet"),
-            },
             {
                 "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
                 "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
@@ -779,21 +843,6 @@ class ComfyDataTransform:
             {
                 "filename": "4x_RealisticRescaler_100000_G.pth",
                 "url": "https://huggingface.co/holwech/realistic-rescaler-real-esrgan/resolve/main/4x_RealisticRescaler_100000_G.pth?download=true",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "upscale_models"),
-            },
-            {
-                "filename": "4xLexicaHAT.pth",
-                "url": "https://github.com/Phhofm/models/raw/main/4xLexicaHAT/4xLexicaHAT.pth",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "upscale_models"),
-            },
-            {
-                "filename": "2x_AstroManLite_266k.pth",
-                "url": "https://huggingface.co/lone682/upscaler_models/resolve/main/2x_AstroManLite_266k.pth?download=true",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "upscale_models"),
-            },
-            {
-                "filename": "4x_IllustrationJaNai_V1_ESRGAN_135k.pth",
-                "url": "https://huggingface.co/lone682/upscaler_models/resolve/main/4x_IllustrationJaNai_V1_ESRGAN_135k.pth?download=true",
                 "dest": os.path.join(COMFY_BASE_PATH, "models", "upscale_models"),
             },
         ]

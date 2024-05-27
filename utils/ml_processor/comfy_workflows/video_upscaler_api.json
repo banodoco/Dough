@@ -1,253 +1,303 @@
 {
-    "241": {
-      "inputs": {
-        "upscale_by": 2,
-        "seed": 44,
-        "steps": 4,
-        "cfg": 1,
-        "sampler_name": "lcm",
-        "scheduler": "sgm_uniform",
-        "denoise": 0.25,
-        "mode_type": "Linear",
-        "tile_width": 640,
-        "tile_height": 640,
-        "mask_blur": 32,
-        "tile_padding": 64,
-        "seam_fix_mode": "None",
-        "seam_fix_denoise": 0.75,
-        "seam_fix_width": 64,
-        "seam_fix_mask_blur": 16,
-        "seam_fix_padding": 32,
-        "force_uniform_tiles": true,
-        "tiled_decode": false,
-        "image": [
-          "302",
-          0
-        ],
-        "model": [
-          "301",
-          0
-        ],
-        "positive": [
-          "253",
-          0
-        ],
-        "negative": [
-          "253",
-          1
-        ],
-        "vae": [
-          "244",
-          4
-        ],
-        "upscale_model": [
-          "242",
-          0
-        ]
-      },
-      "class_type": "UltimateSDUpscale",
-      "_meta": {
-        "title": "Ultimate SD Upscale"
-      }
+  "302": {
+    "inputs": {
+      "video": "AD__01591.mp4",
+      "force_rate": 12,
+      "force_size": "Disabled",
+      "custom_width": 512,
+      "custom_height": 512,
+      "frame_load_cap": 0,
+      "skip_first_frames": 0,
+      "select_every_nth": 1
     },
-    "242": {
-      "inputs": {
-        "model_name": "4xLexicaHAT.pth"
-      },
-      "class_type": "Upscale Model Loader",
-      "_meta": {
-        "title": "Upscale Model Loader"
-      }
+    "class_type": "VHS_LoadVideo",
+    "_meta": {
+      "title": "Load Video (Upload) 🎥🅥🅗🅢"
+    }
+  },
+  "347": {
+    "inputs": {
+      "model_name": "4x_RealisticRescaler_100000_G.pth"
     },
-    "243": {
-      "inputs": {
-        "frame_rate": 15,
-        "loop_count": 0,
-        "filename_prefix": "hr_ult",
-        "format": "video/ProRes",
-        "pingpong": false,
-        "save_output": true,
-        "images": [
-          "241",
-          0
-        ]
-      },
-      "class_type": "VHS_VideoCombine",
-      "_meta": {
-        "title": "Video Combine 🎥🅥🅗🅢"
-      }
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Load Upscale Model"
+    }
+  },
+  "362": {
+    "inputs": {
+      "ckpt_name": "Realistic_Vision_V5.0.safetensors"
     },
-    "244": {
-      "inputs": {
-        "ckpt_name": "Realistic_Vision_V5.0.safetensors",
-        "vae_name": "Baked VAE",
-        "clip_skip": -1,
-        "lora_name": "AnimateLCM_sd15_t2v_lora.safetensors",
-        "lora_model_strength": 1,
-        "lora_clip_strength": 1,
-        "positive": [
-          "307",
-          0
-        ],
-        "negative": "watermark, text, signature, blurry",
-        "token_normalization": "none",
-        "weight_interpretation": "comfy",
-        "empty_latent_width": 320,
-        "empty_latent_height": 576,
-        "batch_size": 64
-      },
-      "class_type": "Efficient Loader",
-      "_meta": {
-        "title": "Efficient Loader"
-      }
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "363": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "385",
+        1
+      ]
     },
-    "245": {
-      "inputs": {
-        "model_name": "AnimateLCM_sd15_t2v.ckpt",
-        "beta_schedule": "lcm >> sqrt_linear",
-        "motion_scale": 1,
-        "apply_v2_models_properly": false,
-        "model": [
-          "244",
-          0
-        ],
-        "context_options": [
-          "246",
-          0
-        ]
-      },
-      "class_type": "ADE_AnimateDiffLoaderWithContext",
-      "_meta": {
-        "title": "AnimateDiff Loader [Legacy] 🎭🅐🅓①"
-      }
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "364": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "385",
+        1
+      ]
     },
-    "246": {
-      "inputs": {
-        "context_length": 16,
-        "context_stride": 1,
-        "context_overlap": 4,
-        "closed_loop": false,
-        "fuse_method": "pyramid",
-        "use_on_equal_length": false,
-        "start_percent": 0,
-        "guarantee_steps": 1
-      },
-      "class_type": "ADE_LoopedUniformContextOptions",
-      "_meta": {
-        "title": "Context Options◆Looped Uniform 🎭🅐🅓"
-      }
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "381": {
+    "inputs": {
+      "ipadapter_file": "ip-adapter-plus_sd15.bin"
     },
-    "250": {
-      "inputs": {
-        "ipadapter_file": "ip-adapter-plus_sd15.bin"
-      },
-      "class_type": "IPAdapterModelLoader",
-      "_meta": {
-        "title": "Load IPAdapter Model"
-      }
+    "class_type": "IPAdapterModelLoader",
+    "_meta": {
+      "title": "IPAdapter Model Loader"
+    }
+  },
+  "382": {
+    "inputs": {
+      "clip_name": "SD1.5/pytorch_model.bin"
     },
-    "253": {
-      "inputs": {
-        "strength": 0.8,
-        "start_percent": 0,
-        "end_percent": 0.751,
-        "positive": [
-          "244",
-          1
-        ],
-        "negative": [
-          "244",
-          2
-        ],
-        "control_net": [
-          "254",
-          0
-        ],
-        "image": [
-          "302",
-          0
-        ]
-      },
-      "class_type": "ACN_AdvancedControlNetApply",
-      "_meta": {
-        "title": "Apply Advanced ControlNet 🛂🅐🅒🅝"
-      }
+    "class_type": "CLIPVisionLoader",
+    "_meta": {
+      "title": "Load CLIP Vision"
+    }
+  },
+  "385": {
+    "inputs": {
+      "lora_name": "AnimateLCM_sd15_t2v_lora.safetensors",
+      "strength_model": 1.05,
+      "strength_clip": 1,
+      "model": [
+        "362",
+        0
+      ],
+      "clip": [
+        "362",
+        1
+      ]
     },
-    "254": {
-      "inputs": {
-        "control_net_name": "controlnet_checkpoint.ckpt"
-      },
-      "class_type": "ControlNetLoaderAdvanced",
-      "_meta": {
-        "title": "Load Advanced ControlNet Model 🛂🅐🅒🅝"
-      }
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "Load LoRA"
+    }
+  },
+  "391": {
+    "inputs": {
+      "upscale_by": 1.5,
+      "seed": 44,
+      "steps": 6,
+      "cfg": 1,
+      "sampler_name": "lcm",
+      "scheduler": "sgm_uniform",
+      "denoise": 0.4,
+      "mode_type": "Chess",
+      "tile_width": 640,
+      "tile_height": 640,
+      "mask_blur": 32,
+      "tile_padding": 64,
+      "seam_fix_mode": "None",
+      "seam_fix_denoise": 0.75,
+      "seam_fix_width": 64,
+      "seam_fix_mask_blur": 16,
+      "seam_fix_padding": 32,
+      "force_uniform_tiles": true,
+      "tiled_decode": false,
+      "image": [
+        "302",
+        0
+      ],
+      "model": [
+        "396",
+        0
+      ],
+      "positive": [
+        "363",
+        0
+      ],
+      "negative": [
+        "364",
+        0
+      ],
+      "vae": [
+        "362",
+        2
+      ],
+      "upscale_model": [
+        "347",
+        0
+      ]
     },
-    "301": {
-      "inputs": {
-        "weight": 1,
-        "weight_type": "linear",
-        "combine_embeds": "concat",
-        "embeds_scaling": "V only",
-        "start_at": 0,
-        "end_at": 1,
-        "ipadapter": [
-          "250",
-          0
-        ],
-        "clip_vision": [
-          "303",
-          0
-        ],
-        "image": [
-          "302",
-          0
-        ],
-        "model": [
-          "245",
-          0
-        ]
-      },
-      "class_type": "IPAdapterAdvanced",
-      "_meta": {
-        "title": "IPAdapter Advanced"
-      }
+    "class_type": "UltimateSDUpscale",
+    "_meta": {
+      "title": "Ultimate SD Upscale"
+    }
+  },
+  "392": {
+    "inputs": {
+      "ckpt_name": "film_net_fp32.pt",
+      "clear_cache_after_n_frames": 10,
+      "multiplier": 2,
+      "frames": [
+        "391",
+        0
+      ]
     },
-    "302": {
-      "inputs": {
-        "video": "94568767-6b1e-450d-8dfb-cb8f08365d6f.mp4",
-        "force_rate": 0,
-        "force_size": "Disabled",
-        "custom_width": 512,
-        "custom_height": 512,
-        "frame_load_cap": 0,
-        "skip_first_frames": 0,
-        "select_every_nth": 1
-      },
-      "class_type": "VHS_LoadVideo",
-      "_meta": {
-        "title": "Load Video (Upload) 🎥🅥🅗🅢"
-      }
+    "class_type": "FILM VFI",
+    "_meta": {
+      "title": "FILM VFI"
+    }
+  },
+  "395": {
+    "inputs": {
+      "weight": 1,
+      "weight_type": "ease in-out",
+      "start_at": 0,
+      "end_at": 0.3,
+      "embeds_scaling": "V only",
+      "model": [
+        "400",
+        0
+      ],
+      "ipadapter": [
+        "381",
+        0
+      ],
+      "image": [
+        "302",
+        0
+      ],
+      "clip_vision": [
+        "382",
+        0
+      ]
     },
-    "303": {
-      "inputs": {
-        "clip_name": "SD1.5/pytorch_model.bin"
-      },
-      "class_type": "CLIPVisionLoader",
-      "_meta": {
-        "title": "Load CLIP Vision"
-      }
+    "class_type": "IPAdapterBatch",
+    "_meta": {
+      "title": "IPAdapter Batch (Adv.)"
+    }
+  },
+  "396": {
+    "inputs": {
+      "weight": 1,
+      "weight_type": "strong middle",
+      "start_at": 0,
+      "end_at": 1,
+      "sharpening": 0,
+      "embeds_scaling": "V only",
+      "model": [
+        "395",
+        0
+      ],
+      "ipadapter": [
+        "381",
+        0
+      ],
+      "image": [
+        "302",
+        0
+      ],
+      "clip_vision": [
+        "382",
+        0
+      ]
     },
-    "307": {
-      "inputs": {
-        "action": "append",
-        "tidy_tags": "yes",
-        "text_a": "",
-        "text_b": "",
-        "result": ""
-      },
-      "class_type": "StringFunction|pysssss",
-      "_meta": {
-        "title": "String Function 🐍"
-      }
+    "class_type": "IPAdapterTiledBatch",
+    "_meta": {
+      "title": "IPAdapter Tiled Batch"
+    }
+  },
+  "397": {
+    "inputs": {
+      "model_name": "AnimateLCM_sd15_t2v.ckpt"
+    },
+    "class_type": "ADE_LoadAnimateDiffModel",
+    "_meta": {
+      "title": "Load AnimateDiff Model 🎭🅐🅓②"
+    }
+  },
+  "399": {
+    "inputs": {
+      "start_percent": 0,
+      "end_percent": 1,
+      "motion_model": [
+        "397",
+        0
+      ]
+    },
+    "class_type": "ADE_ApplyAnimateDiffModel",
+    "_meta": {
+      "title": "Apply AnimateDiff Model (Adv.) 🎭🅐🅓②"
+    }
+  },
+  "400": {
+    "inputs": {
+      "beta_schedule": "lcm >> sqrt_linear",
+      "model": [
+        "385",
+        0
+      ],
+      "m_models": [
+        "399",
+        0
+      ],
+      "context_options": [
+        "401",
+        0
+      ]
+    },
+    "class_type": "ADE_UseEvolvedSampling",
+    "_meta": {
+      "title": "Use Evolved Sampling 🎭🅐🅓②"
+    }
+  },
+  "401": {
+    "inputs": {
+      "context_length": 16,
+      "context_stride": 1,
+      "context_overlap": 4,
+      "context_schedule": "uniform",
+      "closed_loop": true,
+      "fuse_method": "pyramid",
+      "use_on_equal_length": false,
+      "start_percent": 0,
+      "guarantee_steps": 1
+    },
+    "class_type": "ADE_AnimateDiffUniformContextOptions",
+    "_meta": {
+      "title": "Context Options◆Looped Uniform 🎭🅐🅓"
+    }
+  },
+  "402": {
+    "inputs": {
+      "frame_rate": 30,
+      "loop_count": 0,
+      "filename_prefix": "AnimateDiff",
+      "format": "image/gif",
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "392",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Video Combine 🎥🅥🅗🅢"
     }
   }
+}

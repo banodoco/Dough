@@ -26,16 +26,16 @@ def zoom_inputs(position="in-frame", horizontal=False, shot_uuid=None):
         st.session_state["flip_horizontally_default"] = False
 
     col1.number_input(
-        "Zoom In/Out",
+        "Zoom in/out:",
         min_value=10,
         max_value=1000,
-        step=1,
+        step=5,
         key=f"zoom_level_input",
         value=st.session_state["zoom_level_input_default"],
     )
 
     col2.number_input(
-        "Rotate",
+        "Rotate:",
         min_value=-360,
         max_value=360,
         step=5,
@@ -45,7 +45,7 @@ def zoom_inputs(position="in-frame", horizontal=False, shot_uuid=None):
     # st.session_state['rotation_angle_input'] = 0
 
     col3.number_input(
-        "Shift Left/Right",
+        "Shift left/right:",
         min_value=-1000,
         max_value=1000,
         step=5,
@@ -54,7 +54,7 @@ def zoom_inputs(position="in-frame", horizontal=False, shot_uuid=None):
     )
 
     col4.number_input(
-        "Shift Down/Up",
+        "Shift down/up:",
         min_value=-1000,
         max_value=1000,
         step=5,
@@ -63,11 +63,11 @@ def zoom_inputs(position="in-frame", horizontal=False, shot_uuid=None):
     )
 
     col5.checkbox(
-        "Flip Vertically ↕️", key=f"flip_vertically", value=str(st.session_state["flip_vertically_default"])
+        "Flip vertically ↕️", key=f"flip_vertically", value=str(st.session_state["flip_vertically_default"])
     )
 
     col6.checkbox(
-        "Flip Horizontally ↔️",
+        "Flip horizontally ↔️",
         key=f"flip_horizontally",
         value=str(st.session_state["flip_horizontally_default"]),
     )

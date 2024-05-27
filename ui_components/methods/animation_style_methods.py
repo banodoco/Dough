@@ -75,7 +75,7 @@ def load_shot_settings(shot_uuid, log_uuid=None):
                         st.session_state[key] = 0
                     st.session_state["creative_interpolation_type"] = STEERABLE_MOTION_WORKFLOWS[
                         st.session_state[key]
-                    ]
+                    ]["name"]
 
             st.rerun()
         elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
@@ -556,9 +556,7 @@ def update_session_state_with_animation_details(
             ]
             st.session_state[f"motion_during_frame_{shot_uuid}_{idx}"] = motions_during_frames[idx]
             if idx < len(img_list) - 1:
-                st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"] = (
-                    distances_to_next_frames[idx] * 2
-                )
+                st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"] = distances_to_next_frames[idx]
                 st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"] = speeds_of_transitions[idx]
                 st.session_state[f"freedom_between_frames_{shot_uuid}_{idx}"] = freedoms_between_frames[idx]
 
