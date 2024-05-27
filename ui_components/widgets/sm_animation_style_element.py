@@ -127,9 +127,9 @@ def animation_sidebar(
                         entity_new_val = st.slider(
                             "What would you like to change it to?",
                             min_value=0.25,
-                            max_value=6.00,
+                            max_value=12.00,
                             step=0.25,
-                            value=1.0,
+                            value=DEFAULT_SHOT_MOTION_VALUES["distance_to_next_frame"],
                             key="entity_new_val_seconds",
                         )
                     elif editable_entity == "Strength of frames":
@@ -138,7 +138,7 @@ def animation_sidebar(
                             min_value=0.25,
                             max_value=1.0,
                             step=0.01,
-                            value=0.5,
+                            value=DEFAULT_SHOT_MOTION_VALUES["strength_of_frame"],
                             key="entity_new_val_strength",
                         )
                     elif editable_entity == "Speed of transitions":
@@ -147,7 +147,7 @@ def animation_sidebar(
                             min_value=0.2,
                             max_value=0.8,
                             step=0.01,
-                            value=0.6,
+                            value=DEFAULT_SHOT_MOTION_VALUES["speed_of_transition"],
                             key="entity_new_val_speed",
                         )
                     elif editable_entity == "Freedom between frames":
@@ -156,7 +156,7 @@ def animation_sidebar(
                             min_value=0.00,
                             max_value=1.0,
                             step=0.01,
-                            value=1.0,
+                            value=DEFAULT_SHOT_MOTION_VALUES["freedom_between_frames"],
                             key="entity_new_val_freedom",
                         )
                     elif editable_entity == "Motion during frames":
@@ -165,10 +165,9 @@ def animation_sidebar(
                             min_value=0.5,
                             max_value=1.5,
                             step=0.01,
-                            value=1.0,
+                            value=DEFAULT_SHOT_MOTION_VALUES["motion_during_frame"],
                             key="entity_new_val_motion",
                         )
-
                 if st.button("Bulk edit", key="bulk_edit", use_container_width=True):
                     start_idx, end_idx = range_to_edit
                     for idx in range(start_idx - 1, end_idx):  # Adjusting index to be 0-based

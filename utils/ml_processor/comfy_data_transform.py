@@ -579,16 +579,16 @@ class ComfyDataTransform:
 
                 json_data["207"]["inputs"]["sampler_name"] = "lcm"
                 json_data["207"]["inputs"]["steps"] = 20
-                json_data["207"]["inputs"]["cfg"] = 1.0
+                json_data["207"]["inputs"]["cfg"] = 1.2
                 json_data["546"]["inputs"]["model_name"] = "AnimateLCM_sd15_t2v.ckpt"
                 json_data["207"]["inputs"]["scheduler"] = "sgm_uniform"
 
                 json_data["593"]["inputs"]["ipa_starts_at"] = 0
-                json_data["593"]["inputs"]["ipa_ends_at"] = 0.55
+                json_data["593"]["inputs"]["ipa_ends_at"] = 0.3
                 json_data["593"]["inputs"]["ipa_weight_type"] = "ease in-out"
                 json_data["593"]["inputs"]["ipa_weight"] = 1
-                json_data["593"]["inputs"]["ipa_embeds_scaling"] = "K+mean(V) w/ C penalty"
-                json_data["593"]["inputs"]["ipa_noise_strength"] = 0.1
+                json_data["593"]["inputs"]["ipa_embeds_scaling"] = "V only"
+                json_data["593"]["inputs"]["ipa_noise_strength"] = 0.9
                 json_data["593"]["inputs"]["use_image_for_noise"] = True
                 json_data["593"]["inputs"]["type_of_noise"] = "fade"
                 json_data["593"]["inputs"]["noise_blur"] = 0

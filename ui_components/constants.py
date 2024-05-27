@@ -74,7 +74,7 @@ DEFAULT_SHOT_MOTION_VALUES = {
     "strength_of_frame": 0.8,
     "distance_to_next_frame": 3.0,
     "speed_of_transition": 0.5,
-    "freedom_between_frames": 1.0,
+    "freedom_between_frames": 0.85,
     "individual_prompt": "",
     "individual_negative_prompt": "",
     "motion_during_frame": 1.15,
