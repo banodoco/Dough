@@ -10,11 +10,7 @@ MAX_LOADING_FILE_SIZE = 9
 def individual_video_display_element(file: Union[InternalFileObject, str], dont_bypass_file_size_check=True):
     file_location = file.location if file and not isinstance(file, str) and file.location else file
     if file_location:
-        (
-            st.video(file_location, format="mp4", start_time=0)
-            if (get_file_size(file_location) < MAX_LOADING_FILE_SIZE or not dont_bypass_file_size_check)
-            else st.info("Video file too large to display")
-        )
+        st.video(file_location, format="mp4", start_time=0)
     else:
         st.error("No video present")
 

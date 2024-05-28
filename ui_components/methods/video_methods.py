@@ -80,9 +80,7 @@ def create_single_interpolated_clip(
         st.rerun()
 
 
-def upscale_video(
-    shot_uuid, styling_model, upscaler_type, upscale_factor, upscale_strength, promote_to_main_variant
-):
+def upscale_video(shot_uuid, styling_model, upscale_factor, promote_to_main_variant):
     from ui_components.methods.common_methods import process_inference_output
     from shared.constants import QUEUE_INFERENCE_QUERIES
 
@@ -91,7 +89,7 @@ def upscale_video(
 
     # hacky fix to prevent conflicting opencv versions
     try:
-        pkg_resources.require("opencv-python-headless[ffmpeg]==4.8.0.74")
+        pkg_resources.require("opencv-python-headless==4.8.0.74")
     except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
         # Install the package if it's not installed
         try:
@@ -117,9 +115,7 @@ def upscale_video(
         data={
             "file_video": shot.main_clip.uuid,
             "model": styling_model,
-            "upscaler_type": upscaler_type,
             "upscale_factor": upscale_factor,
-            "upscale_strength": upscale_strength,
         },
     )
 

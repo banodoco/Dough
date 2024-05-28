@@ -83,55 +83,58 @@ def frame_styling_page(shot_uuid: str):
                 inpainting_element(options_width, timing.primary_image.location, position=f"{timing_uuid}")
 
             with options_width:
-                how_many_images = st.slider(
-                    "How many images to generate:", 1, 10, 1, key=f"how_many_images_{timing_uuid}"
-                )
-                if st.button("Generate", key=f"generate_inpaint_{timing_uuid}"):
-                    if "mask_to_use" in st.session_state and st.session_state["mask_to_use"]:
-                        for _ in range(how_many_images):  # Loop based on how_many_images
-                            project_settings = data_repo.get_project_setting(shot.project.uuid)
-                            query_obj = MLQueryObject(
-                                timing_uuid=None,
-                                model_uuid=None,
-                                guidance_scale=8,
-                                seed=-1,
-                                num_inference_steps=25,
-                                strength=0.5,
-                                adapter_type=None,
-                                prompt=prompt,
-                                negative_prompt=negative_prompt,
-                                height=project_settings.height,
-                                width=project_settings.width,
-                                data={
-                                    "shot_uuid": shot_uuid,
-                                    "mask": st.session_state["mask_to_use"],
-                                    "input_image": st.session_state["editing_image"],
-                                    "project_uuid": shot.project.uuid,
-                                },
-                            )
+                if "mask_to_use" not in st.session_state:
+                    st.session_state["mask_to_use"] = ""
+                if st.session_state["mask_to_use"] != "":
+                    how_many_images = st.slider(
+                        "How many images to generate:", 1, 10, 1, key=f"how_many_images_{timing_uuid}"
+                    )
+                    if st.button("Generate inpainted images", key=f"generate_inpaint_{timing_uuid}"):
+                        if "mask_to_use" in st.session_state and st.session_state["mask_to_use"]:
+                            for _ in range(how_many_images):  # Loop based on how_many_images
+                                project_settings = data_repo.get_project_setting(shot.project.uuid)
+                                query_obj = MLQueryObject(
+                                    timing_uuid=None,
+                                    model_uuid=None,
+                                    guidance_scale=8,
+                                    seed=-1,
+                                    num_inference_steps=25,
+                                    strength=0.5,
+                                    adapter_type=None,
+                                    prompt=prompt,
+                                    negative_prompt=negative_prompt,
+                                    height=project_settings.height,
+                                    width=project_settings.width,
+                                    data={
+                                        "shot_uuid": shot_uuid,
+                                        "mask": st.session_state["mask_to_use"],
+                                        "input_image": st.session_state["editing_image"],
+                                        "project_uuid": shot.project.uuid,
+                                    },
+                                )
 
-                            ml_client = get_ml_client()
-                            output, log = ml_client.predict_model_output_standardized(
-                                ML_MODEL.sdxl_inpainting, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES
-                            )
+                                ml_client = get_ml_client()
+                                output, log = ml_client.predict_model_output_standardized(
+                                    ML_MODEL.sdxl_inpainting,
+                                    query_obj,
+                                    queue_inference=QUEUE_INFERENCE_QUERIES,
+                                )
 
-                            if log:
-                                inference_data = {
-                                    "inference_type": InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
-                                    "output": output,
-                                    "log_uuid": log.uuid,
-                                    "project_uuid": shot.project.uuid,
-                                    "timing_uuid": timing_uuid,
-                                    "promote_new_generation": False,
-                                    "shot_uuid": shot_uuid if shot_uuid else "explorer",
-                                }
+                                if log:
+                                    inference_data = {
+                                        "inference_type": InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
+                                        "output": output,
+                                        "log_uuid": log.uuid,
+                                        "project_uuid": shot.project.uuid,
+                                        "timing_uuid": timing_uuid,
+                                        "promote_new_generation": False,
+                                        "shot_uuid": shot_uuid if shot_uuid else "explorer",
+                                    }
 
-                                process_inference_output(**inference_data)
-                        st.rerun()
-                    else:
-                        st.error("Please create and save a mask before generation")
-                        time.sleep(0.7)
-                        st.rerun()
+                                    process_inference_output(**inference_data)
+                            st.rerun()
+                else:
+                    st.error("You must first select the area to inpaint.")
 
         # elif st.session_state['styling_view'] == "Scribble":
         # with st.expander("📝 Draw On Image", expanded=True):
