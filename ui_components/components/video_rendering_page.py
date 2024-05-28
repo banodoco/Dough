@@ -183,6 +183,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             
             **Rad Attack**: good for realistic motion but with a lot of detail loss.""",
             )
+        st.write(type_of_generation)
         with footer2:
             st.info(
                 f"Each has a unique type of motion and adherence. You can an example of each of them in action [here](https://youtu.be/zu1IbdavW_4)."
