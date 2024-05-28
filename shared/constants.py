@@ -128,14 +128,14 @@ class SortOrder(ExtendedEnum):
 
 
 class CreativeProcessPage(ExtendedEnum):
-    TIMELINE = "Timeline"
+    SHOTS = "Shots"
     ADJUST_SHOT = "Adjust Shot"
     ANIMATE_SHOT = "Animate Shot"
 
 
 # these can be one of the main creative process page or some other sub page inside it
 class AppSubPage(ExtendedEnum):
-    TIMELINE = "Timeline"
+    SHOTS = "Shots"
     ADJUST_SHOT = "Adjust Shot"
     ANIMATE_SHOT = "Animate Shot"
     KEYFRAME = "Key Frames"

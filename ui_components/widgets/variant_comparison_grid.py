@@ -145,7 +145,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                             promote_to_main_variant,
                         ) = upscale_settings()
                         if st.button(
-                            "Upscale Main Variant",
+                            "Upscale main variant",
                             key=f"upscale_main_variant_{shot_uuid}",
                             help="Upscale the main variant with the selected settings",
                             use_container_width=True,
@@ -156,6 +156,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                                 upscale_factor,
                                 promote_to_main_variant,
                             )
+                            st.rerun()
                 else:
                     st.info("Upscaled video")
                 create_video_download_button(variants[current_variant].location, tag="var_compare")

@@ -37,7 +37,7 @@ from utils import st_memory
 from ui_components.widgets.image_zoom_widgets import reset_zoom_element
 
 
-def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timeline", **kwargs):
+def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots", **kwargs):
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
 
@@ -332,7 +332,7 @@ def default_shot_view(shot_uuid, items_per_row, position):
                 if idx <= len(timing_list):
                     with grid[j]:
                         if idx == len(timing_list):
-                            if position != "Timeline":
+                            if position != "Shots":
                                 add_key_frame_section(shot_uuid)
                         else:
                             timing = timing_list[idx]

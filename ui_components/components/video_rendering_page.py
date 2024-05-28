@@ -187,6 +187,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             st.info(
                 f"Each has a unique type of motion and adherence. You can an example of each of them in action [here](https://youtu.be/zu1IbdavW_4)."
             )
+        st.write("")
         animate_col_1, _, _ = st.columns([3, 1, 1])
         with animate_col_1:
             variant_count = 1

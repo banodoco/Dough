@@ -173,7 +173,7 @@ def setup_app_ui():
                     # mapping subpages to their main page
                     subpage_page_map = {
                         # timeline
-                        AppSubPage.TIMELINE.value: CreativeProcessPage.TIMELINE.value,
+                        AppSubPage.SHOTS.value: CreativeProcessPage.SHOTS.value,
                         # adjust shot
                         AppSubPage.ADJUST_SHOT.value: CreativeProcessPage.ADJUST_SHOT.value,
                         AppSubPage.KEYFRAME.value: CreativeProcessPage.ADJUST_SHOT.value,
@@ -183,12 +183,12 @@ def setup_app_ui():
 
                     if "current_subpage" not in st.session_state:
                         st.session_state["current_subpage"] = st.session_state["prev_subpage"] = (
-                            AppSubPage.TIMELINE.value
+                            AppSubPage.SHOTS.value
                         )
 
                     if "page" not in st.session_state:
                         st.session_state["page"] = st.session_state["prev_page"] = (
-                            CreativeProcessPage.TIMELINE.value
+                            CreativeProcessPage.SHOTS.value
                         )
 
                     if "selected_page_idx" not in st.session_state:
@@ -250,7 +250,7 @@ def setup_app_ui():
                 elif st.session_state["page"] == "Shortlist":
                     shortlist_page(st.session_state["project_uuid"])
 
-                elif st.session_state["page"] == "Timeline":
+                elif st.session_state["page"] == "Shots":
                     timeline_view_page(st.session_state["shot_uuid"], h2)
 
                 elif st.session_state["page"] == "Adjust Shot":

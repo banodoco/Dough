@@ -51,7 +51,7 @@ def timeline_view_page(shot_uuid: str, h2):
         st.markdown("***")
         slider1, slider2, slider3 = st.columns([2, 1, 1])
         with slider1:
-            st.markdown(f"### 🪄 '{project.name}' timeline")
+            st.markdown(f"### 🪄 '{project.name}' shots")
             st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
         shot_list = data_repo.get_shot_list(project_uuid)
@@ -121,10 +121,10 @@ def timeline_view_page(shot_uuid: str, h2):
                         # drop all files that contain xl
                         model_files = [file for file in model_files if "xl" not in file]
                         # model_files.insert(0, "None")  # Add "None" option at the beginning
-                        styling_model = st.selectbox("Styling model", model_files, key="styling_model")
+                        styling_model = st.selectbox("Styling model:", model_files, key="styling_model")
 
                     upscale_by = st.slider(
-                        "Upscale by", min_value=1.0, max_value=3.0, step=0.1, key="upscale_by", value=1.5
+                        "Upscale by:", min_value=1.0, max_value=3.0, step=0.1, key="upscale_by", value=1.5
                     )
 
                     set_upscaled_to_main_variant = st.checkbox(
@@ -157,7 +157,7 @@ def timeline_view_page(shot_uuid: str, h2):
 
         # start_time = time.time()
         timeline_view(st.session_state["shot_uuid"], st.session_state["view"])
-        st.markdown("### ✨ Generate frames")
+        st.markdown("### ✨ Generate images")
         st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
         # end_time = time.time()
