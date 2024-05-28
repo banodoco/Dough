@@ -34,7 +34,6 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
     shot_meta_data = {}
 
     with st.container():
-        col1, _, _ = st.columns([1.0, 1.5, 1.0])
 
         # ----------- INDIVIDUAL FRAME SETTINGS -----------
         (
@@ -45,7 +44,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             individual_prompts,
             individual_negative_prompts,
             motions_during_frames,
-        ) = individual_frame_settings_element(shot_uuid, img_list, col1)
+        ) = individual_frame_settings_element(shot_uuid, img_list)
 
         # ----------- SELECT SD MODEL -----------
         sd_model, model_files = select_sd_model_element(shot_uuid, default_model)
@@ -154,31 +153,41 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
         st.markdown("***")
         st.markdown("##### Generation Settings")
 
-        if f"type_of_generation_index_{shot.uuid}" not in st.session_state or not isinstance(
-            st.session_state[f"type_of_generation_index_{shot.uuid}"], int
-        ):
-            st.session_state[f"type_of_generation_index_{shot.uuid}"] = 0
-
-        generation_types = STEERABLE_MOTION_WORKFLOWS
-
-        type_of_generation = st.radio(
-            "Workflow:",
-            options=generation_types,
-            key="creative_interpolation_type",
-            horizontal=True,
-            index=st.session_state[f"type_of_generation_index_{shot.uuid}"],
-            help="""
-            
-        **Slurshy Realistiche**: good for simple realistic motion.
-
-        **Smooth n' Steady**: good for slow, smooth transitions. 
-        
-        **Chocky Realistiche**: good for realistic motion and chaotic transitions. 
-
-        **Liquidy Loop**: good for liquid-like motion with slick transitions. Also loops!
-        
-        **Fast With A Price**: runs fast but with a lot of detail loss.""",
+        # Filter and sort the workflows based on 'display' flag and 'order'
+        filtered_and_sorted_workflows = sorted(
+            (workflow for workflow in STEERABLE_MOTION_WORKFLOWS if workflow["display"]),
+            key=lambda x: x["order"],
         )
+
+        generation_types = [workflow["name"] for workflow in filtered_and_sorted_workflows]
+
+        footer1, footer2 = st.columns([1.5, 1])
+        with footer1:
+            type_of_generation = st.radio(
+                "Workflow:",
+                options=generation_types,
+                key="creative_interpolation_type",
+                horizontal=True,
+                index=st.session_state.get(f"type_of_generation_index_{shot.uuid}", 0),
+                help="""
+                
+            **Slurshy Realistiche**: good for simple realistic motion.
+
+            **Smooth n' Steady**: good for slow, smooth transitions. 
+            
+            **Chocky Realistiche**: good for realistic motion and chaotic transitions. 
+
+            **Liquidy Loop**: good for liquid-like motion with slick transitions. Also loops!
+            
+            **Fast With A Price**: runs fast but with a lot of detail loss.
+            
+            **Rad Attack**: good for realistic motion but with a lot of detail loss.""",
+            )
+        with footer2:
+            st.info(
+                f"Each has a unique type of motion and adherence. You can an example of each of them in action [here](https://youtu.be/zu1IbdavW_4)."
+            )
+        st.write("")
         animate_col_1, _, _ = st.columns([3, 1, 1])
         with animate_col_1:
             variant_count = 1

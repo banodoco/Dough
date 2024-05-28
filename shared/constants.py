@@ -128,14 +128,14 @@ class SortOrder(ExtendedEnum):
 
 
 class CreativeProcessPage(ExtendedEnum):
-    TIMELINE = "Timeline"
+    SHOTS = "Shots"
     ADJUST_SHOT = "Adjust Shot"
     ANIMATE_SHOT = "Animate Shot"
 
 
 # these can be one of the main creative process page or some other sub page inside it
 class AppSubPage(ExtendedEnum):
-    TIMELINE = "Timeline"
+    SHOTS = "Shots"
     ADJUST_SHOT = "Adjust Shot"
     ANIMATE_SHOT = "Animate Shot"
     KEYFRAME = "Key Frames"
@@ -143,11 +143,12 @@ class AppSubPage(ExtendedEnum):
 
 
 STEERABLE_MOTION_WORKFLOWS = [
-    "Slurshy Realistiche",
-    "Smooth n' Steady",
-    "Chocky Realistiche",
-    "Liquidy Loop",
-    "Fast With A Price",
+    {"name": "Slurshy Realistiche", "order": 6, "display": True},
+    {"name": "Smooth n' Steady", "order": 1, "display": True},
+    {"name": "Chocky Realistiche", "order": 3, "display": True},
+    {"name": "Liquidy Loop", "order": 4, "display": True},
+    {"name": "Fast With A Price", "order": 5, "display": True},
+    {"name": "Rad Attack", "order": 2, "display": True},
 ]
 ##################### global constants #####################
 SERVER = os.getenv("SERVER", ServerType.PRODUCTION.value)

@@ -16,7 +16,6 @@ from ui_components.constants import WorkflowStageType
 from ui_components.methods.file_methods import generate_pil_image, save_or_host_file
 from ui_components.models import InternalProjectObject
 from ui_components.widgets.image_zoom_widgets import reset_zoom_element, save_zoomed_image, zoom_inputs
-from ui_components.widgets.inpainting_element import inpaint_in_black_space_element
 from utils.data_repo.data_repo import DataRepo
 
 from utils import st_memory
@@ -65,7 +64,7 @@ def precision_cropping_element(stage, shot_uuid):
 
     with col1:
         st.subheader("Precision Cropping:")
-        if st.button("Reset Cropping"):
+        if st.button("Reset cropping"):
             reset_zoom_element()
 
         zoom_inputs()
@@ -98,13 +97,12 @@ def precision_cropping_element(stage, shot_uuid):
         ]
 
         st.image(output_image, use_column_width=True)
-        if st.button("Save Image"):
+        if st.button("Save image", use_container_width=True):
             save_zoomed_image(output_image, st.session_state["current_frame_uuid"], stage, promote=True)
             st.success("Image saved successfully!")
+
             time.sleep(1)
             st.rerun()
-
-        inpaint_in_black_space_element(output_image, shot.project.uuid, stage, shot_uuid, transformation_data)
 
 
 def manual_cropping_element(stage, timing_uuid):
@@ -206,5 +204,3 @@ def manual_cropping_element(stage, timing_uuid):
 
             with cropbtn2:
                 st.warning("Warning: This will overwrite the original image")
-
-            inpaint_in_black_space_element(cropped_img, project_uuid, stage, timing.shot.uuid)

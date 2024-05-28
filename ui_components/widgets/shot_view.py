@@ -37,7 +37,7 @@ from utils import st_memory
 from ui_components.widgets.image_zoom_widgets import reset_zoom_element
 
 
-def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Timeline", **kwargs):
+def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots", **kwargs):
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
 
@@ -197,76 +197,121 @@ def edit_shot_view(shot_uuid, items_per_row):
 
                 if idx < len(st.session_state[f"shot_data_{shot_uuid}"]):
                     with grid[j % items_per_row]:
-                        row = st.session_state[f"shot_data_{shot_uuid}"].loc[idx]
 
-                        if row["image_location"]:
-                            st.caption(f"Frame {idx + 1}")
-                            st.image(row["image_location"], use_column_width=True)
-                        else:
-                            st.warning("No primary image present.")
-
-                        btn1, btn2, btn3, btn4, btn5 = st.columns([1, 1, 1, 1, 3.5])
-
-                        with btn1:
-                            if st.button(
-                                "⬅️",
-                                key=f"move_frame_back_{idx}",
-                                help="Move frame back",
-                                use_container_width=True,
-                            ):
-                                st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frame(
-                                    st.session_state[f"shot_data_{shot_uuid}"], idx, "backward"
-                                )
-                                st.rerun()
-                        with btn2:
-                            if st.button(
-                                "➡️",
-                                key=f"move_frame_forward_{idx}",
-                                help="Move frame forward",
-                                use_container_width=True,
-                            ):
-                                st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frame(
-                                    st.session_state[f"shot_data_{shot_uuid}"], idx, "forward"
-                                )
-                                st.rerun()
-                        with btn3:
-                            if st.button(
-                                "🔁",
-                                key=f"copy_frame_{idx}",
-                                help="Duplicate frame",
-                                use_container_width=True,
-                            ):
-                                st.session_state[f"shot_data_{shot_uuid}"] = copy_temp_frame(
-                                    st.session_state[f"shot_data_{shot_uuid}"], idx
-                                )
-                                st.rerun()
-                        with btn4:
-                            if st.button(
-                                "❌", key=f"delete_frame_{idx}", help="Delete frame", use_container_width=True
-                            ):
-                                st.session_state[f"shot_data_{shot_uuid}"] = delete_temp_frame(
-                                    st.session_state[f"shot_data_{shot_uuid}"], idx
-                                )
-                                st.rerun()
-                        with btn5:
-                            if idx not in st.session_state[f"list_to_move_{shot_uuid}"]:
-                                if st.button("Select", key=f"select_frame_{idx}", use_container_width=True):
-                                    st.session_state[f"list_to_move_{shot_uuid}"].append(idx)
-                                    st.rerun()
-                            else:
-                                if st.button(
-                                    "Deselect",
-                                    key=f"deselect_frame_{idx}",
-                                    use_container_width=True,
-                                    type="primary",
-                                ):
-                                    st.session_state[f"list_to_move_{shot_uuid}"].remove(idx)
-                                    st.rerun()
+                        caption1, caption2 = st.columns([1, 1])
 
                         if "zoom_to_open" not in st.session_state:
                             st.session_state["zoom_to_open"] = None
 
-                        individual_frame_zoom_edit_view(shot_uuid, idx)
+                        row = st.session_state[f"shot_data_{shot_uuid}"].loc[idx]
+
+                        if row["image_location"]:
+                            with caption1:
+                                st.info(f"Frame {idx + 1}")
+                            with caption2:
+                                if idx != st.session_state["zoom_to_open"]:
+                                    if st.button(
+                                        "Open zoom",
+                                        key=f"open_zoom_{shot_uuid}_{idx}_button",
+                                        use_container_width=True,
+                                    ):
+                                        st.session_state["zoom_level_input"] = 100
+                                        st.session_state["rotation_angle_input"] = 0
+                                        st.session_state["x_shift"] = 0
+                                        st.session_state["y_shift"] = 0
+                                        st.session_state["flip_vertically"] = False
+                                        st.session_state["flip_horizontally"] = False
+
+                                        st.session_state["zoom_to_open"] = idx
+                                        st.rerun()
+                                else:
+                                    if st.button(
+                                        "Close zoom",
+                                        key=f"close_zoom_{shot_uuid}_{idx}_button",
+                                        use_container_width=True,
+                                    ):
+                                        st.session_state["zoom_to_open"] = None
+                                        st.rerun()
+
+                        if idx != st.session_state["zoom_to_open"]:
+
+                            if row["image_location"]:
+
+                                st.image(row["image_location"], use_column_width=True)
+                            else:
+                                st.warning("No primary image present.")
+
+                            btn1, btn2, btn3, btn4, btn5 = st.columns([1, 1, 1, 1, 3.5])
+
+                            with btn1:
+                                if st.button(
+                                    "⬅️",
+                                    key=f"move_frame_back_{idx}",
+                                    help="Move frame back",
+                                    use_container_width=True,
+                                ):
+                                    st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frame(
+                                        st.session_state[f"shot_data_{shot_uuid}"], idx, "backward"
+                                    )
+                                    st.rerun()
+                            with btn2:
+                                if st.button(
+                                    "➡️",
+                                    key=f"move_frame_forward_{idx}",
+                                    help="Move frame forward",
+                                    use_container_width=True,
+                                ):
+                                    st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frame(
+                                        st.session_state[f"shot_data_{shot_uuid}"], idx, "forward"
+                                    )
+                                    st.rerun()
+                            with btn3:
+                                if st.button(
+                                    "🔁",
+                                    key=f"copy_frame_{idx}",
+                                    help="Duplicate frame",
+                                    use_container_width=True,
+                                ):
+                                    st.session_state[f"shot_data_{shot_uuid}"] = copy_temp_frame(
+                                        st.session_state[f"shot_data_{shot_uuid}"], idx
+                                    )
+                                    st.rerun()
+                            with btn4:
+                                if st.button(
+                                    "❌",
+                                    key=f"delete_frame_{idx}",
+                                    help="Delete frame",
+                                    use_container_width=True,
+                                ):
+                                    st.session_state[f"shot_data_{shot_uuid}"] = delete_temp_frame(
+                                        st.session_state[f"shot_data_{shot_uuid}"], idx
+                                    )
+                                    st.rerun()
+                            with btn5:
+                                if idx not in st.session_state[f"list_to_move_{shot_uuid}"]:
+                                    if st.button(
+                                        "Select", key=f"select_frame_{idx}", use_container_width=True
+                                    ):
+                                        st.session_state[f"list_to_move_{shot_uuid}"].append(idx)
+                                        st.rerun()
+                                else:
+                                    if st.button(
+                                        "Deselect",
+                                        key=f"deselect_frame_{idx}",
+                                        use_container_width=True,
+                                        type="primary",
+                                    ):
+                                        st.session_state[f"list_to_move_{shot_uuid}"].remove(idx)
+                                        st.rerun()
+
+                        else:
+                            individual_frame_zoom_edit_view(shot_uuid, idx)
+
+                            if st.button(
+                                "Reset", use_container_width=True, key=f"reset_zoom_{shot_uuid}_{idx}"
+                            ):
+                                reset_zoom_element()
+                                st.rerun()
 
             st.markdown("***")
 
@@ -287,7 +332,7 @@ def default_shot_view(shot_uuid, items_per_row, position):
                 if idx <= len(timing_list):
                     with grid[j]:
                         if idx == len(timing_list):
-                            if position != "Timeline":
+                            if position != "Shots":
                                 add_key_frame_section(shot_uuid)
                         else:
                             timing = timing_list[idx]
@@ -312,27 +357,7 @@ def individual_frame_zoom_edit_view(shot_uuid, idx):
         if f"open_zoom_{shot_uuid}_{idx}" not in st.session_state:
             st.session_state[f"open_zoom_{shot_uuid}_{idx}"] = False
 
-        if idx != st.session_state["zoom_to_open"]:
-            if st.button("Open zoom", key=f"open_zoom_{shot_uuid}_{idx}_button"):
-                st.session_state["zoom_level_input"] = 100
-                st.session_state["rotation_angle_input"] = 0
-                st.session_state["x_shift"] = 0
-                st.session_state["y_shift"] = 0
-                st.session_state["flip_vertically"] = False
-                st.session_state["flip_horizontally"] = False
-
-                st.session_state["zoom_to_open"] = idx
-                st.rerun()
-        else:
-            if st.button("Close zoom", key=f"close_zoom_{shot_uuid}_{idx}_button"):
-                st.session_state["zoom_to_open"] = None
-                st.rerun()
-
     if st.session_state["zoom_to_open"] == idx:
-        with header2:
-            if st.button("Reset", use_container_width=True, key=f"reset_zoom_{shot_uuid}_{idx}"):
-                reset_zoom_element()
-                st.rerun()
 
         input_image = generate_pil_image(
             st.session_state[f"shot_data_{shot_uuid}"].loc[idx]["image_location"]
@@ -346,7 +371,6 @@ def individual_frame_zoom_edit_view(shot_uuid, idx):
             st.session_state["flip_vertically"] = False
             st.session_state["flip_horizontally"] = False
 
-        st.caption("Zoom and Rotate:")
         h1, h2, h3, h4 = st.columns([1, 1, 1, 1])
 
         with h1:

@@ -83,8 +83,8 @@
         6
       ],
       "images": [
-        "207",
-        5
+        "687",
+        0
       ]
     },
     "class_type": "VHS_SplitImages",
@@ -526,6 +526,22 @@
     "class_type": "IpaConfiguration",
     "_meta": {
       "title": "IPA Configuration  🎞️🅢🅜"
+    }
+  },
+  "687": {
+    "inputs": {
+      "frames_to_drop": [
+        "558",
+        7
+      ],
+      "images": [
+        "207",
+        5
+      ]
+    },
+    "class_type": "RemoveAndInterpolateFrames",
+    "_meta": {
+      "title": "Remove and Interpolate Frames 🎞️🅢🅜"
     }
   }
 }

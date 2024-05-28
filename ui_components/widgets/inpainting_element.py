@@ -41,12 +41,15 @@ def inpainting_element(options_width, image, position="explorer"):
         st.session_state["current_mask"] = ""
 
     main_col_1, main_col_2 = st.columns([0.5, 3])
-    width = int(project_settings.width)
-    height = int(project_settings.height)
+    original_width = int(project_settings.width)
+    original_height = int(project_settings.height)
+    enlarged_width = int(original_width * 1.2)
+    enlarged_height = int(original_height * 1.2)
 
     if st.session_state["current_mask"] != "":
         with main_col_2:
             st.image(st.session_state["current_mask"], width=project_settings.width)
+            st.info("The bright white areas will be inpainted, the faded areas be kept.")
 
             if st.button("Clear Mask", use_container_width=True, key=f"clear_inpaint_mak_{position}"):
                 st.session_state["current_mask"] = ""
@@ -55,33 +58,70 @@ def inpainting_element(options_width, image, position="explorer"):
     else:
         with main_col_1:
             canvas_image = image if isinstance(image, Image.Image) else Image.open(image)
+            # Create a new image with black background and place the original image in the center
+            new_canvas = Image.new("RGB", (enlarged_width, enlarged_height))
+            for y in range(enlarged_height):
+                for x in range(enlarged_width):
+                    if (x // 50) % 2 == (y // 50) % 2:
+                        new_canvas.putpixel((x, y), (255, 255, 255))
+                    else:
+                        new_canvas.putpixel((x, y), (240, 240, 240))
+            offset = ((enlarged_width - original_width) // 2, (enlarged_height - original_height) // 2)
+            new_canvas.paste(canvas_image, offset)
+
             if "drawing_input" not in st.session_state:
                 st.session_state["drawing_input"] = "Magic shapes 🪄"
 
             with options_width:
-                st.session_state["drawing_input"] = st.radio(
-                    "Drawing tool:",
-                    ("Make shapes 🪄", "Move shapes 🏋🏾‍♂️", "Make squares □", "Draw lines ✏️"),
-                    horizontal=True,
-                )
+                # Check if the mode switch button has been pressed and toggle the mode
+                if "mode" not in st.session_state:
+                    st.session_state["mode"] = "draw"  # Default mode
 
+                # Display the drawing tool options when in draw mode
+                if st.session_state["mode"] == "draw":
+                    if st.button("Switch to move mode"):
+                        st.session_state["mode"] = "move"
+                        st.session_state["drawing_input"] = "Move shapes 🏋🏾‍♂️"
+                        st.rerun()
+                    st.session_state["drawing_input"] = st.radio(
+                        "Drawing tool:",
+                        ("Draw lines ✏️", "Make squares □", "Make shapes 🪄"),
+                        horizontal=True,
+                        key="drawing_tool",
+                        help="It'll inpaint over the area you paint black - apart from the area outside the border.",
+                    )
+                    st.info(
+                        "You can draw the mask on the canvas - anything apart from the buffer will be inpainted."
+                    )
+
+                else:
+
+                    if st.button("Switch to draw mode"):
+                        st.session_state["mode"] = "draw"
+                        # Optionally reset to a default drawing tool
+                        st.session_state["drawing_input"] = "Draw lines ✏️"
+                        st.rerun()
+                    st.info("You can move the shapes around to adjust the mask.")
+                # Set drawing mode based on the current state
                 if st.session_state["drawing_input"] == "Move shapes 🏋🏾‍♂️":
                     drawing_mode = "transform"
-                    st.info("To delete something, double click on it.")
+
                 elif st.session_state["drawing_input"] == "Make shapes 🪄":
                     drawing_mode = "polygon"
-                    st.info("To end a shape, right click!")
+
                 elif st.session_state["drawing_input"] == "Draw lines ✏️":
                     drawing_mode = "freedraw"
-                    st.info("To draw, draw! ")
+
                 elif st.session_state["drawing_input"] == "Make squares □":
                     drawing_mode = "rect"
 
-                with options_width:
-                    if drawing_mode == "freedraw":
-                        stroke_width = st.slider("Stroke width: ", 1, 25, 12)
-                    else:
-                        stroke_width = 3
+                # Adjust stroke width based on the drawing mode
+                if drawing_mode == "freedraw":
+                    stroke_width = st.slider("Stroke width: ", 1, 100, 50)
+                else:
+                    stroke_width = 3
+
+                st.markdown("***")
 
         with main_col_2:
             realtime_update = True
@@ -90,10 +130,10 @@ def inpainting_element(options_width, image, position="explorer"):
                 stroke_width=stroke_width,
                 stroke_color="rgba(0, 0, 0)",
                 background_color="rgb(255, 255, 255)",
-                background_image=canvas_image,
+                background_image=new_canvas,
                 update_streamlit=realtime_update,
-                height=height,
-                width=width,
+                height=enlarged_height,
+                width=enlarged_width,
                 drawing_mode=drawing_mode,
                 display_toolbar=True,
                 key="full_app",
@@ -102,20 +142,20 @@ def inpainting_element(options_width, image, position="explorer"):
             if "image_created" not in st.session_state:
                 st.session_state["image_created"] = "no"
         with main_col_1:
-
             if position == "explorer":
                 if st.button("Pick new image", use_container_width=True):
                     st.session_state["uploaded_image"] = ""
                     st.rerun()
         with main_col_2:
-            # saves both the image and mask in the session state
             if st.button("Save Mask", use_container_width=True):
                 img_data = canvas_result.image_data
                 im = Image.fromarray(img_data.astype("uint8"), mode="RGBA")
+                im = ImageOps.crop(im, border=(offset[0], offset[1]))  # Cropping back to original size
                 im_rgb = Image.new("RGB", im.size, (255, 255, 255))
                 im_rgb.paste(im, mask=im.split()[3])  # Paste the mask onto the RGB image
                 im = im_rgb
                 im = ImageOps.invert(im)  # Inverting for sdxl inpainting
+
                 st.session_state["editing_image"] = (
                     image if isinstance(image, Image.Image) else Image.open(image)
                 )
@@ -129,7 +169,7 @@ def inpainting_element(options_width, image, position="explorer"):
 
                 # Create an image with the mask faded to 50% and overlay it over the canvas_image
                 faded_mask_overlay = Image.blend(
-                    canvas_image.convert("RGBA"), im_resized.convert("RGBA"), alpha=0.3
+                    canvas_image.convert("RGBA"), im_resized.convert("RGBA"), alpha=0.7
                 )
 
                 # Save the image with the mask overlayed on top of it to session state
@@ -209,100 +249,6 @@ def replace_with_image(stage, output_file, current_frame_uuid, promote=False):
             promote_image_variant(current_frame_uuid, number_of_image_variants - 1)
 
     st.rerun()
-
-
-# cropped_img here is a PIL image object
-def inpaint_in_black_space_element(
-    cropped_img: Image.Image,
-    project_uuid,
-    stage=WorkflowStageType.SOURCE.value,
-    shot_uuid=None,
-    transformation_data=None,
-):
-    data_repo = DataRepo()
-
-    st.markdown("##### Inpaint in black space:")
-
-    inpaint_prompt = st.text_area("Prompt", value=st.session_state["explorer_base_prompt"])
-    inpaint_negative_prompt = st.text_input(
-        "Negative Prompt", value="" + DefaultProjectSettingParams.batch_negative_prompt
-    )
-
-    if "precision_cropping_inpainted_image_uuid" not in st.session_state:
-        st.session_state["precision_cropping_inpainted_image_uuid"] = ""
-
-    def inpaint(promote=False, transformation_data=transformation_data):
-        project_settings: InternalSettingObject = data_repo.get_project_setting(project_uuid)
-        width = int(project_settings.width)
-        height = int(project_settings.height)
-
-        saved_cropped_img = cropped_img.resize((width, height), Image.Resampling.BICUBIC)
-
-        rotation_angle = 0
-        # removing the mask from this img (as all ml_processors require img, mask separately)
-        if not transformation_data:
-            mask = Image.new("RGB", cropped_img.size, color="white")
-            for x in range(width):
-                for y in range(height):
-                    pixel = saved_cropped_img.getpixel((x, y))
-                    if all(value < 10 for value in pixel[:3]):
-                        mask.putpixel((x, y), (0, 0, 0))
-
-            mask = ImageOps.invert(mask)
-        else:
-            w, h = transformation_data[0]
-            new_coord = apply_coord_transformations(*transformation_data[1:])
-            rotation_angle = transformation_data[3]
-            mask = generate_mask(new_coord, w, h, 3 if rotation_angle != 0 else 1)
-
-        mask = detect_and_draw_contour(mask) if not rotation_angle else mask
-        # mask.save("mask_created.png")
-        query_obj = MLQueryObject(
-            timing_uuid=None,
-            model_uuid=None,
-            guidance_scale=8,
-            seed=-1,
-            num_inference_steps=25,
-            strength=0.5,
-            adapter_type=None,
-            prompt=inpaint_prompt,
-            negative_prompt=inpaint_negative_prompt,
-            height=project_settings.height,
-            width=project_settings.width,
-            data={
-                "shot_uuid": shot_uuid,
-                "mask": mask,
-                "input_image": cropped_img,
-                "project_uuid": project_uuid,
-            },
-        )
-
-        ml_client = get_ml_client()
-        output, log = ml_client.predict_model_output_standardized(
-            ML_MODEL.sdxl_inpainting, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES
-        )
-
-        if log:
-            inference_data = {
-                "inference_type": InferenceType.FRAME_INPAINTING.value,
-                "output": output,
-                "log_uuid": log.uuid,
-                "project_uuid": project_uuid,
-                "timing_uuid": st.session_state["current_frame_uuid"],
-                "promote_generation": promote,
-                "stage": stage,
-                "shot_uuid": shot_uuid,
-            }
-
-            process_inference_output(**inference_data)
-
-    btn1, btn2, btn3 = st.columns([1, 1, 0.5])
-    with btn1:
-        if st.button("Inpaint", use_container_width=True):
-            inpaint(promote=False)
-    with btn2:
-        if st.button("Inpaint & Promote", use_container_width=True):
-            inpaint(promote=True)
 
 
 def generate_mask(vertex_coords, canvas_width, canvas_height, upscale_factor=1):
