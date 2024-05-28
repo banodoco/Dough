@@ -92,7 +92,14 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 "Open generation details", key=f"open_details_{shot_uuid}", value=False
             )
         with col3:
-            items_to_show = st_memory.selectbox("Items per page:", options=[3, 6, 9], index=0)
+            items_to_show = st_memory.slider(
+                "Items per page:",
+                key=f"items_per_page_{shot_uuid}",
+                value=3,
+                step=3,
+                min_value=3,
+                max_value=9,
+            )
         items_to_show = items_to_show - 1
         num_columns = 3
         with col1:

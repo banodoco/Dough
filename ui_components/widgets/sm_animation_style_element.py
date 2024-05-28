@@ -53,38 +53,37 @@ def animation_sidebar(
     default_model,
 ):
     with st.sidebar:
-        with st.expander("⚙️ Animation settings", expanded=True):
-            if st_memory.toggle("Open", key="open_motion_data"):
+        with st.expander("⚙️ Visualisation of motion settings", expanded=True):
+            # if st_memory.toggle("Open", key="open_motion_data"):
 
-                st.markdown("### Visualisation of current motion")
-                keyframe_positions = get_keyframe_positions(
-                    type_of_frame_distribution,
-                    dynamic_frame_distribution_values,
-                    img_list,
-                    linear_frame_distribution_value,
-                )
-                keyframe_positions = [int(kf * 16) for kf in keyframe_positions]
-                last_key_frame_position = keyframe_positions[-1]
-                strength_values = extract_strength_values(
-                    type_of_strength_distribution,
-                    dynamic_strength_values,
-                    keyframe_positions,
-                    linear_cn_strength_value,
-                )
-                key_frame_influence_values = extract_influence_values(
-                    type_of_key_frame_influence,
-                    dynamic_key_frame_influence_values,
-                    keyframe_positions,
-                    linear_key_frame_influence_value,
-                )
-                weights_list, frame_numbers_list = calculate_weights(
-                    keyframe_positions,
-                    strength_values,
-                    4,
-                    key_frame_influence_values,
-                    last_key_frame_position,
-                )
-                plot_weights(weights_list, frame_numbers_list)
+            keyframe_positions = get_keyframe_positions(
+                type_of_frame_distribution,
+                dynamic_frame_distribution_values,
+                img_list,
+                linear_frame_distribution_value,
+            )
+            keyframe_positions = [int(kf * 16) for kf in keyframe_positions]
+            last_key_frame_position = keyframe_positions[-1]
+            strength_values = extract_strength_values(
+                type_of_strength_distribution,
+                dynamic_strength_values,
+                keyframe_positions,
+                linear_cn_strength_value,
+            )
+            key_frame_influence_values = extract_influence_values(
+                type_of_key_frame_influence,
+                dynamic_key_frame_influence_values,
+                keyframe_positions,
+                linear_key_frame_influence_value,
+            )
+            weights_list, frame_numbers_list = calculate_weights(
+                keyframe_positions,
+                strength_values,
+                4,
+                key_frame_influence_values,
+                last_key_frame_position,
+            )
+            plot_weights(weights_list, frame_numbers_list)
 
 
 def video_motion_settings(shot_uuid, img_list):
@@ -708,7 +707,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                         sub1, sub2 = st.columns([1, 1])
                         with sub1:
                             individual_prompt = st.text_input(
-                                "Prompt:",
+                                "Frame prompt:",
                                 key=f"individual_prompt_widget_{idx}_{img.uuid}",
                                 value=st.session_state[f"individual_prompt_{shot_uuid}_{idx}"],
                                 help="This wll bias the video towards the words you enter for this segment.",
@@ -716,7 +715,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                             individual_prompts.append(individual_prompt)
                         with sub2:
                             individual_negative_prompt = st.text_input(
-                                "Negative prompt:",
+                                "Frame negative prompt:",
                                 key=f"negative_prompt_widget_{idx}_{img.uuid}",
                                 value=st.session_state[f"individual_negative_prompt_{shot_uuid}_{idx}"],
                                 help="This will bias the video away from the words you enter for this segment.",
@@ -871,7 +870,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
             st.success("Settings saved successfully.")
             time.sleep(0.7)
             st.rerun()
-
+    with header_col_3:
         if st.button("Reset to default", use_container_width=True, key="reset_to_default"):
             for idx, _ in enumerate(img_list):
                 for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
@@ -879,6 +878,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
 
             st.success("All frames have been reset to default values.")
             st.rerun()
+        st.write("")
 
     return (
         strength_of_frames,
