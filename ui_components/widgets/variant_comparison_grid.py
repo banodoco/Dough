@@ -336,12 +336,20 @@ def variant_inference_detail_element(
 
                     elif k.startswith("type_of_generation_index"):
                         if v is not None:
-                            # Ensure 'v' is within the valid index range to avoid index errors
-                            if 0 <= v < len(STEERABLE_MOTION_WORKFLOWS):
-                                workflow_name = STEERABLE_MOTION_WORKFLOWS[v]["name"]
+                            # Assuming 'v' is the order number you are looking for
+                            workflow_name = next(
+                                (
+                                    workflow["name"]
+                                    for workflow in STEERABLE_MOTION_WORKFLOWS
+                                    if workflow["order"] == v
+                                ),
+                                None,
+                            )
+
+                            if workflow_name:
                                 st.markdown(f"**Workflow:** {workflow_name}", unsafe_allow_html=True)
                             else:
-                                st.error("Invalid workflow index")
+                                st.error("Invalid workflow order")
                     else:
                         if v:  # Check if v is not empty or None
                             st.markdown(f"{title} {v}", unsafe_allow_html=True)
