@@ -70,12 +70,19 @@ def load_shot_settings(shot_uuid, log_uuid=None):
                 ):  # hackish sol, will fix later
                     st.session_state[f"structure_control_image_{shot_uuid}"] = None
                 elif key == f"type_of_generation_index_{shot.uuid}":
+                    # Retrieve the order number from the session state
+                    order_number = st.session_state[key]
 
-                    if not isinstance(st.session_state[key], int):
-                        st.session_state[key] = 0
-                    st.session_state["creative_interpolation_type"] = STEERABLE_MOTION_WORKFLOWS[
-                        st.session_state[key]
-                    ]["name"]
+                    # Find the index in STEERABLE_MOTION_WORKFLOWS where the 'order' matches the order_number
+                    index = next((index for index, workflow in enumerate(STEERABLE_MOTION_WORKFLOWS) if workflow['order'] == order_number), None)
+
+                    if index is not None:
+                        # Set the session state to the index of the workflow
+                        st.session_state[key] = index
+                        # Set the creative interpolation type to the name of the workflow at the found index
+                        st.session_state["creative_interpolation_type"] = STEERABLE_MOTION_WORKFLOWS[index]["name"]
+                    else:
+                        st.error("Invalid workflow order")
 
             st.rerun()
         elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
@@ -567,7 +574,7 @@ def update_session_state_with_animation_details(
             "individual_negative_prompt": individual_negative_prompts[idx],
             "motion_during_frame": motions_during_frames[idx],
             "distance_to_next_frame": (
-                distances_to_next_frames[idx] * 2
+                distances_to_next_frames[idx]
                 if idx < len(img_list) - 1
                 else DEFAULT_SHOT_MOTION_VALUES["distance_to_next_frame"]
             ),

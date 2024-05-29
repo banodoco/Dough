@@ -144,11 +144,12 @@ def sidebar_logger(shot_uuid):
                 c0, c1, c2, c3 = st.columns([0.5, 0.5, 0.01, 1])
             with c0:
                 input_params = json.loads(log.input_params)
-                prompt = input_params.get("prompt", "No prompt found")
-                st.caption(f"Prompt: \"{prompt[:5] + '...' if len(prompt) > 30 else prompt}\"")
+
                 if inference_type == InferenceType.FRAME_INTERPOLATION.value:
                     video_inference_image_grid(origin_data)
                 else:
+                    prompt = input_params.get("prompt", "No prompt found")
+                    st.caption(f"Prompt: \"{prompt[:5] + '...' if len(prompt) > 30 else prompt}\"")
                     st.caption("-\-\-\-\-\-\-\-\-")
 
             with c1:
@@ -157,6 +158,8 @@ def sidebar_logger(shot_uuid):
                 except Exception as e:
                     model_name = "Unavailable"
                 st.caption(f"Model: {model_name}")
+
+                # write type_of_generation from json
 
             with c2:
                 if output_url:

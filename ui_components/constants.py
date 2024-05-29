@@ -71,7 +71,7 @@ class DefaultProjectSettingParams:
 
 
 DEFAULT_SHOT_MOTION_VALUES = {
-    "strength_of_frame": 0.8,
+    "strength_of_frame": 0.9,
     "distance_to_next_frame": 3.0,
     "speed_of_transition": 0.5,
     "freedom_between_frames": 0.85,
