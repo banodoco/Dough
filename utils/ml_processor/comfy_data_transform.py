@@ -479,8 +479,8 @@ class ComfyDataTransform:
                         "ipa_ends_at": 0.5,
                         "ipa_weight_type": "ease in-out",
                         "ipa_weight": 1,
-                        "ipa_embeds_scaling": "K+mean(V) w/ C penalty",
-                        "ipa_noise_strength": 0.9,
+                        "ipa_embeds_scaling": "V only",
+                        "ipa_noise_strength": 0.8,
                         "use_image_for_noise": False,
                         "type_of_noise": "gaussian",
                         "noise_blur": 0,
@@ -495,8 +495,8 @@ class ComfyDataTransform:
                         "ipa_ends_at": 1,
                         "ipa_weight_type": "ease out",
                         "ipa_weight": 1,
-                        "ipa_embeds_scaling": "V only",
-                        "ipa_noise_strength": 0.9,
+                        "ipa_embeds_scaling": "K+mean(V) w/ C penalty",
+                        "ipa_noise_strength": 0.0,
                         "use_image_for_noise": True,
                         "type_of_noise": "fade",
                         "noise_blur": 1,
@@ -627,7 +627,7 @@ class ComfyDataTransform:
                 json_data["593"]["inputs"]["ipa_weight_type"] = "ease in-out"
                 json_data["593"]["inputs"]["ipa_weight"] = 1
                 json_data["593"]["inputs"]["ipa_embeds_scaling"] = "V only"
-                json_data["593"]["inputs"]["ipa_noise_strength"] = 0.60
+                json_data["593"]["inputs"]["ipa_noise_strength"] = 0.30
                 json_data["593"]["inputs"]["use_image_for_noise"] = True
                 json_data["593"]["inputs"]["type_of_noise"] = "fade"
                 json_data["593"]["inputs"]["noise_blur"] = 0
@@ -635,7 +635,7 @@ class ComfyDataTransform:
                 json_data["594"]["inputs"]["ipa_starts_at"] = 0
                 json_data["594"]["inputs"]["ipa_ends_at"] = 1
                 json_data["594"]["inputs"]["ipa_weight_type"] = "strong middle"
-                json_data["594"]["inputs"]["ipa_weight"] = 0.7000000000000001
+                json_data["594"]["inputs"]["ipa_weight"] = 1.0
                 json_data["594"]["inputs"]["ipa_embeds_scaling"] = "V only"
                 json_data["594"]["inputs"]["ipa_noise_strength"] = 0.00
                 json_data["594"]["inputs"]["use_image_for_noise"] = True
