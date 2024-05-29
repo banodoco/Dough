@@ -153,11 +153,16 @@ def sidebar_logger(shot_uuid):
                     st.caption("-\-\-\-\-\-\-\-\-")
 
             with c1:
+
                 try:
+
+                    input_params = json.loads(log.input_params)
                     model_name = json.loads(log.output_details)["model_name"].split("/")[-1]
+                    # workflow = query_dict["type_of_generation"]
+                    workflow = input_params["origin_data"]["settings"]["type_of_generation"]
                 except Exception as e:
-                    model_name = "Unavailable"
-                st.caption(f"Model: {model_name}")
+                    workflow = "Unavailable"
+                st.caption(f"Workflow: {workflow}")
 
                 # write type_of_generation from json
 
