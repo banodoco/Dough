@@ -74,13 +74,22 @@ def load_shot_settings(shot_uuid, log_uuid=None):
                     order_number = st.session_state[key]
 
                     # Find the index in STEERABLE_MOTION_WORKFLOWS where the 'order' matches the order_number
-                    index = next((index for index, workflow in enumerate(STEERABLE_MOTION_WORKFLOWS) if workflow['order'] == order_number), None)
+                    index = next(
+                        (
+                            index
+                            for index, workflow in enumerate(STEERABLE_MOTION_WORKFLOWS)
+                            if workflow["order"] == order_number
+                        ),
+                        None,
+                    )
 
                     if index is not None:
                         # Set the session state to the index of the workflow
                         st.session_state[key] = index
                         # Set the creative interpolation type to the name of the workflow at the found index
-                        st.session_state["creative_interpolation_type"] = STEERABLE_MOTION_WORKFLOWS[index]["name"]
+                        st.session_state["creative_interpolation_type"] = STEERABLE_MOTION_WORKFLOWS[index][
+                            "name"
+                        ]
                     else:
                         st.error("Invalid workflow order")
 
@@ -467,7 +476,7 @@ def transform_data(
     for distance in distances_to_next_frames:
         cumulative_distances.append(cumulative_distances[-1] + distance)
 
-    cumulative_distances = [int(float(value) * 16) for value in cumulative_distances]
+    cumulative_distances = [int(float(value) * 8) for value in cumulative_distances]
 
     # MOTION CONTEXT SETTINGS
     if type_of_motion_context == "Low":
