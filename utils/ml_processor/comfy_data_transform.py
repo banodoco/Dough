@@ -627,9 +627,9 @@ class ComfyDataTransform:
                 json_data["593"]["inputs"]["ipa_weight_type"] = "ease in-out"
                 json_data["593"]["inputs"]["ipa_weight"] = 1
                 json_data["593"]["inputs"]["ipa_embeds_scaling"] = "V only"
-                json_data["593"]["inputs"]["ipa_noise_strength"] = 0
+                json_data["593"]["inputs"]["ipa_noise_strength"] = 0.60
                 json_data["593"]["inputs"]["use_image_for_noise"] = True
-                json_data["593"]["inputs"]["type_of_noise"] = "shuffle"
+                json_data["593"]["inputs"]["type_of_noise"] = "fade"
                 json_data["593"]["inputs"]["noise_blur"] = 0
 
                 json_data["594"]["inputs"]["ipa_starts_at"] = 0
@@ -637,7 +637,7 @@ class ComfyDataTransform:
                 json_data["594"]["inputs"]["ipa_weight_type"] = "strong middle"
                 json_data["594"]["inputs"]["ipa_weight"] = 0.7000000000000001
                 json_data["594"]["inputs"]["ipa_embeds_scaling"] = "V only"
-                json_data["594"]["inputs"]["ipa_noise_strength"] = 0.75
+                json_data["594"]["inputs"]["ipa_noise_strength"] = 0.00
                 json_data["594"]["inputs"]["use_image_for_noise"] = True
                 json_data["594"]["inputs"]["type_of_noise"] = "fade"
                 json_data["594"]["inputs"]["noise_blur"] = 0

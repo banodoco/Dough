@@ -143,12 +143,12 @@ class AppSubPage(ExtendedEnum):
 
 
 STEERABLE_MOTION_WORKFLOWS = [
-    {"name": "Slurshy Realistiche", "order": 6, "display": True},
-    {"name": "Smooth n' Steady", "order": 1, "display": True},
-    {"name": "Chocky Realistiche", "order": 3, "display": True},
-    {"name": "Liquidy Loop", "order": 4, "display": True},
-    {"name": "Fast With A Price", "order": 5, "display": True},
-    {"name": "Rad Attack", "order": 2, "display": True},
+    {"name": "Slurshy Realistiche", "order": 5, "display": True},
+    {"name": "Smooth n' Steady", "order": 0, "display": True},
+    {"name": "Chocky Realistiche", "order": 2, "display": True},
+    {"name": "Liquidy Loop", "order": 3, "display": True},
+    {"name": "Fast With A Price", "order": 4, "display": True},
+    {"name": "Rad Attack", "order": 1, "display": True},
 ]
 ##################### global constants #####################
 SERVER = os.getenv("SERVER", ServerType.PRODUCTION.value)

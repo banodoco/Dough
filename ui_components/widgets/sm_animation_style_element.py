@@ -109,7 +109,7 @@ def video_motion_settings(shot_uuid, img_list):
             "Adherence to input frames:",
             min_value=0.0,
             max_value=1.0,
-            step=0.01,
+            step=0.05,
             key="strength_of_adherence",
             value=st.session_state[f"strength_of_adherence_value_{shot_uuid}"],
         )
@@ -605,7 +605,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
         st.session_state[f"lora_data_{shot_uuid}"] = []
 
     if f"strength_of_adherence_value_{shot_uuid}" not in st.session_state:
-        st.session_state[f"strength_of_adherence_value_{shot_uuid}"] = 0.3
+        st.session_state[f"strength_of_adherence_value_{shot_uuid}"] = 0.4
 
     if f"type_of_motion_context_index_{shot_uuid}" not in st.session_state:
         st.session_state[f"type_of_motion_context_index_{shot_uuid}"] = 1
@@ -765,7 +765,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 label="Strength of frame:",
                                 min_value=0.0,
                                 max_value=1.0,
-                                step=0.01,
+                                step=0.05,
                                 key_suffix="strength_of_frame",
                                 default_value=st.session_state[f"strength_of_frame_{shot_uuid}_{idx}"],
                                 idx=idx,
@@ -781,7 +781,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 label="Motion during frame:",
                                 min_value=0.5,
                                 max_value=1.5,
-                                step=0.01,
+                                step=0.05,
                                 key_suffix="motion_during_frame",
                                 default_value=st.session_state[f"motion_during_frame_{shot_uuid}_{idx}"],
                                 idx=idx,
@@ -799,7 +799,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                             distance_to_next_frame = create_slider(
                                 label="Seconds to next frame:",
                                 min_value=0.25,
-                                max_value=30.00,
+                                max_value=12.00,
                                 step=0.25,
                                 key_suffix="distance_to_next_frame",
                                 default_value=st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"],
@@ -815,7 +815,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 label="Speed of transition:",
                                 min_value=0.2,
                                 max_value=0.8,
-                                step=0.01,
+                                step=0.05,
                                 key_suffix="speed_of_transition",
                                 default_value=st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"],
                                 idx=idx,
@@ -830,7 +830,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 label="Freedom between frames:",
                                 min_value=0.0,
                                 max_value=1.0,
-                                step=0.01,
+                                step=0.05,
                                 key_suffix="freedom_between_frames",
                                 default_value=st.session_state[f"freedom_between_frames_{shot_uuid}_{idx}"],
                                 idx=idx,

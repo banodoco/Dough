@@ -183,7 +183,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             
             **Rad Attack**: good for realistic motion but with a lot of detail loss.""",
             )
-        st.write(type_of_generation)
+
         with footer2:
             st.info(
                 f"Each has a unique type of motion and adherence. You can an example of each of them in action [here](https://youtu.be/zu1IbdavW_4)."
@@ -227,7 +227,14 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     high_detail_mode,
                     image.uuid if image else None,
                     settings["strength_of_structure_control_image"],
-                    generation_types.index(st.session_state["creative_interpolation_type"]),
+                    next(
+                        (
+                            index
+                            for index, workflow in enumerate(filtered_and_sorted_workflows)
+                            if workflow["name"] == type_of_generation
+                        ),
+                        0,
+                    ),
                 )
                 settings.update(shot_data=shot_data)
                 settings.update(type_of_generation=type_of_generation)
