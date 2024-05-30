@@ -207,7 +207,7 @@ def select_motion_lora_element(shot_uuid, model_files):
 
         # Iterate through each current LoRA in session state
         if len(files) == 0:
-            lora1, lora2 = st.columns([1, 1])
+            lora1, lora2 = st.columns([1.5, 1])
             with lora1:
                 st.error(
                     "No LoRAs found in the directory - go to Download LoRAs to download some, or drop them into: ComfyUI/models/animatediff_motion_lora"
@@ -813,8 +813,8 @@ def individual_frame_settings_element(shot_uuid, img_list):
 
                             speed_of_transition = create_slider(
                                 label="Speed of transition:",
-                                min_value=0.2,
-                                max_value=0.8,
+                                min_value=0.25,
+                                max_value=0.75,
                                 step=0.05,
                                 key_suffix="speed_of_transition",
                                 default_value=st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"],
