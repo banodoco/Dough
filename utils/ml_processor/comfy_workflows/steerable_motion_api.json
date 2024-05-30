@@ -235,9 +235,13 @@
       "use_motion": true,
       "motion_strength": 1.04,
       "motion_scale": 1,
+      "context_aware": "off",
+      "sparse_hint_mult": 1,
+      "sparse_nonhint_mult": 1,
+      "sparse_mask_mult": 1,
       "sparse_method": [
-        "558",
-        4
+        "689",
+        0
       ]
     },
     "class_type": "ACN_SparseCtrlLoaderAdvanced",
@@ -526,6 +530,18 @@
     "class_type": "IpaConfiguration",
     "_meta": {
       "title": "IPA Configuration  🎞️🅢🅜"
+    }
+  },
+  "689": {
+    "inputs": {
+      "indexes": [
+        "558",
+        4
+      ]
+    },
+    "class_type": "ACN_SparseCtrlIndexMethodNode",
+    "_meta": {
+      "title": "SparseCtrl Index Method 🛂🅐🅒🅝"
     }
   },
   "687": {
