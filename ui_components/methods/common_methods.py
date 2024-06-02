@@ -13,6 +13,7 @@ import time
 import uuid
 from io import BytesIO
 import numpy as np
+from django.db import transaction
 from shared.constants import (
     COMFY_BASE_PATH,
     OFFLINE_MODE,
@@ -36,7 +37,6 @@ from ui_components.methods.file_methods import (
 )
 from ui_components.methods.video_methods import sync_audio_and_duration
 from ui_components.models import InternalFrameTimingObject, InternalSettingObject
-from utils.common_utils import acquire_lock, release_lock
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
 
@@ -954,7 +954,7 @@ def check_project_meta_data(project_uuid):
     data_repo = DataRepo()
 
     key = project_uuid
-    if acquire_lock(key):
+    with transaction.atomic():
         project = data_repo.get_project_from_uuid(project_uuid)
         timing_update_data = (
             json.loads(project.meta_data).get(ProjectMetaData.DATA_UPDATE.value, None)
@@ -989,8 +989,6 @@ def check_project_meta_data(project_uuid):
             ProjectMetaData.SHOT_VIDEO_UPDATE.value: [],
         }
         data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
-
-        release_lock(key)
 
 
 def update_app_setting_keys():

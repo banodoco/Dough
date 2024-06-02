@@ -250,24 +250,6 @@ def is_process_active(custom_process_name, custom_process_port):
     return False
 
 
-def acquire_lock(key):
-    data_repo = DataRepo()
-    retries = 0
-    while retries < 1:
-        lock_status = data_repo.acquire_lock(key)
-        if lock_status:
-            return lock_status
-        retries += 1
-        time.sleep(0.2)
-    return False
-
-
-def release_lock(key):
-    data_repo = DataRepo()
-    data_repo.release_lock(key)
-    return True
-
-
 def refresh_app(maintain_state=False):
     # st.session_state['maintain_state'] = maintain_state
     st.rerun()

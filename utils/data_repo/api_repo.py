@@ -496,14 +496,6 @@ class APIRepo:
         res = self.http_get(self.STRIPE_PAYMENT_URL, params={"total_amount": amount})
         return InternalResponse(res["payload"], "success", res["status"])
 
-    # lock
-    def acquire_lock(self, key):
-        res = self.http_get(self.LOCK_URL, params={"key": key, "action": "acquire"})
-        return InternalResponse(res["payload"], "success", res["status"])
-
-    def release_lock(self, key):
-        res = self.http_get(self.LOCK_URL, params={"key": key, "action": "release"})
-        return InternalResponse(res["payload"], "success", res["status"])
 
     # shot
     def get_shot_from_uuid(self, shot_uuid):

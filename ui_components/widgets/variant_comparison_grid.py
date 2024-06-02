@@ -33,7 +33,7 @@ from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow
 def video_generation_counter(shot_uuid):
     data_repo = DataRepo()
     log_list, page_count = data_repo.get_all_inference_log_list(
-        status_list=[InferenceStatus.IN_PROGRESS.value], data_per_page=1000, page=1
+        status_list=[InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value], data_per_page=1000, page=1
     )
     log_list = log_list or []
     res = []

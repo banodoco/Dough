@@ -463,26 +463,6 @@ class DataRepo:
         link = res.data["data"] if res.status else None
         return link
 
-    # lock
-    def acquire_lock(self, key):
-        retry_count = 0
-        res = None
-        while retry_count < 3:
-            try:
-                res = self.db_repo.acquire_lock(key)
-                retry_count = 10
-            except Exception as e:
-                app_logger = AppLogger()
-                app_logger.log(LoggingType.DEBUG, "database busy, retrying")
-                retry_count += 1
-                time.sleep(0.3)
-
-        return res.data["data"] if res and res.status else None
-
-    def release_lock(self, key):
-        res = self.db_repo.release_lock(key)
-        return res.status
-
     # shot
     def get_shot_from_uuid(self, shot_uuid):
         res = self.db_repo.get_shot_from_uuid(shot_uuid)

@@ -22,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 if HOSTED_BACKGROUND_RUNNER_MODE in [False, "False"]:
     DATABASES = {
         "default": {
-            "ENGINE": "django.db.backends.sqlite3",
+            "ENGINE": "django.db.backends.sqlite3",     # sqlite by default works with serializable isolation level
             "NAME": DB_LOCATION,
         }
     }
@@ -44,7 +44,10 @@ else:
             "PASSWORD": DB_PASS,
             "HOST": DB_HOST,
             "PORT": DB_PORT,
-        }
+        },
+        'OPTIONS': {
+            'isolation_level': 'repeatable_read',   # TODO: test this isolation_level if deployed on prod
+        },
     }
 
 INSTALLED_APPS = ("backend",)
