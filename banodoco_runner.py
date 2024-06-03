@@ -75,7 +75,11 @@ def handle_termination(signal, frame):
     sys.exit(0)
 
 
+if platform.system() == "Windows":
+    signal.signal(signal.SIGINT, handle_termination)
+
 signal.signal(signal.SIGTERM, handle_termination)
+
 
 
 def main():
