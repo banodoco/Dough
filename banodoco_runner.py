@@ -390,6 +390,7 @@ def check_and_update_db():
                     data["output_node_ids"],
                     data.get("extra_model_list", []),
                     data.get("ignore_model_list", []),
+                    log_tag=str(log.uuid)
                 )
                 end_time = time.time()
 

@@ -1,4 +1,10 @@
+import multiprocessing
+import os
+import sys
 import time
+from shared.logging.constants import LoggingType
+from shared.logging.logging import AppLogger
+from utils.ml_processor.gpu.utils import COMFY_RUNNER_PATH, setup_comfy_runner
 import streamlit as st
 
 from shared.constants import (
@@ -13,7 +19,6 @@ from shared.constants import (
 from ui_components.widgets.display_element import individual_video_display_element
 from ui_components.widgets.frame_movement_widgets import jump_to_single_frame_view_button
 import json
-import math
 from ui_components.widgets.frame_selector import update_current_frame_index
 
 from utils.data_repo.data_repo import DataRepo
@@ -213,7 +218,7 @@ def sidebar_logger(shot_uuid):
                     if st.button(
                         "Cancel", key=f"cancel_gen_{log.uuid}", use_container_width=True, help="Cancel"
                     ):
-                        err_msg = "Generation has already started"
+                        err_msg = "Generation is either already cancelled or failed"
                         success_msg = "Generation cancelled"
                         # fetching the current status as this could have been already started
                         # log = data_repo.get_inference_log_from_uuid(log.uuid)
@@ -224,6 +229,19 @@ def sidebar_logger(shot_uuid):
                         #     st.rerun()
                         # else:
 
+                        log = data_repo.get_inference_log_from_uuid(log.uuid)
+                        if log.status == InferenceStatus.IN_PROGRESS.value:
+                            setup_comfy_runner()
+                            def stop_gen(log_uuid):
+                                sys.path.append(str(os.getcwd()) + COMFY_RUNNER_PATH[1:])
+                                from comfy_runner.inf import ComfyRunner
+
+                                comfy_runner = ComfyRunner()
+                                comfy_runner.stop_current_generation(log_uuid, 12)
+                            
+                            process = multiprocessing.Process(target=stop_gen, args=(str(log.uuid),))
+                            process.start()     # not waiting for this in the main thread
+                            
                         res = data_repo.update_inference_log(
                             uuid=log.uuid, status=InferenceStatus.CANCELED.value
                         )

@@ -13,7 +13,7 @@ COMFY_RUNNER_PATH = "./comfy_runner"
 
 
 def predict_gpu_output(
-    workflow: str, file_path_list=[], output_node=None, extra_model_list=[], ignore_model_list=[]
+    workflow: str, file_path_list=[], output_node=None, extra_model_list=[], ignore_model_list=[], log_tag=None
 ) -> str:
     # spec = importlib.util.spec_from_file_location('my_module', f'{COMFY_RUNNER_PATH}/inf.py')
     # comfy_runner = importlib.util.module_from_spec(spec)
@@ -34,10 +34,11 @@ def predict_gpu_output(
         output_node_ids=output_node,
         extra_models_list=extra_model_list,
         ignore_model_list=ignore_model_list,
+        client_id=log_tag
     )
 
     return output["file_paths"]  # ignoring text output for now {"file_paths": [], "text_content": []}
-
+    
 
 def is_comfy_runner_present():
     return os.path.exists(COMFY_RUNNER_PATH)  # hackish sol, will fix later
