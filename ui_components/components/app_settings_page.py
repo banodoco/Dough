@@ -9,8 +9,12 @@ from utils.data_repo.data_repo import DataRepo
 
 def app_settings_page():
     data_repo = DataRepo()
+    
+    app_version = None
+    with open('scripts/app_version.txt', 'r') as file:
+        app_version = file.read()
 
-    st.markdown("#### App Settings")
+    st.markdown("#### App Settings" + ("" if not app_version else f" (v{app_version})"))
     st.markdown("***")
 
     if SERVER != ServerType.DEVELOPMENT.value:
