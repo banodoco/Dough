@@ -27,6 +27,7 @@ from shared.constants import (
 from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
 from shared.utils import get_file_type
+from utils.common_utils import acquire_lock, release_lock
 from ui_components.methods.file_methods import (
     get_file_bytes_and_extension,
     load_from_env,
@@ -237,7 +238,10 @@ def update_project_meta_data(timing_update_list, gallery_update_list, shot_updat
         final_res[project_uuid] = {ProjectMetaData.SHOT_VIDEO_UPDATE.value: list(set(val))}
 
     for project_uuid, val in final_res.items():
-        _ = Project.objects.filter(uuid=project_uuid).update(meta_data=json.dumps(val))
+        key = str(project_uuid)
+        if acquire_lock(key):
+            _ = Project.objects.filter(uuid=project_uuid).update(meta_data=json.dumps(val))
+            release_lock(key)
 
 
 def check_and_update_db():

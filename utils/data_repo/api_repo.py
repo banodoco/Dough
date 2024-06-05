@@ -544,3 +544,12 @@ class APIRepo:
             self.EXPLORER_STATS_URL, params={"project_uuid": project_uuid, "log_status_list": log_status_list}
         )
         return InternalResponse(res["payload"], "success", res["status"])
+
+    # lock
+    def acquire_lock(self, key):
+        res = self.http_get(self.LOCK_URL, params={"key": key, "action": "acquire"})
+        return InternalResponse(res["payload"], "success", res["status"])
+
+    def release_lock(self, key):
+        res = self.http_get(self.LOCK_URL, params={"key": key, "action": "release"})
+        return InternalResponse(res["payload"], "success", res["status"])

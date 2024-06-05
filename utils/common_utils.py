@@ -258,3 +258,20 @@ def refresh_app(maintain_state=False):
 def padded_integer(integer, pad_length=4):
     padded_string = str(integer).zfill(pad_length)
     return padded_string
+
+def acquire_lock(key):
+    data_repo = DataRepo()
+    retries = 0
+    while retries < 1:
+        lock_status = data_repo.acquire_lock(key)
+        if lock_status:
+            return lock_status
+        retries += 1
+        time.sleep(0.2)
+    return False
+
+
+def release_lock(key):
+    data_repo = DataRepo()
+    data_repo.release_lock(key)
+    return True

@@ -508,3 +508,23 @@ class DataRepo:
         res = self.db_repo.get_explorer_pending_stats(project_uuid, log_status_list)
         count_data = res.data["data"] if res.status else {"temp_image_count": 0, "pending_image_count": 0}
         return count_data
+
+    # lock
+    def acquire_lock(self, key):
+        retry_count = 0
+        res = None
+        while retry_count < 3:
+            try:
+                res = self.db_repo.acquire_lock(key)
+                retry_count = 10
+            except Exception as e:
+                app_logger = AppLogger()
+                app_logger.log(LoggingType.DEBUG, "database busy, retrying")
+                retry_count += 1
+                time.sleep(0.3)
+
+        return res.data["data"] if res and res.status else None
+
+    def release_lock(self, key):
+        res = self.db_repo.release_lock(key)
+        return res.status

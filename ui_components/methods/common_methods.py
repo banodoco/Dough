@@ -14,6 +14,7 @@ import uuid
 from io import BytesIO
 import numpy as np
 from django.db import transaction
+from utils.common_utils import acquire_lock, release_lock
 from shared.constants import (
     COMFY_BASE_PATH,
     OFFLINE_MODE,
@@ -954,41 +955,43 @@ def check_project_meta_data(project_uuid):
     data_repo = DataRepo()
 
     key = project_uuid
-    with transaction.atomic():
-        project = data_repo.get_project_from_uuid(project_uuid)
-        timing_update_data = (
-            json.loads(project.meta_data).get(ProjectMetaData.DATA_UPDATE.value, None)
-            if project.meta_data
-            else None
-        )
-        if timing_update_data and len(timing_update_data):
-            for timing_uuid in timing_update_data:
-                _ = data_repo.get_timing_from_uuid(timing_uuid, invalidate_cache=True)
+    if acquire_lock(key):
+        with transaction.atomic():
+            project = data_repo.get_project_from_uuid(project_uuid)
+            timing_update_data = (
+                json.loads(project.meta_data).get(ProjectMetaData.DATA_UPDATE.value, None)
+                if project.meta_data
+                else None
+            )
+            if timing_update_data and len(timing_update_data):
+                for timing_uuid in timing_update_data:
+                    _ = data_repo.get_timing_from_uuid(timing_uuid, invalidate_cache=True)
 
-        gallery_update_data = (
-            json.loads(project.meta_data).get(ProjectMetaData.GALLERY_UPDATE.value, False)
-            if project.meta_data
-            else False
-        )
-        if gallery_update_data:
-            pass
+            gallery_update_data = (
+                json.loads(project.meta_data).get(ProjectMetaData.GALLERY_UPDATE.value, False)
+                if project.meta_data
+                else False
+            )
+            if gallery_update_data:
+                pass
 
-        shot_update_data = (
-            json.loads(project.meta_data).get(ProjectMetaData.SHOT_VIDEO_UPDATE.value, [])
-            if project.meta_data
-            else []
-        )
-        if shot_update_data and len(shot_update_data):
-            for shot_uuid in shot_update_data:
-                _ = data_repo.get_shot_list(shot_uuid, invalidate_cache=True)
+            shot_update_data = (
+                json.loads(project.meta_data).get(ProjectMetaData.SHOT_VIDEO_UPDATE.value, [])
+                if project.meta_data
+                else []
+            )
+            if shot_update_data and len(shot_update_data):
+                for shot_uuid in shot_update_data:
+                    _ = data_repo.get_shot_list(shot_uuid, invalidate_cache=True)
 
-        # clearing update data from cache
-        meta_data = {
-            ProjectMetaData.DATA_UPDATE.value: [],
-            ProjectMetaData.GALLERY_UPDATE.value: False,
-            ProjectMetaData.SHOT_VIDEO_UPDATE.value: [],
-        }
-        data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
+            # clearing update data from cache
+            meta_data = {
+                ProjectMetaData.DATA_UPDATE.value: [],
+                ProjectMetaData.GALLERY_UPDATE.value: False,
+                ProjectMetaData.SHOT_VIDEO_UPDATE.value: [],
+            }
+            data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
+        release_lock(key)
 
 
 def update_app_setting_keys():

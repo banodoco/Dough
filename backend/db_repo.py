@@ -1638,6 +1638,19 @@ class DBRepo:
         return InternalResponse(
             {"data": "https://buy.stripe.com/test_8wMbJib8g3HK7vi5ko"}, "success", True
         )  # temp link
+        
+    # lock
+    def acquire_lock(self, key):
+        with transaction.atomic():
+            lock, created = Lock.objects.get_or_create(row_key=key)
+            if lock.created_on + datetime.timedelta(minutes=1) < datetime.datetime.now():
+                created = True  # after 1 min, we will assume this to be a fresh lock
+            return InternalResponse({"data": True if created else False}, "success", True)
+
+    def release_lock(self, key):
+        with transaction.atomic():
+            Lock.objects.filter(row_key=key).delete()
+            return InternalResponse({"data": True}, "success", True)
 
     # shot
     def get_shot_from_number(self, project_uuid, shot_number=0):
