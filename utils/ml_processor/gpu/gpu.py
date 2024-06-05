@@ -44,6 +44,8 @@ class GPUProcessor(MachineLearningProcessor):
         )
         file_uuid_list = []
 
+        # TODO: this method picks any key that starts with "file_" inside query_obj
+        # fix this so that there are proper interfaces for passing the various types of data
         file_uuid_list, custom_dest = get_file_list_from_query_obj(query_obj)
         file_list = data_repo.get_image_list_from_uuid_list(file_uuid_list)
 
@@ -112,7 +114,10 @@ class GPUProcessor(MachineLearningProcessor):
         params = {
             "prompt": query_obj.prompt,  # hackish sol
             InferenceParamType.QUERY_DICT.value: query_obj.to_json(),
-            InferenceParamType.GPU_INFERENCE.value: json.dumps(data),
+            InferenceParamType.GPU_INFERENCE.value: json.dumps(
+                data
+            ),  # TODO: technically file_relation_data is going in here as well, but it is not used. we need to make proper interfaces for passing data, right now everything is pushed in kwargs
+            InferenceParamType.FILE_RELATION_DATA.value: query_obj.data["data"].get("relation_data", None),
         }
         return (
             self.predict_model_output(model, **params)

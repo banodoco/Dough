@@ -263,9 +263,9 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
     with d2:
         number_to_generate = st.slider(
             "Number of images to generate:",
-            min_value=4,
+            min_value=1,
             max_value=36,
-            value=4,
+            value=1,
             step=4,
             key="number_to_generate",
             help="It'll generate 4 from each variation.",

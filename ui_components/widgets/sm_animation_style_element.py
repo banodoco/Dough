@@ -565,7 +565,7 @@ def select_sd_model_element(shot_uuid, default_model):
                     "Make sure to get the download url of the model. \n\n For example, from Civit, this should look like this: https://civitai.com/api/download/models/179446. \n\n While from Hugging Face, it should look like this: https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors"
                 )
 
-            if st.button("Download Model", key="download_model"):
+            if st.button("Download Model", key="download_model_url"):
                 with st.spinner("Downloading model..."):
                     save_directory = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
                     os.makedirs(save_directory, exist_ok=True)

@@ -33,7 +33,9 @@ from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow
 def video_generation_counter(shot_uuid):
     data_repo = DataRepo()
     log_list, page_count = data_repo.get_all_inference_log_list(
-        status_list=[InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value], data_per_page=1000, page=1
+        status_list=[InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value],
+        data_per_page=1000,
+        page=1,
     )
     log_list = log_list or []
     res = []
@@ -166,6 +168,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                             st.rerun()
                 else:
                     st.info("Upscaled video")
+                    # print(variants[current_variant].get_parent_entities()[0].filename)
                 create_video_download_button(variants[current_variant].location, tag="var_compare")
                 variant_inference_detail_element(
                     variants[current_variant],

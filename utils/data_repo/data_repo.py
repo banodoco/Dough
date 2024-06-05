@@ -156,6 +156,12 @@ class DataRepo:
 
         return file
 
+    def get_file_children_list(self, file_uuid, transformation_type_list):
+        return self.db_repo.get_file_children_list(file_uuid, transformation_type_list)
+
+    def get_file_parent_list(self, file_uuid, transformation_type_list):
+        return self.db_repo.get_file_parent_list(file_uuid, transformation_type_list)
+
     def delete_file_from_uuid(self, uuid):
         res = self.db_repo.delete_file_from_uuid(uuid)
         return res.status

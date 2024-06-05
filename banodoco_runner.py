@@ -82,7 +82,6 @@ if platform.system() == "Windows":
 signal.signal(signal.SIGTERM, handle_termination)
 
 
-
 def main():
     if SERVER != "development" and HOSTED_BACKGROUND_RUNNER_MODE in [False, "False"]:
         return
@@ -219,6 +218,7 @@ def format_model_output(output, model_display_name):
         return output
     else:
         return [output[-1]]
+
 
 def update_project_meta_data(timing_update_list, gallery_update_list, shot_update_list):
     # adding update_data in the project
@@ -394,7 +394,7 @@ def check_and_update_db():
                     data["output_node_ids"],
                     data.get("extra_model_list", []),
                     data.get("ignore_model_list", []),
-                    log_tag=str(log.uuid)
+                    log_tag=str(log.uuid),
                 )
                 end_time = time.time()
 

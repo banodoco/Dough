@@ -56,6 +56,20 @@ class InternalFileObject:
 
         return filename
 
+    def get_child_entities(self, tranformation_type_list=["upscale"]):
+        from utils.data_repo.data_repo import DataRepo
+
+        data_repo = DataRepo()
+        res = data_repo.get_file_children_list(self.uuid, tranformation_type_list)
+        return [InternalFileObject(**file) for file in res.data["data"]] if res.status else []
+
+    def get_parent_entities(self, tranformation_type_list=["upscale"]):
+        from utils.data_repo.data_repo import DataRepo
+
+        data_repo = DataRepo()
+        res = data_repo.get_file_parent_list(self.uuid, tranformation_type_list)
+        return [InternalFileObject(**file) for file in res.data["data"]] if res.status else []
+
 
 class InternalProjectObject:
     def __init__(self, uuid, name, user_uuid, created_on, temp_file_list, meta_data=None):

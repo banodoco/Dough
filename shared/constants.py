@@ -113,6 +113,9 @@ class InferenceParamType(ExtendedEnum):
     ORIGIN_DATA = "origin_data"  # origin data - used to store file once inference is completed
     GPU_INFERENCE = "gpu_inference"  # gpu inference data
     SAI_INFERENCE = "sai_inference"  # stablity ai inference data
+    FILE_RELATION_DATA = (
+        "file_relation"  # file relationship data such as what parent a particular file was upscaled from
+    )
 
 
 class ProjectMetaData(ExtendedEnum):

@@ -8,7 +8,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 import urllib
 
-from shared.constants import SERVER, InferenceStatus, ServerType
+from shared.constants import SERVER, InferenceParamType, InferenceStatus, ServerType
 from shared.file_upload.s3 import generate_s3_url, is_s3_image_url
 
 
@@ -152,6 +152,46 @@ class InternalFileObject(BaseModel):
 
         super(InternalFileObject, self).save(*args, **kwargs)
 
+        # creating file relation/link if the inference has completed
+        if self.inference_log and self.inference_log.status == InferenceStatus.COMPLETED.value:
+            parent_entity_data = json.loads(self.inference_log.input_params).get(
+                InferenceParamType.FILE_RELATION_DATA.value, None
+            )
+            if parent_entity_data:
+                parent_entity_data = json.loads(parent_entity_data)
+                # TODO: optimize such that the entries are not created twice and not
+                # created one by one
+                for p in parent_entity_data:
+                    file_link = FileRelationship()
+                    file_link.child_entity_id = self.id
+                    file_link.transformation_type = (
+                        p["transformation_type"] if "transformation_type" in p else ""
+                    )
+                    parent_file = InternalFileObject.objects.filter(uuid=p["id"], is_disabled=False).first()
+                    if parent_file:
+                        file_link.parent_entity_id = parent_file.id
+                        file_link.save()
+
+    def get_child_entities(self, transformation_type_list=None):
+        query = {"parent_entity_id": self.id, "is_disabled": False}
+        if transformation_type_list and len(transformation_type_list):
+            query["transformation_type__in"] = transformation_type_list
+        entity_list = FileRelationship.objects.filter(**query).all()
+        res = []
+        for e in entity_list:
+            res.append(e.child_entity)
+        return res
+
+    def get_parent_entities(self, transformation_type_list=None):
+        query = {"parent_entity_id": self.id, "is_disabled": False}
+        if transformation_type_list and len(transformation_type_list):
+            query["transformation_type__in"] = transformation_type_list
+        entity_list = FileRelationship.objects.filter(child_entity_id=self.id, is_disabled=False).all()
+        res = []
+        for e in entity_list:
+            res.append(e.parent_entity)
+        return res
+
     def download_and_save_file(self, file_location):
         try:
             response = requests.get(self.hosted_url)
@@ -166,6 +206,33 @@ class InternalFileObject(BaseModel):
     @property
     def location(self):
         return self.local_path if self.local_path else self.hosted_url
+
+
+class FileRelationship(BaseModel):
+    """
+    for maintaining relationship between files, like upscaled, morphed, stylized, speed change
+    this will also help in tracking the series of transformations a file went through
+    e.g. if vid_2 is upscaled from vid_1, child will be vid_2 and parent will be vid_1
+
+    for now this relationship is automatically created when a file is created with inference log completed if it has
+    the relationship data inside it (given by FILE_RELATION_DATA inside input_params)
+    """
+
+    transformation_type = models.TextField(default="")
+    child_entity_type = models.CharField(
+        max_length=255, default="file"
+    )  # rn it will only be used for file relations
+    child_entity = models.ForeignKey(
+        InternalFileObject, on_delete=models.CASCADE, default=None, null=True, related_name="child_entity"
+    )
+    parent_entity_type = models.CharField(max_length=255, default="file")
+    parent_entity = models.ForeignKey(
+        InternalFileObject, on_delete=models.CASCADE, default=None, null=True, related_name="parent_entity"
+    )
+
+    class Meta:
+        app_label = "backend"
+        db_table = "file_relationship"
 
 
 class AIModelParamMap(BaseModel):

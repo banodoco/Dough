@@ -7,6 +7,7 @@ import tempfile
 import time
 from typing import List
 import uuid
+import json
 import ffmpeg
 import pkg_resources
 import streamlit as st
@@ -115,6 +116,7 @@ def upscale_video(shot_uuid, styling_model, upscale_factor, promote_to_main_vari
             "file_video": shot.main_clip.uuid,
             "model": styling_model,
             "upscale_factor": upscale_factor,
+            "relation_data": json.dumps([{"type": "file", "id": shot.main_clip.uuid, "transformation_type": "upscale"}])
         },
     )
 
