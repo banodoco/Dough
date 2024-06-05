@@ -91,14 +91,13 @@ def upscale_video(shot_uuid, styling_model, upscale_factor, promote_to_main_vari
     try:
         pkg_resources.require("opencv-python-headless==4.8.0.74")
     except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
-        # Install the package if it's not installed
         try:
             subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", "opencv-python-headless[ffmpeg]==4.8.0.74"]
+                [sys.executable, "-m", "pip", "install", "opencv-python-headless==4.8.0.74", "ffmpeg-python"]
             )
-            print("Package installed successfully.")
+            print("Packages installed successfully.")
         except subprocess.CalledProcessError as e:
-            print(f"Error installing package: {e}")
+            print(f"Error installing packages: {e}")
 
     query_obj = MLQueryObject(
         timing_uuid=None,
