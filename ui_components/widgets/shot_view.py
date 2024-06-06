@@ -442,7 +442,7 @@ def individual_frame_zoom_edit_view(shot_uuid, idx):
             # make file_name into a random uuid using uuid
             file_name = f"{uuid.uuid4()}.png"
 
-            save_location = f"videos/{project_uuid}/assets/frames/2_character_pipeline_completed/{file_name}"
+            save_location = f"videos/{project_uuid}/assets/frames/inpainting/{file_name}"
             hosted_url = save_or_host_file(output_image, save_location)
             file_data = {"name": file_name, "type": InternalFileType.IMAGE.value, "project_id": project_uuid}
 

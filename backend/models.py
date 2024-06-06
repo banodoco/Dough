@@ -147,7 +147,7 @@ class InternalFileObject(BaseModel):
             if self.project:
                 video = self.project.uuid
 
-            file_location = "videos/" + str(video) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".png"
+            file_location = "videos/" + str(video) + "/assets/videos/completed/" + str(uuid.uuid4()) + ".png"
             self.download_and_save_file(file_location)
 
         super(InternalFileObject, self).save(*args, **kwargs)

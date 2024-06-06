@@ -116,7 +116,9 @@ def upscale_video(shot_uuid, styling_model, upscale_factor, promote_to_main_vari
             "file_video": shot.main_clip.uuid,
             "model": styling_model,
             "upscale_factor": upscale_factor,
-            "relation_data": json.dumps([{"type": "file", "id": shot.main_clip.uuid, "transformation_type": "upscale"}])
+            "relation_data": json.dumps(
+                [{"type": "file", "id": shot.main_clip.uuid, "transformation_type": "upscale"}]
+            ),
         },
     )
 
@@ -147,7 +149,7 @@ def update_speed_of_video_clip(video_file: InternalFileObject, duration) -> Inte
 
     new_file_name = "".join(random.choices(string.ascii_lowercase + string.digits, k=16)) + ".mp4"
     new_file_location = (
-        "videos/" + str(video_file.project.uuid) + "/assets/videos/1_final/" + str(new_file_name)
+        "videos/" + str(video_file.project.uuid) + "/assets/videos/completed/" + str(new_file_name)
     )
 
     video_bytes = VideoProcessor.update_video_speed(location_of_video, duration)
@@ -284,7 +286,7 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
 
     temp_file_list.append(output_temp_video_file)
     unique_name = str(uuid.uuid4())
-    output_video_file = f"videos/{shot.project.uuid}/assets/videos/0_raw/{unique_name}.mp4"
+    output_video_file = f"videos/{shot.project.uuid}/assets/videos/completed/{unique_name}.mp4"
     hosted_url = save_or_host_file_bytes(video_bytes, output_video_file, ext=".mp4")
     if hosted_url:
         data_repo.update_file(output_video.uuid, hosted_url=hosted_url)

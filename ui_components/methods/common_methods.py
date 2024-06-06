@@ -798,7 +798,7 @@ def process_inference_output(**kwargs):
             #     output = VideoProcessor.update_video_bytes_speed(output, shot.duration)
 
             video_location = (
-                "videos/" + str(shot.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
+                "videos/" + str(shot.project.uuid) + "/assets/videos/completed/" + str(uuid.uuid4()) + ".mp4"
             )
             video = convert_bytes_to_file(
                 file_location_to_save=video_location,

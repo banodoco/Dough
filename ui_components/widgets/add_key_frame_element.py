@@ -31,7 +31,7 @@ def add_key_frame_section(shot_uuid):
             uploaded_images = sorted(uploaded_images, key=lambda x: x.name)
             for i, uploaded_image in enumerate(uploaded_images):
                 image = Image.open(uploaded_image)
-                file_location = f"videos/{shot.uuid}/assets/frames/1_selected/{uploaded_image.name}"
+                file_location = f"videos/{shot.uuid}/assets/frames/base/{uploaded_image.name}"
                 selected_image_location = save_or_host_file(image, file_location)
                 selected_image_location = selected_image_location or file_location
                 add_key_frame(selected_image_location, shot_uuid, refresh_state=False)
