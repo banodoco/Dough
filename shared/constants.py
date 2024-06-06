@@ -71,6 +71,7 @@ class InternalFileTag(ExtendedEnum):
     TEMP_GALLERY_IMAGE = (
         "temp_gallery_image"  # these generations are complete but not yet being shown in the gallery
     )
+    SHORTLISTED_VIDEO = "shortlisted_video"
 
 
 class AnimationStyleType(ExtendedEnum):

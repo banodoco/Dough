@@ -12,7 +12,7 @@ import pandas as pd
 import streamlit as st
 import uuid
 import random
-from shared.constants import AppSubPage, InferenceParamType
+from shared.constants import AppSubPage, InferenceParamType, InternalFileTag, SortOrder
 from ui_components.constants import WorkflowStageType
 from ui_components.methods.file_methods import generate_pil_image, get_file_bytes_and_extension, get_file_size
 from streamlit_option_menu import option_menu
@@ -684,6 +684,32 @@ def create_video_download_button(video_location, tag="temp"):
             key=tag + str(file_name) + "_download_gen",
             use_container_width=True,
         )
+
+
+# @Peter use these methods to shortlist and get the shortlist
+def shortlist_video_button(video_uuid, source="temp"):
+    data_repo = DataRepo()
+    if st.button("Shortlist Video"):
+        data_repo.update_file(
+            video_uuid,
+            tag=InternalFileTag.SHORTLISTED_VIDEO.value,
+        )
+
+
+def get_shortlisted_video(project_uuid, page_number, num_items_per_page):
+    data_repo = DataRepo()
+
+    file_filter_data = {
+        "file_type": InternalFileType.VIDEO.value,
+        "tag": InternalFileTag.SHORTLISTED_VIDEO.value,
+        "project_id": project_uuid,
+        "page": page_number or 1,
+        "data_per_page": num_items_per_page,
+        "sort_order": SortOrder.DESCENDING.value,
+    }
+
+    video_list, res_payload = data_repo.get_all_file_list(**file_filter_data)
+    return video_list, res_payload
 
 
 def shot_adjustment_button(shot, show_label=False):

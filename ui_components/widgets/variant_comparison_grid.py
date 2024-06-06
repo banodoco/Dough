@@ -168,6 +168,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                             st.rerun()
                 else:
                     st.info("Upscaled video")
+                    # @Peter you can parent (the file from which this was created) like this.. similarly you can get children
                     # print(variants[current_variant].get_parent_entities()[0].filename)
                 create_video_download_button(variants[current_variant].location, tag="var_compare")
                 variant_inference_detail_element(
