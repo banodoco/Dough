@@ -92,6 +92,7 @@ class VideoInterpolator:
                 "strength_of_structure_control_image": settings["strength_of_structure_control_image"],
                 "type_of_generation": settings["type_of_generation"],
                 "high_detail_mode": settings.get("high_detail_mode", False),
+                "filename_prefix": settings.get("filename_prefix", None),
             }
 
             # adding the input images

@@ -158,18 +158,13 @@ def sidebar_logger(shot_uuid):
                     st.caption("-\-\-\-\-\-\-\-\-")
 
             with c1:
-
+                input_params = json.loads(log.input_params)
                 try:
-
-                    input_params = json.loads(log.input_params)
-                    model_name = json.loads(log.output_details)["model_name"].split("/")[-1]
-                    # workflow = query_dict["type_of_generation"]
-                    workflow = input_params["origin_data"]["settings"]["type_of_generation"]
+                    workflow = input_params[InferenceParamType.ORIGIN_DATA.value]["settings"]["type_of_generation"]
+                    st.caption(f"Workflow: {workflow}")
                 except Exception as e:
-                    workflow = "Unavailable"
-                st.caption(f"Workflow: {workflow}")
-
-                # write type_of_generation from json
+                    model_name = json.loads(log.output_details)["model_name"].split("/")[-1]
+                    st.caption(f"Model: {model_name}")
 
             with c2:
                 if output_url:
@@ -232,16 +227,17 @@ def sidebar_logger(shot_uuid):
                         log = data_repo.get_inference_log_from_uuid(log.uuid)
                         if log.status == InferenceStatus.IN_PROGRESS.value:
                             setup_comfy_runner()
+
                             def stop_gen(log_uuid):
                                 sys.path.append(str(os.getcwd()) + COMFY_RUNNER_PATH[1:])
                                 from comfy_runner.inf import ComfyRunner
 
                                 comfy_runner = ComfyRunner()
                                 comfy_runner.stop_current_generation(log_uuid, 12)
-                            
+
                             process = multiprocessing.Process(target=stop_gen, args=(str(log.uuid),))
-                            process.start()     # not waiting for this in the main thread
-                            
+                            process.start()  # not waiting for this in the main thread
+
                         res = data_repo.update_inference_log(
                             uuid=log.uuid, status=InferenceStatus.CANCELED.value
                         )

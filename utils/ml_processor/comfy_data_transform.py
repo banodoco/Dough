@@ -717,6 +717,11 @@ class ComfyDataTransform:
         extra_models_list = []
         sm_data = query.data.get("data", {})
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.STEERABLE_MOTION)
+
+        filename_prefix = sm_data.get("filename_prefix", None)
+        if filename_prefix:
+            workflow["281"]["inputs"]["filename_prefix"] = filename_prefix
+
         workflow = update_json_with_loras(workflow, sm_data.get("lora_data"))
 
         workflow["464"]["inputs"]["height"] = sm_data.get("height")
