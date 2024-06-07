@@ -33,6 +33,13 @@ def load_shot_settings(shot_uuid, log_uuid=None):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
 
+    """
+    NOTE: every shot's meta_data has the latest copy of the settings (whatever is the most recent gen)
+    apart from this, every generation log also has it's own copy of settings (for that particular gen)
+    by default shot's settings is applied whenever a new generation is to be created, but if a user
+    clicks "load settings" on a particular gen then it's settings are loaded from it's generation log
+    """
+
     # loading settings of the last generation (saved in the shot)
     # in case no log_uuid is provided
     if not log_uuid:
@@ -564,19 +571,22 @@ def update_session_state_with_animation_details(
     meta_data = shot.meta_data_dict
     timing_data = []
     for idx, img in enumerate(img_list):
-        if idx < len(img_list):
-            st.session_state[f"strength_of_frame_{shot_uuid}_{idx}"] = strength_of_frames[idx]
-            st.session_state[f"individual_prompt_{shot_uuid}_{idx}"] = individual_prompts[idx]
-            st.session_state[f"individual_negative_prompt_{shot_uuid}_{idx}"] = individual_negative_prompts[
-                idx
-            ]
-            st.session_state[f"motion_during_frame_{shot_uuid}_{idx}"] = motions_during_frames[idx]
-            if idx < len(img_list) - 1:
-                st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"] = distances_to_next_frames[idx]
-                st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"] = speeds_of_transitions[idx]
-                st.session_state[f"freedom_between_frames_{shot_uuid}_{idx}"] = freedoms_between_frames[idx]
+        # updating the session state rn
+        st.session_state[f"strength_of_frame_{shot_uuid}_{idx}"] = strength_of_frames[idx]
+        st.session_state[f"individual_prompt_{shot_uuid}_{idx}"] = individual_prompts[idx]
+        st.session_state[f"individual_negative_prompt_{shot_uuid}_{idx}"] = individual_negative_prompts[idx]
+        st.session_state[f"motion_during_frame_{shot_uuid}_{idx}"] = motions_during_frames[idx]
+        st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"] = (
+            distances_to_next_frames[idx] if idx < len(img_list) - 1 else distances_to_next_frames[idx - 1]
+        )
+        st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"] = (
+            speeds_of_transitions[idx] if idx < len(img_list) - 1 else speeds_of_transitions[idx - 1]
+        )
+        st.session_state[f"freedom_between_frames_{shot_uuid}_{idx}"] = (
+            freedoms_between_frames[idx] if idx < len(img_list) - 1 else freedoms_between_frames[idx - 1]
+        )
 
-        # adding into the meta-data
+        # adding into the meta-data. this is what is finally stored in the shot and inference log
         state_data = {
             "strength_of_frame": strength_of_frames[idx],
             "individual_prompt": individual_prompts[idx],
@@ -585,17 +595,13 @@ def update_session_state_with_animation_details(
             "distance_to_next_frame": (
                 distances_to_next_frames[idx]
                 if idx < len(img_list) - 1
-                else DEFAULT_SHOT_MOTION_VALUES["distance_to_next_frame"]
+                else distances_to_next_frames[idx - 1]
             ),
             "speed_of_transition": (
-                speeds_of_transitions[idx]
-                if idx < len(img_list) - 1
-                else DEFAULT_SHOT_MOTION_VALUES["speed_of_transition"]
+                speeds_of_transitions[idx] if idx < len(img_list) - 1 else speeds_of_transitions[idx - 1]
             ),
             "freedom_between_frames": (
-                freedoms_between_frames[idx]
-                if idx < len(img_list) - 1
-                else DEFAULT_SHOT_MOTION_VALUES["freedom_between_frames"]
+                freedoms_between_frames[idx] if idx < len(img_list) - 1 else freedoms_between_frames[idx - 1]
             ),
         }
 

@@ -673,13 +673,13 @@ def individual_frame_settings_element(shot_uuid, img_list):
             if key_suffix in k and not k.endswith(uuid):  # Ensure not to affect the original slider
                 st.session_state[k] = value
 
-    # In your main loop, check if updates need to be applied:
     if "update_values" in st.session_state:
         key_suffix, value, uuid, range_to_edit = st.session_state["update_values"]
         apply_updates(key_suffix, value, uuid, range_to_edit)
         del st.session_state["update_values"]  # Clear the update instruction after applying
 
     for i in range(0, len(img_list), items_per_row):
+        prev_frame_settings = None
         with st.container():
             grid = st.columns([2 if j % 2 == 0 else 1 for j in range(2 * items_per_row)])
 
@@ -698,12 +698,28 @@ def individual_frame_settings_element(shot_uuid, img_list):
                     if j == 0:
                         cols2 = st.columns(3)  # Create a grid with 3 columns
 
-                    # Place each item in the correct column based on its position in the row
-                    with cols2[j]:  # Use modulo to cycle through the 3 columns
-                        # Your existing code to display content in the grid
-                        if f"individual_prompt_{shot_uuid}_{idx}" not in st.session_state:
-                            for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
+                    with cols2[j]:
+                        # setting default values for frames (if they are newly added or settings is not present in the session_state)
+                        if f"distance_to_next_frame_{shot_uuid}_{idx}" not in st.session_state:
+                            # for newly created frames we apply prev frame settings if available
+                            settings_to_apply = prev_frame_settings or DEFAULT_SHOT_MOTION_VALUES
+                            cur_settings = {}
+                            for k, v in settings_to_apply.items():
                                 st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+                                cur_settings[f"{k}"] = v
+
+                            prev_frame_settings = cur_settings
+
+                        else:
+                            cur_settings = {}
+                            for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
+                                t_key = f"{k}_{shot_uuid}_{idx}"
+                                cur_settings[k] = (
+                                    v if t_key not in st.session_state else st.session_state[t_key]
+                                )
+
+                            prev_frame_settings = cur_settings
+
                         sub1, sub2 = st.columns([1, 1])
                         with sub1:
                             individual_prompt = st.text_input(
