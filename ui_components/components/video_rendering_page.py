@@ -1,5 +1,6 @@
 from typing import List
 import time
+import ast
 import streamlit as st
 from shared.constants import AnimationStyleType, AnimationToolType, STEERABLE_MOTION_WORKFLOWS
 import time
@@ -229,6 +230,35 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     new_key = key.replace("pil_img_", "") + "_uuid"
                     settings[new_key] = image.uuid
 
+                if st.session_state.get(f"{shot_uuid}_preview_mode", False):
+                    preview_length = 3
+                    img_list = img_list[:preview_length]
+                    settings["motion_scales"] = ", ".join(
+                        settings["motion_scales"].split(", ")[:preview_length]
+                    )
+                    _t = ast.literal_eval(settings["dynamic_strength_values"])[:preview_length]
+                    settings["dynamic_strength_values"] = f"[{', '.join(repr(t) for t in _t)}]"
+                    settings["dynamic_frame_distribution_values"] = settings[
+                        "dynamic_frame_distribution_values"
+                    ][:preview_length]
+                    settings["dynamic_key_frame_influence_values"] = settings[
+                        "dynamic_key_frame_influence_values"
+                    ][:preview_length]
+                    settings["individual_prompts"] = ", ".join(
+                        settings["individual_prompts"].split(", ")[:preview_length]
+                    )
+                    settings["individual_negative_prompts"] = ", ".join(
+                        settings["individual_negative_prompts"].split(", ")[:preview_length]
+                    )
+
+                    strength_of_frames = strength_of_frames[:preview_length]
+                    speeds_of_transitions = speeds_of_transitions[:preview_length]
+                    distances_to_next_frames = distances_to_next_frames[:preview_length]
+                    freedoms_between_frames = freedoms_between_frames[:preview_length]
+                    motions_during_frames = motions_during_frames[:preview_length]
+                    individual_prompts = individual_prompts[:preview_length]
+                    individual_negative_prompts = individual_negative_prompts[:preview_length]
+
                 shot_data = update_session_state_with_animation_details(
                     shot_uuid,
                     img_list,
@@ -288,12 +318,21 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     img_list,
                 )
 
-                backlog_update = {f"{shot_uuid}_backlog_enabled": False}
-                toggle_generate_inference(position, **backlog_update)
+                updated_additional_params = {
+                    f"{shot_uuid}_backlog_enabled": False,
+                    f"{shot_uuid}_preview_mode": False,
+                }
+                toggle_generate_inference(position, **updated_additional_params)
                 st.rerun()
 
+            preview_mode = st.checkbox(
+                "Preview mode", value=False, help="Generates a preview video only using the first 3 images"
+            )
             btn1, btn2, _ = st.columns([1, 1, 1])
-            backlog_no_update = {f"{shot_uuid}_backlog_enabled": False}
+            additional_params = {
+                f"{shot_uuid}_backlog_enabled": False,
+                f"{shot_uuid}_preview_mode": preview_mode,
+            }
             with btn1:
                 help = ""
                 st.button(
@@ -301,7 +340,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     key="generate_animation_clip",
                     disabled=False,
                     help=help,
-                    on_click=lambda: toggle_generate_inference(position, **backlog_no_update),
+                    on_click=lambda: toggle_generate_inference(position, **additional_params),
                     type="primary",
                     use_container_width=True,
                 )
