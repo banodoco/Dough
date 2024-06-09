@@ -1,3 +1,4 @@
+from collections import defaultdict
 import json
 import time
 import ast
@@ -314,7 +315,9 @@ def variant_inference_detail_element(
 
         with st.expander("Settings", expanded=open_generaton_details):
             shot_meta_data, data_type = get_generation_settings_from_log(variant.inference_log.uuid)
+            
             if shot_meta_data and shot_meta_data.get("main_setting_data", None):
+                # ---------- main settings data ------------------
                 for k, v in shot_meta_data.get("main_setting_data", {}).items():
                     # Custom title formatting based on the key
                     if k.startswith("strength_of_adherence_value"):
@@ -360,6 +363,28 @@ def variant_inference_detail_element(
                         else:
                             # Optionally handle empty or None values differently here
                             pass
+                        
+                # ------------ individual frame settings --------------------
+                timing_data = shot_meta_data.get("timing_data", [])
+                display_dict = defaultdict(list)
+                for idx, _ in enumerate(shot.timing_list):
+                    if timing_data and len(timing_data) >= idx + 1:
+                        motion_data = timing_data[idx]
+
+                    for k, v in motion_data.items():
+                        if v == "":
+                            v = "__"
+                        display_dict[k].append(v)
+                
+                are_all_elements_similar = lambda arr: True if not arr else all(element == arr[0] for element in arr[1:])
+                for k, v in display_dict.items():
+                    k = k.replace("_", " ").title()
+                    if are_all_elements_similar(v):
+                        v = f"{v[0]} (for all frames)"
+                    else:
+                        v = ", ".join(str(e) for e in v)
+                    st.write(f"**{k}**: {v}")
+                        
                 if st.button(
                     "Load settings",
                     key=f"boot_{tag}_{variant.name}",
