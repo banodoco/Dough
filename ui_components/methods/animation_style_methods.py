@@ -48,18 +48,21 @@ def load_shot_settings(shot_uuid, log_uuid=None):
     be present at some places.
     """
 
-    project_meta_data = json.loads(shot.project.meta_data) if shot.project.meta_data else {}
-    active_shot_uuid = project_meta_data.get(ProjectMetaData.ACTIVE_SHOT.value, None)
-    if active_shot_uuid:
-        shot: InternalShotObject = data_repo.get_shot_from_uuid(active_shot_uuid)
-
     update_active_shot(shot.uuid)
 
     # loading settings of the last generation (saved in the shot)
     # in case no log_uuid is provided
     if not log_uuid:
-        shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, json.dumps({}))
-        shot_meta_data = json.loads(shot_meta_data)
+        shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
+        # if the current shot is newly created and has no meta data
+        if not shot_meta_data:
+            project_meta_data = json.loads(shot.project.meta_data) if shot.project.meta_data else {}
+            active_shot_uuid = project_meta_data.get(ProjectMetaData.ACTIVE_SHOT.value, None)
+            if active_shot_uuid:
+                shot: InternalShotObject = data_repo.get_shot_from_uuid(active_shot_uuid)
+                shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
+
+        shot_meta_data = json.loads(shot_meta_data) if shot_meta_data else {}
         data_type = None
         st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
 
@@ -91,29 +94,29 @@ def load_shot_settings(shot_uuid, log_uuid=None):
                     key == f"structure_control_image_uuid_{shot_uuid}" and not main_setting_data[key]
                 ):  # hackish sol, will fix later
                     st.session_state[f"structure_control_image_{shot_uuid}"] = None
-                elif key == f"type_of_generation_index_{shot.uuid}":
-                    # Retrieve the order number from the session state
-                    order_number = st.session_state[key]
+                # elif key == f"type_of_generation_index_{shot.uuid}":
+                #     # Retrieve the order number from the session state
+                #     order_number = st.session_state[key]
 
-                    # Find the index in STEERABLE_MOTION_WORKFLOWS where the 'order' matches the order_number
-                    index = next(
-                        (
-                            index
-                            for index, workflow in enumerate(STEERABLE_MOTION_WORKFLOWS)
-                            if workflow["order"] == order_number
-                        ),
-                        None,
-                    )
+                #     # Find the index in STEERABLE_MOTION_WORKFLOWS where the 'order' matches the order_number
+                #     index = next(
+                #         (
+                #             index
+                #             for index, workflow in enumerate(STEERABLE_MOTION_WORKFLOWS)
+                #             if workflow["order"] == order_number
+                #         ),
+                #         None,
+                #     )
 
-                    if index is not None:
-                        # Set the session state to the index of the workflow
-                        st.session_state[key] = index
-                        # Set the creative interpolation type to the name of the workflow at the found index
-                        st.session_state["creative_interpolation_type"] = STEERABLE_MOTION_WORKFLOWS[index][
-                            "name"
-                        ]
-                    else:
-                        st.error("Invalid workflow order")
+                #     if index is not None:
+                #         # Set the session state to the index of the workflow
+                #         st.session_state[key] = index
+                #         # Set the creative interpolation type to the name of the workflow at the found index
+                #         st.session_state["creative_interpolation_type"] = STEERABLE_MOTION_WORKFLOWS[index][
+                #             "name"
+                #         ]
+                #     else:
+                #         st.error("Invalid workflow order")
 
             st.rerun()
         elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:

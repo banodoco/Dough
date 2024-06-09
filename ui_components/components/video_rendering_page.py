@@ -186,17 +186,19 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                 index=st.session_state.get(f"type_of_generation_index_{shot.uuid}", 0),
                 help="""
                 
-            **Slurshy Realistiche**: good for simple realistic motion.
+                    **Slurshy Realistiche**: good for simple realistic motion.
 
-            **Smooth n' Steady**: good for slow, smooth transitions. 
-            
-            **Chocky Realistiche**: good for realistic motion and chaotic transitions. 
+                    **Smooth n' Steady**: good for slow, smooth transitions. 
+                    
+                    **Chocky Realistiche**: good for realistic motion and chaotic transitions. 
 
-            **Liquidy Loop**: good for liquid-like motion with slick transitions. Also loops!
-            
-            **Fast With A Price**: runs fast but with a lot of detail loss.
-            
-            **Rad Attack**: good for realistic motion but with a lot of detail loss.""",
+                    **Liquidy Loop**: good for liquid-like motion with slick transitions. Also loops!
+                    
+                    **Fast With A Price**: runs fast but with a lot of detail loss.
+                    
+                    **Rad Attack**: good for realistic motion but with a lot of detail loss.
+                    
+                    """,
             )
 
         with footer2:
