@@ -4,8 +4,10 @@ import time
 from typing import List
 import streamlit as st
 from backend.models import InternalFileObject
-from shared.constants import COMFY_BASE_PATH, InferenceParamType, STEERABLE_MOTION_WORKFLOWS
+from shared.constants import COMFY_BASE_PATH, InferenceParamType, STEERABLE_MOTION_WORKFLOWS, ProjectMetaData
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, ShotMetaData
+from ui_components.models import InternalProjectObject, InternalShotObject
+from utils.common_utils import acquire_lock, release_lock
 from utils.constants import AnimateShotMethod
 from utils.data_repo.data_repo import DataRepo
 import numpy as np
@@ -31,7 +33,7 @@ def get_generation_settings_from_log(log_uuid=None):
 
 def load_shot_settings(shot_uuid, log_uuid=None):
     data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
 
     """
     NOTE: every shot's meta_data has the latest copy of the settings (whatever is the most recent gen)
@@ -39,6 +41,19 @@ def load_shot_settings(shot_uuid, log_uuid=None):
     by default shot's settings is applied whenever a new generation is to be created, but if a user
     clicks "load settings" on a particular gen then it's settings are loaded from it's generation log
     """
+
+    """
+    NOTE: the logic has been updated and instead of picking the default values from the given shot (shot_uuid)
+    the values would be picked from the active_shot, present inside project's meta_data. older code may still
+    be present at some places.
+    """
+
+    project_meta_data = json.loads(shot.project.meta_data) if shot.project.meta_data else {}
+    active_shot_uuid = project_meta_data.get(ProjectMetaData.ACTIVE_SHOT.value, None)
+    if active_shot_uuid:
+        shot: InternalShotObject = data_repo.get_shot_from_uuid(active_shot_uuid)
+
+    update_active_shot(shot.uuid)
 
     # loading settings of the last generation (saved in the shot)
     # in case no log_uuid is provided
@@ -567,7 +582,7 @@ def update_session_state_with_animation_details(
     type_of_generation_index=0,
 ):
     data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
     meta_data = shot.meta_data_dict
     timing_data = []
     for idx, img in enumerate(img_list):
@@ -645,7 +660,22 @@ def update_session_state_with_animation_details(
 
     meta_data.update(update_data)
     data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
+    update_active_shot(shot_uuid)
     return update_data
+
+
+def update_active_shot(shot_uuid):
+    # updating the active shot inside the project
+    data_repo = DataRepo()
+    shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
+    key = shot.project.uuid
+    if acquire_lock(key):
+        project: InternalProjectObject = data_repo.get_project_from_uuid(uuid=key)
+        if project:
+            meta_data = json.loads(project.meta_data) if project.meta_data else {}
+            meta_data[ProjectMetaData.ACTIVE_SHOT.value] = str(shot_uuid)
+            data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
+        release_lock(key)
 
 
 # saving dynamic crafter generation details

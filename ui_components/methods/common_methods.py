@@ -37,7 +37,7 @@ from ui_components.methods.file_methods import (
     save_or_host_file_bytes,
 )
 from ui_components.methods.video_methods import sync_audio_and_duration
-from ui_components.models import InternalFrameTimingObject, InternalSettingObject
+from ui_components.models import InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
 
@@ -957,7 +957,7 @@ def check_project_meta_data(project_uuid):
     key = project_uuid
     if acquire_lock(key):
         with transaction.atomic():
-            project = data_repo.get_project_from_uuid(project_uuid)
+            project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
             timing_update_data = (
                 json.loads(project.meta_data).get(ProjectMetaData.DATA_UPDATE.value, None)
                 if project.meta_data
@@ -985,11 +985,13 @@ def check_project_meta_data(project_uuid):
                     _ = data_repo.get_shot_list(shot_uuid, invalidate_cache=True)
 
             # clearing update data from cache
-            meta_data = {
+            blank_data_obj = {
                 ProjectMetaData.DATA_UPDATE.value: [],
                 ProjectMetaData.GALLERY_UPDATE.value: False,
                 ProjectMetaData.SHOT_VIDEO_UPDATE.value: [],
             }
+            meta_data = json.loads(project.meta_data) if project.meta_data else {}
+            meta_data.update(blank_data_obj)
             data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
         release_lock(key)
 

@@ -240,7 +240,11 @@ def update_project_meta_data(timing_update_list, gallery_update_list, shot_updat
     for project_uuid, val in final_res.items():
         key = str(project_uuid)
         if acquire_lock(key):
-            _ = Project.objects.filter(uuid=project_uuid).update(meta_data=json.dumps(val))
+            project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+            if project:
+                cur_meta_data = json.loads(project.meta_data) if project.meta_data else {}
+                cur_meta_data.update(val)
+                _ = Project.objects.filter(uuid=project_uuid).update(meta_data=json.dumps(cur_meta_data))
             release_lock(key)
 
 
