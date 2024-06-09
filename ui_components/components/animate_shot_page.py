@@ -114,6 +114,7 @@ def video_rendering_page(shot_uuid, selected_variant):
                 )
 
             data_repo.bulk_create_timing(new_timing_data)
+            st.rerun()  # NOTE: video (and it's inference) is displayed first and then is updated here, that's why refreshing
 
     img_list = data_repo.get_all_file_list(uuid__in=file_uuid_list, file_type=InternalFileType.IMAGE.value)[0]
 

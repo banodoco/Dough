@@ -31,7 +31,7 @@ def get_generation_settings_from_log(log_uuid=None):
     return shot_meta_data, data_type
 
 
-def load_shot_settings(shot_uuid, log_uuid=None):
+def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_values=True):
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
 
@@ -48,8 +48,6 @@ def load_shot_settings(shot_uuid, log_uuid=None):
     be present at some places.
     """
 
-    update_active_shot(shot.uuid)
-
     # loading settings of the last generation (saved in the shot)
     # in case no log_uuid is provided
     if not log_uuid:
@@ -61,6 +59,8 @@ def load_shot_settings(shot_uuid, log_uuid=None):
             if active_shot_uuid:
                 shot: InternalShotObject = data_repo.get_shot_from_uuid(active_shot_uuid)
                 shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
+        else:
+            update_active_shot(shot.uuid)
 
         shot_meta_data = json.loads(shot_meta_data) if shot_meta_data else {}
         data_type = None
@@ -69,66 +69,68 @@ def load_shot_settings(shot_uuid, log_uuid=None):
     # loading settings from that particular log
     else:
         shot_meta_data, data_type = get_generation_settings_from_log(log_uuid)
-        st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = log_uuid
+        if load_images:
+            st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = log_uuid
 
-    if shot_meta_data:
-        if not data_type or data_type == ShotMetaData.MOTION_DATA.value:
-            st.session_state[f"type_of_animation_{shot.uuid}"] = 0
-            # updating timing data
-            timing_data = shot_meta_data.get("timing_data", [])
-            for idx, _ in enumerate(
-                shot.timing_list
-            ):  # fix: check how the image list is being stored here and use that instead
-                # setting default parameters (fetching data from the shot if it's present)
-                if timing_data and len(timing_data) >= idx + 1:
-                    motion_data = timing_data[idx]
+    if load_setting_values:
+        if shot_meta_data:
+            if not data_type or data_type == ShotMetaData.MOTION_DATA.value:
+                st.session_state[f"type_of_animation_{shot.uuid}"] = 0
+                # ------------------ updating timing data
+                timing_data = shot_meta_data.get("timing_data", [])
+                for idx, _ in enumerate(
+                    shot.timing_list
+                ):  # fix: check how the image list is being stored here and use that instead
+                    # setting default parameters (fetching data from the shot if it's present)
+                    if timing_data and len(timing_data) >= idx + 1:
+                        motion_data = timing_data[idx]
 
-                for k, v in motion_data.items():
+                    for k, v in motion_data.items():
+                        st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+
+                # --------------------- updating other settings main settings
+                main_setting_data = shot_meta_data.get("main_setting_data", {})
+                for key in main_setting_data:
+                    st.session_state[key] = main_setting_data[key]
+                    if (
+                        key == f"structure_control_image_uuid_{shot_uuid}" and not main_setting_data[key]
+                    ):  # hackish sol, will fix later
+                        st.session_state[f"structure_control_image_{shot_uuid}"] = None
+                    # elif key == f"type_of_generation_index_{shot.uuid}":
+                    #     # Retrieve the order number from the session state
+                    #     order_number = st.session_state[key]
+
+                    #     # Find the index in STEERABLE_MOTION_WORKFLOWS where the 'order' matches the order_number
+                    #     index = next(
+                    #         (
+                    #             index
+                    #             for index, workflow in enumerate(STEERABLE_MOTION_WORKFLOWS)
+                    #             if workflow["order"] == order_number
+                    #         ),
+                    #         None,
+                    #     )
+
+                    #     if index is not None:
+                    #         # Set the session state to the index of the workflow
+                    #         st.session_state[key] = index
+                    #         # Set the creative interpolation type to the name of the workflow at the found index
+                    #         st.session_state["creative_interpolation_type"] = STEERABLE_MOTION_WORKFLOWS[index][
+                    #             "name"
+                    #         ]
+                    #     else:
+                    #         st.error("Invalid workflow order")
+
+                st.rerun()
+            elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
+                st.session_state[f"type_of_animation_{shot.uuid}"] = 1
+                main_setting_data = shot_meta_data.get("main_setting_data", {})
+                for key in main_setting_data:
+                    st.session_state[key] = main_setting_data[key]
+                st.rerun()
+        else:
+            for idx, _ in enumerate(shot.timing_list):  # fix: check how the image list is being stored here
+                for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
                     st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
-
-            # updating other settings main settings
-            main_setting_data = shot_meta_data.get("main_setting_data", {})
-            for key in main_setting_data:
-                st.session_state[key] = main_setting_data[key]
-                if (
-                    key == f"structure_control_image_uuid_{shot_uuid}" and not main_setting_data[key]
-                ):  # hackish sol, will fix later
-                    st.session_state[f"structure_control_image_{shot_uuid}"] = None
-                # elif key == f"type_of_generation_index_{shot.uuid}":
-                #     # Retrieve the order number from the session state
-                #     order_number = st.session_state[key]
-
-                #     # Find the index in STEERABLE_MOTION_WORKFLOWS where the 'order' matches the order_number
-                #     index = next(
-                #         (
-                #             index
-                #             for index, workflow in enumerate(STEERABLE_MOTION_WORKFLOWS)
-                #             if workflow["order"] == order_number
-                #         ),
-                #         None,
-                #     )
-
-                #     if index is not None:
-                #         # Set the session state to the index of the workflow
-                #         st.session_state[key] = index
-                #         # Set the creative interpolation type to the name of the workflow at the found index
-                #         st.session_state["creative_interpolation_type"] = STEERABLE_MOTION_WORKFLOWS[index][
-                #             "name"
-                #         ]
-                #     else:
-                #         st.error("Invalid workflow order")
-
-            st.rerun()
-        elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
-            st.session_state[f"type_of_animation_{shot.uuid}"] = 1
-            main_setting_data = shot_meta_data.get("main_setting_data", {})
-            for key in main_setting_data:
-                st.session_state[key] = main_setting_data[key]
-            st.rerun()
-    else:
-        for idx, _ in enumerate(shot.timing_list):  # fix: check how the image list is being stored here
-            for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
-                st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
 
 
 def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):

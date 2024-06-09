@@ -367,7 +367,7 @@ def variant_inference_detail_element(
                 # ------------ individual frame settings --------------------
                 timing_data = shot_meta_data.get("timing_data", [])
                 display_dict = defaultdict(list)
-                for idx, _ in enumerate(shot.timing_list):
+                for idx in range(len(timing_data)):
                     if timing_data and len(timing_data) >= idx + 1:
                         motion_data = timing_data[idx]
 
@@ -382,6 +382,8 @@ def variant_inference_detail_element(
                     if are_all_elements_similar(v):
                         v = f"{v[0]} (for all frames)"
                     else:
+                        if k.startswith("Distance To Next Frame") or k.startswith("Speed Of Transition") or k.startswith("Freedom Between Frames"):
+                            v = v[:-1]  # removing the last ele in these cases
                         v = ", ".join(str(e) for e in v)
                     st.write(f"**{k}**: {v}")
                         
@@ -391,8 +393,19 @@ def variant_inference_detail_element(
                     help="This will load all the settings for this run below. In doing so, it'll remove the current settings and images - though they'll be available for all previous runs.",
                     use_container_width=True,
                 ):
-                    load_shot_settings(shot_uuid, variant.inference_log.uuid)
+                    load_shot_settings(shot_uuid, variant.inference_log.uuid, load_images=False, load_setting_values=True)
                     st.success("Settings Loaded")
+                    time.sleep(0.3)
+                    st.rerun()
+                    
+                if st.button(
+                    "Load images",
+                    key=f"load_img_{tag}_{variant.name}",
+                    help="This will load all the images for this run below. In doing so, it'll remove the current images and images - though they'll be available for all previous runs.",
+                    use_container_width=True,
+                ):
+                    load_shot_settings(shot_uuid, variant.inference_log.uuid, load_images=True, load_setting_values=False)
+                    st.success("Images Loaded")
                     time.sleep(0.3)
                     st.rerun()
 
