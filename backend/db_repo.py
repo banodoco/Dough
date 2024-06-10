@@ -303,7 +303,7 @@ class DBRepo:
         if not data.is_valid():
             return InternalResponse({}, data.errors, False)
 
-        print(data.data)
+        t = data.data
         # hosting the file if only local path is provided and it's a production environment
         if "hosted_url" not in kwargs and AUTOMATIC_FILE_HOSTING:
             # this is the user who is uploading the file
@@ -493,7 +493,7 @@ class DBRepo:
         if not user:
             return InternalResponse({}, "invalid user", False)
 
-        print(data.data)
+        t = data.data
         data._data["user_id"] = user.id
 
         project = Project.objects.create(**data.data)
@@ -587,7 +587,7 @@ class DBRepo:
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
 
-        print(attributes.data)
+        t = attributes.data
 
         if "user_id" in attributes.data and attributes.data["user_id"]:
             user = User.objects.filter(uuid=attributes.data["user_id"], is_disabled=False).first()
@@ -770,7 +770,7 @@ class DBRepo:
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
 
-        print(attributes.data)
+        t = attributes.data
 
         if "model_id" in attributes.data and attributes.data["model_id"]:
             model = AIModel.objects.filter(uuid=attributes.data["model_id"], is_disabled=False).first()
@@ -904,7 +904,7 @@ class DBRepo:
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
 
-        print(attributes.data)
+        t = attributes.data
 
         if "shot_id" in attributes.data and attributes.data["shot_id"]:
             shot = Shot.objects.filter(uuid=attributes.data["shot_id"], is_disabled=False).first()
@@ -1280,7 +1280,7 @@ class DBRepo:
             if not user:
                 return InternalResponse({}, "invalid user", False)
 
-            print(attributes.data)
+            t = attributes.data
             attributes._data["user_id"] = user.id
 
         for attr, value in attributes.data.items():
@@ -1323,7 +1323,7 @@ class DBRepo:
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
 
-        print(attributes.data)
+        t = attributes.data
 
         if "user_id" in attributes.data and attributes.data["user_id"]:
             user = User.objects.filter(uuid=attributes.data["user_id"], is_disabled=False).first()
@@ -1370,7 +1370,7 @@ class DBRepo:
         if not attributes.is_valid():
             return InternalResponse({}, attributes.errors, False)
 
-        print(attributes.data)
+        t = attributes.data
 
         if "project_id" in attributes.data and attributes.data["project_id"]:
             project = Project.objects.filter(uuid=attributes.data["project_id"], is_disabled=False).first()
@@ -1396,8 +1396,10 @@ class DBRepo:
                 return InternalResponse({}, "invalid audio", False)
 
             attributes._data["audio_id"] = audio.id
-
-        setting = Setting.objects.create(**attributes.data)
+        try:
+            setting = Setting.objects.create(**attributes.data)
+        except Exception as e:
+            print(f"exception occured while creating settings obj: {str(e)}")
 
         payload = {"data": SettingDto(setting).data}
 
@@ -1412,7 +1414,7 @@ class DBRepo:
         if not project:
             return InternalResponse({}, "invalid project", False)
 
-        print(attributes.data)
+        t = attributes.data
         attributes._data["project_id"] = project.id
 
         setting = Setting.objects.filter(project_id=project.id, is_disabled=False).first()
@@ -1461,14 +1463,14 @@ class DBRepo:
         if not setting:
             return InternalResponse({}, "invalid project", False)
 
-        print(attributes.data)
+        t = attributes.data
 
         if "project_id" in attributes.data and attributes.data["project_id"]:
             project = Project.objects.filter(uuid=attributes.data["project_id"], is_disabled=False).first()
             if not project:
                 return InternalResponse({}, "invalid project", False)
 
-            print(attributes.data)
+            t = attributes.data
             attributes._data["project_id"] = project.id
 
         if "default_model_id" in attributes.data and attributes.data["default_model_id"]:

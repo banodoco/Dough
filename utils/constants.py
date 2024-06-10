@@ -77,6 +77,7 @@ class MLQueryObject:
         return json.dumps(self.__dict__)
 
 
+# NOTE: old code, not is use
 ML_MODEL_LIST = [
     {
         "name": "stable-diffusion-img2img-v2.1",

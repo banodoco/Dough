@@ -261,7 +261,7 @@ def check_and_update_db():
         user = User.objects.filter(is_disabled=False).first()
     except Exception as e:
         app_logger.log(LoggingType.DEBUG, "db creation pending..")
-        time.sleep(3)
+        time.sleep(5)
         return
 
     if not user:
