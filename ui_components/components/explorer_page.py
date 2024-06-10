@@ -1,4 +1,5 @@
 import json
+import os
 import streamlit as st
 from ui_components.constants import GalleryImageViewType
 from ui_components.methods.common_methods import (
@@ -10,10 +11,12 @@ from ui_components.methods.common_methods import (
 from ui_components.methods.file_methods import zoom_and_crop
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.inpainting_element import inpainting_image_input
+from ui_components.widgets.model_selector_element import model_selector_element
 from utils.common_utils import refresh_app
 from utils.constants import MLQueryObject, T2IModel
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import (
+    COMFY_BASE_PATH,
     GPU_INFERENCE_ENABLED,
     QUEUE_INFERENCE_QUERIES,
     AIModelType,
@@ -243,6 +246,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
             t2i_model = st_memory.radio(
                 "Select Model:", options=T2IModel.value_list(), index=0, key="t2i_model", horizontal=True
             )
+
         if t2i_model == T2IModel.SD3.value:
             if not st.session_state.get("stability_key", None):
                 app_secrets = data_repo.get_app_secrets_from_user_uuid()
@@ -255,6 +259,9 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
             else:
                 with t2i_2:
                     st.info("Stability API will be used for this generation")
+
+        if t2i_model == T2IModel.SDXL.value:
+            explorer_gen_model = model_selector_element()
 
     if position == "explorer":
         _, d2, d3, _ = st.columns([0.25, 1, 1, 0.25])
@@ -294,7 +301,10 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                             negative_prompt=negative_prompt,
                             height=project_settings.height,
                             width=project_settings.width,
-                            data={"shot_uuid": shot_uuid},
+                            data={
+                                "shot_uuid": shot_uuid,
+                                "sdxl_model": explorer_gen_model,
+                            },
                         )
 
                         output, log = ml_client.predict_model_output_standardized(

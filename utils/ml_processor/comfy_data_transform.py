@@ -90,6 +90,7 @@ class ComfyDataTransform:
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL)
 
         # workflow params
+        model = query.data["data"].get("sdxl_model", None)
         width, height = query.width, query.height
         width, height = determine_dimensions_for_sdxl(width, height)
         positive_prompt, negative_prompt = query.prompt, query.negative_prompt
@@ -99,6 +100,9 @@ class ComfyDataTransform:
         seed = random_seed()
         workflow["10"]["inputs"]["noise_seed"] = seed
         workflow["10"]["inputs"]["noise_seed"] = seed
+
+        workflow["4"]["inputs"]["ckpt_name"] = model
+
         workflow["5"]["inputs"]["width"], workflow["5"]["inputs"]["height"] = width, height
         workflow["6"]["inputs"]["text"] = workflow["15"]["inputs"]["text"] = positive_prompt
         workflow["7"]["inputs"]["text"] = workflow["16"]["inputs"]["text"] = negative_prompt
