@@ -57,6 +57,7 @@ def model_selector_element():
                 st.info("To download more models, go to the Download Models tab.")
 
     with tab2:
+        # NOTE: makes sure to add 'xl' in these filenames because that is the only filter rn for sdxl models (will update in the future)
         extra_model_list = {
             "Base SDXL": {
                 "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true",
@@ -75,17 +76,17 @@ def model_selector_element():
             },
             "MKLAN Art XL": {
                 "url": "https://civitai.com/api/download/models/528345",
-                "filename": "mklanArtVersion_mklan2311art.safetensors",
+                "filename": "mklanArtVersionxl_mklan2311art.safetensors",
                 "desc": "Suited for creative outputs",
             },
             "MKLAN Realistic XL": {
                 "url": "https://civitai.com/api/download/models/528311",
-                "filename": "mklanRealistic_mklan230realistic.safetensors",
+                "filename": "mklanRealisticxl_mklan230realistic.safetensors",
                 "desc": "Realistic model",
             },
             "Traditional Painting XL": {
                 "url": "https://civitai.com/api/download/models/529269",
-                "filename": "traditionalPainting_v02.safetensors",
+                "filename": "traditionalPaintingxl_v02.safetensors",
                 "desc": "Traditional paiting style",
             },
         }

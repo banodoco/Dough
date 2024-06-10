@@ -23,15 +23,15 @@ def download_file_widget(url, filename, dest):
             time.sleep(0.3)
             st.rerun()
 
-    # setting this file for deletion, incase it's not downloaded properly
-    # if it is downloaded properly then it will be removed from here (all these steps because of streamlit!)
-    st.session_state["delete_partial_download"] = filepath
-
     # checking if the file already exists
     if os.path.exists(os.path.join(dest, filename)):
         st.warning("File already present")
         time.sleep(1)
         st.rerun()
+
+    # setting this file for deletion, incase it's not downloaded properly
+    # if it is downloaded properly then it will be removed from here (all these steps because of streamlit!)
+    st.session_state["delete_partial_download"] = filepath
 
     with st.spinner("Downloading model..."):
         download_bar = st.progress(0, text="")
@@ -86,8 +86,9 @@ def download_file_widget(url, filename, dest):
                 os.remove(filepath)
             else:
                 os.rename(filepath, filepath.replace(zip_filename, filename))
-                st.session_state["delete_partial_download"] = None
                 print("removing ---------")
+
+            st.session_state["delete_partial_download"] = None
         else:
             st.error("Unable to access model url")
             time.sleep(1)

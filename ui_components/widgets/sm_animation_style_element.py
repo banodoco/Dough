@@ -10,6 +10,7 @@ from PIL import Image
 import streamlit as st
 from shared.constants import COMFY_BASE_PATH, InternalFileType
 from ui_components.methods.common_methods import save_new_image
+from ui_components.widgets.download_file_progress_bar import download_file_widget
 from utils import st_memory
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES
 from ui_components.methods.animation_style_methods import (
@@ -311,41 +312,21 @@ def select_motion_lora_element(shot_uuid, model_files):
                 display_motion_lora(selected_lora_optn, lora_file_links)
 
                 if st.button("Download LoRA", key="download_lora"):
-                    with st.spinner("Downloading LoRA..."):
-                        save_directory = os.path.join(COMFY_BASE_PATH, "models", "animatediff_motion_lora")
-                        os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
-
-                        # Extract the filename from the URL
-                        selected_lora, lora_idx = next(
-                            (
-                                (ele, idx)
-                                for idx, ele in enumerate(lora_file_links.keys())
-                                if selected_lora_optn in ele
-                            ),
-                            None,
-                        )
-                        filename = selected_lora.split("/")[-1]
-                        save_path = os.path.join(save_directory, filename)
-
-                        # Download the file
-                        download_lora_bar = st.progress(0, text="")
-                        response = requests.get(selected_lora, stream=True)
-                        if response.status_code == 200:
-                            total_size = int(response.headers.get("content-length", 0))
-                            with open(save_path, "wb") as f:
-                                received_bytes = 0
-
-                                for data in response.iter_content(chunk_size=8192):
-                                    f.write(data)
-                                    received_bytes += len(data)
-                                    progress = received_bytes / total_size
-                                    download_lora_bar.progress(progress)
-
-                            st.success(f"Downloaded LoRA to {save_path}")
-                            download_lora_bar.empty()
-                            st.rerun()
-                        else:
-                            st.error("Failed to download LoRA")
+                    save_directory = os.path.join(COMFY_BASE_PATH, "models", "animatediff_motion_lora")
+                    selected_lora, lora_idx = next(
+                        (
+                            (ele, idx)
+                            for idx, ele in enumerate(lora_file_links.keys())
+                            if selected_lora_optn in ele
+                        ),
+                        None,
+                    )
+                    filename = selected_lora.split("/")[-1]
+                    download_file_widget(
+                        selected_lora,
+                        filename,
+                        save_directory,
+                    )
 
         elif where_to_download_from == "From a URL":
             with text1:
@@ -433,7 +414,9 @@ def select_sd_model_element(shot_uuid, default_model):
     else:
         model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
         ignored_model_list = ["dynamicrafter_512_interp_v1.ckpt"]
-        model_files = [file for file in model_files if "xl" not in file and file not in ignored_model_list]
+        model_files = [
+            file for file in model_files if "xl" not in file.lower() and file not in ignored_model_list
+        ]
 
     sd_model_dict = {
         "Realistic_Vision_V5.1.safetensors": {
@@ -512,46 +495,11 @@ def select_sd_model_element(shot_uuid, default_model):
             )
 
             if st.button("Download Model", key="download_model"):
-                with st.spinner("Downloading model..."):
-                    download_bar = st.progress(0, text="")
-                    save_directory = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
-                    os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
-
-                    # Retrieve the URL using the selected model name
-                    model_url = sd_model_dict[model_name_selected]["url"]
-
-                    # Download the model and save it to the directory
-                    response = requests.get(model_url, stream=True)
-                    zip_filename = sd_model_dict[model_name_selected]["filename"]
-                    filepath = os.path.join(save_directory, zip_filename)
-                    print("filepath: ", filepath)
-                    if response.status_code == 200:
-                        total_size = int(response.headers.get("content-length", 0))
-
-                        with open(filepath, "wb") as f:
-                            received_bytes = 0
-
-                            for data in response.iter_content(chunk_size=8192):
-                                f.write(data)
-                                received_bytes += len(data)
-                                progress = received_bytes / total_size
-                                download_bar.progress(progress)
-
-                        st.success(f"Downloaded {model_name_selected} to {save_directory}")
-                        download_bar.empty()
-
-                    if model_url.endswith(".zip") or model_url.endswith(".tar"):
-                        st.success("Extracting the zip file. Please wait...")
-                        new_filepath = filepath.replace(zip_filename, "")
-                        if model_url.endswith(".zip"):
-                            with zipfile.ZipFile(f"{filepath}", "r") as zip_ref:
-                                zip_ref.extractall(new_filepath)
-                        else:
-                            with tarfile.open(f"{filepath}", "r") as tar_ref:
-                                tar_ref.extractall(new_filepath)
-
-                        os.remove(filepath)
-                    st.rerun()
+                download_file_widget(
+                    sd_model_dict[model_name_selected]["url"],
+                    sd_model_dict[model_name_selected]["filename"],
+                    checkpoints_dir,
+                )
 
         elif where_to_get_model == "Upload a model":
             st.info("It's simpler to just drop this into the ComfyUI/models/checkpoints directory.")
