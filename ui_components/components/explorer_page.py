@@ -240,6 +240,9 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                                     st.session_state["input_image_1"],
                                 )
                                 st.rerun()
+                                
+        if type_of_generation != InputImageStyling.IPADAPTER_COMPOSITION.value:
+            explorer_gen_model = model_selector_element()
     else:
         t2i_1, t2i_2 = st.columns([1, 1])
         with t2i_1:
@@ -351,7 +354,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        data={"shot_uuid": shot_uuid},
+                        data={"shot_uuid": shot_uuid, "sdxl_model": explorer_gen_model,},
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -423,7 +426,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        data={"shot_uuid": shot_uuid},
+                        data={"shot_uuid": shot_uuid, "sdxl_model": explorer_gen_model,},
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -445,7 +448,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        data={"condition_scale": 1, "shot_uuid": shot_uuid},
+                        data={"condition_scale": 1, "shot_uuid": shot_uuid, "sdxl_model": explorer_gen_model,},
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -473,7 +476,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        data={"file_image_2_uuid": face_image_file.uuid, "shot_uuid": shot_uuid},
+                        data={"file_image_2_uuid": face_image_file.uuid, "shot_uuid": shot_uuid, "sdxl_model": explorer_gen_model,},
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -504,6 +507,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                             "mask": st.session_state["mask_to_use"],
                             "input_image": st.session_state["editing_image"],
                             "project_uuid": project_uuid,
+                            "sdxl_model": explorer_gen_model,
                         },
                     )
 

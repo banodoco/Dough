@@ -18,7 +18,7 @@ def model_selector_element():
 
             # TODO: make a common interface for accessing different types of files
             all_files = os.listdir(checkpoints_dir)
-            ignored_model_list = ["dynamicrafter_512_interp_v1.ckpt", "sd_xl_refiner_1.0.safetensors"]
+            ignored_model_list = ["dynamicrafter_512_interp_v1.ckpt", "sd_xl_refiner_1.0.safetensors", "sd_xl_refiner_1.0_0.9vae.safetensors"]
             model_files = [
                 file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")
             ]

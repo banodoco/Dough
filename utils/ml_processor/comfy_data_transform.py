@@ -117,6 +117,7 @@ class ComfyDataTransform:
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_IMG2IMG)
 
         # workflow params
+        model = query.data["data"].get("sdxl_model", None)
         positive_prompt, negative_prompt = query.prompt, query.negative_prompt
         steps, cfg = 20, 7  # hardcoding values
         strength = round(query.strength / 100, 1)
@@ -124,6 +125,8 @@ class ComfyDataTransform:
         image_name = image.filename
 
         # updating params
+        workflow["1"]["inputs"]["ckpt_name"] = model
+        
         workflow["37:0"]["inputs"]["image"] = image_name
         workflow["42:0"]["inputs"]["text"] = positive_prompt
         workflow["42:1"]["inputs"]["text"] = negative_prompt
@@ -159,32 +162,6 @@ class ComfyDataTransform:
         )
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["13"]["inputs"]["image"] = image_name
-
-        return json.dumps(workflow), output_node_ids, [], []
-
-    @staticmethod
-    def transform_ipadapter_composition_workflow(query: MLQueryObject):
-        data_repo = DataRepo()
-        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IPADAPTER_COMPOSITION)
-
-        # workflow params
-        width, height = query.width, query.height
-        # width, height = determine_dimensions_for_sdxl(width, height)
-        positive_prompt, negative_prompt = query.prompt, query.negative_prompt
-        steps, cfg = query.num_inference_steps, query.guidance_scale
-        # low_threshold, high_threshold = query.low_threshold, query.high_threshold
-        image = data_repo.get_file_from_uuid(query.image_uuid)
-        image_name = image.filename
-
-        # updating params
-        workflow["9"]["inputs"]["seed"] = random_seed()
-        workflow["10"]["width"], workflow["10"]["height"] = width, height
-        # workflow["17"]["width"], workflow["17"]["height"] = width, height
-        workflow["7"]["inputs"]["text"], workflow["8"]["inputs"]["text"] = positive_prompt, negative_prompt
-        # workflow["12"]["inputs"]["low_threshold"], workflow["12"]["inputs"]["high_threshold"] = low_threshold, high_threshold
-        workflow["9"]["inputs"]["steps"], workflow["9"]["inputs"]["cfg"] = steps, cfg
-        workflow["6"]["inputs"]["image"] = image_name
-        workflow["28"]["inputs"]["weight"] = query.strength
 
         return json.dumps(workflow), output_node_ids, [], []
 
@@ -261,6 +238,7 @@ class ComfyDataTransform:
 
         # workflow params
         # node 'get_img_size' automatically fetches the size
+        model = query.data["data"].get("sdxl_model", None)
         positive_prompt, negative_prompt = query.prompt, query.negative_prompt
         steps, cfg = query.num_inference_steps, query.guidance_scale
         input_image = query.data.get("data", {}).get("input_image", None)
@@ -290,6 +268,7 @@ class ComfyDataTransform:
         # adding the combined image in query (and removing io buffers)
         query.data = {"data": {"file_combined_img": file.uuid}}
         # updating params
+        workflow["29"]["inputs"]["ckpt_name"] = model
         workflow["3"]["inputs"]["seed"] = random_seed()
         workflow["20"]["inputs"]["image"] = filename
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
@@ -314,12 +293,15 @@ class ComfyDataTransform:
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IP_ADAPTER_PLUS)
 
         # workflow params
+        model = query.data["data"].get("sdxl_model", None)
         width, height = query.width, query.height
         width, height = determine_dimensions_for_sdxl(width, height)
         steps, cfg = query.num_inference_steps, query.guidance_scale
         image = data_repo.get_file_from_uuid(query.image_uuid)
         image_name = image.filename
+        
         # updating params
+        workflow["4"]["inputs"]["ckpt_name"] = model
         workflow["3"]["inputs"]["seed"] = random_seed()
         workflow["5"]["width"], workflow["5"]["height"] = width, height
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
@@ -337,6 +319,7 @@ class ComfyDataTransform:
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IP_ADAPTER_FACE)
 
         # workflow params
+        model = query.data["data"].get("sdxl_model", None)
         width, height = query.width, query.height
         width, height = determine_dimensions_for_sdxl(width, height)
         steps, cfg = query.num_inference_steps, query.guidance_scale
@@ -345,6 +328,7 @@ class ComfyDataTransform:
         strength = query.strength
 
         # updating params
+        workflow["4"]["inputs"]["ckpt_name"] = model
         workflow["3"]["inputs"]["seed"] = random_seed()
         workflow["5"]["width"], workflow["5"]["height"] = width, height
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
@@ -362,6 +346,7 @@ class ComfyDataTransform:
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.IP_ADAPTER_FACE_PLUS)
 
         # workflow params
+        model = query.data["data"].get("sdxl_model", None)
         width, height = query.width, query.height
         width, height = determine_dimensions_for_sdxl(width, height)
         steps, cfg = query.num_inference_steps, query.guidance_scale
@@ -371,6 +356,7 @@ class ComfyDataTransform:
         image_name_2 = image_2.filename if image_2 else None
 
         # updating params
+        workflow["4"]["inputs"]["ckpt_name"] = model
         workflow["3"]["inputs"]["seed"] = random_seed()
         workflow["5"]["width"], workflow["5"]["height"] = width, height
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
