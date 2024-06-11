@@ -12,6 +12,12 @@ RUNNER_PROCESS_NAME = "banodoco_runner"
 RUNNER_PROCESS_PORT = 12345
 
 
+class TomlConfig(ExtendedEnum):
+    FILE_HASH = "file_hash"
+    NODE_VERSION = "node_version"
+    COMFY_VERSION = "comfy"
+
+
 class ImageStage(ExtendedEnum):
     SOURCE_IMAGE = "Source Image"
     MAIN_VARIANT = "Main Variant"
