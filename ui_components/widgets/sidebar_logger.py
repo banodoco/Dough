@@ -1,9 +1,7 @@
-import multiprocessing
-import os
-import sys
 import time
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
+from ui_components.methods.common_methods import stop_generations
 from utils.ml_processor.gpu.utils import COMFY_RUNNER_PATH, setup_comfy_runner
 import streamlit as st
 
@@ -66,6 +64,7 @@ def sidebar_logger(shot_uuid):
             st.error("No backlogs")
             time.sleep(0.7)
             st.rerun()
+
     y1, y2 = st.columns([1, 1])
     with y1:
         display_options = ["In Progress", "All", "Succeeded", "Failed", "Backlog"]
@@ -160,7 +159,9 @@ def sidebar_logger(shot_uuid):
             with c1:
                 input_params = json.loads(log.input_params)
                 try:
-                    workflow = input_params[InferenceParamType.ORIGIN_DATA.value]["settings"]["type_of_generation"]
+                    workflow = input_params[InferenceParamType.ORIGIN_DATA.value]["settings"][
+                        "type_of_generation"
+                    ]
                     st.caption(f"Workflow: {workflow}")
                 except Exception as e:
                     model_name = json.loads(log.output_details)["model_name"].split("/")[-1]
@@ -227,24 +228,8 @@ def sidebar_logger(shot_uuid):
                         log = data_repo.get_inference_log_from_uuid(log.uuid)
                         if log.status == InferenceStatus.IN_PROGRESS.value:
                             setup_comfy_runner()
+                            stop_generations([log])
 
-                            def stop_gen(log_uuid):
-                                sys.path.append(str(os.getcwd()) + COMFY_RUNNER_PATH[1:])
-                                from comfy_runner.inf import ComfyRunner
-
-                                comfy_runner = ComfyRunner()
-                                comfy_runner.stop_current_generation(log_uuid, 12)
-
-                            process = multiprocessing.Process(target=stop_gen, args=(str(log.uuid),))
-                            process.start()  # not waiting for this in the main thread
-
-                        res = data_repo.update_inference_log(
-                            uuid=log.uuid, status=InferenceStatus.CANCELED.value
-                        )
-                        if not res:
-                            st.error(err_msg)
-                        else:
-                            st.success(success_msg)
                         time.sleep(0.7)
                         st.rerun()
 
@@ -268,6 +253,22 @@ def sidebar_logger(shot_uuid):
 
                     elif inference_type == InferenceType.FRAME_INTERPOLATION.value:
                         jump_to_shot_button(origin_data.get("shot_uuid", ""), log.uuid)
+
+    if log_list and len(log_list):
+        b1, b2 = st.columns([1, 1])
+        with b1:
+            if st.button(label="Cancel all"):
+                log_filter_data = {
+                    "project_id": shot.project.uuid,
+                    "page": 1,
+                    "data_per_page": 1000,
+                    "status_list": [InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value],
+                }
+                all_log_list, total_count = data_repo.get_all_inference_log_list(**log_filter_data)
+                stop_generations(all_log_list)
+                st.rerun()
+        with b2:
+            st.button(label="Move all to backlog")
 
 
 def video_inference_image_grid(origin_data):

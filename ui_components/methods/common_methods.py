@@ -1,4 +1,5 @@
 import io
+import multiprocessing
 import random
 from typing import List
 import os
@@ -19,6 +20,7 @@ from shared.constants import (
     COMFY_BASE_PATH,
     OFFLINE_MODE,
     SERVER,
+    InferenceStatus,
     InferenceType,
     InternalFileTag,
     InternalFileType,
@@ -37,12 +39,19 @@ from ui_components.methods.file_methods import (
     save_or_host_file_bytes,
 )
 from ui_components.methods.video_methods import sync_audio_and_duration
-from ui_components.models import InternalFrameTimingObject, InternalProjectObject, InternalSettingObject
+from ui_components.models import (
+    InferenceLogObject,
+    InternalFrameTimingObject,
+    InternalProjectObject,
+    InternalSettingObject,
+)
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
 
 from ui_components.models import InternalFileObject
 from typing import Union
+
+from utils.ml_processor.gpu.utils import COMFY_RUNNER_PATH
 
 
 # TODO: image format is assumed to be PNG, change this later
@@ -1019,3 +1028,53 @@ def update_app_setting_keys():
 
 def random_seed():
     return random.randint(10**14, 10**15 - 1)
+
+
+# setting up multiprocessing queue for log termination
+# NOTE: for some reason concurrent future is not working properly with streamlit (it's not able to pickle methods on state refresh)
+def stop_gen(log):
+    data_repo = DataRepo()
+
+    in_progress = log.status == InferenceStatus.IN_PROGRESS.value
+    data_repo.update_inference_log(uuid=log.uuid, status=InferenceStatus.CANCELED.value)
+    print(f"DB update {log.uuid} ----------")
+
+    if in_progress:
+        sys.path.append(str(os.getcwd()) + COMFY_RUNNER_PATH[1:])
+        from comfy_runner.inf import ComfyRunner
+
+        comfy_runner = ComfyRunner()
+        comfy_runner.stop_current_generation(log.uuid, 12)
+        print(f"Process stopped {log.uuid} ----------")
+
+
+def stop_generations_worker():
+    queue = multiprocessing.Queue()
+    num_workers = 10
+
+    def worker():
+        while True:
+            log = queue.get()
+            if log is None:
+                break
+            stop_gen(log)
+
+    workers = [multiprocessing.Process(target=worker) for _ in range(num_workers)]
+    for w in workers:
+        w.start()
+
+    return queue, workers
+
+
+def stop_generations(logs: List[InferenceLogObject]):
+    queue, workers = stop_generations_worker()
+
+    for log in logs:
+        if log.status in [InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value]:
+            queue.put(log)
+
+    for _ in range(len(workers)):
+        queue.put(None)
+
+    for w in workers:
+        w.join()

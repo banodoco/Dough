@@ -346,23 +346,23 @@ class DBRepo:
         payload = {"data": InternalFileDto(file).data}
 
         return InternalResponse(payload, "file found", True)
-    
+
     def get_file_children_list(self, file_uuid, transformation_type_list=[]):
         file = InternalFileObject.objects.filter(uuid=file_uuid, is_disabled=False).first()
         if not file:
-            return InternalResponse({}, 'invalid file uuid', False)
-        
+            return InternalResponse({}, "invalid file uuid", False)
+
         file_list = file.get_child_entities(transformation_type_list)
-        payload = {"data": [ InternalFileDto(file).data for file in file_list]}
+        payload = {"data": [InternalFileDto(file).data for file in file_list]}
         return InternalResponse(payload, "success", True)
-    
+
     def get_file_parent_list(self, file_uuid, transformation_type_list=[]):
         file = InternalFileObject.objects.filter(uuid=file_uuid, is_disabled=False).first()
         if not file:
-            return InternalResponse({}, 'invalid file uuid', False)
-        
+            return InternalResponse({}, "invalid file uuid", False)
+
         file_list = file.get_parent_entities(transformation_type_list)
-        payload = {"data": [ InternalFileDto(file).data for file in file_list]}
+        payload = {"data": [InternalFileDto(file).data for file in file_list]}
         return InternalResponse(payload, "success", True)
 
     def delete_file_from_uuid(self, uuid):
@@ -674,7 +674,7 @@ class DBRepo:
         if model_name_list:
             log_list = log_list.filter(model_name__in=model_name_list)
 
-        log_list = log_list.exclude(model_id=None)  # hackish sol to exclude non-image/video logs
+        # log_list = log_list.exclude(model_id=None)  # hackish sol to exclude non-image/video logs
 
         paginator = Paginator(log_list, data_per_page)
         if page > paginator.num_pages or page < 1:
@@ -1658,7 +1658,7 @@ class DBRepo:
         return InternalResponse(
             {"data": "https://buy.stripe.com/test_8wMbJib8g3HK7vi5ko"}, "success", True
         )  # temp link
-        
+
     # lock
     def acquire_lock(self, key):
         with transaction.atomic():
