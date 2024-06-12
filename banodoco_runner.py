@@ -387,7 +387,7 @@ def check_and_update_db():
                 # fetching the current status again (as this could have been cancelled)
                 log = InferenceLog.objects.filter(id=log.id).first()
                 cur_status = log.status
-                if cur_status in [InferenceStatus.FAILED.value, InferenceStatus.CANCELED.value]:
+                if cur_status in [InferenceStatus.FAILED.value, InferenceStatus.CANCELED.value, InferenceStatus.BACKLOG.value]:
                     return
 
                 InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.IN_PROGRESS.value)
@@ -460,7 +460,7 @@ def check_and_update_db():
                 data = sai_data
                 log = InferenceLog.objects.filter(id=log.id).first()
                 cur_status = log.status
-                if cur_status in [InferenceStatus.FAILED.value, InferenceStatus.CANCELED.value]:
+                if cur_status in [InferenceStatus.FAILED.value, InferenceStatus.CANCELED.value, InferenceStatus.BACKLOG.value]:
                     return
 
                 InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.IN_PROGRESS.value)

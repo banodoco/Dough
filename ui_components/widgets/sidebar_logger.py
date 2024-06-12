@@ -268,7 +268,16 @@ def sidebar_logger(shot_uuid):
                 stop_generations(all_log_list)
                 st.rerun()
         with b2:
-            st.button(label="Move all to backlog")
+            if st.button(label="Move all to backlog"):
+                log_filter_data = {
+                    "project_id": shot.project.uuid,
+                    "page": 1,
+                    "data_per_page": 1000,
+                    "status_list": [InferenceStatus.QUEUED.value],
+                }
+                all_log_list, total_count = data_repo.get_all_inference_log_list(**log_filter_data)
+                data_repo.update_inference_log_list([log.uuid for log in all_log_list], status=InferenceStatus.BACKLOG.value)
+                st.rerun()
 
 
 def video_inference_image_grid(origin_data):
