@@ -11,7 +11,7 @@ if [ ! -d "$project_dir" ] && [ "$(basename "$current_dir")" != "Dough" ]; then
     # Clone the git repo
     git clone --depth 1 -b main https://github.com/banodoco/Dough.git "$project_dir"
     cd "$project_dir"
-    git clone --depth 1 -b feature/package https://github.com/piyushK52/comfy_runner.git
+    git clone --depth 1 -b main https://github.com/piyushK52/comfy_runner.git
     git clone https://github.com/comfyanonymous/ComfyUI.git
 
     # Create virtual environment

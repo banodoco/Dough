@@ -1,0 +1,385 @@
+import os
+import json
+
+import replicate.model
+import streamlit as st
+import replicate
+from PIL import Image
+
+from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType
+from ui_components.methods.common_methods import process_inference_output, save_new_image
+from ui_components.methods.file_methods import zoom_and_crop
+from ui_components.models import InternalSettingObject
+from ui_components.widgets.model_selector_element import model_selector_element
+from utils.constants import MLQueryObject, T2IModel
+from utils.data_repo.data_repo import DataRepo
+from utils.ml_processor.constants import ML_MODEL
+from utils.ml_processor.ml_interface import get_ml_client
+
+
+# NOTE: since running locally is very slow (comfy startup, models loading, other gens in process..)
+# rn we are accessing the replicate API directly, will switch to some other local method in the future
+def query_llama3(**kwargs):
+    os.environ["REPLICATE_API_TOKEN"] = os.getenv("REPLICATE_KEY", None)
+    model = replicate.models.get("meta/meta-llama-3-8b")
+    model_version = model.versions.get("9a9e68fc8695f5847ce944a5cecf9967fd7c64d0fb8c8af1d5bdcc71f03c5e47")
+
+    output = model_version.predict(**kwargs)
+    return output
+
+
+def edit_prompts(edit_text, list_of_prompts):
+    query_data = {
+        "top_p": 0.9,
+        "prompt": f"Could you update these based on the following instructions - \"{edit_text}\" - and return only the list of items with NO OTHER TEXT in the EXACT SAME FORMAT as it's in and the SAME number of items - don't introduce the text, just the list:\n\n{list_of_prompts}\n\nCould you update these based on the following instructions - \"{edit_text}\" - and return only the list of items with NO OTHER TEXT in the EXACT SAME FORMAT as it's in and the SAME number of items- don't introduce the text, just the list \n\nHere is the updated just the update list:",
+        "temperature": 0.7,
+        "length_penalty": 1,
+        "system_prompt": f"You are an extremely direct assistant. You only share the response with no introductory text or ANYTHING else - you mostly only edit existing items.",
+        "max_new_tokens": 756,
+        "prompt_template": "{prompt}",
+        "presence_penalty": 1.15,
+        "stop_sequences": " ",
+    }
+    output = query_llama3(**query_data)
+
+    proper_output = ""
+    for item in output:
+        if isinstance(item, dict) and "output" in item:
+            proper_output += item["output"]
+        else:
+            proper_output += str(item)
+
+    list_of_prompts = proper_output.strip()
+    list_of_prompts = list_of_prompts.split("\n")[0]
+    return list_of_prompts
+
+
+def generate_prompts(
+    prompt,
+    total_unique_prompts,
+    temperature=0.8,
+    presence_penalty=1.15,
+    top_p=0.9,
+    length_penalty=1,
+):
+    query_data = {
+        "top_p": top_p,
+        "prompt": f"Given an overall prompt, complete a series of sub-prompts each containing a concise story:\n\nOverall prompt:Story about Leonard Cohen's big day at the beach.\nNumber of items: 12\nSub-prompts:Leonard Cohen looking lying in bed|Leonard Cohen brushing teeth|Leonard Cohen smiling happily|Leonard Cohen driving in car, morning|Leonard Cohen going for a swim at beach|Leonard Cohen sitting on beach towel|Leonard Cohen building sandcastle|Leonard Cohen eating sandwich|Leonard Cohen walking along beach|Leonard Cohen getting out of water at seaside|Leonard Cohen driving home, dark outside|Leonard Cohen lying in bed smiling|close of of Leonard Cohen asleep in bed\n---\nOverall prompt: Visualizing the first day of spring\nNumber of items: 24\nSub-prompts:Frost melting off grass|Sun rising over dewy meadow|Sparrows chirping in tree|Puddles drying up|Bees flying out of hive|Flowers blooming in garden bed|Robin landing on branch|Steam rising from cup of coffee|Morning light creeping through curtains|Wind rustling through leaves|Crocus bulbs pushing through soil|Buds swelling on branches|Birds singing in chorus|Sun shining through rain-soaked pavement|Droplets clinging to spider's web|Green shoots bursting forth from roots|Garden hose dripping water|Fog burning off lake|Light filtering through stained glass window|Hummingbird sipping nectar from flower|Warm breeze rustling through wheat field|Birch trees donning new green coat|Solar eclipse casting shadow on path|Birds returning to their nests\n---\nOverall prompt:{prompt}\nNumber of items: {total_unique_prompts}\nSub-prompts:",
+        "temperature": temperature,
+        "length_penalty": length_penalty,
+        "max_new_tokens": 756,
+        "prompt_template": "{prompt}",
+        "presence_penalty": presence_penalty,
+        "stop_sequences": " ",
+    }
+    output = query_llama3(**query_data)
+
+    proper_output = ""
+    for item in output:
+        if isinstance(item, dict) and "output" in item:
+            proper_output += item["output"]
+        else:
+            proper_output += str(item)
+
+    list_of_prompts = proper_output.split("\n")[0]
+    return list_of_prompts
+
+
+# TODO_1:
+"""
+1. add support for the sd3 workflow (without style preset settings)
+2. save state in session_state and update in the databse whenever a new setting is run
+"""
+
+
+def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None, timing_uuid=None):
+    data_repo = DataRepo()
+    project_settings: InternalSettingObject = data_repo.get_project_setting(project_uuid)
+
+    default_prompt_list = "Small seedling sprouting from sand|Desert sun beating down on small plant|small plant plant growing in desert|Vines growing in all directions across dessert|huge plant growing over roads|plant taking growing over man's legs|plant growing over man's face|huge plant growing over building|zoomed out view of plant city|plants everywhere|huge plant growing over white house|huge plant growing over eifel tower|plant growing over ocean|huge plant growing over pyradmids|zoomed out view of entirely green surface|zoomed out view of entirely green planet"
+    default_generation_text = "Story about about a plant growing out of a bleak desert, expanding to cover everything and every person and taking over the world, final view of green planet from space, inspirational, each should be about the plant"
+    generate_mode, edit_mode = "generate_mode", "edit_mode"
+    style_reference_list = [
+        {
+            "name": "Cutsey Baby Blue",
+            "images": [
+                "https://i.ibb.co/HrkKwGx/IPAdapter-01084-1.png",
+                "https://i.ibb.co/d0zcrHS/Comfy-UI-temp-juama-00007-1.png",
+                "https://i.ibb.co/FgQqY18/IPAdapter-01075-1.png",
+            ],
+        },
+    ]
+
+    with st.expander("Inspiration engine", expanded=True):
+        if "generated_images" not in st.session_state:
+            st.session_state["generated_images"] = []
+            st.session_state["list_of_prompts"] = default_prompt_list
+            st.session_state["prompt_generation_mode"] = generate_mode
+
+        # ---------------- PROMPT GUIDANCE ---------------------
+        st.markdown("#### Prompt guidance")
+        h2, h1 = st.columns([1, 1])
+        with h2:
+            list_of_prompts = st.text_area(
+                "List of prompts separated by |:",
+                value=st.session_state["list_of_prompts"],
+                height=300,
+                help="This is a list of prompts that will be used to generate images. Each prompt should be separated by a '|'.",
+            )
+            number_of_prompts = len(list_of_prompts.split("|"))
+            st.caption(f"Total number of prompts: {number_of_prompts}")
+
+        with h1:
+            i1, i2 = st.columns([1, 1])
+            with i1:
+                if st.session_state["prompt_generation_mode"] == generate_mode:
+                    st.success("Generate prompts")
+                else:
+                    st.warning("Edit prompts")
+            with i2:
+                if st.session_state["prompt_generation_mode"] == generate_mode:
+                    if st.button("Switch to edit prompt mode", use_container_width=True):
+                        st.session_state["prompt_generation_mode"] = edit_mode
+                        st.rerun()
+                else:
+                    if st.button("Switch to generate prompt mode", use_container_width=True):
+                        st.session_state["prompt_generation_mode"] = generate_mode
+                        st.rerun()
+
+            if st.session_state["prompt_generation_mode"] == generate_mode:
+                generaton_text = st.text_area(
+                    "Text to generate prompts:",
+                    value=default_generation_text,
+                    height=100,
+                    help="This will be used to generate prompts and will overwrite the existing prompts.",
+                )
+                subprompt1, subprompt2 = st.columns([2, 1])
+                with subprompt1:
+                    total_unique_prompts = st.slider(
+                        "Roughly, how many unique prompts:", min_value=4, max_value=32, step=4, value=16
+                    )
+                with subprompt2:
+                    creativity = st.slider(
+                        "Creativity:", min_value=0, max_value=11, step=1, value=8, help="😏"
+                    )
+                    temperature = creativity / 10
+
+                total_unique_prompts = total_unique_prompts + 5
+
+                if st.button(
+                    "Generate prompts",
+                    use_container_width=True,
+                    help="This will overwrite the existing prompts.",
+                ):
+                    st.session_state["list_of_prompts"] = generate_prompts(
+                        generaton_text,
+                        total_unique_prompts,
+                        temperature=temperature,
+                    )
+                    st.rerun()
+
+            else:
+                edit_text = st.text_area(
+                    "Text to edit prompts:",
+                    value="Mention the fact that it's a sunny day.",
+                    height=100,
+                )
+                if st.button("Edit Prompts", use_container_width=True):
+                    st.session_state["list_of_prompts"] = edit_prompts(edit_text, list_of_prompts)
+                    st.rerun()
+
+        i1, i2, _ = st.columns([1, 1, 0.5])
+        with i1:
+            additonal_description_text = st.text_area(
+                "Additional description text:",
+                help="This will be attached to each prompt.",
+            )
+        with i2:
+            negative_prompt = st.text_area(
+                "Negative prompt:",
+                help="This is a list of things to avoid in the generated images.",
+            )
+
+        # ----------------- STYLE GUIDANCE ----------------------
+        st.markdown("***")
+        st.markdown("#### Style guidance")
+
+        type_of_model = st.radio(
+            "Type of model:",
+            T2IModel.value_list(),
+            help="Select the type of model to use for image generation.",
+            horizontal=True,
+        )
+
+        model1, model2, _ = st.columns([1.5, 1, 0.5])
+        with model1:
+            if type_of_model == T2IModel.SDXL.value:
+                model = model_selector_element()
+
+            elif type_of_model == T2IModel.SD3.value:
+                model = "Stable Diffusion 3"
+
+        if type_of_model == T2IModel.SD3.value:
+            with model1:
+                st.info("Style references aren't yet supported for Stable Diffusion 3.")
+
+        else:
+            type_of_style_input = st.radio(
+                "Type of style references:",
+                [
+                    "Choose From List",
+                    "Upload Images",
+                    "None",
+                ],
+                help="Select the type of style input to use for image generation.",
+                horizontal=True,
+            )
+            with model2:
+                st.write("")
+                lightening = st.checkbox("Lightening Model", help="Generate images faster with less quality.")
+
+            if type_of_style_input == "Upload Images":
+                columns = st.columns(3)
+                list_of_style_references = []
+                for i, col in enumerate(columns):
+                    with col:
+                        uploaded_img = st.file_uploader(
+                            f"Upload style reference {i+1}:", type=["jpg", "jpeg", "png", "webp"]
+                        )
+                        if uploaded_img:
+                            uploaded_img = (
+                                Image.open(uploaded_img)
+                                if not isinstance(uploaded_img, Image.Image)
+                                else uploaded_img
+                            )
+                            uploaded_img = zoom_and_crop(
+                                uploaded_img, project_settings.width, project_settings.height
+                            )
+                            list_of_style_references.append(uploaded_img)
+                            st.image(uploaded_img)
+
+            elif type_of_style_input == "Choose From List":
+                items = style_reference_list
+
+                preset_style, preset_images = None, None
+                preset1, preset2 = st.columns([0.5, 1])
+                with preset1:
+                    preset_style = st.selectbox(
+                        "Choose a style preset:",
+                        [item["name"] for item in items],
+                        help="Select a style preset to use for image generation.",
+                    )
+                with preset2:
+                    preset_images = items[[item["name"] for item in items].index(preset_style)]["images"]
+                    cols = st.columns(len(preset_images))
+                    for i, col in enumerate(cols):
+                        with col:
+                            st.image(preset_images[i])
+                    list_of_style_references = preset_images
+
+            inf1, inf2 = st.columns([1, 2])
+            with inf1:
+                style_influence = st.slider(
+                    "Style influence:",
+                    min_value=0.0,
+                    max_value=1.0,
+                    step=0.1,
+                    value=0.5,
+                    help="This is the influence of the style on the generated images.",
+                )
+
+        text1, _ = st.columns([1, 1])
+        with text1:
+            additional_style_text = st.text_area(
+                "Additional style guidance text:",
+                help="This is additonal text that will be used to guide the style.",
+            )
+
+        # ---------------------- GENERATION SETTINGS --------------------------
+        st.markdown("***")
+        st.markdown("#### Generation settings")
+
+        prompt1, prompt2 = st.columns([1.25, 1])
+        with prompt1:
+            images_per_prompt = st.slider("Images per prompt:", min_value=1, max_value=64, step=4, value=4)
+
+        with prompt2:
+            if number_of_prompts == 1:
+                st.info(
+                    f"{number_of_prompts} prompt for {images_per_prompt} images per prompt makes a total of **{number_of_prompts*images_per_prompt} images**."
+                )
+            else:
+                st.info(
+                    f"{number_of_prompts} prompts for {images_per_prompt} images per prompt makes a total of **{number_of_prompts*images_per_prompt} images**."
+                )
+
+        test_first_prompt = st.toggle(
+            "Test only first prompt", value=False, help="This will only generate images for the first prompt."
+        )
+
+        if test_first_prompt:
+            list_of_prompts = list_of_prompts.split("|")[0]
+
+        if st.button("Generate images"):
+            ml_client = get_ml_client()
+
+            input_image_file_list = []
+            for img in list_of_style_references:
+                input_image_file = save_new_image(img, project_uuid)
+                input_image_file_list.append(input_image_file)
+
+            prompts_to_be_processed = list_of_prompts.split("|")
+            for _, image_prompt in enumerate(prompts_to_be_processed):
+                for _ in range(images_per_prompt):
+                    data = {
+                        "shot_uuid": shot_uuid,
+                        "img_uuid_list": json.dumps([f.uuid for f in input_image_file_list]),
+                        "additonal_description_text": additonal_description_text,
+                        "additional_style_text": additional_style_text,
+                        "sdxl_model": model,
+                        "lightening": lightening,
+                        "width": project_settings.width,
+                        "height": project_settings.height,
+                    }
+
+                    for idx, f in enumerate(input_image_file_list):
+                        data[f"file_uuid_{idx}"] = f.uuid
+
+                    query_obj = MLQueryObject(
+                        timing_uuid=None,
+                        model_uuid=None,
+                        image_uuid=None,
+                        guidance_scale=5,
+                        seed=-1,
+                        num_inference_steps=30,
+                        strength=style_influence,
+                        adapter_type=None,
+                        prompt=image_prompt,
+                        negative_prompt=negative_prompt,
+                        height=project_settings.height,
+                        width=project_settings.width,
+                        data=data,
+                    )
+
+                    output, log = ml_client.predict_model_output_standardized(
+                        ML_MODEL.creative_image_gen,
+                        query_obj,
+                        queue_inference=QUEUE_INFERENCE_QUERIES,
+                    )
+
+                    if log:
+                        inference_data = {
+                            "inference_type": (
+                                InferenceType.GALLERY_IMAGE_GENERATION.value
+                                if position == "explorer"
+                                else InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value
+                            ),
+                            "output": output,
+                            "log_uuid": log.uuid,
+                            "project_uuid": project_uuid,
+                            "timing_uuid": timing_uuid,
+                            "promote_new_generation": False,
+                            "shot_uuid": shot_uuid if shot_uuid else "explorer",
+                        }
+
+                        process_inference_output(**inference_data)

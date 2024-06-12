@@ -1,53 +1,56 @@
 {
-  "1": {
+  "15": {
     "inputs": {
-      "Model": "llama-2-7b.Q5_0.gguf",
-      "n_ctx": 0
+      "ckpt_name": "Meta-Llama-3-8B-Instruct-Q5_K_M.gguf",
+      "max_ctx": 2048,
+      "gpu_layers": 100,
+      "n_threads": 2
     },
-    "class_type": "Load LLM Model Basic",
+    "class_type": "LLMLoader",
     "_meta": {
-      "title": "Load LLM Model Basic"
+      "title": "LLMLoader"
     }
   },
-  "14": {
+  "24": {
+    "inputs": {
+      "string": "Looking at the examples 1 and 2 below generate the sub-prompts for the FINAL EXAMPLE containing a concise story:\n\nEXAMPLE 1:\nOverall prompt:Story about Leonard Cohen's big day at the beach.\nNumber of items: 12 \nSub-prompts:Leonard Cohen looking lying in bed|Leonard Cohen brushing teeth|Leonard Cohen smiling happily|Leonard Cohen driving in car, morning|Leonard Cohen going for a swim at beach|Leonard Cohen sitting on beach towel|Leonard Cohen building sandcastle|Leonard Cohen eating sandwich|Leonard Cohen walking along beach|Leonard Cohen getting out of water at seaside|Leonard Cohen driving home, dark outside|Leonard Cohen lying in bed smiling|close of of Leonard Cohen asleep in bed---\n\nEXAMPLE 2:\nOverall prompt: Visualizing the first day of spring \nNumber of items: 24 \nSub-prompts:Frost melting off grass|Sun rising over dewy meadow|Sparrows chirping in tree|Puddles drying up|Bees flying out of hive|Flowers blooming in garden bed|Robin landing on branch|Steam rising from cup of coffee|Morning light creeping through curtains|Wind rustling through leaves|Crocus bulbs pushing through soil|Buds swelling on branches|Birds singing in chorus|Sun shining through rain-soaked pavement|Droplets clinging to spider's web|Green shoots bursting forth from roots|Garden hose dripping water|Fog burning off lake|Light filtering through stained glass window|Hummingbird sipping nectar from flower|Warm breeze rustling through wheat field|Birch trees donning new green coat|Solar eclipse casting shadow on path|Birds returning to their nests---\n\nFINAL EXAMPLE:\nOverall prompt:a magical dark castle \nNumber of items: 5 \nSub-prompts:"
+    },
+    "class_type": "String Literal",
+    "_meta": {
+      "title": "String Literal"
+    }
+  },
+  "26": {
     "inputs": {
       "text": [
-        "15",
+        "30",
         0
       ]
     },
     "class_type": "ShowText|pysssss",
     "_meta": {
-      "title": "Show Text 🐍"
+      "title": "✴️ U-NAI Get Text"
     }
   },
-  "15": {
+  "30": {
     "inputs": {
-      "prompt": "write a poem on finding your way in about 100 words",
-      "suffix": "",
-      "max_response_tokens": 500,
-      "temperature": 0.8,
-      "top_p": 0.95,
-      "min_p": 0.05,
-      "typical_p": 1,
-      "echo": false,
-      "frequency_penalty": 0,
-      "presence_penalty": 0,
-      "repeat_penalty": 1.1,
-      "top_k": 40,
-      "seed": 273,
-      "tfs_z": 1,
-      "mirostat_mode": 0,
-      "mirostat_tau": 5,
-      "mirostat_eta": 0.1,
-      "LLM": [
-        "1",
+      "prompt": [
+        "24",
+        0
+      ],
+      "temperature": 0.15,
+      "attribute_name": "Sub-prompts",
+      "attribute_type": "str",
+      "attribute_description": "generate Sub-prompts:",
+      "categories": "",
+      "model": [
+        "15",
         0
       ]
     },
-    "class_type": "Call LLM Advanced",
+    "class_type": "StructuredOutput",
     "_meta": {
-      "title": "Call LLM Advanced"
+      "title": "Structured Output"
     }
   }
 }
