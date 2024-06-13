@@ -6,11 +6,12 @@ import streamlit as st
 import replicate
 from PIL import Image
 
-from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType
+from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType, ProjectMetaData
 from ui_components.methods.common_methods import process_inference_output, save_new_image
 from ui_components.methods.file_methods import zoom_and_crop
-from ui_components.models import InternalSettingObject
+from ui_components.models import InternalProjectObject, InternalSettingObject
 from ui_components.widgets.model_selector_element import model_selector_element
+from utils.common_utils import acquire_lock, release_lock
 from utils.constants import MLQueryObject, T2IModel
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL
@@ -95,6 +96,7 @@ def generate_prompts(
 def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None, timing_uuid=None):
     data_repo = DataRepo()
     project_settings: InternalSettingObject = data_repo.get_project_setting(project_uuid)
+    project: InternalProjectObject = data_repo.get_project_from_uuid(uuid=project_uuid)
 
     default_prompt_list = "Small seedling sprouting from sand|Desert sun beating down on small plant|small plant plant growing in desert|Vines growing in all directions across dessert|huge plant growing over roads|plant taking growing over man's legs|plant growing over man's face|huge plant growing over building|zoomed out view of plant city|plants everywhere|huge plant growing over white house|huge plant growing over eifel tower|plant growing over ocean|huge plant growing over pyradmids|zoomed out view of entirely green surface|zoomed out view of entirely green planet"
     default_generation_text = "Story about about a plant growing out of a bleak desert, expanding to cover everything and every person and taking over the world, final view of green planet from space, inspirational, each should be about the plant"
@@ -111,10 +113,33 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
     ]
 
     with st.expander("Inspiration engine", expanded=True):
-        if "generated_images" not in st.session_state:
-            st.session_state["generated_images"] = []
-            st.session_state["list_of_prompts"] = default_prompt_list
-            st.session_state["prompt_generation_mode"] = generate_mode
+        default_form_values = {
+            "generated_images": [],
+            "list_of_prompts": default_prompt_list,
+            "prompt_generation_mode": generate_mode,
+            "insp_text_prompt": default_generation_text,
+            "total_unique_prompt": 16,
+            "insp_creativity": 8,
+            "insp_edit_prompt": 8,
+            "insp_additional_desc": "",
+            "insp_additional_neg_desc": "",
+            "insp_model_idx": 0,
+            "insp_type_of_style": 0,
+            "insp_style_influence": 0.5,
+            "insp_additional_style_text": "",
+            "insp_img_per_prompt": 4,
+            "insp_test_mode": False,
+            "insp_lightening_mode": False,
+        }
+
+        project_meta_data = json.loads(project.meta_data) if project.meta_data else {}
+        prev_settings = project_meta_data.get(ProjectMetaData.INSP_VALUES.value, None)
+
+        settings_to_load = prev_settings or default_form_values
+        # picking up default values
+        for k, v in settings_to_load.items():
+            if k not in st.session_state:
+                st.session_state[k] = v
 
         # ---------------- PROMPT GUIDANCE ---------------------
         st.markdown("#### Prompt guidance")
@@ -126,6 +151,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 height=300,
                 help="This is a list of prompts that will be used to generate images. Each prompt should be separated by a '|'.",
             )
+
+            st.session_state["list_of_prompts"] = list_of_prompts
             number_of_prompts = len(list_of_prompts.split("|"))
             st.caption(f"Total number of prompts: {number_of_prompts}")
 
@@ -149,20 +176,36 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             if st.session_state["prompt_generation_mode"] == generate_mode:
                 generaton_text = st.text_area(
                     "Text to generate prompts:",
-                    value=default_generation_text,
+                    value=st.session_state["insp_text_prompt"],
                     height=100,
                     help="This will be used to generate prompts and will overwrite the existing prompts.",
                 )
+
+                st.session_state["insp_text_prompt"] = generaton_text
                 subprompt1, subprompt2 = st.columns([2, 1])
                 with subprompt1:
                     total_unique_prompts = st.slider(
-                        "Roughly, how many unique prompts:", min_value=4, max_value=32, step=4, value=16
+                        "Roughly, how many unique prompts:",
+                        min_value=4,
+                        max_value=32,
+                        step=4,
+                        value=st.session_state["total_unique_prompt"],
                     )
+
+                    st.session_state["total_unique_prompt"] = total_unique_prompts
+
                 with subprompt2:
                     creativity = st.slider(
-                        "Creativity:", min_value=0, max_value=11, step=1, value=8, help="😏"
+                        "Creativity:",
+                        min_value=0,
+                        max_value=11,
+                        step=1,
+                        value=st.session_state["insp_creativity"],
+                        help="😏",
                     )
                     temperature = creativity / 10
+
+                    st.session_state["insp_creativity"] = creativity
 
                 total_unique_prompts = total_unique_prompts + 5
 
@@ -181,9 +224,11 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             else:
                 edit_text = st.text_area(
                     "Text to edit prompts:",
-                    value="Mention the fact that it's a sunny day.",
+                    value=st.session_state["insp_edit_prompt"],
                     height=100,
                 )
+
+                st.session_state["insp_edit_prompt"] = edit_text
                 if st.button("Edit Prompts", use_container_width=True):
                     st.session_state["list_of_prompts"] = edit_prompts(edit_text, list_of_prompts)
                     st.rerun()
@@ -192,13 +237,19 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
         with i1:
             additonal_description_text = st.text_area(
                 "Additional description text:",
+                value=st.session_state["insp_additional_desc"],
                 help="This will be attached to each prompt.",
             )
+            st.session_state["insp_additional_desc"] = additonal_description_text
+
         with i2:
             negative_prompt = st.text_area(
                 "Negative prompt:",
+                value=st.session_state["insp_additional_neg_desc"],
                 help="This is a list of things to avoid in the generated images.",
             )
+
+            st.session_state["insp_additional_neg_desc"] = negative_prompt
 
         # ----------------- STYLE GUIDANCE ----------------------
         st.markdown("***")
@@ -207,9 +258,13 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
         type_of_model = st.radio(
             "Type of model:",
             T2IModel.value_list(),
+            index=st.session_state["insp_model_idx"],
             help="Select the type of model to use for image generation.",
             horizontal=True,
         )
+
+        if T2IModel.value_list().index(type_of_model) != st.session_state["insp_model_idx"]:
+            st.session_state["insp_model_idx"] = T2IModel.value_list().index(type_of_model)
 
         model1, model2, _ = st.columns([1.5, 1, 0.5])
         with model1:
@@ -224,19 +279,31 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 st.info("Style references aren't yet supported for Stable Diffusion 3.")
 
         else:
+            input_type_list = [
+                "Choose From List",
+                "Upload Images",
+                "None",
+            ]
             type_of_style_input = st.radio(
                 "Type of style references:",
-                [
-                    "Choose From List",
-                    "Upload Images",
-                    "None",
-                ],
+                input_type_list,
+                index=st.session_state["insp_type_of_style"],
                 help="Select the type of style input to use for image generation.",
                 horizontal=True,
             )
+
+            if input_type_list.index(type_of_style_input) != st.session_state["insp_type_of_style"]:
+                st.session_state["insp_type_of_style"] = input_type_list.index(type_of_style_input)
+
             with model2:
                 st.write("")
-                lightening = st.checkbox("Lightening Model", help="Generate images faster with less quality.")
+                lightening = st.checkbox(
+                    "Lightening Model",
+                    help="Generate images faster with less quality.",
+                    value=st.session_state["insp_lightening_mode"],
+                )
+
+                st.session_state["insp_lightening_mode"] = lightening
 
             if type_of_style_input == "Upload Images":
                 columns = st.columns(3)
@@ -284,16 +351,21 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     min_value=0.0,
                     max_value=1.0,
                     step=0.1,
-                    value=0.5,
+                    value=st.session_state["insp_style_influence"],
                     help="This is the influence of the style on the generated images.",
                 )
+
+                st.session_state["insp_style_influence"] = style_influence
 
         text1, _ = st.columns([1, 1])
         with text1:
             additional_style_text = st.text_area(
                 "Additional style guidance text:",
+                value=st.session_state["insp_additional_style_text"],
                 help="This is additonal text that will be used to guide the style.",
             )
+
+            st.session_state["insp_additional_style_text"] = additional_style_text
 
         # ---------------------- GENERATION SETTINGS --------------------------
         st.markdown("***")
@@ -301,7 +373,15 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
         prompt1, prompt2 = st.columns([1.25, 1])
         with prompt1:
-            images_per_prompt = st.slider("Images per prompt:", min_value=1, max_value=64, step=4, value=4)
+            images_per_prompt = st.slider(
+                "Images per prompt:",
+                min_value=1,
+                max_value=64,
+                step=4,
+                value=st.session_state["insp_img_per_prompt"],
+            )
+
+            st.session_state["insp_img_per_prompt"] = images_per_prompt
 
         with prompt2:
             if number_of_prompts == 1:
@@ -314,21 +394,27 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 )
 
         test_first_prompt = st.toggle(
-            "Test only first prompt", value=False, help="This will only generate images for the first prompt."
+            "Test only first prompt",
+            value=st.session_state["insp_test_mode"],
+            help="This will only generate images for the first prompt.",
         )
+
+        st.session_state["insp_test_mode"] = test_first_prompt
 
         if test_first_prompt:
             list_of_prompts = list_of_prompts.split("|")[0]
 
+        # ------------------ GENERATE --------------------------
         if st.button("Generate images"):
             ml_client = get_ml_client()
 
             input_image_file_list = []
+            atleast_one_log_created = False
             for img in list_of_style_references:
                 input_image_file = save_new_image(img, project_uuid)
                 input_image_file_list.append(input_image_file)
 
-            prompts_to_be_processed = list_of_prompts.split("|")
+            prompts_to_be_processed = [item for item in list_of_prompts.split("|") if item]
             for _, image_prompt in enumerate(prompts_to_be_processed):
                 for _ in range(images_per_prompt):
                     data = {
@@ -383,3 +469,23 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         }
 
                         process_inference_output(**inference_data)
+
+                        # saving state here (this ensures that generation was successfully created with the current settings)
+                        if not atleast_one_log_created:
+                            atleast_one_log_created = True
+                            data_dict = {}
+                            for k, _ in default_form_values.items():
+                                if k in st.session_state:
+                                    data_dict[k] = st.session_state[k]
+
+                            key = project_uuid
+                            # TODO: make storing and retrieving meta data into a single method
+                            if acquire_lock(key):
+                                project: InternalProjectObject = data_repo.get_project_from_uuid(uuid=key)
+                                if project:
+                                    meta_data = json.loads(project.meta_data) if project.meta_data else {}
+                                    meta_data[ProjectMetaData.INSP_VALUES.value] = data_dict
+                                    data_repo.update_project(
+                                        uuid=project.uuid, meta_data=json.dumps(meta_data)
+                                    )
+                                release_lock(key)

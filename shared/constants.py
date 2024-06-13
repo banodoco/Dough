@@ -125,6 +125,7 @@ class ProjectMetaData(ExtendedEnum):
     BACKGROUND_IMG_LIST = "background_img_list"
     SHOT_VIDEO_UPDATE = "shot_video_update"
     ACTIVE_SHOT = "active_shot"  # the most recent shot where the generation took place or where "load settings" was clicked (settings of this will be used as default)
+    INSP_VALUES = "insp_values"
 
 
 class SortOrder(ExtendedEnum):
