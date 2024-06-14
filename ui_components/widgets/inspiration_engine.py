@@ -86,13 +86,6 @@ def generate_prompts(
     return list_of_prompts
 
 
-# TODO_1:
-"""
-1. add support for the sd3 workflow (without style preset settings)
-2. save state in session_state and update in the databse whenever a new setting is run
-"""
-
-
 def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None, timing_uuid=None):
     data_repo = DataRepo()
     project_settings: InternalSettingObject = data_repo.get_project_setting(project_uuid)
@@ -130,6 +123,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             "insp_img_per_prompt": 4,
             "insp_test_mode": False,
             "insp_lightening_mode": False,
+            "insp_selected_model": None,
         }
 
         project_meta_data = json.loads(project.meta_data) if project.meta_data else {}
@@ -265,18 +259,32 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
         if T2IModel.value_list().index(type_of_model) != st.session_state["insp_model_idx"]:
             st.session_state["insp_model_idx"] = T2IModel.value_list().index(type_of_model)
+            st.rerun()
 
         model1, model2, _ = st.columns([1.5, 1, 0.5])
         with model1:
             if type_of_model == T2IModel.SDXL.value:
-                model = model_selector_element()
+                model = model_selector_element(
+                    type=T2IModel.SDXL.value,
+                    position=position,
+                    selected_model=st.session_state["insp_selected_model"],
+                )
 
             elif type_of_model == T2IModel.SD3.value:
-                model = "Stable Diffusion 3"
+                model = model_selector_element(
+                    type=T2IModel.SD3.value,
+                    position=position,
+                    selected_model=st.session_state["insp_selected_model"],
+                )
+
+            if model != st.session_state["insp_selected_model"]:
+                st.session_state["insp_selected_model"] = model
 
         if type_of_model == T2IModel.SD3.value:
             with model1:
                 st.info("Style references aren't yet supported for Stable Diffusion 3.")
+            style_influence = 4.5  # this will actually go into cfg
+            list_of_style_references = []
 
         else:
             input_type_list = [
@@ -292,8 +300,10 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 horizontal=True,
             )
 
+            list_of_style_references = []
             if input_type_list.index(type_of_style_input) != st.session_state["insp_type_of_style"]:
                 st.session_state["insp_type_of_style"] = input_type_list.index(type_of_style_input)
+                st.rerun()
 
             with model2:
                 st.write("")
@@ -307,7 +317,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
             if type_of_style_input == "Upload Images":
                 columns = st.columns(3)
-                list_of_style_references = []
                 for i, col in enumerate(columns):
                     with col:
                         uploaded_img = st.file_uploader(
@@ -417,41 +426,67 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             prompts_to_be_processed = [item for item in list_of_prompts.split("|") if item]
             for _, image_prompt in enumerate(prompts_to_be_processed):
                 for _ in range(images_per_prompt):
-                    data = {
-                        "shot_uuid": shot_uuid,
-                        "img_uuid_list": json.dumps([f.uuid for f in input_image_file_list]),
-                        "additonal_description_text": additonal_description_text,
-                        "additional_style_text": additional_style_text,
-                        "sdxl_model": model,
-                        "lightening": lightening,
-                        "width": project_settings.width,
-                        "height": project_settings.height,
-                    }
 
-                    for idx, f in enumerate(input_image_file_list):
-                        data[f"file_uuid_{idx}"] = f.uuid
+                    if type_of_model == T2IModel.SDXL.value:
+                        data = {
+                            "shot_uuid": shot_uuid,
+                            "img_uuid_list": json.dumps([f.uuid for f in input_image_file_list]),
+                            "additonal_description_text": additonal_description_text,
+                            "additional_style_text": additional_style_text,
+                            "sdxl_model": model,
+                            "lightening": lightening,
+                            "width": project_settings.width,
+                            "height": project_settings.height,
+                        }
 
-                    query_obj = MLQueryObject(
-                        timing_uuid=None,
-                        model_uuid=None,
-                        image_uuid=None,
-                        guidance_scale=5,
-                        seed=-1,
-                        num_inference_steps=30,
-                        strength=style_influence,
-                        adapter_type=None,
-                        prompt=image_prompt,
-                        negative_prompt=negative_prompt,
-                        height=project_settings.height,
-                        width=project_settings.width,
-                        data=data,
-                    )
+                        for idx, f in enumerate(input_image_file_list):
+                            data[f"file_uuid_{idx}"] = f.uuid
 
-                    output, log = ml_client.predict_model_output_standardized(
-                        ML_MODEL.creative_image_gen,
-                        query_obj,
-                        queue_inference=QUEUE_INFERENCE_QUERIES,
-                    )
+                        query_obj = MLQueryObject(
+                            timing_uuid=None,
+                            model_uuid=None,
+                            image_uuid=None,
+                            guidance_scale=5,
+                            seed=-1,
+                            num_inference_steps=30,
+                            strength=style_influence,
+                            adapter_type=None,
+                            prompt=image_prompt,
+                            negative_prompt=negative_prompt,
+                            height=project_settings.height,
+                            width=project_settings.width,
+                            data=data,
+                        )
+
+                        output, log = ml_client.predict_model_output_standardized(
+                            ML_MODEL.sd3_local,
+                            query_obj,
+                            queue_inference=QUEUE_INFERENCE_QUERIES,
+                        )
+
+                    # for sd3 model
+                    else:
+                        query_obj = MLQueryObject(
+                            timing_uuid=None,
+                            model_uuid=None,
+                            image_uuid=None,
+                            guidance_scale=5,
+                            seed=-1,
+                            num_inference_steps=30,
+                            strength=style_influence,
+                            adapter_type=None,
+                            prompt=f"{image_prompt}, {additonal_description_text}, {additional_style_text}",
+                            negative_prompt=negative_prompt,
+                            height=project_settings.height,
+                            width=project_settings.width,
+                            data={"shift": 3.0, "model": model},  # default value
+                        )
+
+                        output, log = ml_client.predict_model_output_standardized(
+                            ML_MODEL.sd3_local,
+                            query_obj,
+                            queue_inference=QUEUE_INFERENCE_QUERIES,
+                        )
 
                     if log:
                         inference_data = {

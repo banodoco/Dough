@@ -73,6 +73,10 @@ MODEL_PATH_DICT = {
         "workflow_path": "comfy_workflows/creative_image_gen.json",
         "output_node_id": [9],
     },
+    ComfyWorkflow.SD3: {
+        "workflow_path": "comfy_workflows/sd3_workflow_api.json",
+        "output_node_id": [233],
+    },
 }
 
 
@@ -885,6 +889,31 @@ class ComfyDataTransform:
         return json.dumps(workflow), output_node_ids, extra_models_list, []
 
     @staticmethod
+    def transform_sd3_workflow(query: MLQueryObject):
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SD3)
+
+        # workflow params
+        query_data = query.data["data"]
+        shift = query_data.get("shift", 3.0)
+        model = query_data.get("model", "")
+        height, width = query.height, query.width
+        width, height = determine_dimensions_for_sdxl(width, height)
+        image_prompt, negative_prompt = query.prompt, query.negative_prompt
+        seed = random_seed()
+
+        workflow["6"]["inputs"]["text"] = image_prompt
+        workflow["71"]["inputs"]["text"] = negative_prompt
+
+        workflow["13"]["inputs"]["shift"] = shift
+
+        workflow["252"]["inputs"]["ckpt_name"] = model
+        workflow["271"]["inputs"]["seed"] = seed
+        workflow["135"]["inputs"]["width"] = width
+        workflow["135"]["inputs"]["height"] = height
+
+        return json.dumps(workflow), output_node_ids, [], []
+
+    @staticmethod
     def transform_creative_img_gen_workflow(query: MLQueryObject):
         data_repo = DataRepo()
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.CREATIVE_IMAGE_GEN)
@@ -1025,6 +1054,7 @@ MODEL_WORKFLOW_MAP = {
     ML_MODEL.video_upscaler.workflow_name: ComfyDataTransform.transform_video_upscaler_workflow,
     ML_MODEL.motion_lora_trainer.workflow_name: ComfyDataTransform.transform_motion_lora_workflow,
     ML_MODEL.creative_image_gen.workflow_name: ComfyDataTransform.transform_creative_img_gen_workflow,
+    ML_MODEL.sd3_local.workflow_name: ComfyDataTransform.transform_sd3_workflow,
 }
 
 
