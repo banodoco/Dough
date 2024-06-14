@@ -253,8 +253,9 @@ def sidebar_logger(shot_uuid):
 
                     elif inference_type == InferenceType.FRAME_INTERPOLATION.value:
                         jump_to_shot_button(origin_data.get("shot_uuid", ""), log.uuid)
-
+    
     if log_list and len(log_list):
+        st.markdown("***")
         b1, b2 = st.columns([1, 1])
         with b1:
             if st.button(label="Cancel all"):

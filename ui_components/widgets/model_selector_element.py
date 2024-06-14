@@ -10,11 +10,11 @@ from utils.constants import T2IModel
 def model_selector_element(type=T2IModel.SDXL.value, position="explorer", selected_model=None):
     tab1, tab2 = st.tabs(["Choose Model", "Download Models"])
     default_model = (
-        "sd_xl_base_1.0.safetensors" if type == T2IModel.SDXL.value else "sd3_medium_incl_clips.safetensors"
+        "Juggernaut-XL_v9" if type == T2IModel.SDXL.value else "sd3_medium_incl_clips.safetensors"
     )
 
     
-    info_msg = "Default model base SDXL would be selected" if type == T2IModel.SDXL.value else "Default model base SD3 medium fp8 would be selected"
+    info_msg = "Juggernaut-XL_v9 will be selected as default" if type == T2IModel.SDXL.value else "Default model base SD3 medium fp8 would be selected"
     checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
 
     with tab1:
@@ -74,35 +74,15 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
     with tab2:
         # NOTE: makes sure to add 'xl' in these filenames because that is the only filter rn for sdxl models (will update in the future)
         sdxl_model_download_list = {
-            "Base SDXL": {
-                "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true",
-                "filename": "sd_xl_base_1.0.safetensors",
-                "desc": "Base SDXL model",
+            "Juggernaut-XL_v9": {
+                "url": "https://huggingface.co/RunDiffusion/Juggernaut-XL-v9/resolve/main/Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
+                "filename": "Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
+                "desc": "Good general purpose model",
             },
-            "Anima Pencil XL": {
-                "url": "https://civitai.com/api/download/models/505691",
-                "filename": "animaPencilXL_v400.safetensors",
-                "desc": "Good for anime art",
-            },
-            "Araminta XL": {
-                "url": "https://civitai.com/api/download/models/561766",
-                "filename": "theAramintaxl_cv5.safetensors",
-                "desc": "General purpose model",
-            },
-            "MKLAN Art XL": {
-                "url": "https://civitai.com/api/download/models/528345",
-                "filename": "mklanArtVersionxl_mklan2311art.safetensors",
-                "desc": "Suited for creative outputs",
-            },
-            "MKLAN Realistic XL": {
-                "url": "https://civitai.com/api/download/models/528311",
-                "filename": "mklanRealisticxl_mklan230realistic.safetensors",
-                "desc": "Realistic model",
-            },
-            "Traditional Painting XL": {
-                "url": "https://civitai.com/api/download/models/529269",
-                "filename": "traditionalPaintingxl_v02.safetensors",
-                "desc": "Traditional paiting style",
+            "Juggernaut-XL-Lightning": {
+                "url": "https://huggingface.co/RunDiffusion/Juggernaut-XL-Lightning/resolve/main/Juggernaut_RunDiffusionPhoto2_Lightning_4Steps.safetensors",
+                "filename": "Juggernaut_RunDiffusionPhoto2_Lightning_4Steps.safetensors",
+                "desc": "Faster version of Juggernaut-XL",
             },
         }
 

@@ -931,82 +931,84 @@ class ComfyDataTransform:
 
         # workflow params
         query_data = query.data["data"]
-        height, width = query_data.get("height", 512), query_data.get("width", 512)
+        width, height = determine_dimensions_for_sdxl(query_data.get("width", 512), query_data.get("height", 512))        
         image_prompt, negative_prompt = query.prompt, query.negative_prompt
         file_uuid_list = json.loads(query_data.get("img_uuid_list", json.dumps([])))
-        lightening = query_data.get("lightening", False)
+        lightning = query_data.get("lightning", False)
         additional_description_text = query_data.get("additional_description_text", "")
         additional_style_text = query_data.get("additional_style_text", "")
         model = query_data.get("model", "sd_xl_base_1.0.safetensors")
         seed = random_seed()
         style_strength = query.strength
 
-        def add_nth_node(workflow, n, img_file: InternalFileObject):
+        def add_nth_node(workflow, n, img_file: InternalFileObject, weight_style):
             ipa_node_idx_list = []
             for k, v in workflow.items():
                 if v["class_type"] == "IPAdapterStyleComposition":
                     ipa_node_idx_list.append(int(k))  # NOTE: in some weird af workflow these are floats
 
-            ipa_node_idx_list.sort(reverse=True)
-            if len(ipa_node_idx_list) == n:
-                # nth node is already present (not checking for connections, assuming they are correctly set)
-                for k, v in workflow.items():
-                    if v["class_type"] == "LoadImage":
-                        workflow[str(k)]["inputs"]["image"] = img_file.filename
-                        break
-                return ipa_node_idx_list[0]
-            else:
-                # creating new nodes (not handling the case if there are multiple nodes)
-                # starting idx from 100, just to be safe
-                node_idx = 100 + n * 4
-                workflow[str(node_idx)] = {
-                    "inputs": {"image": img_file.filename, "upload": "image"},
-                    "class_type": "LoadImage",
-                    "_meta": {"title": "Load Image"},
-                }
-                workflow[str(node_idx + 1)] = {
-                    "inputs": {
-                        "type": "dissolve",
-                        "strength": 0.7000000000000001,
-                        "blur": 0,
-                        "image_optional": [str(node_idx), 0],
-                    },
-                    "class_type": "IPAdapterNoise",
-                    "_meta": {"title": "IPAdapter Noise"},
-                }
-                workflow[str(node_idx + 2)] = {
-                    "inputs": {
-                        "weight_style": 0.7000000000000001,
-                        "weight_composition": 0,
-                        "expand_style": True,
-                        "combine_embeds": "concat",
-                        "start_at": 0,
-                        "end_at": 0.85,
-                        "embeds_scaling": "K+V w/ C penalty",
-                        "model": [str(ipa_node_idx_list[0]), 0],
-                        "ipadapter": ["11", 1],
-                        "image_style": [str(node_idx), 0],
-                        "image_composition": [str(node_idx), 0],
-                        "image_negative": [str(node_idx + 1), 0],
-                    },
-                    "class_type": "IPAdapterStyleComposition",
-                    "_meta": {"title": "IPAdapter Style & Composition SDXL"},
-                }
+            ipa_node_idx_list.sort(reverse=True)        
+            # creating new nodes (not handling the case if there are multiple nodes)
+            # starting idx from 100, just to be safe
+            node_idx = 100 + n * 4
+            workflow[str(node_idx)] = {
+                "inputs": {"image": img_file.filename, "upload": "image"},
+                "class_type": "LoadImage",
+                "_meta": {"title": "Load Image"},
+            }
+            workflow[str(node_idx + 1)] = {
+                "inputs": {
+                    "type": "dissolve",
+                    "strength": 0.7000000000000001,
+                    "blur": 0,
+                    "image_optional": [str(node_idx), 0],
+                },
+                "class_type": "IPAdapterNoise",
+                "_meta": {"title": "IPAdapter Noise"},
+            }
+            workflow[str(node_idx + 2)] = {
+                "inputs": {
+                    "weight_style": weight_style,
+                    "weight_composition": 0,
+                    "expand_style": True,
+                    "combine_embeds": "concat",
+                    "start_at": 0,
+                    "end_at": 0.85,
+                    "embeds_scaling": "K+V w/ C penalty",
+                    "model": ["11", 0] if n == 1 else [str(ipa_node_idx_list[0]), 0],
+                    "ipadapter": ["11", 1],
+                    "image_style": [str(node_idx), 0],
+                    "image_composition": [str(node_idx), 0],
+                    "image_negative": [str(node_idx + 1), 0],
+                },
+                "class_type": "IPAdapterStyleComposition",
+                "_meta": {"title": "IPAdapter Style & Composition SDXL"},
+            }
 
-                workflow["3"]["inputs"]["model"] = [str(node_idx + 2), 0]
+            workflow["3"]["inputs"]["model"] = [str(node_idx + 2), 0]
 
-                return node_idx + 2  # ipadapter style composition node idx
+            return node_idx + 2  # ipadapter style composition node idx
 
-        # this will create nodes require to feed num_imgs in the workflow
-        # all newly created ipa nodes will have the same kwargs settings
-        def add_reference_images(workflow, img_list, **kwargs):
-            for i in range(len(img_list)):
-                # creating a node
-                node_idx = add_nth_node(workflow, i + 1, img_list[i])
-                # setting params
+        def add_reference_images(workflow, img_list, style_strength, **kwargs):
+            num_images = len(img_list)                        
+            # Initial weight_style based on the number of images
+            weight_style = 0.7 if num_images == 1 else 0.4 if num_images == 2 else 0.29 if num_images == 3 else 0.7
+        
+            # Adjust weight_style based on style_strength
+            style_adjustment = (style_strength - 0.5) * 10 * 0.01
+            weight_style += style_adjustment            
+
+            for i in range(num_images):
+                # Creating a node
+                node_idx = add_nth_node(workflow, i + 1, img_list[i], weight_style)
+                # Setting params
                 for k, v in kwargs.items():
                     if k in workflow[str(node_idx)]["inputs"]:
                         workflow[str(node_idx)]["inputs"][k] = v
+
+            return workflow
+
+
 
         # updating params
         workflow["3"]["inputs"]["seed"] = seed
@@ -1021,13 +1023,14 @@ class ComfyDataTransform:
 
         workflow["7"]["inputs"]["text"] = negative_prompt
 
-        if lightening:
+        if lightning:
             workflow["3"]["inputs"]["cfg"] = 1.9
             workflow["3"]["inputs"]["steps"] = 12
             workflow["3"]["inputs"]["scheduler"] = "sgm_uniform"
 
         img_list, _ = data_repo.get_all_file_list(uuid__in=file_uuid_list, is_disabled=False)
-        add_reference_images(workflow, img_list, weight_style=style_strength)
+        
+        workflow = add_reference_images(workflow, img_list, style_strength=style_strength)
 
         extra_model_list = [
             {
@@ -1042,8 +1045,8 @@ class ComfyDataTransform:
             },
         ]
 
-        # with open("ws.json", "w") as file:
-        #     file.write(json.dumps(workflow))
+        with open("ws.json", "w") as file:
+            file.write(json.dumps(workflow))
 
         return json.dumps(workflow), output_node_ids, extra_model_list, []
 

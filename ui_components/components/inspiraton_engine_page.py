@@ -40,8 +40,8 @@ def inspiration_engine_page(shot_uuid: str, h2):
                 sidebar_logger(st.session_state["shot_uuid"])
 
             st.write("")
-            with st.expander("🪄 Timeline", expanded=True):
-                timeline_view(shot_uuid, "🪄 Timeline", view="sidebar")
+            with st.expander("🪄 Shots", expanded=True):
+                timeline_view(shot_uuid, "🪄 Shots", view="sidebar")
 
             
 

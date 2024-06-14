@@ -122,7 +122,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             "insp_additional_style_text": "",
             "insp_img_per_prompt": 4,
             "insp_test_mode": False,
-            "insp_lightening_mode": False,
+            "insp_lightning_mode": False,
             "insp_selected_model": None,
         }
 
@@ -303,8 +303,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             with model1:
                 st.info("Style references aren't yet supported for Stable Diffusion 3.")
             style_influence = 4.5  # this will actually go into cfg
-            list_of_style_references = []
-
+            
         else:
             input_type_list = [
                 "Choose From List",
@@ -319,41 +318,66 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 horizontal=True,
             )
 
-            list_of_style_references = []
+
+                
+            
             if input_type_list.index(type_of_style_input) != st.session_state["insp_type_of_style"]:
                 st.session_state["insp_type_of_style"] = input_type_list.index(type_of_style_input)
                 st.rerun()
 
             with model2:
                 st.write("")
-                lightening = st.checkbox(
+                lightning = st.checkbox(
                     "Lightning Model",
                     help="Generate images faster with less quality.",
-                    value=st.session_state["insp_lightening_mode"],
+                    value=st.session_state["insp_lightning_mode"],
                 )
 
-                if st.session_state["insp_lightening_mode"] != lightening:
-                    st.session_state["insp_lightening_mode"] = lightening
+                if st.session_state["insp_lightning_mode"] != lightning:
+                    st.session_state["insp_lightning_mode"] = lightning
                     st.rerun()
 
             if type_of_style_input == "Upload Images":
-                columns = st.columns(3)
-                for i, col in enumerate(columns):
-                    with col:
+
+                # if st.session_state['list_of_style_references'] starts with https:/ set it to empty list
+
+
+                if 'list_of_style_references' not in st.session_state:
+                    st.session_state['list_of_style_references'] = []
+
+                if len(st.session_state['list_of_style_references']) < 3:
+                    h1, h2 = st.columns([1, 1.5])
+                    with h1:
                         uploaded_img = st.file_uploader(
-                            f"Upload style reference {i+1}:", type=["jpg", "jpeg", "png", "webp"]
-                        )
+                                    f"Upload style reference:", type=["jpg", "jpeg", "png", "webp"]
+                                )
                         if uploaded_img:
-                            uploaded_img = (
-                                Image.open(uploaded_img)
-                                if not isinstance(uploaded_img, Image.Image)
-                                else uploaded_img
-                            )
-                            uploaded_img = zoom_and_crop(
-                                uploaded_img, project_settings.width, project_settings.height
-                            )
-                            list_of_style_references.append(uploaded_img)
-                            st.image(uploaded_img)
+                            if st.button(f"Upload style reference"):
+                                st.session_state['list_of_style_references'].append(uploaded_img)
+                                st.rerun()
+                else:
+                    st.warning("You can only upload 3 style references.")
+
+                columns = st.columns(3)
+
+                for i, col in enumerate(columns):
+                    if i < len(st.session_state['list_of_style_references']):
+                        with col:
+                            img = st.session_state['list_of_style_references'][i]
+                            if img is not None:
+                                display_img = (
+                                    Image.open(img)
+                                    if not isinstance(img, Image.Image)
+                                    else img
+                                )
+                                display_img = zoom_and_crop(
+                                    display_img, 512, 512
+                                )
+                                st.image(display_img)
+                                if st.button(f"Remove style reference {i+1}", use_container_width=True):
+                                    # Remove the image from the list
+                                    st.session_state['list_of_style_references'].pop(i)
+                                    st.rerun()
 
             elif type_of_style_input == "Choose From List":
                 items = style_reference_list
@@ -371,10 +395,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     cols = st.columns(len(preset_images))
                     for i, col in enumerate(cols):
                         with col:
-                            st.image(preset_images[i])
-                    list_of_style_references = preset_images
+                            st.image(preset_images[i])                    
 
-            inf1, inf2 = st.columns([1, 2])
+            inf1, inf2 = st.columns([2, 2])
             with inf1:
                 style_influence = st.slider(
                     "Style influence:",
@@ -442,12 +465,16 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
         # ------------------ GENERATE --------------------------
         st.markdown("***")
-        if st.button("Generate images"):
+        if st.button("Generate images",type="primary"):
+
+            if type_of_style_input == "Choose From List":
+                st.session_state['list_of_style_references'] = preset_images
+
             ml_client = get_ml_client()
 
             input_image_file_list = []
             atleast_one_log_created = False
-            for img in list_of_style_references:
+            for img in st.session_state['list_of_style_references']:
                 input_image_file = save_new_image(img, project_uuid)
                 input_image_file_list.append(input_image_file)
 
@@ -463,7 +490,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             "additonal_description_text": additonal_description_text,
                             "additional_style_text": additional_style_text,
                             "sdxl_model": model,
-                            "lightening": lightening,
+                            "lightning": lightning,
                             "width": project_settings.width,
                             "height": project_settings.height,
                         }
@@ -488,7 +515,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         )
 
                         output, log = ml_client.predict_model_output_standardized(
-                            ML_MODEL.sdxl,
+                            ML_MODEL.creative_image_gen,
                             query_obj,
                             queue_inference=QUEUE_INFERENCE_QUERIES,
                         )
@@ -554,3 +581,5 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         uuid=project.uuid, meta_data=json.dumps(meta_data)
                                     )
                                 release_lock(key)
+        
+            st.rerun()
