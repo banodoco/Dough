@@ -415,7 +415,7 @@ def select_sd_model_element(shot_uuid, default_model):
         model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
         ignored_model_list = ["dynamicrafter_512_interp_v1.ckpt"]
         model_files = [
-            file for file in model_files if "xl" not in file.lower() and file not in ignored_model_list
+            file for file in model_files if "xl" not in file.lower() and "sd3" not in file.lower() and file not in ignored_model_list
         ]
 
     sd_model_dict = {

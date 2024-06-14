@@ -12,17 +12,6 @@
       "title": "CLIP Text Encode (Prompt)"
     }
   },
-  "11": {
-    "inputs": {
-      "clip_name1": "clip_g.safetensors",
-      "clip_name2": "clip_g.safetensors",
-      "clip_name3": "clip_g.safetensors"
-    },
-    "class_type": "TripleCLIPLoader",
-    "_meta": {
-      "title": "TripleCLIPLoader"
-    }
-  },
   "13": {
     "inputs": {
       "shift": 3,

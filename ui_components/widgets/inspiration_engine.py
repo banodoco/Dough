@@ -146,7 +146,10 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 help="This is a list of prompts that will be used to generate images. Each prompt should be separated by a '|'.",
             )
 
-            st.session_state["list_of_prompts"] = list_of_prompts
+            if st.session_state["list_of_prompts"] != list_of_prompts:
+                st.session_state["list_of_prompts"] = list_of_prompts
+                st.rerun()
+
             number_of_prompts = len(list_of_prompts.split("|"))
             st.caption(f"Total number of prompts: {number_of_prompts}")
 
@@ -175,7 +178,10 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     help="This will be used to generate prompts and will overwrite the existing prompts.",
                 )
 
-                st.session_state["insp_text_prompt"] = generaton_text
+                if st.session_state["insp_text_prompt"] != generaton_text:
+                    st.session_state["insp_text_prompt"] = generaton_text
+                    st.rerun()
+                    
                 subprompt1, subprompt2 = st.columns([2, 1])
                 with subprompt1:
                     total_unique_prompts = st.slider(
@@ -186,7 +192,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         value=st.session_state["total_unique_prompt"],
                     )
 
-                    st.session_state["total_unique_prompt"] = total_unique_prompts
+                    if st.session_state["total_unique_prompt"] != total_unique_prompts:
+                        st.session_state["total_unique_prompt"] = total_unique_prompts
+                        st.rerun()
 
                 with subprompt2:
                     creativity = st.slider(
@@ -199,7 +207,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     )
                     temperature = creativity / 10
 
-                    st.session_state["insp_creativity"] = creativity
+                    if st.session_state["insp_creativity"] != creativity:
+                        st.session_state["insp_creativity"] = creativity
+                        st.rerun()
 
                 total_unique_prompts = total_unique_prompts + 5
 
@@ -222,7 +232,10 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     height=100,
                 )
 
-                st.session_state["insp_edit_prompt"] = edit_text
+                if st.session_state["insp_edit_prompt"] != edit_text:
+                    st.session_state["insp_edit_prompt"] = edit_text
+                    st.rerun()
+
                 if st.button("Edit Prompts", use_container_width=True):
                     st.session_state["list_of_prompts"] = edit_prompts(edit_text, list_of_prompts)
                     st.rerun()
@@ -234,7 +247,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 value=st.session_state["insp_additional_desc"],
                 help="This will be attached to each prompt.",
             )
-            st.session_state["insp_additional_desc"] = additonal_description_text
+            if st.session_state["insp_additional_desc"] != additonal_description_text:
+                st.session_state["insp_additional_desc"] = additonal_description_text
+                st.rerun()
 
         with i2:
             negative_prompt = st.text_area(
@@ -243,7 +258,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 help="This is a list of things to avoid in the generated images.",
             )
 
-            st.session_state["insp_additional_neg_desc"] = negative_prompt
+            if st.session_state["insp_additional_neg_desc"] != negative_prompt:
+                st.session_state["insp_additional_neg_desc"] = negative_prompt
+                st.rerun()
 
         # ----------------- STYLE GUIDANCE ----------------------
         st.markdown("***")
@@ -279,6 +296,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
             if model != st.session_state["insp_selected_model"]:
                 st.session_state["insp_selected_model"] = model
+                st.rerun()
+
 
         if type_of_model == T2IModel.SD3.value:
             with model1:
@@ -313,7 +332,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     value=st.session_state["insp_lightening_mode"],
                 )
 
-                st.session_state["insp_lightening_mode"] = lightening
+                if st.session_state["insp_lightening_mode"] != lightening:
+                    st.session_state["insp_lightening_mode"] = lightening
+                    st.rerun()
 
             if type_of_style_input == "Upload Images":
                 columns = st.columns(3)
@@ -364,7 +385,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     help="This is the influence of the style on the generated images.",
                 )
 
-                st.session_state["insp_style_influence"] = style_influence
+                if st.session_state["insp_style_influence"] != style_influence:
+                    st.session_state["insp_style_influence"] = style_influence
+                    st.rerun()
 
         text1, _ = st.columns([1, 1])
         with text1:
@@ -374,7 +397,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 help="This is additonal text that will be used to guide the style.",
             )
 
-            st.session_state["insp_additional_style_text"] = additional_style_text
+            if st.session_state["insp_additional_style_text"] != additional_style_text:
+                st.session_state["insp_additional_style_text"] = additional_style_text
+                st.rerun()
 
         # ---------------------- GENERATION SETTINGS --------------------------
         st.markdown("***")
@@ -390,7 +415,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 value=st.session_state["insp_img_per_prompt"],
             )
 
-            st.session_state["insp_img_per_prompt"] = images_per_prompt
+            if st.session_state["insp_img_per_prompt"] != images_per_prompt:
+                st.session_state["insp_img_per_prompt"] = images_per_prompt
+                st.rerun()
 
         with prompt2:
             if number_of_prompts == 1:
@@ -429,6 +456,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 for _ in range(images_per_prompt):
 
                     if type_of_model == T2IModel.SDXL.value:
+                        print("--------- generating sdxl")
                         data = {
                             "shot_uuid": shot_uuid,
                             "img_uuid_list": json.dumps([f.uuid for f in input_image_file_list]),
@@ -460,13 +488,14 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         )
 
                         output, log = ml_client.predict_model_output_standardized(
-                            ML_MODEL.sd3_local,
+                            ML_MODEL.sdxl,
                             query_obj,
                             queue_inference=QUEUE_INFERENCE_QUERIES,
                         )
 
                     # for sd3 model
                     else:
+                        print("--------- generating sd3")
                         query_obj = MLQueryObject(
                             timing_uuid=None,
                             model_uuid=None,

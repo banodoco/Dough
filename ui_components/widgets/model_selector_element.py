@@ -14,7 +14,7 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
     )
 
     
-    info_msg = "Default model base SDXL would be selected" if T2IModel.SDXL.value else None
+    info_msg = "Default model base SDXL would be selected" if type == T2IModel.SDXL.value else "Default model base SD3 medium fp8 would be selected"
     checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
 
     with tab1:

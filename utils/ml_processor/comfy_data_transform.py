@@ -910,8 +910,19 @@ class ComfyDataTransform:
         workflow["271"]["inputs"]["seed"] = seed
         workflow["135"]["inputs"]["width"] = width
         workflow["135"]["inputs"]["height"] = height
+        
+        # adding download link if it's the default model
+        extra_model_list = []
+        if model == "sd3_medium_incl_clips.safetensors":
+            extra_model_list = [
+                {
+                    "url": "https://huggingface.co/lone682/sd3/resolve/main/sd3_medium_incl_clips_t5xxlfp8.safetensors?download=true",
+                    "filename": "sd3_medium_incl_clips.safetensors",
+                    "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
+                }
+            ]
 
-        return json.dumps(workflow), output_node_ids, [], []
+        return json.dumps(workflow), output_node_ids, extra_model_list, []
 
     @staticmethod
     def transform_creative_img_gen_workflow(query: MLQueryObject):
