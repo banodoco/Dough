@@ -13,8 +13,8 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
         "sd_xl_base_1.0.safetensors" if type == T2IModel.SDXL.value else "sd3_medium_incl_clips.safetensors"
     )
 
-    sd3_license = "SD3 is for non-commercial use only. For fair use and license please read this [license](https://huggingface.co/stabilityai/stable-diffusion-3-medium/blob/main/LICENSE)"
-    info_msg = "Default model base SDXL would be selected" if T2IModel.SDXL.value else sd3_license
+    
+    info_msg = "Default model base SDXL would be selected" if T2IModel.SDXL.value else None
     checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
 
     with tab1:
@@ -148,6 +148,4 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
             )
             st.rerun()
 
-    if type == T2IModel.SD3.value:
-        st.info(sd3_license)
     return explorer_gen_model

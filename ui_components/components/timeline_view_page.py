@@ -8,13 +8,11 @@ from zipfile import ZipFile
 from io import BytesIO
 from ui_components.constants import CreativeProcessType
 from ui_components.methods.video_methods import upscale_video
-from ui_components.widgets.inspiration_engine import inspiration_engine_element
 from ui_components.widgets.timeline_view import timeline_view
 from ui_components.components.explorer_page import gallery_image_view
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 from ui_components.widgets.sidebar_logger import sidebar_logger
-from ui_components.components.explorer_page import generate_images_element
 
 
 def timeline_view_page(shot_uuid: str, h2):
@@ -157,18 +155,14 @@ def timeline_view_page(shot_uuid: str, h2):
                                 )
 
         # start_time = time.time()
-        timeline_view(st.session_state["shot_uuid"], st.session_state["view"])
-        st.markdown("### ✨ Generate images")
-        st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+        timeline_view(st.session_state["shot_uuid"], st.session_state["view"], view="main")
 
         # end_time = time.time()
         # print("///////////////// timeline laoded in: ", end_time - start_time)
         # generate_images_element(
         #     position="explorer", project_uuid=project_uuid, timing_uuid=None, shot_uuid=None
         # )
-        inspiration_engine_element(
-            position="explorer", project_uuid=project_uuid, timing_uuid=None, shot_uuid=None
-        )
+
         # end_time = time.time()
         # print("///////////////// generate img laoded in: ", end_time - start_time)
         gallery_image_view(

@@ -6,6 +6,7 @@ from ui_components.widgets.sidebar_logger import sidebar_logger
 from ui_components.components.app_settings_page import app_settings_page
 from ui_components.components.shortlist_page import shortlist_page
 from ui_components.components.timeline_view_page import timeline_view_page
+from ui_components.components.inspiraton_engine_page import inspiration_engine_page
 from ui_components.components.adjust_shot_page import adjust_shot_page
 from ui_components.components.animate_shot_page import animate_shot_page
 from ui_components.components.explorer_page import explorer_page
@@ -174,6 +175,7 @@ def setup_app_ui():
                     subpage_page_map = {
                         # timeline
                         AppSubPage.SHOTS.value: CreativeProcessPage.SHOTS.value,
+                        AppSubPage.INSPIRATION_ENGINE.value: CreativeProcessPage.INSPIRATION_ENGINE.value,
                         # adjust shot
                         AppSubPage.ADJUST_SHOT.value: CreativeProcessPage.ADJUST_SHOT.value,
                         AppSubPage.KEYFRAME.value: CreativeProcessPage.ADJUST_SHOT.value,
@@ -228,7 +230,7 @@ def setup_app_ui():
                     _ = option_menu(
                         None,
                         creative_process_pages,
-                        icons=["bookshelf", "aspect-ratio", "lightning-charge", "stopwatch"],
+                        icons=["bookshelf", "lightning-charge","aspect-ratio", "film"],
                         menu_icon="cast",
                         orientation="vertical",
                         key="page_opt_menu",
@@ -243,9 +245,12 @@ def setup_app_ui():
 
                     if st.session_state["page"] != creative_process_pages[1]:
                         st.session_state["current_frame_sidebar_selector"] = 0
-
+                
                 if st.session_state["page"] == "Explore":
                     explorer_page(st.session_state["project_uuid"])
+
+                elif st.session_state["page"] == "Inspiration Engine":
+                    inspiration_engine_page(st.session_state["shot_uuid"], h2)
 
                 elif st.session_state["page"] == "Shortlist":
                     shortlist_page(st.session_state["project_uuid"])

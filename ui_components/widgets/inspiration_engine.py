@@ -308,7 +308,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             with model2:
                 st.write("")
                 lightening = st.checkbox(
-                    "Lightening Model",
+                    "Lightning Model",
                     help="Generate images faster with less quality.",
                     value=st.session_state["insp_lightening_mode"],
                 )
@@ -384,7 +384,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
         with prompt1:
             images_per_prompt = st.slider(
                 "Images per prompt:",
-                min_value=1,
+                min_value=4,
                 max_value=64,
                 step=4,
                 value=st.session_state["insp_img_per_prompt"],
@@ -414,6 +414,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             list_of_prompts = list_of_prompts.split("|")[0]
 
         # ------------------ GENERATE --------------------------
+        st.markdown("***")
         if st.button("Generate images"):
             ml_client = get_ml_client()
 

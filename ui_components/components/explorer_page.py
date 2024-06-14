@@ -662,7 +662,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]
 
     if shortlist is False:
-        st.markdown("***")
+        
         st.markdown("### 🖼️ Generated images")
         st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
@@ -688,6 +688,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         # selecting specific shot for adding to the filter
         if "shot_chooser" in view:
             with h1:
+                '''
+                
                 shot_chooser_1, shot_chooser_2 = st.columns([1, 1])
                 with shot_chooser_1:
                     options = ["Timeline", "Specific shots", "All"]
@@ -725,6 +727,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
 
                     else:
                         shot_uuid_list = []
+                '''
+                shot_uuid_list = []
         else:
             shot_uuid_list = []
 

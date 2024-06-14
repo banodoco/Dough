@@ -23,54 +23,56 @@ from ui_components.widgets.shot_view import (
 )
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
-
-
-def timeline_view(shot_uuid, stage):
+def timeline_view(shot_uuid, stage, view='sidebar'):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     shot_list = data_repo.get_shot_list(shot.project.uuid)
-    timing_list: List[InternalFrameTimingObject] = shot.timing_list
 
-    _, header_col_2 = st.columns([5.5, 1.5])
+    if view == 'main':
+        _, header_col_2 = st.columns([5.5, 1.5])
+        items_per_row = 4
+    else:  # sidebar view
+        items_per_row = 1
 
-    # with header_col_2:
-
-    items_per_row = 4
     for idx, shot in enumerate(shot_list):
         timing_list: List[InternalFrameTimingObject] = shot.timing_list
         if idx % items_per_row == 0:
-            grid = st.columns(items_per_row)
+            if view == 'main':
+                grid = st.columns(items_per_row)
+            else:
+                grid = [st.container()]  # Use the sidebar as the grid for sidebar view
 
-        with grid[idx % items_per_row]:
+        with grid[idx % items_per_row]:  # Correct indexing for main view
             st.info(f"##### {shot.name}")
-            if shot.main_clip and shot.main_clip.location:
+            if shot.main_clip and shot.main_clip.location and view == 'main':
                 individual_video_display_element(shot.main_clip)
             else:
-                for i in range(0, len(timing_list), items_per_row):
-                    if i % items_per_row == 0:
-                        grid_timing = st.columns(items_per_row)
-                    for j in range(items_per_row):
-                        # idx = i + j
-                        if i + j < len(timing_list):
-                            with grid_timing[j]:
-                                timing = timing_list[i + j]
-                                if timing.primary_image and timing.primary_image.location:
-                                    st.image(timing.primary_image.location, use_column_width=True)
+                # Ensure a minimum of 4 columns for images
+                num_columns = max(len(timing_list), 4)
+                grid_timing = st.columns(num_columns)
+                for j, timing in enumerate(timing_list):
+                    with grid_timing[j]:
+                        if timing.primary_image and timing.primary_image.location:
+                            st.image(timing.primary_image.location, use_column_width=True)
+                # Fill remaining columns if any
+                for j in range(len(timing_list), num_columns):
+                    with grid_timing[j]:
+                        st.empty()
 
-            switch1, switch2 = st.columns([1, 1])
-            with switch1:
-                shot_adjustment_button(shot)
-            with switch2:
-                shot_animation_button(shot)
+            if view == 'main':
+                switch1, switch2 = st.columns([1, 1])
+                with switch1:
+                    shot_adjustment_button(shot)
+                with switch2:
+                    shot_animation_button(shot)
 
-            with st.expander("Details & settings:", expanded=False):
-                update_shot_name(shot.uuid)
-                # update_shot_duration(shot.uuid)
-                move_shot_buttons(shot, "side")
-                delete_shot_button(shot.uuid)
-                duplicate_shot_button(shot.uuid, position="timeline_view")
-                if shot.main_clip:
-                    create_video_download_button(shot.main_clip.location, tag="main_clip")
+                with st.expander("Details & settings:", expanded=False):
+                    update_shot_name(shot.uuid)
+                    move_shot_buttons(shot, "side")
+                    delete_shot_button(shot.uuid)
+                    duplicate_shot_button(shot.uuid, position="timeline_view")
+                    if shot.main_clip:
+                        create_video_download_button(shot.main_clip.location, tag="main_clip")
 
         if (idx + 1) % items_per_row == 0 or idx == len(shot_list) - 1:
             st.markdown("***")
@@ -78,7 +80,6 @@ def timeline_view(shot_uuid, stage):
             with grid[(idx + 1) % items_per_row]:
                 st.markdown("### Add new shot")
                 add_new_shot_element(shot, data_repo)
-
 
 def add_new_shot_element(shot, data_repo):
     new_shot_name = st.text_input("Shot Name:", max_chars=25)

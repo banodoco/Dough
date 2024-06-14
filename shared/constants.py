@@ -135,6 +135,7 @@ class SortOrder(ExtendedEnum):
 
 class CreativeProcessPage(ExtendedEnum):
     SHOTS = "Shots"
+    INSPIRATION_ENGINE = "Inspiration Engine"
     ADJUST_SHOT = "Adjust Shot"
     ANIMATE_SHOT = "Animate Shot"
 
@@ -142,6 +143,7 @@ class CreativeProcessPage(ExtendedEnum):
 # these can be one of the main creative process page or some other sub page inside it
 class AppSubPage(ExtendedEnum):
     SHOTS = "Shots"
+    INSPIRATION_ENGINE = "Inspiration Engine"
     ADJUST_SHOT = "Adjust Shot"
     ANIMATE_SHOT = "Animate Shot"
     KEYFRAME = "Key Frames"
