@@ -11,6 +11,7 @@ from ui_components.methods.common_methods import (
 from ui_components.methods.file_methods import zoom_and_crop
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.inpainting_element import inpainting_image_input
+from ui_components.widgets.inspiration_engine import inspiration_engine_element
 from ui_components.widgets.model_selector_element import model_selector_element
 from utils.common_utils import refresh_app
 from utils.constants import MLQueryObject, T2IModel
@@ -53,7 +54,10 @@ def explorer_page(project_uuid):
     st.markdown("***")
 
     with st.expander("✨ Generate Images", expanded=True):
-        generate_images_element(
+        # generate_images_element(
+        #     position="explorer", project_uuid=project_uuid, timing_uuid=None, shot_uuid=None
+        # )
+        inspiration_engine_element(
             position="explorer", project_uuid=project_uuid, timing_uuid=None, shot_uuid=None
         )
     st.markdown("***")
@@ -240,7 +244,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                                     st.session_state["input_image_1"],
                                 )
                                 st.rerun()
-                                
+
         if type_of_generation != InputImageStyling.IPADAPTER_COMPOSITION.value:
             explorer_gen_model = model_selector_element()
     else:
@@ -354,7 +358,10 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        data={"shot_uuid": shot_uuid, "sdxl_model": explorer_gen_model,},
+                        data={
+                            "shot_uuid": shot_uuid,
+                            "sdxl_model": explorer_gen_model,
+                        },
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -426,7 +433,10 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        data={"shot_uuid": shot_uuid, "sdxl_model": explorer_gen_model,},
+                        data={
+                            "shot_uuid": shot_uuid,
+                            "sdxl_model": explorer_gen_model,
+                        },
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -448,7 +458,11 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        data={"condition_scale": 1, "shot_uuid": shot_uuid, "sdxl_model": explorer_gen_model,},
+                        data={
+                            "condition_scale": 1,
+                            "shot_uuid": shot_uuid,
+                            "sdxl_model": explorer_gen_model,
+                        },
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -476,7 +490,11 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                         negative_prompt=negative_prompt,
                         height=project_settings.height,
                         width=project_settings.width,
-                        data={"file_image_2_uuid": face_image_file.uuid, "shot_uuid": shot_uuid, "sdxl_model": explorer_gen_model,},
+                        data={
+                            "file_image_2_uuid": face_image_file.uuid,
+                            "shot_uuid": shot_uuid,
+                            "sdxl_model": explorer_gen_model,
+                        },
                     )
 
                     output, log = ml_client.predict_model_output_standardized(

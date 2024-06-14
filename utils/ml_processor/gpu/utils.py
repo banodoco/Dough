@@ -68,7 +68,7 @@ def setup_comfy_runner():
 
     app_logger.log(LoggingType.INFO, "cloning comfy runner")
     comfy_repo_url = "https://github.com/piyushK52/comfy-runner"
-    Repo.clone_from(comfy_repo_url, COMFY_RUNNER_PATH[2:], single_branch=True, branch="feature/package")
+    Repo.clone_from(comfy_repo_url, COMFY_RUNNER_PATH[2:], single_branch=True, branch="main")
 
     # installing dependencies
     subprocess.run(["pip", "install", "-r", COMFY_RUNNER_PATH + "/requirements.txt"], check=True)

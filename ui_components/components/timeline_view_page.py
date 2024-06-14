@@ -8,6 +8,7 @@ from zipfile import ZipFile
 from io import BytesIO
 from ui_components.constants import CreativeProcessType
 from ui_components.methods.video_methods import upscale_video
+from ui_components.widgets.inspiration_engine import inspiration_engine_element
 from ui_components.widgets.timeline_view import timeline_view
 from ui_components.components.explorer_page import gallery_image_view
 from utils import st_memory
@@ -162,7 +163,10 @@ def timeline_view_page(shot_uuid: str, h2):
 
         # end_time = time.time()
         # print("///////////////// timeline laoded in: ", end_time - start_time)
-        generate_images_element(
+        # generate_images_element(
+        #     position="explorer", project_uuid=project_uuid, timing_uuid=None, shot_uuid=None
+        # )
+        inspiration_engine_element(
             position="explorer", project_uuid=project_uuid, timing_uuid=None, shot_uuid=None
         )
         # end_time = time.time()

@@ -79,8 +79,8 @@ update_app() {
         # Step 2: Check if the comfy_runner folder is present
         if [ -d "${CURRENT_DIR}/comfy_runner" ]; then
             # Step 3a: If comfy_runner is present, pull from the feature/package branch
-            echo "comfy_runner folder found. Pulling from feature/package branch."
-            cd comfy_runner && git pull origin feature/package
+            # echo "comfy_runner folder found. Pulling from feature/package branch."
+            cd comfy_runner && git pull origin main
             cd ..
         else
             # Step 3b: If comfy_runner is not present, clone the repository

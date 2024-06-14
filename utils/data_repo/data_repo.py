@@ -117,8 +117,9 @@ class DataRepo:
 
     # kwargs -  file_type: InternalFileType, tag = None, shot_uuid = "", project_id = None, page=None, data_per_page=None, sort_order=None
     def get_all_file_list(self, **kwargs):
-        kwargs["type"] = kwargs["file_type"]
-        del kwargs["file_type"]
+        if "file_type" in kwargs:
+            kwargs["type"] = kwargs["file_type"]
+            del kwargs["file_type"]
 
         res = self.db_repo.get_all_file_list(**kwargs)
         file_list = res.data["data"] if res.status else None

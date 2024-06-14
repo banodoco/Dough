@@ -1,0 +1,192 @@
+{
+    "3": {
+      "inputs": {
+        "seed": 128148908877228,
+        "steps": 30,
+        "cfg": 6.5,
+        "sampler_name": "dpmpp_2m",
+        "scheduler": "sgm_uniform",
+        "denoise": 1,
+        "model": [
+          "26",
+          0
+        ],
+        "positive": [
+          "6",
+          0
+        ],
+        "negative": [
+          "7",
+          0
+        ],
+        "latent_image": [
+          "5",
+          0
+        ]
+      },
+      "class_type": "KSampler",
+      "_meta": {
+        "title": "KSampler"
+      }
+    },
+    "4": {
+      "inputs": {
+        "ckpt_name": "Juggernaut_RunDiffusionPhoto2_Lightning_4Steps.safetensors"
+      },
+      "class_type": "CheckpointLoaderSimple",
+      "_meta": {
+        "title": "Load Checkpoint"
+      }
+    },
+    "5": {
+      "inputs": {
+        "width": 1216,
+        "height": 832,
+        "batch_size": 1
+      },
+      "class_type": "EmptyLatentImage",
+      "_meta": {
+        "title": "Empty Latent Image"
+      }
+    },
+    "6": {
+      "inputs": {
+        "text": "car driving down road",
+        "clip": [
+          "4",
+          1
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Prompt)"
+      }
+    },
+    "7": {
+      "inputs": {
+        "text": "star, light, text, watermark, blurry, noisy, messy, lowres, jpeg, artifacts, ill, distorted, (malformed:1.05)",
+        "clip": [
+          "4",
+          1
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Prompt)"
+      }
+    },
+    "8": {
+      "inputs": {
+        "samples": [
+          "3",
+          0
+        ],
+        "vae": [
+          "4",
+          2
+        ]
+      },
+      "class_type": "VAEDecode",
+      "_meta": {
+        "title": "VAE Decode"
+      }
+    },
+    "9": {
+      "inputs": {
+        "filename_prefix": "IPAdapter",
+        "images": [
+          "8",
+          0
+        ]
+      },
+      "class_type": "SaveImage",
+      "_meta": {
+        "title": "Save Image"
+      }
+    },
+    "11": {
+      "inputs": {
+        "preset": "PLUS (high strength)",
+        "model": [
+          "4",
+          0
+        ]
+      },
+      "class_type": "IPAdapterUnifiedLoader",
+      "_meta": {
+        "title": "IPAdapter Unified Loader"
+      }
+    },
+    "26": {
+      "inputs": {
+        "weight_style": 0.7000000000000001,
+        "weight_composition": 0,
+        "expand_style": true,
+        "combine_embeds": "concat",
+        "start_at": 0,
+        "end_at": 0.85,
+        "embeds_scaling": "K+V w/ C penalty",
+        "model": [
+          "11",
+          0
+        ],
+        "ipadapter": [
+          "11",
+          1
+        ],
+        "image_style": [
+          "40",
+          0
+        ],
+        "image_composition": [
+          "40",
+          0
+        ],
+        "image_negative": [
+          "43",
+          0
+        ]
+      },
+      "class_type": "IPAdapterStyleComposition",
+      "_meta": {
+        "title": "IPAdapter Style & Composition SDXL"
+      }
+    },
+    "34": {
+      "inputs": {
+        "images": [
+          "40",
+          0
+        ]
+      },
+      "class_type": "PreviewImage",
+      "_meta": {
+        "title": "Preview Image"
+      }
+    },
+    "40": {
+      "inputs": {
+        "image": "001.png",
+        "upload": "image"
+      },
+      "class_type": "LoadImage",
+      "_meta": {
+        "title": "Load Image"
+      }
+    },
+    "43": {
+      "inputs": {
+        "type": "dissolve",
+        "strength": 0.7000000000000001,
+        "blur": 0,
+        "image_optional": [
+          "40",
+          0
+        ]
+      },
+      "class_type": "IPAdapterNoise",
+      "_meta": {
+        "title": "IPAdapter Noise"
+      }
+    }
+  }
