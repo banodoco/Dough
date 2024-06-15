@@ -155,19 +155,6 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
         st.markdown("***")
         st.markdown("##### Generation Settings")
 
-        c1, _ = st.columns([0.25, 0.75])
-        with c1:
-            if "filename_prefix" not in st.session_state:
-                st.session_state["filename_prefix"] = "AD_"
-
-            filename_prefix = st.text_input(
-                label="Filename Prefix",
-                key="filename_prefix_input",
-                value=st.session_state["filename_prefix"],
-                help="This prefix will be added infront of the generated filename",
-            )
-
-            st.session_state["filename_prefix"] = filename_prefix
 
         # Filter and sort the workflows based on 'display' flag and 'order'
         filtered_and_sorted_workflows = sorted(
@@ -285,7 +272,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                 )
                 settings.update(shot_data=shot_data)
                 settings.update(type_of_generation=type_of_generation)
-                settings.update(filename_prefix=filename_prefix)
+                settings.update(filename_prefix="AD_")
 
                 vid_quality = "full"
                 st.success(

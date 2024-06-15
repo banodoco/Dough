@@ -86,6 +86,7 @@ def frame_selector_widget(show_frame_selector=True):
                     st.session_state["current_frame_sidebar_selector"] = 0
                     st.rerun()
                 # st.session_state['creative_process_manual_select']  = 4
+                st.write(st.session_state["current_frame_index"])
                 st.session_state["current_frame_index"] = int(frame_selection.split(" ")[-1])
                 update_current_frame_index(st.session_state["current_frame_index"])
         else:

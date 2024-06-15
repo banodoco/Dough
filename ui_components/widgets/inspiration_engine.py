@@ -428,7 +428,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
         st.markdown("***")
         st.markdown("#### Generation settings")
 
-        prompt1, prompt2 = st.columns([1.25, 1])
+        prompt1, prompt2, prompt3 = st.columns([1.25, 1, 1])
         with prompt1:
             images_per_prompt = st.slider(
                 "Images per prompt:",

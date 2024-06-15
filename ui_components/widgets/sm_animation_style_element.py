@@ -30,6 +30,8 @@ from ui_components.methods.file_methods import (
 from ui_components.widgets.display_element import display_motion_lora
 from ui_components.methods.ml_methods import train_motion_lora
 from utils.data_repo.data_repo import DataRepo
+from streamlit.elements.utils import _shown_default_value_warning
+_shown_default_value_warning = True
 
 
 def animation_sidebar(
@@ -55,36 +57,36 @@ def animation_sidebar(
 ):
     with st.sidebar:
         with st.expander("⚙️ Visualisation of motion settings", expanded=True):
-            # if st_memory.toggle("Open", key="open_motion_data"):
+            if st_memory.toggle("Open", key="open_motion_data", help="Closing this will speed up the interface.", value=True):
 
-            keyframe_positions = get_keyframe_positions(
-                type_of_frame_distribution,
-                dynamic_frame_distribution_values,
-                img_list,
-                linear_frame_distribution_value,
-            )
-            keyframe_positions = [int(kf * 16) for kf in keyframe_positions]
-            last_key_frame_position = keyframe_positions[-1]
-            strength_values = extract_strength_values(
-                type_of_strength_distribution,
-                dynamic_strength_values,
-                keyframe_positions,
-                linear_cn_strength_value,
-            )
-            key_frame_influence_values = extract_influence_values(
-                type_of_key_frame_influence,
-                dynamic_key_frame_influence_values,
-                keyframe_positions,
-                linear_key_frame_influence_value,
-            )
-            weights_list, frame_numbers_list = calculate_weights(
-                keyframe_positions,
-                strength_values,
-                4,
-                key_frame_influence_values,
-                last_key_frame_position,
-            )
-            plot_weights(weights_list, frame_numbers_list)
+                keyframe_positions = get_keyframe_positions(
+                    type_of_frame_distribution,
+                    dynamic_frame_distribution_values,
+                    img_list,
+                    linear_frame_distribution_value,
+                )
+                keyframe_positions = [int(kf * 16) for kf in keyframe_positions]
+                last_key_frame_position = keyframe_positions[-1]
+                strength_values = extract_strength_values(
+                    type_of_strength_distribution,
+                    dynamic_strength_values,
+                    keyframe_positions,
+                    linear_cn_strength_value,
+                )
+                key_frame_influence_values = extract_influence_values(
+                    type_of_key_frame_influence,
+                    dynamic_key_frame_influence_values,
+                    keyframe_positions,
+                    linear_key_frame_influence_value,
+                )
+                weights_list, frame_numbers_list = calculate_weights(
+                    keyframe_positions,
+                    strength_values,
+                    4,
+                    key_frame_influence_values,
+                    last_key_frame_position,
+                )
+                plot_weights(weights_list, frame_numbers_list)
 
 
 def video_motion_settings(shot_uuid, img_list):
@@ -688,7 +690,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                         advanced1, advanced2, _ = st.columns([1, 1, 0.5])
                         with advanced1:
                             
-                            @st.experimental_fragment
+                            
                             def create_slider(
                                 label,
                                 min_value,

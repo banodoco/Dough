@@ -314,23 +314,53 @@ def edit_shot_view(shot_uuid, items_per_row):
                                 st.rerun()
 
             st.markdown("***")
+    '''
+    def add_key_frame_section(shot_uuid):
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    selected_image_location = ""
 
+    uploaded_images = st.file_uploader(
+        "Upload images:",
+        type=["png", "jpg", "jpeg", "webp"],
+        key=f"uploaded_image_{shot_uuid}",
+        help="You can upload multiple images",
+        accept_multiple_files=True,
+    )
 
-    def upload_temp_frame(df, shot_uuid):
-        uploaded_file = st.file_uploader("Upload images:", type=['png', 'jpg', 'jpeg'], key=f"upload_frame_{shot_uuid}", accept_multiple_files=True)
+    if st.button(
+        f"Add key frame(s)", use_container_width=True, key=f"add_key_frame_btn_{shot_uuid}", type="primary"
+    ):
+        if uploaded_images:
+            progress_bar = st.progress(0)
+            uploaded_images = sorted(uploaded_images, key=lambda x: x.name)
+            for i, uploaded_image in enumerate(uploaded_images):
+                image = Image.open(uploaded_image)
+                file_location = f"videos/{shot.uuid}/assets/frames/base/{uploaded_image.name}"
+                selected_image_location = save_or_host_file(image, file_location)
+                selected_image_location = selected_image_location or file_location
+                add_key_frame(selected_image_location, shot_uuid, refresh_state=False)
+                progress_bar.progress((i + 1) / len(uploaded_images))
+        else:
+            st.error("Please generate new images or upload them")
+            time.sleep(0.7)
+        st.rerun()
+    '''
+    def upload_temp_frame(shot_uuid):
+        uploaded_images = st.file_uploader("Upload images:", type=['png', 'jpg', 'jpeg'], key=f"upload_frame_{shot_uuid}", accept_multiple_files=True)
         if st.button("Add key frame(s)", key=f"add_key_frame_{shot_uuid}",use_container_width=True):
-            if uploaded_file is not None:
-                for file in uploaded_file:
-                    image = Image.open(file)
-                    file_location = f"videos/{shot_uuid}/assets/frames/base/{file.name}"
-                    uploaded_file = save_or_host_file(image, file_location)
-                    uploaded_file = uploaded_file or file_location
+            if uploaded_images is not None:
+                for i, uploaded_image in enumerate(uploaded_images):                    
+                    image = Image.open(uploaded_image)
+                    file_location = f"videos/{shot_uuid}/assets/frames/base/{uploaded_image.name}"
+                    saved_image_locaton = save_or_host_file(image, file_location)
+                    saved_image_locaton = saved_image_locaton or file_location
                     new_row = {
                         "uuid": f"Uploaded_{uuid.uuid4()}",
-                        "image_location": uploaded_file,
-                        "position": len(df)
+                        "image_location": file_location,
+                        "position": len(st.session_state[f"shot_data_{shot_uuid}"])
                     }
-                    st.session_state[f"shot_data_{shot_uuid}"] = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+                    st.session_state[f"shot_data_{shot_uuid}"] = pd.concat([st.session_state[f"shot_data_{shot_uuid}"], pd.DataFrame([new_row])], ignore_index=True)
                 st.rerun()
             else:
                 st.warning("You need to input an image to add a key frame.")
@@ -338,7 +368,7 @@ def edit_shot_view(shot_uuid, items_per_row):
 
     upload1, _ = st.columns([1, 3])
     with upload1:
-        upload_temp_frame(st.session_state[f"shot_data_{shot_uuid}"], shot_uuid)
+        upload_temp_frame(shot_uuid)
     
     st.markdown("***")
 

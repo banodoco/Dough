@@ -56,11 +56,6 @@ def frame_styling_page(shot_uuid: str):
 
         st.markdown("***")
 
-        with st.expander("🤏 Crop, Move & Rotate", expanded=True):
-            cropping_selector_element(shot_uuid)
-
-        st.markdown("***")
-
         with st.expander("🌌 Inpainting", expanded=True):
 
             options_width, canvas_width = st.columns([1.2, 3])
@@ -135,9 +130,10 @@ def frame_styling_page(shot_uuid: str):
                             st.rerun()
                 else:
                     st.error("You must first select the area to inpaint.")
+        
+        st.markdown("***")
 
-        # elif st.session_state['styling_view'] == "Scribble":
-        # with st.expander("📝 Draw On Image", expanded=True):
-        #  drawing_element(shot_uuid)
+        with st.expander("🤏 Crop, Move & Rotate", expanded=True):
+            cropping_selector_element(shot_uuid)
 
         st.markdown("***")

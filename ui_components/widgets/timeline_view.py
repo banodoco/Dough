@@ -4,7 +4,8 @@ import shutil
 from typing import List
 import uuid
 from zipfile import ZipFile
-
+from ui_components.methods.file_methods import save_or_host_file
+from ui_components.widgets.add_key_frame_element import add_key_frame
 import requests
 import streamlit as st
 from ui_components.methods.common_methods import add_new_shot
@@ -23,6 +24,7 @@ from ui_components.widgets.shot_view import (
 )
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
+from PIL import Image
 
 def timeline_view(shot_uuid, stage, view='sidebar'):
     data_repo = DataRepo()
@@ -49,7 +51,7 @@ def timeline_view(shot_uuid, stage, view='sidebar'):
 
         # Add new shot button at the top for sidebar view
         with st.container():
-            st.markdown("#### Add new shot")
+            st.markdown("### Add new shot")
             add_new_shot_element(shot, data_repo)
             st.markdown("***")
 
@@ -100,11 +102,22 @@ def timeline_view(shot_uuid, stage, view='sidebar'):
 
         if view == 'main' and idx == len(shot_list) - 1:
             with grid[(idx + 1) % items_per_row]:
-                st.markdown("### Add new shot")
-                add_new_shot_element(shot, data_repo)
+                st.markdown("###### Add new shot")
+                add_new_shot_element(shot, data_repo,show_image_uploader=True)
 
-def add_new_shot_element(shot, data_repo):
+def add_new_shot_element(shot, data_repo, show_image_uploader=False):
     new_shot_name = st.text_input("Shot Name:", max_chars=25)
+    if show_image_uploader:
+        with st.expander("Upload images", expanded=False):
+            uploaded_images = st.file_uploader(
+                "Upload images:",
+                type=["png", "jpg", "jpeg", "webp"],
+                key=f"uploaded_image_{shot.uuid}",
+                help="You can upload multiple images",
+                accept_multiple_files=True,
+            )
+    else:
+        uploaded_images = None
 
     if st.button("Add new shot", type="primary", key=f"add_shot_btn_{shot.uuid}"):
 
@@ -115,5 +128,15 @@ def add_new_shot_element(shot, data_repo):
         shot_list = data_repo.get_shot_list(project_uuid)
         len_shot_list = len(shot_list) - 1
         st.session_state["last_shot_number"] = len_shot_list
+        if uploaded_images:
+            progress_bar = st.progress(0)
+            uploaded_images = sorted(uploaded_images, key=lambda x: x.name)
+            for i, uploaded_image in enumerate(uploaded_images):
+                image = Image.open(uploaded_image)
+                file_location = f"videos/{new_shot.uuid}/assets/frames/base/{uploaded_image.name}"
+                selected_image_location = save_or_host_file(image, file_location)
+                selected_image_location = selected_image_location or file_location
+                add_key_frame(selected_image_location, new_shot.uuid, refresh_state=False)
+                progress_bar.progress((i + 1) / len(uploaded_images))
 
         st.rerun()
