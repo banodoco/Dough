@@ -5,6 +5,8 @@ import replicate.model
 import streamlit as st
 import replicate
 from PIL import Image
+import requests
+from io import BytesIO
 
 from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType, ProjectMetaData
 from ui_components.methods.common_methods import process_inference_output, save_new_image
@@ -303,7 +305,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             with model1:
                 st.info("Style references aren't yet supported for Stable Diffusion 3.")
             style_influence = 4.5  # this will actually go into cfg
-            
+            type_of_style_input = None
         else:
             input_type_list = [
                 "Choose From List",
@@ -348,16 +350,18 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 if len(st.session_state['list_of_style_references']) < 3:
                     h1, h2 = st.columns([1, 1.5])
                     with h1:
-                        uploaded_img = st.file_uploader(
-                                    f"Upload style reference:", type=["jpg", "jpeg", "png", "webp"]
+                        uploaded_images = st.file_uploader(
+                                    f"Upload up to 3 style references:", type=["jpg", "jpeg", "png", "webp"]
+                                ,accept_multiple_files=True
                                 )
-                        if uploaded_img:
-                            if st.button(f"Upload style reference"):
-                                st.session_state['list_of_style_references'].append(uploaded_img)
-                                st.rerun()
-                else:
-                    st.warning("You can only upload 3 style references.")
-
+                        if uploaded_images:
+                            if st.button(f"Add style reference", use_container_width=True):
+                                # Check if there are less than 3 images already in the list
+                                while len(st.session_state['list_of_style_references']) < 3 and uploaded_images:
+                                    st.session_state['list_of_style_references'].append(uploaded_images.pop(0))
+                                if uploaded_images:  # If there are still images left, show a warning
+                                    st.warning("You can only upload 3 style references.")
+                         
                 columns = st.columns(3)
 
                 for i, col in enumerate(columns):
@@ -365,14 +369,21 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         with col:
                             img = st.session_state['list_of_style_references'][i]
                             if img is not None:
-                                display_img = (
-                                    Image.open(img)
-                                    if not isinstance(img, Image.Image)
-                                    else img
-                                )
-                                display_img = zoom_and_crop(
-                                    display_img, 512, 512
-                                )
+                                # Check if the reference is a URL or an uploaded file
+                                if isinstance(img, str) and img.startswith('http'):
+                                    # It's a URL, load the image from the URL
+                                    response = requests.get(img)
+                                    display_img = Image.open(BytesIO(response.content))
+                                elif not isinstance(img, Image.Image):
+                                    # It's an uploaded file, open it
+                                    display_img = Image.open(img)
+                                else:
+                                    # It's already an image object
+                                    display_img = img
+                                    
+
+                                # Apply zoom and crop
+                                # display_img = zoom_and_crop(display_img, 512, 512)
                                 st.image(display_img)
                                 if st.button(f"Remove style reference {i+1}", use_container_width=True):
                                     # Remove the image from the list

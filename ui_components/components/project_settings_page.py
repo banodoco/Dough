@@ -44,7 +44,7 @@ def project_settings_page(project_uuid):
                 )
                 width, height = map(int, frame_size.split("x"))
             else:
-                st.info("This is an experimental feature")
+                st.info("This is an experimental feature. There might be some issues - particularly with image generation.")
                 width = st.text_input("Width", value=512)
                 height = st.text_input("Height", value=512)
                 try:

@@ -835,7 +835,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     if gallery_image_list and len(gallery_image_list):
         start_index = 0
         end_index = min(start_index + num_items_per_page, total_image_count)
-        shot_names = [s.name for s in reversed(shot_list)]
+        shot_names = [s.name for s in shot_list]
         shot_names.append("**Create New Shot**")
         for i in range(start_index, end_index, num_columns):
             cols = st.columns(num_columns)
@@ -850,6 +850,9 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                             if "add_to_this_shot" in view:
                                 shot_name = shot.name
                             else:
+                                if st.session_state["last_shot_number"] >= len(shot_names):
+                                    st.session_state["last_shot_number"] = 0
+
                                 shot_name = st.selectbox(
                                     "Add to shot:",
                                     shot_names,
@@ -878,6 +881,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                         )
                                         # removing this from the gallery view
                                         data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+                                                                                
+                                        st.session_state["last_shot_number"] = len(shot_list)
                                         st.rerun()
 
                                 else:

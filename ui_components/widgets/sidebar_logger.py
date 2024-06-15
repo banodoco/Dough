@@ -258,7 +258,7 @@ def sidebar_logger(shot_uuid):
         st.markdown("***")
         b1, b2 = st.columns([1, 1])
         with b1:
-            if st.button(label="Cancel all"):
+            if st.button(label="Cancel all",use_container_width=True):
                 log_filter_data = {
                     "project_id": shot.project.uuid,
                     "page": 1,
@@ -269,7 +269,7 @@ def sidebar_logger(shot_uuid):
                 stop_generations(all_log_list)
                 st.rerun()
         with b2:
-            if st.button(label="Move all to backlog"):
+            if st.button(label="Move all to backlog",use_container_width=True):
                 log_filter_data = {
                     "project_id": shot.project.uuid,
                     "page": 1,

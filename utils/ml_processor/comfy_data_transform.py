@@ -622,9 +622,9 @@ class ComfyDataTransform:
             elif type_of_generation == "Chocky Realistiche":
 
                 json_data["593"]["inputs"]["ipa_starts_at"] = 0
-                json_data["593"]["inputs"]["ipa_ends_at"] = 0.28
+                json_data["593"]["inputs"]["ipa_ends_at"] = 0.3
                 json_data["593"]["inputs"]["ipa_weight_type"] = "ease in-out"
-                json_data["593"]["inputs"]["ipa_weight"] = 1
+                json_data["593"]["inputs"]["ipa_weight"] = 0.75
                 json_data["593"]["inputs"]["ipa_embeds_scaling"] = "V only"
                 json_data["593"]["inputs"]["ipa_noise_strength"] = 0.30
                 json_data["593"]["inputs"]["use_image_for_noise"] = True
