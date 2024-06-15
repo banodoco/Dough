@@ -3,9 +3,8 @@ import streamlit as st
 
 
 def get_url_param(key):
-    params = st.experimental_get_query_params()
-    val = params.get(key)
-    if isinstance(val, list):
+    val = st.query_params.get_all(key)    
+    if val:
         res = val[0]
     else:
         res = val
@@ -18,7 +17,7 @@ def get_url_param(key):
 
 def set_url_param(key, value):
     st.session_state[key] = value
-    st.experimental_set_query_params(**{key: [value]})
+    st.query_params.from_dict(**{key: [value]})
 
 
 def delete_url_param(key):
@@ -26,4 +25,4 @@ def delete_url_param(key):
     if key in st.session_state:
         del st.session_state[key]
 
-    st.experimental_set_query_params(**{key: None})
+    st.query_params.from_dict(**{key: None})

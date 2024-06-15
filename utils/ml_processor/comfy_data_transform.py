@@ -1008,14 +1008,9 @@ class ComfyDataTransform:
 
             return workflow
 
-
-
-        # updating params
         workflow["3"]["inputs"]["seed"] = seed
-
         workflow["5"]["inputs"]["width"] = width
         workflow["5"]["inputs"]["height"] = height
-
         workflow["4"]["inputs"]["ckpt_name"] = model
         workflow["6"]["inputs"]["text"] = (
             image_prompt + ", " + additional_description_text + ", " + additional_style_text
@@ -1044,9 +1039,6 @@ class ComfyDataTransform:
                 "dest": os.path.join(COMFY_BASE_PATH, "models", "ipadapter"),
             },
         ]
-
-        with open("ws.json", "w") as file:
-            file.write(json.dumps(workflow))
 
         return json.dumps(workflow), output_node_ids, extra_model_list, []
 

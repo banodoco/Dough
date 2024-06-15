@@ -386,28 +386,30 @@ def variant_inference_detail_element(
                             v = v[:-1]  # removing the last ele in these cases
                         v = ", ".join(str(e) for e in v)
                     st.write(f"**{k}**: {v}")
-                        
-                if st.button(
-                    "Load settings",
-                    key=f"boot_{tag}_{variant.name}",
-                    help="This will load all the settings for this run below. In doing so, it'll remove the current settings and images - though they'll be available for all previous runs.",
-                    use_container_width=True,
-                ):
-                    load_shot_settings(shot_uuid, variant.inference_log.uuid, load_images=False, load_setting_values=True)
-                    st.success("Settings Loaded")
-                    time.sleep(0.3)
-                    st.rerun()
-                    
-                if st.button(
-                    "Load images",
-                    key=f"load_img_{tag}_{variant.name}",
-                    help="This will load all the images for this run below. In doing so, it'll remove the current images and images - though they'll be available for all previous runs.",
-                    use_container_width=True,
-                ):
-                    load_shot_settings(shot_uuid, variant.inference_log.uuid, load_images=True, load_setting_values=False)
-                    st.success("Images Loaded")
-                    time.sleep(0.3)
-                    st.rerun()
+                btn1, btn2 = st.columns([1, 1])
+                with btn1:
+                    if st.button(
+                        "Load settings",
+                        key=f"boot_{tag}_{variant.name}",
+                        help="This will load all the settings for this run below. In doing so, it'll remove the current settings and images - though they'll be available for all previous runs.",
+                        use_container_width=True,
+                        type="primary",
+                    ):
+                        load_shot_settings(shot_uuid, variant.inference_log.uuid, load_images=False, load_setting_values=True)
+                        st.success("Settings Loaded")
+                        time.sleep(0.3)
+                        st.rerun()
+                with btn2:
+                    if st.button(
+                        "Load images",
+                        key=f"load_img_{tag}_{variant.name}",
+                        help="This will load all the images for this run below. In doing so, it'll remove the current images and images - though they'll be available for all previous runs.",
+                        use_container_width=True,
+                    ):
+                        load_shot_settings(shot_uuid, variant.inference_log.uuid, load_images=True, load_setting_values=False)
+                        st.success("Images Loaded")
+                        time.sleep(0.3)
+                        st.rerun()
 
     if stage != CreativeProcessType.MOTION.value:
         h1, h2 = st.columns([1, 1])

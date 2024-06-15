@@ -835,7 +835,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     if gallery_image_list and len(gallery_image_list):
         start_index = 0
         end_index = min(start_index + num_items_per_page, total_image_count)
-        shot_names = [s.name for s in shot_list]
+        shot_names = [s.name for s in reversed(shot_list)]
         shot_names.append("**Create New Shot**")
         for i in range(start_index, end_index, num_columns):
             cols = st.columns(num_columns)

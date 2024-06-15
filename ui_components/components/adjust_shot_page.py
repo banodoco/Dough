@@ -48,19 +48,5 @@ def adjust_shot_page(shot_uuid: str, h2):
         shot_keyframe_element(st.session_state["shot_uuid"], 4, column2, position="Individual")
 
 
-
-        # st.markdown("***")
-        gallery_image_view(
-            shot.project.uuid,
-            shortlist=False,
-            view=[
-                "add_and_remove_from_shortlist",
-                "add_to_this_shot",
-                "view_inference_details",
-                "shot_chooser",
-            ],
-            shot=shot,
-            sidebar=False,
-        )
     else:
         frame_styling_page(st.session_state["shot_uuid"])

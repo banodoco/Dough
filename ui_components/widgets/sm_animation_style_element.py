@@ -634,7 +634,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
             for j in range(items_per_row):
                 idx = i + j
                 img = img_list[idx] if idx < len(img_list) else None
-
+                
                 if img and img.location:
                     with grid[2 * j]:
                         st.info(f"**Frame {idx + 1}**")
@@ -687,7 +687,8 @@ def individual_frame_settings_element(shot_uuid, img_list):
                             individual_negative_prompts.append(individual_negative_prompt)
                         advanced1, advanced2, _ = st.columns([1, 1, 0.5])
                         with advanced1:
-
+                            
+                            @st.experimental_fragment
                             def create_slider(
                                 label,
                                 min_value,

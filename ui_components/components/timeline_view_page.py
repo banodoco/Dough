@@ -165,15 +165,6 @@ def timeline_view_page(shot_uuid: str, h2):
 
         # end_time = time.time()
         # print("///////////////// generate img laoded in: ", end_time - start_time)
-        gallery_image_view(
-            project_uuid,
-            False,
-            view=[
-                "add_and_remove_from_shortlist",
-                "view_inference_details",
-                "shot_chooser",
-                "add_to_any_shot",
-            ],
-        )
+
         # end_time = time.time()
         # print("///////////////// gallery laoded in: ", end_time - start_time)

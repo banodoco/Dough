@@ -316,6 +316,33 @@ def edit_shot_view(shot_uuid, items_per_row):
             st.markdown("***")
 
 
+    def upload_temp_frame(df, shot_uuid):
+        uploaded_file = st.file_uploader("Upload images:", type=['png', 'jpg', 'jpeg'], key=f"upload_frame_{shot_uuid}", accept_multiple_files=True)
+        if st.button("Add key frame(s)", key=f"add_key_frame_{shot_uuid}",use_container_width=True):
+            if uploaded_file is not None:
+                for file in uploaded_file:
+                    image = Image.open(file)
+                    file_location = f"videos/{shot_uuid}/assets/frames/base/{file.name}"
+                    uploaded_file = save_or_host_file(image, file_location)
+                    uploaded_file = uploaded_file or file_location
+                    new_row = {
+                        "uuid": f"Uploaded_{uuid.uuid4()}",
+                        "image_location": uploaded_file,
+                        "position": len(df)
+                    }
+                    st.session_state[f"shot_data_{shot_uuid}"] = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+                st.rerun()
+            else:
+                st.warning("You need to input an image to add a key frame.")
+                
+
+    upload1, _ = st.columns([1, 3])
+    with upload1:
+        upload_temp_frame(st.session_state[f"shot_data_{shot_uuid}"], shot_uuid)
+    
+    st.markdown("***")
+
+
 def default_shot_view(shot_uuid, items_per_row, position):
     """
     This is the default shot view where the images in the shot are listed and there is an

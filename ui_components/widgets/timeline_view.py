@@ -24,7 +24,6 @@ from ui_components.widgets.shot_view import (
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
 
-
 def timeline_view(shot_uuid, stage, view='sidebar'):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
@@ -68,12 +67,12 @@ def timeline_view(shot_uuid, stage, view='sidebar'):
             if shot.main_clip and shot.main_clip.location and view == 'main':
                 individual_video_display_element(shot.main_clip)
             else:
-                num_columns = max(len(timing_list), 4)
+                num_columns = 4  # Set to 4 images per row regardless of the number of images
                 
                 if timing_list:
                     grid_timing = st.columns(num_columns)
                     for j, timing in enumerate(timing_list):
-                        with grid_timing[j]:
+                        with grid_timing[j % num_columns]:
                             if timing.primary_image and timing.primary_image.location:
                                 st.image(timing.primary_image.location, use_column_width=True)
                     for j in range(len(timing_list), num_columns):
@@ -98,6 +97,7 @@ def timeline_view(shot_uuid, stage, view='sidebar'):
 
         if (idx + 1) % items_per_row == 0 or idx == len(shot_list) - 1:
             st.markdown("***")
+
         if view == 'main' and idx == len(shot_list) - 1:
             with grid[(idx + 1) % items_per_row]:
                 st.markdown("### Add new shot")
@@ -107,7 +107,13 @@ def add_new_shot_element(shot, data_repo):
     new_shot_name = st.text_input("Shot Name:", max_chars=25)
 
     if st.button("Add new shot", type="primary", key=f"add_shot_btn_{shot.uuid}"):
+
         new_shot = add_new_shot(shot.project.uuid)
         if new_shot_name != "":
             data_repo.update_shot(uuid=new_shot.uuid, name=new_shot_name)
+        project_uuid = shot.project.uuid
+        shot_list = data_repo.get_shot_list(project_uuid)
+        len_shot_list = len(shot_list) - 1
+        st.session_state["last_shot_number"] = len_shot_list
+
         st.rerun()
