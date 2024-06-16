@@ -140,8 +140,8 @@ def setup_app_ui():
 
         if st.session_state["project_uuid"] == "":
             st.info("No projects found - create one in the 'New Project' section")
-        else:
 
+        else:
             if not os.path.exists("videos/" + st.session_state["project_uuid"] + "/assets"):
                 create_working_assets(st.session_state["project_uuid"])
 
@@ -230,7 +230,7 @@ def setup_app_ui():
                     _ = option_menu(
                         None,
                         creative_process_pages,
-                        icons=["bookshelf", "lightning-charge","aspect-ratio", "film"],
+                        icons=["bookshelf", "lightning-charge", "aspect-ratio", "film"],
                         menu_icon="cast",
                         orientation="vertical",
                         key="page_opt_menu",
@@ -243,25 +243,25 @@ def setup_app_ui():
                         on_change=change_page,
                     )
 
-                    if st.session_state["page"] != creative_process_pages[1]:
+                    if st.session_state["page"] != CreativeProcessPage.ADJUST_SHOT.value:
                         st.session_state["current_frame_sidebar_selector"] = 0
-                
-                if st.session_state["page"] == "Explore":
-                    explorer_page(st.session_state["project_uuid"])
 
-                elif st.session_state["page"] == "Inspiration Engine":
-                    inspiration_engine_page(st.session_state["shot_uuid"], h2)
+                # TODO: not is use
+                # if st.session_state["page"] == "Explore":
+                #     explorer_page(st.session_state["project_uuid"])
+                # elif st.session_state["page"] == "Shortlist":
+                #     shortlist_page(st.session_state["project_uuid"])
 
-                elif st.session_state["page"] == "Shortlist":
-                    shortlist_page(st.session_state["project_uuid"])
-
-                elif st.session_state["page"] == "Shots":
+                if st.session_state["page"] == CreativeProcessPage.SHOTS.value:
                     timeline_view_page(st.session_state["shot_uuid"], h2)
 
-                elif st.session_state["page"] == "Adjust Shot":
+                elif st.session_state["page"] == CreativeProcessPage.INSPIRATION_ENGINE.value:
+                    inspiration_engine_page(st.session_state["shot_uuid"], h2)
+
+                elif st.session_state["page"] == CreativeProcessPage.ADJUST_SHOT.value:
                     adjust_shot_page(st.session_state["shot_uuid"], h2)
 
-                elif st.session_state["page"] == "Animate Shot":
+                elif st.session_state["page"] == CreativeProcessPage.ANIMATE_SHOT.value:
                     animate_shot_page(st.session_state["shot_uuid"], h2)
 
             elif st.session_state["main_view_type"] == "Project Settings":

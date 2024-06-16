@@ -24,7 +24,6 @@ def adjust_shot_page(shot_uuid: str, h2):
                 # if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
                 sidebar_logger(st.session_state["shot_uuid"])
 
-            # frame_view(view='Video',show_current_frames=False)
             st.write("")
             with st.expander("📋 Explorer shortlist", expanded=True):
                 if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
@@ -45,8 +44,8 @@ def adjust_shot_page(shot_uuid: str, h2):
         with column1:
             st.markdown(f"### 🎬 '{shot.name}' frames")
             st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
-        shot_keyframe_element(st.session_state["shot_uuid"], 4, column2, position="Individual")
 
+        shot_keyframe_element(st.session_state["shot_uuid"], 4, column2, position="Individual")
 
     else:
         frame_styling_page(st.session_state["shot_uuid"])

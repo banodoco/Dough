@@ -1,6 +1,6 @@
 import time
 import streamlit as st
-from shared.constants import AppSubPage
+from shared.constants import AppSubPage, CreativeProcessPage
 from ui_components.constants import WorkflowStageType
 from ui_components.methods.common_methods import (
     add_image_variant,
@@ -146,10 +146,14 @@ def replace_image_widget(timing_uuid, stage, options=["Uploaded Frame", "Other F
                     time.sleep(1.5)
                     st.rerun()
 
-
+'''
+TODO: 
+1. use timing_list to validate the range of display_number
+2. set shot_uuid from the timing_list in the session_state as well
+'''
 def jump_to_single_frame_view_button(display_number, timing_list, src, uuid=None):
-
     if st.button(f"Jump to #{display_number}", key=f"{src}_{uuid}", use_container_width=True):
         st.session_state["current_frame_sidebar_selector"] = display_number
         st.session_state["current_subpage"] = AppSubPage.KEYFRAME.value
+        st.session_state["page"] = CreativeProcessPage.ADJUST_SHOT.value
         st.rerun()

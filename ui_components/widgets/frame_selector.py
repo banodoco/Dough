@@ -1,15 +1,6 @@
 from typing import List
 import streamlit as st
-from ui_components.widgets.frame_movement_widgets import (
-    delete_frame_button,
-    replace_image_widget,
-    jump_to_single_frame_view_button,
-)
-from ui_components.widgets.image_carousal import display_image
-from ui_components.widgets.shot_view import update_shot_name, update_shot_duration, delete_shot_button
-from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from utils.data_repo.data_repo import DataRepo
-from ui_components.constants import WorkflowStageType
 from utils import st_memory
 from ui_components.methods.common_methods import add_new_shot
 
@@ -47,6 +38,7 @@ def frame_selector_widget(show_frame_selector=True):
                 st.session_state["shot_name"] = new_shot_name
                 st.session_state["shot_uuid"] = new_shot.uuid
                 st.rerun()
+
     # find shot index based on shot name
     st.session_state["current_shot_index"] = shot_names.index(st.session_state["shot_name"]) + 1
 
@@ -80,13 +72,12 @@ def frame_selector_widget(show_frame_selector=True):
                     "Frame:", frame_list, key="current_frame_sidebar_selector"
                 )
 
-            # Only trigger the frame number extraction and current frame index update if a non-empty value is selected
+            # only trigger the frame number extraction and current frame index update if a non-empty value is selected
             if frame_selection != "":
                 if st.button("Jump to shot view", use_container_width=True):
                     st.session_state["current_frame_sidebar_selector"] = 0
                     st.rerun()
-                # st.session_state['creative_process_manual_select']  = 4
-                st.write(st.session_state["current_frame_index"])
+
                 st.session_state["current_frame_index"] = int(frame_selection.split(" ")[-1])
                 update_current_frame_index(st.session_state["current_frame_index"])
         else:
@@ -96,56 +87,6 @@ def frame_selector_widget(show_frame_selector=True):
                 st.error("No frames present")
 
         return frame_selection
-
-
-def frame_view(view="Key Frame", show_current_frames=True):
-    data_repo = DataRepo()
-    st.write("")
-
-    timing_list = data_repo.get_timing_list_from_shot(st.session_state["shot_uuid"])
-    shot = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
-    if view == "Key Frame":
-        with st.expander(f"🖼️ Frame #{st.session_state['current_frame_index']} Details", expanded=True):
-            if st_memory.toggle("Open", value=True, key="frame_toggle"):
-                a1, a2 = st.columns([3, 2])
-                with a1:
-                    st.success(f"Main Key Frame:")
-                    display_image(
-                        st.session_state["current_frame_uuid"],
-                        stage=WorkflowStageType.STYLED.value,
-                        clickable=False,
-                    )
-                with a2:
-                    st.caption("Replace styled image")
-                    replace_image_widget(
-                        st.session_state["current_frame_uuid"], stage=WorkflowStageType.STYLED.value
-                    )
-
-                st.markdown("---")
-
-                st.info("In Context:")
-                shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
-                timing_list: List[InternalFrameTimingObject] = shot.timing_list
-                display_shot_frames(timing_list, False)
-                st.markdown("---")
-                delete_frame_button(st.session_state["current_frame_uuid"])
-
-    else:
-        shot: InternalShotObject = data_repo.get_shot_from_uuid(st.session_state["shot_uuid"])
-
-        with st.expander(f"🎬 {shot.name} Details", expanded=True):
-            if st_memory.toggle("Open", value=True, key="shot_details_toggle"):
-                a1, a2 = st.columns([2, 2])
-                with a1:
-                    update_shot_name(shot.uuid)
-
-                if show_current_frames:
-                    st.markdown("---")
-                    timing_list: List[InternalFrameTimingObject] = shot.timing_list
-                    display_shot_frames(timing_list, False)
-
-                st.markdown("---")
-                delete_shot_button(shot.uuid)
 
 
 def update_current_frame_index(index):
@@ -176,30 +117,3 @@ def update_current_shot_index(index):
         st.session_state["frame_styling_view_type"] = "Individual View"
 
         st.rerun()
-
-
-def display_shot_frames(timing_list: List[InternalFrameTimingObject], show_button: bool):
-    if timing_list and len(timing_list):
-        items_per_row = 3
-        for i in range(0, len(timing_list), items_per_row):
-            with st.container():
-                grid = st.columns(items_per_row)
-                for j in range(items_per_row):
-                    idx = i + j
-                    if idx < len(timing_list):
-                        timing = timing_list[idx]
-                        with grid[j]:
-                            if timing.primary_image and timing.primary_image.location:
-                                st.image(timing.primary_image.location, use_column_width=True)
-                                # Show button if show_button is True
-                                if show_button:
-                                    # Call jump_to_single_frame_view_button function
-                                    jump_to_single_frame_view_button(
-                                        idx + 1, timing_list, f"jump_to_{idx + 1}"
-                                    )
-                            else:
-                                st.warning("No primary image present")
-                                jump_to_single_frame_view_button(idx + 1, timing_list, f"jump_to_{idx + 1}")
-
-    else:
-        st.warning("No keyframes present")

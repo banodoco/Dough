@@ -17,7 +17,6 @@ from shared.constants import (
 from ui_components.widgets.display_element import individual_video_display_element
 from ui_components.widgets.frame_movement_widgets import jump_to_single_frame_view_button
 import json
-from ui_components.widgets.frame_selector import update_current_frame_index
 
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL, MODEL_FILTERS

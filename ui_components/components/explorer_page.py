@@ -54,9 +54,6 @@ def explorer_page(project_uuid):
     st.markdown("***")
 
     with st.expander("✨ Generate Images", expanded=True):
-        # generate_images_element(
-        #     position="explorer", project_uuid=project_uuid, timing_uuid=None, shot_uuid=None
-        # )
         inspiration_engine_element(
             position="explorer", project_uuid=project_uuid, timing_uuid=None, shot_uuid=None
         )
