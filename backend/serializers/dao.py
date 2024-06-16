@@ -104,7 +104,7 @@ class CreateAppSettingDao(serializers.Serializer):
 class UpdateAppSettingDao(serializers.Serializer):
     uuid = serializers.CharField(max_length=100, required=False)  # picking the first app setting by defaults
     user_id = serializers.CharField(max_length=100, required=False)
-    replicate_key = serializers.CharField(max_length=100, required=False)
+    replicate_key = serializers.CharField(max_length=100, required=False, allow_blank=True)
     aws_access_key = serializers.CharField(max_length=100, required=False)
     stability_key = serializers.CharField(max_length=100, required=False)
     previous_project = serializers.CharField(max_length=100, required=False)

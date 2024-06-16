@@ -1006,24 +1006,26 @@ def check_project_meta_data(project_uuid):
 
 
 def update_app_setting_keys():
-    data_repo = DataRepo()
-    app_logger = AppLogger()
+    # TODO: not in use atm
+    # data_repo = DataRepo()
+    # app_logger = AppLogger()
 
-    if OFFLINE_MODE:
-        key = os.getenv("REPLICATE_KEY", None)
-    else:
-        import boto3
+    # if OFFLINE_MODE:
+    #     key = os.getenv("REPLICATE_KEY", "")
+    # else:
+    #     import boto3
 
-        ssm = boto3.client("ssm", region_name="ap-south-1")
-        key = ssm.get_parameter(Name="/backend/banodoco/replicate/key")["Parameter"]["Value"]
+    #     ssm = boto3.client("ssm", region_name="ap-south-1")
+    #     key = ssm.get_parameter(Name="/backend/banodoco/replicate/key")["Parameter"]["Value"]
 
-    app_setting = data_repo.get_app_secrets_from_user_uuid()
-    if app_setting and app_setting["replicate_key"] == key:
-        return
+    # app_setting = data_repo.get_app_secrets_from_user_uuid()
+    # if app_setting and app_setting["replicate_key"] == key:
+    #     return
 
-    app_logger.log(LoggingType.DEBUG, "setting keys", None)
-    data_repo.update_app_setting(replicate_username="update")
-    data_repo.update_app_setting(replicate_key=key)
+    # app_logger.log(LoggingType.DEBUG, "setting keys", None)
+    # data_repo.update_app_setting(replicate_username="update")
+    # data_repo.update_app_setting(replicate_key=key)
+    pass
 
 
 def random_seed():

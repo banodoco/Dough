@@ -1,5 +1,6 @@
 import os
 import json
+import time
 
 import replicate.model
 import streamlit as st
@@ -23,12 +24,26 @@ from utils.ml_processor.ml_interface import get_ml_client
 # NOTE: since running locally is very slow (comfy startup, models loading, other gens in process..)
 # rn we are accessing the replicate API directly, will switch to some other local method in the future
 def query_llama3(**kwargs):
-    os.environ["REPLICATE_API_TOKEN"] = os.getenv("REPLICATE_KEY", None)
+    check_replicate_key()
+
     model = replicate.models.get("meta/meta-llama-3-8b")
     model_version = model.versions.get("9a9e68fc8695f5847ce944a5cecf9967fd7c64d0fb8c8af1d5bdcc71f03c5e47")
 
     output = model_version.predict(**kwargs)
     return output
+
+
+def check_replicate_key():
+    data_repo = DataRepo()
+    app_secrets = data_repo.get_app_secrets_from_user_uuid()
+    if "replicate_key" in app_secrets and app_secrets["replicate_key"]:
+        st.session_state["replicate_key"] = app_secrets["replicate_key"]
+        os.environ["REPLICATE_API_TOKEN"] = st.session_state["replicate_key"]
+    else:
+        st.error("You need to add your Replicate key inside App Settings to make this feature work")
+        return False
+
+    return True
 
 
 def edit_prompts(edit_text, list_of_prompts):
@@ -44,6 +59,8 @@ def edit_prompts(edit_text, list_of_prompts):
         "stop_sequences": " ",
     }
     output = query_llama3(**query_data)
+    if not output:
+        return None
 
     proper_output = ""
     for item in output:
@@ -76,6 +93,8 @@ def generate_prompts(
         "stop_sequences": " ",
     }
     output = query_llama3(**query_data)
+    if not output:
+        return None
 
     proper_output = ""
     for item in output:
@@ -220,12 +239,13 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     use_container_width=True,
                     help="This will overwrite the existing prompts.",
                 ):
-                    st.session_state["list_of_prompts"] = generate_prompts(
-                        generaton_text,
-                        total_unique_prompts,
-                        temperature=temperature,
-                    )
-                    st.rerun()
+                    if check_replicate_key():
+                        st.session_state["list_of_prompts"] = generate_prompts(
+                            generaton_text,
+                            total_unique_prompts,
+                            temperature=temperature,
+                        )
+                        st.rerun()
 
             else:
                 edit_text = st.text_area(
@@ -239,8 +259,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     st.rerun()
 
                 if st.button("Edit Prompts", use_container_width=True):
-                    st.session_state["list_of_prompts"] = edit_prompts(edit_text, list_of_prompts)
-                    st.rerun()
+                    if check_replicate_key():
+                        st.session_state["list_of_prompts"] = edit_prompts(edit_text, list_of_prompts)
+                        st.rerun()
 
         i1, i2, _ = st.columns([1, 1, 0.5])
         with i1:

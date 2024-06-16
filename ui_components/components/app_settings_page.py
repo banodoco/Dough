@@ -9,9 +9,9 @@ from utils.data_repo.data_repo import DataRepo
 
 def app_settings_page():
     data_repo = DataRepo()
-    
+
     app_version = None
-    with open('scripts/app_version.txt', 'r') as file:
+    with open("scripts/app_version.txt", "r") as file:
         app_version = file.read()
 
     st.markdown("#### App Settings" + ("" if not app_version else f" (v{app_version})"))
@@ -72,35 +72,33 @@ def app_settings_page():
 def api_key_input_component():
     data_repo = DataRepo()
     app_secrets = data_repo.get_app_secrets_from_user_uuid()
-    if "stability_key" in app_secrets and app_secrets["stability_key"]:
-        st.session_state["stability_key"] = app_secrets["stability_key"]
+    if "replicate_key" in app_secrets and app_secrets["replicate_key"]:
+        st.session_state["replicate_key"] = app_secrets["replicate_key"]
     else:
-        st.session_state["stability_key"] = ""
+        st.session_state["replicate_key"] = ""
     if (
-        st.session_state["stability_key"] is None
-        or st.session_state["stability_key"] == ""
-        or "stability_key" not in st.session_state
+        st.session_state["replicate_key"] is None
+        or st.session_state["replicate_key"] == ""
+        or "replicate_key" not in st.session_state
     ):
         st.info(
             """
-            Please enter your Stability API key below to use Stable Diffusion 3. To get your API key, you’ll need to:
+            Please enter your Replicate API key below to use prompt generation in Inspiration Engine. To get your API key, you’ll need to:
 
-            1) Sign up for Stability’s platform **[here](https://platform.stability.ai/docs/getting-started)**.
-            2) Purchase credits **[here](https://platform.stability.ai/account/credits)**.
-            3) Grab your API key **[here](https://platform.stability.ai/account/keys)**.
-            4) Enter this key into the field.
-             
+            1) Sign up for the Replicate platform **[here](https://replicate.com/)**.
+            2) Create your API key by going into the "API tokens" section.
+            3) Enter this key into the field.
+
             
             """
         )
 
-    sai_key = st.text_input("Stability AI API Key", st.session_state["stability_key"])
+    replicate_key = st.text_input("Replicate API Key", st.session_state["replicate_key"])
 
     if st.button("Update"):
-
-        if sai_key and sai_key != st.session_state["stability_key"]:
-            data_repo.update_app_setting(stability_key=sai_key)
-            st.session_state["stability_key"] = sai_key
+        if replicate_key != None and replicate_key != st.session_state["replicate_key"]:
+            data_repo.update_app_setting(replicate_key=replicate_key)
+            st.session_state["replicate_key"] = replicate_key
             st.success("API Key updated successfully.")
             time.sleep(0.7)
             st.rerun()
