@@ -243,10 +243,11 @@ def setup_app_ui():
                         on_change=change_page,
                     )
 
+                    # TODO: this is a hacky fix (related to jump_to_single_frame_view_button)
                     if st.session_state["page"] != CreativeProcessPage.ADJUST_SHOT.value:
                         st.session_state["current_frame_sidebar_selector"] = 0
 
-                # TODO: not is use
+                # NOTE: not is use
                 # if st.session_state["page"] == "Explore":
                 #     explorer_page(st.session_state["project_uuid"])
                 # elif st.session_state["page"] == "Shortlist":

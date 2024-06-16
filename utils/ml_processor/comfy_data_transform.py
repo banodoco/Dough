@@ -247,7 +247,7 @@ class ComfyDataTransform:
 
         # workflow params
         # node 'get_img_size' automatically fetches the size
-        model = query.data["data"].get("sdxl_model", None)
+        model = query.data["data"].get("model", "sd_xl_base_1.0.safetensors")
         positive_prompt, negative_prompt = query.prompt, query.negative_prompt
         steps, cfg = query.num_inference_steps, query.guidance_scale
         input_image = query.data.get("data", {}).get("input_image", None)
