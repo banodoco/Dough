@@ -72,6 +72,7 @@ def create_single_interpolated_clip(
                 "log_uuid": log.uuid,
                 "settings": settings,
                 "shot_uuid": str(shot_uuid),
+                "inference_tag": settings.get("inference_type", "")
             }
 
             process_inference_output(**inference_data)

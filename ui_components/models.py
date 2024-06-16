@@ -334,6 +334,10 @@ class InferenceLogObject:
             else None
         )
         self.model_name = kwargs["model_name"] if key_present("model_name", kwargs) else ""
+        self.generation_source = (
+            kwargs["generation_source"] if key_present("generation_source", kwargs) else ""
+        )
+        self.generation_tag = kwargs["generation_tag"] if key_present("generation_tag", kwargs) else ""
 
 
 def key_present(key, dict):

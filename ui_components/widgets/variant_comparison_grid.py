@@ -148,6 +148,9 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                     individual_video_display_element(variants[current_variant], is_video_upscaled)
 
                 if not is_video_upscaled:
+                    if variants[current_variant].inference_log.generation_tag:
+                        st.info(variants[current_variant].inference_log.generation_tag.title())
+                    
                     with st.expander("Upscale settings", expanded=False):
                         (
                             styling_model,
@@ -169,7 +172,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                             st.rerun()
                 else:
                     st.info("Upscaled video")
-                    # @Peter you can parent (the file from which this was created) like this.. similarly you can get children
+                    # @Peter you can get the parent (the file from which this was created) like this.. similarly you can get children
                     # print(variants[current_variant].get_parent_entities()[0].filename)
                 create_video_download_button(variants[current_variant].location, tag="var_compare")
                 variant_inference_detail_element(
@@ -219,6 +222,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
                     if is_upscaled_variant:
                         st.info("Upscaled video")
+                    elif variants[variant_index].inference_log.generation_tag:
+                        st.info(variants[variant_index].inference_log.generation_tag.title())
                     create_video_download_button(variants[variant_index].location, tag="var_details")
                     variant_inference_detail_element(
                         variants[variant_index],
@@ -315,7 +320,7 @@ def variant_inference_detail_element(
 
         with st.expander("Settings", expanded=open_generaton_details):
             shot_meta_data, data_type = get_generation_settings_from_log(variant.inference_log.uuid)
-            
+
             if shot_meta_data and shot_meta_data.get("main_setting_data", None):
                 # ---------- main settings data ------------------
                 for k, v in shot_meta_data.get("main_setting_data", {}).items():
@@ -363,7 +368,7 @@ def variant_inference_detail_element(
                         else:
                             # Optionally handle empty or None values differently here
                             pass
-                        
+
                 # ------------ individual frame settings --------------------
                 timing_data = shot_meta_data.get("timing_data", [])
                 display_dict = defaultdict(list)
@@ -375,14 +380,20 @@ def variant_inference_detail_element(
                         if v == "":
                             v = "__"
                         display_dict[k].append(v)
-                
-                are_all_elements_similar = lambda arr: True if not arr else all(element == arr[0] for element in arr[1:])
+
+                are_all_elements_similar = lambda arr: (
+                    True if not arr else all(element == arr[0] for element in arr[1:])
+                )
                 for k, v in display_dict.items():
                     k = k.replace("_", " ").title()
                     if are_all_elements_similar(v):
                         v = f"{v[0]} (for all frames)"
                     else:
-                        if k.startswith("Distance To Next Frame") or k.startswith("Speed Of Transition") or k.startswith("Freedom Between Frames"):
+                        if (
+                            k.startswith("Distance To Next Frame")
+                            or k.startswith("Speed Of Transition")
+                            or k.startswith("Freedom Between Frames")
+                        ):
                             v = v[:-1]  # removing the last ele in these cases
                         v = ", ".join(str(e) for e in v)
                     st.write(f"**{k}**: {v}")
@@ -395,7 +406,9 @@ def variant_inference_detail_element(
                         use_container_width=True,
                         type="primary",
                     ):
-                        load_shot_settings(shot_uuid, variant.inference_log.uuid, load_images=False, load_setting_values=True)
+                        load_shot_settings(
+                            shot_uuid, variant.inference_log.uuid, load_images=False, load_setting_values=True
+                        )
                         st.success("Settings Loaded")
                         time.sleep(0.3)
                         st.rerun()
@@ -406,7 +419,9 @@ def variant_inference_detail_element(
                         help="This will load all the images for this run below. In doing so, it'll remove the current images and images - though they'll be available for all previous runs.",
                         use_container_width=True,
                     ):
-                        load_shot_settings(shot_uuid, variant.inference_log.uuid, load_images=True, load_setting_values=False)
+                        load_shot_settings(
+                            shot_uuid, variant.inference_log.uuid, load_images=True, load_setting_values=False
+                        )
                         st.success("Images Loaded")
                         time.sleep(0.3)
                         st.rerun()

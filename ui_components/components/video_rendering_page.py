@@ -245,6 +245,8 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     motions_during_frames = motions_during_frames[:preview_length]
                     individual_prompts = individual_prompts[:preview_length]
                     individual_negative_prompts = individual_negative_prompts[:preview_length]
+                    
+                    settings["inference_type"] = "preview"      # TODO: probably a wrong practice to send this in with the settings
 
                 shot_data = update_session_state_with_animation_details(
                     shot_uuid,
@@ -296,6 +298,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                 if f"{shot_uuid}_backlog_enabled" not in st.session_state:
                     st.session_state[f"{shot_uuid}_backlog_enabled"] = False
 
+                
                 create_single_interpolated_clip(
                     shot_uuid,
                     vid_quality,

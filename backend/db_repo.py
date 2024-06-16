@@ -429,13 +429,17 @@ class DBRepo:
 
         return InternalResponse(payload, "file count fetched", True)
 
-    def get_explorer_pending_stats(self, project_uuid, log_status_list):
+    def get_explorer_pending_stats(self, project_uuid, log_status_list, generation_source_list):
         project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
         temp_image_count = InternalFileObject.objects.filter(
-            tag=InternalFileTag.TEMP_GALLERY_IMAGE.value, project_id=project.id, is_disabled=False
+            tag=InternalFileTag.TEMP_GALLERY_IMAGE.value,
+            project_id=project.id,
+            is_disabled=False,
         ).count()
         pending_image_count = InferenceLog.objects.filter(
-            status__in=log_status_list, is_disabled=False
+            status__in=log_status_list,
+            generation_source__in=generation_source_list,
+            is_disabled=False,
         ).count()
         payload = {"data": {"temp_image_count": temp_image_count, "pending_image_count": pending_image_count}}
 

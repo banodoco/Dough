@@ -5,6 +5,7 @@ from shared.constants import (
     SECRET_ACCESS_TOKEN,
     InferenceParamType,
     InferenceStatus,
+    InferenceType,
     InternalFileType,
     InternalResponse,
 )
@@ -289,8 +290,15 @@ class DataRepo:
 
         input_params_data = json.loads(res.input_params)
         input_params_data[InferenceParamType.ORIGIN_DATA.value] = dict(kwargs)
+        generation_source = kwargs.get("inference_type", "")
+        generation_tag = kwargs.get("inference_tag", "")
 
-        status = self.update_inference_log(uuid, input_params=json.dumps(input_params_data))
+        status = self.update_inference_log(
+            uuid,
+            input_params=json.dumps(input_params_data),
+            generation_source=generation_source,
+            generation_tag=generation_tag,
+        )
         return status
 
     # ai model param map
@@ -512,7 +520,14 @@ class DataRepo:
     # gives the count of 1. temp generated images 2. inference logs with in-progress/pending status
     def get_explorer_pending_stats(self, project_uuid):
         log_status_list = [InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value]
-        res = self.db_repo.get_explorer_pending_stats(project_uuid, log_status_list)
+        res = self.db_repo.get_explorer_pending_stats(
+            project_uuid,
+            log_status_list,
+            generation_source_list=[
+                InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
+                InferenceType.GALLERY_IMAGE_GENERATION.value,
+            ],
+        )
         count_data = res.data["data"] if res.status else {"temp_image_count": 0, "pending_image_count": 0}
         return count_data
 
