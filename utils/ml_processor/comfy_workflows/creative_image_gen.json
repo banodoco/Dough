@@ -8,7 +8,7 @@
         "scheduler": "sgm_uniform",
         "denoise": 1,
         "model": [
-          "26",
+          "4",
           0
         ],
         "positive": [

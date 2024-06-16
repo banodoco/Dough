@@ -11,7 +11,7 @@ from io import BytesIO
 
 from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType, ProjectMetaData
 from ui_components.methods.common_methods import process_inference_output, save_new_image
-from ui_components.methods.file_methods import zoom_and_crop
+from ui_components.methods.file_methods import generate_pil_image, zoom_and_crop
 from ui_components.models import InternalProjectObject, InternalSettingObject
 from ui_components.widgets.model_selector_element import model_selector_element
 from utils.common_utils import acquire_lock, release_lock
@@ -356,12 +356,10 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     st.session_state["insp_lightning_mode"] = lightning
                     st.rerun()
 
+            if "list_of_style_references" not in st.session_state:
+                st.session_state["list_of_style_references"] = []
+
             if type_of_style_input == "Upload Images":
-
-                # if st.session_state['list_of_style_references'] starts with https:/ set it to empty list
-
-                if "list_of_style_references" not in st.session_state:
-                    st.session_state["list_of_style_references"] = []
 
                 if len(st.session_state["list_of_style_references"]) < 3:
                     h1, h2 = st.columns([1, 1.5])
@@ -390,20 +388,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         with col:
                             img = st.session_state["list_of_style_references"][i]
                             if img is not None:
-                                # Check if the reference is a URL or an uploaded file
-                                if isinstance(img, str) and img.startswith("http"):
-                                    # It's a URL, load the image from the URL
-                                    response = requests.get(img)
-                                    display_img = Image.open(BytesIO(response.content))
-                                elif not isinstance(img, Image.Image):
-                                    # It's an uploaded file, open it
-                                    display_img = Image.open(img)
-                                else:
-                                    # It's already an image object
-                                    display_img = img
+                                display_img = generate_pil_image(img)
 
-                                # Apply zoom and crop
-                                # display_img = zoom_and_crop(display_img, 512, 512)
                                 st.image(display_img)
                                 if st.button(f"Remove style reference {i+1}", use_container_width=True):
                                     # Remove the image from the list
@@ -427,6 +413,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     for i, col in enumerate(cols):
                         with col:
                             st.image(preset_images[i])
+
+            else:
+                st.session_state["list_of_style_references"] = []
 
             inf1, inf2 = st.columns([2, 2])
             with inf1:
@@ -463,7 +452,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
         with prompt1:
             images_per_prompt = st.slider(
                 "Images per prompt:",
-                min_value=4,
+                min_value=1,
                 max_value=64,
                 step=4,
                 value=st.session_state["insp_img_per_prompt"],
@@ -517,7 +506,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         # print("--------- generating sdxl")
                         data = {
                             "shot_uuid": shot_uuid,
-                            "img_uuid_list": json.dumps([f.uuid for f in input_image_file_list]),
                             "additonal_description_text": additonal_description_text,
                             "additional_style_text": additional_style_text,
                             "sdxl_model": model,
@@ -525,6 +513,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             "width": project_settings.width,
                             "height": project_settings.height,
                         }
+
+                        if input_image_file_list and len(input_image_file_list):
+                            data["img_uuid_list"] = json.dumps([f.uuid for f in input_image_file_list])
 
                         for idx, f in enumerate(input_image_file_list):
                             data[f"file_uuid_{idx}"] = f.uuid
