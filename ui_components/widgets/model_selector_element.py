@@ -10,11 +10,16 @@ from utils.constants import T2IModel
 def model_selector_element(type=T2IModel.SDXL.value, position="explorer", selected_model=None):
     tab1, tab2 = st.tabs(["Choose Model", "Download Models"])
     default_model = (
-        "Juggernaut-XL_v9" if type == T2IModel.SDXL.value else "sd3_medium_incl_clips.safetensors"
+        "Juggernaut-XL_v9_v2.safetensors"
+        if type == T2IModel.SDXL.value
+        else "sd3_medium_incl_clips.safetensors"
     )
 
-    
-    info_msg = "Juggernaut-XL_v9 will be selected as default" if type == T2IModel.SDXL.value else "Default model base SD3 medium fp8 would be selected"
+    info_msg = (
+        "Juggernaut-XL_v9 will be selected as default"
+        if type == T2IModel.SDXL.value
+        else "Default model base SD3 medium fp8 would be selected"
+    )
     checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
 
     with tab1:
@@ -76,12 +81,12 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
         sdxl_model_download_list = {
             "Juggernaut-XL_v9": {
                 "url": "https://huggingface.co/RunDiffusion/Juggernaut-XL-v9/resolve/main/Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
-                "filename": "Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
+                "filename": "Juggernaut-XL_v9_v2.safetensors",
                 "desc": "Good general purpose model",
             },
             "Juggernaut-XL-Lightning": {
                 "url": "https://huggingface.co/RunDiffusion/Juggernaut-XL-Lightning/resolve/main/Juggernaut_RunDiffusionPhoto2_Lightning_4Steps.safetensors",
-                "filename": "Juggernaut_RunDiffusionPhoto2_Lightning_4Steps.safetensors",
+                "filename": "Juggernaut-XL_Lightning_4Steps.safetensors",
                 "desc": "Faster version of Juggernaut-XL",
             },
         }

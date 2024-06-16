@@ -339,7 +339,7 @@ def copy_local_file(filepath, destination_directory, new_name):
         new_filepath = os.path.join(destination_directory, new_name)
         shutil.copy2(filepath, new_filepath)
     except Exception as e:
-        print("error occured: ", e)
+        pass
 
 
 def determine_dimensions_for_sdxl(width, height):

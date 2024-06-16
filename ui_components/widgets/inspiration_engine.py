@@ -183,7 +183,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 if st.session_state["insp_text_prompt"] != generaton_text:
                     st.session_state["insp_text_prompt"] = generaton_text
                     st.rerun()
-                    
+
                 subprompt1, subprompt2 = st.columns([2, 1])
                 with subprompt1:
                     total_unique_prompts = st.slider(
@@ -300,7 +300,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 st.session_state["insp_selected_model"] = model
                 st.rerun()
 
-
         if type_of_model == T2IModel.SD3.value:
             with model1:
                 st.info("Style references aren't yet supported for Stable Diffusion 3.")
@@ -320,9 +319,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 horizontal=True,
             )
 
-
-                
-            
             if input_type_list.index(type_of_style_input) != st.session_state["insp_type_of_style"]:
                 st.session_state["insp_type_of_style"] = input_type_list.index(type_of_style_input)
                 st.rerun()
@@ -343,34 +339,38 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                 # if st.session_state['list_of_style_references'] starts with https:/ set it to empty list
 
+                if "list_of_style_references" not in st.session_state:
+                    st.session_state["list_of_style_references"] = []
 
-                if 'list_of_style_references' not in st.session_state:
-                    st.session_state['list_of_style_references'] = []
-
-                if len(st.session_state['list_of_style_references']) < 3:
+                if len(st.session_state["list_of_style_references"]) < 3:
                     h1, h2 = st.columns([1, 1.5])
                     with h1:
                         uploaded_images = st.file_uploader(
-                                    f"Upload up to 3 style references:", type=["jpg", "jpeg", "png", "webp"]
-                                ,accept_multiple_files=True
-                                )
+                            f"Upload up to 3 style references:",
+                            type=["jpg", "jpeg", "png", "webp"],
+                            accept_multiple_files=True,
+                        )
                         if uploaded_images:
                             if st.button(f"Add style reference", use_container_width=True):
                                 # Check if there are less than 3 images already in the list
-                                while len(st.session_state['list_of_style_references']) < 3 and uploaded_images:
-                                    st.session_state['list_of_style_references'].append(uploaded_images.pop(0))
+                                while (
+                                    len(st.session_state["list_of_style_references"]) < 3 and uploaded_images
+                                ):
+                                    st.session_state["list_of_style_references"].append(
+                                        uploaded_images.pop(0)
+                                    )
                                 if uploaded_images:  # If there are still images left, show a warning
                                     st.warning("You can only upload 3 style references.")
-                         
+
                 columns = st.columns(3)
 
                 for i, col in enumerate(columns):
-                    if i < len(st.session_state['list_of_style_references']):
+                    if i < len(st.session_state["list_of_style_references"]):
                         with col:
-                            img = st.session_state['list_of_style_references'][i]
+                            img = st.session_state["list_of_style_references"][i]
                             if img is not None:
                                 # Check if the reference is a URL or an uploaded file
-                                if isinstance(img, str) and img.startswith('http'):
+                                if isinstance(img, str) and img.startswith("http"):
                                     # It's a URL, load the image from the URL
                                     response = requests.get(img)
                                     display_img = Image.open(BytesIO(response.content))
@@ -380,14 +380,13 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 else:
                                     # It's already an image object
                                     display_img = img
-                                    
 
                                 # Apply zoom and crop
                                 # display_img = zoom_and_crop(display_img, 512, 512)
                                 st.image(display_img)
                                 if st.button(f"Remove style reference {i+1}", use_container_width=True):
                                     # Remove the image from the list
-                                    st.session_state['list_of_style_references'].pop(i)
+                                    st.session_state["list_of_style_references"].pop(i)
                                     st.rerun()
 
             elif type_of_style_input == "Choose From List":
@@ -406,7 +405,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     cols = st.columns(len(preset_images))
                     for i, col in enumerate(cols):
                         with col:
-                            st.image(preset_images[i])                    
+                            st.image(preset_images[i])
 
             inf1, inf2 = st.columns([2, 2])
             with inf1:
@@ -476,16 +475,16 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
         # ------------------ GENERATE --------------------------
         st.markdown("***")
-        if st.button("Generate images",type="primary"):
+        if st.button("Generate images", type="primary"):
 
             if type_of_style_input == "Choose From List":
-                st.session_state['list_of_style_references'] = preset_images
+                st.session_state["list_of_style_references"] = preset_images
 
             ml_client = get_ml_client()
 
             input_image_file_list = []
             atleast_one_log_created = False
-            for img in st.session_state['list_of_style_references']:
+            for img in st.session_state["list_of_style_references"]:
                 input_image_file = save_new_image(img, project_uuid)
                 input_image_file_list.append(input_image_file)
 
@@ -494,7 +493,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 for _ in range(images_per_prompt):
 
                     if type_of_model == T2IModel.SDXL.value:
-                        print("--------- generating sdxl")
+                        # print("--------- generating sdxl")
                         data = {
                             "shot_uuid": shot_uuid,
                             "img_uuid_list": json.dumps([f.uuid for f in input_image_file_list]),
@@ -533,7 +532,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                     # for sd3 model
                     else:
-                        print("--------- generating sd3")
+                        # print("--------- generating sd3")
                         query_obj = MLQueryObject(
                             timing_uuid=None,
                             model_uuid=None,
@@ -592,5 +591,5 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         uuid=project.uuid, meta_data=json.dumps(meta_data)
                                     )
                                 release_lock(key)
-        
+
             st.rerun()

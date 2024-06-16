@@ -910,7 +910,7 @@ class ComfyDataTransform:
         workflow["271"]["inputs"]["seed"] = seed
         workflow["135"]["inputs"]["width"] = width
         workflow["135"]["inputs"]["height"] = height
-        
+
         # adding download link if it's the default model
         extra_model_list = []
         if model == "sd3_medium_incl_clips.safetensors":
@@ -931,13 +931,15 @@ class ComfyDataTransform:
 
         # workflow params
         query_data = query.data["data"]
-        width, height = determine_dimensions_for_sdxl(query_data.get("width", 512), query_data.get("height", 512))        
+        width, height = determine_dimensions_for_sdxl(
+            query_data.get("width", 512), query_data.get("height", 512)
+        )
         image_prompt, negative_prompt = query.prompt, query.negative_prompt
         file_uuid_list = json.loads(query_data.get("img_uuid_list", json.dumps([])))
         lightning = query_data.get("lightning", False)
         additional_description_text = query_data.get("additional_description_text", "")
         additional_style_text = query_data.get("additional_style_text", "")
-        model = query_data.get("model", "sd_xl_base_1.0.safetensors")
+        model = query_data.get("sdxl_model", "sd_xl_base_1.0.safetensors")
         seed = random_seed()
         style_strength = query.strength
 
@@ -947,7 +949,7 @@ class ComfyDataTransform:
                 if v["class_type"] == "IPAdapterStyleComposition":
                     ipa_node_idx_list.append(int(k))  # NOTE: in some weird af workflow these are floats
 
-            ipa_node_idx_list.sort(reverse=True)        
+            ipa_node_idx_list.sort(reverse=True)
             # creating new nodes (not handling the case if there are multiple nodes)
             # starting idx from 100, just to be safe
             node_idx = 100 + n * 4
@@ -990,13 +992,15 @@ class ComfyDataTransform:
             return node_idx + 2  # ipadapter style composition node idx
 
         def add_reference_images(workflow, img_list, style_strength, **kwargs):
-            num_images = len(img_list)                        
+            num_images = len(img_list)
             # Initial weight_style based on the number of images
-            weight_style = 0.7 if num_images == 1 else 0.4 if num_images == 2 else 0.29 if num_images == 3 else 0.7
-        
+            weight_style = (
+                0.7 if num_images == 1 else 0.4 if num_images == 2 else 0.29 if num_images == 3 else 0.7
+            )
+
             # Adjust weight_style based on style_strength
             style_adjustment = (style_strength - 0.5) * 10 * 0.01
-            weight_style += style_adjustment            
+            weight_style += style_adjustment
 
             for i in range(num_images):
                 # Creating a node
@@ -1024,7 +1028,7 @@ class ComfyDataTransform:
             workflow["3"]["inputs"]["scheduler"] = "sgm_uniform"
 
         img_list, _ = data_repo.get_all_file_list(uuid__in=file_uuid_list, is_disabled=False)
-        
+
         workflow = add_reference_images(workflow, img_list, style_strength=style_strength)
 
         extra_model_list = [
@@ -1039,6 +1043,14 @@ class ComfyDataTransform:
                 "dest": os.path.join(COMFY_BASE_PATH, "models", "ipadapter"),
             },
         ]
+        if model == "Juggernaut-XL_v9_v2.safetensors":
+            extra_model_list.append(
+                {
+                    "filename": "Juggernaut-XL_v9_v2.safetensors",
+                    "url": "https://huggingface.co/RunDiffusion/Juggernaut-XL-v9/resolve/main/Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
+                    "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
+                }
+            )
 
         return json.dumps(workflow), output_node_ids, extra_model_list, []
 
