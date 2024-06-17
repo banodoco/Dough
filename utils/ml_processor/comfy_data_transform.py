@@ -946,7 +946,7 @@ class ComfyDataTransform:
         def add_nth_node(workflow, n, img_file: InternalFileObject, weight_style):
             ipa_node_idx_list = []
             for k, v in workflow.items():
-                if v["class_type"] == "IPAdapterStyleComposition":
+                if v["class_type"] == "IPAdapterAdvanced":
                     ipa_node_idx_list.append(int(k))  # NOTE: in some weird af workflow these are floats
 
             ipa_node_idx_list.sort(reverse=True)
@@ -958,6 +958,7 @@ class ComfyDataTransform:
                 "class_type": "LoadImage",
                 "_meta": {"title": "Load Image"},
             }
+
             workflow[str(node_idx + 1)] = {
                 "inputs": {
                     "type": "dissolve",
@@ -968,30 +969,48 @@ class ComfyDataTransform:
                 "class_type": "IPAdapterNoise",
                 "_meta": {"title": "IPAdapter Noise"},
             }
+
             workflow[str(node_idx + 2)] = {
                 "inputs": {
-                    "weight_style": weight_style,
-                    "weight_composition": 0,
-                    "expand_style": True,
+                    "weight": 0.07,
+                    "weight_type": "style transfer",
                     "combine_embeds": "concat",
                     "start_at": 0,
                     "end_at": 0.85,
-                    "embeds_scaling": "K+V w/ C penalty",
-                    "model": ["11", 0] if n == 1 else [str(ipa_node_idx_list[0]), 0],
-                    "ipadapter": ["11", 1],
-                    "image_style": [str(node_idx), 0],
-                    "image_composition": [str(node_idx), 0],
+                    "embeds_scaling": "V only",
+                    "model": ["4", 0],
+                    "ipadapter": ["58", 0],
+                    "image": [str(node_idx), 0],
                     "image_negative": [str(node_idx + 1), 0],
+                    "clip_vision": ["62", 0],
                 },
-                "class_type": "IPAdapterStyleComposition",
-                "_meta": {"title": "IPAdapter Style & Composition SDXL"},
+                "class_type": "IPAdapterAdvanced",
+                "_meta": {"title": "IPAdapter Advanced"},
             }
 
-            workflow["3"]["inputs"]["model"] = [str(node_idx + 2), 0]
+            workflow[str(node_idx + 3)] = {
+                "inputs": {
+                    "weight": 0.3,
+                    "weight_type": "ease in-out",
+                    "combine_embeds": "concat",
+                    "start_at": 0,
+                    "end_at": 1,
+                    "embeds_scaling": "V only",
+                    "model": [str(node_idx + 2), 0],
+                    "ipadapter": ["48", 0],
+                    "image": [str(node_idx), 0],
+                    "image_negative": [str(node_idx + 1), 0],
+                    "clip_vision": ["49", 0],
+                },
+                "class_type": "IPAdapterAdvanced",
+                "_meta": {"title": "IPAdapter Advanced"},
+            }
 
-            return node_idx + 2  # ipadapter style composition node idx
+            workflow["3"]["inputs"]["model"] = [str(node_idx + 3), 0]
 
-        def add_reference_images(workflow, img_list, style_strength, **kwargs):
+            return node_idx + 2  # ipadapter style node idx
+
+        def add_reference_images(workflow, img_list, weight, **kwargs):
             num_images = len(img_list)
             # Initial weight_style based on the number of images
             weight_style = (
@@ -999,7 +1018,7 @@ class ComfyDataTransform:
             )
 
             # Adjust weight_style based on style_strength
-            style_adjustment = (style_strength - 0.5) * 10 * 0.01
+            style_adjustment = (weight - 0.5) * 10 * 0.01
             weight_style += style_adjustment
 
             for i in range(num_images):
@@ -1029,7 +1048,7 @@ class ComfyDataTransform:
 
         img_list, _ = data_repo.get_all_file_list(uuid__in=file_uuid_list, is_disabled=False)
 
-        workflow = add_reference_images(workflow, img_list, style_strength=style_strength)
+        workflow = add_reference_images(workflow, img_list, weight=style_strength)
 
         extra_model_list = [
             {
@@ -1051,6 +1070,9 @@ class ComfyDataTransform:
                     "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
                 }
             )
+
+        # with open("ws.json", "w") as file:
+        #     file.write(json.dumps(workflow))
 
         return json.dumps(workflow), output_node_ids, extra_model_list, []
 
