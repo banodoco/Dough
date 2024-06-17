@@ -8,6 +8,7 @@ import random
 import shutil
 import string
 import tempfile
+import time
 from typing import Union
 from urllib.parse import urlparse
 import zipfile
@@ -19,7 +20,7 @@ from moviepy.editor import VideoFileClip
 from dotenv import set_key, get_key
 import requests
 import streamlit as st
-from shared.constants import SERVER, InternalFileType, ServerType
+from shared.constants import SERVER, InternalFileTag, InternalFileType, ServerType
 from ui_components.models import InternalFileObject
 from utils.data_repo.data_repo import DataRepo
 
@@ -304,6 +305,10 @@ def zip_images(image_locations, zip_filename="images.zip", filename_list=[]):
 
 
 def create_duplicate_file(file: InternalFileObject, project_uuid=None) -> InternalFileObject:
+    """
+    this creates a duplicate InternalFileobject in the db, the actual file on the disk/or url
+    remains the same
+    """
     data_repo = DataRepo()
 
     unique_id = "".join(random.choices(string.ascii_lowercase + string.digits, k=5))
@@ -488,3 +493,18 @@ def get_files_in_a_directory(directory, ext_list=[]):
                     res.append(file)  # (os.path.join(root, file))
 
     return res
+
+
+def add_file_to_shortlist(file_uuid, project_uuid=None):
+    data_repo = DataRepo()
+    file: InternalFileObject = data_repo.get_file_from_uuid(file_uuid)
+
+    project_uuid = project_uuid or file.project.uuid
+    duplicate_file = create_duplicate_file(file, project_uuid)
+    data_repo.update_file(
+        duplicate_file.uuid,
+        tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value,
+    )
+    st.success("Added To Shortlist")
+    time.sleep(0.3)
+    st.rerun()

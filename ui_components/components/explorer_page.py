@@ -8,7 +8,7 @@ from ui_components.methods.common_methods import (
     add_new_shot,
     save_new_image,
 )
-from ui_components.methods.file_methods import zoom_and_crop
+from ui_components.methods.file_methods import add_file_to_shortlist, zoom_and_crop
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.inpainting_element import inpainting_image_input
 from ui_components.widgets.inspiration_engine import inspiration_engine_element
@@ -927,13 +927,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                     use_container_width=True,
                                     help="The shortlist appears in a box on the left.",
                                 ):
-                                    data_repo.update_file(
-                                        gallery_image_list[i + j].uuid,
-                                        tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value,
-                                    )
-                                    st.success("Added To Shortlist")
-                                    time.sleep(0.3)
-                                    st.rerun()
+                                    add_file_to_shortlist(gallery_image_list[i + j].uuid)
 
                         # -------- inference details --------------
                         if gallery_image_list[i + j].inference_log:

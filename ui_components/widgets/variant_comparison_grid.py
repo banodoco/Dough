@@ -19,7 +19,7 @@ from shared.constants import (
 from ui_components.constants import CreativeProcessType, ShotMetaData
 from ui_components.methods.animation_style_methods import get_generation_settings_from_log, load_shot_settings
 from ui_components.methods.common_methods import promote_image_variant, promote_video_variant
-from ui_components.methods.file_methods import create_duplicate_file
+from ui_components.methods.file_methods import add_file_to_shortlist, create_duplicate_file
 from ui_components.methods.video_methods import sync_audio_and_duration, upscale_video
 from ui_components.widgets.display_element import individual_video_display_element
 from ui_components.widgets.shot_view import create_video_download_button
@@ -150,7 +150,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                 if not is_video_upscaled:
                     if variants[current_variant].inference_log.generation_tag:
                         st.info(variants[current_variant].inference_log.generation_tag.title())
-                    
+
                     with st.expander("Upscale settings", expanded=False):
                         (
                             styling_model,
@@ -562,16 +562,13 @@ def fetch_inference_data(file: InternalFileObject):
 
 
 def add_variant_to_shortlist_element(file: InternalFileObject, project_uuid):
-    data_repo = DataRepo()
-
     if st.button(
-        "Add to shortlist ➕", key=f"shortlist_{file.uuid}", use_container_width=True, help="Add to shortlist"
+        "Add to shortlist ➕",
+        key=f"shortlist_{file.uuid}",
+        use_container_width=True,
+        help="Add to shortlist",
     ):
-        duplicate_file = create_duplicate_file(file, project_uuid)
-        data_repo.update_file(duplicate_file.uuid, tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value)
-        st.success("Added To Shortlist")
-        time.sleep(0.3)
-        st.rerun()
+        add_file_to_shortlist(file.uuid, project_uuid)
 
 
 def add_variant_to_shot_element(file: InternalFileObject, project_uuid):
