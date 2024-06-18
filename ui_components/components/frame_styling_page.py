@@ -130,12 +130,12 @@ def frame_styling_page(shot_uuid: str):
                             st.rerun()
                 else:
                     st.error("You must first select the area to inpaint.")
-
+        '''
         st.markdown("***")
 
         with st.expander("🤏 Crop, Move & Rotate", expanded=True):
             cropping_selector_element(shot_uuid)
-
+        '''
         st.markdown("***")
 
 
