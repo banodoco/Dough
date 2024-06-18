@@ -630,7 +630,6 @@ def move_shot_buttons(shot, direction):
 
 
 def download_all_images(shot_uuid):
-    # @peter4piyush, you may neeed to do this in a different way to interact properly with the db etc.
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     timing_list = shot.timing_list
@@ -740,16 +739,6 @@ def create_video_download_button(video_location, tag="temp"):
             mime="video/mp4",
             key=tag + str(file_name) + "_download_gen",
             use_container_width=True,
-        )
-
-
-# @Peter use these methods to shortlist and get the shortlist
-def shortlist_video_button(video_uuid, source="temp"):
-    data_repo = DataRepo()
-    if st.button("Shortlist Video"):
-        data_repo.update_file(
-            video_uuid,
-            tag=InternalFileTag.SHORTLISTED_VIDEO.value,
         )
 
 

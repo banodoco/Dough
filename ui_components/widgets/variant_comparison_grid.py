@@ -25,6 +25,7 @@ from ui_components.widgets.display_element import individual_video_display_eleme
 from ui_components.widgets.shot_view import create_video_download_button
 from ui_components.models import InternalAIModelObject, InternalFileObject
 from ui_components.widgets.add_key_frame_element import add_key_frame
+from ui_components.widgets.sm_animation_style_element import video_shortlist_btn
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow
@@ -172,8 +173,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                             st.rerun()
                 else:
                     st.info("Upscaled video")
-                    # @Peter you can get the parent (the file from which this was created) like this.. similarly you can get children
-                    # print(variants[current_variant].get_parent_entities()[0].filename)
+
                 create_video_download_button(variants[current_variant].location, tag="var_compare")
                 variant_inference_detail_element(
                     variants[current_variant],
@@ -317,6 +317,18 @@ def variant_inference_detail_element(
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     if stage == CreativeProcessType.MOTION.value:
+
+        with st.expander("Relationship details", expanded=False):
+            file_parents = variant.get_parent_entities()
+            if file_parents and len(file_parents):
+                st.write(f"This file has been upscaled from the file {file_parents[0].filename}")
+            file_children = variant.get_child_entities()
+            if file_children and len(file_children):
+                st.write(f"There are {len(file_children)} files that have been upscaled from this")
+                for i in range(len(file_children)):
+                    st.write(file_children[i].uuid)
+
+            video_shortlist_btn(variant.uuid)
 
         with st.expander("Settings", expanded=open_generaton_details):
             shot_meta_data, data_type = get_generation_settings_from_log(variant.inference_log.uuid)

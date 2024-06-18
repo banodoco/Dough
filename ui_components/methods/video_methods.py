@@ -72,7 +72,7 @@ def create_single_interpolated_clip(
                 "log_uuid": log.uuid,
                 "settings": settings,
                 "shot_uuid": str(shot_uuid),
-                "inference_tag": settings.get("inference_type", "")
+                "inference_tag": settings.get("inference_type", ""),
             }
 
             process_inference_output(**inference_data)
@@ -134,6 +134,7 @@ def upscale_video(shot_uuid, styling_model, upscale_factor, promote_to_main_vari
             "log_uuid": log.uuid,
             "settings": {"promote_to_main_variant": promote_to_main_variant},
             "shot_uuid": str(shot_uuid),
+            "inference_tag": "upscaled_video",
         }
 
         process_inference_output(**inference_data)

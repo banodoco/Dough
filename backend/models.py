@@ -104,8 +104,8 @@ class InferenceLog(BaseModel):
     output_details = models.TextField(default="", blank=True)
     total_inference_time = models.FloatField(default=0)
     status = models.CharField(max_length=255, default="")  # success, failed, in_progress, queued
-    generation_source = models.CharField(max_length=255, default="", blank=True)    # the source of generation
-    generation_tag = models.CharField(max_length=255, default="", blank=True)   # review, temp, upscaled etc..
+    generation_source = models.CharField(max_length=255, default="", blank=True)  # the source of generation
+    generation_tag = models.CharField(max_length=255, default="", blank=True)  # review, temp, upscaled etc..
 
     class Meta:
         app_label = "backend"
@@ -164,15 +164,20 @@ class InternalFileObject(BaseModel):
                 # TODO: optimize such that the entries are not created twice and not
                 # created one by one
                 for p in parent_entity_data:
-                    file_link = FileRelationship()
-                    file_link.child_entity_id = self.id
-                    file_link.transformation_type = (
-                        p["transformation_type"] if "transformation_type" in p else ""
-                    )
                     parent_file = InternalFileObject.objects.filter(uuid=p["id"], is_disabled=False).first()
-                    if parent_file:
-                        file_link.parent_entity_id = parent_file.id
-                        file_link.save()
+                    if not FileRelationship.objects.filter(
+                        child_entity_id=self.id,
+                        parent_entity_id=parent_file.id,
+                        is_disabled=False,
+                    ).exists():
+                        file_link = FileRelationship()
+                        file_link.child_entity_id = self.id
+                        file_link.transformation_type = (
+                            p["transformation_type"] if "transformation_type" in p else ""
+                        )
+                        if parent_file:
+                            file_link.parent_entity_id = parent_file.id
+                            file_link.save()
 
     def get_child_entities(self, transformation_type_list=None):
         query = {"parent_entity_id": self.id, "is_disabled": False}

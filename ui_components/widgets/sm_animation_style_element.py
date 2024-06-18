@@ -8,7 +8,7 @@ import string
 import tarfile
 from PIL import Image
 import streamlit as st
-from shared.constants import COMFY_BASE_PATH, InternalFileType
+from shared.constants import COMFY_BASE_PATH, InternalFileTag, InternalFileType, SortOrder
 from ui_components.methods.common_methods import save_new_image
 from ui_components.widgets.download_file_progress_bar import download_file_widget
 from utils import st_memory
@@ -31,6 +31,7 @@ from ui_components.widgets.display_element import display_motion_lora
 from ui_components.methods.ml_methods import train_motion_lora
 from utils.data_repo.data_repo import DataRepo
 from streamlit.elements.utils import _shown_default_value_warning
+
 _shown_default_value_warning = True
 
 
@@ -57,7 +58,9 @@ def animation_sidebar(
 ):
     with st.sidebar:
         with st.expander("⚙️ Visualisation of motion settings", expanded=True):
-            if st_memory.toggle("Open", key="open_motion_data", help="Closing this will speed up the interface.", value=True):
+            if st_memory.toggle(
+                "Open", key="open_motion_data", help="Closing this will speed up the interface.", value=True
+            ):
 
                 keyframe_positions = get_keyframe_positions(
                     type_of_frame_distribution,
@@ -87,6 +90,60 @@ def animation_sidebar(
                     last_key_frame_position,
                 )
                 plot_weights(weights_list, frame_numbers_list)
+
+        with st.expander("Shortlisted videos", expanded=True):
+            if st_memory.toggle("Open", value=True, key="video_shortlist_toggle"):
+                data_repo = DataRepo()
+                shot = data_repo.get_shot_from_uuid(shot_uuid)
+                video_shortlist_view(shot.project.uuid)
+
+
+def video_shortlist_view(project_uuid):
+    # TODO: @Peter this is just a basic setup, check this method gallery_image_view for proper implementation
+    data_repo = DataRepo()
+
+    page_number = 1
+    num_items_per_page = 100
+    gallery_image_filter_data = {
+        "file_type": InternalFileType.VIDEO.value,
+        "tag": InternalFileTag.SHORTLISTED_VIDEO.value,
+        "project_id": project_uuid,
+        "page": page_number or 1,
+        "data_per_page": num_items_per_page,
+        "sort_order": SortOrder.DESCENDING.value,
+    }
+
+    video_list, res_payload = data_repo.get_all_file_list(**gallery_image_filter_data)
+    for i in range(0, len(video_list), 2):
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            st.video(video_list[i].location)
+            video_shortlist_btn(video_list[i].uuid, type="remove_from_shortlist")
+
+        with c2:
+            if i + 1 < len(video_list):
+                st.video(video_list[i + 1].location)
+                video_shortlist_btn(video_list[i + 1].uuid, type="remove_from_shortlist")
+
+
+def video_shortlist_btn(video_uuid, type="add_to_shortlist"):
+    data_repo = DataRepo()
+    # add to shortlist
+    if type == "add_to_shortlist":
+        if st.button("Add to shortlist", key=f"{video_uuid}_shortlist_btn"):
+            data_repo.update_file(
+                video_uuid,
+                tag=InternalFileTag.SHORTLISTED_VIDEO.value,
+            )
+            st.rerun()
+    # remove from shortlist btn
+    else:
+        if st.button("Remove from shortlist", key=f"{video_uuid}_remove_shortlist_btn"):
+            data_repo.update_file(
+                video_uuid,
+                tag="",
+            )
+            st.rerun()
 
 
 def video_motion_settings(shot_uuid, img_list):
@@ -417,7 +474,9 @@ def select_sd_model_element(shot_uuid, default_model):
         model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
         ignored_model_list = ["dynamicrafter_512_interp_v1.ckpt"]
         model_files = [
-            file for file in model_files if "xl" not in file.lower() and "sd3" not in file.lower() and file not in ignored_model_list
+            file
+            for file in model_files
+            if "xl" not in file.lower() and "sd3" not in file.lower() and file not in ignored_model_list
         ]
 
     sd_model_dict = {
@@ -636,7 +695,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
             for j in range(items_per_row):
                 idx = i + j
                 img = img_list[idx] if idx < len(img_list) else None
-                
+
                 if img and img.location:
                     with grid[2 * j]:
                         st.info(f"**Frame {idx + 1}**")
@@ -689,8 +748,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                             individual_negative_prompts.append(individual_negative_prompt)
                         advanced1, advanced2, _ = st.columns([1, 1, 0.5])
                         with advanced1:
-                            
-                            
+
                             def create_slider(
                                 label,
                                 min_value,
