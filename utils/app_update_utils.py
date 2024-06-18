@@ -1,6 +1,7 @@
 import glob
 import hashlib
 import os
+import shutil
 import subprocess
 from dotenv import dotenv_values
 import requests
@@ -10,6 +11,8 @@ import sys
 from git import Repo
 from streamlit_server_state import server_state_lock
 
+from utils.common_utils import get_toml_config
+from utils.constants import TomlConfig
 from utils.data_repo.data_repo import DataRepo
 
 update_event = threading.Event()
@@ -64,7 +67,18 @@ def update_comfy_runner():
     if os.path.exists(comfy_runner_dir):
         os.chdir(comfy_runner_dir)
         try:
-            update_git_repo(comfy_runner_dir)
+            repo = Repo(comfy_runner_dir)
+            current_branch = repo.active_branch
+
+            # deleting the folder if it's on some other branch and cloning
+            # a fresh copy
+            if current_branch != "main":
+                shutil.rmtree(comfy_runner_dir)
+                move_to_root()
+                Repo.clone_from("https://github.com/piyushK52/comfy_runner", "./comfy_runner")
+            # updating if it's already on the main branch
+            else:
+                update_git_repo(comfy_runner_dir)
         except Exception as e:
             print(f"Error occured: {str(e)}")
 
@@ -80,6 +94,7 @@ def update_dough():
     except Exception as e:
         print(f"Error occurred: {str(e)}")
 
+    # performing db migrations if any
     if os.path.exists("banodoco_local.db"):
         python_executable = sys.executable
         completed_process = subprocess.run(
@@ -88,6 +103,7 @@ def update_dough():
         if completed_process.returncode == 0:
             print("Database migration successful")
 
+    # updating env file
     if os.path.exists(".env"):
         sample_env = dotenv_values(".env.sample")
         env = dotenv_values(".env")
@@ -105,6 +121,8 @@ def update_dough():
 def update_comfy_ui():
     global update_event
     custom_nodes_dir = os.path.join(comfy_ui_dir, "custom_nodes")
+    node_commit_dict = get_toml_config(TomlConfig.NODE_VERSION.value)
+
     if os.path.exists(custom_nodes_dir):
         initial_dir = dough_dir
         for folder in os.listdir(custom_nodes_dir):
@@ -122,13 +140,12 @@ def update_comfy_ui():
                             old_hash = hashlib.sha256(f.read()).hexdigest()
                     except FileNotFoundError:
                         print(f"Requirements file not found for {folder}")
+
+                # moving to a stable commit version for this node and installing
+                # deps only if they have changed
                 try:
-                    subprocess.run(
-                        ["git", "pull", "origin", "main"],
-                        check=True,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                    )
+                    commit_hash = node_commit_dict.get(folder, {}).get("commit_hash", None)
+                    update_git_repo(folder_path, commit_hash)
                     print(f"{folder} update successful")
 
                     if requirements_files:
@@ -152,11 +169,38 @@ def update_comfy_ui():
     move_to_root()
 
 
-def update_git_repo(git_dir):
+# TODO: move all the git methods into a single class
+def update_git_repo(git_dir, commit_hash=None):
     repo = Repo(git_dir)
-    current_branch = repo.active_branch
+
     repo.git.stash()
-    repo.remotes.origin.pull(current_branch.name)
+    repo.remotes.origin.fetch()
+
+    if repo.head.is_detached:
+        current_hash = repo.head.commit.hexsha
+        # print(f"Current repository is in detached HEAD state, current commit: {current_hash}")
+
+        if commit_hash:
+            if current_hash != commit_hash:
+                print(f"Checking out stable commit: {commit_hash}")
+                repo.git.checkout(commit_hash)
+            else:
+                print("Already at the stable commit")
+        else:
+            print("No commit hash provided. Skipping checkout.")
+    else:
+        current_branch = repo.active_branch
+        print(f"Current branch: {current_branch.name}")
+
+        if commit_hash:
+            current_hash = repo.rev_parse("HEAD")
+            if current_hash != commit_hash:
+                print(f"Checking out stable commit: {commit_hash}")
+                repo.git.checkout(commit_hash)
+            else:
+                print("Already at the stable commit")
+        else:
+            repo.remotes.origin.pull(current_branch.name)
 
 
 def get_local_version():
