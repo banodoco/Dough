@@ -16,14 +16,14 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
     )
 
     info_msg = (
-        "Juggernaut-XL_v9 will be selected as default"
+        "Juggernaut-XL_v9 will be selected as default. You can download more or put them in ComfyUI/models/checkpoints"
         if type == T2IModel.SDXL.value
-        else "Default model base SD3 medium fp8 would be selected"
+        else "Default base SD3 medium will be selected."
     )
     checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
 
     with tab1:
-        col1, col2 = st.columns([1, 1])
+        col1, col2 = st.columns([1, 0.25])
         with col1:
             explorer_gen_model = ""
 
@@ -68,13 +68,6 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
                 st.info(info_msg)
                 explorer_gen_model = default_model
 
-        with col2:
-            if len(all_files) == 0:
-                st.write("")
-                st.info("This is the default model - to download more, go to the Download Models tab.")
-            else:
-                st.write("")
-                st.info("To download more models, go to the Download Models tab.")
 
     with tab2:
         # NOTE: makes sure to add 'xl' in these filenames because that is the only filter rn for sdxl models (will update in the future)

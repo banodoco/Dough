@@ -943,16 +943,18 @@ class ComfyDataTransform:
         seed = random_seed()
         style_strength = query.strength
 
-        def add_nth_node(workflow, n, img_file: InternalFileObject, weight_style):
+        def add_nth_node(workflow, n, img_file, weight_first_node, weight_second_node):
+
             ipa_node_idx_list = []
             for k, v in workflow.items():
                 if v["class_type"] == "IPAdapterAdvanced":
-                    ipa_node_idx_list.append(int(k))  # NOTE: in some weird af workflow these are floats
+                    ipa_node_idx_list.append(int(k))
 
             ipa_node_idx_list.sort(reverse=True)
             # creating new nodes (not handling the case if there are multiple nodes)
             # starting idx from 100, just to be safe
             node_idx = 100 + n * 4
+
             workflow[str(node_idx)] = {
                 "inputs": {"image": img_file.filename, "upload": "image"},
                 "class_type": "LoadImage",
@@ -962,7 +964,7 @@ class ComfyDataTransform:
             workflow[str(node_idx + 1)] = {
                 "inputs": {
                     "type": "dissolve",
-                    "strength": 0.7000000000000001,
+                    "strength": 0.7,
                     "blur": 0,
                     "image_optional": [str(node_idx), 0],
                 },
@@ -970,15 +972,18 @@ class ComfyDataTransform:
                 "_meta": {"title": "IPAdapter Noise"},
             }
 
+            # the latest (previous) ipa node acts as a input in this
+            model_input = [str(ipa_node_idx_list[0]), 0] if len(ipa_node_idx_list) else ["4", 0]
+
             workflow[str(node_idx + 2)] = {
                 "inputs": {
-                    "weight": 0.07,
+                    "weight": weight_first_node,
                     "weight_type": "style transfer",
                     "combine_embeds": "concat",
                     "start_at": 0,
                     "end_at": 0.85,
                     "embeds_scaling": "V only",
-                    "model": ["4", 0],
+                    "model": model_input,
                     "ipadapter": ["58", 0],
                     "image": [str(node_idx), 0],
                     "image_negative": [str(node_idx + 1), 0],
@@ -990,7 +995,7 @@ class ComfyDataTransform:
 
             workflow[str(node_idx + 3)] = {
                 "inputs": {
-                    "weight": 0.3,
+                    "weight": weight_second_node,
                     "weight_type": "ease in-out",
                     "combine_embeds": "concat",
                     "start_at": 0,
@@ -1006,28 +1011,34 @@ class ComfyDataTransform:
                 "_meta": {"title": "IPAdapter Advanced"},
             }
 
-            workflow["3"]["inputs"]["model"] = [str(node_idx + 3), 0]
-
-            return node_idx + 2  # ipadapter style node idx
+            return node_idx + 3
 
         def add_reference_images(workflow, img_list, weight, **kwargs):
             num_images = len(img_list)
-            # Initial weight_style based on the number of images
-            weight_style = (
-                0.7 if num_images == 1 else 0.4 if num_images == 2 else 0.29 if num_images == 3 else 0.7
-            )
 
-            # Adjust weight_style based on style_strength
-            style_adjustment = (weight - 0.5) * 10 * 0.01
-            weight_style += style_adjustment
+            base_weight_first_node = (
+                0.7 if num_images == 1 else 0.4 if num_images == 2 else 0.07 if num_images == 3 else 0.7
+            )
+            base_weight_second_node = (
+                0.7 if num_images == 1 else 0.4 if num_images == 2 else 0.3 if num_images == 3 else 0.7
+            )
+            weight_increment = (weight - 0.5) * 0.1
+
+            # Adjusted weights
+            weight_first_node = base_weight_first_node + weight_increment
+            weight_second_node = base_weight_second_node + weight_increment
+
+            last_node_index = None
 
             for i in range(num_images):
-                # Creating a node
-                node_idx = add_nth_node(workflow, i + 1, img_list[i], weight_style)
-                # Setting params
+                last_node_index = add_nth_node(
+                    workflow, i + 1, img_list[i], weight_first_node, weight_second_node
+                )
                 for k, v in kwargs.items():
-                    if k in workflow[str(node_idx)]["inputs"]:
-                        workflow[str(node_idx)]["inputs"][k] = v
+                    if k in workflow[str(last_node_index)]["inputs"]:
+                        workflow[str(last_node_index)]["inputs"][k] = v
+
+            workflow["3"]["inputs"]["model"] = [str(last_node_index), 0]
 
             return workflow
 
@@ -1070,9 +1081,6 @@ class ComfyDataTransform:
                     "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
                 }
             )
-
-        # with open("ws.json", "w") as file:
-        #     file.write(json.dumps(workflow))
 
         return json.dumps(workflow), output_node_ids, extra_model_list, []
 
