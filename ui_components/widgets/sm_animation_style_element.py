@@ -91,12 +91,6 @@ def animation_sidebar(
                 )
                 plot_weights(weights_list, frame_numbers_list)
 
-        with st.expander("Shortlisted videos", expanded=True):
-            if st_memory.toggle("Open", value=True, key="video_shortlist_toggle"):
-                data_repo = DataRepo()
-                shot = data_repo.get_shot_from_uuid(shot_uuid)
-                video_shortlist_view(shot.project.uuid)
-
 
 def video_shortlist_view(project_uuid):
     # TODO: @Peter this is just a basic setup, check this method gallery_image_view for proper implementation

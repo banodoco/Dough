@@ -91,20 +91,23 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     col1, col2, col3 = st.columns([1, 0.25, 0.5])
     if stage == CreativeProcessType.MOTION.value:
         # have a toggle for open details
-        with col2:
-            open_generaton_details = st_memory.toggle(
-                "Open generation details", key=f"open_details_{shot_uuid}", value=False
-            )
-        with col3:
-            items_to_show = st_memory.slider(
-                "Items per page:",
-                key=f"items_per_page_{shot_uuid}",
-                value=3,
-                step=3,
-                min_value=3,
-                max_value=9,
-            )
-        items_to_show = items_to_show - 1
+        if len(variants):
+            with col2:
+                open_generaton_details = st_memory.toggle(
+                    "Open generation details", key=f"open_details_{shot_uuid}", value=False
+                )
+            with col3:
+                items_to_show = st_memory.slider(
+                    "Items per page:",
+                    key=f"items_per_page_{shot_uuid}",
+                    value=3,
+                    step=3,
+                    min_value=3,
+                    max_value=9,
+                )
+            items_to_show = items_to_show - 1
+        else:
+            items_to_show = 5
         num_columns = 3
         with col1:
             st.markdown(f"### 🎞️ '{shot.name}' options")
