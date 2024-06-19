@@ -43,7 +43,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
 
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
     with column:
-        col1, col2, col3 = st.columns([1.25, 0.75, 1])
+        col0, col3, col2, col1 = st.columns([1.0,1.0, 0.75, 1])
         with col1:
             open_frame_changer = st_memory.toggle(
                 "Open Frame Changer™",
@@ -154,15 +154,15 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
                         st.info(f"Selected frames to move: {st.session_state[f'list_to_move_{shot.uuid}']}")
                 if st.session_state[f"list_to_move_{shot.uuid}"] != []:
                     if st.button(
-                        "Remove all selected",
+                        "Deselect all",
                         key=f"remove_all_selected_{shot.uuid}",
-                        help="Remove all selected frames to move",
+                        help="Deselect all selected frames",
                     ):
                         st.session_state[f"list_to_move_{shot.uuid}"] = []
                         st.rerun()
 
         edit_shot_view(shot_uuid, items_per_row)
-        bottom1, bottom2 = st.columns([1, 2])
+        bottom1, bottom2 = st.columns([1, 3])
         with bottom1:
             st.warning("You're in frame moving mode. You must press 'Save' to save changes.")
             if st.button(

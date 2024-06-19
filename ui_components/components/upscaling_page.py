@@ -28,10 +28,12 @@ def upscaling_page(shot_uuid: str, h2):
     list_of_videos = ["https://www.youtube.com/watch?v=dQw4w9WgXcQ","https://www.youtube.com/watch?v=dQw4w9WgXcQ","https://www.youtube.com/watch?v=dQw4w9WgXcQ"]
     st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['page']}]")
     st.markdown("***")
-
-    st.markdown("### ✨ Upscale videos")
-    st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
-
+    slider1, slider2, slider3 = st.columns([2, 1, 1])
+    with slider1:
+        st.markdown("### ✨ Upscale videos")
+        st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+    st.write("")
+    st.write("")
     def display_video(video_url, index):        
         
         vid1, vid2 = st.columns([1, 2])
@@ -40,9 +42,9 @@ def upscaling_page(shot_uuid: str, h2):
             st.markdown(f"#### From shot 'Mars Attack'")
 
             st.button("Remove from shortlist",key=f"remove_{index}", use_container_width=True)
-            st.markdown("***")
+            st.markdown("***") 
             status = st.radio("Status (for demo purposes)", ["Non-upscaled", "Upscaled","Upscale in progress"],key=f"status_{index}", horizontal=True)
-                                    
+            
             if status == "Upscaled":
                 st.success("Upscaled video")
             elif status == "Upscale in progress":
@@ -54,26 +56,29 @@ def upscaling_page(shot_uuid: str, h2):
                     st.info("No models found in the checkpoints directory")
                     styling_model = "None"
                 else:
-                    # Filter files to only include those with .safetensors and .ckpt extensions
-                    model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
-                    # drop all files that contain xl
-                    model_files = [file for file in model_files if "xl" not in file]
-                    # model_files.insert(0, "None")  # Add "None" option at the beginning
-                    styling_model = st.selectbox("Styling model", model_files, key=f"styling_model_{index}")
+                    
+                    with st.expander("Upscale settings"):
+                        # Filter files to only include those with .safetensors and .ckpt extensions
+                        model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
+                        # drop all files that contain xl
+                        model_files = [file for file in model_files if "xl" not in file]
+                        # model_files.insert(0, "None")  # Add "None" option at the beginning
+                        styling_model = st.selectbox("Styling model", model_files, key=f"styling_model_{index}")
 
-                    upscale_by = st.slider("Upscale by", min_value=1.0, max_value=3.0, step=0.1, key=f"upscale_by_{index}", value=1.5)
+                        upscale_by = st.slider("Upscale by", min_value=1.0, max_value=3.0, step=0.1, key=f"upscale_by_{index}", value=1.5)
 
                 st.button("Queue for upscaling",key=f"queue_{index}",use_container_width=True,type="primary")                                            
 
-            st.button("Download",key=f"download_{index}",use_container_width=True)
+            
         with vid2:        
             if status == "Upscaled":
                 st.success("SHOW UPSCALED VIDEO HERE")
             st.video(video_url)
+            st.button("Download",key=f"download_{index}",use_container_width=True)
 
     
     main_clip_list = [1,2,3,4,5]
-    slider1, slider2, slider3 = st.columns([2, 1, 1])
+    
     with slider3:
         with st.expander("Export all shortlisted videos", expanded=False):
             if not len(main_clip_list):
@@ -165,7 +170,7 @@ def upscaling_page(shot_uuid: str, h2):
                                 upscale_factor,
                                 promote_to_main_variant,
                             )
-        st.write("")
+        
     
     if list_of_videos:                        
         ## display 2 per row
