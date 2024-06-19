@@ -181,6 +181,7 @@ def setup_app_ui():
                         AppSubPage.KEYFRAME.value: CreativeProcessPage.ADJUST_SHOT.value,
                         # animate shot
                         AppSubPage.ANIMATE_SHOT.value: CreativeProcessPage.ANIMATE_SHOT.value,
+                        AppSubPage.UPSCALING.value: CreativeProcessPage.UPSCALING.value,
                     }
 
                     if "current_subpage" not in st.session_state:
@@ -230,7 +231,7 @@ def setup_app_ui():
                     _ = option_menu(
                         None,
                         creative_process_pages,
-                        icons=["bookshelf", "lightning-charge", "aspect-ratio", "film"],
+                        icons=["bookshelf", "lightning-charge", "crop", "film", "aspect-ratio"],
                         menu_icon="cast",
                         orientation="vertical",
                         key="page_opt_menu",
@@ -264,6 +265,9 @@ def setup_app_ui():
 
                 elif st.session_state["page"] == CreativeProcessPage.ANIMATE_SHOT.value:
                     animate_shot_page(st.session_state["shot_uuid"], h2)
+
+                elif st.session_state["page"] == CreativeProcessPage.UPSCALING.value:
+                    st.write("Upscale Shot")
 
             elif st.session_state["main_view_type"] == "Project Settings":
                 project_settings_page(st.session_state["project_uuid"])

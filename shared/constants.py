@@ -138,6 +138,7 @@ class CreativeProcessPage(ExtendedEnum):
     INSPIRATION_ENGINE = "Inspiration Engine"
     ADJUST_SHOT = "Adjust Shot"
     ANIMATE_SHOT = "Animate Shot"
+    UPSCALING = "Upscaling"
 
 
 # these can be one of the main creative process page or some other sub page inside it
@@ -147,6 +148,7 @@ class AppSubPage(ExtendedEnum):
     ADJUST_SHOT = "Adjust Shot"
     ANIMATE_SHOT = "Animate Shot"
     KEYFRAME = "Key Frames"
+    UPSCALING = "Upscaling"
     SHOT = "Shots"
 
 
