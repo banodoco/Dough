@@ -177,40 +177,39 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             with h1:
                 st.info(f"###### Variant #{current_variant + 1}")
             with h2:
-                st.success("**Main variant**")
+                st.button("Add to shortlist", key=f"add_to_shortlist_{shot_uuid}",use_container_width=True)
+                
             is_video_upscaled = is_upscaled_video(variants[current_variant])
             # Display the main variant
             if stage == CreativeProcessType.MOTION.value:
                 if current_variant != -1 and variants[current_variant]:
                     individual_video_display_element(variants[current_variant], is_video_upscaled)
 
-                if not is_video_upscaled:
-                    if variants[current_variant].inference_log.generation_tag:
-                        st.info(variants[current_variant].inference_log.generation_tag.title())
-
-                    with st.expander("Upscale settings", expanded=False):
-                        (
+                # Upscale settings shown for every video
+                with st.expander("Upscale settings", expanded=False):
+                    (
+                        styling_model,
+                        upscale_factor,
+                        promote_to_main_variant,
+                    ) = upscale_settings()
+                    if st.button(
+                        "Upscale main variant",
+                        key=f"upscale_main_variant_{shot_uuid}",
+                        help="Upscale the main variant with the selected settings",
+                        use_container_width=True,
+                    ):
+                        upscale_video(
+                            shot_uuid,
                             styling_model,
                             upscale_factor,
                             promote_to_main_variant,
-                        ) = upscale_settings()
-                        if st.button(
-                            "Upscale main variant",
-                            key=f"upscale_main_variant_{shot_uuid}",
-                            help="Upscale the main variant with the selected settings",
-                            use_container_width=True,
-                        ):
-                            upscale_video(
-                                shot_uuid,
-                                styling_model,
-                                upscale_factor,
-                                promote_to_main_variant,
-                            )
-                            st.rerun()
-                else:
+                        )
+                        st.rerun()
+
+                if is_video_upscaled:
                     st.info("Upscaled video")
 
-                create_video_download_button(variants[current_variant].location, tag="var_compare")
+                # create_video_download_button(variants[current_variant].location, tag="var_compare")
                 variant_inference_detail_element(
                     variants[current_variant],
                     stage,
@@ -223,7 +222,6 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             else:
                 st.image(variants[current_variant].location, use_column_width=True)
                 image_variant_details(variants[current_variant])
-
         # Determine the start and end indices for additional variants on the current page
         additional_variants = [idx for idx in range(len(variants) - 1, -1, -1) if idx != current_variant]
         page_start = (page - 1) * items_to_show
@@ -260,7 +258,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                         st.info("Upscaled video")
                     elif variants[variant_index].inference_log.generation_tag:
                         st.info(variants[variant_index].inference_log.generation_tag.title())
-                    create_video_download_button(variants[variant_index].location, tag="var_details")
+                    # create_video_download_button(variants[variant_index].location, tag="var_details")
                     variant_inference_detail_element(
                         variants[variant_index],
                         stage,
