@@ -60,6 +60,39 @@ def video_generation_counter(shot_uuid):
         with h2:
             if st.button("Refresh", key=f"refresh_{shot_uuid}", use_container_width=True):
                 st.rerun()
+                
+
+# TODO: very inefficient operation.. (maybe add source_entity_id ? as a foreign key)
+# @Peter enter the video_uuid to get the count of upscales in progress (this works very similar to the mthod above)
+def upscale_video_generation_counter(video_uuid):
+    data_repo = DataRepo()
+    log_list, page_count = data_repo.get_all_inference_log_list(
+        status_list=[InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value],
+        data_per_page=1000,
+        page=1,
+    )
+    log_list = log_list or []
+    res = []
+    for log in log_list:
+        relation_data = json.loads(log.input_params).get(InferenceParamType.FILE_RELATION_DATA.value, None)
+        if relation_data:
+            relation_data = json.loads(relation_data)
+            if (
+                relation_data[0]["id"] == str(video_uuid) and
+                relation_data[0]["transformation_type"] == "upscale"
+            ):
+                res.append(log)
+
+    if len(res) > 0:
+        h1, h2 = st.columns([1, 1])
+        with h1:
+            if len(res) == 1:
+                st.info(f"{len(res)} upscale generation pending for this shot.")
+            else:
+                st.info(f"{len(res)} upscale generations pending for this shot.")
+        with h2:
+            if st.button("Refresh", key=f"refresh_upscale_{video_uuid}", use_container_width=True):
+                st.rerun()
 
 
 def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
