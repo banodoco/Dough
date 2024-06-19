@@ -1,14 +1,12 @@
 import json
 import os
-import time
 from typing import List
 import streamlit as st
 from backend.models import InternalFileObject
-from shared.constants import COMFY_BASE_PATH, InferenceParamType, STEERABLE_MOTION_WORKFLOWS, ProjectMetaData
+from shared.constants import COMFY_BASE_PATH, InferenceParamType, ProjectMetaData
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, ShotMetaData
 from ui_components.models import InternalProjectObject, InternalShotObject
 from utils.common_utils import acquire_lock, release_lock
-from utils.constants import AnimateShotMethod
 from utils.data_repo.data_repo import DataRepo
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,7 +24,7 @@ def get_generation_settings_from_log(log_uuid=None):
     elif shot_meta_data and ShotMetaData.DYNAMICRAFTER_DATA.value in shot_meta_data:
         data_type = ShotMetaData.DYNAMICRAFTER_DATA.value
 
-    shot_meta_data = json.loads(shot_meta_data.get(data_type)) if data_type else None
+    shot_meta_data = (json.loads(shot_meta_data.get(data_type))) if data_type else None
 
     return shot_meta_data, data_type
 

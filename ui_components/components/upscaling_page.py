@@ -34,6 +34,7 @@ def upscaling_page(shot_uuid: str, h2):
         st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
     st.write("")
     st.write("")
+    
     def display_video(video_url, index):        
         
         vid1, vid2 = st.columns([1, 2])
@@ -165,6 +166,7 @@ def upscaling_page(shot_uuid: str, h2):
                     for shot in shot_list:
                         if shot.main_clip and shot.main_clip.location:
                             upscale_video(
+                                shot.main_clip.uuid,
                                 shot.uuid,
                                 styling_model,
                                 upscale_factor,

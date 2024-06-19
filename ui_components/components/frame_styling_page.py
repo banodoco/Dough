@@ -1,7 +1,9 @@
 from typing import List
+import uuid
 import streamlit as st
-from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType
-from ui_components.methods.common_methods import process_inference_output
+from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType, InternalFileType
+from ui_components.methods.common_methods import combine_mask_and_input_image, process_inference_output
+from ui_components.methods.file_methods import save_or_host_file
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from ui_components.widgets.frame_movement_widgets import (
     delete_frame_button,
@@ -50,10 +52,7 @@ def frame_styling_page(shot_uuid: str):
             f"#### :green[{st.session_state['main_view_type']}] > :red[Adjust Shot] > :blue[{shot.name} - #{st.session_state['current_frame_index']}]"
         )
 
-
         st.markdown("***")
-
-        
 
         options_width, canvas_width = st.columns([1.2, 3])
         timing_uuid = st.session_state["current_frame_uuid"]
@@ -83,11 +82,15 @@ def frame_styling_page(shot_uuid: str):
                 )
                 if st.button("Generate inpainted images", key=f"generate_inpaint_{timing_uuid}"):
                     if "mask_to_use" in st.session_state and st.session_state["mask_to_use"]:
+
+                        combined_file = get_combined_image_file(
+                            shot_uuid, st.session_state["mask_to_use"], st.session_state["editing_image"]
+                        )
+
                         for _ in range(how_many_images):  # Loop based on how_many_images
                             project_settings = data_repo.get_project_setting(shot.project.uuid)
                             query_obj = MLQueryObject(
                                 timing_uuid=None,
-                                model_uuid=None,
                                 guidance_scale=8,
                                 seed=-1,
                                 num_inference_steps=25,
@@ -99,10 +102,8 @@ def frame_styling_page(shot_uuid: str):
                                 width=project_settings.width,
                                 data={
                                     "shot_uuid": shot_uuid,
-                                    "mask": st.session_state["mask_to_use"],
-                                    "input_image": st.session_state["editing_image"],
-                                    "project_uuid": shot.project.uuid,
                                 },
+                                file_data={"image_1": {"uuid": combined_file.uuid, "dest": "input/"}},
                             )
 
                             ml_client = get_ml_client()
@@ -132,16 +133,41 @@ def frame_styling_page(shot_uuid: str):
 
         st.markdown("### 🔄 Compare Variants")
         variant_comparison_grid(
-        st.session_state["current_frame_uuid"],
-        stage=CreativeProcessType.STYLING.value,
+            st.session_state["current_frame_uuid"],
+            stage=CreativeProcessType.STYLING.value,
         )
-        '''
+        """
         st.markdown("***")
 
         with st.expander("🤏 Crop, Move & Rotate", expanded=True):
             cropping_selector_element(shot_uuid)
-        '''
+        """
         st.markdown("***")
+
+
+def get_combined_image_file(shot_uuid, mask, input_image):
+    data_repo = DataRepo()
+    shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
+
+    # inpainting workflows takes in an image and inpaints the transparent area
+    combined_img = combine_mask_and_input_image(mask, input_image)
+    # down combined_img PIL image to the current directory
+    filename = str(uuid.uuid4()) + ".png"
+    hosted_url = save_or_host_file(combined_img, "videos/temp/" + filename)
+
+    file_data = {
+        "name": filename,
+        "type": InternalFileType.IMAGE.value,
+        "project_id": str(shot.project.uuid),
+    }
+
+    if hosted_url:
+        file_data.update({"hosted_url": hosted_url})
+    else:
+        file_data.update({"local_path": "videos/temp/" + filename})
+
+    file = data_repo.create_file(**file_data)
+    return file
 
 
 def frame_view():

@@ -4,6 +4,7 @@ import ast
 import streamlit as st
 from shared.constants import AnimationStyleType, AnimationToolType, STEERABLE_MOTION_WORKFLOWS
 import time
+from ui_components.methods.ml_methods import generate_sm_video
 from ui_components.widgets.sm_animation_style_element import (
     animation_sidebar,
     individual_frame_settings_element,
@@ -18,8 +19,6 @@ from ui_components.methods.animation_style_methods import (
     update_session_state_with_animation_details,
     update_session_state_with_dc_details,
 )
-from ui_components.methods.video_methods import create_single_interpolated_clip
-from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 
 default_model = "dreamshaper_8.safetensors"
@@ -286,7 +285,6 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                 settings.update(type_of_generation=type_of_generation)
                 settings.update(filename_prefix="AD_")
 
-                vid_quality = "full"
                 st.success(
                     "Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update."
                 )
@@ -308,9 +306,8 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                 if f"{shot_uuid}_backlog_enabled" not in st.session_state:
                     st.session_state[f"{shot_uuid}_backlog_enabled"] = False
 
-                create_single_interpolated_clip(
+                generate_sm_video(
                     shot_uuid,
-                    vid_quality,
                     settings,
                     variant_count,
                     st.session_state[f"{shot_uuid}_backlog_enabled"],
@@ -409,7 +406,6 @@ def two_img_realistic_interpolation_page(shot_uuid, img_list: List[InternalFileO
         st.info("NOTE: The model for this animation is 10.5 GB in size, which can take some time to download")
 
     variant_count = 1  # Assuming a default value for variant_count, adjust as necessary
-    vid_quality = "full"  # Assuming full quality, adjust as necessary based on your requirements
     position = "dynamiccrafter"
 
     if (
@@ -439,9 +435,8 @@ def two_img_realistic_interpolation_page(shot_uuid, img_list: List[InternalFileO
             prompt=description_of_motion,
         )
 
-        create_single_interpolated_clip(
+        generate_sm_video(
             shot_uuid,
-            vid_quality,
             settings,
             variant_count,
             st.session_state[f"{shot_uuid}_backlog_enabled"],
