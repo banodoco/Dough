@@ -9,6 +9,7 @@ from ui_components.components.timeline_view_page import timeline_view_page
 from ui_components.components.inspiraton_engine_page import inspiration_engine_page
 from ui_components.components.adjust_shot_page import adjust_shot_page
 from ui_components.components.animate_shot_page import animate_shot_page
+from ui_components.components.upscaling_page import upscaling_page
 from ui_components.components.explorer_page import explorer_page
 
 from ui_components.components.new_project_page import new_project_page
@@ -267,7 +268,7 @@ def setup_app_ui():
                     animate_shot_page(st.session_state["shot_uuid"], h2)
 
                 elif st.session_state["page"] == CreativeProcessPage.UPSCALING.value:
-                    st.write("Upscale Shot")
+                    upscaling_page(st.session_state["shot_uuid"], h2)
 
             elif st.session_state["main_view_type"] == "Project Settings":
                 project_settings_page(st.session_state["project_uuid"])
