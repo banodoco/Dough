@@ -881,7 +881,6 @@ class ComfyDataTransform:
             query_data.get("width", 512), query_data.get("height", 512)
         )
         image_prompt, negative_prompt = query.prompt, query.negative_prompt
-        file_uuid_list = json.loads(query_data.get("img_uuid_list", json.dumps([])))
         lightning = query_data.get("lightning", False)
         additional_description_text = query_data.get("additional_description_text", "")
         additional_style_text = query_data.get("additional_style_text", "")
@@ -1014,8 +1013,8 @@ class ComfyDataTransform:
                 "dest": os.path.join(COMFY_BASE_PATH, "models", "clip_vision"),
             },
             {
-                "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
-                "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors",
+                "filename": "ip_plus_style_sdxl.safetensors",
+                "url": "https://huggingface.co/peteromallet/mystery_models/resolve/main/ip_plus_style_sdxl.safetensors?download=true",
                 "dest": os.path.join(COMFY_BASE_PATH, "models", "ipadapter"),
             },
         ]
@@ -1027,6 +1026,9 @@ class ComfyDataTransform:
                     "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
                 }
             )
+
+        # with open("ws.json", "w") as file:
+        #     file.write(json.dumps(workflow))
 
         return json.dumps(workflow), output_node_ids, extra_model_list, []
 

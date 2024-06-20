@@ -678,12 +678,12 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             if input_image_file_list and len(input_image_file_list):
                                 data["img_uuid_list"] = json.dumps([f.uuid for f in input_image_file_list])
 
+                            file_data = {}
                             for idx, f in enumerate(input_image_file_list):
-                                data[f"file_uuid_{idx}"] = f.uuid
+                                file_data[f"image_file_{idx}"] = {"uuid": f.uuid, "dest": "input/"}
 
                             query_obj = MLQueryObject(
                                 timing_uuid=None,
-                                model_uuid=None,
                                 image_uuid=None,
                                 guidance_scale=5,
                                 seed=-1,
@@ -695,6 +695,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 height=project_settings.height,
                                 width=project_settings.width,
                                 data=data,
+                                file_data=file_data,
                             )
 
                             output, log = ml_client.predict_model_output_standardized(
