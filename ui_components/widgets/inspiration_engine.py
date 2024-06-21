@@ -122,7 +122,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
         "plant taking growing over man's legs",
         "plants everywhere",
         "huge plant growing over pyramids",
-        "zoomed out view of entirely green planet",
+        "zoomed out view of entirely green planet"
     ]
     default_generation_text = "Story about about a plant growing out of a bleak desert, expanding to cover everything and every person and taking over the world, final view of green planet from space, inspirational, each should be about the plant"
     generate_mode, edit_mode = "generate_mode", "edit_mode"
@@ -237,19 +237,17 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 if st.button("Remove all prompts"):
                     st.session_state["list_of_prompts"] = [""]
                     st.rerun()
-
-            h2_a, h2_b, h2_c, h1 = st.columns([0.5, 0.5, 0.5, 0.75])
-            if isinstance(st.session_state["list_of_prompts"], str):
-                st.session_state["list_of_prompts"] = st.session_state["list_of_prompts"].split("|")
+                
+            h2_a, h2_b,h2_c,h1 = st.columns([0.5,0.5,0.5, 0.75])
+            if isinstance(st.session_state["list_of_prompts"], str):        
+                st.session_state["list_of_prompts"] = st.session_state["list_of_prompts"].split('|')
 
             column_handlers = [h2_a, h2_b, h2_c] * ((len(st.session_state["list_of_prompts"]) + 2) // 3)
 
-            for index, prompt in enumerate(st.session_state["list_of_prompts"]):
+            for index, prompt in enumerate(st.session_state["list_of_prompts"]):            
                 with column_handlers[index]:
                     # Create a text area for each prompt
-                    user_input = st.text_area(
-                        f"Prompt {index + 1}:", value=prompt, height=50, key=f"prompt_{index}"
-                    )
+                    user_input = st.text_area(f"Prompt {index + 1}:", value=prompt, height=50, key=f"prompt_{index}")
                     # Update the prompt in session state if it changes
                     if user_input != prompt:
                         st.session_state["list_of_prompts"][index] = user_input
@@ -260,6 +258,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         if st.button("➕", key=f"add_{index}", use_container_width=True):
                             st.session_state["list_of_prompts"].insert(index + 1, user_input)
                             st.rerun()
+
                     with col2:
                         # Delete the current prompt when the "🗑️" button is pressed
                         if len(st.session_state["list_of_prompts"]) > 1:
@@ -372,6 +371,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         if check_replicate_key():
                             generated_prompts = edit_prompts(edit_text, st.session_state["list_of_prompts"])
                             st.session_state["list_of_prompts"] = generated_prompts.split("|")
+
                             st.rerun()
 
             i1, i2, _ = st.columns([1, 1, 0.5])
@@ -433,10 +433,11 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     st.rerun()
 
             st.markdown("***")
-            st.markdown("#### Style guidance")
+
+            st.markdown("#### Style guidance")  
 
             if type_of_model == T2IModel.SD3.value:
-                sd3, _ = st.columns([1, 1])
+                sd3,_ = st.columns([1,1])
                 with sd3:
                     st.info("Style references aren't yet supported for SD3.")
                 style_influence = 4.5  # this will actually go into cfg
@@ -617,7 +618,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             with prompt1:
                 images_per_prompt = st.slider(
                     "Images per prompt:",
-                    min_value=1,
+
+                    min_value=4,
                     max_value=64,
                     step=4,
                     value=st.session_state["insp_img_per_prompt"],
@@ -636,6 +638,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     st.info(
                         f"{number_of_prompts} prompts for {images_per_prompt} images per prompt makes a total of **{number_of_prompts*images_per_prompt} images**."
                     )
+
+
 
             st.session_state["insp_test_mode"] = test_first_prompt
 
@@ -678,12 +682,12 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             if input_image_file_list and len(input_image_file_list):
                                 data["img_uuid_list"] = json.dumps([f.uuid for f in input_image_file_list])
 
-                            file_data = {}
                             for idx, f in enumerate(input_image_file_list):
-                                file_data[f"image_file_{idx}"] = {"uuid": f.uuid, "dest": "input/"}
+                                data[f"file_uuid_{idx}"] = f.uuid
 
                             query_obj = MLQueryObject(
                                 timing_uuid=None,
+                                model_uuid=None,
                                 image_uuid=None,
                                 guidance_scale=5,
                                 seed=-1,
@@ -695,7 +699,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 height=project_settings.height,
                                 width=project_settings.width,
                                 data=data,
-                                file_data=file_data,
                             )
 
                             output, log = ml_client.predict_model_output_standardized(
@@ -767,5 +770,5 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                     release_lock(key)
 
                 st.rerun()
-
+       
         st.write("")

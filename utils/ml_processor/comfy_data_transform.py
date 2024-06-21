@@ -888,17 +888,19 @@ class ComfyDataTransform:
         seed = random_seed()
         style_strength = query.strength
 
-        def add_nth_node(workflow, n, img_file, weight_first_node, weight_second_node):
-
+        def add_nth_node(workflow, n, img_file, weight_first_node, weight_second_node, last_node_index=None):
+            
+            # Adding node indices of a particular type
             ipa_node_idx_list = []
             for k, v in workflow.items():
                 if v["class_type"] == "IPAdapterAdvanced":
                     ipa_node_idx_list.append(int(k))
 
             ipa_node_idx_list.sort(reverse=True)
-            # creating new nodes (not handling the case if there are multiple nodes)
-            # starting idx from 100, just to be safe
-            node_idx = 100 + n * 4
+
+            node_idx = 100 + n * 4  # Increment node index by 4 for each new batch
+
+            # First node in this batch
 
             workflow[str(node_idx)] = {
                 "inputs": {"image": img_file.filename, "upload": "image"},
@@ -906,6 +908,7 @@ class ComfyDataTransform:
                 "_meta": {"title": "Load Image"},
             }
 
+            # Second node in this batch
             workflow[str(node_idx + 1)] = {
                 "inputs": {
                     "type": "dissolve",
@@ -958,7 +961,8 @@ class ComfyDataTransform:
                 "_meta": {"title": "IPAdapter Tiled"},
             }
 
-            return node_idx + 3
+
+            return node_idx + 3 
 
         def add_reference_images(workflow, img_list, weight, **kwargs):
             num_images = len(img_list)
@@ -983,9 +987,11 @@ class ComfyDataTransform:
                     if k in workflow[str(last_node_index)]["inputs"]:
                         workflow[str(last_node_index)]["inputs"][k] = v
 
-            workflow["3"]["inputs"]["model"] = [str(last_node_index), 0]
 
-            return workflow
+            workflow["3"]["inputs"]["model"] = [str(last_node_index), 0]
+            
+            return workflow  # Return the updated workflow
+
 
         workflow["3"]["inputs"]["seed"] = seed
         workflow["5"]["inputs"]["width"] = width
@@ -1005,6 +1011,7 @@ class ComfyDataTransform:
         img_list = query.file_list
 
         workflow = add_reference_images(workflow, img_list, weight=style_strength)
+        
 
         extra_model_list = [
             {
@@ -1026,9 +1033,9 @@ class ComfyDataTransform:
                     "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
                 }
             )
-
-        # with open("ws.json", "w") as file:
-        #     file.write(json.dumps(workflow))
+            
+        with open("workflow.json", "w") as f:
+            f.write(json.dumps(workflow, indent=4))
 
         return json.dumps(workflow), output_node_ids, extra_model_list, []
 

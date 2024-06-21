@@ -129,19 +129,76 @@ def frame_styling_page(shot_uuid: str):
             else:
                 st.error("You must first select the area to inpaint.")
 
-        st.markdown("***")
+                negative_prompt = st_memory.text_area(
+                    "Negative prompt:",
+                    value="",
+                    key=f"neg_base_prompt_{timing_uuid}",
+                    help="These are the things you wish to be excluded from the image",
+                )
+            with canvas_width:
+                inpainting_element(options_width, timing.primary_image.location, position=f"{timing_uuid}")
 
-        st.markdown("### 🔄 Compare Variants")
-        variant_comparison_grid(
-            st.session_state["current_frame_uuid"],
-            stage=CreativeProcessType.STYLING.value,
-        )
-        """
+            with options_width:
+                if "mask_to_use" not in st.session_state:
+                    st.session_state["mask_to_use"] = ""
+                if st.session_state["mask_to_use"] != "":
+                    how_many_images = st.slider(
+                        "How many images to generate:", 1, 10, 1, key=f"how_many_images_{timing_uuid}"
+                    )
+                    if st.button("Generate inpainted images", key=f"generate_inpaint_{timing_uuid}"):
+                        if "mask_to_use" in st.session_state and st.session_state["mask_to_use"]:
+                            for _ in range(how_many_images):  # Loop based on how_many_images
+                                project_settings = data_repo.get_project_setting(shot.project.uuid)
+                                query_obj = MLQueryObject(
+                                    timing_uuid=None,
+                                    model_uuid=None,
+                                    guidance_scale=8,
+                                    seed=-1,
+                                    num_inference_steps=25,
+                                    strength=0.5,
+                                    adapter_type=None,
+                                    prompt=prompt,
+                                    negative_prompt=negative_prompt,
+                                    height=project_settings.height,
+                                    width=project_settings.width,
+                                    data={
+                                        "shot_uuid": shot_uuid,
+                                        "mask": st.session_state["mask_to_use"],
+                                        "input_image": st.session_state["editing_image"],
+                                        "project_uuid": shot.project.uuid,
+                                    },
+                                )
+
+                                ml_client = get_ml_client()
+                                output, log = ml_client.predict_model_output_standardized(
+                                    ML_MODEL.sdxl_inpainting,
+                                    query_obj,
+                                    queue_inference=QUEUE_INFERENCE_QUERIES,
+                                )
+
+                                if log:
+                                    inference_data = {
+                                        "inference_type": InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
+                                        "output": output,
+                                        "log_uuid": log.uuid,
+                                        "project_uuid": shot.project.uuid,
+                                        "timing_uuid": timing_uuid,
+                                        "promote_new_generation": False,
+                                        "shot_uuid": shot_uuid if shot_uuid else "explorer",
+                                    }
+
+                                    process_inference_output(**inference_data)
+                            st.rerun()
+                else:
+                    st.error("You must first select the area to inpaint.")
+        '''
         st.markdown("***")
 
         with st.expander("🤏 Crop, Move & Rotate", expanded=True):
             cropping_selector_element(shot_uuid)
-        """
+
+        '''
+
         st.markdown("***")
 
 
