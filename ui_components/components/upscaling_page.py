@@ -1,5 +1,7 @@
+import io
 import time
 from typing import List
+import zipfile
 from shared.constants import COMFY_BASE_PATH, InferenceLogTag, InternalFileTag, InternalFileType, SortOrder
 import streamlit as st
 import os
@@ -8,6 +10,7 @@ import shutil
 from zipfile import ZipFile
 from io import BytesIO
 from ui_components.constants import CreativeProcessType
+from ui_components.methods.file_methods import get_file_bytes_and_extension
 from ui_components.methods.video_methods import upscale_video
 from ui_components.models import InternalFileObject, InternalProjectObject, InternalShotObject
 from ui_components.widgets.inspiration_engine import inspiration_engine_element
@@ -62,41 +65,7 @@ def upscaling_page(project_uuid: str):
                 st.info("No videos available in the project.")
 
             else:
-                if st.button("Prepare videos for download"):
-                    temp_dir = "temp_main_variants"
-                    os.makedirs(temp_dir, exist_ok=True)
-                    zip_data = BytesIO()
-                    st.info("Preparing videos for download. This may take a while.")
-                    time.sleep(0.4)
-                    try:
-                        for idx, video in enumerate(video_list):
-                            # Prepend the video number (idx + 1) to the filename
-                            file_name = f"{idx + 1:03d}_{video.filename}.mp4"  # Using :03d to ensure the number is zero-padded to 3 digits
-                            file_path = os.path.join(temp_dir, file_name)
-                            if video.location.startswith("http"):
-                                response = requests.get(video.location)
-                                with open(file_path, "wb") as f:
-                                    f.write(response.content)
-                            else:
-                                shutil.copyfile(video.location, file_path)
-
-                        with ZipFile(zip_data, "w") as zipf:
-                            for root, _, files in os.walk(temp_dir):
-                                for file in files:
-                                    zipf.write(os.path.join(root, file), file)
-
-                        st.download_button(
-                            label="Download Main Variant Videos zip",
-                            data=zip_data.getvalue(),
-                            file_name="main_variant_videos.zip",
-                            mime="application/zip",
-                            key="main_variant_download",
-                            use_container_width=True,
-                            type="primary",
-                        )
-
-                    finally:
-                        shutil.rmtree(temp_dir)
+                create_multi_video_download_button([v.location for v in video_list], ui_key="upscaling_page")
 
     # -------------- video grid --------------------
     if video_list:
@@ -173,3 +142,24 @@ def get_final_video_list(project_uuid):
             final_list.append(video)
 
     return final_list
+
+
+def create_multi_video_download_button(video_location_list, ui_key="temp"):
+    if st.button("Prepare videos for download", use_container_width=True, key=ui_key + "_download_button"):
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, mode="w") as zip_file:
+            for video_location in video_location_list:
+                file_name = os.path.basename(video_location)
+                file_bytes, _ = get_file_bytes_and_extension(video_location)
+                zip_file.writestr(file_name, file_bytes)
+
+        zip_buffer.seek(0)
+
+        st.download_button(
+            label="Download videos as ZIP",
+            data=zip_buffer,
+            file_name="videos.zip",
+            mime="application/zip",
+            key=ui_key + "_download_gen",
+            use_container_width=True,
+        )

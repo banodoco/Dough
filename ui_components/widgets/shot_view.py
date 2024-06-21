@@ -733,13 +733,10 @@ def update_shot_duration(shot_uuid):
 
 
 def create_video_download_button(video_location, ui_key="temp"):
-    # Extract the file name from the video location
     file_name = os.path.basename(video_location)
-
-    # if get_file_size(video_location) > 5:
+    
     if st.button("Prepare video for download", use_container_width=True, key=ui_key + str(file_name)):
         file_bytes, file_ext = get_file_bytes_and_extension(video_location)
-        # file_bytes = base64.b64encode(file_bytes).decode('utf-8')
         st.download_button(
             label="Download video",
             data=file_bytes,
