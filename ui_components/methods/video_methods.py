@@ -20,7 +20,13 @@ from moviepy.editor import (
 )
 from pydub import AudioSegment
 
-from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType, InternalFileTag
+from shared.constants import (
+    QUEUE_INFERENCE_QUERIES,
+    FileTransformationType,
+    InferenceLogTag,
+    InferenceType,
+    InternalFileTag,
+)
 from shared.file_upload.s3 import is_s3_image_url
 from ui_components.constants import ShotMetaData
 from ui_components.methods.animation_style_methods import get_generation_settings_from_log
@@ -74,7 +80,15 @@ def upscale_video(file_uuid, shot_uuid, styling_model, upscale_factor, promote_t
             },  # adding parent's generation detail in the upscaled version (change the key according to the model)
         },
         file_data={"video_file": {"uuid": video_file.uuid, "dest": "input/"}},
-        relation_data=json.dumps([{"type": "file", "id": video_file.uuid, "transformation_type": "upscale"}]),
+        relation_data=json.dumps(
+            [
+                {
+                    "type": "file",
+                    "id": video_file.uuid,
+                    "transformation_type": FileTransformationType.UPSCALE.value,
+                }
+            ]
+        ),
     )
 
     ml_client = get_ml_client()
@@ -98,7 +112,7 @@ def upscale_video(file_uuid, shot_uuid, styling_model, upscale_factor, promote_t
                 "file_uuid_list": file_uuid_list,
             },
             "shot_uuid": str(shot_uuid),
-            "inference_tag": "upscaled_video",
+            "inference_tag": InferenceLogTag.UPSCALED_VIDEO.value,
         }
 
         process_inference_output(**inference_data)

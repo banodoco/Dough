@@ -8,7 +8,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 import urllib
 
-from shared.constants import SERVER, InferenceParamType, InferenceStatus, ServerType
+from shared.constants import SERVER, FileTransformationType, InferenceParamType, InferenceStatus, ServerType
 from shared.file_upload.s3 import generate_s3_url, is_s3_image_url
 
 
@@ -178,6 +178,10 @@ class InternalFileObject(BaseModel):
                         if parent_file:
                             file_link.parent_entity_id = parent_file.id
                             file_link.save()
+                            if file_link.transformation_type == FileTransformationType.UPSCALE.value:
+                                # disabling the parent file in case of upscaling
+                                parent_file.is_disabled = True
+                                parent_file.save()
 
     def get_child_entities(self, transformation_type_list=None):
         query = {"parent_entity_id": self.id, "is_disabled": False}

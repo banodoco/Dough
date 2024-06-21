@@ -9,6 +9,8 @@ import os
 from PIL import Image
 from shared.constants import (
     COMFY_BASE_PATH,
+    FileTransformationType,
+    InferenceLogTag,
     InferenceParamType,
     InternalFileTag,
     InferenceParamType,
@@ -23,7 +25,12 @@ from ui_components.methods.file_methods import add_file_to_shortlist, create_dup
 from ui_components.methods.video_methods import sync_audio_and_duration, upscale_video
 from ui_components.widgets.display_element import individual_video_display_element
 from ui_components.widgets.shot_view import create_video_download_button
-from ui_components.models import InternalAIModelObject, InternalFileObject
+from ui_components.models import (
+    InferenceLogObject,
+    InternalAIModelObject,
+    InternalFileObject,
+    InternalShotObject,
+)
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.sm_animation_style_element import video_shortlist_btn
 from utils import st_memory
@@ -79,7 +86,7 @@ def upscale_video_generation_counter(video_uuid):
             relation_data = json.loads(relation_data)
             if (
                 relation_data[0]["id"] == str(video_uuid)
-                and relation_data[0]["transformation_type"] == "upscale"
+                and relation_data[0]["transformation_type"] == FileTransformationType.UPSCALE.value
             ):
                 res.append(log)
 
@@ -116,6 +123,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         shot_uuid = timing.shot.uuid
         timing_list = ""
 
+    upscale_in_progress_arr = []
+
     col1, col2, col3 = st.columns([1, 0.25, 0.5])
     if stage == CreativeProcessType.MOTION.value:
         # have a toggle for open details
@@ -139,6 +148,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         with col1:
             st.markdown(f"### 🎞️ '{shot.name}' options")
             st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+
+        upscale_in_progress_arr = get_video_upscale_dict(shot_uuid)
 
     else:
         items_to_show = 5
@@ -220,10 +231,12 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                     else:
                         st.error("No video present")
 
-                    if is_upscaled_variant:
-                        st.info("Upscaled video")
-                    elif variants[variant_index].inference_log.generation_tag:
-                        st.info(variants[variant_index].inference_log.generation_tag.title())
+                    additional_tags = (
+                        ["Upscale In Progress"]
+                        if str(variants[variant_index].uuid) in upscale_in_progress_arr
+                        else []
+                    )
+                    video_tag_element(variants[variant_index], additional_tags)
 
                     variant_inference_detail_element(
                         variants[variant_index],
@@ -259,6 +272,47 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             if f"{shot_uuid}_selected_variant_log_uuid" in st.session_state
             else None
         )
+
+
+def get_video_upscale_dict(shot_uuid):
+    """
+    returns a arr [uuid_1, uuid_2] of video uuids, for which upscale is in progress
+    """
+    data_repo = DataRepo()
+    shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
+    log_filter_data = {
+        "project_id": shot.project.uuid,
+        "page": 1,
+        "data_per_page": 1000,
+        "status_list": [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
+        "model_name_list": ["upscale"],
+    }
+
+    log_list, page_count = data_repo.get_all_inference_log_list(**log_filter_data)
+    upscale_in_progress_arr = []
+    if log_list:
+        for log in log_list:
+            relation_data = json.loads(log.input_params).get(
+                InferenceParamType.FILE_RELATION_DATA.value, None
+            )
+            if relation_data:
+                relation_data = json.loads(relation_data)
+                if relation_data[0]["transformation_type"] == "upscale":
+                    upscale_in_progress_arr.append(relation_data[0]["id"])
+
+    return list(set(upscale_in_progress_arr))
+
+
+def video_tag_element(video_file: InternalFileObject, additional_tags=[]):
+    # additional_tags can also be provided, these are mostly generated in runtimes
+    if additional_tags and len(additional_tags):
+        for tag in additional_tags:
+            st.info(tag)
+
+    # there are two tags, one on video_file (mainly used for shortlisting/filtering)
+    # the other is on the log, used to mark the process of generation (upscale/preview etc..)
+    if video_file.inference_log.generation_tag:
+        st.info(" ".join(video_file.inference_log.generation_tag.split("_")).title())
 
 
 def add_video_to_shortlist(video_uuid):
@@ -301,12 +355,8 @@ def upscale_variant_element(ele_uuid, shot_uuid):
 
 
 def is_upscaled_video(variant: InternalFileObject):
-    log = variant.inference_log
-    if (
-        log
-        and log.output_details
-        and json.loads(log.output_details).get("model_name", "") == ComfyWorkflow.UPSCALER.value
-    ):
+    log: InferenceLogObject = variant.inference_log
+    if log and log.generation_tag and log.generation_tag == InferenceLogTag.UPSCALED_VIDEO.value:
         return True
     return False
 
