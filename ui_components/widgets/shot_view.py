@@ -43,7 +43,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
 
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
     with column:
-        col0, col3, col2, col1 = st.columns([1.0,1.0, 0.75, 1])
+        col0, col3, col2, col1 = st.columns([1.0, 1.0, 0.75, 1])
         with col1:
             open_frame_changer = st_memory.toggle(
                 "Open Frame Changer™",
@@ -314,7 +314,7 @@ def edit_shot_view(shot_uuid, items_per_row):
                                 st.rerun()
 
             st.markdown("***")
-    '''
+    """
     def add_key_frame_section(shot_uuid):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
@@ -345,12 +345,18 @@ def edit_shot_view(shot_uuid, items_per_row):
             st.error("Please generate new images or upload them")
             time.sleep(0.7)
         st.rerun()
-    '''
+    """
+
     def upload_temp_frame(shot_uuid):
-        uploaded_images = st.file_uploader("Upload images:", type=['png', 'jpg', 'jpeg'], key=f"upload_frame_{shot_uuid}", accept_multiple_files=True)
-        if st.button("Add key frame(s)", key=f"add_key_frame_{shot_uuid}",use_container_width=True):
+        uploaded_images = st.file_uploader(
+            "Upload images:",
+            type=["png", "jpg", "jpeg"],
+            key=f"upload_frame_{shot_uuid}",
+            accept_multiple_files=True,
+        )
+        if st.button("Add key frame(s)", key=f"add_key_frame_{shot_uuid}", use_container_width=True):
             if uploaded_images is not None:
-                for i, uploaded_image in enumerate(uploaded_images):                    
+                for i, uploaded_image in enumerate(uploaded_images):
                     image = Image.open(uploaded_image)
                     file_location = f"videos/{shot_uuid}/assets/frames/base/{uploaded_image.name}"
                     saved_image_locaton = save_or_host_file(image, file_location)
@@ -358,18 +364,20 @@ def edit_shot_view(shot_uuid, items_per_row):
                     new_row = {
                         "uuid": f"Uploaded_{uuid.uuid4()}",
                         "image_location": file_location,
-                        "position": len(st.session_state[f"shot_data_{shot_uuid}"])
+                        "position": len(st.session_state[f"shot_data_{shot_uuid}"]),
                     }
-                    st.session_state[f"shot_data_{shot_uuid}"] = pd.concat([st.session_state[f"shot_data_{shot_uuid}"], pd.DataFrame([new_row])], ignore_index=True)
+                    st.session_state[f"shot_data_{shot_uuid}"] = pd.concat(
+                        [st.session_state[f"shot_data_{shot_uuid}"], pd.DataFrame([new_row])],
+                        ignore_index=True,
+                    )
                 st.rerun()
             else:
                 st.warning("You need to input an image to add a key frame.")
-                
 
     upload1, _ = st.columns([1, 3])
     with upload1:
         upload_temp_frame(shot_uuid)
-    
+
     st.markdown("***")
 
 
@@ -724,12 +732,12 @@ def update_shot_duration(shot_uuid):
         st.rerun()
 
 
-def create_video_download_button(video_location, tag="temp"):
+def create_video_download_button(video_location, ui_key="temp"):
     # Extract the file name from the video location
     file_name = os.path.basename(video_location)
 
     # if get_file_size(video_location) > 5:
-    if st.button("Prepare video for download", use_container_width=True, key=tag + str(file_name)):
+    if st.button("Prepare video for download", use_container_width=True, key=ui_key + str(file_name)):
         file_bytes, file_ext = get_file_bytes_and_extension(video_location)
         # file_bytes = base64.b64encode(file_bytes).decode('utf-8')
         st.download_button(
@@ -737,7 +745,7 @@ def create_video_download_button(video_location, tag="temp"):
             data=file_bytes,
             file_name=file_name,
             mime="video/mp4",
-            key=tag + str(file_name) + "_download_gen",
+            key=ui_key + str(file_name) + "_download_gen",
             use_container_width=True,
         )
 

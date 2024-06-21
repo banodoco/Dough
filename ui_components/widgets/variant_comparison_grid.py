@@ -253,7 +253,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                     )
 
                     uspcale_expander_element([variants[variant_index].uuid])
-                    create_video_download_button(variants[variant_index].location, tag="var_details")
+                    create_video_download_button(variants[variant_index].location, ui_key="var_details")
 
                 else:
                     if variants[variant_index]:

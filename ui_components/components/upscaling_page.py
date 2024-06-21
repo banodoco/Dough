@@ -11,6 +11,7 @@ from ui_components.constants import CreativeProcessType
 from ui_components.methods.video_methods import upscale_video
 from ui_components.models import InternalFileObject, InternalProjectObject, InternalShotObject
 from ui_components.widgets.inspiration_engine import inspiration_engine_element
+from ui_components.widgets.shot_view import create_video_download_button
 from ui_components.widgets.sm_animation_style_element import video_shortlist_btn
 from ui_components.widgets.timeline_view import timeline_view
 from ui_components.components.explorer_page import gallery_image_view
@@ -110,7 +111,7 @@ def upscaling_page(project_uuid: str):
             st.markdown("***")
 
     else:
-        st.info("You need to shortlist videos on the Adjust Shot view for them to appear here.")
+        st.info("You need to shortlist videos in the Animate Shot view for them to appear here.")
 
 
 def display_video(video_file: InternalFileObject, upscale_in_progress=False):
@@ -142,7 +143,7 @@ def display_video(video_file: InternalFileObject, upscale_in_progress=False):
 
     with col2:
         st.video(video_file.location)
-        st.button("Download", key=f"download_{video_file.uuid}", use_container_width=True)
+        create_video_download_button(video_file.location, ui_key="upscale_page")
 
 
 def get_final_video_list(project_uuid):
