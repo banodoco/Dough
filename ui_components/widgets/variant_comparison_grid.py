@@ -112,7 +112,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     timing_uuid, shot_uuid = None, None
     if stage == CreativeProcessType.MOTION.value:
         shot_uuid = ele_uuid
-        shot = data_repo.get_shot_from_uuid(shot_uuid)
+        shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
         variants: List[InternalFileObject] = shot.interpolated_clip_list
         timing_list = data_repo.get_timing_list_from_shot(shot.uuid)
 
@@ -149,7 +149,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             st.markdown(f"### 🎞️ '{shot.name}' options")
             st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
-        upscale_in_progress_arr = get_video_upscale_dict(shot_uuid)
+        upscale_in_progress_arr = get_video_upscale_dict(shot.project.uuid)
 
     else:
         items_to_show = 5
@@ -221,8 +221,14 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                             #     promote_video_variant(shot.uuid, variants[variant_index].uuid)
                             promote_image_variant(timing.uuid, variant_index)
                             st.rerun()
-                    else:
-                        add_video_to_shortlist(variants[variant_index].uuid)
+                    elif (
+                        variants[variant_index].inference_log.generation_tag
+                        != InferenceLogTag.UPSCALED_VIDEO.value
+                    ):
+                        if variants[variant_index].tag == InternalFileTag.SHORTLISTED_VIDEO.value:
+                            st.info("Shortlisted")
+                        else:
+                            video_shortlist_btn(variants[variant_index].uuid)
 
                 is_upscaled_variant = is_upscaled_video(variants[variant_index])
                 if stage == CreativeProcessType.MOTION.value:
@@ -246,7 +252,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                         open_generaton_details=open_generaton_details,
                     )
 
-                    upscale_variant_element(variants[variant_index].uuid, shot_uuid)
+                    uspcale_expander_element([variants[variant_index].uuid])
                     create_video_download_button(variants[variant_index].location, tag="var_details")
 
                 else:
@@ -274,14 +280,13 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         )
 
 
-def get_video_upscale_dict(shot_uuid):
+def get_video_upscale_dict(project_uuid):
     """
     returns a arr [uuid_1, uuid_2] of video uuids, for which upscale is in progress
     """
     data_repo = DataRepo()
-    shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
     log_filter_data = {
-        "project_id": shot.project.uuid,
+        "project_id": project_uuid,
         "page": 1,
         "data_per_page": 1000,
         "status_list": [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
@@ -315,43 +320,38 @@ def video_tag_element(video_file: InternalFileObject, additional_tags=[]):
         st.info(" ".join(video_file.inference_log.generation_tag.split("_")).title())
 
 
-def add_video_to_shortlist(video_uuid):
-    data_repo = DataRepo()
-    video_file: InternalFileObject = data_repo.get_file_from_uuid(video_uuid)
-
-    if video_file.tag == InternalFileTag.SHORTLISTED_VIDEO.value:
-        st.info("Shortlisted")
-    else:
-        if st.button("Add to shortlist", key=f"add_to_shortlist_btn_{video_uuid}", use_container_width=True):
-            data_repo.update_file(
-                video_uuid,
-                tag=InternalFileTag.SHORTLISTED_VIDEO.value,
-            )
-            st.rerun()
-
-
-def upscale_variant_element(ele_uuid, shot_uuid):
-    with st.expander("Upscale settings", expanded=False):
-        (
-            styling_model,
-            upscale_factor,
-            promote_to_main_variant,
-        ) = upscale_settings(ui_key=ele_uuid)
-
-        if st.button(
-            "Upscale",
-            key=f"upscale_main_variant_{ele_uuid}",
-            help="Upscale the main variant with the selected settings",
-            use_container_width=True,
-        ):
-            upscale_video(
-                ele_uuid,
-                shot_uuid,
+def uspcale_expander_element(
+    ele_uuid_list,
+    heading="Upscale settings",
+    btn_text="Upscale",
+    ui_key=None,
+    default_expanded=False,
+):
+    ui_key = ui_key or ele_uuid_list[0]
+    with st.expander(heading, expanded=default_expanded):
+        if not (ele_uuid_list and len(ele_uuid_list)):
+            st.info("No videos to upscale")
+        else:
+            (
                 styling_model,
                 upscale_factor,
                 promote_to_main_variant,
-            )
-            st.rerun()
+            ) = upscale_settings(ui_key=ui_key)
+
+            if st.button(
+                btn_text,
+                key=f"upscale_main_variant_{ui_key}",
+                help="Upscale",
+                use_container_width=True,
+            ):
+                for ele_uuid in ele_uuid_list:
+                    upscale_video(
+                        ele_uuid,
+                        styling_model,
+                        upscale_factor,
+                        promote_to_main_variant,
+                    )
+                st.rerun()
 
 
 def is_upscaled_video(variant: InternalFileObject):

@@ -263,7 +263,7 @@ def setup_app_ui():
                     animate_shot_page(st.session_state["shot_uuid"], h2)
 
                 elif st.session_state["page"] == CreativeProcessPage.UPSCALING.value:
-                    upscaling_page(st.session_state["shot_uuid"], h2)
+                    upscaling_page(st.session_state["project_uuid"])
 
             elif st.session_state["main_view_type"] == "Project Settings":
                 project_settings_page(st.session_state["project_uuid"])

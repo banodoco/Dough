@@ -56,6 +56,21 @@ class InternalFileObject:
 
         return filename
 
+    @property
+    def origin_shot_uuid(self):
+        # trying to fetch the shot_uuid from origin data as well (in older code there was some issue where shot_uuid
+        # was not saved properly directly in the file)
+        if self.shot_uuid:
+            return self.shot_uuid
+        else:
+            from utils.data_repo.data_repo import DataRepo
+
+            data_repo = DataRepo()
+            origin_log = data_repo.get_inference_log_from_uuid(self.inference_log.uuid)
+            shot_data = json.loads(origin_log.input_params)
+            shot_uuid = shot_data.get("origin_data", json.dumps({})).get("shot_uuid", None) or self.shot_uuid
+            return shot_uuid
+
     def get_child_entities(self, tranformation_type_list=["upscale"]):
         from utils.data_repo.data_repo import DataRepo
 

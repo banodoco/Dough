@@ -40,7 +40,7 @@ from utils.ml_processor.constants import ML_MODEL
 from utils.ml_processor.ml_interface import get_ml_client
 
 
-def upscale_video(file_uuid, shot_uuid, styling_model, upscale_factor, promote_to_main_variant):
+def upscale_video(file_uuid, styling_model, upscale_factor, promote_to_main_variant):
     from ui_components.methods.common_methods import process_inference_output
     from shared.constants import QUEUE_INFERENCE_QUERIES
 
@@ -103,6 +103,7 @@ def upscale_video(file_uuid, shot_uuid, styling_model, upscale_factor, promote_t
         file_uuid_list = (
             shot_data.get("origin_data", json.dumps({})).get("settings", {}).get("file_uuid_list", [])
         )
+
         inference_data = {
             "inference_type": InferenceType.FRAME_INTERPOLATION.value,
             "output": output,
@@ -111,7 +112,7 @@ def upscale_video(file_uuid, shot_uuid, styling_model, upscale_factor, promote_t
                 "promote_to_main_variant": promote_to_main_variant,
                 "file_uuid_list": file_uuid_list,
             },
-            "shot_uuid": str(shot_uuid),
+            "shot_uuid": str(video_file.origin_shot_uuid),
             "inference_tag": InferenceLogTag.UPSCALED_VIDEO.value,
         }
 
