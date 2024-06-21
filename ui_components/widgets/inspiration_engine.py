@@ -122,83 +122,82 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
         "plant taking growing over man's legs",
         "plants everywhere",
         "huge plant growing over pyramids",
-        "zoomed out view of entirely green planet"
+        "zoomed out view of entirely green planet",
     ]
     default_generation_text = "Story about about a plant growing out of a bleak desert, expanding to cover everything and every person and taking over the world, final view of green planet from space, inspirational, each should be about the plant"
     generate_mode, edit_mode = "generate_mode", "edit_mode"
     style_reference_list = [
-                {
-                    "name": "The Strangest Dream",
-                    "images": [
-                        "https://cdn.discordapp.com/attachments/1215034841473490994/1252224520740143187/hannahsubmarine_Psychedelic_illustration_of_a_Bug_Dreamy_Vibe_434174e0-8f65-44ec-a41c-6a0467de1e0f_1.png?ex=66717076&is=66701ef6&hm=d161c576f37dc7dab7022063c688d03d77b5feb06696f859d0401e194de45edc&",
-                        "https://media.discordapp.net/attachments/1215034841473490994/1252224516625797180/hannahsubmarine_Psychedelic_art_of_dreams_Dreamy_Vibes_sci-fi_287d2dd5-e3d8-42f3-9fab-3c543ebc416f_3.png?ex=66717075&is=66701ef5&hm=235a53e5936a24565ada54d7c8655f062aa68141a8e2208b8c7037042c6ad1dc&",
-                        "https://media.discordapp.net/attachments/1215034841473490994/1252224515442741321/hannahsubmarine_Psychedelic_art_of_a_woman_lying_in_bed_Dreamy__42b777fe-b572-4a95-9c78-7faa41b05b5e.png?ex=66717075&is=66701ef5&hm=50360b75a6da9c42bb996bed608d0ea6ddf3e82432f109a8857e46f8f8f8b4c7&"
-                    ],                    
-                    "description": "Bold, dark colors, Dark Blue & red dominant, dream like, surreal.",
-                    "models_works_best_with":"Dreamshaper, Deliberate",
-                    "workflows_works_best_with":"Rad Attack, Slushy Realistiche, Smooth n’ Steady",
-                    "example_video": "https://banodoco.s3.amazonaws.com/plan/5c2cfcb1-04c3-432b-9585-a39a0b55686e+(1).mp4",
-                    "created_by": "Hannah Submarine"
-
-                },
-                {
-                "name": "Green Hard Funk",
-                "images": [
-                    "https://cdn.discordapp.com/attachments/1215034841473490994/1252224725586022411/hannahsubmarine_Illustration_of_the_sun_--ar_32_--sref_312112_29b10d4d-98b0-40f4-8d5f-918ecbce5a31_3.png?ex=667170a7&is=66701f27&hm=1cc5793bbcd4dcd0ab1dfa2b39ff9802810d540c559bf14cac9ee12efc2419ad&",
-                    "https://cdn.discordapp.com/attachments/1215034841473490994/1252219944972849172/hannahsubmarine_Illustration_of_the_sun_--ar_32_--sref_312112_29b10d4d-98b0-40f4-8d5f-918ecbce5a31_1.png?ex=66716c34&is=66701ab4&hm=a62eda7a42049e64c405d1af789997c48225f9088efaeb129cadb94d80ac8292&",
-                    "https://cdn.discordapp.com/attachments/1215034841473490994/1252224722377113680/hannahsubmarine_Illustration_of_a_woman_--ar_32_--sref_312112_d60f3231-3971-4bda-ba6a-44e349ba76d0_1.png?ex=667170a7&is=66701f27&hm=0e449f93d6084be74b824ee080bc5713cbbc50c96feeb51996245a275c32da71&"
-                ],
-                "description": "Dominant green tones, red accents, high contrast, geometrical lining.",
-                "models_works_best_with":"Dreamshaper, Deliberate",
-                "workflows_works_best_with":"Rad attack, Chucky realistiche",
-                "example_video": "https://banodoco.s3.amazonaws.com/plan/6a974b2d-bc0e-4c7c-87b5-99ca5594162e.mp4",
-                "created_by": "Hannah Submarine"
-            },
-            {
+        {
+            "name": "The Strangest Dream",
+            "images": [
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0001.png",
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0002.png",
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0003.png",
+            ],
+            "description": "Bold, dark colors, Dark Blue & red dominant, dream like, surreal.",
+            "models_works_best_with": "Dreamshaper, Deliberate",
+            "workflows_works_best_with": "Rad Attack, Slushy Realistiche, Smooth n’ Steady",
+            "example_video": "https://banodoco.s3.amazonaws.com/plan/5c2cfcb1-04c3-432b-9585-a39a0b55686e+(1).mp4",
+            "created_by": "Hannah Submarine",
+        },
+        {
+            "name": "Green Hard Funk",
+            "images": [
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0001.png",
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0002.png",
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0003.png",
+            ],
+            "description": "Dominant green tones, red accents, high contrast, geometrical lining.",
+            "models_works_best_with": "Dreamshaper, Deliberate",
+            "workflows_works_best_with": "Rad attack, Chucky realistiche",
+            "example_video": "https://banodoco.s3.amazonaws.com/plan/6a974b2d-bc0e-4c7c-87b5-99ca5594162e.mp4",
+            "created_by": "Hannah Submarine",
+        },
+        {
             "name": "Nordic Pale Blue",
             "images": [
-                "https://cdn.discordapp.com/attachments/1215034841473490994/1252223945365782549/hannahsubmarine_._--ar_32_--sref_178649523_0592111c-b58e-4b26-9b6b-f43e2064c22e_3.png?ex=66716fed&is=66701e6d&hm=68c6975201017e6462d6dfc95149d8ff0730238fc138673ca98c7d5255ca1448&",
-                "https://cdn.discordapp.com/attachments/1215034841473490994/1252223953037037649/hannahsubmarine_A_deer._--ar_32_--sref_178649523_0ef59f9d-5011-4db3-8d01-3df77e447cd3_0.png?ex=66716fef&is=66701e6f&hm=2f7b0d6c5beae0c5eaa6693e37dc5c0135982f2539ebd93eaed0a80e94fa488b&",
-                "https://media.discordapp.net/attachments/1215034841473490994/1252223946854629468/hannahsubmarine_._--ar_32_--sref_178649523_a1afc477-73df-4986-a211-8cbfcd4ea496_1.png?ex=66716fee&is=66701e6e&hm=7298ab0330df299ad3a0bbd952f25d2b41a99e3f0beff767fdceef4073479ad0&=&format=webp&quality=lossless&width=1620&height=1080",
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0001.png",
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0002.png",
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0003.png",
             ],
             "description": "Pale blue, grey, pastel colors, ornamental and decorative details.",
-            "models_works_best_with":"Dreamshaper, Deliberate",
-            "workflows_works_best_with":"Rad Attack, Liquid Loop",
+            "models_works_best_with": "Dreamshaper, Deliberate",
+            "workflows_works_best_with": "Rad Attack, Liquid Loop",
             "example_video": "https://banodoco.s3.amazonaws.com/plan/454e2dff-97c5-49c7-91dc-a66c5216cd44+(1).mp4",
-            "created_by": "Hannah Submarine"
-            },
-            {
+            "created_by": "Hannah Submarine",
+        },
+        {
             "name": "Insane Animane",
             "images": [
-                "https://cdn.discordapp.com/attachments/1215034841473490994/1252225839441907763/hannahsubmarine_A_modern_hand_drawn_minimalistic_vectographic_02fbe245-8e24-47ec-80b4-42719768c7bd_2.png?ex=667171b1&is=66702031&hm=1bf98e6462934a974157900f615c5f3ce3c057a54ee99d4a85dd7d46870faf75&",
-                "https://cdn.discordapp.com/attachments/1215034841473490994/1252225840700325992/hannahsubmarine_A_modern_hand_drawn_minimalistic_vectographic_073d88cc-8049-4bc3-93d5-f72327c49ae2_0.png?ex=667171b1&is=66702031&hm=e2611b27019ff064ce352ee710c0c20bebe0710cb602caa753a0b53b0be4c894&",
-                "https://cdn.discordapp.com/attachments/1215034841473490994/1252225841614557225/hannahsubmarine_A_modern_hand_drawn_minimalistic_vectographic_78d81322-7423-440e-8861-fb2e8fc70dd8_1.png?ex=667171b1&is=66702031&hm=18b3d027949985b02b32516b9a47582143e91b747dd970ca70de4326b8b5bcb9&",
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0001.png",
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0002.png",
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0003.png",
             ],
             "description": "Detailed animation style, Blue, orange, white dominant, intense, expressive",
-            "models_works_best_with":"Dreamshaper, Deliberate",
-            "workflows_works_best_with":"Rad Attack, Slushy Realistiche",
+            "models_works_best_with": "Dreamshaper, Deliberate",
+            "workflows_works_best_with": "Rad Attack, Slushy Realistiche",
             "example_video": "https://banodoco.s3.amazonaws.com/plan/3b2a0c0f-e100-4f44-b386-9e3c7781854e.mp4",
-            "created_by": "Hannah Submarine"
-            },
-            {
+            "created_by": "Hannah Submarine",
+        },
+        {
             "name": "Delicate Pink Glimmer",
             "images": [
-                "https://media.discordapp.net/attachments/1215034841473490994/1252227121657548920/hannahsubmarine_Illustration_of_a_woman_--ar_32_--sref_427707_da9756cc-0d0b-4d16-b253-763cd73fd42e_0.png?ex=66721ba3&is=6670ca23&hm=24abaa1703b1aed77ea9719f25d4e5f06977f369cba79343f072fce95d2d245d&=&format=webp&quality=lossless&width=1620&height=1080",
-                "https://media.discordapp.net/attachments/1215034841473490994/1252227121179263036/hannahsubmarine_illustration_of_a_house_._--ar_32_--sref_4277_76255169-6900-4ad2-9135-41506a667b38_3.png?ex=66721ba2&is=6670ca22&hm=7d8be25e50c65ed33cd18e5ec11b9e992aaeb376d021c52dc9b2bda1ffc4e0c0&=&format=webp&quality=lossless&width=1620&height=1080",
-                "https://media.discordapp.net/attachments/1215034841473490994/1252227125382221834/hannahsubmarine_illustration_of_nanimal_._--ar_32_--sref_4277_a0250257-1e76-41c8-b622-d4f178d58511_3.png?ex=66721ba3&is=6670ca23&hm=120ef5f7d9d1fda8482364d4f2ee778b7a706551d36947dbed8d0087deca20c7&=&format=webp&quality=lossless&width=1620&height=1080",
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0001.png",
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0002.png",
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/posts/image__0003.png",
             ],
             "description": "Delicate lines, soft colors, pink-blue & green dominant, misty/glimmer shine.",
-            "models_works_best_with":"Deliberate, Realistic Vision",
-            "workflows_works_best_with":"Smooth n' Steady, Rad Attack",
+            "models_works_best_with": "Deliberate, Realistic Vision",
+            "workflows_works_best_with": "Smooth n' Steady, Rad Attack",
             "example_video": "https://banodoco.s3.amazonaws.com/plan/8d689176-9833-47ed-970f-2c14ff0440a6.mp4",
-            "created_by": "Hannah Submarine"
-            },            
-            
-    ]  
-            
+            "created_by": "Hannah Submarine",
+        },
+    ]
 
     with st.expander("Inspiration engine", expanded=True):
-        if st_memory.toggle("Open", value=True, key="inspiration_engine_toggle",help="Close it to speed up the page."):
+        if st_memory.toggle(
+            "Open", value=True, key="inspiration_engine_toggle", help="Close it to speed up the page."
+        ):
             default_form_values = {
                 "generated_images": [],
                 "list_of_prompts": default_prompt_list,
@@ -229,26 +228,28 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     st.session_state[k] = v
 
             # ---------------- PROMPT GUIDANCE ---------------------
-            h1, h2,_ = st.columns([1, 1, 0.25])
+            h1, h2, _ = st.columns([1, 1, 0.25])
             with h1:
                 st.markdown("#### Prompt guidance")
-            
+
             # list_of_prompts = st.session_state["list_of_prompts"]
             with h2:
                 if st.button("Remove all prompts"):
                     st.session_state["list_of_prompts"] = [""]
                     st.rerun()
-                
-            h2_a, h2_b,h2_c,h1 = st.columns([0.5,0.5,0.5, 0.75])
-            if isinstance(st.session_state["list_of_prompts"], str):        
-                st.session_state["list_of_prompts"] = st.session_state["list_of_prompts"].split('|')
+
+            h2_a, h2_b, h2_c, h1 = st.columns([0.5, 0.5, 0.5, 0.75])
+            if isinstance(st.session_state["list_of_prompts"], str):
+                st.session_state["list_of_prompts"] = st.session_state["list_of_prompts"].split("|")
 
             column_handlers = [h2_a, h2_b, h2_c] * ((len(st.session_state["list_of_prompts"]) + 2) // 3)
 
-            for index, prompt in enumerate(st.session_state["list_of_prompts"]):            
+            for index, prompt in enumerate(st.session_state["list_of_prompts"]):
                 with column_handlers[index]:
                     # Create a text area for each prompt
-                    user_input = st.text_area(f"Prompt {index + 1}:", value=prompt, height=50, key=f"prompt_{index}")
+                    user_input = st.text_area(
+                        f"Prompt {index + 1}:", value=prompt, height=50, key=f"prompt_{index}"
+                    )
                     # Update the prompt in session state if it changes
                     if user_input != prompt:
                         st.session_state["list_of_prompts"][index] = user_input
@@ -258,20 +259,26 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         # Add a new prompt below the current one when the "+" button is pressed
                         if st.button("➕", key=f"add_{index}", use_container_width=True):
                             st.session_state["list_of_prompts"].insert(index + 1, user_input)
-                            st.experimental_rerun()
+                            st.rerun()
                     with col2:
                         # Delete the current prompt when the "🗑️" button is pressed
                         if len(st.session_state["list_of_prompts"]) > 1:
                             if st.button("🗑️", key=f"delete_{index}", use_container_width=True):
                                 st.session_state["list_of_prompts"].pop(index)
-                                st.experimental_rerun()        
+                                st.rerun()
                         else:
-                            st.button("🗑️", key=f"delete_{index}", use_container_width=True,disabled=True, help="You can't delete the last prompt.")
-            '''
+                            st.button(
+                                "🗑️",
+                                key=f"delete_{index}",
+                                use_container_width=True,
+                                disabled=True,
+                                help="You can't delete the last prompt.",
+                            )
+            """
             if st.session_state["list_of_prompts"] != list_of_prompts:
                 st.session_state["list_of_prompts"] = list_of_prompts
                 st.rerun()
-            '''
+            """
             number_of_prompts = len(st.session_state["list_of_prompts"])
 
             with h1:
@@ -346,7 +353,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 temperature=temperature,
                             )
                             # split the prompts by | and create a list
-                            st.session_state["list_of_prompts"] = generated_prompts.split('|')
+                            st.session_state["list_of_prompts"] = generated_prompts.split("|")
 
                             st.rerun()
 
@@ -364,7 +371,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     if st.button("Edit Prompts", use_container_width=True):
                         if check_replicate_key():
                             generated_prompts = edit_prompts(edit_text, st.session_state["list_of_prompts"])
-                            st.session_state["list_of_prompts"] = generated_prompts.split('|')
+                            st.session_state["list_of_prompts"] = generated_prompts.split("|")
                             st.rerun()
 
             i1, i2, _ = st.columns([1, 1, 0.5])
@@ -426,10 +433,10 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     st.rerun()
 
             st.markdown("***")
-            st.markdown("#### Style guidance")  
+            st.markdown("#### Style guidance")
 
             if type_of_model == T2IModel.SD3.value:
-                sd3,_ = st.columns([1,1])
+                sd3, _ = st.columns([1, 1])
                 with sd3:
                     st.info("Style references aren't yet supported for SD3.")
                 style_influence = 4.5  # this will actually go into cfg
@@ -485,33 +492,38 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 if st.button(text, use_container_width=True):
                                     # Check if there are less than 3 images already in the list
                                     while (
-                                        len(st.session_state["list_of_style_references"]) < 3 and uploaded_images
+                                        len(st.session_state["list_of_style_references"]) < 3
+                                        and uploaded_images
                                     ):
                                         st.session_state["list_of_style_references"].append(
                                             uploaded_images.pop(0)
                                         )
-                                    
+
                                     if uploaded_images:  # If there are still images left, show a warning
                                         st.warning("You can only upload 3 style references.")
 
                                     st.rerun()
                             else:
-                                st.button(f"Add style reference", use_container_width=True, disabled=True,help="You have no input images selectedr.")
+                                st.button(
+                                    f"Add style reference",
+                                    use_container_width=True,
+                                    disabled=True,
+                                    help="You have no input images selectedr.",
+                                )
                     else:
                         if st.button("Remove all style references"):
                             st.session_state["list_of_style_references"] = []
                             st.rerun()
-                                    
 
                     columns = st.columns(4)
 
                     for i, col in enumerate(columns):
-                        if i < len(st.session_state['list_of_style_references']):
+                        if i < len(st.session_state["list_of_style_references"]):
                             with col:
-                                uploaded_file = st.session_state['list_of_style_references'][i]
+                                uploaded_file = st.session_state["list_of_style_references"][i]
                                 if uploaded_file is not None:
                                     # Check if the uploaded file behaves like a file-like object
-                                    if hasattr(uploaded_file, 'read'):
+                                    if hasattr(uploaded_file, "read"):
                                         # Attempt to open the image
                                         try:
                                             display_img = Image.open(uploaded_file)
@@ -521,13 +533,13 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                     else:
                                         st.error("Uploaded file does not support file-like operations.")
                                         continue
-                                    
+
                                     # Apply zoom and crop
                                     display_img = zoom_and_crop(display_img, 512, 512)
                                     st.image(display_img)
                                     if st.button(f"Remove style reference {i+1}", use_container_width=True):
                                         # Remove the image from the list
-                                        st.session_state['list_of_style_references'].pop(i)
+                                        st.session_state["list_of_style_references"].pop(i)
                                         st.rerun()
 
                 elif type_of_style_input == "Choose From List":
@@ -549,13 +561,17 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             with col:
                                 st.image(preset_images[i])
                             if i == 0:
-                                st.info(f'''**Recommended animation styling models:** {items[[item["name"] for item in items].index(preset_style)]["models_works_best_with"]}
+                                st.info(
+                                    f"""**Recommended animation styling models:** {items[[item["name"] for item in items].index(preset_style)]["models_works_best_with"]}
                         \n**Recommended workflow:** {items[[item["name"] for item in items].index(preset_style)]["workflows_works_best_with"]}
-                        \n**Created by:** {items[[item["name"] for item in items].index(preset_style)]["created_by"]}''')
+                        \n**Created by:** {items[[item["name"] for item in items].index(preset_style)]["created_by"]}"""
+                                )
                     with preview2:
-                        st.caption("Example video:")                    
+                        st.caption("Example video:")
                         st.video(items[[item["name"] for item in items].index(preset_style)]["example_video"])
-                        st.caption(f"{items[[item['name'] for item in items].index(preset_style)]['description']}")                                 
+                        st.caption(
+                            f"{items[[item['name'] for item in items].index(preset_style)]['description']}"
+                        )
 
                 else:
                     st.session_state["list_of_style_references"] = []
@@ -601,7 +617,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             with prompt1:
                 images_per_prompt = st.slider(
                     "Images per prompt:",
-                    min_value=4,
+                    min_value=1,
                     max_value=64,
                     step=4,
                     value=st.session_state["insp_img_per_prompt"],
@@ -620,8 +636,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     st.info(
                         f"{number_of_prompts} prompts for {images_per_prompt} images per prompt makes a total of **{number_of_prompts*images_per_prompt} images**."
                     )
-
-
 
             st.session_state["insp_test_mode"] = test_first_prompt
 
@@ -664,12 +678,12 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             if input_image_file_list and len(input_image_file_list):
                                 data["img_uuid_list"] = json.dumps([f.uuid for f in input_image_file_list])
 
+                            file_data = {}
                             for idx, f in enumerate(input_image_file_list):
-                                data[f"file_uuid_{idx}"] = f.uuid
+                                file_data[f"image_file_{idx}"] = {"uuid": f.uuid, "dest": "input/"}
 
                             query_obj = MLQueryObject(
                                 timing_uuid=None,
-                                model_uuid=None,
                                 image_uuid=None,
                                 guidance_scale=5,
                                 seed=-1,
@@ -681,6 +695,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 height=project_settings.height,
                                 width=project_settings.width,
                                 data=data,
+                                file_data=file_data,
                             )
 
                             output, log = ml_client.predict_model_output_standardized(
@@ -752,5 +767,5 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                     release_lock(key)
 
                 st.rerun()
-        
+
         st.write("")

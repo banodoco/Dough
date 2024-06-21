@@ -26,12 +26,13 @@ from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
 from PIL import Image
 
-def timeline_view(shot_uuid, stage, view='sidebar'):
+
+def timeline_view(shot_uuid, stage, view="sidebar"):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     shot_list = data_repo.get_shot_list(shot.project.uuid)
 
-    if view == 'main':
+    if view == "main":
         _, header_col_2 = st.columns([5.5, 1.5])
         items_per_row = 4
     else:  # sidebar view
@@ -39,7 +40,7 @@ def timeline_view(shot_uuid, stage, view='sidebar'):
         shot_list.reverse()  # Reverse the order of shots for sidebar view
 
     # Pagination setup for sidebar view
-    if view == 'sidebar':
+    if view == "sidebar":
         total_pages = (len(shot_list) + items_per_row - 1) // items_per_row
         if total_pages > 1:
             page = st.radio("Select Page", list(range(1, total_pages + 1)), horizontal=True)
@@ -58,7 +59,7 @@ def timeline_view(shot_uuid, stage, view='sidebar'):
     for idx, shot in enumerate(shot_list):
         timing_list: List[InternalFrameTimingObject] = shot.timing_list
         if idx % items_per_row == 0:
-            if view == 'main':
+            if view == "main":
                 grid = st.columns(items_per_row)
             else:
                 # Ensure grid is only as large as the number of shots in the last segment
@@ -66,11 +67,11 @@ def timeline_view(shot_uuid, stage, view='sidebar'):
 
         with grid[idx % items_per_row]:
             st.info(f"##### {shot.name}")
-            if shot.main_clip and shot.main_clip.location and view == 'main':
+            if shot.main_clip and shot.main_clip.location and view == "main":
                 individual_video_display_element(shot.main_clip)
             else:
                 num_columns = 4  # Set to 4 images per row regardless of the number of images
-                
+
                 if timing_list:
                     grid_timing = st.columns(num_columns)
                     for j, timing in enumerate(timing_list):
@@ -88,22 +89,23 @@ def timeline_view(shot_uuid, stage, view='sidebar'):
                 shot_adjustment_button(shot)
             with switch2:
                 shot_animation_button(shot)
-            if view == 'main':
+            if view == "main":
                 with st.expander("Details & settings:", expanded=False):
                     update_shot_name(shot.uuid)
                     move_shot_buttons(shot, "side")
                     delete_shot_button(shot.uuid)
                     duplicate_shot_button(shot.uuid, position="timeline_view")
                     if shot.main_clip:
-                        create_video_download_button(shot.main_clip.location, tag="main_clip")
+                        create_video_download_button(shot.main_clip.location, ui_key="main_clip")
 
         if (idx + 1) % items_per_row == 0 or idx == len(shot_list) - 1:
             st.markdown("***")
 
-        if view == 'main' and idx == len(shot_list) - 1:
+        if view == "main" and idx == len(shot_list) - 1:
             with grid[(idx + 1) % items_per_row]:
                 st.markdown("###### Add new shot")
-                add_new_shot_element(shot, data_repo,show_image_uploader=True)
+                add_new_shot_element(shot, data_repo, show_image_uploader=True)
+
 
 def add_new_shot_element(shot, data_repo, show_image_uploader=False):
     new_shot_name = st.text_input("Shot Name:", max_chars=25)

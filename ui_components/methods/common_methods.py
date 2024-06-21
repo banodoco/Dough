@@ -1046,7 +1046,7 @@ def stop_gen(log):
         from comfy_runner.inf import ComfyRunner
 
         comfy_runner = ComfyRunner()
-        comfy_runner.stop_current_generation(log.uuid, 12)
+        comfy_runner.stop_current_generation(log.uuid, 3)
         print(f"Process stopped {log.uuid} ----------")
 
 

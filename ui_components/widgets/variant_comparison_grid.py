@@ -9,6 +9,8 @@ import os
 from PIL import Image
 from shared.constants import (
     COMFY_BASE_PATH,
+    FileTransformationType,
+    InferenceLogTag,
     InferenceParamType,
     InternalFileTag,
     InferenceParamType,
@@ -23,7 +25,12 @@ from ui_components.methods.file_methods import add_file_to_shortlist, create_dup
 from ui_components.methods.video_methods import sync_audio_and_duration, upscale_video
 from ui_components.widgets.display_element import individual_video_display_element
 from ui_components.widgets.shot_view import create_video_download_button
-from ui_components.models import InternalAIModelObject, InternalFileObject
+from ui_components.models import (
+    InferenceLogObject,
+    InternalAIModelObject,
+    InternalFileObject,
+    InternalShotObject,
+)
 from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.sm_animation_style_element import video_shortlist_btn
 from utils import st_memory
@@ -60,7 +67,7 @@ def video_generation_counter(shot_uuid):
         with h2:
             if st.button("Refresh", key=f"refresh_{shot_uuid}", use_container_width=True):
                 st.rerun()
-                
+
 
 # TODO: very inefficient operation.. (maybe add source_entity_id ? as a foreign key)
 # @Peter enter the video_uuid to get the count of upscales in progress (this works very similar to the mthod above)
@@ -78,8 +85,8 @@ def upscale_video_generation_counter(video_uuid):
         if relation_data:
             relation_data = json.loads(relation_data)
             if (
-                relation_data[0]["id"] == str(video_uuid) and
-                relation_data[0]["transformation_type"] == "upscale"
+                relation_data[0]["id"] == str(video_uuid)
+                and relation_data[0]["transformation_type"] == FileTransformationType.UPSCALE.value
             ):
                 res.append(log)
 
@@ -105,21 +112,18 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     timing_uuid, shot_uuid = None, None
     if stage == CreativeProcessType.MOTION.value:
         shot_uuid = ele_uuid
-        shot = data_repo.get_shot_from_uuid(shot_uuid)
+        shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
         variants: List[InternalFileObject] = shot.interpolated_clip_list
         timing_list = data_repo.get_timing_list_from_shot(shot.uuid)
 
-        # if not (f"{shot_uuid}_selected_variant_log_uuid" in st.session_state and st.session_state[f"{shot_uuid}_selected_variant_log_uuid"]):
-        #     # if variants and len(variants):
-        #     #     st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = variants[-1].inference_log.uuid
-        #     # else:
-        #     st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
     else:
         timing_uuid = ele_uuid
         timing = data_repo.get_timing_from_uuid(timing_uuid)
         variants = timing.alternative_images_list
         shot_uuid = timing.shot.uuid
         timing_list = ""
+
+    upscale_in_progress_arr = []
 
     col1, col2, col3 = st.columns([1, 0.25, 0.5])
     if stage == CreativeProcessType.MOTION.value:
@@ -138,7 +142,6 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                     min_value=3,
                     max_value=9,
                 )
-            items_to_show = items_to_show - 1
         else:
             items_to_show = 5
         num_columns = 3
@@ -146,12 +149,17 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             st.markdown(f"### 🎞️ '{shot.name}' options")
             st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
+        upscale_in_progress_arr = get_video_upscale_dict(shot.project.uuid)
+
     else:
         items_to_show = 5
         num_columns = 3
 
     # Updated logic for pagination
-    num_pages = (len(variants) - 1) // items_to_show + ((len(variants) - 1) % items_to_show > 0)
+    total_items = (
+        len(variants) if stage == CreativeProcessType.MOTION.value else len(variants) - 1
+    )  # subtracting 1 in the case of images, as we show the main variant there as well
+    num_pages = total_items // items_to_show + (total_items % items_to_show > 0)
     page = 1
 
     if num_pages > 1:
@@ -160,92 +168,67 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     if not len(variants):
         st.info("No options created yet.")
         st.markdown("***")
+
     else:
-
-        current_variant = (
-            shot.primary_interpolated_video_index
-            if stage == CreativeProcessType.MOTION.value
-            else int(timing.primary_variant_index)
-        )
-
         st.markdown("***")
         if stage == CreativeProcessType.MOTION.value:
             video_generation_counter(shot_uuid)
         cols = st.columns(num_columns)
-        with cols[0]:
-            h1, h2 = st.columns([1, 1])
-            with h1:
-                st.info(f"###### Variant #{current_variant + 1}")
-            with h2:
-                st.button("Add to shortlist", key=f"add_to_shortlist_{shot_uuid}",use_container_width=True)
-                
-            is_video_upscaled = is_upscaled_video(variants[current_variant])
-            # Display the main variant
-            if stage == CreativeProcessType.MOTION.value:
-                if current_variant != -1 and variants[current_variant]:
-                    individual_video_display_element(variants[current_variant], is_video_upscaled)
+        current_variant = -2  # rand value that won't be filtered in additional_variants
+        cur_col = 0
+        # ----------------------------- main variant (only showing for images) -----------------------
+        if stage != CreativeProcessType.MOTION.value:
+            current_variant = (
+                shot.primary_interpolated_video_index
+                if stage == CreativeProcessType.MOTION.value
+                else int(timing.primary_variant_index)
+            )
 
-                # Upscale settings shown for every video
-                with st.expander("Upscale settings", expanded=False):
-                    (
-                        styling_model,
-                        upscale_factor,
-                        promote_to_main_variant,
-                    ) = upscale_settings()
-                    if st.button(
-                        "Upscale main variant",
-                        key=f"upscale_main_variant_{shot_uuid}",
-                        help="Upscale the main variant with the selected settings",
-                        use_container_width=True,
-                    ):
-                        upscale_video(
-                            shot_uuid,
-                            styling_model,
-                            upscale_factor,
-                            promote_to_main_variant,
-                        )
-                        st.rerun()
+            with cols[cur_col]:
+                h1, h2 = st.columns([1, 1])
+                with h1:
+                    # st.info(f"###### Variant #{current_variant + 1}")
+                    st.success("Main variant")
+                with h2:
+                    st.button(
+                        "Add to shortlist", key=f"add_to_shortlist_{ele_uuid}", use_container_width=True
+                    )
 
-                if is_video_upscaled:
-                    st.info("Upscaled video")
-
-                # create_video_download_button(variants[current_variant].location, tag="var_compare")
-                variant_inference_detail_element(
-                    variants[current_variant],
-                    stage,
-                    shot_uuid,
-                    timing_list,
-                    tag="var_compare",
-                    open_generaton_details=open_generaton_details,
-                )
-
-            else:
                 st.image(variants[current_variant].location, use_column_width=True)
                 image_variant_details(variants[current_variant])
-        # Determine the start and end indices for additional variants on the current page
+                cur_col += 1
+
+        # ------------------------------------- additional variants on the current page -------------------------
         additional_variants = [idx for idx in range(len(variants) - 1, -1, -1) if idx != current_variant]
         page_start = (page - 1) * items_to_show
         page_end = page_start + items_to_show
         page_indices = additional_variants[page_start:page_end]
 
-        next_col = 1
         for i, variant_index in enumerate(page_indices):
-            with cols[next_col]:
+            with cols[cur_col]:
                 h1, h2 = st.columns([1, 1])
                 with h1:
                     st.info(f"###### Variant #{variant_index + 1}")
                 with h2:
-                    if st.button(
-                        f"Promote variant #{variant_index + 1}",
-                        key=f"Promote Variant #{variant_index + 1} for {st.session_state['current_frame_index']}",
-                        help="Promote this variant to the primary image",
-                        use_container_width=True,
-                    ):
-                        if stage == CreativeProcessType.MOTION.value:
-                            promote_video_variant(shot.uuid, variants[variant_index].uuid)
-                        else:
+                    if stage != CreativeProcessType.MOTION.value:
+                        if st.button(
+                            f"Promote variant #{variant_index + 1}",
+                            key=f"Promote Variant #{variant_index + 1} for {st.session_state['current_frame_index']}",
+                            help="Promote this variant to the primary image",
+                            use_container_width=True,
+                        ):
+                            # if stage == CreativeProcessType.MOTION.value:
+                            #     promote_video_variant(shot.uuid, variants[variant_index].uuid)
                             promote_image_variant(timing.uuid, variant_index)
-                        st.rerun()
+                            st.rerun()
+                    elif (
+                        variants[variant_index].inference_log.generation_tag
+                        != InferenceLogTag.UPSCALED_VIDEO.value
+                    ):
+                        if variants[variant_index].tag == InternalFileTag.SHORTLISTED_VIDEO.value:
+                            st.info("Shortlisted")
+                        else:
+                            video_shortlist_btn(variants[variant_index].uuid)
 
                 is_upscaled_variant = is_upscaled_video(variants[variant_index])
                 if stage == CreativeProcessType.MOTION.value:
@@ -254,19 +237,23 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                     else:
                         st.error("No video present")
 
-                    if is_upscaled_variant:
-                        st.info("Upscaled video")
-                    elif variants[variant_index].inference_log.generation_tag:
-                        st.info(variants[variant_index].inference_log.generation_tag.title())
-                    # create_video_download_button(variants[variant_index].location, tag="var_details")
+                    additional_tags = (
+                        ["Upscale In Progress"]
+                        if str(variants[variant_index].uuid) in upscale_in_progress_arr
+                        else []
+                    )
+                    video_tag_element(variants[variant_index], additional_tags)
+
                     variant_inference_detail_element(
                         variants[variant_index],
                         stage,
                         shot_uuid,
-                        timing_list,
                         tag="var_details",
                         open_generaton_details=open_generaton_details,
                     )
+
+                    uspcale_expander_element([variants[variant_index].uuid])
+                    create_video_download_button(variants[variant_index].location, ui_key="var_details")
 
                 else:
                     if variants[variant_index]:
@@ -275,13 +262,13 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                     else:
                         st.error("No image present")
 
-            next_col += 1
+            cur_col += 1
 
             # if there's only one item, show a line break
             if len(page_indices) == 1:
                 st.markdown("***")
-            if next_col >= num_columns or i == len(page_indices) - 1 or len(page_indices) == i:
-                next_col = 0  # Reset the column counter
+            if cur_col >= num_columns or i == len(page_indices) - 1 or len(page_indices) == i:
+                cur_col = 0  # Reset the column counter
                 st.markdown("***")  # Add markdown line
                 cols = st.columns(num_columns)  # Prepare for the next row
                 # Add markdown line if this is not the last variant in page_indices
@@ -293,13 +280,83 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         )
 
 
+def get_video_upscale_dict(project_uuid):
+    """
+    returns a arr [uuid_1, uuid_2] of video uuids, for which upscale is in progress
+    """
+    data_repo = DataRepo()
+    log_filter_data = {
+        "project_id": project_uuid,
+        "page": 1,
+        "data_per_page": 1000,
+        "status_list": [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
+        "model_name_list": ["upscale"],
+    }
+
+    log_list, page_count = data_repo.get_all_inference_log_list(**log_filter_data)
+    upscale_in_progress_arr = []
+    if log_list:
+        for log in log_list:
+            relation_data = json.loads(log.input_params).get(
+                InferenceParamType.FILE_RELATION_DATA.value, None
+            )
+            if relation_data:
+                relation_data = json.loads(relation_data)
+                if relation_data[0]["transformation_type"] == "upscale":
+                    upscale_in_progress_arr.append(relation_data[0]["id"])
+
+    return list(set(upscale_in_progress_arr))
+
+
+def video_tag_element(video_file: InternalFileObject, additional_tags=[]):
+    # additional_tags can also be provided, these are mostly generated in runtimes
+    if additional_tags and len(additional_tags):
+        for tag in additional_tags:
+            st.info(tag)
+
+    # there are two tags, one on video_file (mainly used for shortlisting/filtering)
+    # the other is on the log, used to mark the process of generation (upscale/preview etc..)
+    if video_file.inference_log.generation_tag:
+        st.info(" ".join(video_file.inference_log.generation_tag.split("_")).title())
+
+
+def uspcale_expander_element(
+    ele_uuid_list,
+    heading="Upscale settings",
+    btn_text="Upscale",
+    ui_key=None,
+    default_expanded=False,
+):
+    ui_key = ui_key or ele_uuid_list[0]
+    with st.expander(heading, expanded=default_expanded):
+        if not (ele_uuid_list and len(ele_uuid_list)):
+            st.info("No videos to upscale")
+        else:
+            (
+                styling_model,
+                upscale_factor,
+                promote_to_main_variant,
+            ) = upscale_settings(ui_key=ui_key)
+
+            if st.button(
+                btn_text,
+                key=f"upscale_main_variant_{ui_key}",
+                help="Upscale",
+                use_container_width=True,
+            ):
+                for ele_uuid in ele_uuid_list:
+                    upscale_video(
+                        ele_uuid,
+                        styling_model,
+                        upscale_factor,
+                        promote_to_main_variant,
+                    )
+                st.rerun()
+
+
 def is_upscaled_video(variant: InternalFileObject):
-    log = variant.inference_log
-    if (
-        log
-        and log.output_details
-        and json.loads(log.output_details).get("model_name", "") == ComfyWorkflow.UPSCALER.value
-    ):
+    log: InferenceLogObject = variant.inference_log
+    if log and log.generation_tag and log.generation_tag == InferenceLogTag.UPSCALED_VIDEO.value:
         return True
     return False
 
@@ -346,27 +403,18 @@ def image_variant_details(variant: InternalFileObject):
 
 
 def variant_inference_detail_element(
-    variant: InternalFileObject, stage, shot_uuid, timing_list="", tag="temp", open_generaton_details=False
+    variant: InternalFileObject,
+    stage,
+    shot_uuid,
+    tag="temp",
+    open_generaton_details=False,
 ):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     if stage == CreativeProcessType.MOTION.value:
 
-        with st.expander("Relationship details", expanded=False):
-            file_parents = variant.get_parent_entities()
-            if file_parents and len(file_parents):
-                st.write(f"This file has been upscaled from the file {file_parents[0].filename}")
-            file_children = variant.get_child_entities()
-            if file_children and len(file_children):
-                st.write(f"There are {len(file_children)} files that have been upscaled from this")
-                for i in range(len(file_children)):
-                    st.write(file_children[i].uuid)
-
-            video_shortlist_btn(variant.uuid)
-
         with st.expander("Settings", expanded=open_generaton_details):
             shot_meta_data, data_type = get_generation_settings_from_log(variant.inference_log.uuid)
-
             if shot_meta_data and shot_meta_data.get("main_setting_data", None):
                 # ---------- main settings data ------------------
                 for k, v in shot_meta_data.get("main_setting_data", {}).items():
@@ -443,6 +491,7 @@ def variant_inference_detail_element(
                             v = v[:-1]  # removing the last ele in these cases
                         v = ", ".join(str(e) for e in v)
                     st.write(f"**{k}**: {v}")
+
                 btn1, btn2 = st.columns([1, 1])
                 with btn1:
                     if st.button(
@@ -458,6 +507,7 @@ def variant_inference_detail_element(
                         st.success("Settings Loaded")
                         time.sleep(0.3)
                         st.rerun()
+
                 with btn2:
                     if st.button(
                         "Load images",
@@ -472,7 +522,7 @@ def variant_inference_detail_element(
                         time.sleep(0.3)
                         st.rerun()
 
-    if stage != CreativeProcessType.MOTION.value:
+    else:
         h1, h2 = st.columns([1, 1])
         with h1:
             st.markdown(f"Add to shortlist:")
@@ -563,7 +613,7 @@ def prepare_values(inf_data, timing_list):
     return values
 
 
-def upscale_settings():
+def upscale_settings(ui_key):
     checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
     all_files = os.listdir(checkpoints_dir)
     if len(all_files) == 0:
@@ -573,17 +623,19 @@ def upscale_settings():
         # Filter files to only include those with .safetensors and .ckpt extensions
         model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
         # drop all files that contain xl
-        model_files = [file for file in model_files if "xl" not in file]
+        model_files = [file for file in model_files if "xl" not in file and "sd3" not in file]
         # model_files.insert(0, "None")  # Add "None" option at the beginning
-        styling_model = st.selectbox("Styling model", model_files, key="styling_model")
+        styling_model = st.selectbox("Styling model", model_files, key=f"styling_model_{ui_key}")
 
-    upscale_by = st.slider("Upscale by", min_value=1.0, max_value=3.0, step=0.1, key="upscale_by", value=1.5)
-
-    set_upscaled_to_main_variant = st.checkbox(
-        "Set upscaled to main variant", key="set_upscaled_to_main_variant", value=True
+    upscale_by = st.slider(
+        "Upscale by", min_value=1.0, max_value=3.0, step=0.1, key=f"upscale_by_{ui_key}", value=1.5
     )
 
-    return styling_model, upscale_by, set_upscaled_to_main_variant
+    # set_upscaled_to_main_variant = st.checkbox(
+    #     "Set upscaled to main variant", key=f"set_upscaled_to_main_variant_{ui_key}", value=True
+    # )
+
+    return styling_model, upscale_by, True
 
 
 def fetch_inference_data(file: InternalFileObject):

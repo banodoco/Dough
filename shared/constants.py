@@ -99,6 +99,15 @@ class InferenceType(ExtendedEnum):
     MOTION_LORA_TRAINING = "motion_lora_training"  # for training new motion loras
 
 
+class InferenceLogTag(ExtendedEnum):
+    UPSCALED_VIDEO = "upscaled_video"
+    PREVIEW_VIEW = "preview"
+
+
+class FileTransformationType(ExtendedEnum):
+    UPSCALE = "upscale"
+
+
 class InferenceStatus(ExtendedEnum):
     QUEUED = "queued"
     IN_PROGRESS = "in_progress"

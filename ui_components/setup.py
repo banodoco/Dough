@@ -2,22 +2,19 @@ import streamlit as st
 import os
 from moviepy.editor import *
 from shared.constants import SERVER, AppSubPage, CreativeProcessPage, ServerType
-from ui_components.widgets.sidebar_logger import sidebar_logger
+from ui_components.methods.common_methods import check_project_meta_data
 from ui_components.components.app_settings_page import app_settings_page
-from ui_components.components.shortlist_page import shortlist_page
 from ui_components.components.timeline_view_page import timeline_view_page
 from ui_components.components.inspiraton_engine_page import inspiration_engine_page
 from ui_components.components.adjust_shot_page import adjust_shot_page
 from ui_components.components.animate_shot_page import animate_shot_page
 from ui_components.components.upscaling_page import upscaling_page
-from ui_components.components.explorer_page import explorer_page
 
 from ui_components.components.new_project_page import new_project_page
 from ui_components.components.project_settings_page import project_settings_page
 from streamlit_option_menu import option_menu
 from utils.common_utils import set_default_values
 
-from ui_components.methods.common_methods import check_project_meta_data, update_app_setting_keys
 from ui_components.models import InternalAppSettingObject
 from utils.common_utils import (
     create_working_assets,
@@ -117,8 +114,6 @@ def setup_app_ui():
 
         if not st.session_state["maintain_state"]:
             check_project_meta_data(st.session_state["project_uuid"])
-
-        update_app_setting_keys()
 
         if "shot_uuid" not in st.session_state:
             shot_list = data_repo.get_shot_list(st.session_state["project_uuid"])
@@ -268,7 +263,7 @@ def setup_app_ui():
                     animate_shot_page(st.session_state["shot_uuid"], h2)
 
                 elif st.session_state["page"] == CreativeProcessPage.UPSCALING.value:
-                    upscaling_page(st.session_state["shot_uuid"], h2)
+                    upscaling_page(st.session_state["project_uuid"])
 
             elif st.session_state["main_view_type"] == "Project Settings":
                 project_settings_page(st.session_state["project_uuid"])

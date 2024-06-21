@@ -1,14 +1,12 @@
 import json
 import os
-import time
 from typing import List
 import streamlit as st
 from backend.models import InternalFileObject
-from shared.constants import COMFY_BASE_PATH, InferenceParamType, STEERABLE_MOTION_WORKFLOWS, ProjectMetaData
+from shared.constants import COMFY_BASE_PATH, InferenceParamType, ProjectMetaData
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, ShotMetaData
 from ui_components.models import InternalProjectObject, InternalShotObject
 from utils.common_utils import acquire_lock, release_lock
-from utils.constants import AnimateShotMethod
 from utils.data_repo.data_repo import DataRepo
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,7 +24,7 @@ def get_generation_settings_from_log(log_uuid=None):
     elif shot_meta_data and ShotMetaData.DYNAMICRAFTER_DATA.value in shot_meta_data:
         data_type = ShotMetaData.DYNAMICRAFTER_DATA.value
 
-    shot_meta_data = json.loads(shot_meta_data.get(data_type)) if data_type else None
+    shot_meta_data = (json.loads(shot_meta_data.get(data_type))) if data_type else None
 
     return shot_meta_data, data_type
 
@@ -57,8 +55,14 @@ def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_
             project_meta_data = json.loads(shot.project.meta_data) if shot.project.meta_data else {}
             active_shot_uuid = project_meta_data.get(ProjectMetaData.ACTIVE_SHOT.value, None)
             if active_shot_uuid:
-                shot: InternalShotObject = data_repo.get_shot_from_uuid(active_shot_uuid)
-                shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
+                active_shot: InternalShotObject = data_repo.get_shot_from_uuid(active_shot_uuid)
+                if active_shot:
+                    shot_meta_data = active_shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
+                else:
+                    # if shot was deleted then setting the first shot as the active shot
+                    shot_list: List[InternalShotObject] = data_repo.get_shot_list(shot.project.uuid)
+                    update_active_shot(shot_list[0].uuid)
+
         else:
             update_active_shot(shot.uuid)
 

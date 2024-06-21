@@ -92,34 +92,6 @@ def animation_sidebar(
                 plot_weights(weights_list, frame_numbers_list)
 
 
-def video_shortlist_view(project_uuid):
-    # TODO: @Peter this is just a basic setup, check this method gallery_image_view for proper implementation
-    data_repo = DataRepo()
-
-    page_number = 1
-    num_items_per_page = 100
-    gallery_image_filter_data = {
-        "file_type": InternalFileType.VIDEO.value,
-        "tag": InternalFileTag.SHORTLISTED_VIDEO.value,
-        "project_id": project_uuid,
-        "page": page_number or 1,
-        "data_per_page": num_items_per_page,
-        "sort_order": SortOrder.DESCENDING.value,
-    }
-
-    video_list, res_payload = data_repo.get_all_file_list(**gallery_image_filter_data)
-    for i in range(0, len(video_list), 2):
-        c1, c2 = st.columns([1, 1])
-        with c1:
-            st.video(video_list[i].location)
-            video_shortlist_btn(video_list[i].uuid, type="remove_from_shortlist")
-
-        with c2:
-            if i + 1 < len(video_list):
-                st.video(video_list[i + 1].location)
-                video_shortlist_btn(video_list[i + 1].uuid, type="remove_from_shortlist")
-
-
 def video_shortlist_btn(video_uuid, type="add_to_shortlist"):
     data_repo = DataRepo()
     # add to shortlist

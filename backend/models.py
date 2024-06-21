@@ -8,7 +8,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 import urllib
 
-from shared.constants import SERVER, InferenceParamType, InferenceStatus, ServerType
+from shared.constants import SERVER, FileTransformationType, InferenceParamType, InferenceStatus, ServerType
 from shared.file_upload.s3 import generate_s3_url, is_s3_image_url
 
 
@@ -178,6 +178,10 @@ class InternalFileObject(BaseModel):
                         if parent_file:
                             file_link.parent_entity_id = parent_file.id
                             file_link.save()
+                            if file_link.transformation_type == FileTransformationType.UPSCALE.value:
+                                # disabling the parent file in case of upscaling
+                                parent_file.is_disabled = True
+                                parent_file.save()
 
     def get_child_entities(self, transformation_type_list=None):
         query = {"parent_entity_id": self.id, "is_disabled": False}
@@ -312,6 +316,11 @@ class Shot(BaseModel):
             else:
                 shot_list = shot_list.filter(shot_idx__gte=self.shot_idx).order_by("shot_idx")
                 shot_list.update(shot_idx=F("shot_idx") + 1)
+
+            # deleting all the interpolated clip list
+            clip_uuid_list = json.loads(self.interpolated_clip_list)
+            if clip_uuid_list and len(clip_uuid_list):
+                InternalFileObject.objects.filter(uuid__in=clip_uuid_list).update(is_disabled=True)
 
         # if this is a newly created shot or assigned new shot_idx (and not disabled)
         if (not self.id or self.old_shot_idx != self.shot_idx) and not self.is_disabled:

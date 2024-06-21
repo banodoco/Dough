@@ -133,7 +133,7 @@ def sidebar_logger(shot_uuid):
         # st.markdown("---")
         for _, log in enumerate(log_list):
             origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
-            if not log.status:
+            if not log.status or not origin_data:
                 continue
 
             inference_type = origin_data.get("inference_type", "")
@@ -252,12 +252,12 @@ def sidebar_logger(shot_uuid):
 
                     elif inference_type == InferenceType.FRAME_INTERPOLATION.value:
                         jump_to_shot_button(origin_data.get("shot_uuid", ""), log.uuid)
-    
+
     if log_list and len(log_list):
         st.markdown("***")
         b1, b2 = st.columns([1, 1])
         with b1:
-            if st.button(label="Cancel all",use_container_width=True):
+            if st.button(label="Cancel all", use_container_width=True):
                 log_filter_data = {
                     "project_id": shot.project.uuid,
                     "page": 1,
@@ -268,7 +268,7 @@ def sidebar_logger(shot_uuid):
                 stop_generations(all_log_list)
                 st.rerun()
         with b2:
-            if st.button(label="Move all to backlog",use_container_width=True):
+            if st.button(label="Move all to backlog", use_container_width=True):
                 log_filter_data = {
                     "project_id": shot.project.uuid,
                     "page": 1,
@@ -276,7 +276,9 @@ def sidebar_logger(shot_uuid):
                     "status_list": [InferenceStatus.QUEUED.value],
                 }
                 all_log_list, total_count = data_repo.get_all_inference_log_list(**log_filter_data)
-                data_repo.update_inference_log_list([log.uuid for log in all_log_list], status=InferenceStatus.BACKLOG.value)
+                data_repo.update_inference_log_list(
+                    [log.uuid for log in all_log_list], status=InferenceStatus.BACKLOG.value
+                )
                 st.rerun()
 
 

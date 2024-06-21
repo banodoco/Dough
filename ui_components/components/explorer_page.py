@@ -295,7 +295,6 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                     if t2i_model == T2IModel.SDXL.value:
                         query_obj = MLQueryObject(
                             timing_uuid=None,
-                            model_uuid=None,
                             guidance_scale=8,
                             seed=-1,
                             num_inference_steps=25,
@@ -309,6 +308,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                                 "shot_uuid": shot_uuid,
                                 "sdxl_model": explorer_gen_model,
                             },
+                            file_data={}
                         )
 
                         output, log = ml_client.predict_model_output_standardized(
@@ -319,7 +319,6 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                         encryptor = Encryptor()
                         query_obj = MLQueryObject(
                             timing_uuid=None,
-                            model_uuid=None,
                             guidance_scale=8,
                             seed=-1,
                             num_inference_steps=25,
@@ -333,6 +332,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                                 "shot_uuid": shot_uuid,
                                 "stability_key": encryptor.encrypt_json(st.session_state["stability_key"]),
                             },
+                            file_data={}
                         )
 
                         sai_client = StabilityProcessor()
@@ -344,8 +344,6 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                     input_image_file = save_new_image(st.session_state["input_image_1"], project_uuid)
                     query_obj = MLQueryObject(
                         timing_uuid=None,
-                        model_uuid=None,
-                        image_uuid=input_image_file.uuid,
                         guidance_scale=5,
                         seed=-1,
                         num_inference_steps=30,
@@ -359,6 +357,9 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                             "shot_uuid": shot_uuid,
                             "sdxl_model": explorer_gen_model,
                         },
+                        file_data={
+                            "image_1": {'uuid': input_image_file.uuid, 'dest': "input/"},
+                        }
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -370,8 +371,6 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                     input_image_file = save_new_image(input_img, project_uuid)
                     query_obj = MLQueryObject(
                         timing_uuid=None,
-                        model_uuid=None,
-                        image_uuid=input_image_file.uuid,
                         guidance_scale=5,
                         seed=-1,
                         num_inference_steps=30,
@@ -382,6 +381,9 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                         height=project_settings.height,
                         width=project_settings.width,
                         data={"condition_scale": 1, "shot_uuid": shot_uuid},
+                        file_data={
+                            "image_1": {'uuid': input_image_file.uuid, 'dest': "input/"}
+                        }
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -419,8 +421,6 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                     input_image_file = save_new_image(st.session_state["input_image_1"], project_uuid)
                     query_obj = MLQueryObject(
                         timing_uuid=None,
-                        model_uuid=None,
-                        image_uuid=input_image_file.uuid,
                         guidance_scale=5,
                         seed=-1,
                         num_inference_steps=30,
@@ -434,6 +434,9 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                             "shot_uuid": shot_uuid,
                             "sdxl_model": explorer_gen_model,
                         },
+                        file_data={
+                            "image_1": {'uuid': input_image_file.uuid, 'dest': "input/"},
+                        }
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -444,8 +447,6 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                     input_image_file = save_new_image(st.session_state["input_image_1"], project_uuid)
                     query_obj = MLQueryObject(
                         timing_uuid=None,
-                        model_uuid=None,
-                        image_uuid=input_image_file.uuid,
                         guidance_scale=5,
                         seed=-1,
                         num_inference_steps=30,
@@ -460,6 +461,9 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                             "shot_uuid": shot_uuid,
                             "sdxl_model": explorer_gen_model,
                         },
+                        file_data={
+                            "image_1": {'uuid': input_image_file.uuid, 'dest': "input/"},
+                        }
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -477,7 +481,6 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                     query_obj = MLQueryObject(
                         timing_uuid=None,
                         model_uuid=None,
-                        image_uuid=plus_image_file.uuid,
                         guidance_scale=5,
                         seed=-1,
                         num_inference_steps=30,
@@ -488,10 +491,13 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                         height=project_settings.height,
                         width=project_settings.width,
                         data={
-                            "file_image_2_uuid": face_image_file.uuid,
                             "shot_uuid": shot_uuid,
                             "sdxl_model": explorer_gen_model,
                         },
+                        file_data={
+                            "image_1": {'uuid': plus_image_file.uuid, 'dest': "input/"},
+                            "image_2": {'uuid': face_image_file.uuid, 'dest': "input/"},
+                        }
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
