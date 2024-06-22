@@ -923,10 +923,10 @@ class ComfyDataTransform:
             workflow[str(node_idx + 2)] = {
                 "inputs": {
                     "weight": weight_first_node,
-                    "weight_type": "style transfer",
+                    "weight_type": "strong style transfer",
                     "combine_embeds": "concat",
                     "start_at": 0,
-                    "end_at": 0.85,
+                    "end_at": 0.3,
                     "embeds_scaling": "V only",
                     "model": model_input,
                     "ipadapter": ["58", 0],
@@ -938,6 +938,7 @@ class ComfyDataTransform:
                 "_meta": {"title": "IPAdapter Advanced"},
             }
 
+            # Fourth node in this batch
             workflow[str(node_idx + 3)] = {
                 "inputs": {
                     "weight": weight_second_node,
@@ -945,6 +946,7 @@ class ComfyDataTransform:
                     "combine_embeds": "concat",
                     "start_at": 0,
                     "end_at": 1,
+                    "sharpening": 0,
                     "embeds_scaling": "V only",
                     "model": [str(node_idx + 2), 0],
                     "ipadapter": ["48", 0],
@@ -952,26 +954,24 @@ class ComfyDataTransform:
                     "image_negative": [str(node_idx + 1), 0],
                     "clip_vision": ["49", 0],
                 },
-                "class_type": "IPAdapterAdvanced",
-                "_meta": {"title": "IPAdapter Advanced"},
+                "class_type": "IPAdapterTiled",
+                "_meta": {"title": "IPAdapter Tiled"},
             }
 
             return node_idx + 3
 
         def add_reference_images(workflow, img_list, weight, **kwargs):
             num_images = len(img_list)
-
-            base_weight_first_node = (
-                0.7 if num_images == 1 else 0.4 if num_images == 2 else 0.07 if num_images == 3 else 0.7
-            )
-            base_weight_second_node = (
-                0.7 if num_images == 1 else 0.4 if num_images == 2 else 0.3 if num_images == 3 else 0.7
-            )
-            weight_increment = (weight - 0.5) * 0.1
-
+            
+            base_weight_first_node = 0.11
+            base_weight_second_node = 0.75
+            
+            first_weight_increment = (weight - 0.5) * 0.1
+            second_weight_increment = (weight - 0.5) * 0.3
+            
             # Adjusted weights
-            weight_first_node = base_weight_first_node + weight_increment
-            weight_second_node = base_weight_second_node + weight_increment
+            weight_first_node = base_weight_first_node + first_weight_increment
+            weight_second_node = base_weight_second_node + second_weight_increment
 
             last_node_index = None
 
