@@ -966,7 +966,7 @@ class ComfyDataTransform:
             base_weight_first_node = 0.11
             base_weight_second_node = 0.75
             
-            first_weight_increment = (weight - 0.5) * 0.1
+            first_weight_increment = (weight - 0.5) * 0.15
             second_weight_increment = (weight - 0.5) * 0.3
             
             # Adjusted weights

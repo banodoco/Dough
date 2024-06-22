@@ -682,8 +682,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                 )
             with h3:
                 num_items_per_page = st_memory.slider(
-                    "Items per page:", min_value=8, max_value=64, value=16, key="num_items_per_page_explorer"
-                )
+                    "Items per page:", min_value=8, max_value=256, value=16, key="num_items_per_page_explorer", step=8)                
         else:
             num_items_per_page = 4
             num_columns = 2

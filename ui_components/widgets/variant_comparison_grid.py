@@ -208,7 +208,10 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             with cols[cur_col]:
                 h1, h2 = st.columns([1, 1])
                 with h1:
-                    st.info(f"###### Variant #{variant_index + 1}")
+                    if variants[variant_index].tag == InternalFileTag.SHORTLISTED_VIDEO.value:
+                        st.success(f"###### Variant #{variant_index + 1}")
+                    else:
+                        st.info(f"###### Variant #{variant_index + 1}")
                 with h2:
                     if stage != CreativeProcessType.MOTION.value:
                         if st.button(
@@ -226,7 +229,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                         != InferenceLogTag.UPSCALED_VIDEO.value
                     ):
                         if variants[variant_index].tag == InternalFileTag.SHORTLISTED_VIDEO.value:
-                            st.info("Shortlisted")
+                            video_shortlist_btn(variants[variant_index].uuid, type="rempve_from_shortlist")
                         else:
                             video_shortlist_btn(variants[variant_index].uuid)
 

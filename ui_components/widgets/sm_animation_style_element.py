@@ -96,7 +96,7 @@ def video_shortlist_btn(video_uuid, type="add_to_shortlist"):
     data_repo = DataRepo()
     # add to shortlist
     if type == "add_to_shortlist":
-        if st.button("Add to shortlist", key=f"{video_uuid}_shortlist_btn"):
+        if st.button("Add to shortlist", key=f"{video_uuid}_shortlist_btn",use_container_width=True):
             data_repo.update_file(
                 video_uuid,
                 tag=InternalFileTag.SHORTLISTED_VIDEO.value,
@@ -104,7 +104,7 @@ def video_shortlist_btn(video_uuid, type="add_to_shortlist"):
             st.rerun()
     # remove from shortlist btn
     else:
-        if st.button("Remove from shortlist", key=f"{video_uuid}_remove_shortlist_btn"):
+        if st.button("Remove from shortlist", key=f"{video_uuid}_remove_shortlist_btn",use_container_width=True):
             data_repo.update_file(
                 video_uuid,
                 tag="",

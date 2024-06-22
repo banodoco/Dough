@@ -617,7 +617,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             with prompt1:
                 images_per_prompt = st.slider(
                     "Images per prompt:",
-                    min_value=1,
+                    min_value=4,
                     max_value=64,
                     step=4,
                     value=st.session_state["insp_img_per_prompt"],
