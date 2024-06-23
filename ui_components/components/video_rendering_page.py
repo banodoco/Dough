@@ -21,7 +21,7 @@ from ui_components.methods.animation_style_methods import (
 )
 from utils.data_repo.data_repo import DataRepo
 
-default_model = "dreamshaper_8.safetensors"
+DEFAULT_SM_MODEL = "dreamshaper_8.safetensors"
 
 
 def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
@@ -47,7 +47,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
         ) = individual_frame_settings_element(shot_uuid, img_list)
 
         # ----------- SELECT SD MODEL -----------
-        sd_model, model_files = select_sd_model_element(shot_uuid, default_model)
+        sd_model, model_files = select_sd_model_element(shot_uuid, DEFAULT_SM_MODEL)
 
         # ----------- SELECT MOTION LORA ------------
         lora_data = select_motion_lora_element(shot_uuid, model_files)
@@ -268,7 +268,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     individual_prompts,
                     individual_negative_prompts,
                     lora_data,
-                    default_model,
+                    DEFAULT_SM_MODEL,
                     high_detail_mode,
                     image.uuid if image else None,
                     settings["strength_of_structure_control_image"],
@@ -373,7 +373,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             motions_during_frames,
             individual_prompts,
             individual_negative_prompts,
-            default_model,
+            DEFAULT_SM_MODEL,
         )
 
 

@@ -100,29 +100,6 @@ def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_
                         key == f"structure_control_image_uuid_{shot_uuid}" and not main_setting_data[key]
                     ):  # hackish sol, will fix later
                         st.session_state[f"structure_control_image_{shot_uuid}"] = None
-                    # elif key == f"type_of_generation_index_{shot.uuid}":
-                    #     # Retrieve the order number from the session state
-                    #     order_number = st.session_state[key]
-
-                    #     # Find the index in STEERABLE_MOTION_WORKFLOWS where the 'order' matches the order_number
-                    #     index = next(
-                    #         (
-                    #             index
-                    #             for index, workflow in enumerate(STEERABLE_MOTION_WORKFLOWS)
-                    #             if workflow["order"] == order_number
-                    #         ),
-                    #         None,
-                    #     )
-
-                    #     if index is not None:
-                    #         # Set the session state to the index of the workflow
-                    #         st.session_state[key] = index
-                    #         # Set the creative interpolation type to the name of the workflow at the found index
-                    #         st.session_state["creative_interpolation_type"] = STEERABLE_MOTION_WORKFLOWS[index][
-                    #             "name"
-                    #         ]
-                    #     else:
-                    #         st.error("Invalid workflow order")
 
                 st.rerun()
             elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
@@ -573,9 +550,9 @@ def transform_data(
     )
 
 
-def update_session_state_with_animation_details(
+def get_timing_data(
     shot_uuid,
-    img_list: List[InternalFileObject],
+    img_list,
     strength_of_frames,
     distances_to_next_frames,
     speeds_of_transitions,
@@ -583,16 +560,7 @@ def update_session_state_with_animation_details(
     motions_during_frames,
     individual_prompts,
     individual_negative_prompts,
-    lora_data,
-    default_model,
-    high_detail_mode=True,
-    structure_control_img_uuid=None,
-    strength_of_structure_control_img=None,
-    type_of_generation_index=0,
 ):
-    data_repo = DataRepo()
-    shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
-    meta_data = shot.meta_data_dict
     timing_data = []
     for idx, img in enumerate(img_list):
         # updating the session state rn
@@ -630,6 +598,55 @@ def update_session_state_with_animation_details(
         }
 
         timing_data.append(state_data)
+
+    return timing_data
+
+
+def update_session_state_with_animation_details(
+    shot_uuid,
+    img_list: List[InternalFileObject],
+    strength_of_frames,
+    distances_to_next_frames,
+    speeds_of_transitions,
+    freedoms_between_frames,
+    motions_during_frames,
+    individual_prompts,
+    individual_negative_prompts,
+    lora_data,
+    default_model,
+    high_detail_mode=True,
+    structure_control_img_uuid=None,
+    strength_of_structure_control_img=None,
+    type_of_generation_index=0,
+):
+    """
+    for any generation session_state holds two kind of data objects.
+    1. timing_data -> this is data points like distance to next frames, frame strengths etc.. basically
+    anything to do with timing/frames
+    2. main_setting_data -> this is the model selected, lora added, workflow selected etc..
+    """
+
+    """
+    A 'active_shot' index is maintained and settings are picked from that shot, whenvever
+    generating a new shot. But when someone wants to save the settings manually, a temp_shot
+    is created (that is not visible on the frontend), it stores the settings. If a new gen is run
+    then the settings are overwritten. temp_shot is identified by shot_uuid = -1
+    """
+    data_repo = DataRepo()
+
+    shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
+    meta_data = shot.meta_data_dict
+    timing_data = get_timing_data(
+        shot_uuid,
+        img_list,
+        strength_of_frames,
+        distances_to_next_frames,
+        speeds_of_transitions,
+        freedoms_between_frames,
+        motions_during_frames,
+        individual_prompts,
+        individual_negative_prompts,
+    )
 
     main_setting_data = {}
     main_setting_data[f"lora_data_{shot.uuid}"] = lora_data

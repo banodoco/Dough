@@ -9,6 +9,7 @@ import tarfile
 from PIL import Image
 import streamlit as st
 from shared.constants import COMFY_BASE_PATH, InternalFileTag, InternalFileType, SortOrder
+from ui_components.components.video_rendering_page import DEFAULT_SM_MODEL
 from ui_components.methods.common_methods import save_new_image
 from ui_components.widgets.download_file_progress_bar import download_file_widget
 from utils import st_memory
@@ -96,7 +97,9 @@ def video_shortlist_btn(video_uuid, type="add_to_shortlist"):
     data_repo = DataRepo()
     # add to shortlist
     if type == "add_to_shortlist":
-        if st.button("Add to upscaling shortlist", key=f"{video_uuid}_shortlist_btn",use_container_width=True):
+        if st.button(
+            "Add to upscaling shortlist", key=f"{video_uuid}_shortlist_btn", use_container_width=True
+        ):
             data_repo.update_file(
                 video_uuid,
                 tag=InternalFileTag.SHORTLISTED_VIDEO.value,
@@ -104,7 +107,11 @@ def video_shortlist_btn(video_uuid, type="add_to_shortlist"):
             st.rerun()
     # remove from shortlist btn
     else:
-        if st.button("Remove from upscaling shortlist", key=f"{video_uuid}_remove_shortlist_btn",use_container_width=True):
+        if st.button(
+            "Remove from upscaling shortlist",
+            key=f"{video_uuid}_remove_shortlist_btn",
+            use_container_width=True,
+        ):
             data_repo.update_file(
                 video_uuid,
                 tag="",
@@ -843,6 +850,8 @@ def individual_frame_settings_element(shot_uuid, img_list):
             use_container_width=True,
             help="Settings will also be saved when you generate the animation.",
         ):
+            data_repo = DataRepo()
+            shot = data_repo.get_shot_from_uuid(shot_uuid)
             update_session_state_with_animation_details(
                 shot_uuid,
                 img_list,
@@ -853,8 +862,8 @@ def individual_frame_settings_element(shot_uuid, img_list):
                 motions_during_frames,
                 individual_prompts,
                 individual_negative_prompts,
-                [],
-                sd_model,
+                None,
+                DEFAULT_SM_MODEL,
             )
             st.success("Settings saved successfully.")
             time.sleep(0.7)

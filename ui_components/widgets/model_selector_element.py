@@ -10,9 +10,7 @@ from utils.constants import T2IModel
 def model_selector_element(type=T2IModel.SDXL.value, position="explorer", selected_model=None):
     tab1, tab2 = st.tabs(["Choose Model", "Download Models"])
     default_model = (
-        "SDXL-Base"
-        if type == T2IModel.SDXL.value
-        else "sd3_medium_incl_clips.safetensors"
+        "sd_xl_base_1.0.safetensors" if type == T2IModel.SDXL.value else "sd3_medium_incl_clips.safetensors"
     )
 
     info_msg = (
@@ -67,7 +65,6 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
                 st.write("")
                 st.info(info_msg)
                 explorer_gen_model = default_model
-
 
     with tab2:
         # NOTE: makes sure to add 'xl' in these filenames because that is the only filter rn for sdxl models (will update in the future)
