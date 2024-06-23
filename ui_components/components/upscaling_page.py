@@ -1,29 +1,17 @@
 import io
-import time
 from typing import List
 import zipfile
 from shared.constants import COMFY_BASE_PATH, InferenceLogTag, InternalFileTag, InternalFileType, SortOrder
 import streamlit as st
 import os
-import requests
-import shutil
-from zipfile import ZipFile
-from io import BytesIO
-from ui_components.constants import CreativeProcessType
 from ui_components.methods.file_methods import get_file_bytes_and_extension
-from ui_components.methods.video_methods import upscale_video
 from ui_components.models import InternalFileObject, InternalProjectObject, InternalShotObject
-from ui_components.widgets.inspiration_engine import inspiration_engine_element
 from ui_components.widgets.shot_view import create_video_download_button
 from ui_components.widgets.sm_animation_style_element import video_shortlist_btn
-from ui_components.widgets.timeline_view import timeline_view
-from ui_components.components.explorer_page import gallery_image_view
 from ui_components.widgets.variant_comparison_grid import get_video_upscale_dict, uspcale_expander_element
-from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 
 from ui_components.widgets.sidebar_logger import sidebar_logger
-from ui_components.components.explorer_page import generate_images_element
 
 
 def upscaling_page(project_uuid: str):
@@ -64,8 +52,8 @@ def upscaling_page(project_uuid: str):
             if not len(main_clip_list):
                 st.info("No videos available in the project.")
 
-            else:
-                create_multi_video_download_button([v.location for v in video_list], ui_key="upscaling_page")
+            else:                
+                create_multi_video_download_button([v.location for v in video_list], ui_key="upscaling_page",project_uuid=project_uuid)
 
     # -------------- video grid --------------------
     if video_list:
@@ -100,8 +88,9 @@ def display_video(video_file: InternalFileObject, upscale_in_progress=False):
         if upscale_in_progress:
             st.info("Upscale pending")
         elif upscaled_video:
-            st.success("Upscaled video")
+            st.success("Upscaled")
         else:
+            st.info("Not queued for upscaling")
             uspcale_expander_element(
                 [video_file.uuid],
                 heading="Upscale settings",
@@ -144,21 +133,25 @@ def get_final_video_list(project_uuid):
     return final_list
 
 
-def create_multi_video_download_button(video_location_list, ui_key="temp"):
+def create_multi_video_download_button(video_location_list, ui_key="temp", project_uuid=None):
     if st.button("Prepare videos for download", use_container_width=True, key=ui_key + "_download_button"):
         zip_buffer = io.BytesIO()
+        project_name = DataRepo().get_project_from_uuid(project_uuid).name        
+        project_name = project_name.replace(" ", "_")
         with zipfile.ZipFile(zip_buffer, mode="w") as zip_file:
             for video_location in video_location_list:
                 file_name = os.path.basename(video_location)
+                # Include the project_name as a folder in the path within the zip
+                zip_path = f"{project_name}/{file_name}"
                 file_bytes, _ = get_file_bytes_and_extension(video_location)
-                zip_file.writestr(file_name, file_bytes)
+                zip_file.writestr(zip_path, file_bytes)
 
         zip_buffer.seek(0)
 
         st.download_button(
             label="Download videos as ZIP",
             data=zip_buffer,
-            file_name="videos.zip",
+            file_name=f"{project_name}_clips.zip",
             mime="application/zip",
             key=ui_key + "_download_gen",
             use_container_width=True,
