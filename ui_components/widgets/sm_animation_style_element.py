@@ -1,16 +1,10 @@
-import time
 import uuid
 import os
-import zipfile
 import requests
 import random
 import string
-import tarfile
-from PIL import Image
 import streamlit as st
-from shared.constants import COMFY_BASE_PATH, InternalFileTag, InternalFileType, SortOrder
-from ui_components.components.video_rendering_page import DEFAULT_SM_MODEL
-from ui_components.methods.common_methods import save_new_image
+from shared.constants import COMFY_BASE_PATH, InternalFileTag, InternalFileType
 from ui_components.widgets.download_file_progress_bar import download_file_widget
 from utils import st_memory
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES
@@ -21,7 +15,6 @@ from ui_components.methods.animation_style_methods import (
     get_keyframe_positions,
     load_shot_settings,
     plot_weights,
-    update_session_state_with_animation_details,
 )
 from ui_components.methods.file_methods import (
     get_files_in_a_directory,
@@ -279,6 +272,7 @@ def select_motion_lora_element(shot_uuid, model_files):
                         step=0.01,
                         key=f"strength_of_lora_{idx}",
                     )
+
                     lora_data.append(
                         {
                             "filename": motion_lora,
@@ -287,14 +281,22 @@ def select_motion_lora_element(shot_uuid, model_files):
                         }
                     )
 
+                if strength_of_lora != lora["lora_strength"] or motion_lora != lora["filename"]:
+                    st.session_state[f"lora_data_{shot_uuid}"][idx] = {
+                        "filename": motion_lora,
+                        "lora_strength": strength_of_lora,
+                        "filepath": lora_file_dest + "/" + files[0],
+                    }
+                    st.rerun
+
                 with h5:
-                    when_to_apply_lora = st.slider(
+                    lora_range = st.slider(
                         "When to apply:",
                         min_value=0,
                         max_value=100,
                         value=(0, 100),
                         step=1,
-                        key=f"when_to_apply_lora_{idx}",
+                        key=f"lora_range_{idx}",
                         disabled=True,
                         help="This feature is not yet available.",
                     )
@@ -305,12 +307,11 @@ def select_motion_lora_element(shot_uuid, model_files):
                         st.session_state[f"lora_data_{shot_uuid}"].pop(idx)
                         st.rerun()
 
-                # displaying preview
-
             if len(st.session_state[f"lora_data_{shot_uuid}"]) == 0:
                 text = "Add a LoRA"
             else:
                 text = "Add another LoRA"
+
             if st.button(text, key="add_motion_guidance"):
                 if files and len(files):
                     st.session_state[f"lora_data_{shot_uuid}"].append(
@@ -566,8 +567,6 @@ def select_sd_model_element(shot_uuid, default_model):
 
 
 def individual_frame_settings_element(shot_uuid, img_list):
-    header_col_1, _, header_col_3, header_col_4 = st.columns([1.0, 1.5, 1.0, 1.0])
-
     st.write("")
     items_per_row = 3
     strength_of_frames = []
@@ -842,41 +841,6 @@ def individual_frame_settings_element(shot_uuid, img_list):
 
             if (i < len(img_list) - 1) or (len(img_list) % items_per_row != 0):
                 st.markdown("***")
-
-    with header_col_4:
-        if st.button(
-            "Save current settings",
-            key="save_current_settings",
-            use_container_width=True,
-            help="Settings will also be saved when you generate the animation.",
-        ):
-            data_repo = DataRepo()
-            shot = data_repo.get_shot_from_uuid(shot_uuid)
-            update_session_state_with_animation_details(
-                shot_uuid,
-                img_list,
-                strength_of_frames,
-                distances_to_next_frames,
-                speeds_of_transitions,
-                freedoms_between_frames,
-                motions_during_frames,
-                individual_prompts,
-                individual_negative_prompts,
-                None,
-                DEFAULT_SM_MODEL,
-            )
-            st.success("Settings saved successfully.")
-            time.sleep(0.7)
-            st.rerun()
-    with header_col_3:
-        if st.button("Reset to default", use_container_width=True, key="reset_to_default"):
-            for idx, _ in enumerate(img_list):
-                for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
-                    st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
-
-            st.success("All frames have been reset to default values.")
-            st.rerun()
-        st.write("")
 
     return (
         strength_of_frames,

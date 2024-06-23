@@ -2,6 +2,7 @@ import json
 import os
 import streamlit as st
 from ui_components.constants import GalleryImageViewType
+from ui_components.methods.animation_style_methods import toggle_generate_inference
 from ui_components.methods.common_methods import (
     get_canny_img,
     process_inference_output,
@@ -308,7 +309,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                                 "shot_uuid": shot_uuid,
                                 "sdxl_model": explorer_gen_model,
                             },
-                            file_data={}
+                            file_data={},
                         )
 
                         output, log = ml_client.predict_model_output_standardized(
@@ -332,7 +333,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                                 "shot_uuid": shot_uuid,
                                 "stability_key": encryptor.encrypt_json(st.session_state["stability_key"]),
                             },
-                            file_data={}
+                            file_data={},
                         )
 
                         sai_client = StabilityProcessor()
@@ -358,8 +359,8 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                             "sdxl_model": explorer_gen_model,
                         },
                         file_data={
-                            "image_1": {'uuid': input_image_file.uuid, 'dest': "input/"},
-                        }
+                            "image_1": {"uuid": input_image_file.uuid, "dest": "input/"},
+                        },
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -381,9 +382,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                         height=project_settings.height,
                         width=project_settings.width,
                         data={"condition_scale": 1, "shot_uuid": shot_uuid},
-                        file_data={
-                            "image_1": {'uuid': input_image_file.uuid, 'dest': "input/"}
-                        }
+                        file_data={"image_1": {"uuid": input_image_file.uuid, "dest": "input/"}},
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -435,8 +434,8 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                             "sdxl_model": explorer_gen_model,
                         },
                         file_data={
-                            "image_1": {'uuid': input_image_file.uuid, 'dest': "input/"},
-                        }
+                            "image_1": {"uuid": input_image_file.uuid, "dest": "input/"},
+                        },
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -462,8 +461,8 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                             "sdxl_model": explorer_gen_model,
                         },
                         file_data={
-                            "image_1": {'uuid': input_image_file.uuid, 'dest': "input/"},
-                        }
+                            "image_1": {"uuid": input_image_file.uuid, "dest": "input/"},
+                        },
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -495,9 +494,9 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                             "sdxl_model": explorer_gen_model,
                         },
                         file_data={
-                            "image_1": {'uuid': plus_image_file.uuid, 'dest': "input/"},
-                            "image_2": {'uuid': face_image_file.uuid, 'dest': "input/"},
-                        }
+                            "image_1": {"uuid": plus_image_file.uuid, "dest": "input/"},
+                            "image_2": {"uuid": face_image_file.uuid, "dest": "input/"},
+                        },
                     )
 
                     output, log = ml_client.predict_model_output_standardized(
@@ -648,15 +647,6 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
             )
 
 
-def toggle_generate_inference(position):
-    if position + "_generate_inference" not in st.session_state:
-        st.session_state[position + "_generate_inference"] = True
-    else:
-        st.session_state[position + "_generate_inference"] = not st.session_state[
-            position + "_generate_inference"
-        ]
-
-
 def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, sidebar=False):
     data_repo = DataRepo()
     project_settings = data_repo.get_project_setting(project_uuid)
@@ -665,7 +655,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]
 
     if shortlist is False:
-        
+
         st.markdown("### 🖼️ Generated images")
         st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
 
@@ -682,12 +672,18 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                 )
             with h3:
                 num_items_per_page = st_memory.slider(
-                    "Items per page:", min_value=8, max_value=256, value=16, key="num_items_per_page_explorer", step=8)                
+                    "Items per page:",
+                    min_value=8,
+                    max_value=256,
+                    value=16,
+                    key="num_items_per_page_explorer",
+                    step=8,
+                )
         else:
             num_items_per_page = 4
             num_columns = 2
 
-        # selecting specific shot for adding to the filter                
+        # selecting specific shot for adding to the filter
         shot_uuid_list = []
 
         if not shortlist:
@@ -793,10 +789,9 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     if gallery_image_list and len(gallery_image_list):
         start_index = 0
         end_index = min(start_index + num_items_per_page, total_image_count)
-        shot_names = [s.name for s in shot_list]        
+        shot_names = [s.name for s in shot_list]
 
         if not shortlist:
-
 
             # Image gallery display
             for i in range(start_index, end_index, num_columns):
@@ -805,15 +800,24 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                     if i + j < len(gallery_image_list):
                         with cols[j]:
                             st.image(gallery_image_list[i + j].location, use_column_width=True)
-                            
+
                             # Select/Deselect button
-                            select_label = "Deselect" if gallery_image_list[i + j].uuid in st.session_state['selected_images'] else "Select"
-                            button_type = "primary" if select_label == "Deselect" else "secondary"                            
-                            if st.button(select_label, key=f"select_{gallery_image_list[i + j].uuid}", use_container_width=True, type=button_type):
-                                if gallery_image_list[i + j].uuid in st.session_state['selected_images']:
-                                    st.session_state['selected_images'].remove(gallery_image_list[i + j].uuid)                            
+                            select_label = (
+                                "Deselect"
+                                if gallery_image_list[i + j].uuid in st.session_state["selected_images"]
+                                else "Select"
+                            )
+                            button_type = "primary" if select_label == "Deselect" else "secondary"
+                            if st.button(
+                                select_label,
+                                key=f"select_{gallery_image_list[i + j].uuid}",
+                                use_container_width=True,
+                                type=button_type,
+                            ):
+                                if gallery_image_list[i + j].uuid in st.session_state["selected_images"]:
+                                    st.session_state["selected_images"].remove(gallery_image_list[i + j].uuid)
                                 else:
-                                    st.session_state['selected_images'].append(gallery_image_list[i + j].uuid)
+                                    st.session_state["selected_images"].append(gallery_image_list[i + j].uuid)
                                 st.rerun()
 
                             # -------- inference details --------------
@@ -830,7 +834,9 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                         )
                                     model = json.loads(log.output_details)["model_name"].split("/")[-1]
                                     if "view_inference_details" in view:
-                                        with st.expander("Prompt Details", expanded=open_detailed_view_for_all):
+                                        with st.expander(
+                                            "Prompt Details", expanded=open_detailed_view_for_all
+                                        ):
                                             st.info(f"**Prompt:** {prompt}\n\n**Model:** {model}")
 
                                 else:
@@ -883,7 +889,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                             )
                                             # removing this from the gallery view
                                             data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                                                                    
+
                                             st.session_state["last_shot_number"] = len(shot_list)
                                             st.rerun()
 
@@ -948,7 +954,9 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                         )
                                     model = json.loads(log.output_details)["model_name"].split("/")[-1]
                                     if "view_inference_details" in view:
-                                        with st.expander("Prompt Details", expanded=open_detailed_view_for_all):
+                                        with st.expander(
+                                            "Prompt Details", expanded=open_detailed_view_for_all
+                                        ):
                                             st.info(f"**Prompt:** {prompt}\n\n**Model:** {model}")
 
                                 else:
@@ -958,7 +966,9 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
 
             st.markdown("***")
     else:
-        if st.session_state['page'] == "Shots":
-            st.info("No images present. You can generate images by clicking into the 'Inspiration Engine' tab on the left.")
+        if st.session_state["page"] == "Shots":
+            st.info(
+                "No images present. You can generate images by clicking into the 'Inspiration Engine' tab on the left."
+            )
         else:
-            st.info("No images present. You can generate images above.")  
+            st.info("No images present. You can generate images above.")

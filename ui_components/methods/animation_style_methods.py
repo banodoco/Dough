@@ -61,6 +61,7 @@ def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_
                 else:
                     # if shot was deleted then setting the first shot as the active shot
                     shot_list: List[InternalShotObject] = data_repo.get_shot_list(shot.project.uuid)
+                    shot_meta_data = shot_list[0].meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
                     update_active_shot(shot_list[0].uuid)
 
         else:
@@ -95,7 +96,14 @@ def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_
                 # --------------------- updating other settings main settings
                 main_setting_data = shot_meta_data.get("main_setting_data", {})
                 for key in main_setting_data:
-                    st.session_state[key] = main_setting_data[key]
+                    # if data is being loaded from a different shot then key will have to be updated
+                    # from "lora_data_{other_shot_uuid}" to "lora_data_{this_shot_data}"
+                    if str(shot_uuid) not in key:
+                        new_key = key.rsplit("_", 1)[0] + "_" + str(shot_uuid)
+                    else:
+                        new_key = key
+
+                    st.session_state[new_key] = main_setting_data[key]
                     if (
                         key == f"structure_control_image_uuid_{shot_uuid}" and not main_setting_data[key]
                     ):  # hackish sol, will fix later
@@ -421,15 +429,23 @@ def get_keyframe_positions(
         return [i * linear_frame_distribution_value for i in range(len(images))]
 
 
+postfix_str = "_generate_inference"
+
+
 def toggle_generate_inference(position, **kwargs):
+
     for k, v in kwargs.items():
         st.session_state[k] = v
-    if position + "_generate_inference" not in st.session_state:
-        st.session_state[position + "_generate_inference"] = True
+    if position + postfix_str not in st.session_state:
+        st.session_state[position + postfix_str] = True
     else:
-        st.session_state[position + "_generate_inference"] = not st.session_state[
-            position + "_generate_inference"
-        ]
+        st.session_state[position + postfix_str] = not st.session_state[position + postfix_str]
+
+
+def is_inference_enabled(position):
+    if f"{position}{postfix_str}" in st.session_state and st.session_state[f"{position}{postfix_str}"]:
+        return True
+    return False
 
 
 def transform_data(
