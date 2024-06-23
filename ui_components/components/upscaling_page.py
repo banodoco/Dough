@@ -1,29 +1,17 @@
 import io
-import time
 from typing import List
 import zipfile
 from shared.constants import COMFY_BASE_PATH, InferenceLogTag, InternalFileTag, InternalFileType, SortOrder
 import streamlit as st
 import os
-import requests
-import shutil
-from zipfile import ZipFile
-from io import BytesIO
-from ui_components.constants import CreativeProcessType
 from ui_components.methods.file_methods import get_file_bytes_and_extension
-from ui_components.methods.video_methods import upscale_video
 from ui_components.models import InternalFileObject, InternalProjectObject, InternalShotObject
-from ui_components.widgets.inspiration_engine import inspiration_engine_element
 from ui_components.widgets.shot_view import create_video_download_button
 from ui_components.widgets.sm_animation_style_element import video_shortlist_btn
-from ui_components.widgets.timeline_view import timeline_view
-from ui_components.components.explorer_page import gallery_image_view
 from ui_components.widgets.variant_comparison_grid import get_video_upscale_dict, uspcale_expander_element
-from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 
 from ui_components.widgets.sidebar_logger import sidebar_logger
-from ui_components.components.explorer_page import generate_images_element
 
 
 def upscaling_page(project_uuid: str):
