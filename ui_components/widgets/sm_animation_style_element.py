@@ -96,7 +96,7 @@ def video_shortlist_btn(video_uuid, type="add_to_shortlist"):
     data_repo = DataRepo()
     # add to shortlist
     if type == "add_to_shortlist":
-        if st.button("Add to shortlist", key=f"{video_uuid}_shortlist_btn",use_container_width=True):
+        if st.button("Add to upscaling shortlist", key=f"{video_uuid}_shortlist_btn",use_container_width=True):
             data_repo.update_file(
                 video_uuid,
                 tag=InternalFileTag.SHORTLISTED_VIDEO.value,
@@ -104,7 +104,7 @@ def video_shortlist_btn(video_uuid, type="add_to_shortlist"):
             st.rerun()
     # remove from shortlist btn
     else:
-        if st.button("Remove from shortlist", key=f"{video_uuid}_remove_shortlist_btn",use_container_width=True):
+        if st.button("Remove from upscaling shortlist", key=f"{video_uuid}_remove_shortlist_btn",use_container_width=True):
             data_repo.update_file(
                 video_uuid,
                 tag="",
@@ -836,8 +836,6 @@ def individual_frame_settings_element(shot_uuid, img_list):
             if (i < len(img_list) - 1) or (len(img_list) % items_per_row != 0):
                 st.markdown("***")
 
-    with header_col_1:
-        st.markdown("##### Individual frame settings")
     with header_col_4:
         if st.button(
             "Save current settings",

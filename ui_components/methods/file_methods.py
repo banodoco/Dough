@@ -505,6 +505,4 @@ def add_file_to_shortlist(file_uuid, project_uuid=None):
         duplicate_file.uuid,
         tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value,
     )
-    st.success("Added To Shortlist")
-    time.sleep(0.3)
-    st.rerun()
+

@@ -185,17 +185,12 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             )
 
             with cols[cur_col]:
-                h1, h2 = st.columns([1, 1])
-                with h1:
-                    # st.info(f"###### Variant #{current_variant + 1}")
-                    st.success("Main variant")
-                with h2:
-                    st.button(
-                        "Add to shortlist", key=f"add_to_shortlist_{ele_uuid}", use_container_width=True
-                    )
+           # st.info(f"###### Variant #{current_variant + 1}")
+                st.success("Main variant")
+               
 
                 st.image(variants[current_variant].location, use_column_width=True)
-                image_variant_details(variants[current_variant])
+                # image_variant_details(variants[current_variant])
                 cur_col += 1
 
         # ------------------------------------- additional variants on the current page -------------------------
@@ -206,13 +201,14 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
         for i, variant_index in enumerate(page_indices):
             with cols[cur_col]:
-                h1, h2 = st.columns([1, 1])
+                h1, h2 = st.columns([1, 1.75])
                 with h1:
                     if variants[variant_index].tag == InternalFileTag.SHORTLISTED_VIDEO.value:
                         st.success(f"###### Variant #{variant_index + 1}")
                     else:
                         st.info(f"###### Variant #{variant_index + 1}")
                 with h2:
+
                     if stage != CreativeProcessType.MOTION.value:
                         if st.button(
                             f"Promote variant #{variant_index + 1}",
@@ -631,7 +627,7 @@ def upscale_settings(ui_key):
         styling_model = st.selectbox("Styling model", model_files, key=f"styling_model_{ui_key}")
 
     upscale_by = st.slider(
-        "Upscale by", min_value=1.0, max_value=3.0, step=0.1, key=f"upscale_by_{ui_key}", value=1.5
+        "Upscale by:", min_value=1.25, max_value=3.0, step=0.05, key=f"upscale_by_{ui_key}", value=1.5
     )
 
     # set_upscaled_to_main_variant = st.checkbox(
@@ -663,6 +659,7 @@ def fetch_inference_data(file: InternalFileObject):
 
 
 def add_variant_to_shortlist_element(file: InternalFileObject, project_uuid):
+    
     if st.button(
         "Add to shortlist ➕",
         key=f"shortlist_{file.uuid}",

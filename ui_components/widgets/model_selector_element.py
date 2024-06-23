@@ -10,13 +10,13 @@ from utils.constants import T2IModel
 def model_selector_element(type=T2IModel.SDXL.value, position="explorer", selected_model=None):
     tab1, tab2 = st.tabs(["Choose Model", "Download Models"])
     default_model = (
-        "Juggernaut-XL_v9_v2.safetensors"
+        "SDXL-Base"
         if type == T2IModel.SDXL.value
         else "sd3_medium_incl_clips.safetensors"
     )
 
     info_msg = (
-        "Juggernaut-XL_v9 will be selected as default. You can download more or put them in ComfyUI/models/checkpoints"
+        "SDXL base will be selected as default. This tends to work best with style transfer."
         if type == T2IModel.SDXL.value
         else "Default base SD3 medium will be selected."
     )
@@ -72,6 +72,16 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
     with tab2:
         # NOTE: makes sure to add 'xl' in these filenames because that is the only filter rn for sdxl models (will update in the future)
         sdxl_model_download_list = {
+            "SDXL-Base": {
+                "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors",
+                "filename": "sd_xl_base_1.0.safetensors",
+                "desc": "Base SDXL model",
+            },
+            "SDXL-Base-Lightning": {
+                "url": "https://huggingface.co/ByteDance/SDXL-Lightning/resolve/main/sdxl_lightning_4step.safetensors",
+                "filename": "sdxl_lightning_4step.safetensors",
+                "desc": "Faster version of SDXL",
+            },
             "Juggernaut-XL_v9": {
                 "url": "https://huggingface.co/RunDiffusion/Juggernaut-XL-v9/resolve/main/Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
                 "filename": "Juggernaut-XL_v9_v2.safetensors",

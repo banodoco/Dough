@@ -272,8 +272,11 @@ def api_key_input_component():
             
             """
         )
+    h1, _ = st.columns([1, 1])
+    with h1:        
+        replicate_key = st.text_input("Replicate API Key:", st.session_state["replicate_key"])
 
-    replicate_key = st.text_input("Replicate API Key", st.session_state["replicate_key"])
+   
 
     if st.button("Update"):
         if replicate_key != None and replicate_key != st.session_state["replicate_key"]:
@@ -282,7 +285,7 @@ def api_key_input_component():
             st.success("API Key updated successfully.")
             time.sleep(0.7)
             st.rerun()
-
+    
 
 def update_toggle():
     data_repo = DataRepo()
