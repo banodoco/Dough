@@ -119,6 +119,9 @@ def setup_app_ui():
             shot_list = data_repo.get_shot_list(st.session_state["project_uuid"])
             st.session_state["shot_uuid"] = shot_list[0].uuid
 
+        if "last_shot_number" not in st.session_state:
+            st.session_state["last_shot_number"] = 0
+
         # print uuids of shots
         if "current_frame_index" not in st.session_state:
             st.session_state["current_frame_index"] = 1
