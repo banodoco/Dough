@@ -682,62 +682,17 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                 )
             with h3:
                 num_items_per_page = st_memory.slider(
-                    "Items per page:", min_value=8, max_value=64, value=16, key="num_items_per_page_explorer"
-                )
+                    "Items per page:", min_value=8, max_value=256, value=16, key="num_items_per_page_explorer", step=8)                
         else:
             num_items_per_page = 4
             num_columns = 2
 
-        # selecting specific shot for adding to the filter
-        if "shot_chooser" in view:
-            with h1:
-                '''
-                
-                shot_chooser_1, shot_chooser_2 = st.columns([1, 1])
-                with shot_chooser_1:
-                    options = ["Timeline", "Specific shots", "All"]
-                    if shot is None:
-                        default_value = 0
-                    else:
-                        default_value = 1
-                    show_images_associated_with_shots = st.selectbox(
-                        "Images associated with:",
-                        options=options,
-                        index=default_value,
-                        key=f"show_images_associated_with_shots_explorer_{shortlist}",
-                    )
-                with shot_chooser_2:
-                    if show_images_associated_with_shots == "Timeline":
-                        shot_uuid_list = [GalleryImageViewType.EXPLORER_ONLY.value]
-
-                    elif show_images_associated_with_shots == "Specific shots":
-                        specific_shots = [shot.name for shot in shot_list]
-                        if shot is None:
-                            default_shot = specific_shots[0]
-                        else:
-                            default_shot = shot.name
-                        shot_name_list = st.multiselect(
-                            "Shots to show:",
-                            options=specific_shots,
-                            default=default_shot,
-                            key="specific_shots_explorer",
-                        )
-                        shot_uuid_list = (
-                            [str(shot_name_uuid_map[s]) for s in shot_name_list]
-                            if shot_name_list
-                            else ["xyz"]
-                        )
-
-                    else:
-                        shot_uuid_list = []
-                '''
-                shot_uuid_list = []
-        else:
-            shot_uuid_list = []
+        # selecting specific shot for adding to the filter                
+        shot_uuid_list = []
 
         if not shortlist:
             with h1:
-                page_number = st.radio(
+                page_number = st_memory.radio(
                     "Select page:",
                     options=range(1, project_settings.total_gallery_pages + 1),
                     horizontal=True,
@@ -838,124 +793,168 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     if gallery_image_list and len(gallery_image_list):
         start_index = 0
         end_index = min(start_index + num_items_per_page, total_image_count)
-        shot_names = [s.name for s in shot_list]
-        shot_names.append("**Create New Shot**")
-        for i in range(start_index, end_index, num_columns):
-            cols = st.columns(num_columns)
-            for j in range(num_columns):
-                if i + j < len(gallery_image_list):
-                    with cols[j]:
-                        st.image(gallery_image_list[i + j].location, use_column_width=True)
-                        # ---------- add to shot btn ---------------
-                        if "last_shot_number" not in st.session_state:
-                            st.session_state["last_shot_number"] = 0
-                        if "add_to_this_shot" in view or "add_to_any_shot" in view:
-                            if "add_to_this_shot" in view:
-                                shot_name = shot.name
-                            else:
-                                if st.session_state["last_shot_number"] >= len(shot_names):
-                                    st.session_state["last_shot_number"] = 0
+        shot_names = [s.name for s in shot_list]        
 
-                                shot_name = st.selectbox(
-                                    "Add to shot:",
-                                    shot_names,
-                                    key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}",
-                                    index=st.session_state["last_shot_number"],
-                                )
+        if not shortlist:
 
-                            if shot_name != "":
-                                if shot_name == "**Create New Shot**":
-                                    shot_name = st.text_input(
-                                        "New shot name:",
-                                        max_chars=40,
-                                        key=f"shot_name_{gallery_image_list[i+j].uuid}",
-                                    )
-                                    if st.button(
-                                        "Create new shot",
-                                        key=f"create_new_{gallery_image_list[i + j].uuid}",
-                                        use_container_width=True,
-                                    ):
-                                        new_shot = add_new_shot(project_uuid, name=shot_name)
-                                        add_key_frame(
-                                            gallery_image_list[i + j],
-                                            new_shot.uuid,
-                                            len(data_repo.get_timing_list_from_shot(new_shot.uuid)),
-                                            refresh_state=False,
+
+            # Image gallery display
+            for i in range(start_index, end_index, num_columns):
+                cols = st.columns(num_columns)
+                for j in range(num_columns):
+                    if i + j < len(gallery_image_list):
+                        with cols[j]:
+                            st.image(gallery_image_list[i + j].location, use_column_width=True)
+                            
+                            # Select/Deselect button
+                            select_label = "Deselect" if gallery_image_list[i + j].uuid in st.session_state['selected_images'] else "Select"
+                            button_type = "primary" if select_label == "Deselect" else "secondary"                            
+                            if st.button(select_label, key=f"select_{gallery_image_list[i + j].uuid}", use_container_width=True, type=button_type):
+                                if gallery_image_list[i + j].uuid in st.session_state['selected_images']:
+                                    st.session_state['selected_images'].remove(gallery_image_list[i + j].uuid)                            
+                                else:
+                                    st.session_state['selected_images'].append(gallery_image_list[i + j].uuid)
+                                st.rerun()
+
+                            # -------- inference details --------------
+                            if gallery_image_list[i + j].inference_log:
+                                log = gallery_image_list[
+                                    i + j
+                                ].inference_log  # data_repo.get_inference_log_from_uuid(gallery_image_list[i + j].inference_log.uuid)
+                                if log:
+                                    input_params = json.loads(log.input_params)
+                                    prompt = input_params.get("prompt", None)
+                                    if not prompt:
+                                        prompt = input_params.get("query_dict", {}).get(
+                                            "prompt", "Prompt not found"
                                         )
-                                        # removing this from the gallery view
-                                        data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                                                                
-                                        st.session_state["last_shot_number"] = len(shot_list)
-                                        st.rerun()
+                                    model = json.loads(log.output_details)["model_name"].split("/")[-1]
+                                    if "view_inference_details" in view:
+                                        with st.expander("Prompt Details", expanded=open_detailed_view_for_all):
+                                            st.info(f"**Prompt:** {prompt}\n\n**Model:** {model}")
 
                                 else:
+                                    st.warning("No inference data")
+                            else:
+                                st.warning("No data found")
+        elif shortlist:
+            shot_names.append("**Create New Shot**")
+            for i in range(start_index, end_index, num_columns):
+                cols = st.columns(num_columns)
+                for j in range(num_columns):
+                    if i + j < len(gallery_image_list):
+                        with cols[j]:
+                            st.image(gallery_image_list[i + j].location, use_column_width=True)
+                            # ---------- add to shot btn ---------------
+                            if "last_shot_number" not in st.session_state:
+                                st.session_state["last_shot_number"] = 0
+                            if "add_to_this_shot" in view or "add_to_any_shot" in view:
+                                if "add_to_this_shot" in view:
+                                    shot_name = shot.name
+                                else:
+                                    if st.session_state["last_shot_number"] >= len(shot_names):
+                                        st.session_state["last_shot_number"] = 0
+
+                                    shot_name = st.selectbox(
+                                        "Add to shot:",
+                                        shot_names,
+                                        key=f"current_shot_sidebar_selector_{gallery_image_list[i + j].uuid}",
+                                        index=st.session_state["last_shot_number"],
+                                    )
+
+                                if shot_name != "":
+                                    if shot_name == "**Create New Shot**":
+                                        shot_name = st.text_input(
+                                            "New shot name:",
+                                            max_chars=40,
+                                            key=f"shot_name_{gallery_image_list[i+j].uuid}",
+                                        )
+                                        if st.button(
+                                            "Create new shot",
+                                            key=f"create_new_{gallery_image_list[i + j].uuid}",
+                                            use_container_width=True,
+                                        ):
+                                            new_shot = add_new_shot(project_uuid, name=shot_name)
+                                            add_key_frame(
+                                                gallery_image_list[i + j],
+                                                new_shot.uuid,
+                                                len(data_repo.get_timing_list_from_shot(new_shot.uuid)),
+                                                refresh_state=False,
+                                            )
+                                            # removing this from the gallery view
+                                            data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+                                                                                    
+                                            st.session_state["last_shot_number"] = len(shot_list)
+                                            st.rerun()
+
+                                    else:
+                                        if st.button(
+                                            f"Add to shot",
+                                            key=f"add_{gallery_image_list[i + j].uuid}",
+                                            use_container_width=True,
+                                        ):
+                                            shot_number = shot_names.index(shot_name)
+                                            st.session_state["last_shot_number"] = shot_number
+                                            shot_uuid = shot_list[shot_number].uuid
+
+                                            add_key_frame(
+                                                gallery_image_list[i + j],
+                                                shot_uuid,
+                                                len(data_repo.get_timing_list_from_shot(shot_uuid)),
+                                                refresh_state=False,
+                                                update_cur_frame_idx=False,
+                                            )
+                                            # removing this from the gallery view
+                                            data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
+                                            st.session_state[f"open_frame_changer_{shot_uuid}"] = False
+                                            refresh_app(maintain_state=True)
+
+                            # else:
+                            #     st.error("The image is truncated and cannot be displayed.")
+                            if "add_and_remove_from_shortlist" in view:
+                                if shortlist:
                                     if st.button(
-                                        f"Add to shot",
-                                        key=f"add_{gallery_image_list[i + j].uuid}",
+                                        "Remove from shortlist ➖",
+                                        key=f"shortlist_{gallery_image_list[i + j].uuid}",
                                         use_container_width=True,
                                     ):
-                                        shot_number = shot_names.index(shot_name)
-                                        st.session_state["last_shot_number"] = shot_number
-                                        shot_uuid = shot_list[shot_number].uuid
-
-                                        add_key_frame(
-                                            gallery_image_list[i + j],
-                                            shot_uuid,
-                                            len(data_repo.get_timing_list_from_shot(shot_uuid)),
-                                            refresh_state=False,
-                                            update_cur_frame_idx=False,
+                                        data_repo.update_file(
+                                            gallery_image_list[i + j].uuid,
+                                            tag=InternalFileTag.GALLERY_IMAGE.value,
                                         )
-                                        # removing this from the gallery view
-                                        data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
-                                        st.session_state[f"open_frame_changer_{shot_uuid}"] = False
-                                        refresh_app(maintain_state=True)
+                                        st.success("Removed From Shortlist")
+                                        time.sleep(0.3)
+                                        st.rerun()
+                                else:
+                                    if st.button(
+                                        "Add to shortlist ➕",
+                                        key=f"shortlist_{gallery_image_list[i + j].uuid}",
+                                        use_container_width=True,
+                                        help="The shortlist appears in a box on the left.",
+                                    ):
+                                        add_file_to_shortlist(gallery_image_list[i + j].uuid)
 
-                        # else:
-                        #     st.error("The image is truncated and cannot be displayed.")
-                        if "add_and_remove_from_shortlist" in view:
-                            if shortlist:
-                                if st.button(
-                                    "Remove from shortlist ➖",
-                                    key=f"shortlist_{gallery_image_list[i + j].uuid}",
-                                    use_container_width=True,
-                                ):
-                                    data_repo.update_file(
-                                        gallery_image_list[i + j].uuid,
-                                        tag=InternalFileTag.GALLERY_IMAGE.value,
-                                    )
-                                    st.success("Removed From Shortlist")
-                                    time.sleep(0.3)
-                                    st.rerun()
+                            # -------- inference details --------------
+                            if gallery_image_list[i + j].inference_log:
+                                log = gallery_image_list[
+                                    i + j
+                                ].inference_log  # data_repo.get_inference_log_from_uuid(gallery_image_list[i + j].inference_log.uuid)
+                                if log:
+                                    input_params = json.loads(log.input_params)
+                                    prompt = input_params.get("prompt", None)
+                                    if not prompt:
+                                        prompt = input_params.get("query_dict", {}).get(
+                                            "prompt", "Prompt not found"
+                                        )
+                                    model = json.loads(log.output_details)["model_name"].split("/")[-1]
+                                    if "view_inference_details" in view:
+                                        with st.expander("Prompt Details", expanded=open_detailed_view_for_all):
+                                            st.info(f"**Prompt:** {prompt}\n\n**Model:** {model}")
+
+                                else:
+                                    st.warning("No inference data")
                             else:
-                                if st.button(
-                                    "Add to shortlist ➕",
-                                    key=f"shortlist_{gallery_image_list[i + j].uuid}",
-                                    use_container_width=True,
-                                    help="The shortlist appears in a box on the left.",
-                                ):
-                                    add_file_to_shortlist(gallery_image_list[i + j].uuid)
-
-                        # -------- inference details --------------
-                        if gallery_image_list[i + j].inference_log:
-                            log = gallery_image_list[
-                                i + j
-                            ].inference_log  # data_repo.get_inference_log_from_uuid(gallery_image_list[i + j].inference_log.uuid)
-                            if log:
-                                input_params = json.loads(log.input_params)
-                                prompt = input_params.get("prompt", None)
-                                if not prompt:
-                                    prompt = input_params.get("query_dict", {}).get(
-                                        "prompt", "Prompt not found"
-                                    )
-                                model = json.loads(log.output_details)["model_name"].split("/")[-1]
-                                if "view_inference_details" in view:
-                                    with st.expander("Prompt Details", expanded=open_detailed_view_for_all):
-                                        st.info(f"**Prompt:** {prompt}\n\n**Model:** {model}")
-
-                            else:
-                                st.warning("No inference data")
-                        else:
-                            st.warning("No data found")
+                                st.warning("No data found")
 
             st.markdown("***")
     else:

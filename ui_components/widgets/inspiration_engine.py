@@ -38,10 +38,11 @@ def check_replicate_key():
     data_repo = DataRepo()
     app_secrets = data_repo.get_app_secrets_from_user_uuid()
     if "replicate_key" in app_secrets and app_secrets["replicate_key"]:
+        if app_secrets["replicate_key"] == "xyz":            
+            return False
         st.session_state["replicate_key"] = app_secrets["replicate_key"]
         os.environ["REPLICATE_API_TOKEN"] = st.session_state["replicate_key"]
-    else:
-        st.error("You need to add your Replicate key inside App Settings to make this feature work")
+    else:        
         return False
 
     return True
@@ -297,7 +298,14 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         if st.button("Switch to generate prompt mode", use_container_width=True):
                             st.session_state["prompt_generation_mode"] = generate_mode
                             st.rerun()
+                
+                app_secrets = data_repo.get_app_secrets_from_user_uuid()
+                if "replicate_key" in app_secrets and app_secrets["replicate_key"]:
+                    st.session_state["replicate_key"] = app_secrets["replicate_key"]
+                else:
+                    st.session_state["replicate_key"] = ""
 
+                replicate_warning_message = "We currently use Replicate for LLM queries for simplicity. This costs $0.00025/run. You can add a key in App Settings."
                 if st.session_state["prompt_generation_mode"] == generate_mode:
                     generaton_text = st.text_area(
                         "Text to generate prompts:",
@@ -340,13 +348,15 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             st.rerun()
 
                     total_unique_prompts = total_unique_prompts + 5
-
-                    if st.button(
-                        "Generate prompts",
-                        use_container_width=True,
-                        help="This will overwrite the existing prompts.",
-                    ):
-                        if check_replicate_key():
+                    
+                    if not check_replicate_key():
+                        st.info(replicate_warning_message)                   
+                    else:
+                        if st.button(
+                            "Generate prompts",
+                            use_container_width=True,
+                            help="This will overwrite the existing prompts.",
+                        ):                            
                             generated_prompts = generate_prompts(
                                 generaton_text,
                                 total_unique_prompts,
@@ -368,8 +378,10 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         st.session_state["insp_edit_prompt"] = edit_text
                         st.rerun()
 
-                    if st.button("Edit Prompts", use_container_width=True):
-                        if check_replicate_key():
+                    if not check_replicate_key():
+                        st.info(replicate_warning_message)
+                    else:                   
+                        if st.button("Edit Prompts", use_container_width=True):                            
                             generated_prompts = edit_prompts(edit_text, st.session_state["list_of_prompts"])
                             st.session_state["list_of_prompts"] = generated_prompts.split("|")
                             st.rerun()
@@ -617,7 +629,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             with prompt1:
                 images_per_prompt = st.slider(
                     "Images per prompt:",
-                    min_value=1,
+                    min_value=4,
                     max_value=64,
                     step=4,
                     value=st.session_state["insp_img_per_prompt"],
@@ -640,7 +652,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             st.session_state["insp_test_mode"] = test_first_prompt
 
             if test_first_prompt:
-                prompts_to_be_processed = st.session_state["list_of_prompts"][0]
+                prompts_to_be_processed = [st.session_state["list_of_prompts"][0]]
             else:
                 prompts_to_be_processed = st.session_state["list_of_prompts"]
 

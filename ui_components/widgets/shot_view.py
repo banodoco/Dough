@@ -4,6 +4,7 @@ import time
 from typing import List
 import os
 import zipfile
+from ui_components.components.explorer_page import gallery_image_view
 import shutil
 from PIL import Image
 import requests
@@ -40,93 +41,76 @@ from ui_components.widgets.image_zoom_widgets import reset_zoom_element
 def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots", **kwargs):
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
+    
+    if f'list_to_move_{shot_uuid}' not in st.session_state:
+        st.session_state[f'list_to_move_{shot_uuid}'] = []
 
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
-    with column:
-        col0, col3, col2, col1 = st.columns([1.0, 1.0, 0.75, 1])
-        with col1:
-            open_frame_changer = st_memory.toggle(
-                "Open Frame Changer™",
-                value=False,
-                key=f"open_frame_changer_{shot.uuid}",
-                help="Enable to move frames around",
-            )
-            if st.session_state[f"open_frame_changer_{shot.uuid}"]:
-                st.warning("You're in frame moving mode. You must press 'Save' to save changes.")
-                if st.button(
-                    "Save",
-                    key=f"save_move_frame_{shot.uuid}",
-                    help="Save the changes made in 'move frame' mode",
-                    use_container_width=True,
-                    type="primary",
-                ):
-                    update_shot_frames(shot_uuid)
-                    st.rerun()
-                if f"shot_data_{shot_uuid}" not in st.session_state:
-                    st.session_state[f"shot_data_{shot_uuid}"] = None
-                if st.session_state[f"shot_data_{shot_uuid}"] is None:
-                    shot_data = [
-                        {
-                            "uuid": timing.uuid,
-                            "image_uuid": (
-                                timing.primary_image.uuid
-                                if timing.primary_image and timing.primary_image.uuid
-                                else None
-                            ),
-                            "image_location": (
-                                timing.primary_image.location
-                                if timing.primary_image and timing.primary_image.location
-                                else None
-                            ),
-                            "position": idx,
-                        }
-                        for idx, timing in enumerate(timing_list)
-                    ]
-                    st.session_state[f"shot_data_{shot_uuid}"] = pd.DataFrame(shot_data)
-                if st.button(
-                    "Discard changes",
-                    key=f"discard_changes_{shot.uuid}",
-                    help="Discard all changes made in 'move frame' mode",
-                    use_container_width=True,
-                ):
-                    st.session_state[f"open_frame_changer_{shot.uuid}"] = False
-                    st.rerun()
-            else:
+    def manage_frame_movement(shot_uuid, timing_list):
+        open_frame_changer = st_memory.toggle(
+            "Open Frame Changer™ mode",
+            value=False,
+            key=f"open_frame_changer_{shot.uuid}",
+            help="Enable to move frames around",
+        )
+
+        if st.session_state[f"open_frame_changer_{shot.uuid}"]:
+            st.warning("You're in frame moving mode. You must press 'Save' to save changes.")
+            if st.button(
+                "Save",
+                key=f"save_move_frame_{shot.uuid}",
+                help="Save the changes made in 'move frame' mode",
+                use_container_width=True,
+                type="primary",
+            ):
+                update_shot_frames(shot_uuid)
+                st.rerun()
+
+            if f"shot_data_{shot_uuid}" not in st.session_state:
                 st.session_state[f"shot_data_{shot_uuid}"] = None
 
-    st.markdown("***")
+            if st.session_state[f"shot_data_{shot_uuid}"] is None:
+                shot_data = [
+                    {
+                        "uuid": timing.uuid,
+                        "image_uuid": (
+                            timing.primary_image.uuid if timing.primary_image and timing.primary_image.uuid else None
+                        ),
+                        "image_location": (
+                            timing.primary_image.location if timing.primary_image and timing.primary_image.location else None
+                        ),
+                        "position": idx,
+                    }
+                    for idx, timing in enumerate(timing_list)
+                ]
+                st.session_state[f"shot_data_{shot_uuid}"] = pd.DataFrame(shot_data)
 
-    if open_frame_changer:
-        with column:
-            if f"list_to_move_{shot.uuid}" not in st.session_state:
-                st.session_state[f"list_to_move_{shot.uuid}"] = []
+            if st.button(
+                "Discard changes",
+                key=f"discard_changes_{shot.uuid}",
+                help="Discard all changes made in 'move frame' mode",
+                use_container_width=True,
+            ):
+                st.session_state[f"open_frame_changer_{shot.uuid}"] = False
+                st.rerun()
 
-            with col2:
-                frame_to_move_to = st.selectbox(
-                    "Bulk move frames to:",
-                    [f"{i + 1}" for i in range(len(timing_list))],
-                    key=f"frame_to_move_to_{shot.uuid}",
-                )
-                if st.session_state[f"list_to_move_{shot.uuid}"] != []:
+        else:
+            st.session_state[f"shot_data_{shot_uuid}"] = None
+
+        if open_frame_changer:
+            st.markdown("### Bulk move frames")
+            if st.session_state[f"list_to_move_{shot.uuid}"] != []:
+                h1, h2, h3 = st.columns([2, 1, 1])
+                with h1:
+                    if st.session_state[f"list_to_move_{shot.uuid}"] == []:
+                        st.write("")
+                        st.info("No frames selected to move. Select them below.")
+                    else:
+                        st.info(f"Selected frames to move: {', '.join(str(x + 1) for x in st.session_state[f'list_to_move_{shot.uuid}'])}")
+
+                with h2:
                     if st.button(
-                        "Move selected",
-                        key=f"move_frame_to_{shot.uuid}",
-                        help="Move the frame to the selected position",
-                        use_container_width=True,
-                    ):
-                        # order list to move in ascending order
-                        list_to_move = sorted(st.session_state[f"list_to_move_{shot.uuid}"])
-
-                        st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frames_to_positions(
-                            st.session_state[f"shot_data_{shot_uuid}"],
-                            list_to_move,
-                            int(frame_to_move_to) - 1,
-                        )
-                        st.session_state[f"list_to_move_{shot.uuid}"] = []
-                        st.rerun()
-
-                    if st.button(
-                        "Delete selected",
+                        "Delete frames",
                         key=f"delete_frame_to_{shot.uuid}",
                         help="Delete the selected frames",
                     ):
@@ -136,56 +120,65 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
                         )
                         st.session_state[f"list_to_move_{shot.uuid}"] = []
                         st.rerun()
-                else:
-                    st.button(
-                        "Move selected",
-                        key=f"move_frame_to_{shot.uuid}",
-                        use_container_width=True,
-                        disabled=True,
-                        help="No frames selected to move.",
+
+                with h3:
+                    if st.session_state[f"list_to_move_{shot.uuid}"] != []:
+                        if st.button(
+                            "Deselect all frames",
+                            key=f"remove_all_selected_{shot.uuid}",
+                            help="Deselect all selected frames",
+                        ):
+                            st.session_state[f"list_to_move_{shot.uuid}"] = []
+                            st.rerun()
+
+                frame_to_move_to = st.selectbox("Bulk move frames to:", [f"{i + 1}" for i in range(len(timing_list))], key=f"frame_to_move_to_{shot.uuid}")
+
+                if st.button(
+                    "Move selected",
+                    key=f"move_frame_to_{shot.uuid}",
+                    help="Move the frame to the selected position",
+                    use_container_width=True,
+                ):
+                    list_to_move = sorted(st.session_state[f"list_to_move_{shot.uuid}"])
+                    st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frames_to_positions(
+                        st.session_state[f"shot_data_{shot_uuid}"],
+                        list_to_move,
+                        int(frame_to_move_to) - 1,
                     )
+                    st.session_state[f"list_to_move_{shot.uuid}"] = []
+                    st.rerun()
+            else:
+                st.info("You haven't selected any frames - you can do so on the right.")
+            
+            return open_frame_changer
 
-            with col3:
-                if st.session_state[f"open_frame_changer_{shot.uuid}"]:
-                    if st.session_state[f"list_to_move_{shot.uuid}"] == []:
-                        st.write("")
-                        st.info("No frames selected to move. Select them below.")
-                    else:
-                        st.info(f"Selected frames to move: {st.session_state[f'list_to_move_{shot.uuid}']}")
-                if st.session_state[f"list_to_move_{shot.uuid}"] != []:
-                    if st.button(
-                        "Deselect all",
-                        key=f"remove_all_selected_{shot.uuid}",
-                        help="Deselect all selected frames",
-                    ):
-                        st.session_state[f"list_to_move_{shot.uuid}"] = []
-                        st.rerun()
+    with st.sidebar:
 
+        st.write("")
+
+        with st.expander("🔧 Frame Changer", expanded=True):
+            open_frame_changer = manage_frame_movement(shot_uuid, timing_list)
+
+        st.write("")
+
+        with st.expander("📋 Shortlist", expanded=True):
+            if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
+                gallery_image_view(
+                    shot.project.uuid,
+                    shortlist=True,
+                    view=["add_and_remove_from_shortlist", "add_to_any_shot"],
+                )
+
+
+    if open_frame_changer:            
+        st.warning("You're in frame moving mode. You must press 'Save' on the left to save changes.")
         edit_shot_view(shot_uuid, items_per_row)
-        bottom1, bottom2 = st.columns([1, 3])
-        with bottom1:
-            st.warning("You're in frame moving mode. You must press 'Save' to save changes.")
-            if st.button(
-                "Save",
-                key=f"save_move_frame_{shot.uuid}_bottom",
-                help="Save the changes made in 'move frame' mode",
-                use_container_width=True,
-                type="primary",
-            ):
-                update_shot_frames(shot_uuid)
-                st.rerun()
-            if st.button(
-                "Discard changes",
-                key=f"discard_changes_{shot.uuid}_2",
-                help="Discard all changes made in 'move frame' mode",
-                use_container_width=True,
-            ):
-                st.session_state[f"open_frame_changer_{shot.uuid}"] = False
-                st.rerun()
+        # st.warning("You're in frame moving mode. You must press 'Save' on the left to save changes.")
+
         st.markdown("***")
 
     else:
-        default_shot_view(shot_uuid, items_per_row, position)
+            default_shot_view(shot_uuid, items_per_row, position)
 
 
 def edit_shot_view(shot_uuid, items_per_row):
@@ -194,6 +187,9 @@ def edit_shot_view(shot_uuid, items_per_row):
             grid = st.columns(items_per_row)
             for j in range(items_per_row):
                 idx = i + j
+
+                
+                   
 
                 if idx < len(st.session_state[f"shot_data_{shot_uuid}"]):
                     with grid[j % items_per_row]:
@@ -314,72 +310,42 @@ def edit_shot_view(shot_uuid, items_per_row):
                                 st.rerun()
 
             st.markdown("***")
-    """
-    def add_key_frame_section(shot_uuid):
-    data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
-    selected_image_location = ""
 
-    uploaded_images = st.file_uploader(
-        "Upload images:",
-        type=["png", "jpg", "jpeg", "webp"],
-        key=f"uploaded_image_{shot_uuid}",
-        help="You can upload multiple images",
-        accept_multiple_files=True,
-    )
-
-    if st.button(
-        f"Add key frame(s)", use_container_width=True, key=f"add_key_frame_btn_{shot_uuid}", type="primary"
-    ):
-        if uploaded_images:
-            progress_bar = st.progress(0)
-            uploaded_images = sorted(uploaded_images, key=lambda x: x.name)
-            for i, uploaded_image in enumerate(uploaded_images):
-                image = Image.open(uploaded_image)
-                file_location = f"videos/{shot.uuid}/assets/frames/base/{uploaded_image.name}"
-                selected_image_location = save_or_host_file(image, file_location)
-                selected_image_location = selected_image_location or file_location
-                add_key_frame(selected_image_location, shot_uuid, refresh_state=False)
-                progress_bar.progress((i + 1) / len(uploaded_images))
-        else:
-            st.error("Please generate new images or upload them")
-            time.sleep(0.7)
-        st.rerun()
-    """
-
-    def upload_temp_frame(shot_uuid):
-        uploaded_images = st.file_uploader(
-            "Upload images:",
-            type=["png", "jpg", "jpeg"],
-            key=f"upload_frame_{shot_uuid}",
-            accept_multiple_files=True,
-        )
-        if st.button("Add key frame(s)", key=f"add_key_frame_{shot_uuid}", use_container_width=True):
-            if uploaded_images is not None:
-                for i, uploaded_image in enumerate(uploaded_images):
-                    image = Image.open(uploaded_image)
-                    file_location = f"videos/{shot_uuid}/assets/frames/base/{uploaded_image.name}"
-                    saved_image_locaton = save_or_host_file(image, file_location)
-                    saved_image_locaton = saved_image_locaton or file_location
-                    new_row = {
-                        "uuid": f"Uploaded_{uuid.uuid4()}",
-                        "image_location": file_location,
-                        "position": len(st.session_state[f"shot_data_{shot_uuid}"]),
-                    }
-                    st.session_state[f"shot_data_{shot_uuid}"] = pd.concat(
-                        [st.session_state[f"shot_data_{shot_uuid}"], pd.DataFrame([new_row])],
-                        ignore_index=True,
-                    )
-                st.rerun()
-            else:
-                st.warning("You need to input an image to add a key frame.")
 
     upload1, _ = st.columns([1, 3])
+
+    
     with upload1:
         upload_temp_frame(shot_uuid)
 
     st.markdown("***")
 
+def upload_temp_frame(shot_uuid):
+    uploaded_images = st.file_uploader(
+        "Upload images:",
+        type=["png", "jpg", "jpeg"],
+        key=f"upload_frame_{shot_uuid}",
+        accept_multiple_files=True,
+    )
+    if st.button("Add key frame(s)", key=f"add_key_frame_{shot_uuid}", use_container_width=True):
+        if uploaded_images is not None:
+            for i, uploaded_image in enumerate(uploaded_images):
+                image = Image.open(uploaded_image)
+                file_location = f"videos/{shot_uuid}/assets/frames/base/{uploaded_image.name}"
+                saved_image_locaton = save_or_host_file(image, file_location)
+                saved_image_locaton = saved_image_locaton or file_location
+                new_row = {
+                    "uuid": f"Uploaded_{uuid.uuid4()}",
+                    "image_location": file_location,
+                    "position": len(st.session_state[f"shot_data_{shot_uuid}"]),
+                }
+                st.session_state[f"shot_data_{shot_uuid}"] = pd.concat(
+                    [st.session_state[f"shot_data_{shot_uuid}"], pd.DataFrame([new_row])],
+                    ignore_index=True,
+                )
+            st.rerun()
+        else:
+            st.warning("You need to input an image to add a key frame.")
 
 def default_shot_view(shot_uuid, items_per_row, position):
     """

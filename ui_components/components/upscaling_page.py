@@ -64,8 +64,8 @@ def upscaling_page(project_uuid: str):
             if not len(main_clip_list):
                 st.info("No videos available in the project.")
 
-            else:
-                create_multi_video_download_button([v.location for v in video_list], ui_key="upscaling_page")
+            else:                
+                create_multi_video_download_button([v.location for v in video_list], ui_key="upscaling_page",project_uuid=project_uuid)
 
     # -------------- video grid --------------------
     if video_list:
@@ -100,8 +100,9 @@ def display_video(video_file: InternalFileObject, upscale_in_progress=False):
         if upscale_in_progress:
             st.info("Upscale pending")
         elif upscaled_video:
-            st.success("Upscaled video")
+            st.success("Upscaled")
         else:
+            st.info("Not queued for upscaling")
             uspcale_expander_element(
                 [video_file.uuid],
                 heading="Upscale settings",
@@ -144,21 +145,25 @@ def get_final_video_list(project_uuid):
     return final_list
 
 
-def create_multi_video_download_button(video_location_list, ui_key="temp"):
+def create_multi_video_download_button(video_location_list, ui_key="temp", project_uuid=None):
     if st.button("Prepare videos for download", use_container_width=True, key=ui_key + "_download_button"):
         zip_buffer = io.BytesIO()
+        project_name = DataRepo().get_project_from_uuid(project_uuid).name        
+        project_name = project_name.replace(" ", "_")
         with zipfile.ZipFile(zip_buffer, mode="w") as zip_file:
             for video_location in video_location_list:
                 file_name = os.path.basename(video_location)
+                # Include the project_name as a folder in the path within the zip
+                zip_path = f"{project_name}/{file_name}"
                 file_bytes, _ = get_file_bytes_and_extension(video_location)
-                zip_file.writestr(file_name, file_bytes)
+                zip_file.writestr(zip_path, file_bytes)
 
         zip_buffer.seek(0)
 
         st.download_button(
             label="Download videos as ZIP",
             data=zip_buffer,
-            file_name="videos.zip",
+            file_name=f"{project_name}_clips.zip",
             mime="application/zip",
             key=ui_key + "_download_gen",
             use_container_width=True,
