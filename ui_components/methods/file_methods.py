@@ -261,8 +261,21 @@ def save_to_env(key, value):
 
 
 def load_from_env(key):
-    val = get_key(dotenv_path=ENV_FILE_PATH, key_to_get=key)
-    return val
+    try:
+        val = get_key(dotenv_path=ENV_FILE_PATH, key_to_get=key)
+        return val
+    except Exception as e:
+        return None
+
+
+def delete_from_env(key_to_delete):
+    with open(ENV_FILE_PATH, "r") as f:
+        lines = f.readlines()
+
+    with open(ENV_FILE_PATH, "w") as f:
+        for line in lines:
+            if not line.startswith(f"{key_to_delete}="):
+                f.write(line)
 
 
 def zip_images(image_locations, zip_filename="images.zip", filename_list=[]):
@@ -505,4 +518,3 @@ def add_file_to_shortlist(file_uuid, project_uuid=None):
         duplicate_file.uuid,
         tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value,
     )
-

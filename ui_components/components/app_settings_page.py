@@ -6,6 +6,7 @@ from git import Repo
 import streamlit as st
 from dataclasses import dataclass, field
 from shared.constants import SERVER, ServerType
+from ui_components.methods.file_methods import delete_from_env, load_from_env, save_to_env
 from utils.common_utils import get_current_user, get_toml_config
 from ui_components.components.query_logger_page import query_logger_page
 
@@ -13,6 +14,7 @@ from utils.constants import TomlConfig
 from utils.data_repo.data_repo import DataRepo
 from utils.encryption import generate_file_hash
 from utils.enum import ExtendedEnum
+from ui_components.widgets.base_theme import BaseTheme as theme
 
 
 class ErrorLevel(ExtendedEnum):
@@ -83,6 +85,9 @@ def app_settings_page():
             help="This will update the app automatically when a new version is available.",
         )
 
+    with st.expander("Custom ComfyUI Path", expanded=True):
+        custom_comfy_input_component()
+
     with st.expander("API Keys", expanded=False):
         api_key_input_component()
 
@@ -93,7 +98,41 @@ def app_settings_page():
         query_logger_page()
 
 
-# ce2e2039b9f894ed40f8e24a8fdf8160
+def custom_comfy_input_component():
+    custom_comfy_key = "COMFY_MODELS_BASE_PATH"
+    custom_comfy_path = load_from_env(custom_comfy_key)
+    if not custom_comfy_path:
+        st.info(
+            """
+            Please enter your custom ComfyUI path below. Dough will use the models present in your personal ComfyUI
+            for inference. It will also download the new models in your personal ComfyUI instance. Please note that 
+            Dough will maintain it's own copy of the nodes and packages to not cause any issues with the packages 
+            that might already be installed on your personal ComfyUI.
+            
+            """
+        )
+    h1, _ = st.columns([1, 1])
+    with h1:
+        updated_path = st.text_input(
+            "Custom ComfyUI path:",
+            custom_comfy_path,
+            key="app_settings_custom_comfy",
+        )
+
+    if st.button("Update", key="app_settings_update_path"):
+        if updated_path != custom_comfy_path:
+            if not updated_path:
+                delete_from_env(custom_comfy_key)
+            else:
+                updated_path = os.path.join(updated_path, "")
+                save_to_env(
+                    key=custom_comfy_key,
+                    value=updated_path,
+                )
+            theme.success_msg("Successfully updated the ComfyUI path")
+            st.rerun()
+
+
 def health_check_component():
     c1, c2 = st.columns([1, 1])
     with c1:
