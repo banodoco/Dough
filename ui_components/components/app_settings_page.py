@@ -185,7 +185,7 @@ def run_health_check():
                 if current_hash != val["commit_hash"]:
                     error_list.append(
                         ErrorPayload(
-                            error=f"{node} is a different version that what is expected",
+                            error=f"{node} is a different version than what is expected",
                             error_level=ErrorLevel.SEVERE.value,
                             resolution=f"Either enable automatic update and restart the app or delete the {node} folder",
                         )
@@ -273,10 +273,8 @@ def api_key_input_component():
             """
         )
     h1, _ = st.columns([1, 1])
-    with h1:        
+    with h1:
         replicate_key = st.text_input("Replicate API Key:", st.session_state["replicate_key"])
-
-   
 
     if st.button("Update"):
         if replicate_key != None and replicate_key != st.session_state["replicate_key"]:
@@ -285,7 +283,7 @@ def api_key_input_component():
             st.success("API Key updated successfully.")
             time.sleep(0.7)
             st.rerun()
-    
+
 
 def update_toggle():
     data_repo = DataRepo()
