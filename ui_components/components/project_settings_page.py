@@ -44,7 +44,7 @@ def project_settings_page(project_uuid):
                 )
                 width, height = map(int, frame_size.split("x"))
             else:
-                st.info("This is an experimental feature")
+                st.info("This is an experimental feature. There might be some issues - particularly with image generation.")
                 width = st.text_input("Width", value=512)
                 height = st.text_input("Height", value=512)
                 try:
@@ -59,9 +59,11 @@ def project_settings_page(project_uuid):
                 st.image(img, width=70)
 
                 if st.button("Save"):
+                    st.success("Frame size updated successfully")
+                    time.sleep(0.3)
                     data_repo.update_project_setting(project_uuid, width=width)
                     data_repo.update_project_setting(project_uuid, height=height)
-                    st.experimental_rerun()
+                    st.rerun()
 
     st.write("")
     st.write("")

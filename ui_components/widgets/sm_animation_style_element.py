@@ -1,15 +1,11 @@
-import time
 import uuid
 import os
-import zipfile
 import requests
 import random
 import string
-import tarfile
-from PIL import Image
 import streamlit as st
-from shared.constants import COMFY_BASE_PATH, InternalFileType
-from ui_components.methods.common_methods import save_new_image
+from shared.constants import COMFY_BASE_PATH, InternalFileTag, InternalFileType
+from ui_components.widgets.download_file_progress_bar import download_file_widget
 from utils import st_memory
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES
 from ui_components.methods.animation_style_methods import (
@@ -19,7 +15,6 @@ from ui_components.methods.animation_style_methods import (
     get_keyframe_positions,
     load_shot_settings,
     plot_weights,
-    update_session_state_with_animation_details,
 )
 from ui_components.methods.file_methods import (
     get_files_in_a_directory,
@@ -29,6 +24,9 @@ from ui_components.methods.file_methods import (
 from ui_components.widgets.display_element import display_motion_lora
 from ui_components.methods.ml_methods import train_motion_lora
 from utils.data_repo.data_repo import DataRepo
+from streamlit.elements.utils import _shown_default_value_warning
+
+_shown_default_value_warning = True
 
 
 def animation_sidebar(
@@ -54,36 +52,64 @@ def animation_sidebar(
 ):
     with st.sidebar:
         with st.expander("⚙️ Visualisation of motion settings", expanded=True):
-            # if st_memory.toggle("Open", key="open_motion_data"):
+            if st_memory.toggle(
+                "Open", key="open_motion_data", help="Closing this will speed up the interface.", value=True
+            ):
 
-            keyframe_positions = get_keyframe_positions(
-                type_of_frame_distribution,
-                dynamic_frame_distribution_values,
-                img_list,
-                linear_frame_distribution_value,
+                keyframe_positions = get_keyframe_positions(
+                    type_of_frame_distribution,
+                    dynamic_frame_distribution_values,
+                    img_list,
+                    linear_frame_distribution_value,
+                )
+                keyframe_positions = [int(kf * 16) for kf in keyframe_positions]
+                last_key_frame_position = keyframe_positions[-1]
+                strength_values = extract_strength_values(
+                    type_of_strength_distribution,
+                    dynamic_strength_values,
+                    keyframe_positions,
+                    linear_cn_strength_value,
+                )
+                key_frame_influence_values = extract_influence_values(
+                    type_of_key_frame_influence,
+                    dynamic_key_frame_influence_values,
+                    keyframe_positions,
+                    linear_key_frame_influence_value,
+                )
+                weights_list, frame_numbers_list = calculate_weights(
+                    keyframe_positions,
+                    strength_values,
+                    4,
+                    key_frame_influence_values,
+                    last_key_frame_position,
+                )
+                plot_weights(weights_list, frame_numbers_list)
+
+
+def video_shortlist_btn(video_uuid, type="add_to_shortlist"):
+    data_repo = DataRepo()
+    # add to shortlist
+    if type == "add_to_shortlist":
+        if st.button(
+            "Add to upscaling shortlist", key=f"{video_uuid}_shortlist_btn", use_container_width=True
+        ):
+            data_repo.update_file(
+                video_uuid,
+                tag=InternalFileTag.SHORTLISTED_VIDEO.value,
             )
-            keyframe_positions = [int(kf * 16) for kf in keyframe_positions]
-            last_key_frame_position = keyframe_positions[-1]
-            strength_values = extract_strength_values(
-                type_of_strength_distribution,
-                dynamic_strength_values,
-                keyframe_positions,
-                linear_cn_strength_value,
+            st.rerun()
+    # remove from shortlist btn
+    else:
+        if st.button(
+            "Remove from upscaling shortlist",
+            key=f"{video_uuid}_remove_shortlist_btn",
+            use_container_width=True,
+        ):
+            data_repo.update_file(
+                video_uuid,
+                tag="",
             )
-            key_frame_influence_values = extract_influence_values(
-                type_of_key_frame_influence,
-                dynamic_key_frame_influence_values,
-                keyframe_positions,
-                linear_key_frame_influence_value,
-            )
-            weights_list, frame_numbers_list = calculate_weights(
-                keyframe_positions,
-                strength_values,
-                4,
-                key_frame_influence_values,
-                last_key_frame_position,
-            )
-            plot_weights(weights_list, frame_numbers_list)
+            st.rerun()
 
 
 def video_motion_settings(shot_uuid, img_list):
@@ -246,6 +272,7 @@ def select_motion_lora_element(shot_uuid, model_files):
                         step=0.01,
                         key=f"strength_of_lora_{idx}",
                     )
+
                     lora_data.append(
                         {
                             "filename": motion_lora,
@@ -254,14 +281,22 @@ def select_motion_lora_element(shot_uuid, model_files):
                         }
                     )
 
+                if strength_of_lora != lora["lora_strength"] or motion_lora != lora["filename"]:
+                    st.session_state[f"lora_data_{shot_uuid}"][idx] = {
+                        "filename": motion_lora,
+                        "lora_strength": strength_of_lora,
+                        "filepath": lora_file_dest + "/" + files[0],
+                    }
+                    st.rerun
+
                 with h5:
-                    when_to_apply_lora = st.slider(
+                    lora_range = st.slider(
                         "When to apply:",
                         min_value=0,
                         max_value=100,
                         value=(0, 100),
                         step=1,
-                        key=f"when_to_apply_lora_{idx}",
+                        key=f"lora_range_{idx}",
                         disabled=True,
                         help="This feature is not yet available.",
                     )
@@ -272,12 +307,11 @@ def select_motion_lora_element(shot_uuid, model_files):
                         st.session_state[f"lora_data_{shot_uuid}"].pop(idx)
                         st.rerun()
 
-                # displaying preview
-
             if len(st.session_state[f"lora_data_{shot_uuid}"]) == 0:
                 text = "Add a LoRA"
             else:
                 text = "Add another LoRA"
+
             if st.button(text, key="add_motion_guidance"):
                 if files and len(files):
                     st.session_state[f"lora_data_{shot_uuid}"].append(
@@ -311,41 +345,21 @@ def select_motion_lora_element(shot_uuid, model_files):
                 display_motion_lora(selected_lora_optn, lora_file_links)
 
                 if st.button("Download LoRA", key="download_lora"):
-                    with st.spinner("Downloading LoRA..."):
-                        save_directory = os.path.join(COMFY_BASE_PATH, "models", "animatediff_motion_lora")
-                        os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
-
-                        # Extract the filename from the URL
-                        selected_lora, lora_idx = next(
-                            (
-                                (ele, idx)
-                                for idx, ele in enumerate(lora_file_links.keys())
-                                if selected_lora_optn in ele
-                            ),
-                            None,
-                        )
-                        filename = selected_lora.split("/")[-1]
-                        save_path = os.path.join(save_directory, filename)
-
-                        # Download the file
-                        download_lora_bar = st.progress(0, text="")
-                        response = requests.get(selected_lora, stream=True)
-                        if response.status_code == 200:
-                            total_size = int(response.headers.get("content-length", 0))
-                            with open(save_path, "wb") as f:
-                                received_bytes = 0
-
-                                for data in response.iter_content(chunk_size=8192):
-                                    f.write(data)
-                                    received_bytes += len(data)
-                                    progress = received_bytes / total_size
-                                    download_lora_bar.progress(progress)
-
-                            st.success(f"Downloaded LoRA to {save_path}")
-                            download_lora_bar.empty()
-                            st.rerun()
-                        else:
-                            st.error("Failed to download LoRA")
+                    save_directory = os.path.join(COMFY_BASE_PATH, "models", "animatediff_motion_lora")
+                    selected_lora, lora_idx = next(
+                        (
+                            (ele, idx)
+                            for idx, ele in enumerate(lora_file_links.keys())
+                            if selected_lora_optn in ele
+                        ),
+                        None,
+                    )
+                    filename = selected_lora.split("/")[-1]
+                    download_file_widget(
+                        selected_lora,
+                        filename,
+                        save_directory,
+                    )
 
         elif where_to_download_from == "From a URL":
             with text1:
@@ -433,7 +447,11 @@ def select_sd_model_element(shot_uuid, default_model):
     else:
         model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
         ignored_model_list = ["dynamicrafter_512_interp_v1.ckpt"]
-        model_files = [file for file in model_files if "xl" not in file and file not in ignored_model_list]
+        model_files = [
+            file
+            for file in model_files
+            if "xl" not in file.lower() and "sd3" not in file.lower() and file not in ignored_model_list
+        ]
 
     sd_model_dict = {
         "Realistic_Vision_V5.1.safetensors": {
@@ -512,46 +530,11 @@ def select_sd_model_element(shot_uuid, default_model):
             )
 
             if st.button("Download Model", key="download_model"):
-                with st.spinner("Downloading model..."):
-                    download_bar = st.progress(0, text="")
-                    save_directory = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
-                    os.makedirs(save_directory, exist_ok=True)  # Create the directory if it doesn't exist
-
-                    # Retrieve the URL using the selected model name
-                    model_url = sd_model_dict[model_name_selected]["url"]
-
-                    # Download the model and save it to the directory
-                    response = requests.get(model_url, stream=True)
-                    zip_filename = sd_model_dict[model_name_selected]["filename"]
-                    filepath = os.path.join(save_directory, zip_filename)
-                    print("filepath: ", filepath)
-                    if response.status_code == 200:
-                        total_size = int(response.headers.get("content-length", 0))
-
-                        with open(filepath, "wb") as f:
-                            received_bytes = 0
-
-                            for data in response.iter_content(chunk_size=8192):
-                                f.write(data)
-                                received_bytes += len(data)
-                                progress = received_bytes / total_size
-                                download_bar.progress(progress)
-
-                        st.success(f"Downloaded {model_name_selected} to {save_directory}")
-                        download_bar.empty()
-
-                    if model_url.endswith(".zip") or model_url.endswith(".tar"):
-                        st.success("Extracting the zip file. Please wait...")
-                        new_filepath = filepath.replace(zip_filename, "")
-                        if model_url.endswith(".zip"):
-                            with zipfile.ZipFile(f"{filepath}", "r") as zip_ref:
-                                zip_ref.extractall(new_filepath)
-                        else:
-                            with tarfile.open(f"{filepath}", "r") as tar_ref:
-                                tar_ref.extractall(new_filepath)
-
-                        os.remove(filepath)
-                    st.rerun()
+                download_file_widget(
+                    sd_model_dict[model_name_selected]["url"],
+                    sd_model_dict[model_name_selected]["filename"],
+                    checkpoints_dir,
+                )
 
         elif where_to_get_model == "Upload a model":
             st.info("It's simpler to just drop this into the ComfyUI/models/checkpoints directory.")
@@ -565,7 +548,7 @@ def select_sd_model_element(shot_uuid, default_model):
                     "Make sure to get the download url of the model. \n\n For example, from Civit, this should look like this: https://civitai.com/api/download/models/179446. \n\n While from Hugging Face, it should look like this: https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors"
                 )
 
-            if st.button("Download Model", key="download_model"):
+            if st.button("Download Model", key="download_model_url"):
                 with st.spinner("Downloading model..."):
                     save_directory = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
                     os.makedirs(save_directory, exist_ok=True)
@@ -584,8 +567,6 @@ def select_sd_model_element(shot_uuid, default_model):
 
 
 def individual_frame_settings_element(shot_uuid, img_list):
-    header_col_1, _, header_col_3, header_col_4 = st.columns([1.0, 1.5, 1.0, 1.0])
-
     st.write("")
     items_per_row = 3
     strength_of_frames = []
@@ -673,13 +654,13 @@ def individual_frame_settings_element(shot_uuid, img_list):
             if key_suffix in k and not k.endswith(uuid):  # Ensure not to affect the original slider
                 st.session_state[k] = value
 
-    # In your main loop, check if updates need to be applied:
     if "update_values" in st.session_state:
         key_suffix, value, uuid, range_to_edit = st.session_state["update_values"]
         apply_updates(key_suffix, value, uuid, range_to_edit)
         del st.session_state["update_values"]  # Clear the update instruction after applying
 
     for i in range(0, len(img_list), items_per_row):
+        prev_frame_settings = None
         with st.container():
             grid = st.columns([2 if j % 2 == 0 else 1 for j in range(2 * items_per_row)])
 
@@ -698,12 +679,28 @@ def individual_frame_settings_element(shot_uuid, img_list):
                     if j == 0:
                         cols2 = st.columns(3)  # Create a grid with 3 columns
 
-                    # Place each item in the correct column based on its position in the row
-                    with cols2[j]:  # Use modulo to cycle through the 3 columns
-                        # Your existing code to display content in the grid
-                        if f"individual_prompt_{shot_uuid}_{idx}" not in st.session_state:
-                            for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
+                    with cols2[j]:
+                        # setting default values for frames (if they are newly added or settings is not present in the session_state)
+                        if f"distance_to_next_frame_{shot_uuid}_{idx}" not in st.session_state:
+                            # for newly created frames we apply prev frame settings if available
+                            settings_to_apply = prev_frame_settings or DEFAULT_SHOT_MOTION_VALUES
+                            cur_settings = {}
+                            for k, v in settings_to_apply.items():
                                 st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+                                cur_settings[f"{k}"] = v
+
+                            prev_frame_settings = cur_settings
+
+                        else:
+                            cur_settings = {}
+                            for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
+                                t_key = f"{k}_{shot_uuid}_{idx}"
+                                cur_settings[k] = (
+                                    v if t_key not in st.session_state else st.session_state[t_key]
+                                )
+
+                            prev_frame_settings = cur_settings
+
                         sub1, sub2 = st.columns([1, 1])
                         with sub1:
                             individual_prompt = st.text_input(
@@ -844,41 +841,6 @@ def individual_frame_settings_element(shot_uuid, img_list):
 
             if (i < len(img_list) - 1) or (len(img_list) % items_per_row != 0):
                 st.markdown("***")
-
-    with header_col_1:
-        st.markdown("##### Individual frame settings")
-    with header_col_4:
-        if st.button(
-            "Save current settings",
-            key="save_current_settings",
-            use_container_width=True,
-            help="Settings will also be saved when you generate the animation.",
-        ):
-            update_session_state_with_animation_details(
-                shot_uuid,
-                img_list,
-                strength_of_frames,
-                distances_to_next_frames,
-                speeds_of_transitions,
-                freedoms_between_frames,
-                motions_during_frames,
-                individual_prompts,
-                individual_negative_prompts,
-                [],
-                sd_model,
-            )
-            st.success("Settings saved successfully.")
-            time.sleep(0.7)
-            st.rerun()
-    with header_col_3:
-        if st.button("Reset to default", use_container_width=True, key="reset_to_default"):
-            for idx, _ in enumerate(img_list):
-                for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
-                    st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
-
-            st.success("All frames have been reset to default values.")
-            st.rerun()
-        st.write("")
 
     return (
         strength_of_frames,

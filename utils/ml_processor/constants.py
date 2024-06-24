@@ -18,6 +18,8 @@ class ComfyWorkflow(ExtendedEnum):
     MOTION_LORA = "motion_lora"
     IPADAPTER_COMPOSITION = "ipadapter_composition"
     DYNAMICRAFTER = "dynamicrafter"
+    CREATIVE_IMAGE_GEN = "creative_image_gen"
+    SD3 = "sd3"
 
 
 @dataclass
@@ -226,6 +228,14 @@ class ML_MODEL:
 
     # addition 21/04/2024
     sd3 = MLModel("stability-ai/sd3", "")
+
+    # addition 12/06/2024
+    creative_image_gen = MLModel(
+        ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.CREATIVE_IMAGE_GEN
+    )
+    sd3_local = MLModel(
+        ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.SD3
+    )
 
     @staticmethod
     def get_model_by_db_obj(model_db_obj):

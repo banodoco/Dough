@@ -1,4 +1,5 @@
 import io
+import multiprocessing
 import random
 from typing import List
 import os
@@ -13,10 +14,13 @@ import time
 import uuid
 from io import BytesIO
 import numpy as np
+from django.db import transaction
+from utils.common_utils import acquire_lock, release_lock
 from shared.constants import (
     COMFY_BASE_PATH,
     OFFLINE_MODE,
     SERVER,
+    InferenceStatus,
     InferenceType,
     InternalFileTag,
     InternalFileType,
@@ -35,13 +39,19 @@ from ui_components.methods.file_methods import (
     save_or_host_file_bytes,
 )
 from ui_components.methods.video_methods import sync_audio_and_duration
-from ui_components.models import InternalFrameTimingObject, InternalSettingObject
-from utils.common_utils import acquire_lock, release_lock
+from ui_components.models import (
+    InferenceLogObject,
+    InternalFrameTimingObject,
+    InternalProjectObject,
+    InternalSettingObject,
+)
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType
 
 from ui_components.models import InternalFileObject
 from typing import Union
+
+from utils.ml_processor.gpu.utils import COMFY_RUNNER_PATH
 
 
 # TODO: image format is assumed to be PNG, change this later
@@ -797,7 +807,7 @@ def process_inference_output(**kwargs):
             #     output = VideoProcessor.update_video_bytes_speed(output, shot.duration)
 
             video_location = (
-                "videos/" + str(shot.project.uuid) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".mp4"
+                "videos/" + str(shot.project.uuid) + "/assets/videos/completed/" + str(uuid.uuid4()) + ".mp4"
             )
             video = convert_bytes_to_file(
                 file_location_to_save=video_location,
@@ -955,64 +965,118 @@ def check_project_meta_data(project_uuid):
 
     key = project_uuid
     if acquire_lock(key):
-        project = data_repo.get_project_from_uuid(project_uuid)
-        timing_update_data = (
-            json.loads(project.meta_data).get(ProjectMetaData.DATA_UPDATE.value, None)
-            if project.meta_data
-            else None
-        )
-        if timing_update_data and len(timing_update_data):
-            for timing_uuid in timing_update_data:
-                _ = data_repo.get_timing_from_uuid(timing_uuid, invalidate_cache=True)
+        with transaction.atomic():
+            project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
+            timing_update_data = (
+                json.loads(project.meta_data).get(ProjectMetaData.DATA_UPDATE.value, None)
+                if project.meta_data
+                else None
+            )
+            if timing_update_data and len(timing_update_data):
+                for timing_uuid in timing_update_data:
+                    _ = data_repo.get_timing_from_uuid(timing_uuid, invalidate_cache=True)
 
-        gallery_update_data = (
-            json.loads(project.meta_data).get(ProjectMetaData.GALLERY_UPDATE.value, False)
-            if project.meta_data
-            else False
-        )
-        if gallery_update_data:
-            pass
+            gallery_update_data = (
+                json.loads(project.meta_data).get(ProjectMetaData.GALLERY_UPDATE.value, False)
+                if project.meta_data
+                else False
+            )
+            if gallery_update_data:
+                pass
 
-        shot_update_data = (
-            json.loads(project.meta_data).get(ProjectMetaData.SHOT_VIDEO_UPDATE.value, [])
-            if project.meta_data
-            else []
-        )
-        if shot_update_data and len(shot_update_data):
-            for shot_uuid in shot_update_data:
-                _ = data_repo.get_shot_list(shot_uuid, invalidate_cache=True)
+            shot_update_data = (
+                json.loads(project.meta_data).get(ProjectMetaData.SHOT_VIDEO_UPDATE.value, [])
+                if project.meta_data
+                else []
+            )
+            if shot_update_data and len(shot_update_data):
+                for shot_uuid in shot_update_data:
+                    _ = data_repo.get_shot_list(shot_uuid, invalidate_cache=True)
 
-        # clearing update data from cache
-        meta_data = {
-            ProjectMetaData.DATA_UPDATE.value: [],
-            ProjectMetaData.GALLERY_UPDATE.value: False,
-            ProjectMetaData.SHOT_VIDEO_UPDATE.value: [],
-        }
-        data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
-
+            # clearing update data from cache
+            blank_data_obj = {
+                ProjectMetaData.DATA_UPDATE.value: [],
+                ProjectMetaData.GALLERY_UPDATE.value: False,
+                ProjectMetaData.SHOT_VIDEO_UPDATE.value: [],
+            }
+            meta_data = json.loads(project.meta_data) if project.meta_data else {}
+            meta_data.update(blank_data_obj)
+            data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
         release_lock(key)
 
 
 def update_app_setting_keys():
-    data_repo = DataRepo()
-    app_logger = AppLogger()
+    # TODO: not in use atm
+    # data_repo = DataRepo()
+    # app_logger = AppLogger()
 
-    if OFFLINE_MODE:
-        key = os.getenv("REPLICATE_KEY", None)
-    else:
-        import boto3
+    # if OFFLINE_MODE:
+    #     key = os.getenv("REPLICATE_KEY", "")
+    # else:
+    #     import boto3
 
-        ssm = boto3.client("ssm", region_name="ap-south-1")
-        key = ssm.get_parameter(Name="/backend/banodoco/replicate/key")["Parameter"]["Value"]
+    #     ssm = boto3.client("ssm", region_name="ap-south-1")
+    #     key = ssm.get_parameter(Name="/backend/banodoco/replicate/key")["Parameter"]["Value"]
 
-    app_setting = data_repo.get_app_secrets_from_user_uuid()
-    if app_setting and app_setting["replicate_key"] == key:
-        return
+    # app_setting = data_repo.get_app_secrets_from_user_uuid()
+    # if app_setting and app_setting["replicate_key"] == key:
+    #     return
 
-    app_logger.log(LoggingType.DEBUG, "setting keys", None)
-    data_repo.update_app_setting(replicate_username="update")
-    data_repo.update_app_setting(replicate_key=key)
+    # app_logger.log(LoggingType.DEBUG, "setting keys", None)
+    # data_repo.update_app_setting(replicate_username="update")
+    # data_repo.update_app_setting(replicate_key=key)
+    pass
 
 
 def random_seed():
     return random.randint(10**14, 10**15 - 1)
+
+
+# setting up multiprocessing queue for log termination
+# NOTE: for some reason concurrent future is not working properly with streamlit (it's not able to pickle methods on state refresh)
+def stop_gen(log):
+    data_repo = DataRepo()
+
+    in_progress = log.status == InferenceStatus.IN_PROGRESS.value
+    data_repo.update_inference_log(uuid=log.uuid, status=InferenceStatus.CANCELED.value)
+    print(f"DB update {log.uuid} ----------")
+
+    if in_progress:
+        sys.path.append(str(os.getcwd()) + COMFY_RUNNER_PATH[1:])
+        from comfy_runner.inf import ComfyRunner
+
+        comfy_runner = ComfyRunner()
+        comfy_runner.stop_current_generation(log.uuid, 3)
+        print(f"Process stopped {log.uuid} ----------")
+
+
+def stop_generations_worker():
+    queue = multiprocessing.Queue()
+    num_workers = 10
+
+    def worker():
+        while True:
+            log = queue.get()
+            if log is None:
+                break
+            stop_gen(log)
+
+    workers = [multiprocessing.Process(target=worker) for _ in range(num_workers)]
+    for w in workers:
+        w.start()
+
+    return queue, workers
+
+
+def stop_generations(logs: List[InferenceLogObject]):
+    queue, workers = stop_generations_worker()
+
+    for log in logs:
+        if log.status in [InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value]:
+            queue.put(log)
+
+    for _ in range(len(workers)):
+        queue.put(None)
+
+    for w in workers:
+        w.join()

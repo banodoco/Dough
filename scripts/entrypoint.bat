@@ -44,9 +44,9 @@ goto :loop
             rem Step 2: Check if the comfy_runner folder is present
             if exist "!CURRENT_DIR!\comfy_runner" (
                 rem Step 3a: If comfy_runner is present, pull from the feature/package branch
-                echo comfy_runner folder found. Pulling from feature/package branch.
+                rem echo comfy_runner folder found. Pulling from feature/package branch.
                 cd comfy_runner
-                git pull origin feature/package
+                rem git pull origin feature/package
                 cd "!CURRENT_DIR!"
             ) else (
                 rem Step 3b: If comfy_runner is not present, clone the repository

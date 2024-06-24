@@ -5,6 +5,7 @@ from shared.constants import (
     SECRET_ACCESS_TOKEN,
     InferenceParamType,
     InferenceStatus,
+    InferenceType,
     InternalFileType,
     InternalResponse,
 )
@@ -117,8 +118,9 @@ class DataRepo:
 
     # kwargs -  file_type: InternalFileType, tag = None, shot_uuid = "", project_id = None, page=None, data_per_page=None, sort_order=None
     def get_all_file_list(self, **kwargs):
-        kwargs["type"] = kwargs["file_type"]
-        del kwargs["file_type"]
+        if "file_type" in kwargs:
+            kwargs["type"] = kwargs["file_type"]
+            del kwargs["file_type"]
 
         res = self.db_repo.get_all_file_list(**kwargs)
         file_list = res.data["data"] if res.status else None
@@ -155,6 +157,12 @@ class DataRepo:
             file = normalize_size_internal_file_obj(file, **kwargs)
 
         return file
+
+    def get_file_children_list(self, file_uuid, transformation_type_list):
+        return self.db_repo.get_file_children_list(file_uuid, transformation_type_list)
+
+    def get_file_parent_list(self, file_uuid, transformation_type_list):
+        return self.db_repo.get_file_parent_list(file_uuid, transformation_type_list)
 
     def delete_file_from_uuid(self, uuid):
         res = self.db_repo.delete_file_from_uuid(uuid)
@@ -282,8 +290,15 @@ class DataRepo:
 
         input_params_data = json.loads(res.input_params)
         input_params_data[InferenceParamType.ORIGIN_DATA.value] = dict(kwargs)
+        generation_source = kwargs.get("inference_type", "")
+        generation_tag = kwargs.get("inference_tag", "")
 
-        status = self.update_inference_log(uuid, input_params=json.dumps(input_params_data))
+        status = self.update_inference_log(
+            uuid,
+            input_params=json.dumps(input_params_data),
+            generation_source=generation_source,
+            generation_tag=generation_tag,
+        )
         return status
 
     # ai model param map
@@ -463,26 +478,6 @@ class DataRepo:
         link = res.data["data"] if res.status else None
         return link
 
-    # lock
-    def acquire_lock(self, key):
-        retry_count = 0
-        res = None
-        while retry_count < 3:
-            try:
-                res = self.db_repo.acquire_lock(key)
-                retry_count = 10
-            except Exception as e:
-                app_logger = AppLogger()
-                app_logger.log(LoggingType.DEBUG, "database busy, retrying")
-                retry_count += 1
-                time.sleep(0.3)
-
-        return res.data["data"] if res and res.status else None
-
-    def release_lock(self, key):
-        res = self.db_repo.release_lock(key)
-        return res.status
-
     # shot
     def get_shot_from_uuid(self, shot_uuid):
         res = self.db_repo.get_shot_from_uuid(shot_uuid)
@@ -525,6 +520,33 @@ class DataRepo:
     # gives the count of 1. temp generated images 2. inference logs with in-progress/pending status
     def get_explorer_pending_stats(self, project_uuid):
         log_status_list = [InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value]
-        res = self.db_repo.get_explorer_pending_stats(project_uuid, log_status_list)
+        res = self.db_repo.get_explorer_pending_stats(
+            project_uuid,
+            log_status_list,
+            generation_source_list=[
+                InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
+                InferenceType.GALLERY_IMAGE_GENERATION.value,
+            ],
+        )
         count_data = res.data["data"] if res.status else {"temp_image_count": 0, "pending_image_count": 0}
         return count_data
+
+    # lock
+    def acquire_lock(self, key):
+        retry_count = 0
+        res = None
+        while retry_count < 3:
+            try:
+                res = self.db_repo.acquire_lock(key)
+                retry_count = 10
+            except Exception as e:
+                app_logger = AppLogger()
+                app_logger.log(LoggingType.DEBUG, "database busy, retrying")
+                retry_count += 1
+                time.sleep(0.3)
+
+        return res.data["data"] if res and res.status else None
+
+    def release_lock(self, key):
+        res = self.db_repo.release_lock(key)
+        return res.status

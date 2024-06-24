@@ -7,6 +7,7 @@ import tempfile
 import time
 from typing import List
 import uuid
+import json
 import ffmpeg
 import pkg_resources
 import streamlit as st
@@ -19,86 +20,45 @@ from moviepy.editor import (
 )
 from pydub import AudioSegment
 
-from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType, InternalFileTag
+from shared.constants import (
+    QUEUE_INFERENCE_QUERIES,
+    FileTransformationType,
+    InferenceLogTag,
+    InferenceType,
+    InternalFileTag,
+)
 from shared.file_upload.s3 import is_s3_image_url
+from ui_components.constants import ShotMetaData
+from ui_components.methods.animation_style_methods import get_generation_settings_from_log
 from ui_components.methods.file_methods import save_or_host_file_bytes
 from ui_components.models import InternalFileObject, InternalFrameTimingObject, InternalShotObject
 from utils.common_utils import padded_integer
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
-from utils.media_processor.interpolator import VideoInterpolator
 from utils.media_processor.video import VideoProcessor
 from utils.ml_processor.constants import ML_MODEL
 from utils.ml_processor.ml_interface import get_ml_client
 
 
-def create_single_interpolated_clip(
-    shot_uuid, quality, settings={}, variant_count=1, backlog=False, img_list=[]
-):
-    """
-    - this includes all the animation styles [direct morphing, interpolation, image to video]
-    - this stores the newly created video in the interpolated_clip_list and promotes them to
-    timed_clip (if it's not already present)
-    """
-
+def upscale_video(file_uuid, styling_model, upscale_factor, promote_to_main_variant):
     from ui_components.methods.common_methods import process_inference_output
     from shared.constants import QUEUE_INFERENCE_QUERIES
 
     data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
-
-    if quality == "full":
-        interpolation_steps = VideoInterpolator.calculate_dynamic_interpolations_steps(shot.duration)
-    elif quality == "preview":
-        interpolation_steps = 3
-
-    settings.update(interpolation_steps=interpolation_steps)
-    if not (img_list and len(img_list)):
-        timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
-        img_list = [t.primary_image for t in timing_list]
-    settings.update(file_uuid_list=[t.uuid for t in img_list])
-
-    # res is an array of tuples (video_bytes, log)
-    res = VideoInterpolator.create_interpolated_clip(
-        settings["animation_style"], settings, variant_count, QUEUE_INFERENCE_QUERIES, backlog
-    )
-
-    if res:
-        for output, log in res:
-            inference_data = {
-                "inference_type": InferenceType.FRAME_INTERPOLATION.value,
-                "output": output,
-                "log_uuid": log.uuid,
-                "settings": settings,
-                "shot_uuid": str(shot_uuid),
-            }
-
-            process_inference_output(**inference_data)
-    else:
-        st.error("Failed to create interpolated clip")
-        time.sleep(0.5)
-        st.rerun()
-
-
-def upscale_video(shot_uuid, styling_model, upscale_factor, promote_to_main_variant):
-    from ui_components.methods.common_methods import process_inference_output
-    from shared.constants import QUEUE_INFERENCE_QUERIES
-
-    data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    video_file: InternalFileObject = data_repo.get_file_from_uuid(uuid=file_uuid)
+    shot_meta_data, data_type = get_generation_settings_from_log(video_file.inference_log.uuid)
 
     # hacky fix to prevent conflicting opencv versions
     try:
         pkg_resources.require("opencv-python-headless==4.8.0.74")
     except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
-        # Install the package if it's not installed
         try:
             subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", "opencv-python-headless[ffmpeg]==4.8.0.74"]
+                [sys.executable, "-m", "pip", "install", "opencv-python-headless==4.8.0.74", "ffmpeg-python"]
             )
-            print("Package installed successfully.")
+            print("Packages installed successfully.")
         except subprocess.CalledProcessError as e:
-            print(f"Error installing package: {e}")
+            print(f"Error installing packages: {e}")
 
     query_obj = MLQueryObject(
         timing_uuid=None,
@@ -113,10 +73,22 @@ def upscale_video(shot_uuid, styling_model, upscale_factor, promote_to_main_vari
         height=512,  # these are dummy values, not used
         width=512,
         data={
-            "file_video": shot.main_clip.uuid,
             "model": styling_model,
             "upscale_factor": upscale_factor,
+            "shot_data": {
+                ShotMetaData.MOTION_DATA.value: json.dumps(shot_meta_data)
+            },  # adding parent's generation detail in the upscaled version (change the key according to the model)
         },
+        file_data={"video_file": {"uuid": video_file.uuid, "dest": "input/"}},
+        relation_data=json.dumps(
+            [
+                {
+                    "type": "file",
+                    "id": video_file.uuid,
+                    "transformation_type": FileTransformationType.UPSCALE.value,
+                }
+            ]
+        ),
     )
 
     ml_client = get_ml_client()
@@ -124,12 +96,24 @@ def upscale_video(shot_uuid, styling_model, upscale_factor, promote_to_main_vari
         ML_MODEL.video_upscaler, query_obj, queue_inference=QUEUE_INFERENCE_QUERIES
     )
     if log:
+        # TODO: this is a hackish way of adding the input images of the base shot in the upscaled version
+        # change it so that the origin data is added in the log before it is created
+        origin_log = data_repo.get_inference_log_from_uuid(video_file.inference_log.uuid)
+        shot_data = json.loads(origin_log.input_params)
+        file_uuid_list = (
+            shot_data.get("origin_data", json.dumps({})).get("settings", {}).get("file_uuid_list", [])
+        )
+
         inference_data = {
             "inference_type": InferenceType.FRAME_INTERPOLATION.value,
             "output": output,
             "log_uuid": log.uuid,
-            "settings": {"promote_to_main_variant": promote_to_main_variant},
-            "shot_uuid": str(shot_uuid),
+            "settings": {
+                "promote_to_main_variant": promote_to_main_variant,
+                "file_uuid_list": file_uuid_list,
+            },
+            "shot_uuid": str(video_file.origin_shot_uuid),
+            "inference_tag": InferenceLogTag.UPSCALED_VIDEO.value,
         }
 
         process_inference_output(**inference_data)
@@ -146,7 +130,7 @@ def update_speed_of_video_clip(video_file: InternalFileObject, duration) -> Inte
 
     new_file_name = "".join(random.choices(string.ascii_lowercase + string.digits, k=16)) + ".mp4"
     new_file_location = (
-        "videos/" + str(video_file.project.uuid) + "/assets/videos/1_final/" + str(new_file_name)
+        "videos/" + str(video_file.project.uuid) + "/assets/videos/completed/" + str(new_file_name)
     )
 
     video_bytes = VideoProcessor.update_video_speed(location_of_video, duration)
@@ -283,7 +267,7 @@ def sync_audio_and_duration(video_file: InternalFileObject, shot_uuid, audio_syn
 
     temp_file_list.append(output_temp_video_file)
     unique_name = str(uuid.uuid4())
-    output_video_file = f"videos/{shot.project.uuid}/assets/videos/0_raw/{unique_name}.mp4"
+    output_video_file = f"videos/{shot.project.uuid}/assets/videos/completed/{unique_name}.mp4"
     hosted_url = save_or_host_file_bytes(video_bytes, output_video_file, ext=".mp4")
     if hosted_url:
         data_repo.update_file(output_video.uuid, hosted_url=hosted_url)

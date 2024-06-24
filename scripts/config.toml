@@ -1,0 +1,35 @@
+[file_hash]
+"sd_xl_base_1.0.safetensors" = { "location" = "models/checkpoints/", "hash" = ["cf9d29192ef7433096a69fe5e32efba1"]}
+"sd_xl_refiner_1.0.safetensors" = { "location" = "models/checkpoints/", "hash" = ["c0df90f318abf30fcd2cd233ea638251"]}
+"Realistic_Vision_V5.1.safetensors" = { "location" = "models/checkpoints/", "hash" = ["03c000bbbbfede673b334897648431ba"]}
+"dreamshaper_8.safetensors" = { "location" = "models/checkpoints/", "hash" = ["1bfe9fce2c2c1498bcb6fdac2e44aab5"]}
+"sd_xl_refiner_1.0_0.9vae.safetensors" = { "location" = "models/checkpoints/", "hash" = ["74d31c96097471d5d3bd93a915ad0b30"]}
+"pytorch_model.bin" = { "location" = "", "hash" = ["0a0900180245762f122a681839391a9b", "ac277e29ea6d70799072d1ed52ac0f79"]}
+"v3_sd15_sparsectrl_rgb.ckpt" = { "location" = "models/controlnet/SD1.5/animatediff/", "hash" = ["b7d6b72ee2ba2866d167277598f27340"]}
+"inpainting_diffusion_pytorch_model.fp16.safetensors" = { "location" = "models/unet/inpainting_diffusion_pytorch_model.fp16.safetensors/", "hash" = ["9c688d78a75c1d3a0b33afffdd7e72f2"]}
+"vae-ft-mse-840000-ema-pruned.safetensors" = { "location" = "models/vae/", "hash" = ["418949762c3f321f2927e590e255f63c"]}
+"ip_plus_composition_sd15.safetensors" = { "location" = "models/ipadapter/", "hash" = ["029d345e257b72bc7be2fdf0a2295eba"]}
+"ip-adapter_sdxl.safetensors" = { "location" = "models/ipadapter/", "hash" = ["67b7f27bbf03d6b6921e520779abc212"]}
+"ip-adapter-plus_sd15.bin" = { "location" = "models/ipadapter/", "hash" = ["a50be6ac20883c4969c7bb60d5f2a46b"]}
+"v3_sd15_mm.ckpt" = { "location" = "models/animatediff_models/", "hash" = ["ac855686ee49fb5436c881c50a9b59ca"]}
+"AnimateLCM_sd15_t2v.ckpt" = { "location" = "models/animatediff_models/", "hash" = ["b5426e509e70b1b1b13ca03f877bac2a"]}
+"AnimateLCM_sd15_t2v_lora.safetensors" = { "location" = "models/loras/", "hash" = ["fb6fa0bf09bcfbe3d002ce0bfdfa7770"]}
+
+
+[node_version]
+"ComfyUI-Manager" = { "url" = "https://github.com/ltdrdata/ComfyUI-Manager", "commit_hash" = "61dff9dca6dc6a420bf2975326f54660cf081cd1"}
+"ComfyUI_IPAdapter_plus" = { "url" = "https://github.com/cubiq/ComfyUI_IPAdapter_plus", "commit_hash" = "7d8adaec730bff243cc3026eed5111695cc5ed4e"}
+"comfyui-various" = { "url" = "https://github.com/jamesWalker55/comfyui-various", "commit_hash" = "ec58185387c75b74ee93d6f835ff480772dbc64d"}
+"comfy_PoP" = { "url" = "https://github.com/picturesonpictures/comfy_PoP", "commit_hash" = "4cb7bf7c55c484e50dddf6b881739b7a506b0946"}
+"ComfyUI-Frame-Interpolation" = { "url" = "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation", "commit_hash" = "1c4c4b4f9a99e7e6eb7c5a5f3fdc7c9dfd319357"}
+"efficiency-nodes-comfyui" = { "url" = "https://github.com/jags111/efficiency-nodes-comfyui", "commit_hash" = "a5422d6599971881b5fc80d0496ca3a8b6108267"}
+"ComfyUI_FizzNodes" = { "url" = "https://github.com/FizzleDorf/ComfyUI_FizzNodes", "commit_hash" = "3db5b71e2ff4f7016ce91c860c6e794fa41f174d"}
+"ComfyUI-Advanced-ControlNet" = { "url" = "https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet", "commit_hash" = "f6adc32937413b46ee0b489d03eb539e6999d7e1"}
+"ComfyUI-AnimateDiff-Evolved" = { "url" = "https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved", "commit_hash" = "e2313c42fdadf2b6d9cf019c9695c419ac482548"}
+"ComfyUI-VideoHelperSuite" = { "url" = "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite", "commit_hash" = "08dc3d63a76942c0bdfd8492a50d1585e5252149"}
+"ComfyUI_essentials" = { "url" = "https://github.com/cubiq/ComfyUI_essentials", "commit_hash" = "b0cfa1bfb4f27fdf41d021b27d7ac930e704b0e7"}
+"steerable-motion" = { "url" = "https://github.com/banodoco/steerable-motion", "commit_hash" = "d747e46b215d84407578fd2a6ed26763185d00c1"}
+
+
+[comfy]
+commit_hash = "ac151ac1698624bc4e321addb8c126069aced4b0"

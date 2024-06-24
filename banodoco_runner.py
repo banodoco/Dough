@@ -27,13 +27,13 @@ from shared.constants import (
 from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
 from shared.utils import get_file_type
+from utils.common_utils import acquire_lock, release_lock
 from ui_components.methods.file_methods import (
     get_file_bytes_and_extension,
     load_from_env,
     save_or_host_file_bytes,
     save_to_env,
 )
-from utils.common_utils import acquire_lock, release_lock
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ComfyWorkflow, replicate_status_map
 
@@ -75,6 +75,9 @@ def handle_termination(signal, frame):
     TERMINATE_SCRIPT = True
     sys.exit(0)
 
+
+if platform.system() == "Windows":
+    signal.signal(signal.SIGINT, handle_termination)
 
 signal.signal(signal.SIGTERM, handle_termination)
 
@@ -217,6 +220,34 @@ def format_model_output(output, model_display_name):
         return [output[-1]]
 
 
+def update_project_meta_data(timing_update_list, gallery_update_list, shot_update_list):
+    # adding update_data in the project
+    from backend.models import Project
+
+    final_res = {}
+    for project_uuid, val in timing_update_list.items():
+        final_res[project_uuid] = {ProjectMetaData.DATA_UPDATE.value: list(set(val))}
+
+    for project_uuid, val in gallery_update_list.items():
+        if project_uuid not in final_res:
+            final_res[project_uuid] = {}
+
+        final_res[project_uuid].update({f"{ProjectMetaData.GALLERY_UPDATE.value}": val})
+
+    for project_uuid, val in shot_update_list.items():
+        final_res[project_uuid] = {ProjectMetaData.SHOT_VIDEO_UPDATE.value: list(set(val))}
+
+    for project_uuid, val in final_res.items():
+        key = str(project_uuid)
+        if acquire_lock(key):
+            project = Project.objects.filter(uuid=project_uuid, is_disabled=False).first()
+            if project:
+                cur_meta_data = json.loads(project.meta_data) if project.meta_data else {}
+                cur_meta_data.update(val)
+                _ = Project.objects.filter(uuid=project_uuid).update(meta_data=json.dumps(cur_meta_data))
+            release_lock(key)
+
+
 def check_and_update_db():
     # print("updating logs")
     from backend.models import InferenceLog, AppSetting, User
@@ -230,7 +261,7 @@ def check_and_update_db():
         user = User.objects.filter(is_disabled=False).first()
     except Exception as e:
         app_logger.log(LoggingType.DEBUG, "db creation pending..")
-        time.sleep(3)
+        time.sleep(5)
         return
 
     if not user:
@@ -238,20 +269,20 @@ def check_and_update_db():
 
     app_setting = AppSetting.objects.filter(user_id=user.id, is_disabled=False).first()
     replicate_key = app_setting.replicate_key_decrypted
-    if not replicate_key:
-        # app_logger.log(LoggingType.ERROR, "Replicate key not found")
-        return
+    # if not replicate_key:
+    #     app_logger.log(LoggingType.ERROR, "Replicate key not found")
+    #     return
 
     log_list = InferenceLog.objects.filter(
         status__in=[InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value], is_disabled=False
     ).all()
 
-    # these items will updated in the cache when the app refreshes the next time
-    timing_update_list = {}  # {project_id: [timing_uuids]}
-    gallery_update_list = {}  # {project_id: True/False}
-    shot_update_list = {}  # {project_id: [shot_uuids]}
-
     for log in log_list:
+        # these items will updated in the cache when the app refreshes the next time
+        timing_update_list = {}  # {project_id: [timing_uuids]}
+        gallery_update_list = {}  # {project_id: True/False}
+        shot_update_list = {}  # {project_id: [shot_uuids]}
+
         input_params = json.loads(log.input_params)
         replicate_data = input_params.get(InferenceParamType.REPLICATE_INFERENCE.value, None)
         local_gpu_data = input_params.get(InferenceParamType.GPU_INFERENCE.value, None)
@@ -356,7 +387,11 @@ def check_and_update_db():
                 # fetching the current status again (as this could have been cancelled)
                 log = InferenceLog.objects.filter(id=log.id).first()
                 cur_status = log.status
-                if cur_status in [InferenceStatus.FAILED.value, InferenceStatus.CANCELED.value]:
+                if cur_status in [
+                    InferenceStatus.FAILED.value,
+                    InferenceStatus.CANCELED.value,
+                    InferenceStatus.BACKLOG.value,
+                ]:
                     return
 
                 InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.IN_PROGRESS.value)
@@ -367,6 +402,7 @@ def check_and_update_db():
                     data["output_node_ids"],
                     data.get("extra_model_list", []),
                     data.get("ignore_model_list", []),
+                    log_tag=str(log.uuid),
                 )
                 end_time = time.time()
 
@@ -428,7 +464,11 @@ def check_and_update_db():
                 data = sai_data
                 log = InferenceLog.objects.filter(id=log.id).first()
                 cur_status = log.status
-                if cur_status in [InferenceStatus.FAILED.value, InferenceStatus.CANCELED.value]:
+                if cur_status in [
+                    InferenceStatus.FAILED.value,
+                    InferenceStatus.CANCELED.value,
+                    InferenceStatus.BACKLOG.value,
+                ]:
                     return
 
                 InferenceLog.objects.filter(id=log.id).update(status=InferenceStatus.IN_PROGRESS.value)
@@ -483,31 +523,7 @@ def check_and_update_db():
             # if replicate/gpu data is not present then removing the status
             InferenceLog.objects.filter(id=log.id).update(status="")
 
-    # adding update_data in the project
-    from backend.models import Project
-
-    final_res = {}
-    for project_uuid, val in timing_update_list.items():
-        final_res[project_uuid] = {ProjectMetaData.DATA_UPDATE.value: list(set(val))}
-
-    for project_uuid, val in gallery_update_list.items():
-        if project_uuid not in final_res:
-            final_res[project_uuid] = {}
-
-        final_res[project_uuid].update({f"{ProjectMetaData.GALLERY_UPDATE.value}": val})
-
-    for project_uuid, val in shot_update_list.items():
-        final_res[project_uuid] = {ProjectMetaData.SHOT_VIDEO_UPDATE.value: list(set(val))}
-
-    for project_uuid, val in final_res.items():
-        key = str(project_uuid)
-        if acquire_lock(key):
-            _ = Project.objects.filter(uuid=project_uuid).update(meta_data=json.dumps(val))
-            release_lock(key)
-
-    if not len(log_list):
-        # app_logger.log(LoggingType.DEBUG, f"No logs found")
-        pass
+        update_project_meta_data(timing_update_list, gallery_update_list, shot_update_list)
 
     return
 

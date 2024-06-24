@@ -8,6 +8,7 @@ import random
 import shutil
 import string
 import tempfile
+import time
 from typing import Union
 from urllib.parse import urlparse
 import zipfile
@@ -19,7 +20,7 @@ from moviepy.editor import VideoFileClip
 from dotenv import set_key, get_key
 import requests
 import streamlit as st
-from shared.constants import SERVER, InternalFileType, ServerType
+from shared.constants import SERVER, InternalFileTag, InternalFileType, ServerType
 from ui_components.models import InternalFileObject
 from utils.data_repo.data_repo import DataRepo
 
@@ -260,15 +261,21 @@ def save_to_env(key, value):
 
 
 def load_from_env(key):
-    val = get_key(dotenv_path=ENV_FILE_PATH, key_to_get=key)
-    return val
+    try:
+        val = get_key(dotenv_path=ENV_FILE_PATH, key_to_get=key)
+        return val
+    except Exception as e:
+        return None
 
 
-import zipfile
-import os
-import requests
-from PIL import Image
-from io import BytesIO
+def delete_from_env(key_to_delete):
+    with open(ENV_FILE_PATH, "r") as f:
+        lines = f.readlines()
+
+    with open(ENV_FILE_PATH, "w") as f:
+        for line in lines:
+            if not line.startswith(f"{key_to_delete}="):
+                f.write(line)
 
 
 def zip_images(image_locations, zip_filename="images.zip", filename_list=[]):
@@ -311,6 +318,10 @@ def zip_images(image_locations, zip_filename="images.zip", filename_list=[]):
 
 
 def create_duplicate_file(file: InternalFileObject, project_uuid=None) -> InternalFileObject:
+    """
+    this creates a duplicate InternalFileobject in the db, the actual file on the disk/or url
+    remains the same
+    """
     data_repo = DataRepo()
 
     unique_id = "".join(random.choices(string.ascii_lowercase + string.digits, k=5))
@@ -346,7 +357,7 @@ def copy_local_file(filepath, destination_directory, new_name):
         new_filepath = os.path.join(destination_directory, new_name)
         shutil.copy2(filepath, new_filepath)
     except Exception as e:
-        print("error occured: ", e)
+        pass
 
 
 def determine_dimensions_for_sdxl(width, height):
@@ -495,3 +506,15 @@ def get_files_in_a_directory(directory, ext_list=[]):
                     res.append(file)  # (os.path.join(root, file))
 
     return res
+
+
+def add_file_to_shortlist(file_uuid, project_uuid=None):
+    data_repo = DataRepo()
+    file: InternalFileObject = data_repo.get_file_from_uuid(file_uuid)
+
+    project_uuid = project_uuid or file.project.uuid
+    duplicate_file = create_duplicate_file(file, project_uuid)
+    data_repo.update_file(
+        duplicate_file.uuid,
+        tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value,
+    )

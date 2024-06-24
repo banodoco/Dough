@@ -72,6 +72,8 @@ class CreateInferenceLogDao(serializers.Serializer):
     total_inference_time = serializers.CharField(required=False)
     status = serializers.CharField(required=False, default="")
     model_name = serializers.CharField(max_length=512, allow_blank=True, required=False, default="")
+    generation_source = serializers.CharField(max_length=512, allow_blank=True, required=False, default="")
+    generation_tag = serializers.CharField(max_length=512, allow_blank=True, required=False, default="")
 
 
 class CreateAIModelParamMapDao(serializers.Serializer):
@@ -104,7 +106,7 @@ class CreateAppSettingDao(serializers.Serializer):
 class UpdateAppSettingDao(serializers.Serializer):
     uuid = serializers.CharField(max_length=100, required=False)  # picking the first app setting by defaults
     user_id = serializers.CharField(max_length=100, required=False)
-    replicate_key = serializers.CharField(max_length=100, required=False)
+    replicate_key = serializers.CharField(max_length=100, required=False, allow_blank=True)
     aws_access_key = serializers.CharField(max_length=100, required=False)
     stability_key = serializers.CharField(max_length=100, required=False)
     previous_project = serializers.CharField(max_length=100, required=False)

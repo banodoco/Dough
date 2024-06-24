@@ -1,4 +1,8 @@
 import time
+from shared.logging.constants import LoggingType
+from shared.logging.logging import AppLogger
+from ui_components.methods.common_methods import stop_generations
+from utils.ml_processor.gpu.utils import COMFY_RUNNER_PATH, setup_comfy_runner
 import streamlit as st
 
 from shared.constants import (
@@ -13,8 +17,6 @@ from shared.constants import (
 from ui_components.widgets.display_element import individual_video_display_element
 from ui_components.widgets.frame_movement_widgets import jump_to_single_frame_view_button
 import json
-import math
-from ui_components.widgets.frame_selector import update_current_frame_index
 
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL, MODEL_FILTERS
@@ -61,6 +63,7 @@ def sidebar_logger(shot_uuid):
             st.error("No backlogs")
             time.sleep(0.7)
             st.rerun()
+
     y1, y2 = st.columns([1, 1])
     with y1:
         display_options = ["In Progress", "All", "Succeeded", "Failed", "Backlog"]
@@ -130,7 +133,7 @@ def sidebar_logger(shot_uuid):
         # st.markdown("---")
         for _, log in enumerate(log_list):
             origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
-            if not log.status:
+            if not log.status or not origin_data:
                 continue
 
             inference_type = origin_data.get("inference_type", "")
@@ -153,18 +156,15 @@ def sidebar_logger(shot_uuid):
                     st.caption("-\-\-\-\-\-\-\-\-")
 
             with c1:
-
+                input_params = json.loads(log.input_params)
                 try:
-
-                    input_params = json.loads(log.input_params)
-                    model_name = json.loads(log.output_details)["model_name"].split("/")[-1]
-                    # workflow = query_dict["type_of_generation"]
-                    workflow = input_params["origin_data"]["settings"]["type_of_generation"]
+                    workflow = input_params[InferenceParamType.ORIGIN_DATA.value]["settings"][
+                        "type_of_generation"
+                    ]
+                    st.caption(f"Workflow: {workflow}")
                 except Exception as e:
-                    workflow = "Unavailable"
-                st.caption(f"Workflow: {workflow}")
-
-                # write type_of_generation from json
+                    model_name = json.loads(log.output_details)["model_name"].split("/")[-1]
+                    st.caption(f"Model: {model_name}")
 
             with c2:
                 if output_url:
@@ -213,7 +213,7 @@ def sidebar_logger(shot_uuid):
                     if st.button(
                         "Cancel", key=f"cancel_gen_{log.uuid}", use_container_width=True, help="Cancel"
                     ):
-                        err_msg = "Generation has already started"
+                        err_msg = "Generation is either already cancelled or failed"
                         success_msg = "Generation cancelled"
                         # fetching the current status as this could have been already started
                         # log = data_repo.get_inference_log_from_uuid(log.uuid)
@@ -224,13 +224,11 @@ def sidebar_logger(shot_uuid):
                         #     st.rerun()
                         # else:
 
-                        res = data_repo.update_inference_log(
-                            uuid=log.uuid, status=InferenceStatus.CANCELED.value
-                        )
-                        if not res:
-                            st.error(err_msg)
-                        else:
-                            st.success(success_msg)
+                        log = data_repo.get_inference_log_from_uuid(log.uuid)
+                        if log.status == InferenceStatus.IN_PROGRESS.value:
+                            setup_comfy_runner()
+                            stop_generations([log])
+
                         time.sleep(0.7)
                         st.rerun()
 
@@ -254,6 +252,34 @@ def sidebar_logger(shot_uuid):
 
                     elif inference_type == InferenceType.FRAME_INTERPOLATION.value:
                         jump_to_shot_button(origin_data.get("shot_uuid", ""), log.uuid)
+
+    if log_list and len(log_list):
+        st.markdown("***")
+        b1, b2 = st.columns([1, 1])
+        with b1:
+            if st.button(label="Cancel all", use_container_width=True):
+                log_filter_data = {
+                    "project_id": shot.project.uuid,
+                    "page": 1,
+                    "data_per_page": 1000,
+                    "status_list": [InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value],
+                }
+                all_log_list, total_count = data_repo.get_all_inference_log_list(**log_filter_data)
+                stop_generations(all_log_list)
+                st.rerun()
+        with b2:
+            if st.button(label="Move all to backlog", use_container_width=True):
+                log_filter_data = {
+                    "project_id": shot.project.uuid,
+                    "page": 1,
+                    "data_per_page": 1000,
+                    "status_list": [InferenceStatus.QUEUED.value],
+                }
+                all_log_list, total_count = data_repo.get_all_inference_log_list(**log_filter_data)
+                data_repo.update_inference_log_list(
+                    [log.uuid for log in all_log_list], status=InferenceStatus.BACKLOG.value
+                )
+                st.rerun()
 
 
 def video_inference_image_grid(origin_data):

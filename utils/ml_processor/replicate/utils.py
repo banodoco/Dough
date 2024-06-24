@@ -9,7 +9,6 @@ from utils.common_utils import user_credits_available
 from utils.constants import MLQueryObject
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.comfy_data_transform import (
-    get_file_list_from_query_obj,
     get_file_zip_url,
     get_model_workflow_from_query,
     get_workflow_json_url,
@@ -61,7 +60,11 @@ def get_model_params_from_query_obj(model, query_obj: MLQueryObject):
         ]
 
         # resizing image for sdxl
-        file_uuid_list, custom_dest = get_file_list_from_query_obj(query_obj)  # TODO: handle custom_dest
+        file_uuid_list = []
+        custom_dest = {}
+        for _, v in query_obj.file_data.items():
+            file_uuid_list.append(v["uuid"])
+            custom_dest[v["uuid"]] = v["dest"]
         if model.display_name() in models_using_sdxl and len(file_uuid_list):
             new_uuid_list = []
             for file_uuid in file_uuid_list:

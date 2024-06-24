@@ -1,7 +1,7 @@
 import json
 import streamlit as st
 import time
-from shared.constants import InferenceStatus
+from shared.constants import InferenceParamType, InferenceStatus
 from shared.logging.constants import LoggingPayload, LoggingType
 from utils.common_utils import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
@@ -18,6 +18,7 @@ def log_model_inference(model: MLModel, time_taken, **kwargs):
             del kwargs_dict[key]
 
     data_str = json.dumps(kwargs_dict)
+    origin_data = kwargs_dict.get(InferenceParamType.ORIGIN_DATA.value, {})
     time_taken = round(time_taken, 2) if time_taken else 0
 
     # system_logger = AppLogger()
@@ -57,6 +58,8 @@ def log_model_inference(model: MLModel, time_taken, **kwargs):
             )
         ),
         "model_name": model.display_name(),
+        "generation_source": origin_data.get("inference_type", ""),
+        "generation_tag": origin_data.get("inference_tag", "")
     }
 
     log = data_repo.create_inference_log(**log_data)

@@ -8,7 +8,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 import urllib
 
-from shared.constants import SERVER, InferenceStatus, ServerType
+from shared.constants import SERVER, FileTransformationType, InferenceParamType, InferenceStatus, ServerType
 from shared.file_upload.s3 import generate_s3_url, is_s3_image_url
 
 
@@ -104,6 +104,8 @@ class InferenceLog(BaseModel):
     output_details = models.TextField(default="", blank=True)
     total_inference_time = models.FloatField(default=0)
     status = models.CharField(max_length=255, default="")  # success, failed, in_progress, queued
+    generation_source = models.CharField(max_length=255, default="", blank=True)  # the source of generation
+    generation_tag = models.CharField(max_length=255, default="", blank=True)  # review, temp, upscaled etc..
 
     class Meta:
         app_label = "backend"
@@ -147,10 +149,59 @@ class InternalFileObject(BaseModel):
             if self.project:
                 video = self.project.uuid
 
-            file_location = "videos/" + str(video) + "/assets/videos/0_raw/" + str(uuid.uuid4()) + ".png"
+            file_location = "videos/" + str(video) + "/assets/videos/completed/" + str(uuid.uuid4()) + ".png"
             self.download_and_save_file(file_location)
 
         super(InternalFileObject, self).save(*args, **kwargs)
+
+        # creating file relation/link if the inference has completed
+        if self.inference_log and self.inference_log.status == InferenceStatus.COMPLETED.value:
+            parent_entity_data = json.loads(self.inference_log.input_params).get(
+                InferenceParamType.FILE_RELATION_DATA.value, None
+            )
+            if parent_entity_data:
+                parent_entity_data = json.loads(parent_entity_data)
+                # TODO: optimize such that the entries are not created twice and not
+                # created one by one
+                for p in parent_entity_data:
+                    parent_file = InternalFileObject.objects.filter(uuid=p["id"], is_disabled=False).first()
+                    if not FileRelationship.objects.filter(
+                        child_entity_id=self.id,
+                        parent_entity_id=parent_file.id,
+                        is_disabled=False,
+                    ).exists():
+                        file_link = FileRelationship()
+                        file_link.child_entity_id = self.id
+                        file_link.transformation_type = (
+                            p["transformation_type"] if "transformation_type" in p else ""
+                        )
+                        if parent_file:
+                            file_link.parent_entity_id = parent_file.id
+                            file_link.save()
+                            if file_link.transformation_type == FileTransformationType.UPSCALE.value:
+                                # disabling the parent file in case of upscaling
+                                parent_file.is_disabled = True
+                                parent_file.save()
+
+    def get_child_entities(self, transformation_type_list=None):
+        query = {"parent_entity_id": self.id, "is_disabled": False}
+        if transformation_type_list and len(transformation_type_list):
+            query["transformation_type__in"] = transformation_type_list
+        entity_list = FileRelationship.objects.filter(**query).all()
+        res = []
+        for e in entity_list:
+            res.append(e.child_entity)
+        return res
+
+    def get_parent_entities(self, transformation_type_list=None):
+        query = {"parent_entity_id": self.id, "is_disabled": False}
+        if transformation_type_list and len(transformation_type_list):
+            query["transformation_type__in"] = transformation_type_list
+        entity_list = FileRelationship.objects.filter(child_entity_id=self.id, is_disabled=False).all()
+        res = []
+        for e in entity_list:
+            res.append(e.parent_entity)
+        return res
 
     def download_and_save_file(self, file_location):
         try:
@@ -166,6 +217,33 @@ class InternalFileObject(BaseModel):
     @property
     def location(self):
         return self.local_path if self.local_path else self.hosted_url
+
+
+class FileRelationship(BaseModel):
+    """
+    for maintaining relationship between files, like upscaled, morphed, stylized, speed change
+    this will also help in tracking the series of transformations a file went through
+    e.g. if vid_2 is upscaled from vid_1, child will be vid_2 and parent will be vid_1
+
+    for now this relationship is automatically created when a file is created with inference log completed if it has
+    the relationship data inside it (given by FILE_RELATION_DATA inside input_params)
+    """
+
+    transformation_type = models.TextField(default="")
+    child_entity_type = models.CharField(
+        max_length=255, default="file"
+    )  # rn it will only be used for file relations
+    child_entity = models.ForeignKey(
+        InternalFileObject, on_delete=models.CASCADE, default=None, null=True, related_name="child_entity"
+    )
+    parent_entity_type = models.CharField(max_length=255, default="file")
+    parent_entity = models.ForeignKey(
+        InternalFileObject, on_delete=models.CASCADE, default=None, null=True, related_name="parent_entity"
+    )
+
+    class Meta:
+        app_label = "backend"
+        db_table = "file_relationship"
 
 
 class AIModelParamMap(BaseModel):
@@ -238,6 +316,11 @@ class Shot(BaseModel):
             else:
                 shot_list = shot_list.filter(shot_idx__gte=self.shot_idx).order_by("shot_idx")
                 shot_list.update(shot_idx=F("shot_idx") + 1)
+
+            # deleting all the interpolated clip list
+            clip_uuid_list = json.loads(self.interpolated_clip_list)
+            if clip_uuid_list and len(clip_uuid_list):
+                InternalFileObject.objects.filter(uuid__in=clip_uuid_list).update(is_disabled=True)
 
         # if this is a newly created shot or assigned new shot_idx (and not disabled)
         if (not self.id or self.old_shot_idx != self.shot_idx) and not self.is_disabled:

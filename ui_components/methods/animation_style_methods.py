@@ -1,12 +1,12 @@
 import json
 import os
-import time
 from typing import List
 import streamlit as st
 from backend.models import InternalFileObject
-from shared.constants import COMFY_BASE_PATH, InferenceParamType, STEERABLE_MOTION_WORKFLOWS
+from shared.constants import COMFY_BASE_PATH, InferenceParamType, ProjectMetaData
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, ShotMetaData
-from utils.constants import AnimateShotMethod
+from ui_components.models import InternalProjectObject, InternalShotObject
+from utils.common_utils import acquire_lock, release_lock
 from utils.data_repo.data_repo import DataRepo
 import numpy as np
 import matplotlib.pyplot as plt
@@ -24,86 +24,102 @@ def get_generation_settings_from_log(log_uuid=None):
     elif shot_meta_data and ShotMetaData.DYNAMICRAFTER_DATA.value in shot_meta_data:
         data_type = ShotMetaData.DYNAMICRAFTER_DATA.value
 
-    shot_meta_data = json.loads(shot_meta_data.get(data_type)) if data_type else None
+    shot_meta_data = (json.loads(shot_meta_data.get(data_type))) if data_type else None
 
     return shot_meta_data, data_type
 
 
-def load_shot_settings(shot_uuid, log_uuid=None):
+def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_values=True):
     data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
+
+    """
+    NOTE: every shot's meta_data has the latest copy of the settings (whatever is the most recent gen)
+    apart from this, every generation log also has it's own copy of settings (for that particular gen)
+    by default shot's settings is applied whenever a new generation is to be created, but if a user
+    clicks "load settings" on a particular gen then it's settings are loaded from it's generation log
+    """
+
+    """
+    NOTE: the logic has been updated and instead of picking the default values from the given shot (shot_uuid)
+    the values would be picked from the active_shot, present inside project's meta_data. older code may still
+    be present at some places.
+    """
 
     # loading settings of the last generation (saved in the shot)
     # in case no log_uuid is provided
     if not log_uuid:
-        shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, json.dumps({}))
-        shot_meta_data = json.loads(shot_meta_data)
+        shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
+        # if the current shot is newly created and has no meta data
+        if not shot_meta_data:
+            project_meta_data = json.loads(shot.project.meta_data) if shot.project.meta_data else {}
+            active_shot_uuid = project_meta_data.get(ProjectMetaData.ACTIVE_SHOT.value, None)
+            if active_shot_uuid:
+                active_shot: InternalShotObject = data_repo.get_shot_from_uuid(active_shot_uuid)
+                if active_shot:
+                    shot_meta_data = active_shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
+                else:
+                    # if shot was deleted then setting the first shot as the active shot
+                    shot_list: List[InternalShotObject] = data_repo.get_shot_list(shot.project.uuid)
+                    shot_meta_data = shot_list[0].meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
+                    update_active_shot(shot_list[0].uuid)
+
+        else:
+            update_active_shot(shot.uuid)
+
+        shot_meta_data = json.loads(shot_meta_data) if shot_meta_data else {}
         data_type = None
         st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
 
     # loading settings from that particular log
     else:
         shot_meta_data, data_type = get_generation_settings_from_log(log_uuid)
-        st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = log_uuid
+        if load_images:
+            st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = log_uuid
 
-    if shot_meta_data:
-        if not data_type or data_type == ShotMetaData.MOTION_DATA.value:
-            st.session_state[f"type_of_animation_{shot.uuid}"] = 0
-            # updating timing data
-            timing_data = shot_meta_data.get("timing_data", [])
-            for idx, _ in enumerate(
-                shot.timing_list
-            ):  # fix: check how the image list is being stored here and use that instead
-                # setting default parameters (fetching data from the shot if it's present)
-                if timing_data and len(timing_data) >= idx + 1:
-                    motion_data = timing_data[idx]
+    if load_setting_values:
+        if shot_meta_data:
+            if not data_type or data_type == ShotMetaData.MOTION_DATA.value:
+                st.session_state[f"type_of_animation_{shot.uuid}"] = 0
+                # ------------------ updating timing data
+                timing_data = shot_meta_data.get("timing_data", [])
+                for idx, _ in enumerate(
+                    shot.timing_list
+                ):  # fix: check how the image list is being stored here and use that instead
+                    # setting default parameters (fetching data from the shot if it's present)
+                    if timing_data and len(timing_data) >= idx + 1:
+                        motion_data = timing_data[idx]
 
-                for k, v in motion_data.items():
-                    st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+                    for k, v in motion_data.items():
+                        st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
 
-            # updating other settings main settings
-            main_setting_data = shot_meta_data.get("main_setting_data", {})
-            for key in main_setting_data:
-                st.session_state[key] = main_setting_data[key]
-                if (
-                    key == f"structure_control_image_uuid_{shot_uuid}" and not main_setting_data[key]
-                ):  # hackish sol, will fix later
-                    st.session_state[f"structure_control_image_{shot_uuid}"] = None
-                elif key == f"type_of_generation_index_{shot.uuid}":
-                    # Retrieve the order number from the session state
-                    order_number = st.session_state[key]
-
-                    # Find the index in STEERABLE_MOTION_WORKFLOWS where the 'order' matches the order_number
-                    index = next(
-                        (
-                            index
-                            for index, workflow in enumerate(STEERABLE_MOTION_WORKFLOWS)
-                            if workflow["order"] == order_number
-                        ),
-                        None,
-                    )
-
-                    if index is not None:
-                        # Set the session state to the index of the workflow
-                        st.session_state[key] = index
-                        # Set the creative interpolation type to the name of the workflow at the found index
-                        st.session_state["creative_interpolation_type"] = STEERABLE_MOTION_WORKFLOWS[index][
-                            "name"
-                        ]
+                # --------------------- updating other settings main settings
+                main_setting_data = shot_meta_data.get("main_setting_data", {})
+                for key in main_setting_data:
+                    # if data is being loaded from a different shot then key will have to be updated
+                    # from "lora_data_{other_shot_uuid}" to "lora_data_{this_shot_data}"
+                    if str(shot_uuid) not in key:
+                        new_key = key.rsplit("_", 1)[0] + "_" + str(shot_uuid)
                     else:
-                        st.error("Invalid workflow order")
+                        new_key = key
 
-            st.rerun()
-        elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
-            st.session_state[f"type_of_animation_{shot.uuid}"] = 1
-            main_setting_data = shot_meta_data.get("main_setting_data", {})
-            for key in main_setting_data:
-                st.session_state[key] = main_setting_data[key]
-            st.rerun()
-    else:
-        for idx, _ in enumerate(shot.timing_list):  # fix: check how the image list is being stored here
-            for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
-                st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+                    st.session_state[new_key] = main_setting_data[key]
+                    if (
+                        key == f"structure_control_image_uuid_{shot_uuid}" and not main_setting_data[key]
+                    ):  # hackish sol, will fix later
+                        st.session_state[f"structure_control_image_{shot_uuid}"] = None
+
+                st.rerun()
+            elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
+                st.session_state[f"type_of_animation_{shot.uuid}"] = 1
+                main_setting_data = shot_meta_data.get("main_setting_data", {})
+                for key in main_setting_data:
+                    st.session_state[key] = main_setting_data[key]
+                st.rerun()
+        else:
+            for idx, _ in enumerate(shot.timing_list):  # fix: check how the image list is being stored here
+                for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
+                    st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
 
 
 def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):
@@ -413,15 +429,23 @@ def get_keyframe_positions(
         return [i * linear_frame_distribution_value for i in range(len(images))]
 
 
+postfix_str = "_generate_inference"
+
+
 def toggle_generate_inference(position, **kwargs):
+
     for k, v in kwargs.items():
         st.session_state[k] = v
-    if position + "_generate_inference" not in st.session_state:
-        st.session_state[position + "_generate_inference"] = True
+    if position + postfix_str not in st.session_state:
+        st.session_state[position + postfix_str] = True
     else:
-        st.session_state[position + "_generate_inference"] = not st.session_state[
-            position + "_generate_inference"
-        ]
+        st.session_state[position + postfix_str] = not st.session_state[position + postfix_str]
+
+
+def is_inference_enabled(position):
+    if f"{position}{postfix_str}" in st.session_state and st.session_state[f"{position}{postfix_str}"]:
+        return True
+    return False
 
 
 def transform_data(
@@ -542,6 +566,58 @@ def transform_data(
     )
 
 
+def get_timing_data(
+    shot_uuid,
+    img_list,
+    strength_of_frames,
+    distances_to_next_frames,
+    speeds_of_transitions,
+    freedoms_between_frames,
+    motions_during_frames,
+    individual_prompts,
+    individual_negative_prompts,
+):
+    timing_data = []
+    for idx, img in enumerate(img_list):
+        # updating the session state rn
+        st.session_state[f"strength_of_frame_{shot_uuid}_{idx}"] = strength_of_frames[idx]
+        st.session_state[f"individual_prompt_{shot_uuid}_{idx}"] = individual_prompts[idx]
+        st.session_state[f"individual_negative_prompt_{shot_uuid}_{idx}"] = individual_negative_prompts[idx]
+        st.session_state[f"motion_during_frame_{shot_uuid}_{idx}"] = motions_during_frames[idx]
+        st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"] = (
+            distances_to_next_frames[idx] if idx < len(img_list) - 1 else distances_to_next_frames[idx - 1]
+        )
+        st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"] = (
+            speeds_of_transitions[idx] if idx < len(img_list) - 1 else speeds_of_transitions[idx - 1]
+        )
+        st.session_state[f"freedom_between_frames_{shot_uuid}_{idx}"] = (
+            freedoms_between_frames[idx] if idx < len(img_list) - 1 else freedoms_between_frames[idx - 1]
+        )
+
+        # adding into the meta-data. this is what is finally stored in the shot and inference log
+        state_data = {
+            "strength_of_frame": strength_of_frames[idx],
+            "individual_prompt": individual_prompts[idx],
+            "individual_negative_prompt": individual_negative_prompts[idx],
+            "motion_during_frame": motions_during_frames[idx],
+            "distance_to_next_frame": (
+                distances_to_next_frames[idx]
+                if idx < len(img_list) - 1
+                else distances_to_next_frames[idx - 1]
+            ),
+            "speed_of_transition": (
+                speeds_of_transitions[idx] if idx < len(img_list) - 1 else speeds_of_transitions[idx - 1]
+            ),
+            "freedom_between_frames": (
+                freedoms_between_frames[idx] if idx < len(img_list) - 1 else freedoms_between_frames[idx - 1]
+            ),
+        }
+
+        timing_data.append(state_data)
+
+    return timing_data
+
+
 def update_session_state_with_animation_details(
     shot_uuid,
     img_list: List[InternalFileObject],
@@ -559,47 +635,34 @@ def update_session_state_with_animation_details(
     strength_of_structure_control_img=None,
     type_of_generation_index=0,
 ):
+    """
+    for any generation session_state holds two kind of data objects.
+    1. timing_data -> this is data points like distance to next frames, frame strengths etc.. basically
+    anything to do with timing/frames
+    2. main_setting_data -> this is the model selected, lora added, workflow selected etc..
+    """
+
+    """
+    A 'active_shot' index is maintained and settings are picked from that shot, whenvever
+    generating a new shot. But when someone wants to save the settings manually, a temp_shot
+    is created (that is not visible on the frontend), it stores the settings. If a new gen is run
+    then the settings are overwritten. temp_shot is identified by shot_uuid = -1
+    """
     data_repo = DataRepo()
-    shot = data_repo.get_shot_from_uuid(shot_uuid)
+
+    shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
     meta_data = shot.meta_data_dict
-    timing_data = []
-    for idx, img in enumerate(img_list):
-        if idx < len(img_list):
-            st.session_state[f"strength_of_frame_{shot_uuid}_{idx}"] = strength_of_frames[idx]
-            st.session_state[f"individual_prompt_{shot_uuid}_{idx}"] = individual_prompts[idx]
-            st.session_state[f"individual_negative_prompt_{shot_uuid}_{idx}"] = individual_negative_prompts[
-                idx
-            ]
-            st.session_state[f"motion_during_frame_{shot_uuid}_{idx}"] = motions_during_frames[idx]
-            if idx < len(img_list) - 1:
-                st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"] = distances_to_next_frames[idx]
-                st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"] = speeds_of_transitions[idx]
-                st.session_state[f"freedom_between_frames_{shot_uuid}_{idx}"] = freedoms_between_frames[idx]
-
-        # adding into the meta-data
-        state_data = {
-            "strength_of_frame": strength_of_frames[idx],
-            "individual_prompt": individual_prompts[idx],
-            "individual_negative_prompt": individual_negative_prompts[idx],
-            "motion_during_frame": motions_during_frames[idx],
-            "distance_to_next_frame": (
-                distances_to_next_frames[idx]
-                if idx < len(img_list) - 1
-                else DEFAULT_SHOT_MOTION_VALUES["distance_to_next_frame"]
-            ),
-            "speed_of_transition": (
-                speeds_of_transitions[idx]
-                if idx < len(img_list) - 1
-                else DEFAULT_SHOT_MOTION_VALUES["speed_of_transition"]
-            ),
-            "freedom_between_frames": (
-                freedoms_between_frames[idx]
-                if idx < len(img_list) - 1
-                else DEFAULT_SHOT_MOTION_VALUES["freedom_between_frames"]
-            ),
-        }
-
-        timing_data.append(state_data)
+    timing_data = get_timing_data(
+        shot_uuid,
+        img_list,
+        strength_of_frames,
+        distances_to_next_frames,
+        speeds_of_transitions,
+        freedoms_between_frames,
+        motions_during_frames,
+        individual_prompts,
+        individual_negative_prompts,
+    )
 
     main_setting_data = {}
     main_setting_data[f"lora_data_{shot.uuid}"] = lora_data
@@ -639,7 +702,22 @@ def update_session_state_with_animation_details(
 
     meta_data.update(update_data)
     data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
+    update_active_shot(shot_uuid)
     return update_data
+
+
+def update_active_shot(shot_uuid):
+    # updating the active shot inside the project
+    data_repo = DataRepo()
+    shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
+    key = shot.project.uuid
+    if acquire_lock(key):
+        project: InternalProjectObject = data_repo.get_project_from_uuid(uuid=key)
+        if project:
+            meta_data = json.loads(project.meta_data) if project.meta_data else {}
+            meta_data[ProjectMetaData.ACTIVE_SHOT.value] = str(shot_uuid)
+            data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
+        release_lock(key)
 
 
 # saving dynamic crafter generation details
