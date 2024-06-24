@@ -12,6 +12,12 @@ RUNNER_PROCESS_NAME = "banodoco_runner"
 RUNNER_PROCESS_PORT = 12345
 
 
+class TomlConfig(ExtendedEnum):
+    FILE_HASH = "file_hash"
+    NODE_VERSION = "node_version"
+    COMFY_VERSION = "comfy"
+
+
 class ImageStage(ExtendedEnum):
     SOURCE_IMAGE = "Source Image"
     MAIN_VARIANT = "Main Variant"
@@ -29,11 +35,11 @@ class AnimateShotMethod(ExtendedEnum):  # remove this and have a common nomencla
 
 
 # single template for passing query params
+# TODO: remove the named params and pass everything through the data object (as different models require very different inputs)
 class MLQueryObject:
     def __init__(
         self,
         timing_uuid,
-        model_uuid,
         guidance_scale,
         seed,
         num_inference_steps,
@@ -45,15 +51,12 @@ class MLQueryObject:
         width=512,
         low_threshold=100,  # update these default values
         high_threshold=200,
-        image_uuid=None,
-        mask_uuid=None,
+        file_data={},  # {'file_name': {'uuid': file_uuid, 'dest': file_dest}}
+        relation_data={},  # json.dumps([{"type": "file", "id": video_file.uuid, "transformation_type": "upscale"}])
         **kwargs,
     ):
         self.timing_uuid = timing_uuid
-        self.model_uuid = model_uuid
         self.prompt = prompt
-        self.image_uuid = image_uuid
-        self.mask_uuid = mask_uuid
         self.strength = strength
         self.height = height
         self.width = width
@@ -65,18 +68,33 @@ class MLQueryObject:
         self.low_threshold = low_threshold
         self.high_threshold = high_threshold
         self.data = kwargs
+        self.relation_data = relation_data
+        self.file_data = file_data
 
         self._validate_params()
 
     def _validate_params(self):
-        if not (self.prompt or self.image_uuid):
+        if not (self.prompt or len(self.file_data.keys())):
             st.error("Prompt or image is required to run the model")
             raise Exception("Prompt or image is required to run the model")
+
+    @property
+    def file_list(self):
+        from utils.data_repo.data_repo import DataRepo
+
+        data_repo = DataRepo()
+
+        file_uuid_list = []
+        for _, v in self.file_data.items():
+            file_uuid_list.append(v["uuid"])
+
+        return data_repo.get_all_file_list(uuid__in=file_uuid_list)[0]
 
     def to_json(self):
         return json.dumps(self.__dict__)
 
 
+# NOTE: old code, not is use
 ML_MODEL_LIST = [
     {
         "name": "stable-diffusion-img2img-v2.1",

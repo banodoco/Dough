@@ -81,7 +81,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
     file_name = str(uuid.uuid4()) + ".png"
 
     if stage == WorkflowStageType.SOURCE.value:
-        save_location = f"videos/{project_uuid}/assets/frames/1_selected/{file_name}"
+        save_location = f"videos/{project_uuid}/assets/frames/modified/{file_name}"
         hosted_url = save_or_host_file(image, save_location)
         file_data = {"name": file_name, "type": InternalFileType.IMAGE.value, "project_id": project_uuid}
 
@@ -95,7 +95,7 @@ def save_zoomed_image(image, timing_uuid, stage, promote=False):
             st.session_state["current_frame_uuid"], source_image_id=source_image.uuid, update_in_place=True
         )
     elif stage == WorkflowStageType.STYLED.value:
-        save_location = f"videos/{project_uuid}/assets/frames/2_character_pipeline_completed/{file_name}"
+        save_location = f"videos/{project_uuid}/assets/frames/modified/{file_name}"
         hosted_url = save_or_host_file(image, save_location)
         file_data = {"name": file_name, "type": InternalFileType.IMAGE.value, "project_id": project_uuid}
 

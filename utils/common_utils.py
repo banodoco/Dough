@@ -8,6 +8,8 @@ import socket
 import streamlit as st
 import json
 import platform
+
+import toml
 from shared.constants import SERVER, CreativeProcessPage, ServerType
 from ui_components.models import InternalUserObject
 from utils.cache.cache import CacheKey, StCache
@@ -66,6 +68,9 @@ def copy_sample_assets(project_uuid):
     shutil.copyfile(source, dest)
 
 
+# TODO: some of the folders are not in use, remove them
+# TODO: a lot of things are directly going into the temp folder, put them in appropriate folder
+# TODO: comfy gens are copied into videos folder (taking twice as much space) also sometimes save is directly triggered from the backend model
 def create_working_assets(project_uuid):
     if SERVER != ServerType.DEVELOPMENT.value:
         return
@@ -80,25 +85,26 @@ def create_working_assets(project_uuid):
         "videos/" + project_uuid + "/temp",
         "videos/" + project_uuid + "/assets",
         "videos/" + project_uuid + "/assets/frames",
-        "videos/" + project_uuid + "/assets/frames/0_extracted",
-        "videos/" + project_uuid + "/assets/frames/1_selected",
-        "videos/" + project_uuid + "/assets/frames/2_character_pipeline_completed",
-        "videos/" + project_uuid + "/assets/frames/3_backdrop_pipeline_completed",
+        # these are user uploaded/generated base keyframes
+        "videos/" + project_uuid + "/assets/frames/base",
+        # these are modified frames (like zoom, crop, rotate)
+        "videos/" + project_uuid + "/assets/frames/modified",
+        # these are inpainted keyframes
+        "videos/" + project_uuid + "/assets/frames/inpainting",
         "videos/" + project_uuid + "/assets/resources",
-        "videos/" + project_uuid + "/assets/resources/backgrounds",
         "videos/" + project_uuid + "/assets/resources/masks",
         "videos/" + project_uuid + "/assets/resources/audio",
         "videos/" + project_uuid + "/assets/resources/input_videos",
         "videos/" + project_uuid + "/assets/resources/prompt_images",
         "videos/" + project_uuid + "/assets/videos",
-        "videos/" + project_uuid + "/assets/videos/0_raw",
-        "videos/" + project_uuid + "/assets/videos/1_final",
-        "videos/" + project_uuid + "/assets/videos/2_completed",
+        # for raw imports (not in use anymore)
+        "videos/" + project_uuid + "/assets/videos/raw",
+        # storing generated videos
+        "videos/" + project_uuid + "/assets/videos/completed",
         # app data
         "inference_log",
         # temp folder
         "videos/temp",
-        "videos/temp/assets/videos/0_raw/",
     ]
 
     for directory in directory_list:
@@ -250,6 +256,16 @@ def is_process_active(custom_process_name, custom_process_port):
     return False
 
 
+def refresh_app(maintain_state=False):
+    # st.session_state['maintain_state'] = maintain_state
+    st.rerun()
+
+
+def padded_integer(integer, pad_length=4):
+    padded_string = str(integer).zfill(pad_length)
+    return padded_string
+
+
 def acquire_lock(key):
     data_repo = DataRepo()
     retries = 0
@@ -268,11 +284,15 @@ def release_lock(key):
     return True
 
 
-def refresh_app(maintain_state=False):
-    # st.session_state['maintain_state'] = maintain_state
-    st.rerun()
+def get_toml_config(key=None):
+    toml_config_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "scripts", "config.toml")
+    )
 
+    toml_data = {}
+    with open(toml_config_path, "r") as f:
+        toml_data = toml.load(f)
 
-def padded_integer(integer, pad_length=4):
-    padded_string = str(integer).zfill(pad_length)
-    return padded_string
+    if key and key in toml_data:
+        return toml_data[key]
+    return toml_data

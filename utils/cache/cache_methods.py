@@ -53,6 +53,7 @@ def cache_data(cls):
         if file:
             StCache.delete(file.uuid, CacheKey.FILE.value)
             StCache.add(file, CacheKey.FILE.value)
+            StCache.delete_all(CacheKey.SHOT.value)  # interpolated_clips within shot
 
         return file
 

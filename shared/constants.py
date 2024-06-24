@@ -71,6 +71,7 @@ class InternalFileTag(ExtendedEnum):
     TEMP_GALLERY_IMAGE = (
         "temp_gallery_image"  # these generations are complete but not yet being shown in the gallery
     )
+    SHORTLISTED_VIDEO = "shortlisted_video"
 
 
 class AnimationStyleType(ExtendedEnum):
@@ -98,6 +99,15 @@ class InferenceType(ExtendedEnum):
     MOTION_LORA_TRAINING = "motion_lora_training"  # for training new motion loras
 
 
+class InferenceLogTag(ExtendedEnum):
+    UPSCALED_VIDEO = "upscaled_video"
+    PREVIEW_VIEW = "preview"
+
+
+class FileTransformationType(ExtendedEnum):
+    UPSCALE = "upscale"
+
+
 class InferenceStatus(ExtendedEnum):
     QUEUED = "queued"
     IN_PROGRESS = "in_progress"
@@ -113,6 +123,9 @@ class InferenceParamType(ExtendedEnum):
     ORIGIN_DATA = "origin_data"  # origin data - used to store file once inference is completed
     GPU_INFERENCE = "gpu_inference"  # gpu inference data
     SAI_INFERENCE = "sai_inference"  # stablity ai inference data
+    FILE_RELATION_DATA = (
+        "file_relation"  # file relationship data such as what parent a particular file was upscaled from
+    )
 
 
 class ProjectMetaData(ExtendedEnum):
@@ -120,6 +133,8 @@ class ProjectMetaData(ExtendedEnum):
     GALLERY_UPDATE = "gallery_update"
     BACKGROUND_IMG_LIST = "background_img_list"
     SHOT_VIDEO_UPDATE = "shot_video_update"
+    ACTIVE_SHOT = "active_shot"  # the most recent shot where the generation took place or where "load settings" was clicked (settings of this will be used as default)
+    INSP_VALUES = "insp_values"
 
 
 class SortOrder(ExtendedEnum):
@@ -129,16 +144,20 @@ class SortOrder(ExtendedEnum):
 
 class CreativeProcessPage(ExtendedEnum):
     SHOTS = "Shots"
+    INSPIRATION_ENGINE = "Inspiration Engine"
     ADJUST_SHOT = "Adjust Shot"
     ANIMATE_SHOT = "Animate Shot"
+    UPSCALING = "Upscaling"
 
 
 # these can be one of the main creative process page or some other sub page inside it
 class AppSubPage(ExtendedEnum):
     SHOTS = "Shots"
+    INSPIRATION_ENGINE = "Inspiration Engine"
     ADJUST_SHOT = "Adjust Shot"
     ANIMATE_SHOT = "Animate Shot"
     KEYFRAME = "Key Frames"
+    UPSCALING = "Upscaling"
     SHOT = "Shots"
 
 

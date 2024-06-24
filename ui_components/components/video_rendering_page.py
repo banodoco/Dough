@@ -1,8 +1,11 @@
 from typing import List
 import time
+import ast
 import streamlit as st
 from shared.constants import AnimationStyleType, AnimationToolType, STEERABLE_MOTION_WORKFLOWS
 import time
+from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES
+from ui_components.methods.ml_methods import generate_sm_video
 from ui_components.widgets.sm_animation_style_element import (
     animation_sidebar,
     individual_frame_settings_element,
@@ -12,19 +15,18 @@ from ui_components.widgets.sm_animation_style_element import (
 )
 from ui_components.models import InternalFileObject, InternalShotObject
 from ui_components.methods.animation_style_methods import (
+    is_inference_enabled,
     toggle_generate_inference,
     transform_data,
     update_session_state_with_animation_details,
     update_session_state_with_dc_details,
 )
-from ui_components.methods.video_methods import create_single_interpolated_clip
-from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 
-default_model = "dreamshaper_8.safetensors"
+DEFAULT_SM_MODEL = "dreamshaper_8.safetensors"
 
 
-def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
+def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], column1, column2):
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
 
@@ -34,6 +36,11 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
     shot_meta_data = {}
 
     with st.container():
+
+        # ----------- HEADER OPTIONS -------------
+        header_col_1, _, header_col_3, header_col_4 = st.columns(
+            [1.0, 1.5, 1.0, 1.0]
+        )  # btns defined at the bottom of the UI
 
         # ----------- INDIVIDUAL FRAME SETTINGS -----------
         (
@@ -47,7 +54,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
         ) = individual_frame_settings_element(shot_uuid, img_list)
 
         # ----------- SELECT SD MODEL -----------
-        sd_model, model_files = select_sd_model_element(shot_uuid, default_model)
+        sd_model, model_files = select_sd_model_element(shot_uuid, DEFAULT_SM_MODEL)
 
         # ----------- SELECT MOTION LORA ------------
         lora_data = select_motion_lora_element(shot_uuid, model_files)
@@ -147,13 +154,12 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             strength_of_structure_control_image=st.session_state[
                 f"strength_of_structure_control_image_{shot.uuid}"
             ],
+            filename_prefix="AD_",
         )
 
-        position = "generate_vid"
         st.markdown("***")
         st.markdown("##### Generation Settings")
 
-        # Filter and sort the workflows based on 'display' flag and 'order'
         filtered_and_sorted_workflows = sorted(
             (workflow for workflow in STEERABLE_MOTION_WORKFLOWS if workflow["display"]),
             key=lambda x: x["order"],
@@ -171,32 +177,44 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                 index=st.session_state.get(f"type_of_generation_index_{shot.uuid}", 0),
                 help="""
                 
-            **Slurshy Realistiche**: good for simple realistic motion.
+                    **Slurshy Realistiche**: good for simple realistic motion.
 
-            **Smooth n' Steady**: good for slow, smooth transitions. 
-            
-            **Chocky Realistiche**: good for realistic motion and chaotic transitions. 
+                    **Smooth n' Steady**: good for slow, smooth transitions. 
+                    
+                    **Chocky Realistiche**: good for realistic motion and chaotic transitions. 
 
-            **Liquidy Loop**: good for liquid-like motion with slick transitions. Also loops!
-            
-            **Fast With A Price**: runs fast but with a lot of detail loss.
-            
-            **Rad Attack**: good for realistic motion but with a lot of detail loss.""",
+                    **Liquidy Loop**: good for liquid-like motion with slick transitions. Also loops!
+                    
+                    **Fast With A Price**: runs fast but with a lot of detail loss.
+                    
+                    **Rad Attack**: good for realistic motion but with a lot of detail loss.
+                    
+                    """,
             )
+
+            if (
+                type_of_generation
+                != generation_types[st.session_state.get(f"type_of_generation_index_{shot.uuid}", 0)]
+            ):
+                st.session_state[f"type_of_generation_index_{shot.uuid}"] = generation_types.index(
+                    type_of_generation
+                )
+                st.rerun()
 
         with footer2:
             st.info(
                 f"Each has a unique type of motion and adherence. You can an example of each of them in action [here](https://youtu.be/zu1IbdavW_4)."
             )
+
+        generate_vid_inf_tag = "generate_vid"
+        manual_save_inf_tag = "manual_save"
+
         st.write("")
         animate_col_1, _, _ = st.columns([3, 1, 1])
         with animate_col_1:
             variant_count = 1
 
-            if (
-                "generate_vid_generate_inference" in st.session_state
-                and st.session_state["generate_vid_generate_inference"]
-            ):
+            if is_inference_enabled(generate_vid_inf_tag) or is_inference_enabled(manual_save_inf_tag):
                 # last keyframe position * 16
                 duration = float(dynamic_frame_distribution_values[-1] / 16)
                 data_repo.update_shot(uuid=shot_uuid, duration=duration)
@@ -212,6 +230,39 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     new_key = key.replace("pil_img_", "") + "_uuid"
                     settings[new_key] = image.uuid
 
+                if st.session_state.get(f"{shot_uuid}_preview_mode", False):
+                    preview_length = 3
+                    img_list = img_list[:preview_length]
+                    settings["motion_scales"] = ", ".join(
+                        settings["motion_scales"].split(", ")[:preview_length]
+                    )
+                    _t = ast.literal_eval(settings["dynamic_strength_values"])[:preview_length]
+                    settings["dynamic_strength_values"] = f"[{', '.join(repr(t) for t in _t)}]"
+                    settings["dynamic_frame_distribution_values"] = settings[
+                        "dynamic_frame_distribution_values"
+                    ][:preview_length]
+                    settings["dynamic_key_frame_influence_values"] = settings[
+                        "dynamic_key_frame_influence_values"
+                    ][:preview_length]
+                    settings["individual_prompts"] = ", ".join(
+                        settings["individual_prompts"].split(", ")[:preview_length]
+                    )
+                    settings["individual_negative_prompts"] = ", ".join(
+                        settings["individual_negative_prompts"].split(", ")[:preview_length]
+                    )
+
+                    strength_of_frames = strength_of_frames[:preview_length]
+                    speeds_of_transitions = speeds_of_transitions[:preview_length]
+                    distances_to_next_frames = distances_to_next_frames[:preview_length]
+                    freedoms_between_frames = freedoms_between_frames[:preview_length]
+                    motions_during_frames = motions_during_frames[:preview_length]
+                    individual_prompts = individual_prompts[:preview_length]
+                    individual_negative_prompts = individual_negative_prompts[:preview_length]
+
+                    settings["inference_type"] = (
+                        "preview"  # TODO: probably a wrong practice to send this in with the settings
+                    )
+
                 shot_data = update_session_state_with_animation_details(
                     shot_uuid,
                     img_list,
@@ -223,7 +274,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     individual_prompts,
                     individual_negative_prompts,
                     lora_data,
-                    default_model,
+                    DEFAULT_SM_MODEL,
                     high_detail_mode,
                     image.uuid if image else None,
                     settings["strength_of_structure_control_image"],
@@ -238,8 +289,8 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                 )
                 settings.update(shot_data=shot_data)
                 settings.update(type_of_generation=type_of_generation)
+                settings.update(filename_prefix="AD_")
 
-                vid_quality = "full"
                 st.success(
                     "Generating clip - see status in the Generation Log in the sidebar. Press 'Refresh log' to update."
                 )
@@ -261,21 +312,37 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                 if f"{shot_uuid}_backlog_enabled" not in st.session_state:
                     st.session_state[f"{shot_uuid}_backlog_enabled"] = False
 
-                create_single_interpolated_clip(
-                    shot_uuid,
-                    vid_quality,
-                    settings,
-                    variant_count,
-                    st.session_state[f"{shot_uuid}_backlog_enabled"],
-                    img_list,
-                )
+                if is_inference_enabled(generate_vid_inf_tag):
+                    generate_sm_video(
+                        shot_uuid,
+                        settings,
+                        variant_count,
+                        st.session_state[f"{shot_uuid}_backlog_enabled"],
+                        img_list,
+                    )
 
-                backlog_update = {f"{shot_uuid}_backlog_enabled": False}
-                toggle_generate_inference(position, **backlog_update)
+                updated_additional_params = {
+                    f"{shot_uuid}_backlog_enabled": False,
+                    f"{shot_uuid}_preview_mode": False,
+                }
+
+                position = (
+                    generate_vid_inf_tag
+                    if is_inference_enabled(generate_vid_inf_tag)
+                    else manual_save_inf_tag
+                )
+                toggle_generate_inference(position, **updated_additional_params)
                 st.rerun()
 
+            preview_mode = st.checkbox(
+                "Preview mode", value=False, help="Generates a preview video only using the first 3 images"
+            )
             btn1, btn2, _ = st.columns([1, 1, 1])
-            backlog_no_update = {f"{shot_uuid}_backlog_enabled": False}
+            additional_params = {
+                f"{shot_uuid}_backlog_enabled": False,
+                f"{shot_uuid}_preview_mode": preview_mode,
+            }
+
             with btn1:
                 help = ""
                 st.button(
@@ -283,7 +350,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     key="generate_animation_clip",
                     disabled=False,
                     help=help,
-                    on_click=lambda: toggle_generate_inference(position, **backlog_no_update),
+                    on_click=lambda: toggle_generate_inference(generate_vid_inf_tag, **additional_params),
                     type="primary",
                     use_container_width=True,
                 )
@@ -296,9 +363,30 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     key="generate_animation_clip_backlog",
                     disabled=False,
                     help=backlog_help,
-                    on_click=lambda: toggle_generate_inference(position, **backlog_update),
+                    on_click=lambda: toggle_generate_inference(generate_vid_inf_tag, **backlog_update),
                     type="secondary",
                 )
+
+            with column1:
+                if st.button("Reset to default", use_container_width=True, key="reset_to_default"):
+                    for idx, _ in enumerate(img_list):
+                        for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
+                            st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+
+                    st.success("All frames have been reset to default values.")
+                    st.rerun()
+                st.write("")
+
+            with column2:
+                if st.button(
+                    "Save current settings",
+                    key="save_current_settings",
+                    use_container_width=True,
+                    help="Settings will also be saved when you generate the animation.",
+                ):
+                    st.success("Settings saved successfully")
+                    toggle_generate_inference(manual_save_inf_tag, **additional_params)
+                    st.rerun()
 
         # --------------- SIDEBAR ---------------------
         animation_sidebar(
@@ -320,7 +408,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
             motions_during_frames,
             individual_prompts,
             individual_negative_prompts,
-            default_model,
+            DEFAULT_SM_MODEL,
         )
 
 
@@ -353,7 +441,6 @@ def two_img_realistic_interpolation_page(shot_uuid, img_list: List[InternalFileO
         st.info("NOTE: The model for this animation is 10.5 GB in size, which can take some time to download")
 
     variant_count = 1  # Assuming a default value for variant_count, adjust as necessary
-    vid_quality = "full"  # Assuming full quality, adjust as necessary based on your requirements
     position = "dynamiccrafter"
 
     if (
@@ -383,9 +470,8 @@ def two_img_realistic_interpolation_page(shot_uuid, img_list: List[InternalFileO
             prompt=description_of_motion,
         )
 
-        create_single_interpolated_clip(
+        generate_sm_video(
             shot_uuid,
-            vid_quality,
             settings,
             variant_count,
             st.session_state[f"{shot_uuid}_backlog_enabled"],

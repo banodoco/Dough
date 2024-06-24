@@ -7,13 +7,20 @@ from git import Repo
 from shared.constants import COMFY_BASE_PATH
 from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
+from utils.common_utils import get_toml_config
+from utils.constants import TomlConfig
 
 
 COMFY_RUNNER_PATH = "./comfy_runner"
 
 
 def predict_gpu_output(
-    workflow: str, file_path_list=[], output_node=None, extra_model_list=[], ignore_model_list=[]
+    workflow: str,
+    file_path_list=[],
+    output_node=None,
+    extra_model_list=[],
+    ignore_model_list=[],
+    log_tag=None,
 ) -> str:
     # spec = importlib.util.spec_from_file_location('my_module', f'{COMFY_RUNNER_PATH}/inf.py')
     # comfy_runner = importlib.util.module_from_spec(spec)
@@ -26,6 +33,13 @@ def predict_gpu_output(
     sys.path.append(str(os.getcwd()) + COMFY_RUNNER_PATH[1:])
     from comfy_runner.inf import ComfyRunner
 
+    comfy_commit_hash = get_toml_config(TomlConfig.COMFY_VERSION.value)["commit_hash"]
+    node_commit_dict = get_toml_config(TomlConfig.NODE_VERSION.value)
+    extra_node_urls = []
+    for k, v in node_commit_dict.items():
+        v["title"] = k
+        extra_node_urls.append(v)
+
     comfy_runner = ComfyRunner()
     output = comfy_runner.predict(
         workflow_input=workflow,
@@ -34,6 +48,9 @@ def predict_gpu_output(
         output_node_ids=output_node,
         extra_models_list=extra_model_list,
         ignore_model_list=ignore_model_list,
+        client_id=log_tag,
+        extra_node_urls=extra_node_urls,
+        comfy_commit_hash=comfy_commit_hash,
     )
 
     return output["file_paths"]  # ignoring text output for now {"file_paths": [], "text_content": []}
@@ -51,7 +68,7 @@ def setup_comfy_runner():
 
     app_logger.log(LoggingType.INFO, "cloning comfy runner")
     comfy_repo_url = "https://github.com/piyushK52/comfy-runner"
-    Repo.clone_from(comfy_repo_url, COMFY_RUNNER_PATH[2:], single_branch=True, branch="feature/package")
+    Repo.clone_from(comfy_repo_url, COMFY_RUNNER_PATH[2:], single_branch=True, branch="main")
 
     # installing dependencies
     subprocess.run(["pip", "install", "-r", COMFY_RUNNER_PATH + "/requirements.txt"], check=True)

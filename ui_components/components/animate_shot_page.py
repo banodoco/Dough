@@ -114,6 +114,7 @@ def video_rendering_page(shot_uuid, selected_variant):
                 )
 
             data_repo.bulk_create_timing(new_timing_data)
+            st.rerun()  # NOTE: video (and it's inference) is displayed first and then is updated here, that's why refreshing
 
     img_list = data_repo.get_all_file_list(uuid__in=file_uuid_list, file_type=InternalFileType.IMAGE.value)[0]
 
@@ -124,7 +125,7 @@ def video_rendering_page(shot_uuid, selected_variant):
         if uuid in file_uuid_img_dict:
             img_list.append(file_uuid_img_dict[uuid])
 
-    headline1, _, headline3 = st.columns([1, 1, 1])
+    headline1, _, headline3, headline4 = st.columns([1, 1, 1, 1])
     with headline1:
         st.markdown("### 🎥 Generate animations")
         st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
@@ -137,7 +138,7 @@ def video_rendering_page(shot_uuid, selected_variant):
     """
     type_of_animation = AnimateShotMethod.BATCH_CREATIVE_INTERPOLATION.value
     if type_of_animation == AnimateShotMethod.BATCH_CREATIVE_INTERPOLATION.value:
-        sm_video_rendering_page(shot_uuid, img_list)
+        sm_video_rendering_page(shot_uuid, img_list, headline3, headline4)
     else:
         two_img_realistic_interpolation_page(shot_uuid, img_list)
 

@@ -2,20 +2,19 @@ import streamlit as st
 import os
 from moviepy.editor import *
 from shared.constants import SERVER, AppSubPage, CreativeProcessPage, ServerType
-from ui_components.widgets.sidebar_logger import sidebar_logger
+from ui_components.methods.common_methods import check_project_meta_data
 from ui_components.components.app_settings_page import app_settings_page
-from ui_components.components.shortlist_page import shortlist_page
 from ui_components.components.timeline_view_page import timeline_view_page
+from ui_components.components.inspiraton_engine_page import inspiration_engine_page
 from ui_components.components.adjust_shot_page import adjust_shot_page
 from ui_components.components.animate_shot_page import animate_shot_page
-from ui_components.components.explorer_page import explorer_page
+from ui_components.components.upscaling_page import upscaling_page
 
 from ui_components.components.new_project_page import new_project_page
 from ui_components.components.project_settings_page import project_settings_page
 from streamlit_option_menu import option_menu
 from utils.common_utils import set_default_values
 
-from ui_components.methods.common_methods import check_project_meta_data, update_app_setting_keys
 from ui_components.models import InternalAppSettingObject
 from utils.common_utils import (
     create_working_assets,
@@ -116,11 +115,12 @@ def setup_app_ui():
         if not st.session_state["maintain_state"]:
             check_project_meta_data(st.session_state["project_uuid"])
 
-        update_app_setting_keys()
-
         if "shot_uuid" not in st.session_state:
             shot_list = data_repo.get_shot_list(st.session_state["project_uuid"])
             st.session_state["shot_uuid"] = shot_list[0].uuid
+
+        if "last_shot_number" not in st.session_state:
+            st.session_state["last_shot_number"] = 0
 
         # print uuids of shots
         if "current_frame_index" not in st.session_state:
@@ -139,8 +139,8 @@ def setup_app_ui():
 
         if st.session_state["project_uuid"] == "":
             st.info("No projects found - create one in the 'New Project' section")
-        else:
 
+        else:
             if not os.path.exists("videos/" + st.session_state["project_uuid"] + "/assets"):
                 create_working_assets(st.session_state["project_uuid"])
 
@@ -174,11 +174,13 @@ def setup_app_ui():
                     subpage_page_map = {
                         # timeline
                         AppSubPage.SHOTS.value: CreativeProcessPage.SHOTS.value,
+                        AppSubPage.INSPIRATION_ENGINE.value: CreativeProcessPage.INSPIRATION_ENGINE.value,
                         # adjust shot
                         AppSubPage.ADJUST_SHOT.value: CreativeProcessPage.ADJUST_SHOT.value,
                         AppSubPage.KEYFRAME.value: CreativeProcessPage.ADJUST_SHOT.value,
                         # animate shot
                         AppSubPage.ANIMATE_SHOT.value: CreativeProcessPage.ANIMATE_SHOT.value,
+                        AppSubPage.UPSCALING.value: CreativeProcessPage.UPSCALING.value,
                     }
 
                     if "current_subpage" not in st.session_state:
@@ -228,7 +230,7 @@ def setup_app_ui():
                     _ = option_menu(
                         None,
                         creative_process_pages,
-                        icons=["bookshelf", "aspect-ratio", "lightning-charge", "stopwatch"],
+                        icons=["bookshelf", "lightning-charge", "crop", "film", "aspect-ratio"],
                         menu_icon="cast",
                         orientation="vertical",
                         key="page_opt_menu",
@@ -241,23 +243,30 @@ def setup_app_ui():
                         on_change=change_page,
                     )
 
-                    if st.session_state["page"] != creative_process_pages[1]:
+                    # TODO: this is a hacky fix (related to jump_to_single_frame_view_button)
+                    if st.session_state["page"] != CreativeProcessPage.ADJUST_SHOT.value:
                         st.session_state["current_frame_sidebar_selector"] = 0
 
-                if st.session_state["page"] == "Explore":
-                    explorer_page(st.session_state["project_uuid"])
+                # NOTE: not is use
+                # if st.session_state["page"] == "Explore":
+                #     explorer_page(st.session_state["project_uuid"])
+                # elif st.session_state["page"] == "Shortlist":
+                #     shortlist_page(st.session_state["project_uuid"])
 
-                elif st.session_state["page"] == "Shortlist":
-                    shortlist_page(st.session_state["project_uuid"])
-
-                elif st.session_state["page"] == "Shots":
+                if st.session_state["page"] == CreativeProcessPage.SHOTS.value:
                     timeline_view_page(st.session_state["shot_uuid"], h2)
 
-                elif st.session_state["page"] == "Adjust Shot":
+                elif st.session_state["page"] == CreativeProcessPage.INSPIRATION_ENGINE.value:
+                    inspiration_engine_page(st.session_state["shot_uuid"], h2)
+
+                elif st.session_state["page"] == CreativeProcessPage.ADJUST_SHOT.value:
                     adjust_shot_page(st.session_state["shot_uuid"], h2)
 
-                elif st.session_state["page"] == "Animate Shot":
+                elif st.session_state["page"] == CreativeProcessPage.ANIMATE_SHOT.value:
                     animate_shot_page(st.session_state["shot_uuid"], h2)
+
+                elif st.session_state["page"] == CreativeProcessPage.UPSCALING.value:
+                    upscaling_page(st.session_state["project_uuid"])
 
             elif st.session_state["main_view_type"] == "Project Settings":
                 project_settings_page(st.session_state["project_uuid"])

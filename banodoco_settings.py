@@ -18,8 +18,8 @@ from ui_components.models import (
     InternalProjectObject,
     InternalUserObject,
 )
-from utils.common_utils import create_working_assets
-from utils.constants import ML_MODEL_LIST
+from utils.common_utils import create_working_assets, get_toml_config
+from utils.constants import TomlConfig
 from utils.data_repo.data_repo import DataRepo
 
 
@@ -68,7 +68,6 @@ def project_init():
         app_logger.log(LoggingType.DEBUG, "cloning comfy repo")
         Repo.clone_from(comfy_repo_url, "ComfyUI")
         time.sleep(0.7)
-        
 
     # updating extra_model_path.yaml
     if COMFY_BASE_PATH != "ComfyUI":
@@ -98,10 +97,16 @@ def project_init():
             print(f"File {file_path} has been deleted.")
         except OSError as e:
             pass
-    
+
     if not os.path.exists("./ComfyUI/custom_nodes/ComfyUI-Manager"):
+        node_commit_dict = get_toml_config(TomlConfig.NODE_VERSION.value)
+        commit_hash = None
+        if "ComfyUI-Manager" in node_commit_dict:
+            commit_hash = node_commit_dict["ComfyUI-Manager"]["commit_hash"]
         os.chdir("./ComfyUI/custom_nodes/")
-        Repo.clone_from(comfy_manager_url, "ComfyUI-Manager")
+        repo = Repo.clone_from(comfy_manager_url, "ComfyUI-Manager")
+        if commit_hash:
+            repo.git.checkout(commit_hash)
         os.chdir("../../")
 
     # create encryption key if not already present (not applicable in dev mode)
@@ -125,9 +130,7 @@ def create_new_user_data(user: InternalUserObject):
     data_repo = DataRepo()
 
     setting_data = {"user_id": user.uuid, "welcome_state": 0}
-
     app_setting = data_repo.create_app_setting(**setting_data)
-
     create_new_project(user, "my_first_project")
 
 
@@ -146,7 +149,7 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
     shot = data_repo.create_shot(**shot_data)
     st.session_state["project_uuid"] = project.uuid
 
-    # Add initial frames only if there are no existing projects (i.e., it's the user's first project)
+    # Add initial frames only if there are no existing projects (i.e., it's user's first project)
     if add_initial_frames:
         init_images_path = os.path.join("sample_assets", "sample_images", "init_frames")
         init_image_list = list_files_in_folder(init_images_path)
@@ -187,47 +190,15 @@ def create_new_project(user: InternalUserObject, project_name: str, width=512, h
 
             add_image_variant(source_image.uuid, timing.uuid)
 
-    # create default ai models
-    model_list = create_predefined_models(user)
-
     # creating a project settings for this
     project_setting_data = {
         "project_id": project.uuid,
         "input_type": "video",
         "width": width,
         "height": height,
-        "default_model_id": model_list[0].uuid,
     }
 
     _ = data_repo.create_project_setting(**project_setting_data)
-
     create_working_assets(project.uuid)
 
     return project, shot
-
-
-def create_predefined_models(user):
-    data_repo = DataRepo()
-
-    # create predefined models
-    data = []
-    predefined_model_list = copy.deepcopy(ML_MODEL_LIST)
-    for m in predefined_model_list:
-        if "enabled" in m and m["enabled"]:
-            del m["enabled"]
-            m["user_id"] = user.uuid
-            data.append(m)
-
-    # only creating pre-defined models for the first time
-    available_models = data_repo.get_all_ai_model_list(
-        model_category_list=[AIModelCategory.BASE_SD.value], user_id=user.uuid, custom_trained=None
-    )
-
-    if available_models and len(available_models):
-        return available_models
-
-    model_list = []
-    for model in data:
-        model_list.append(data_repo.create_ai_model(**model))
-
-    return model_list

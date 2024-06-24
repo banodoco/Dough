@@ -51,7 +51,7 @@ def inpainting_element(options_width, image, position="explorer"):
             st.image(st.session_state["current_mask"], width=project_settings.width)
             st.info("The bright white areas will be inpainted, the faded areas be kept.")
 
-            if st.button("Clear Mask", use_container_width=True, key=f"clear_inpaint_mak_{position}"):
+            if st.button("Reset area to inpaint", use_container_width=True, key=f"clear_inpaint_mak_{position}"):
                 st.session_state["current_mask"] = ""
                 st.session_state["mask_to_use"] = ""
                 st.rerun()
@@ -147,7 +147,7 @@ def inpainting_element(options_width, image, position="explorer"):
                     st.session_state["uploaded_image"] = ""
                     st.rerun()
         with main_col_2:
-            if st.button("Save Mask", use_container_width=True):
+            if st.button("Save area to inpaint", use_container_width=True):
                 img_data = canvas_result.image_data
                 im = Image.fromarray(img_data.astype("uint8"), mode="RGBA")
                 im = ImageOps.crop(im, border=(offset[0], offset[1]))  # Cropping back to original size

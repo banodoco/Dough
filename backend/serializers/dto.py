@@ -73,6 +73,8 @@ class InferenceLogDto(serializers.ModelSerializer):
             "updated_on",
             "status",
             "model_name",
+            "generation_source",
+            "generation_tag"
         )
 
 
