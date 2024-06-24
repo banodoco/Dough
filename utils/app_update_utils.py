@@ -1,5 +1,6 @@
 import glob
 import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -21,7 +22,8 @@ comfy_runner_dir = os.path.join(dough_dir, "comfy_runner")
 comfy_ui_dir = os.path.join(dough_dir, "ComfyUI")
 
 
-def check_for_updates():
+# TODO: add all these methods in a common interface
+def check_and_pull_changes():
     if not os.path.exists("banodoco_local.db"):
         return
 
@@ -45,22 +47,55 @@ def check_for_updates():
         ):
             st.info("Checking for updates...")
             st.session_state["update_in_progress"] = True
-            update_thread = threading.Thread(target=update_app)
+            update_thread = threading.Thread(target=pull_fresh_changes)
             update_thread.start()
             update_thread.join()
             update_event.wait()
+
+            st.success(
+                """
+                ## New changes have been fetched. Please stop the app from the terminal and then restart to apply the changes.         
+            """
+            )
+            save_checkpoint()
             st.session_state["update_in_progress"] = False
+            st.stop()
+        else:
             st.session_state["first_load"] = True
             st.rerun()
 
 
-def update_app():
+def pull_fresh_changes():
+    print("Pulling latest changes...")
     try:
-        update_dough()
-        update_comfy_runner()
-        update_comfy_ui()
+        update_git_repo(dough_dir)
+        update_event.set()
     except Exception as e:
-        print("Update failed:", str(e))
+        print(f"Error occurred: {str(e)}")
+
+
+def apply_updates():
+    if st.session_state.get("update_in_progress", False):
+        return
+
+    st.session_state["update_in_progress"] = True
+
+    def update_method():
+        try:
+            update_dough()
+            update_comfy_runner()
+            update_comfy_ui()
+            clear_save_checkpoint()
+            update_event.set()
+        except Exception as e:
+            print("Update failed:", str(e))
+
+    update_thread = threading.Thread(target=update_method)
+    update_thread.start()
+    update_thread.join()
+    update_event.wait()
+
+    st.session_state["update_in_progress"] = False
 
 
 def update_comfy_runner():
@@ -88,11 +123,6 @@ def update_comfy_runner():
 
 def update_dough():
     print("Updating the app...")
-
-    try:
-        update_git_repo(dough_dir)
-    except Exception as e:
-        print(f"Error occurred: {str(e)}")
 
     # performing db migrations if any
     if os.path.exists("banodoco_local.db"):
@@ -165,42 +195,44 @@ def update_comfy_ui():
 
                 os.chdir(initial_dir)
 
-    update_event.set()
     move_to_root()
 
 
 # TODO: move all the git methods into a single class
 def update_git_repo(git_dir, commit_hash=None):
-    repo = Repo(git_dir)
+    try:
+        repo = Repo(git_dir)
 
-    repo.git.stash()
-    repo.remotes.origin.fetch()
+        repo.git.stash()
+        repo.remotes.origin.fetch()
 
-    if repo.head.is_detached:
-        current_hash = repo.head.commit.hexsha
-        # print(f"Current repository is in detached HEAD state, current commit: {current_hash}")
+        if repo.head.is_detached:
+            current_hash = repo.head.commit.hexsha
+            # print(f"Current repository is in detached HEAD state, current commit: {current_hash}")
 
-        if commit_hash:
-            if current_hash != commit_hash:
-                print(f"Checking out stable commit: {commit_hash}")
-                repo.git.checkout(commit_hash)
+            if commit_hash:
+                if current_hash != commit_hash:
+                    print(f"Checking out stable commit: {commit_hash}")
+                    repo.git.checkout(commit_hash)
+                else:
+                    print("Already at the stable commit")
             else:
-                print("Already at the stable commit")
+                print("No commit hash provided. Skipping checkout.")
         else:
-            print("No commit hash provided. Skipping checkout.")
-    else:
-        current_branch = repo.active_branch
-        print(f"Current branch: {current_branch.name}")
+            current_branch = repo.active_branch
+            print(f"Current branch: {current_branch.name}")
 
-        if commit_hash:
-            current_hash = repo.rev_parse("HEAD")
-            if current_hash != commit_hash:
-                print(f"Checking out stable commit: {commit_hash}")
-                repo.git.checkout(commit_hash)
+            if commit_hash:
+                current_hash = repo.rev_parse("HEAD")
+                if current_hash != commit_hash:
+                    print(f"Checking out stable commit: {commit_hash}")
+                    repo.git.checkout(commit_hash)
+                else:
+                    print("Already at the stable commit")
             else:
-                print("Already at the stable commit")
-        else:
-            repo.remotes.origin.pull(current_branch.name)
+                repo.remotes.origin.pull(current_branch.name)
+    except Exception as e:
+        print(f"Error occured while pulling fresh changes: {str(e)}")
 
 
 def get_local_version():
@@ -210,6 +242,30 @@ def get_local_version():
             return file.read().strip()
     except Exception as e:
         return None
+
+
+SAVE_CHECKPOINT_FILE = "./scripts/app_checkpoint.json"
+
+
+def save_checkpoint(stage="pull_changess"):
+    data = {"stage": stage}
+    os.makedirs(os.path.dirname(SAVE_CHECKPOINT_FILE), exist_ok=True)
+
+    with open(SAVE_CHECKPOINT_FILE, "w") as f:
+        f.write(json.dumps(data))
+
+
+def load_save_checkpoint():
+    if os.path.exists(SAVE_CHECKPOINT_FILE):
+        with open(SAVE_CHECKPOINT_FILE, "r") as f:
+            return json.loads(f.read().strip())
+
+    return None
+
+
+def clear_save_checkpoint():
+    if os.path.exists(SAVE_CHECKPOINT_FILE):
+        os.remove(SAVE_CHECKPOINT_FILE)
 
 
 def get_current_branch(git_dir):
