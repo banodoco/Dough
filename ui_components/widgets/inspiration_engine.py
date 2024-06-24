@@ -25,6 +25,7 @@ from utils import st_memory
 # NOTE: since running locally is very slow (comfy startup, models loading, other gens in process..)
 # rn we are accessing the replicate API directly, will switch to some other local method in the future
 
+
 def check_replicate_key():
     data_repo = DataRepo()
     app_secrets = data_repo.get_app_secrets_from_user_uuid()
@@ -41,7 +42,7 @@ def check_replicate_key():
 
 def edit_prompts(edit_text, list_of_prompts):
     # Convert list of prompts to a single string separated by '|'
-    prompts_string = '|'.join(list_of_prompts)
+    prompts_string = "|".join(list_of_prompts)
 
     query_data = {
         "top_p": 0.9,
@@ -54,7 +55,7 @@ def edit_prompts(edit_text, list_of_prompts):
         "presence_penalty": 1.15,
         "stop_sequences": " ",
     }
-    
+
     output = replicate.run(
         "meta/meta-llama-3-8b",
         input=query_data,
@@ -62,15 +63,15 @@ def edit_prompts(edit_text, list_of_prompts):
 
     proper_output = ""  # Initialize an empty string to accumulate outputs
     for item in output:
-        if isinstance(item, dict) and 'output' in item:
-            proper_output += item['output']  # Concatenate each output to the proper_output string
+        if isinstance(item, dict) and "output" in item:
+            proper_output += item["output"]  # Concatenate each output to the proper_output string
         else:
             proper_output += str(item)  # Handle cases where item is not a dictionary
-    
+
     list_of_prompts = proper_output.strip()
-    list_of_prompts = list_of_prompts.lstrip('\n')
+    list_of_prompts = list_of_prompts.lstrip("\n")
     # Proper output should be only before the first \n
-    list_of_prompts = list_of_prompts.split("\n")[0]     
+    list_of_prompts = list_of_prompts.split("\n")[0]
 
     return list_of_prompts
 
@@ -100,14 +101,14 @@ def generate_prompts(
 
     proper_output = ""  # Initialize an empty string to accumulate outputs
     for item in output:
-        if isinstance(item, dict) and 'output' in item:
-            proper_output += item['output']  # Concatenate each output to the proper_output string
+        if isinstance(item, dict) and "output" in item:
+            proper_output += item["output"]  # Concatenate each output to the proper_output string
         else:
             proper_output += str(item)  # Handle cases where item is not a dictionary
     list_of_prompts = proper_output.strip()
-    list_of_prompts = list_of_prompts.lstrip('\n')
+    list_of_prompts = list_of_prompts.lstrip("\n")
     # Proper output should be only before the first \n
-    list_of_prompts = proper_output.split("\n")[0]     
+    list_of_prompts = proper_output.split("\n")[0]
     return list_of_prompts
 
 
@@ -132,8 +133,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
     style_reference_list = [
         {
             "name": "The Strangest Dream",
-            "images": [                
-                "https://banodoco.s3.amazonaws.com/plan/strangest_dream_2.png",                
+            "images": [
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/general_pics/strangest_dream_2.png",
             ],
             "description": "Bold, dark colors, Dark Blue & red dominant, dream like, surreal.",
             "models_works_best_with": "Dreamshaper, Deliberate",
@@ -144,7 +145,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
         {
             "name": "Green Hard Funk",
             "images": [
-                "https://banodoco.s3.amazonaws.com/plan/green_hard_funk_1.png",                                
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/general_pics/green_hard_funk_1.png",
             ],
             "description": "Dominant green tones, red accents, high contrast, geometrical lining.",
             "models_works_best_with": "Dreamshaper, Deliberate",
@@ -155,7 +156,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
         {
             "name": "Nordic Pale Blue",
             "images": [
-                "https://banodoco.s3.amazonaws.com/plan/nordic_pale_blue_1.png",                                
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/general_pics/nordic_pale_blue_1.png",
             ],
             "description": "Pale blue, grey, pastel colors, ornamental and decorative details.",
             "models_works_best_with": "Dreamshaper, Deliberate",
@@ -166,7 +167,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
         {
             "name": "Insane Animane",
             "images": [
-                "https://banodoco.s3.amazonaws.com/plan/insane_animane_1.png",                                
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/general_pics/insane_animane_1.png",
             ],
             "description": "Detailed animation style, Blue, orange, white dominant, intense, expressive",
             "models_works_best_with": "Dreamshaper, Deliberate",
@@ -176,8 +177,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
         },
         {
             "name": "Delicate Pink Glimmer",
-            "images": [                
-                "https://banodoco.s3.amazonaws.com/plan/delicate_pink_2.png",                
+            "images": [
+                "https://banodoco-data-bucket-public.s3.ap-south-1.amazonaws.com/general_pics/delicate_pink_2.png",
             ],
             "description": "Delicate lines, soft colors, pink-blue & green dominant, misty/glimmer shine.",
             "models_works_best_with": "Deliberate, Realistic Vision",
@@ -560,21 +561,20 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     preview1, preview2, preview_3 = st.columns([1, 1, 1])
                     with preview1:
                         preset_images = items[[item["name"] for item in items].index(preset_style)]["images"]
-  
+
                         st.image(preset_images[0])
-   
+
                     with preview2:
                         st.info(
-                        f"""**Recommended animation styling models:** {items[[item["name"] for item in items].index(preset_style)]["models_works_best_with"]}
+                            f"""**Recommended animation styling models:** {items[[item["name"] for item in items].index(preset_style)]["models_works_best_with"]}
                         \n**Recommended workflow:** {items[[item["name"] for item in items].index(preset_style)]["workflows_works_best_with"]}
                         \n**Created by:** {items[[item["name"] for item in items].index(preset_style)]["created_by"]}
                         \n**Description:** {items[[item["name"] for item in items].index(preset_style)]["description"]}
 """
-                                )
+                        )
 
-                    with preview_3:                        
+                    with preview_3:
                         st.video(items[[item["name"] for item in items].index(preset_style)]["example_video"])
-              
 
                 else:
                     st.session_state["list_of_style_references"] = []
@@ -656,7 +656,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 help = ""
 
             st.markdown("***")
-            if st.button("Generate images", type="primary",disabled=button_status, help=help):
+            if st.button("Generate images", type="primary", disabled=button_status, help=help):
 
                 if type_of_style_input == "Choose From List":
                     st.session_state["list_of_style_references"] = preset_images

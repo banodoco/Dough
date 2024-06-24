@@ -154,18 +154,8 @@ cd Dough
 ---
 
 ### Using personal ComfyUI instance
-You can provide the path to your ComfyUI instance and Dough will use the models present there. Add the following at the bottom of the ".env" file
-```bash
-COMFY_MODELS_BASE_PATH="full_path_to_your_ComfyUI"
-```
-for e.g. in the case of Linux users this may look something like this
+You can provide the path to your ComfyUI instance in the "App Settings" section of Dough
 
-```bash
-COMFY_MODELS_BASE_PATH="/home/ubuntu/my_apps/ComfyUI/"
-```
-
-It will also download the new models in your personal ComfyUI instance. Please note that Dough
-will maintain it's own copy of the nodes and packages to not cause any issues with the packages that might already be installed on your personal ComfyUI.
 
 If you're having any issues, please share them in our [Discord](https://discord.com/invite/8Wx9dFu5tP).
 

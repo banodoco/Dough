@@ -7,7 +7,7 @@ import django
 from shared.constants import HOSTED_BACKGROUND_RUNNER_MODE, OFFLINE_MODE, SERVER, ServerType
 import sentry_sdk
 from shared.logging.logging import AppLogger
-from utils.app_update_utils import check_for_updates
+from utils.app_update_utils import apply_updates, check_and_pull_changes, load_save_checkpoint
 from utils.common_utils import is_process_active
 
 from utils.constants import AUTH_TOKEN, RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT
@@ -91,7 +91,10 @@ def main():
         # if it's the first time,
         if "first_load" not in st.session_state:
             if not is_process_active(RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT):
-                check_for_updates()  # enabling auto updates only for local version
+                if not load_save_checkpoint():
+                    check_and_pull_changes()  # enabling auto updates only for local version
+                else:
+                    apply_updates()
             st.session_state["first_load"] = True
         start_runner()
         project_init()
