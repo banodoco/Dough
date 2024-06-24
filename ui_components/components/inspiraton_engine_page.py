@@ -31,6 +31,8 @@ def inspiration_engine_page(shot_uuid: str, h2):
             with st.expander("🔍 Generation log", expanded=True):
                 sidebar_logger(st.session_state["shot_uuid"])
 
+
+
             st.write("")
             with st.expander("🪄 Shots", expanded=True):
                 timeline_view(shot_uuid, "🪄 Shots", view="sidebar")

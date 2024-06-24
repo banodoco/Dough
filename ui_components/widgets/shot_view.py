@@ -55,16 +55,19 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
         )
 
         if st.session_state[f"open_frame_changer_{shot.uuid}"]:
-            st.warning("You're in frame moving mode. You must press 'Save' to save changes.")
-            if st.button(
-                "Save",
-                key=f"save_move_frame_{shot.uuid}",
-                help="Save the changes made in 'move frame' mode",
-                use_container_width=True,
-                type="primary",
-            ):
-                update_shot_frames(shot_uuid)
-                st.rerun()
+            
+            save1, save2 = st.columns([1, 1])
+            with save1:
+                st.warning("You're in frame moving mode. You must press 'Save' to save changes.")
+                if st.button(
+                    "Save",
+                    key=f"save_move_frame_{shot.uuid}",
+                    help="Save the changes made in 'move frame' mode",
+                    use_container_width=True,
+                    type="primary",
+                ):
+                    update_shot_frames(shot_uuid)
+                    st.rerun()
 
             if f"shot_data_{shot_uuid}" not in st.session_state:
                 st.session_state[f"shot_data_{shot_uuid}"] = None
@@ -84,35 +87,41 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
                     for idx, timing in enumerate(timing_list)
                 ]
                 st.session_state[f"shot_data_{shot_uuid}"] = pd.DataFrame(shot_data)
-
-            if st.button(
-                "Discard changes",
-                key=f"discard_changes_{shot.uuid}",
-                help="Discard all changes made in 'move frame' mode",
-                use_container_width=True,
-            ):
-                st.session_state[f"open_frame_changer_{shot.uuid}"] = False
-                st.rerun()
+            with save1:
+                if st.button(
+                    "Discard changes",
+                    key=f"discard_changes_{shot.uuid}",
+                    help="Discard all changes made in 'move frame' mode",
+                    use_container_width=True,
+                ):
+                    st.session_state[f"open_frame_changer_{shot.uuid}"] = False
+                    st.rerun()
 
         else:
             st.session_state[f"shot_data_{shot_uuid}"] = None
 
         if open_frame_changer:
-            st.markdown("### Bulk move frames")
+            
             if st.session_state[f"list_to_move_{shot.uuid}"] != []:
-                h1, h2, h3 = st.columns([2, 1, 1])
-                with h1:
+
+                # if the number of an item in list_to_move is greater than the number of frames in the shot, remove it
+                if any([x >= len(st.session_state[f"shot_data_{shot_uuid}"]) for x in st.session_state[f"list_to_move_{shot.uuid}"]]):
+                    st.session_state[f"list_to_move_{shot_uuid}"] = [x for x in st.session_state[f"list_to_move_{shot_uuid}"] if x < len(st.session_state[f"shot_data_{shot_uuid}"])]
+                    st.rerun()
+                
+                with save2:
                     if st.session_state[f"list_to_move_{shot.uuid}"] == []:
                         st.write("")
                         st.info("No frames selected to move. Select them below.")
                     else:
-                        st.info(f"Selected frames to move: {', '.join(str(x + 1) for x in st.session_state[f'list_to_move_{shot.uuid}'])}")
+                        st.info(f"Selected frames: {', '.join(str(x + 1) for x in st.session_state[f'list_to_move_{shot.uuid}'])}")
+                with save2:
 
-                with h2:
                     if st.button(
-                        "Delete frames",
+                        "Delete selected frames",
                         key=f"delete_frame_to_{shot.uuid}",
                         help="Delete the selected frames",
+                        use_container_width=True,
                     ):
                         st.session_state[f"shot_data_{shot_uuid}"] = bulk_delete_temp_frames(
                             st.session_state[f"shot_data_{shot_uuid}"],
@@ -120,45 +129,32 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
                         )
                         st.session_state[f"list_to_move_{shot.uuid}"] = []
                         st.rerun()
-
-                with h3:
+                    
                     if st.session_state[f"list_to_move_{shot.uuid}"] != []:
                         if st.button(
                             "Deselect all frames",
                             key=f"remove_all_selected_{shot.uuid}",
                             help="Deselect all selected frames",
+                            use_container_width=True,
                         ):
                             st.session_state[f"list_to_move_{shot.uuid}"] = []
                             st.rerun()
-
-                frame_to_move_to = st.selectbox("Bulk move frames to:", [f"{i + 1}" for i in range(len(timing_list))], key=f"frame_to_move_to_{shot.uuid}")
-
-                if st.button(
-                    "Move selected",
-                    key=f"move_frame_to_{shot.uuid}",
-                    help="Move the frame to the selected position",
-                    use_container_width=True,
-                ):
-                    list_to_move = sorted(st.session_state[f"list_to_move_{shot.uuid}"])
-                    st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frames_to_positions(
-                        st.session_state[f"shot_data_{shot_uuid}"],
-                        list_to_move,
-                        int(frame_to_move_to) - 1,
-                    )
-                    st.session_state[f"list_to_move_{shot.uuid}"] = []
-                    st.rerun()
             else:
-                st.info("You haven't selected any frames - you can do so on the right.")
+                with save2:
+                    st.info("You haven't selected any frames - you can do so below.")
             
             return open_frame_changer
-
+    _, h1 = st.columns([3, 1])
+    with column:
+        with st.expander("🔧 Frame Changer", expanded=True):
+            open_frame_changer = manage_frame_movement(shot_uuid, timing_list)
+        
+    st.markdown("***")
     with st.sidebar:
 
         st.write("")
 
-        with st.expander("🔧 Frame Changer", expanded=True):
-            open_frame_changer = manage_frame_movement(shot_uuid, timing_list)
-
+       
         st.write("")
 
         with st.expander("📋 Shortlist", expanded=True):
@@ -171,7 +167,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
 
 
     if open_frame_changer:            
-        st.warning("You're in frame moving mode. You must press 'Save' on the left to save changes.")
+        
         edit_shot_view(shot_uuid, items_per_row)
         # st.warning("You're in frame moving mode. You must press 'Save' on the left to save changes.")
 
@@ -299,6 +295,26 @@ def edit_shot_view(shot_uuid, items_per_row):
                                     ):
                                         st.session_state[f"list_to_move_{shot_uuid}"].remove(idx)
                                         st.rerun()
+                            if st.session_state[f"list_to_move_{shot_uuid}"]:
+                                if len(st.session_state[f'list_to_move_{shot_uuid}']) == 1:
+                                    text = f"Move {len(st.session_state[f'list_to_move_{shot_uuid}'])} selected image here"
+                                else:
+                                    text = f"Move {len(st.session_state[f'list_to_move_{shot_uuid}'])} selected images here"
+                                if st.button(
+                                    text,
+                                    key=f"move_selected_{shot_uuid}_{idx}",
+                                    help="Move the selected frames",
+                                    use_container_width=True,
+                                ):
+                                    frame_to_move_to = idx + 1
+                                    list_to_move = sorted(st.session_state[f"list_to_move_{shot_uuid}"])
+                                    st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frames_to_positions(
+                                    st.session_state[f"shot_data_{shot_uuid}"],
+                                    list_to_move,
+                                    int(frame_to_move_to) - 1,
+                                    )
+                                    st.session_state[f"list_to_move_{shot_uuid}"] = []
+                                    st.rerun()
 
                         else:
                             individual_frame_zoom_edit_view(shot_uuid, idx)
