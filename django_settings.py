@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import sys
+from django.db.backends.signals import connection_created
 
 sys.path.append("../")
 
@@ -19,6 +20,11 @@ else:
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+def set_sqlite_timeout(sender, connection, **kwargs):
+    if connection.vendor == 'sqlite':
+        cursor = connection.cursor()
+        cursor.execute('PRAGMA busy_timeout = 30000;')  # 30 seconds
+
 if HOSTED_BACKGROUND_RUNNER_MODE in [False, "False"]:
     DATABASES = {
         "default": {
@@ -26,6 +32,7 @@ if HOSTED_BACKGROUND_RUNNER_MODE in [False, "False"]:
             "NAME": DB_LOCATION,
         }
     }
+    connection_created.connect(set_sqlite_timeout)
 else:
     import boto3
 
