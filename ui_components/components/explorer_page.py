@@ -966,9 +966,11 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
 
             st.markdown("***")
     else:
-        if st.session_state["page"] == "Shots":
+        if shortlist:
+            st.info("No images present. You can add images to the shortlist in the 'Inspiration Engine' tab.")
+        else:             
             st.info(
-                "No images present. You can generate images by clicking into the 'Inspiration Engine' tab on the left."
+                "No images present. You can generate images by clicking in the 'Inspiration Engine' section."
             )
-        else:
-            st.info("No images present. You can generate images above.")
+            
+            

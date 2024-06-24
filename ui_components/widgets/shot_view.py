@@ -103,6 +103,11 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
         if open_frame_changer:
             
             if st.session_state[f"list_to_move_{shot.uuid}"] != []:
+
+                # if the number of an item in list_to_move is greater than the number of frames in the shot, remove it
+                if any([x >= len(st.session_state[f"shot_data_{shot_uuid}"]) for x in st.session_state[f"list_to_move_{shot.uuid}"]]):
+                    st.session_state[f"list_to_move_{shot_uuid}"] = [x for x in st.session_state[f"list_to_move_{shot_uuid}"] if x < len(st.session_state[f"shot_data_{shot_uuid}"])]
+                    st.rerun()
                 
                 with save2:
                     if st.session_state[f"list_to_move_{shot.uuid}"] == []:
