@@ -694,6 +694,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                     horizontal=True,
                     key="main_gallery",
                 )
+                st.markdown(f"#### Page {page_number} of {project_settings.total_gallery_pages}")
             with h4:
                 st.write("")
                 if "view_inference_details" in view:
@@ -835,9 +836,9 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                     model = json.loads(log.output_details)["model_name"].split("/")[-1]
                                     if "view_inference_details" in view:
                                         with st.expander(
-                                            "Prompt Details", expanded=open_detailed_view_for_all
+                                            "Prompt Details:", expanded=open_detailed_view_for_all
                                         ):
-                                            st.info(f"**Prompt:** {prompt}\n\n**Model:** {model}")
+                                            st.info(f"'{prompt}'")
 
                                 else:
                                     st.warning("No inference data")
@@ -852,8 +853,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                         with cols[j]:
                             st.image(gallery_image_list[i + j].location, use_column_width=True)
                             # ---------- add to shot btn ---------------
-                            if "last_shot_number" not in st.session_state:
-                                st.session_state["last_shot_number"] = 0
+ 
                             if "add_to_this_shot" in view or "add_to_any_shot" in view:
                                 if "add_to_this_shot" in view:
                                     shot_name = shot.name
@@ -955,9 +955,9 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                     model = json.loads(log.output_details)["model_name"].split("/")[-1]
                                     if "view_inference_details" in view:
                                         with st.expander(
-                                            "Prompt Details", expanded=open_detailed_view_for_all
+                                            "Prompt Details:", expanded=open_detailed_view_for_all
                                         ):
-                                            st.info(f"**Prompt:** {prompt}\n\n**Model:** {model}")
+                                            st.info(f"'{prompt}'")
 
                                 else:
                                     st.warning("No inference data")

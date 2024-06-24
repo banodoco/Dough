@@ -127,7 +127,7 @@ def frame_styling_page(shot_uuid: str):
                                 process_inference_output(**inference_data)
                         st.rerun()
             else:
-                st.error("You must first select the area to inpaint.")
+                st.error("You must first select the area to inpaint and save it by clicking the button below.")
 
         st.markdown("***")
 

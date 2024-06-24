@@ -32,7 +32,7 @@ def adjust_shot_page(shot_uuid: str, h2):
         )
         st.markdown("***")
 
-        column1, column2 = st.columns([0.8, 1.35])
+        column1, column2 = st.columns([2, 1.35])
         with column1:
             st.markdown(f"### 🎬 '{shot.name}' frames")
             st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")

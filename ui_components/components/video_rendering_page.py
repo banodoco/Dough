@@ -26,7 +26,7 @@ from utils.data_repo.data_repo import DataRepo
 DEFAULT_SM_MODEL = "dreamshaper_8.safetensors"
 
 
-def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
+def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], column1, column2):
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
 
@@ -367,7 +367,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     type="secondary",
                 )
 
-            with header_col_3:
+            with column1:
                 if st.button("Reset to default", use_container_width=True, key="reset_to_default"):
                     for idx, _ in enumerate(img_list):
                         for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
@@ -377,7 +377,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject]):
                     st.rerun()
                 st.write("")
 
-            with header_col_4:
+            with column2:
                 if st.button(
                     "Save current settings",
                     key="save_current_settings",

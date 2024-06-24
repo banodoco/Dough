@@ -77,33 +77,14 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
             with h2:
                 if st.button('Add all to shortlist'):
                     for uuid in st.session_state['selected_images']:                
-                        add_file_to_shortlist(uuid)                                           
-                        st.session_state['selected_images'].remove(uuid)
-                    st.success("All selected images added to shortlist")
+                        add_file_to_shortlist(uuid)                                                                                       
                     time.sleep(0.3)
                     st.session_state['selected_images'] = []  # Clear selected images after adding
                     st.rerun()
 
-            shot_name = st.selectbox(
-                f"Add {len(st.session_state['selected_images'])} images to shot:",
-                shot_names,
-                key=f"current_shot_sidebar_selector",
-                index=st.session_state["last_shot_number"],
-            )
+            
+            add_new_shot_element(shot, data_repo)
 
-            if shot_name == "**Create New Shot**":
-                add_new_shot_element(shot, data_repo)
-            else:
-                if st.button('Add all to shot',use_container_width=True, type="primary"):
-                    shot_number = shot_names.index(shot_name)
-                    st.session_state["last_shot_number"] = shot_number
-                    shot_uuid = shot_list[shot_number].uuid            
-                    for uuid in st.session_state['selected_images']:
-                        image = data_repo.get_file_from_uuid(uuid).location
-                        if image:
-                            add_key_frame(image, shot_uuid, len(data_repo.get_timing_list_from_shot(shot_uuid)), refresh_state=False)
-                    st.session_state['selected_images'] = []  # Clear selected images after adding
-                    st.rerun()
 
 
             st.markdown("***")
@@ -161,6 +142,20 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
                     duplicate_shot_button(shot.uuid, position="timeline_view")
                     if shot.main_clip:
                         create_video_download_button(shot.main_clip.location, ui_key="main_clip")
+            elif view == "sidebar":
+                if st.session_state['selected_images']:                    
+                    if st.button(f"Add {len(st.session_state['selected_images'])} selected images to this shot",use_container_width=True, type="primary", key=f"add_to_shot_{shot.uuid}"):
+                        shot_names = [s.name for s in shot_list]
+                        shot_number = shot_names.index(shot.name)
+                        st.session_state["last_shot_number"] = shot_number                            
+                        for uuid in st.session_state['selected_images']:
+                            image = data_repo.get_file_from_uuid(uuid).location
+                            if image:
+                                add_key_frame(image, shot.uuid, len(data_repo.get_timing_list_from_shot(shot.uuid)), refresh_state=False)
+                        st.session_state['selected_images'] = []  # Clear selected images after adding
+                        st.rerun()
+                st.markdown("***")
+
 
         if (idx + 1) % items_per_row == 0 or idx == len(shot_list_for_display) - 1:
             st.markdown("***")
@@ -185,7 +180,7 @@ def add_new_shot_element(shot, data_repo, show_image_uploader=False):
     else:
         uploaded_images = None
 
-    if st.button("Add new shot", type="primary", key=f"add_shot_btn_{shot.uuid}"):
+    if st.button("Add new shot", type="secondary", key=f"add_shot_btn_{shot.uuid}"):
 
         new_shot = add_new_shot(shot.project.uuid)
         if new_shot_name != "":
