@@ -73,7 +73,7 @@ MODEL_PATH_DICT = {
     },
     ComfyWorkflow.CREATIVE_IMAGE_GEN: {
         "workflow_path": "comfy_workflows/creative_image_gen.json",
-        "output_node_id": [9],
+        "output_node_id": [27],
     },
     ComfyWorkflow.SD3: {
         "workflow_path": "comfy_workflows/sd3_workflow_api.json",
@@ -888,17 +888,18 @@ class ComfyDataTransform:
         seed = random_seed()
         style_strength = query.strength
 
-        def add_nth_node(workflow, n, img_file, weight_first_node, weight_second_node):
+        # @Peter you can use this weight, passed from the frontend
+        def add_nth_node(workflow, n, img_file, weight=0.7):
 
             ipa_node_idx_list = []
             for k, v in workflow.items():
-                if v["class_type"] == "IPAdapterAdvanced":
+                if v["class_type"] == "IPAdapterMS":
                     ipa_node_idx_list.append(int(k))
 
             ipa_node_idx_list.sort(reverse=True)
             # creating new nodes (not handling the case if there are multiple nodes)
-            # starting idx from 100, just to be safe
-            node_idx = 100 + n * 4
+            # starting idx from 50, just to be safe
+            node_idx = 50 + n * 3
 
             workflow[str(node_idx)] = {
                 "inputs": {"image": img_file.filename, "upload": "image"},
@@ -906,78 +907,43 @@ class ComfyDataTransform:
                 "_meta": {"title": "Load Image"},
             }
 
+            # the latest (previous) ipa node acts as a input in this
+            model_input = [str(ipa_node_idx_list[0]), 0] if len(ipa_node_idx_list) else ["11", 0]
+
             workflow[str(node_idx + 1)] = {
                 "inputs": {
-                    "type": "dissolve",
-                    "strength": 0.7,
-                    "blur": 0,
-                    "image_optional": [str(node_idx), 0],
+                "weight": 1,
+                "style_boost": 1,
+                "combine_embeds": "concat",
+                "start_at": 0,
+                "end_at": 1,
+                "embeds_scaling": "V only",
+                "model": model_input,
+                "ipadapter": [
+                    "11",
+                    1
+                ],
+                "image": [
+                    str(node_idx),
+                    0
+                ]
                 },
-                "class_type": "IPAdapterNoise",
-                "_meta": {"title": "IPAdapter Noise"},
+                "class_type": "IPAdapterPreciseStyleTransfer",
+                "_meta": {
+                "title": "IPAdapter Precise Style Transfer"
+                }
             }
 
-            # the latest (previous) ipa node acts as a input in this
-            model_input = [str(ipa_node_idx_list[0]), 0] if len(ipa_node_idx_list) else ["4", 0]
-
-            workflow[str(node_idx + 2)] = {
-                "inputs": {
-                    "weight": weight_first_node,
-                    "weight_type": "strong style transfer",
-                    "combine_embeds": "concat",
-                    "start_at": 0,
-                    "end_at": 0.3,
-                    "embeds_scaling": "V only",
-                    "model": model_input,
-                    "ipadapter": ["58", 0],
-                    "image": [str(node_idx), 0],
-                    "image_negative": [str(node_idx + 1), 0],
-                    "clip_vision": ["62", 0],
-                },
-                "class_type": "IPAdapterAdvanced",
-                "_meta": {"title": "IPAdapter Advanced"},
-            }
-
-            # Fourth node in this batch
-            workflow[str(node_idx + 3)] = {
-                "inputs": {
-                    "weight": weight_second_node,
-                    "weight_type": "ease in-out",
-                    "combine_embeds": "concat",
-                    "start_at": 0,
-                    "end_at": 1,
-                    "sharpening": 0,
-                    "embeds_scaling": "V only",
-                    "model": [str(node_idx + 2), 0],
-                    "ipadapter": ["48", 0],
-                    "image": [str(node_idx), 0],
-                    "image_negative": [str(node_idx + 1), 0],
-                    "clip_vision": ["49", 0],
-                },
-                "class_type": "IPAdapterTiled",
-                "_meta": {"title": "IPAdapter Tiled"},
-            }
-
-            return node_idx + 3
+            return node_idx + 1
 
         def add_reference_images(workflow, img_list, weight, **kwargs):
             num_images = len(img_list)
-            
-            base_weight_first_node = 0.11
-            base_weight_second_node = 0.75
-            
-            first_weight_increment = (weight - 0.5) * 0.15
-            second_weight_increment = (weight - 0.5) * 0.3
-            
-            # Adjusted weights
-            weight_first_node = base_weight_first_node + first_weight_increment
-            weight_second_node = base_weight_second_node + second_weight_increment
 
             last_node_index = None
 
             for i in range(num_images):
                 last_node_index = add_nth_node(
-                    workflow, i + 1, img_list[i], weight_first_node, weight_second_node
+                    workflow, i + 1, img_list[i], weight
                 )
                 for k, v in kwargs.items():
                     if k in workflow[str(last_node_index)]["inputs"]:
@@ -1013,8 +979,8 @@ class ComfyDataTransform:
                 "dest": os.path.join(COMFY_BASE_PATH, "models", "clip_vision"),
             },
             {
-                "filename": "ip_plus_style_sdxl.safetensors",
-                "url": "https://huggingface.co/peteromallet/mystery_models/resolve/main/ip_plus_style_sdxl.safetensors?download=true",
+                "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+                "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors",
                 "dest": os.path.join(COMFY_BASE_PATH, "models", "ipadapter"),
             },
         ]
