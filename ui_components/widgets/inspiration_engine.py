@@ -204,7 +204,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 "insp_additional_neg_desc": "",
                 "insp_model_idx": 0,
                 "insp_type_of_style": 0,
-                "insp_style_influence": 0.5,
+                "insp_style_influence": [0.7, 0.7, 0.7],
+                "insp_composition_influence": [0.0, 0.0, 0.0],
+                "insp_vibe_influence": [0.0, 0.0, 0.0],
                 "insp_additional_style_text": "",
                 "insp_img_per_prompt": 4,
                 "insp_test_mode": False,
@@ -213,10 +215,17 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             }
 
             project_meta_data = json.loads(project.meta_data) if project.meta_data else {}
-            prev_settings = project_meta_data.get(ProjectMetaData.INSP_VALUES.value, None)
+            prev_settings = project_meta_data.get(ProjectMetaData.INSP_VALUES.value, {})
+            
+            # Ensure that settings_to_load prioritizes prev_settings and falls back to default_form_values if a key is missing
+            settings_to_load = {**default_form_values, **prev_settings}
 
-            settings_to_load = prev_settings or default_form_values
-            # picking up default values
+            # Update settings_to_load to prioritize prev_settings over default_form_values
+            for key in default_form_values:
+                if key not in settings_to_load:
+                    settings_to_load[key] = default_form_values[key]
+
+            # Picking up default values
             for k, v in settings_to_load.items():
                 if k not in st.session_state:
                     st.session_state[k] = v
@@ -479,7 +488,10 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 if "list_of_style_references" not in st.session_state:
                     st.session_state["list_of_style_references"] = []
 
+                list_of_strengths = []
+
                 if type_of_style_input == "Upload Images":
+                    preview_1, preview_2, preview_3 = st.columns([1, 1, 1])
 
                     if len(st.session_state["list_of_style_references"]) < 3:
                         h1, h2 = st.columns([1, 1.5])
@@ -520,53 +532,31 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             st.session_state["list_of_style_references"] = []
                             st.rerun()
 
-                    columns = st.columns(4)
-
-                    for i, col in enumerate(columns):
-                        if i < len(st.session_state["list_of_style_references"]):
-                            with col:
-                                uploaded_file = st.session_state["list_of_style_references"][i]
-                                if uploaded_file is not None:
-                                    # Check if the uploaded file behaves like a file-like object
-                                    if hasattr(uploaded_file, "read"):
-                                        # Attempt to open the image
-                                        try:
-                                            display_img = Image.open(uploaded_file)
-                                        except IOError:
-                                            st.error("Failed to read the image file.")
-                                            continue
-                                    else:
-                                        st.error("Uploaded file does not support file-like operations.")
-                                        continue
-
-                                    # Apply zoom and crop
-                                    display_img = zoom_and_crop(display_img, 512, 512)
-                                    st.image(display_img)
-                                    if st.button(f"Remove style reference {i+1}", use_container_width=True):
-                                        # Remove the image from the list
-                                        st.session_state["list_of_style_references"].pop(i)
-                                        st.rerun()
-
                 elif type_of_style_input == "Choose From List":
+
+                    if st.session_state["list_of_style_references"]:
+                        st.session_state["list_of_style_references"] = [items["images"] for items in style_reference_list]
+
+                    
                     items = style_reference_list
 
                     preset_style, preset_images = None, None
                     preset1, _ = st.columns([0.5, 1.0])
                     with preset1:
-                        preset_style = st.selectbox(
+                        preset_style = st_memory.selectbox(
                             "Choose a style preset:",
                             [item["name"] for item in items],
                             help="Select a style preset to use for image generation.",
                         )
-                    preview1, preview2, preview_3 = st.columns([1, 1, 1])
-                    with preview1:
-                        preset_images = items[[item["name"] for item in items].index(preset_style)]["images"]
+                        
+                    preview_1, preview_2, preview_3 = st.columns([1, 1, 1])
 
-                        st.image(preset_images[0])
-
-                    with preview2:
+                    if st.session_state["list_of_style_references"] != items[[item["name"] for item in items].index(preset_style)]["images"]:
+                        st.session_state["list_of_style_references"] = items[[item["name"] for item in items].index(preset_style)]["images"]
+                        # st.image(items[[item["name"] for item in items].index(preset_style)]["images"])
+                    with preview_2:
                         st.info(
-                            f"""**Recommended animation styling models:** {items[[item["name"] for item in items].index(preset_style)]["models_works_best_with"]}
+                        f"""**Recommended animation styling models:** {items[[item["name"] for item in items].index(preset_style)]["models_works_best_with"]}
                         \n**Recommended workflow:** {items[[item["name"] for item in items].index(preset_style)]["workflows_works_best_with"]}
                         \n**Created by:** {items[[item["name"] for item in items].index(preset_style)]["created_by"]}
                         \n**Description:** {items[[item["name"] for item in items].index(preset_style)]["description"]}
@@ -578,22 +568,86 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                 else:
                     st.session_state["list_of_style_references"] = []
+                
 
-                inf1, inf2 = st.columns([2, 2])
-                with inf1:
-                    style_influence = st.slider(
-                        "Style influence:",
-                        min_value=0.0,
-                        max_value=1.0,
-                        step=0.1,
-                        value=st.session_state["insp_style_influence"],
-                        help="This is the influence of the style on the generated images.",
-                    )
+                for key in ["insp_style_influence", "insp_composition_influence", "insp_vibe_influence"]:
+                    # if it's a float, make it into a list with 3 items
+                    if not isinstance(st.session_state[key], list):
+                        st.session_state[key] = [st.session_state[key]] * 3
 
-                    if st.session_state["insp_style_influence"] != style_influence:
-                        st.session_state["insp_style_influence"] = style_influence
-                        st.rerun()
+                # Determine if we should use the first value for all sliders
+                use_first_value = len(st.session_state["list_of_style_references"]) == 1
 
+                for i, col in enumerate([preview_1, preview_2, preview_3]):
+                    with col:
+                        if i < len(st.session_state["list_of_style_references"]):                            
+                            uploaded_file = st.session_state["list_of_style_references"][i]
+                            if uploaded_file is not None:                                
+                                if isinstance(uploaded_file, str) and uploaded_file.startswith('http'):
+                                    st.image(uploaded_file)
+                                else:
+                                    display_img = Image.open(uploaded_file)
+                                    display_img = zoom_and_crop(display_img, 512, 512)
+                                    st.image(display_img)
+                                
+                                # Determine which index to use for the sliders
+                                slider_index = 0 if use_first_value else i
+
+                                # Style influence slider
+                                style_influence = st.slider(
+                                    f"Style influence:",
+                                    min_value=0.0,
+                                    max_value=1.0,
+                                    step=0.1,
+                                    value=st.session_state["insp_style_influence"][slider_index],
+                                    key=f"style_influence_{i}",
+                                    help=f"Style influence for image {i+1}",
+                                )
+                                if st.session_state["insp_style_influence"][slider_index] != style_influence:
+                                    st.session_state["insp_style_influence"][slider_index] = style_influence
+                                    st.rerun()
+
+                                # Composition influence slider
+                                composition_influence = st.slider(
+                                    f"Composition influence:",
+                                    min_value=0.0,
+                                    max_value=1.0,
+                                    step=0.1,
+                                    value=st.session_state["insp_composition_influence"][slider_index],
+                                    key=f"composition_influence_{i}",
+                                    help=f"Composition influence for image {i+1}",
+                                )
+                                if st.session_state["insp_composition_influence"][slider_index] != composition_influence:
+                                    st.session_state["insp_composition_influence"][slider_index] = composition_influence
+                                    st.rerun()
+
+                                # Vibe influence slider
+                                vibe_influence = st.slider(
+                                    f"Vibe influence:",
+                                    min_value=0.0,
+                                    max_value=1.0,
+                                    step=0.1,
+                                    value=st.session_state["insp_vibe_influence"][slider_index],
+                                    key=f"vibe_influence_{i}",
+                                    help=f"Vibe influence for image {i+1}",
+                                )
+                                if st.session_state["insp_vibe_influence"][slider_index] != vibe_influence:
+                                    st.session_state["insp_vibe_influence"][slider_index] = vibe_influence
+                                    st.rerun()
+                                if type_of_style_input == "Upload Images":
+                                    if st.button(f"Remove style reference", use_container_width=True,key=f"remove_{i}"):
+                                        # Remove the image from the list
+                                        st.session_state["list_of_style_references"].pop(i)
+                                        st.rerun()
+                                item = (style_influence, composition_influence, vibe_influence)
+                                list_of_strengths.append(item)
+
+                            else:
+                                st.error("Uploaded file does not support file-like operations.")
+
+                            
+   
+            
             text1, _ = st.columns([1, 1])
             with text1:
                 additional_style_text = st.text_area(
@@ -658,9 +712,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             st.markdown("***")
             if st.button("Generate images", type="primary", disabled=button_status, help=help):
 
-                if type_of_style_input == "Choose From List":
-                    st.session_state["list_of_style_references"] = preset_images
-
                 ml_client = get_ml_client()
 
                 input_image_file_list = []
@@ -724,7 +775,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 guidance_scale=5,
                                 seed=-1,
                                 num_inference_steps=30,
-                                strength=style_influence,
+                                strength=list_of_strengths,
                                 adapter_type=None,
                                 prompt=f"{image_prompt}, {additonal_description_text}, {additional_style_text}",
                                 negative_prompt=negative_prompt,

@@ -889,61 +889,131 @@ class ComfyDataTransform:
         style_strength = query.strength
 
         # @Peter you can use this weight, passed from the frontend
-        def add_nth_node(workflow, n, img_file, weight=0.7):
+        def add_nth_node(workflow, n, img_file, weight):
+            
+            # make style_influence the first item in the weight tuple
+            style_influence = float(weight[0])
+            composition_influence = float(weight[1])
+            vibe_influence = float(weight[2])
 
             ipa_node_idx_list = []
             for k, v in workflow.items():
-                if v["class_type"] == "IPAdapterMS":
+                if v["class_type"] in ["IPAdapterMS", "IPAdapterAdvanced"]:
                     ipa_node_idx_list.append(int(k))
-
             ipa_node_idx_list.sort(reverse=True)
-            # creating new nodes (not handling the case if there are multiple nodes)
-            # starting idx from 50, just to be safe
-            node_idx = 50 + n * 3
 
+            # starting idx from 50, just to be safe
+            node_idx = 50 + n * 6
+
+            # Load Image
             workflow[str(node_idx)] = {
                 "inputs": {"image": img_file.filename, "upload": "image"},
                 "class_type": "LoadImage",
                 "_meta": {"title": "Load Image"},
             }
 
-            # the latest (previous) ipa node acts as a input in this
-            model_input = [str(ipa_node_idx_list[0]), 0] if len(ipa_node_idx_list) else ["11", 0]
-
+            # Prep Image For ClipVision
             workflow[str(node_idx + 1)] = {
                 "inputs": {
-                "weight": 1,
-                "style_boost": 1,
-                "combine_embeds": "concat",
-                "start_at": 0,
-                "end_at": 1,
-                "embeds_scaling": "V only",
-                "model": model_input,
-                "ipadapter": [
-                    "11",
-                    1
-                ],
-                "image": [
-                    str(node_idx),
-                    0
-                ]
+                    "interpolation": "LANCZOS",
+                    "crop_position": "center",
+                    "sharpening": 0,
+                    "image": [str(node_idx), 0]
                 },
-                "class_type": "IPAdapterPreciseStyleTransfer",
-                "_meta": {
-                "title": "IPAdapter Precise Style Transfer"
-                }
+                "class_type": "PrepImageForClipVision",
+                "_meta": {"title": "Prep Image For ClipVision"}
             }
 
-            return node_idx + 1
+            # IPAdapter Mad Scientist
+            model_input = [str(ipa_node_idx_list[0]), 0] if len(ipa_node_idx_list) else ["11", 0]
+            workflow[str(node_idx + 2)] = {
+                "inputs": {
+                    "weight": style_influence,
+                    "weight_faceidv2": 1,
+                    "weight_type": "style transfer precise",
+                    "combine_embeds": "concat",
+                    "start_at": 0,
+                    "end_at": 1,
+                    "embeds_scaling": "V only",
+                    "layer_weights": "3:2.5, 6:1",
+                    "model": model_input,
+                    "ipadapter": ["11", 1],
+                    "image": [str(node_idx + 1), 0]
+                },
+                "class_type": "IPAdapterMS",
+                "_meta": {"title": "IPAdapter Mad Scientist"}
+            }
+
+            # ImageCropByRatioAndResize
+            workflow[str(node_idx + 3)] = {
+                "inputs": {
+                    "width_ratio_size": 512,
+                    "height_ratio_size": 512,
+                    "position": "center",
+                    "interpolation": "nearest",
+                    "image": [str(node_idx), 0]
+                },
+                "class_type": "ImageCropByRatioAndResize",
+                "_meta": {"title": "ImageCropByRatioAndResize"}
+            }
+
+            # IPAdapter Advanced (composition)
+            workflow[str(node_idx + 4)] = {
+                "inputs": {
+                    "weight": composition_influence,
+                    "weight_type": "composition",
+                    "combine_embeds": "concat",
+                    "start_at": 0,
+                    "end_at": 1,
+                    "embeds_scaling": "V only",
+                    "model": [str(node_idx + 2), 0],
+                    "ipadapter": ["11", 1],
+                    "image": [str(node_idx + 3), 0]
+                },
+                "class_type": "IPAdapterAdvanced",
+                "_meta": {"title": "IPAdapter Advanced"}
+            }
+
+            # Prep Image For ClipVision (pad)
+            workflow[str(node_idx + 5)] = {
+                "inputs": {
+                    "interpolation": "LANCZOS",
+                    "crop_position": "pad",
+                    "sharpening": 0,
+                    "image": [str(node_idx), 0]
+                },
+                "class_type": "PrepImageForClipVision",
+                "_meta": {"title": "Prep Image For ClipVision"}
+            }
+
+            # IPAdapter Advanced (linear)
+            workflow[str(node_idx + 6)] = {
+                "inputs": {
+                    "weight": vibe_influence,
+                    "weight_type": "linear",
+                    "combine_embeds": "concat",
+                    "start_at": 0,
+                    "end_at": 1,
+                    "embeds_scaling": "V only",
+                    "model": [str(node_idx + 4), 0],
+                    "ipadapter": ["11", 1],
+                    "image": [str(node_idx + 5), 0]
+                },
+                "class_type": "IPAdapterAdvanced",
+                "_meta": {"title": "IPAdapter Advanced"}
+            }
+
+            return node_idx + 6
 
         def add_reference_images(workflow, img_list, weight, **kwargs):
+            
             num_images = len(img_list)
 
             last_node_index = None
 
             for i in range(num_images):
                 last_node_index = add_nth_node(
-                    workflow, i + 1, img_list[i], weight
+                    workflow, i + 1, img_list[i], weight[i]
                 )
                 for k, v in kwargs.items():
                     if k in workflow[str(last_node_index)]["inputs"]:
