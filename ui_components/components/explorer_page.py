@@ -687,7 +687,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         shot_uuid_list = []
 
         if not shortlist:
-            with h1:
+            st.caption(f"Items in view: {num_items_per_page*project_settings.total_gallery_pages}")
+            with h1:                
                 page_number = st_memory.radio(
                     "Select page:",
                     options=range(1, project_settings.total_gallery_pages + 1),
@@ -698,7 +699,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             with h4:
                 st.write("")
                 if "view_inference_details" in view:
-                    open_detailed_view_for_all = st.toggle("Open all details:", key="main_gallery_toggle")
+                    open_detailed_view_for_all = st.toggle("Open all prompts:", key="main_gallery_toggle")
 
         else:
             with h1:

@@ -889,124 +889,135 @@ class ComfyDataTransform:
         style_strength = query.strength
         # @Peter you can use this weight, passed from the frontend
         def add_nth_node(workflow, n, img_file, weight):
-            
-            # make style_influence the first item in the weight tuple
-            style_influence = float(weight[0])
-            composition_influence = float(weight[1])
-            vibe_influence = float(weight[2])
-
+            style_influence, composition_influence, vibe_influence = map(float, weight[:3])
+        
             ipa_node_idx_list = []
             for k, v in workflow.items():
                 if v["class_type"] in ["IPAdapterMS", "IPAdapterAdvanced"]:
                     ipa_node_idx_list.append(int(k))
             ipa_node_idx_list.sort(reverse=True)
-
-            # starting idx from 50, just to be safe
+        
             node_idx = 50 + n * 10 
-
+        
             # Load Image
             workflow[str(node_idx)] = {
                 "inputs": {"image": img_file.filename, "upload": "image"},
                 "class_type": "LoadImage",
                 "_meta": {"title": "Load Image"},
             }
-
-            # Prep Image For ClipVision
-            workflow[str(node_idx + 1)] = {
-                "inputs": {
-                    "interpolation": "LANCZOS",
-                    "crop_position": "center",
-                    "sharpening": 0,
-                    "image": [str(node_idx), 0]
-                },
-                "class_type": "PrepImageForClipVision",
-                "_meta": {"title": "Prep Image For ClipVision"}
-            }
-
-            # IPAdapter Mad Scientist
-            model_input = [str(ipa_node_idx_list[0]), 0] if len(ipa_node_idx_list) else ["11", 0]
-            workflow[str(node_idx + 2)] = {
-                "inputs": {
-                    "weight": style_influence,
-                    "weight_faceidv2": 1,
-                    "weight_type": "style transfer precise",
-                    "combine_embeds": "concat",
-                    "start_at": 0,
-                    "end_at": 1,
-                    "embeds_scaling": "V only",
-                    "layer_weights": "3:2.5, 6:1",
-                    "model": model_input,
-                    "ipadapter": ["11", 1],
-                    "image": [str(node_idx + 1), 0]
-                },
-                "class_type": "IPAdapterMS",
-                "_meta": {"title": "IPAdapter Mad Scientist"}
-            }
-
-            # ImageCropByRatioAndResize
-            workflow[str(node_idx + 3)] = {
-                "inputs": {
-                    "width_ratio_size": 512,
-                    "height_ratio_size": 512,
-                    "position": "center",
-                    "interpolation": "nearest",
-                    "image": [str(node_idx), 0]
-                },
-                "class_type": "ImageCropByRatioAndResize",
-                "_meta": {"title": "ImageCropByRatioAndResize"}
-            }
-
-            # IPAdapter Advanced (composition)
-            workflow[str(node_idx + 4)] = {
-                "inputs": {
-                    "weight": composition_influence,
-                    "weight_type": "composition",
-                    "combine_embeds": "concat",
-                    "start_at": 0,
-                    "end_at": 1,
-                    "embeds_scaling": "V only",
-                    "model": [str(node_idx + 2), 0],
-                    "ipadapter": ["11", 1],
-                    "image": [str(node_idx + 3), 0]
-                },
-                "class_type": "IPAdapterAdvanced",
-                "_meta": {"title": "IPAdapter Advanced"}
-            }
-
-            # Prep Image For ClipVision (pad)
-            workflow[str(node_idx + 5)] = {
-                "inputs": {
-                    "interpolation": "LANCZOS",
-                    "crop_position": "pad",
-                    "sharpening": 0,
-                    "image": [str(node_idx), 0]
-                },
-                "class_type": "PrepImageForClipVision",
-                "_meta": {"title": "Prep Image For ClipVision"}
-            }
-
-            # IPAdapter Advanced (linear)
-            workflow[str(node_idx + 6)] = {
-                "inputs": {
-                    "weight": vibe_influence,
-                    "weight_type": "linear",
-                    "combine_embeds": "concat",
-                    "start_at": 0,
-                    "end_at": 1,
-                    "embeds_scaling": "V only",
-                    "model": [str(node_idx + 4), 0],
-                    "ipadapter": ["11", 1],
-                    "image": [str(node_idx + 5), 0]
-                },
-                "class_type": "IPAdapterAdvanced",
-                "_meta": {"title": "IPAdapter Advanced"}
-            }
-
-            # workflow.json
-            with open("workflow.json", "w") as f:
-                json.dump(workflow, f, indent=4)
-
-            return node_idx + 6
+        
+            last_model_node = ipa_node_idx_list[0] if ipa_node_idx_list else 11
+        
+            if style_influence > 0:
+                # Prep Image For ClipVision
+                workflow[str(node_idx + 1)] = {
+                    "inputs": {
+                        "interpolation": "LANCZOS",
+                        "crop_position": "center",
+                        "sharpening": 0,
+                        "image": [str(node_idx), 0]
+                    },
+                    "class_type": "PrepImageForClipVision",
+                    "_meta": {"title": "Prep Image For ClipVision"}
+                }
+        
+                # IPAdapter Mad Scientist
+                workflow[str(node_idx + 2)] = {
+                    "inputs": {
+                        "weight": style_influence,
+                        "weight_faceidv2": 1,
+                        "weight_type": "style transfer precise",
+                        "combine_embeds": "concat",
+                        "start_at": 0,
+                        "end_at": 1,
+                        "embeds_scaling": "V only",
+                        "layer_weights": "3:2.5, 6:1",
+                        "model": [str(last_model_node), 0],
+                        "ipadapter": ["11", 1],
+                        "image": [str(node_idx + 1), 0]
+                    },
+                    "class_type": "IPAdapterMS",
+                    "_meta": {"title": "IPAdapter Mad Scientist"}
+                }
+                last_model_node = node_idx + 2
+        
+            if composition_influence > 0:
+                # ImageCropByRatioAndResize
+                workflow[str(node_idx + 3)] = {
+                    "inputs": {
+                        "width_ratio_size": 512,
+                        "height_ratio_size": 512,
+                        "position": "center",
+                        "interpolation": "nearest",
+                        "image": [str(node_idx), 0]
+                    },
+                    "class_type": "ImageCropByRatioAndResize",
+                    "_meta": {"title": "ImageCropByRatioAndResize"}
+                }
+        
+                # IPAdapter Advanced (composition)
+                workflow[str(node_idx + 4)] = {
+                    "inputs": {
+                        "weight": composition_influence,
+                        "weight_type": "composition",
+                        "combine_embeds": "concat",
+                        "start_at": 0,
+                        "end_at": 1,
+                        "embeds_scaling": "V only",
+                        "model": [str(last_model_node), 0],
+                        "ipadapter": ["11", 1],
+                        "image": [str(node_idx + 3), 0]
+                    },
+                    "class_type": "IPAdapterAdvanced",
+                    "_meta": {"title": "IPAdapter Advanced"}
+                }
+                last_model_node = node_idx + 4
+        
+            if vibe_influence > 0:
+                # IPAdapter Noise (negative)
+                workflow[str(node_idx + 5)] = {
+                    "inputs": {
+                        "type": "dissolve",
+                        "strength": 0.7,
+                        "blur": 0,
+                        "image_optional": [str(node_idx), 0]
+                    },
+                    "class_type": "IPAdapterNoise",
+                    "_meta": {"title": "IPAdapter Noise (negative)"}
+                }
+        
+                # Prep Image For ClipVision (pad)
+                workflow[str(node_idx + 6)] = {
+                    "inputs": {
+                        "interpolation": "LANCZOS",
+                        "crop_position": "pad",
+                        "sharpening": 0,
+                        "image": [str(node_idx), 0]
+                    },
+                    "class_type": "PrepImageForClipVision",
+                    "_meta": {"title": "Prep Image For ClipVision"}
+                }
+        
+                # IPAdapter Advanced (linear)
+                workflow[str(node_idx + 7)] = {
+                    "inputs": {
+                        "weight": vibe_influence,
+                        "weight_type": "linear",
+                        "combine_embeds": "concat",
+                        "start_at": 0,
+                        "end_at": 1,
+                        "embeds_scaling": "V only",
+                        "model": [str(last_model_node), 0],  # Changed this line
+                        "ipadapter": ["11", 1],
+                        "image": [str(node_idx + 6), 0],
+                        "image_negative": [str(node_idx + 5), 0]
+                    },
+                    "class_type": "IPAdapterAdvanced",
+                    "_meta": {"title": "IPAdapter Advanced"}
+                }
+                last_model_node = node_idx + 7
+        
+            return int(last_model_node)                            
 
         def add_reference_images(workflow, img_list, weight, **kwargs):
             
@@ -1065,6 +1076,9 @@ class ComfyDataTransform:
                     "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
                 }
             )
+
+        with open("workflow.json", "w") as f:
+            json.dump(workflow, f, indent=4)
 
         return json.dumps(workflow), output_node_ids, extra_model_list, []
 

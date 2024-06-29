@@ -495,9 +495,20 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                     if len(st.session_state["list_of_style_references"]) < 3:
                         h1, h2 = st.columns([1, 1.5])
-                        with h1:
+                        if len(st.session_state["list_of_style_references"]) == 0:
+                            column = preview_1
+                            text = "Upload up to 3 style references."
+                        elif len(st.session_state["list_of_style_references"]) == 1:
+                            column = preview_2
+                            text = "Upload up to 2 more style references."
+                        elif len(st.session_state["list_of_style_references"]) == 2:
+                            column = preview_3
+                            text = "Upload 1 more style reference."
+                        else:
+                            column = h1
+                        with column:
                             uploaded_images = st.file_uploader(
-                                f"Upload up to 3 style references:",
+                                text,
                                 type=["jpg", "jpeg", "png", "webp"],
                                 accept_multiple_files=True,
                             )
@@ -527,10 +538,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                     disabled=True,
                                     help="You have no input images selectedr.",
                                 )
-                    else:
-                        if st.button("Remove all style references"):
-                            st.session_state["list_of_style_references"] = []
-                            st.rerun()
 
                 elif type_of_style_input == "Choose From List":
 
@@ -578,6 +585,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 # Determine if we should use the first value for all sliders
                 use_first_value = len(st.session_state["list_of_style_references"]) == 1
                 list_of_strengths = []
+                total_influences = 0
 
                 for i, col in enumerate([preview_1, preview_2, preview_3]):
                     with col:
@@ -642,11 +650,17 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         st.rerun()
                                 # add up the 3 values and if together they're over 1.5, show a warning
                                 
-                                item_strenths = (style_influence, composition_influence, vibe_influence)
-                                list_of_strengths.append(item_strenths)
+                                item_strengths = (style_influence, composition_influence, vibe_influence)
+                                list_of_strengths.append(item_strengths)
+                                total_influences += sum(1 for strength in item_strengths if strength > 0.0)
 
                             else:
                                 st.error("Uploaded file does not support file-like operations.")
+                
+                warning, _ = st.columns([1, 1.5])
+                with warning:
+                    if total_influences > 6:
+                        st.warning("Any more than 6 total influences will take more than 24GB of VRAM.")
 
                             
    

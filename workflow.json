@@ -1,0 +1,410 @@
+{
+    "3": {
+        "inputs": {
+            "seed": 457887425698111,
+            "steps": 20,
+            "cfg": 7,
+            "sampler_name": "dpmpp_2m",
+            "scheduler": "karras",
+            "denoise": 1,
+            "model": [
+                "76",
+                0
+            ],
+            "positive": [
+                "6",
+                0
+            ],
+            "negative": [
+                "7",
+                0
+            ],
+            "latent_image": [
+                "5",
+                0
+            ]
+        },
+        "class_type": "KSampler",
+        "_meta": {
+            "title": "KSampler"
+        }
+    },
+    "4": {
+        "inputs": {
+            "ckpt_name": "sd_xl_base_1.0.safetensors"
+        },
+        "class_type": "CheckpointLoaderSimple",
+        "_meta": {
+            "title": "Load Checkpoint"
+        }
+    },
+    "5": {
+        "inputs": {
+            "width": 1344,
+            "height": 768,
+            "batch_size": 1
+        },
+        "class_type": "EmptyLatentImage",
+        "_meta": {
+            "title": "Empty Latent Image"
+        }
+    },
+    "6": {
+        "inputs": {
+            "text": "tits, , ",
+            "clip": [
+                "4",
+                1
+            ]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": {
+            "title": "CLIP Text Encode (Prompt)"
+        }
+    },
+    "7": {
+        "inputs": {
+            "text": "",
+            "clip": [
+                "4",
+                1
+            ]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": {
+            "title": "CLIP Text Encode (Prompt)"
+        }
+    },
+    "10": {
+        "inputs": {
+            "vae_name": "sdxl_vae.safetensors"
+        },
+        "class_type": "VAELoader",
+        "_meta": {
+            "title": "Load VAE"
+        }
+    },
+    "11": {
+        "inputs": {
+            "preset": "PLUS (high strength)",
+            "model": [
+                "4",
+                0
+            ]
+        },
+        "class_type": "IPAdapterUnifiedLoader",
+        "_meta": {
+            "title": "IPAdapter Unified Loader"
+        }
+    },
+    "16": {
+        "inputs": {
+            "samples": [
+                "3",
+                0
+            ],
+            "vae": [
+                "10",
+                0
+            ]
+        },
+        "class_type": "VAEDecode",
+        "_meta": {
+            "title": "VAE Decode"
+        }
+    },
+    "27": {
+        "inputs": {
+            "filename_prefix": "IPAdapter",
+            "images": [
+                "16",
+                0
+            ]
+        },
+        "class_type": "SaveImage",
+        "_meta": {
+            "title": "Save Image"
+        }
+    },
+    "28": {
+        "inputs": {
+            "seed": 832322928972889
+        },
+        "class_type": "ttN seed",
+        "_meta": {
+            "title": "seed"
+        }
+    },
+    "60": {
+        "inputs": {
+            "image": "f734d5cd-fa99-412f-86e5-4ce42004b719.png",
+            "upload": "image"
+        },
+        "class_type": "LoadImage",
+        "_meta": {
+            "title": "Load Image"
+        }
+    },
+    "61": {
+        "inputs": {
+            "interpolation": "LANCZOS",
+            "crop_position": "center",
+            "sharpening": 0,
+            "image": [
+                "60",
+                0
+            ]
+        },
+        "class_type": "PrepImageForClipVision",
+        "_meta": {
+            "title": "Prep Image For ClipVision"
+        }
+    },
+    "62": {
+        "inputs": {
+            "weight": 0.8,
+            "weight_faceidv2": 1,
+            "weight_type": "style transfer precise",
+            "combine_embeds": "concat",
+            "start_at": 0,
+            "end_at": 1,
+            "embeds_scaling": "V only",
+            "layer_weights": "3:2.5, 6:1",
+            "model": [
+                "11",
+                0
+            ],
+            "ipadapter": [
+                "11",
+                1
+            ],
+            "image": [
+                "61",
+                0
+            ]
+        },
+        "class_type": "IPAdapterMS",
+        "_meta": {
+            "title": "IPAdapter Mad Scientist"
+        }
+    },
+    "63": {
+        "inputs": {
+            "width_ratio_size": 512,
+            "height_ratio_size": 512,
+            "position": "center",
+            "interpolation": "nearest",
+            "image": [
+                "60",
+                0
+            ]
+        },
+        "class_type": "ImageCropByRatioAndResize",
+        "_meta": {
+            "title": "ImageCropByRatioAndResize"
+        }
+    },
+    "64": {
+        "inputs": {
+            "weight": 0.1,
+            "weight_type": "composition",
+            "combine_embeds": "concat",
+            "start_at": 0,
+            "end_at": 1,
+            "embeds_scaling": "V only",
+            "model": [
+                "62",
+                0
+            ],
+            "ipadapter": [
+                "11",
+                1
+            ],
+            "image": [
+                "63",
+                0
+            ]
+        },
+        "class_type": "IPAdapterAdvanced",
+        "_meta": {
+            "title": "IPAdapter Advanced"
+        }
+    },
+    "65": {
+        "inputs": {
+            "interpolation": "LANCZOS",
+            "crop_position": "pad",
+            "sharpening": 0,
+            "image": [
+                "60",
+                0
+            ]
+        },
+        "class_type": "PrepImageForClipVision",
+        "_meta": {
+            "title": "Prep Image For ClipVision"
+        }
+    },
+    "66": {
+        "inputs": {
+            "weight": 0.4,
+            "weight_type": "linear",
+            "combine_embeds": "concat",
+            "start_at": 0,
+            "end_at": 1,
+            "embeds_scaling": "V only",
+            "model": [
+                "64",
+                0
+            ],
+            "ipadapter": [
+                "11",
+                1
+            ],
+            "image": [
+                "65",
+                0
+            ]
+        },
+        "class_type": "IPAdapterAdvanced",
+        "_meta": {
+            "title": "IPAdapter Advanced"
+        }
+    },
+    "70": {
+        "inputs": {
+            "image": "c6547cb2-d873-46e6-98bc-6a2464d4eba3.png",
+            "upload": "image"
+        },
+        "class_type": "LoadImage",
+        "_meta": {
+            "title": "Load Image"
+        }
+    },
+    "71": {
+        "inputs": {
+            "interpolation": "LANCZOS",
+            "crop_position": "center",
+            "sharpening": 0,
+            "image": [
+                "70",
+                0
+            ]
+        },
+        "class_type": "PrepImageForClipVision",
+        "_meta": {
+            "title": "Prep Image For ClipVision"
+        }
+    },
+    "72": {
+        "inputs": {
+            "weight": 0.5,
+            "weight_faceidv2": 1,
+            "weight_type": "style transfer precise",
+            "combine_embeds": "concat",
+            "start_at": 0,
+            "end_at": 1,
+            "embeds_scaling": "V only",
+            "layer_weights": "3:2.5, 6:1",
+            "model": [
+                "66",
+                0
+            ],
+            "ipadapter": [
+                "11",
+                1
+            ],
+            "image": [
+                "71",
+                0
+            ]
+        },
+        "class_type": "IPAdapterMS",
+        "_meta": {
+            "title": "IPAdapter Mad Scientist"
+        }
+    },
+    "73": {
+        "inputs": {
+            "width_ratio_size": 512,
+            "height_ratio_size": 512,
+            "position": "center",
+            "interpolation": "nearest",
+            "image": [
+                "70",
+                0
+            ]
+        },
+        "class_type": "ImageCropByRatioAndResize",
+        "_meta": {
+            "title": "ImageCropByRatioAndResize"
+        }
+    },
+    "74": {
+        "inputs": {
+            "weight": 0.1,
+            "weight_type": "composition",
+            "combine_embeds": "concat",
+            "start_at": 0,
+            "end_at": 1,
+            "embeds_scaling": "V only",
+            "model": [
+                "72",
+                0
+            ],
+            "ipadapter": [
+                "11",
+                1
+            ],
+            "image": [
+                "73",
+                0
+            ]
+        },
+        "class_type": "IPAdapterAdvanced",
+        "_meta": {
+            "title": "IPAdapter Advanced"
+        }
+    },
+    "75": {
+        "inputs": {
+            "interpolation": "LANCZOS",
+            "crop_position": "pad",
+            "sharpening": 0,
+            "image": [
+                "70",
+                0
+            ]
+        },
+        "class_type": "PrepImageForClipVision",
+        "_meta": {
+            "title": "Prep Image For ClipVision"
+        }
+    },
+    "76": {
+        "inputs": {
+            "weight": 0.2,
+            "weight_type": "linear",
+            "combine_embeds": "concat",
+            "start_at": 0,
+            "end_at": 1,
+            "embeds_scaling": "V only",
+            "model": [
+                "74",
+                0
+            ],
+            "ipadapter": [
+                "11",
+                1
+            ],
+            "image": [
+                "75",
+                0
+            ]
+        },
+        "class_type": "IPAdapterAdvanced",
+        "_meta": {
+            "title": "IPAdapter Advanced"
+        }
+    }
+}
