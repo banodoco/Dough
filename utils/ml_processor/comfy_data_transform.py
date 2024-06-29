@@ -1023,8 +1023,8 @@ class ComfyDataTransform:
             
             num_images = len(img_list)
 
-            last_node_index = None
-
+            last_node_index = 4
+            
             for i in range(num_images):
                 last_node_index = add_nth_node(
                     workflow, i + 1, img_list[i], weight[i]
@@ -1077,8 +1077,8 @@ class ComfyDataTransform:
                 }
             )
 
-        with open("workflow.json", "w") as f:
-            json.dump(workflow, f, indent=4)
+        # with open("workflow.json", "w") as f:
+        #     json.dump(workflow, f, indent=4)
 
         return json.dumps(workflow), output_node_ids, extra_model_list, []
 

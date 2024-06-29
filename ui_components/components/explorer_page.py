@@ -837,7 +837,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                     model = json.loads(log.output_details)["model_name"].split("/")[-1]
                                     if "view_inference_details" in view:
                                         with st.expander(
-                                            "Prompt Details:", expanded=open_detailed_view_for_all
+                                            "Prompt:", expanded=open_detailed_view_for_all
                                         ):
                                             st.info(f"'{prompt}'")
 
@@ -956,7 +956,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                     model = json.loads(log.output_details)["model_name"].split("/")[-1]
                                     if "view_inference_details" in view:
                                         with st.expander(
-                                            "Prompt Details:", expanded=open_detailed_view_for_all
+                                            "Prompt:", expanded=open_detailed_view_for_all
                                         ):
                                             st.info(f"'{prompt}'")
 

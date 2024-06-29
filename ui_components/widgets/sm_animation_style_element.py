@@ -644,14 +644,11 @@ def individual_frame_settings_element(shot_uuid, img_list):
         st.session_state["last_value_set"] = value
 
     def queue_updates(key_suffix, value, idx, uuid, range_to_edit):
-        # This will set a flag to update all values on the next run
         st.session_state["update_values"] = (key_suffix, value, uuid, range_to_edit)
 
     def apply_updates(key_suffix, value, uuid, range_to_edit):
-
-        # Update all sliders with the same suffix
         for k in list(st.session_state.keys()):
-            if key_suffix in k and not k.endswith(uuid):  # Ensure not to affect the original slider
+            if f"{key_suffix}_{uuid}" in k:
                 st.session_state[k] = value
 
     if "update_values" in st.session_state:
