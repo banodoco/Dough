@@ -1,14 +1,17 @@
 {
   "3": {
     "inputs": {
-      "seed": 1017966716157224,
-      "steps": 30,
-      "cfg": 6.5,
+      "seed": [
+        "28",
+        0
+      ],
+      "steps": 20,
+      "cfg": 7,
       "sampler_name": "dpmpp_2m",
-      "scheduler": "sgm_uniform",
+      "scheduler": "karras",
       "denoise": 1,
       "model": [
-        "47",
+        "24",
         0
       ],
       "positive": [
@@ -31,7 +34,7 @@
   },
   "4": {
     "inputs": {
-      "ckpt_name": "juggernaut_xl_6.safetensors"
+      "ckpt_name": "sd_xl_base_1.0.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
@@ -51,7 +54,7 @@
   },
   "6": {
     "inputs": {
-      "text": "old Boris Karloff ",
+      "text": "beautiful ocean scene",
       "clip": [
         "4",
         1
@@ -64,7 +67,7 @@
   },
   "7": {
     "inputs": {
-      "text": "text, watermark, blurry, noisy, messy, lowres, jpeg, artifacts, ill, distorted, (malformed:1.05)",
+      "text": "horror",
       "clip": [
         "4",
         1
@@ -75,15 +78,37 @@
       "title": "CLIP Text Encode (Prompt)"
     }
   },
-  "8": {
+  "10": {
+    "inputs": {
+      "vae_name": "sdxl_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "11": {
+    "inputs": {
+      "preset": "PLUS (high strength)",
+      "model": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "IPAdapterUnifiedLoader",
+    "_meta": {
+      "title": "IPAdapter Unified Loader"
+    }
+  },
+  "16": {
     "inputs": {
       "samples": [
         "3",
         0
       ],
       "vae": [
-        "4",
-        2
+        "10",
+        0
       ]
     },
     "class_type": "VAEDecode",
@@ -91,11 +116,11 @@
       "title": "VAE Decode"
     }
   },
-  "9": {
+  "27": {
     "inputs": {
       "filename_prefix": "IPAdapter",
       "images": [
-        "8",
+        "16",
         0
       ]
     },
@@ -104,40 +129,13 @@
       "title": "Save Image"
     }
   },
-  "48": {
+  "28": {
     "inputs": {
-      "ipadapter_file": "ip_plus_style_sdxl.safetensors"
+      "seed": 832322928972889
     },
-    "class_type": "IPAdapterModelLoader",
+    "class_type": "ttN seed",
     "_meta": {
-      "title": "IPAdapter Model Loader"
-    }
-  },
-  "49": {
-    "inputs": {
-      "clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
-    },
-    "class_type": "CLIPVisionLoader",
-    "_meta": {
-      "title": "Load CLIP Vision"
-    }
-  },
-  "58": {
-    "inputs": {
-      "ipadapter_file": "ip-adapter_sdxl.safetensors"
-    },
-    "class_type": "IPAdapterModelLoader",
-    "_meta": {
-      "title": "IPAdapter Model Loader"
-    }
-  },
-  "62": {
-    "inputs": {
-      "clip_name": "CLIP-ViT-bigG-14-laion2B-39B-b160k.safetensors"
-    },
-    "class_type": "CLIPVisionLoader",
-    "_meta": {
-      "title": "Load CLIP Vision"
+      "title": "seed"
     }
   }
 }

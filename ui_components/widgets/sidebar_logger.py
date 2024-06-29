@@ -97,7 +97,7 @@ def sidebar_logger(shot_uuid):
             "Which model to show:", ["All"] + [m.display_name() for m in MODEL_FILTERS]
         )
     page_number = y2.number_input(
-        "Page number:", min_value=1, max_value=project_setting.total_log_pages, value=1, step=1
+        "Page number (out of {})".format(project_setting.total_log_pages), min_value=1, max_value=project_setting.total_log_pages, value=1, step=1
     )
     items_per_page = 5
     # items_per_page = z2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
