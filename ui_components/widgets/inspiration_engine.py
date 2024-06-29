@@ -488,7 +488,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 if "list_of_style_references" not in st.session_state:
                     st.session_state["list_of_style_references"] = []
 
-                list_of_strengths = []
+                
 
                 if type_of_style_input == "Upload Images":
                     preview_1, preview_2, preview_3 = st.columns([1, 1, 1])
@@ -577,6 +577,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                 # Determine if we should use the first value for all sliders
                 use_first_value = len(st.session_state["list_of_style_references"]) == 1
+                list_of_strengths = []
 
                 for i, col in enumerate([preview_1, preview_2, preview_3]):
                     with col:
@@ -639,8 +640,10 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         # Remove the image from the list
                                         st.session_state["list_of_style_references"].pop(i)
                                         st.rerun()
-                                item = (style_influence, composition_influence, vibe_influence)
-                                list_of_strengths.append(item)
+                                # add up the 3 values and if together they're over 1.5, show a warning
+                                
+                                item_strenths = (style_influence, composition_influence, vibe_influence)
+                                list_of_strengths.append(item_strenths)
 
                             else:
                                 st.error("Uploaded file does not support file-like operations.")
@@ -749,7 +752,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 guidance_scale=5,
                                 seed=-1,
                                 num_inference_steps=30,
-                                strength=style_influence,
+                                strength=list_of_strengths,
                                 adapter_type=None,
                                 prompt=image_prompt,
                                 negative_prompt=negative_prompt,
@@ -775,7 +778,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 guidance_scale=5,
                                 seed=-1,
                                 num_inference_steps=30,
-                                strength=list_of_strengths,
+                                strength=5.0,
                                 adapter_type=None,
                                 prompt=f"{image_prompt}, {additonal_description_text}, {additional_style_text}",
                                 negative_prompt=negative_prompt,

@@ -887,7 +887,6 @@ class ComfyDataTransform:
         model = query_data.get("sdxl_model", "sd_xl_base_1.0.safetensors")
         seed = random_seed()
         style_strength = query.strength
-
         # @Peter you can use this weight, passed from the frontend
         def add_nth_node(workflow, n, img_file, weight):
             
@@ -903,7 +902,7 @@ class ComfyDataTransform:
             ipa_node_idx_list.sort(reverse=True)
 
             # starting idx from 50, just to be safe
-            node_idx = 50 + n * 6
+            node_idx = 50 + n * 10 
 
             # Load Image
             workflow[str(node_idx)] = {
@@ -1003,6 +1002,10 @@ class ComfyDataTransform:
                 "_meta": {"title": "IPAdapter Advanced"}
             }
 
+            # workflow.json
+            with open("workflow.json", "w") as f:
+                json.dump(workflow, f, indent=4)
+
             return node_idx + 6
 
         def add_reference_images(workflow, img_list, weight, **kwargs):
@@ -1062,9 +1065,6 @@ class ComfyDataTransform:
                     "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
                 }
             )
-
-        # with open("ws.json", "w") as file:
-        #     file.write(json.dumps(workflow))
 
         return json.dumps(workflow), output_node_ids, extra_model_list, []
 
