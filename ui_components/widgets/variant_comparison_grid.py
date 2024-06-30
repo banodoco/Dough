@@ -695,3 +695,4 @@ def add_variant_to_shot_element(file: InternalFileObject, project_uuid):
                 update_cur_frame_idx=False,
             )
             st.rerun()
+

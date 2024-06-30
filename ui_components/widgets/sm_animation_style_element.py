@@ -182,6 +182,13 @@ def video_motion_settings(shot_uuid, img_list):
             help="This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.",
         )
 
+        stabilise_motion = st_memory.checkbox(
+            "Stabilise motion",
+            help="This will stabilise the motion of the video, making it less shaky.",
+            key="stabilise_motion", 
+            value=True,
+        )
+
     if f"structure_control_image_{shot_uuid}" not in st.session_state:
         st.session_state[f"structure_control_image_{shot_uuid}"] = None
 
@@ -194,6 +201,7 @@ def video_motion_settings(shot_uuid, img_list):
         overall_negative_prompt,
         type_of_motion_context,
         high_detail_mode,
+        stabilise_motion,
     )
 
 

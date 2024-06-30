@@ -682,6 +682,9 @@ class ComfyDataTransform:
                         "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models"),
                     }
                 )
+                
+              
+
 
                 return json_data, extra_models_list
 
@@ -758,13 +761,24 @@ class ComfyDataTransform:
         #         sm_data.get("strength_of_structure_control_image"),
         #     )
 
+
+
         workflow, extra_models_list = convert_to_specific_workflow(
             workflow,
             sm_data.get("type_of_generation", "Fast With A Price"),
             extra_models_list,
         )
 
+        if sm_data.get("stabilise_motion"):
+            workflow["467"]["inputs"]["context_aware"] = "nearest_hint"
+
+            if workflow["546"]["inputs"]["model_name"] == "AnimateLCM_sd15_t2v.ckpt":
+                workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.3                                    
+            else:
+                workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.15
+
         ignore_list = sm_data.get("lora_data", [])
+        
         return json.dumps(workflow), output_node_ids, extra_models_list, ignore_list
 
     @staticmethod

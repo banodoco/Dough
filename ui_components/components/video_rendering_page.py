@@ -66,6 +66,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
             overall_negative_prompt,
             type_of_motion_context,
             high_detail_mode,
+            stabilise_motion
         ) = video_motion_settings(shot_uuid, img_list)
 
         type_of_frame_distribution = "dynamic"
@@ -146,6 +147,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
             individual_negative_prompts=negative_prompt_travel,
             animation_stype=AnimationStyleType.CREATIVE_INTERPOLATION.value,
             max_frames=str(dynamic_frame_distribution_values[-1]),
+            stabilise_motion=stabilise_motion,
             lora_data=lora_data,
             shot_data=shot_meta_data,
             pil_img_structure_control_image=st.session_state[
