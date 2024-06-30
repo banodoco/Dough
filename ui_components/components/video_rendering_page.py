@@ -172,7 +172,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
         footer1, footer2 = st.columns([1.5, 1])
         with footer1:
             type_of_generation = st.radio(
-                "Workflow:",
+                "Workflow variant:",
                 options=generation_types,
                 key="creative_interpolation_type",
                 horizontal=True,

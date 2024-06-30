@@ -182,12 +182,17 @@ def video_motion_settings(shot_uuid, img_list):
             help="This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.",
         )
 
-        stabilise_motion = st_memory.checkbox(
-            "Stabilise motion",
-            help="This will stabilise the motion of the video, making it less shaky.",
+        stabilise_motion_options = ["None", "Low", "Standard", "High", "Very High"]
+        stabilise_motion_index = st_memory.radio(
+            "Amount to constrain motion:",
+            help="This will prevent the motion from being too weird and wild.",
+            options=stabilise_motion_options,
             key="stabilise_motion", 
-            value=True,
+            index=2,
+            horizontal=True,
         )
+
+        stabilise_motion = stabilise_motion_options.index(stabilise_motion_index)
 
     if f"structure_control_image_{shot_uuid}" not in st.session_state:
         st.session_state[f"structure_control_image_{shot_uuid}"] = None
@@ -594,7 +599,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
         st.session_state[f"lora_data_{shot_uuid}"] = []
 
     if f"strength_of_adherence_value_{shot_uuid}" not in st.session_state:
-        st.session_state[f"strength_of_adherence_value_{shot_uuid}"] = 0.4
+        st.session_state[f"strength_of_adherence_value_{shot_uuid}"] = 0.8
 
     if f"type_of_motion_context_index_{shot_uuid}" not in st.session_state:
         st.session_state[f"type_of_motion_context_index_{shot_uuid}"] = 1

@@ -769,13 +769,27 @@ class ComfyDataTransform:
             extra_models_list,
         )
 
-        if sm_data.get("stabilise_motion"):
+        if sm_data.get("stabilise_motion") > 0:
             workflow["467"]["inputs"]["context_aware"] = "nearest_hint"
 
             if workflow["546"]["inputs"]["model_name"] == "AnimateLCM_sd15_t2v.ckpt":
-                workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.3                                    
+                if sm_data.get("stabilise_motion") == 1:
+                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.2
+                elif sm_data.get("stabilise_motion") == 2:
+                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.4                                    
+                elif sm_data.get("stabilise_motion") == 3:
+                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.6
+                elif sm_data.get("stabilise_motion") == 4:
+                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.8
             else:
-                workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.15
+                if sm_data.get("stabilise_motion") == 1:
+                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.1
+                elif sm_data.get("stabilise_motion") == 2:
+                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.2
+                elif sm_data.get("stabilise_motion") == 3:
+                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.3
+                elif sm_data.get("stabilise_motion") == 4:
+                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.4
 
         ignore_list = sm_data.get("lora_data", [])
         
