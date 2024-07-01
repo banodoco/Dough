@@ -288,6 +288,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                         ),
                         0,
                     ),
+                    stabilise_motion=stabilise_motion
                 )
                 settings.update(shot_data=shot_data)
                 settings.update(type_of_generation=type_of_generation)

@@ -15,7 +15,7 @@ from ui_components.methods.file_methods import (
     determine_dimensions_for_sdxl,
 )
 from utils.common_utils import padded_integer
-from utils.constants import MLQueryObject
+from utils.constants import MLQueryObject, StabliseMotionOption
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow, MLModel
 import json
@@ -682,9 +682,6 @@ class ComfyDataTransform:
                         "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models"),
                     }
                 )
-                
-              
-
 
                 return json_data, extra_models_list
 
@@ -761,38 +758,31 @@ class ComfyDataTransform:
         #         sm_data.get("strength_of_structure_control_image"),
         #     )
 
-
-
         workflow, extra_models_list = convert_to_specific_workflow(
             workflow,
             sm_data.get("type_of_generation", "Fast With A Price"),
             extra_models_list,
         )
 
-        if sm_data.get("stabilise_motion") > 0:
-            workflow["467"]["inputs"]["context_aware"] = "nearest_hint"
-
-            if workflow["546"]["inputs"]["model_name"] == "AnimateLCM_sd15_t2v.ckpt":
-                if sm_data.get("stabilise_motion") == 1:
-                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.2
-                elif sm_data.get("stabilise_motion") == 2:
-                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.4                                    
-                elif sm_data.get("stabilise_motion") == 3:
-                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.6
-                elif sm_data.get("stabilise_motion") == 4:
-                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.8
-            else:
-                if sm_data.get("stabilise_motion") == 1:
-                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.1
-                elif sm_data.get("stabilise_motion") == 2:
-                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.2
-                elif sm_data.get("stabilise_motion") == 3:
-                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.3
-                elif sm_data.get("stabilise_motion") == 4:
-                    workflow["467"]["inputs"]["sparse_nonhint_mult"] = 0.4
+        # maps stablise motion values <-> sparse nonhint multiplier (for normal and lcm models)
+        stablise_motion_value_map = {
+            StabliseMotionOption.NONE.value: {"normal": 0.15, "lcm": 0.15},
+            StabliseMotionOption.LOW.value: {"normal": 0.1, "lcm": 0.2},
+            StabliseMotionOption.STANDARD.value: {"normal": 0.2, "lcm": 0.4},
+            StabliseMotionOption.HIGH.value: {"normal": 0.3, "lcm": 0.6},
+            StabliseMotionOption.VERY_HIGH.value: {"normal": 0.4, "lcm": 0.8},
+        }
+        
+        workflow["467"]["inputs"]["context_aware"] = "nearest_hint"
+        ad_mode = (
+            "lcm" if workflow["546"]["inputs"]["model_name"] == "AnimateLCM_sd15_t2v.ckpt" else "normal"
+        )
+        workflow["467"]["inputs"]["sparse_nonhint_mult"] = stablise_motion_value_map[
+            sm_data.get("stabilise_motion", StabliseMotionOption.NONE.value)
+        ][ad_mode]
 
         ignore_list = sm_data.get("lora_data", [])
-        
+
         return json.dumps(workflow), output_node_ids, extra_models_list, ignore_list
 
     @staticmethod
@@ -915,27 +905,28 @@ class ComfyDataTransform:
         model = query_data.get("sdxl_model", "sd_xl_base_1.0.safetensors")
         seed = random_seed()
         style_strength = query.strength
+
         # @Peter you can use this weight, passed from the frontend
         def add_nth_node(workflow, n, img_file, weight):
             style_influence, composition_influence, vibe_influence = map(float, weight[:3])
-        
+
             ipa_node_idx_list = []
             for k, v in workflow.items():
                 if v["class_type"] in ["IPAdapterMS", "IPAdapterAdvanced"]:
                     ipa_node_idx_list.append(int(k))
             ipa_node_idx_list.sort(reverse=True)
-        
-            node_idx = 50 + n * 10 
-        
+
+            node_idx = 50 + n * 10
+
             # Load Image
             workflow[str(node_idx)] = {
                 "inputs": {"image": img_file.filename, "upload": "image"},
                 "class_type": "LoadImage",
                 "_meta": {"title": "Load Image"},
             }
-        
+
             last_model_node = ipa_node_idx_list[0] if ipa_node_idx_list else 11
-        
+
             if style_influence > 0:
                 # Prep Image For ClipVision
                 workflow[str(node_idx + 1)] = {
@@ -943,12 +934,12 @@ class ComfyDataTransform:
                         "interpolation": "LANCZOS",
                         "crop_position": "center",
                         "sharpening": 0,
-                        "image": [str(node_idx), 0]
+                        "image": [str(node_idx), 0],
                     },
                     "class_type": "PrepImageForClipVision",
-                    "_meta": {"title": "Prep Image For ClipVision"}
+                    "_meta": {"title": "Prep Image For ClipVision"},
                 }
-        
+
                 # IPAdapter Mad Scientist
                 workflow[str(node_idx + 2)] = {
                     "inputs": {
@@ -962,13 +953,13 @@ class ComfyDataTransform:
                         "layer_weights": "3:2.5, 6:1",
                         "model": [str(last_model_node), 0],
                         "ipadapter": ["11", 1],
-                        "image": [str(node_idx + 1), 0]
+                        "image": [str(node_idx + 1), 0],
                     },
                     "class_type": "IPAdapterMS",
-                    "_meta": {"title": "IPAdapter Mad Scientist"}
+                    "_meta": {"title": "IPAdapter Mad Scientist"},
                 }
                 last_model_node = node_idx + 2
-        
+
             if composition_influence > 0:
                 # ImageCropByRatioAndResize
                 workflow[str(node_idx + 3)] = {
@@ -977,12 +968,12 @@ class ComfyDataTransform:
                         "height_ratio_size": 512,
                         "position": "center",
                         "interpolation": "nearest",
-                        "image": [str(node_idx), 0]
+                        "image": [str(node_idx), 0],
                     },
                     "class_type": "ImageCropByRatioAndResize",
-                    "_meta": {"title": "ImageCropByRatioAndResize"}
+                    "_meta": {"title": "ImageCropByRatioAndResize"},
                 }
-        
+
                 # IPAdapter Advanced (composition)
                 workflow[str(node_idx + 4)] = {
                     "inputs": {
@@ -994,13 +985,13 @@ class ComfyDataTransform:
                         "embeds_scaling": "V only",
                         "model": [str(last_model_node), 0],
                         "ipadapter": ["11", 1],
-                        "image": [str(node_idx + 3), 0]
+                        "image": [str(node_idx + 3), 0],
                     },
                     "class_type": "IPAdapterAdvanced",
-                    "_meta": {"title": "IPAdapter Advanced"}
+                    "_meta": {"title": "IPAdapter Advanced"},
                 }
                 last_model_node = node_idx + 4
-        
+
             if vibe_influence > 0:
                 # IPAdapter Noise (negative)
                 workflow[str(node_idx + 5)] = {
@@ -1008,24 +999,24 @@ class ComfyDataTransform:
                         "type": "dissolve",
                         "strength": 0.7,
                         "blur": 0,
-                        "image_optional": [str(node_idx), 0]
+                        "image_optional": [str(node_idx), 0],
                     },
                     "class_type": "IPAdapterNoise",
-                    "_meta": {"title": "IPAdapter Noise (negative)"}
+                    "_meta": {"title": "IPAdapter Noise (negative)"},
                 }
-        
+
                 # Prep Image For ClipVision (pad)
                 workflow[str(node_idx + 6)] = {
                     "inputs": {
                         "interpolation": "LANCZOS",
                         "crop_position": "pad",
                         "sharpening": 0,
-                        "image": [str(node_idx), 0]
+                        "image": [str(node_idx), 0],
                     },
                     "class_type": "PrepImageForClipVision",
-                    "_meta": {"title": "Prep Image For ClipVision"}
+                    "_meta": {"title": "Prep Image For ClipVision"},
                 }
-        
+
                 # IPAdapter Advanced (linear)
                 workflow[str(node_idx + 7)] = {
                     "inputs": {
@@ -1038,25 +1029,23 @@ class ComfyDataTransform:
                         "model": [str(last_model_node), 0],  # Changed this line
                         "ipadapter": ["11", 1],
                         "image": [str(node_idx + 6), 0],
-                        "image_negative": [str(node_idx + 5), 0]
+                        "image_negative": [str(node_idx + 5), 0],
                     },
                     "class_type": "IPAdapterAdvanced",
-                    "_meta": {"title": "IPAdapter Advanced"}
+                    "_meta": {"title": "IPAdapter Advanced"},
                 }
                 last_model_node = node_idx + 7
-        
-            return int(last_model_node)                            
+
+            return int(last_model_node)
 
         def add_reference_images(workflow, img_list, weight, **kwargs):
-            
+
             num_images = len(img_list)
 
             last_node_index = 4
-            
+
             for i in range(num_images):
-                last_node_index = add_nth_node(
-                    workflow, i + 1, img_list[i], weight[i]
-                )
+                last_node_index = add_nth_node(workflow, i + 1, img_list[i], weight[i])
                 for k, v in kwargs.items():
                     if k in workflow[str(last_node_index)]["inputs"]:
                         workflow[str(last_node_index)]["inputs"][k] = v

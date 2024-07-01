@@ -634,6 +634,7 @@ def update_session_state_with_animation_details(
     structure_control_img_uuid=None,
     strength_of_structure_control_img=None,
     type_of_generation_index=0,
+    stabilise_motion=None
 ):
     """
     for any generation session_state holds two kind of data objects.
@@ -644,10 +645,11 @@ def update_session_state_with_animation_details(
 
     """
     A 'active_shot' index is maintained and settings are picked from that shot, whenvever
-    generating a new shot. But when someone wants to save the settings manually, a temp_shot
-    is created (that is not visible on the frontend), it stores the settings. If a new gen is run
-    then the settings are overwritten. temp_shot is identified by shot_uuid = -1
+    generating a new shot. But when someone wants to save the settings manually,the data is saved
+    in the shot (the last generation data is maintained in both the shot and the generation log)
     """
+    from utils.constants import StabliseMotionOption
+    
     data_repo = DataRepo()
 
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
@@ -678,6 +680,7 @@ def update_session_state_with_animation_details(
     )
     main_setting_data[f"type_of_generation_index_{shot.uuid}"] = type_of_generation_index
     main_setting_data[f"high_detail_mode_val_{shot.uuid}"] = high_detail_mode
+    main_setting_data[f"stabilise_motion_{shot.uuid}"] = stabilise_motion or StabliseMotionOption.NONE.value
 
     checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
     all_files = os.listdir(checkpoints_dir)

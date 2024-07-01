@@ -424,6 +424,8 @@ def variant_inference_detail_element(
                         title = "**Type of motion context:**"
                     elif k.startswith("ckpt"):
                         title = "**Model:**"
+                    elif k.startswith("stabilise_motion"):
+                        title = "**Stablise Motion:**"
                     elif k.startswith("high_detail_mode_val"):
                         continue  # Skip displaying this key
                     else:
