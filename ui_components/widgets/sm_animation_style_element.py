@@ -23,6 +23,7 @@ from ui_components.methods.file_methods import (
 )
 from ui_components.widgets.display_element import display_motion_lora
 from ui_components.methods.ml_methods import train_motion_lora
+from utils.constants import StabliseMotionOption
 from utils.data_repo.data_repo import DataRepo
 from streamlit.elements.utils import _shown_default_value_warning
 
@@ -182,17 +183,20 @@ def video_motion_settings(shot_uuid, img_list):
             help="This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.",
         )
 
-        stabilise_motion_options = ["None", "Low", "Standard", "High", "Very High"]
-        stabilise_motion_index = st_memory.radio(
+        stabilise_motion_options = StabliseMotionOption.value_list()
+        stabilise_index = 2
+        if f"stabilise_motion_{shot_uuid}" in st.session_state and isinstance(st.session_state[f"stabilise_motion_{shot_uuid}"], str):
+            stabilise_index = stabilise_motion_options.index(st.session_state[f"stabilise_motion_{shot_uuid}"])
+            st.session_state["stabilise_motion"] = stabilise_index
+        
+        stabilise_motion = st_memory.radio(
             "Amount to constrain motion:",
             help="This will prevent the motion from being too weird and wild.",
             options=stabilise_motion_options,
             key="stabilise_motion", 
-            index=2,
+            index=stabilise_index,
             horizontal=True,
         )
-
-        stabilise_motion = stabilise_motion_options.index(stabilise_motion_index)
 
     if f"structure_control_image_{shot_uuid}" not in st.session_state:
         st.session_state[f"structure_control_image_{shot_uuid}"] = None

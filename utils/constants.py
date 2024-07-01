@@ -34,6 +34,14 @@ class AnimateShotMethod(ExtendedEnum):  # remove this and have a common nomencla
     DYNAMICRAFTER_INTERPOLATION = "2-Image Realistic Interpolation (beta)"
 
 
+class StabliseMotionOption(ExtendedEnum):
+    NONE = "None"
+    LOW = "Low"
+    STANDARD = "Standard"
+    HIGH = "High"
+    VERY_HIGH = "Very High"
+
+
 # single template for passing query params
 # TODO: remove the named params and pass everything through the data object (as different models require very different inputs)
 class MLQueryObject:
