@@ -23,6 +23,7 @@ from ui_components.methods.file_methods import (
 )
 from ui_components.widgets.display_element import display_motion_lora
 from ui_components.methods.ml_methods import train_motion_lora
+from utils.constants import StabliseMotionOption
 from utils.data_repo.data_repo import DataRepo
 from streamlit.elements.utils import _shown_default_value_warning
 
@@ -182,6 +183,21 @@ def video_motion_settings(shot_uuid, img_list):
             help="This is how much the motion will be informed by the previous and next frames. 'High' can make it smoother but increase artifacts - while 'Low' make the motion less smooth but removes artifacts. Naturally, we recommend Standard.",
         )
 
+        stabilise_motion_options = StabliseMotionOption.value_list()
+        stabilise_index = 2
+        if f"stabilise_motion_{shot_uuid}" in st.session_state and isinstance(st.session_state[f"stabilise_motion_{shot_uuid}"], str):
+            stabilise_index = stabilise_motion_options.index(st.session_state[f"stabilise_motion_{shot_uuid}"])
+            st.session_state["stabilise_motion"] = stabilise_index
+        
+        stabilise_motion = st_memory.radio(
+            "Amount to constrain motion:",
+            help="This will prevent the motion from being too weird and wild.",
+            options=stabilise_motion_options,
+            key="stabilise_motion", 
+            index=stabilise_index,
+            horizontal=True,
+        )
+
     if f"structure_control_image_{shot_uuid}" not in st.session_state:
         st.session_state[f"structure_control_image_{shot_uuid}"] = None
 
@@ -194,6 +210,7 @@ def video_motion_settings(shot_uuid, img_list):
         overall_negative_prompt,
         type_of_motion_context,
         high_detail_mode,
+        stabilise_motion,
     )
 
 
@@ -586,7 +603,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
         st.session_state[f"lora_data_{shot_uuid}"] = []
 
     if f"strength_of_adherence_value_{shot_uuid}" not in st.session_state:
-        st.session_state[f"strength_of_adherence_value_{shot_uuid}"] = 0.4
+        st.session_state[f"strength_of_adherence_value_{shot_uuid}"] = 0.8
 
     if f"type_of_motion_context_index_{shot_uuid}" not in st.session_state:
         st.session_state[f"type_of_motion_context_index_{shot_uuid}"] = 1
@@ -644,14 +661,11 @@ def individual_frame_settings_element(shot_uuid, img_list):
         st.session_state["last_value_set"] = value
 
     def queue_updates(key_suffix, value, idx, uuid, range_to_edit):
-        # This will set a flag to update all values on the next run
         st.session_state["update_values"] = (key_suffix, value, uuid, range_to_edit)
 
     def apply_updates(key_suffix, value, uuid, range_to_edit):
-
-        # Update all sliders with the same suffix
         for k in list(st.session_state.keys()):
-            if key_suffix in k and not k.endswith(uuid):  # Ensure not to affect the original slider
+            if f"{key_suffix}_{uuid}" in k:
                 st.session_state[k] = value
 
     if "update_values" in st.session_state:

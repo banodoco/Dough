@@ -18,7 +18,7 @@
 
 [node_version]
 "ComfyUI-Manager" = { "url" = "https://github.com/ltdrdata/ComfyUI-Manager", "commit_hash" = "61dff9dca6dc6a420bf2975326f54660cf081cd1"}
-"ComfyUI_IPAdapter_plus" = { "url" = "https://github.com/cubiq/ComfyUI_IPAdapter_plus", "commit_hash" = "7d8adaec730bff243cc3026eed5111695cc5ed4e"}
+"ComfyUI_IPAdapter_plus" = { "url" = "https://github.com/cubiq/ComfyUI_IPAdapter_plus", "commit_hash" = "8208e27bf10e9b5b36546dd64c4b820b168c2724"}
 "comfyui-various" = { "url" = "https://github.com/jamesWalker55/comfyui-various", "commit_hash" = "ec58185387c75b74ee93d6f835ff480772dbc64d"}
 "comfy_PoP" = { "url" = "https://github.com/picturesonpictures/comfy_PoP", "commit_hash" = "4cb7bf7c55c484e50dddf6b881739b7a506b0946"}
 "ComfyUI-Frame-Interpolation" = { "url" = "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation", "commit_hash" = "1c4c4b4f9a99e7e6eb7c5a5f3fdc7c9dfd319357"}
@@ -29,6 +29,7 @@
 "ComfyUI-VideoHelperSuite" = { "url" = "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite", "commit_hash" = "08dc3d63a76942c0bdfd8492a50d1585e5252149"}
 "ComfyUI_essentials" = { "url" = "https://github.com/cubiq/ComfyUI_essentials", "commit_hash" = "b0cfa1bfb4f27fdf41d021b27d7ac930e704b0e7"}
 "steerable-motion" = { "url" = "https://github.com/banodoco/steerable-motion", "commit_hash" = "d747e46b215d84407578fd2a6ed26763185d00c1"}
+"ComfyUI_tinyterraNodes" = { "url" = "https://github.com/TinyTerra/ComfyUI_tinyterraNodes", "commit_hash" = "d094cd15da030b1153f2aeaf27f718e21280d8a8"}
 
 
 [comfy]
