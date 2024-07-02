@@ -318,9 +318,10 @@ class Shot(BaseModel):
                 shot_list.update(shot_idx=F("shot_idx") + 1)
 
             # deleting all the interpolated clip list
-            clip_uuid_list = json.loads(self.interpolated_clip_list)
-            if clip_uuid_list and len(clip_uuid_list):
-                InternalFileObject.objects.filter(uuid__in=clip_uuid_list).update(is_disabled=True)
+            if self.interpolated_clip_list:
+                clip_uuid_list = json.loads(self.interpolated_clip_list)
+                if clip_uuid_list and len(clip_uuid_list):
+                    InternalFileObject.objects.filter(uuid__in=clip_uuid_list).update(is_disabled=True)
 
         # if this is a newly created shot or assigned new shot_idx (and not disabled)
         if (not self.id or self.old_shot_idx != self.shot_idx) and not self.is_disabled:

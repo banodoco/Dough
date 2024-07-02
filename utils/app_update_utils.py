@@ -132,6 +132,15 @@ def update_dough():
         )
         if completed_process.returncode == 0:
             print("Database migration successful")
+            
+    # installing requirements
+    try:
+        subprocess.run(
+            [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True
+        )
+        print(f"Dough requirements installed successfully")
+    except subprocess.CalledProcessError as e:
+        print(f"Error installing requirements for Dough: {str(e)}")
 
     # updating env file
     if os.path.exists(".env"):
@@ -191,7 +200,7 @@ def update_comfy_ui():
                         )
                         print(f"{folder} requirements installed successfully")
                     except subprocess.CalledProcessError as e:
-                        print(f"Error installing requirements for {folder}: {e}")
+                        print(f"Error installing requirements for {folder}: {str(e)}")
 
                 os.chdir(initial_dir)
 

@@ -46,22 +46,14 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
 
     # Pagination setup for sidebar view
     if view == "sidebar":
-
-
-        # shot_list = shot_list[start_index:end_index]
-
-        # Add new shot button at the top for sidebar view        
         shot_list = data_repo.get_shot_list(project_uuid)
-        shot_names = [s.name for s in shot_list]        
-        shot_names.append("**Create New Shot**")
-
+        
         # Initialize selected images list in session state if not present
         if 'selected_images' not in st.session_state:
             st.session_state['selected_images'] = []
 
         if len(st.session_state['selected_images']) == 0:    
             st.info("Select images on the right to add them to a shot or shortlist.")
-            st.markdown("***")
         else:
             # Display selected images and provide action buttons
             h1, h2, h3 = st.columns([2, 1, 1])
@@ -82,16 +74,26 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
                     st.session_state['selected_images'] = []  # Clear selected images after adding
                     st.rerun()
 
-            
-            add_new_shot_element(shot, data_repo)
-
-
-
-            st.markdown("***")
+        add_new_shot_element(shot, data_repo)
+        
+        st.markdown("***")
+        
+        # Add search bar
+        search_query = st_memory.text_input("Search shots:", key=f"shot_search_bar_{project_uuid}")
+        
+        # Filter shots based on search query
+        if search_query:
+            shot_list_for_display = [shot for shot in shot_list if search_query.lower() in shot.name.lower()]
+        else:
+            shot_list_for_display = shot_list[::-1]  # Reverse the list if no search query
+        
+        # Update shot_names after filtering
+        shot_names = [s.name for s in shot_list_for_display]        
+        shot_names.append("**Create New Shot**")
     
         total_pages = (len(shot_list_for_display) + items_per_row - 1) // items_per_row
         if total_pages > 1:
-            page = st.radio("Select Page", list(range(1, total_pages + 1)), horizontal=True)
+            page = st_memory.radio("Select Page:", list(range(1, total_pages + 1)), horizontal=True,key=f"page_selector_{project_uuid}")
         else:
             page = 1
 
@@ -153,8 +155,7 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
                             if image:
                                 add_key_frame(image, shot.uuid, len(data_repo.get_timing_list_from_shot(shot.uuid)), refresh_state=False)
                         st.session_state['selected_images'] = []  # Clear selected images after adding
-                        st.rerun()
-                st.markdown("***")
+                        st.rerun()                
 
 
         if (idx + 1) % items_per_row == 0 or idx == len(shot_list_for_display) - 1:
