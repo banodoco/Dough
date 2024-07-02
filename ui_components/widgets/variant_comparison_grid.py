@@ -55,9 +55,9 @@ def video_generation_counter(shot_uuid):
             inference_type == InferenceType.FRAME_INTERPOLATION.value
             and origin_data.get("shot_uuid", "") == shot_uuid
         ):
-            res.append(log)
-
+            res.append(log)    
     if len(res) > 0:
+        
         h1, h2 = st.columns([1, 1])
         with h1:
             if len(res) == 1:
@@ -164,15 +164,15 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
     if num_pages > 1:
         page = col3.radio("Page:", options=list(range(1, num_pages + 1)), horizontal=True)
-
+    if stage == CreativeProcessType.MOTION.value:
+        video_generation_counter(shot_uuid)
     if not len(variants):
         st.info("No options created yet.")
         st.markdown("***")
 
     else:
         st.markdown("***")
-        if stage == CreativeProcessType.MOTION.value:
-            video_generation_counter(shot_uuid)
+        
         cols = st.columns(num_columns)
         current_variant = -2  # rand value that won't be filtered in additional_variants
         cur_col = 0
@@ -424,6 +424,8 @@ def variant_inference_detail_element(
                         title = "**Type of motion context:**"
                     elif k.startswith("ckpt"):
                         title = "**Model:**"
+                    elif k.startswith("stabilise_motion"):
+                        title = "**Stablise Motion:**"
                     elif k.startswith("high_detail_mode_val"):
                         continue  # Skip displaying this key
                     else:
@@ -695,3 +697,4 @@ def add_variant_to_shot_element(file: InternalFileObject, project_uuid):
                 update_cur_frame_idx=False,
             )
             st.rerun()
+
