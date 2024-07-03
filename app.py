@@ -96,6 +96,7 @@ def main():
                 else:
                     apply_updates()
             st.session_state["first_load"] = True
+
         start_runner()
         project_init()
 
