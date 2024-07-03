@@ -185,17 +185,20 @@ def video_motion_settings(shot_uuid, img_list):
 
         stabilise_motion_options = StabliseMotionOption.value_list()
         stabilise_index = 2
-        if f"stabilise_motion_{shot_uuid}" in st.session_state and isinstance(st.session_state[f"stabilise_motion_{shot_uuid}"], str):
-            stabilise_index = stabilise_motion_options.index(st.session_state[f"stabilise_motion_{shot_uuid}"])
-            st.session_state["stabilise_motion"] = stabilise_index
-        
-        stabilise_motion = st_memory.radio(
-            "Amount to constrain motion:",
-            help="This will prevent the motion from being too weird and wild.",
+        if f"stabilise_motion_{shot_uuid}" in st.session_state and isinstance(
+            st.session_state[f"stabilise_motion_{shot_uuid}"], str
+        ):
+            stabilise_index = stabilise_motion_options.index(
+                st.session_state[f"stabilise_motion_{shot_uuid}"]
+            )
+
+        stabilise_motion = st.radio(
+            label="Amount to constrain motion:",
             options=stabilise_motion_options,
-            key="stabilise_motion", 
             index=stabilise_index,
             horizontal=True,
+            label_visibility="visible",
+            key="stabilise_motion",
         )
 
     if f"structure_control_image_{shot_uuid}" not in st.session_state:
