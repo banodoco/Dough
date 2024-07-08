@@ -1,6 +1,7 @@
 import io
 import multiprocessing
 import random
+import sys
 from typing import List
 import os
 from PIL import Image, ImageDraw, ImageFilter
@@ -1050,18 +1051,18 @@ def stop_gen(log):
         print(f"Process stopped {log.uuid} ----------")
 
 
+def worker(queue):
+    while True:
+        log = queue.get()
+        if log is None:
+            break
+        stop_gen(log)
+
 def stop_generations_worker():
     queue = multiprocessing.Queue()
     num_workers = 10
 
-    def worker():
-        while True:
-            log = queue.get()
-            if log is None:
-                break
-            stop_gen(log)
-
-    workers = [multiprocessing.Process(target=worker) for _ in range(num_workers)]
+    workers = [multiprocessing.Process(target=worker, args=(queue,)) for _ in range(num_workers)]
     for w in workers:
         w.start()
 
