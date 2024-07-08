@@ -112,6 +112,12 @@ def custom_comfy_input_component():
             
             """
         )
+        
+        st.info(
+            """
+            Pinokio users don't need to update this path, as it is already linked to their shared drive
+            """
+        )
 
     h1, h2 = st.columns([1, 1])
     with h2:
