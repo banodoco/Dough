@@ -6,6 +6,28 @@ from shared.constants import COMFY_BASE_PATH
 from ui_components.widgets.download_file_progress_bar import download_file_widget
 from utils.constants import T2IModel
 
+# TODO: make all the file access methods in a single interface
+def list_dir_files(directory, depth=0):
+    all_items = []
+
+    def explore(current_dir, current_depth):
+        if current_depth > depth:
+            return
+
+        for entry in os.listdir(current_dir):
+            full_path = os.path.join(current_dir, entry)
+            rel_path = os.path.relpath(full_path, directory)
+
+            if os.path.isfile(full_path):
+                all_items.append(rel_path)
+            elif os.path.isdir(full_path):
+                all_items.append(rel_path + '/')
+                if current_depth < depth:
+                    explore(full_path, current_depth + 1)
+
+    explore(directory, 0)
+    return sorted(all_items)
+
 
 def model_selector_element(type=T2IModel.SDXL.value, position="explorer", selected_model=None):
     tab1, tab2 = st.tabs(["Choose Model", "Download Models"])
@@ -26,7 +48,7 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
             explorer_gen_model = ""
 
             # TODO: make a common interface for accessing different types of files
-            all_files = os.listdir(checkpoints_dir)
+            all_files = list_dir_files(checkpoints_dir, 1)
             ignored_model_list = [
                 "dynamicrafter_512_interp_v1.ckpt",
                 "sd_xl_refiner_1.0.safetensors",
@@ -37,9 +59,9 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
             ]
 
             if type == T2IModel.SDXL.value:
-                match_condition = lambda file: file and "xl" in file.lower()
+                match_condition = lambda file: file #and "xl" in file.lower()
             else:
-                match_condition = lambda file: file and "sd3" in file.lower()
+                match_condition = lambda file: file #and "sd3" in file.lower()
 
             model_files = [
                 file for file in model_files if match_condition(file) and file not in ignored_model_list
@@ -61,6 +83,9 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
                     index=current_model_index,
                     # on_change=update_model,
                 )
+                
+                st.info("Please only select SDXL based models") if type == T2IModel.SDXL.value \
+                    else st.info("Please only select SD3 based models")
             else:
                 st.write("")
                 st.info(info_msg)

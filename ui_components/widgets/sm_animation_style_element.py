@@ -3,6 +3,7 @@ import os
 import requests
 import random
 import string
+from Dough.ui_components.widgets.model_selector_element import list_dir_files
 import streamlit as st
 from shared.constants import COMFY_BASE_PATH, InternalFileTag, InternalFileType
 from ui_components.widgets.download_file_progress_bar import download_file_widget
@@ -460,7 +461,7 @@ def select_sd_model_element(shot_uuid, default_model):
     tab1, tab2 = st.tabs(["Choose Model", "Download Models"])
 
     checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
-    all_files = os.listdir(checkpoints_dir)
+    all_files = list_dir_files(checkpoints_dir, depth=1)
     if len(all_files) == 0:
         model_files = [default_model]
 
@@ -470,7 +471,7 @@ def select_sd_model_element(shot_uuid, default_model):
         model_files = [
             file
             for file in model_files
-            if "xl" not in file.lower() and "sd3" not in file.lower() and file not in ignored_model_list
+            if file not in ignored_model_list
         ]
 
     sd_model_dict = {
@@ -532,7 +533,8 @@ def select_sd_model_element(shot_uuid, default_model):
                 st.info("This is the default model - to download more, go to the Download Models tab.")
             else:
                 st.write("")
-                st.info("To download more models, go to the Download Models tab.")
+                st.info("Please only select SD1.5 based models")
+                # st.info("To download more models, go to the Download Models tab.")
 
     # ---------------- ADD CKPT ---------------
     with tab2:
