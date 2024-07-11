@@ -29,11 +29,12 @@ def check_and_pull_changes():
 
     with server_state_lock["update_process"]:
         global update_event
-        data_repo = DataRepo()
-        app_setting = data_repo.get_app_setting_from_uuid()
+        general_settings = get_toml_config(toml_file="app_settings.toml")
         update_enabled = (
             True
-            if app_setting.replicate_username and app_setting.replicate_username in ["bn", "update"]
+            if general_settings
+            and "automatic_update" in general_settings
+            and general_settings["automatic_update"]
             else False
         )
 

@@ -16,6 +16,7 @@ class TomlConfig(ExtendedEnum):
     FILE_HASH = "file_hash"
     NODE_VERSION = "node_version"
     COMFY_VERSION = "comfy"
+    GENERAL_SETTINGS = "general_settings"
 
 
 class ImageStage(ExtendedEnum):
