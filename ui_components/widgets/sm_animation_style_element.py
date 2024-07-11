@@ -3,7 +3,7 @@ import os
 import requests
 import random
 import string
-from Dough.ui_components.widgets.model_selector_element import list_dir_files
+from ui_components.widgets.model_selector_element import list_dir_files
 import streamlit as st
 from shared.constants import COMFY_BASE_PATH, InternalFileTag, InternalFileType
 from ui_components.widgets.download_file_progress_bar import download_file_widget
@@ -468,11 +468,7 @@ def select_sd_model_element(shot_uuid, default_model):
     else:
         model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
         ignored_model_list = ["dynamicrafter_512_interp_v1.ckpt"]
-        model_files = [
-            file
-            for file in model_files
-            if file not in ignored_model_list
-        ]
+        model_files = [file for file in model_files if file not in ignored_model_list]
 
     sd_model_dict = {
         "Realistic_Vision_V5.1.safetensors": {

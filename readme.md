@@ -119,6 +119,9 @@ source ./dough-env/bin/activate && ./scripts/entrypoint.sh
 ### Open Powershell in Administrator mode
 
 Open the Start menu, type Windows PowerShell, right-click on Windows PowerShell, and then select Run as administrator.
+Then run this command ```Set-ExecutionPolicy RemoteSigned```
+
+**NOTE:** Make sure you have Python3.10 installed and set as the default Python version
 
 ### Install the app
 

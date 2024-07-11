@@ -7,7 +7,7 @@ import streamlit as st
 from dataclasses import dataclass, field
 from shared.constants import SERVER, ServerType
 from ui_components.methods.file_methods import delete_from_env, load_from_env, save_to_env
-from utils.common_utils import get_current_user, get_toml_config
+from utils.common_utils import get_current_user, get_toml_config, update_toml_config
 from ui_components.components.query_logger_page import query_logger_page
 
 from utils.constants import TomlConfig
@@ -67,16 +67,11 @@ def app_settings_page():
                         payment_link = f"""<a target='_self' href='{payment_link}'> PAYMENT LINK </a>"""
                         st.markdown(payment_link, unsafe_allow_html=True)
 
-    # TODO: rn storing 'update_state' in replicate_username inside app_setting to bypass db changes, will change this later
-    app_setting = data_repo.get_app_setting_from_uuid()
+    general_settings = get_toml_config(toml_file="app_settings.toml")
     update_enabled = (
-        True
-        if app_setting.replicate_username and app_setting.replicate_username in ["update", "bn"]
-        else False
+        True if "automatic_update" in general_settings and general_settings["automatic_update"] else False
     )
     with st.expander("App Update", expanded=True):
-
-        # st.info("We recommend auto-updating the app to get the latest features and bug fixes. However, if you'd like to update manually, you can turn this off and use './scripts/entrypoint.sh --update' when you're starting the app to update.")
         st.toggle(
             "Auto-update app upon restart",
             key="enable_app_update",
@@ -112,7 +107,7 @@ def custom_comfy_input_component():
             
             """
         )
-        
+
         st.info(
             """
             Pinokio users don't need to update this path, as it is already linked to their shared drive
@@ -340,7 +335,8 @@ def api_key_input_component():
 
 
 def update_toggle():
-    data_repo = DataRepo()
-    data_repo.update_app_setting(
-        replicate_username="update" if st.session_state["enable_app_update"] else "no_update"
-    )
+    toml_data = get_toml_config(toml_file="app_settings.toml")
+    print("toml_data: ", toml_data)
+    update_enabled = True if "automatic_update" in toml_data and toml_data["automatic_update"] else False
+    toml_data["automatic_update"] = not update_enabled
+    update_toml_config(toml_data, toml_file="app_settings.toml")
