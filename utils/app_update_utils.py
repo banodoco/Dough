@@ -36,6 +36,8 @@ def check_and_pull_changes():
             if app_setting.replicate_username and app_setting.replicate_username in ["bn", "update"]
             else False
         )
+
+        st.info("Checking for updates. Please don't close the app.")
         current_version = get_local_version()
         remote_version = get_remote_version()
         if (
@@ -45,7 +47,6 @@ def check_and_pull_changes():
             and update_enabled
             and not st.session_state.get("update_in_progress", False)
         ):
-            st.info("Checking for updates...")
             st.session_state["update_in_progress"] = True
             update_thread = threading.Thread(target=pull_fresh_changes)
             update_thread.start()
@@ -79,6 +80,7 @@ def apply_updates():
         return
 
     st.session_state["update_in_progress"] = True
+    st.info("Applying updates. Please don't close the app.")
 
     def update_method():
         try:
@@ -132,12 +134,10 @@ def update_dough():
         )
         if completed_process.returncode == 0:
             print("Database migration successful")
-            
+
     # installing requirements
     try:
-        subprocess.run(
-            [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True
-        )
+        subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
         print(f"Dough requirements installed successfully")
     except subprocess.CalledProcessError as e:
         print(f"Error installing requirements for Dough: {str(e)}")
