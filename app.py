@@ -95,6 +95,7 @@ def main():
                     check_and_pull_changes()  # enabling auto updates only for local version
                 else:
                     apply_updates()
+                    st.rerun()
             st.session_state["first_load"] = True
 
         start_runner()
