@@ -209,9 +209,8 @@ def update_comfy_ui():
 
 # TODO: move all the git methods into a single class
 def update_git_repo(git_dir, commit_hash=None):
+    repo = Repo(git_dir)
     try:
-        repo = Repo(git_dir)
-
         repo.git.stash()
         repo.remotes.origin.fetch()
 
@@ -242,6 +241,25 @@ def update_git_repo(git_dir, commit_hash=None):
                 repo.remotes.origin.pull(current_branch.name)
     except Exception as e:
         print(f"Error occured while pulling fresh changes: {str(e)}")
+        handle_git_error(repo)
+
+
+def handle_git_error(repo):
+    if not repo:
+        return
+
+    try:
+        # abort in-progress merge or rebase
+        if repo.git.status("--porcelain"):
+            repo.git.merge("--abort")
+            repo.git.rebase("--abort")
+        repo.git.reset("--hard")
+        repo.git.clean("-fd")
+        print("Git operation aborted and repository reset")
+        return True
+    except Exception as e:
+        print(f"Failed to handle Git error: {str(e)}")
+        return False
 
 
 def get_local_version():
