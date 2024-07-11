@@ -284,10 +284,8 @@ def release_lock(key):
     return True
 
 
-def get_toml_config(key=None):
-    toml_config_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "scripts", "config.toml")
-    )
+def get_toml_config(key=None, toml_file="config.toml"):
+    toml_config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts", toml_file))
 
     toml_data = {}
     with open(toml_config_path, "r") as f:
@@ -296,3 +294,11 @@ def get_toml_config(key=None):
     if key and key in toml_data:
         return toml_data[key]
     return toml_data
+
+
+def update_toml_config(toml_dict, toml_file="config.toml"):
+    toml_config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts", toml_file))
+
+    with open(toml_config_path, "wb") as f:
+        toml_content = toml.dumps(toml_dict)
+        f.write(toml_content.encode())
