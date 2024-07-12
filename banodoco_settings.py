@@ -83,6 +83,7 @@ def project_init():
                     controlnet: models/controlnet/
                     embeddings: models/embeddings/
                     loras: models/loras/
+                    unet: models/unet/
                     upscale_models: models/upscale_models/
                     vae: models/vae/
                     ipadapter: models/ipadapter/
