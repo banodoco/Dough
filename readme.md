@@ -10,22 +10,18 @@ To achieve this, we allow you to guide video generations with precision using a 
 
 To start, with Dough, you generate hundreds of images in the right style and theme using the Inspiration Engine:
 
-<img src="https://github.com/banodoco/Dough/assets/34690994/698d63f5-765c-4cf2-94f4-7943d241a6ea" width="800">
-
+![images](https://github.com/user-attachments/assets/43a4c7e1-416c-480c-9ae2-b10558754da7)
 <br>
 You can then assemble these frames into shots that you can granularly edit:
 <br>
-<br>
 
-<img src="https://github.com/banodoco/Dough/assets/34690994/1080ed90-b829-47cd-b946-de49a7a03b2a" width="800">
-<br>
-<br>
+![edit](https://github.com/user-attachments/assets/b7ec75d2-3839-4501-8e09-179c8094476d)
+
 And then animate these with granular settings for each frame and Motion LoRAs:
 <br>
-<br>
 
-<img src="https://github.com/banodoco/Dough/assets/34690994/95ec3ec3-5143-40e9-88ba-941ce7e2dec9" width="800">
-<br>
+![animate](https://github.com/user-attachments/assets/ade7bb0e-fc77-4633-940f-be6e0437bf48)
+
 <br>
 As an example, here's a video that's guided with just images on high strength:
 
@@ -189,7 +185,6 @@ cd Dough
 ```
 </details>
 
-<br>
 
 ## Troubleshooting
 
@@ -239,8 +234,6 @@ cd Dough
   Drop in our [Discord](https://discord.com/invite/8Wx9dFu5tP).
 </details>
 </details>
-
-<br>
 
 ## Artworks created with Dough
 
