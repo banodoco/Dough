@@ -6,21 +6,20 @@ Dough is a tool for crafting videos with AI. Our goal is to give you enough cont
 
 To achieve this, we allow you to guide video generations with precision using a combination of images (via [Steerable Motion](https://github.com/banodoco/steerable-motion)) and examples videos (via [Motion Director](https://github.com/ExponentialML/AnimateDiff-MotionDirector)) with granular motion settings for each frame.
 
-
-
 To start, with Dough, you generate hundreds of images in the right style and theme using the Inspiration Engine:
 
-![images](https://github.com/user-attachments/assets/43a4c7e1-416c-480c-9ae2-b10558754da7)
+![images (2)](https://github.com/user-attachments/assets/ebdb923e-7d4e-4dee-8cce-db62d5c62be2)
 <br>
 You can then assemble these frames into shots that you can granularly edit:
 <br>
 
-![edit](https://github.com/user-attachments/assets/b7ec75d2-3839-4501-8e09-179c8094476d)
+![edit (1)](https://github.com/user-attachments/assets/405af368-b2ad-406a-93aa-942d84dd48cc)
 
 And then animate these with granular settings for each frame and Motion LoRAs:
 <br>
 
-![animate](https://github.com/user-attachments/assets/ade7bb0e-fc77-4633-940f-be6e0437bf48)
+![animate (1)](https://github.com/user-attachments/assets/2ced74e1-88c7-4c49-a3f4-942bb00f1893)
+
 
 <br>
 As an example, here's a video that's guided with just images on high strength:
