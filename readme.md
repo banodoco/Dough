@@ -1,46 +1,76 @@
-# Welcome to Dough v. 0.9.1 (beta)
+# Welcome to Dough v. 0.9.18 (beta)
 
-**⬇️ Scroll down for Setup Instructions - Currently available on Linux & Windows, hosted version coming soon.**
+**⬇️ Scroll down for Setup Instructions - Currently available on Linux & Windows computers with more than 12GB of VRAM, hosted version coming soon.**
 
 Dough is a tool for crafting videos with AI. Our goal is to give you enough control over video generations that you can make beautiful creations of anything you imagine that feel uniquely your own.
 
-To achieve this, we allow you to guide video generations with precision using a combination of images (via [Steerable Motion](https://github.com/banodoco/steerable-motion)) examples videos (via [Motion Director](https://github.com/ExponentialML/AnimateDiff-MotionDirector)).
+To achieve this, we allow you to guide video generations with precision using a combination of images (via [Steerable Motion](https://github.com/banodoco/steerable-motion)) and examples videos (via [Motion Director](https://github.com/ExponentialML/AnimateDiff-MotionDirector)) with granular motion settings for each frame.
 
-Below is brief overview and some examples of outputs:
 
-### With Dough, you can makes guidance frames using Stable Diffusion XL, IP-Adapter, Fooocus Inpainting, and more:
+
+To start, with Dough, you generate hundreds of images in the right style and theme using the Inspiration Engine:
 
 <img src="https://github.com/banodoco/Dough/assets/34690994/698d63f5-765c-4cf2-94f4-7943d241a6ea" width="800">
 
-### You can then assemble these frames into shots that you can granularly edit:
+<br>
+You can then assemble these frames into shots that you can granularly edit:
+<br>
+<br>
 
 <img src="https://github.com/banodoco/Dough/assets/34690994/1080ed90-b829-47cd-b946-de49a7a03b2a" width="800">
-
-### And then animate these shots by defining parameters for each frame and selecting guidance videos via Motion LoRAs:
+<br>
+<br>
+And then animate these with granular settings for each frame and Motion LoRAs:
+<br>
+<br>
 
 <img src="https://github.com/banodoco/Dough/assets/34690994/95ec3ec3-5143-40e9-88ba-941ce7e2dec9" width="800">
+<br>
+<br>
+As an example, here's a video that's guided with just images on high strength:
 
-### As an example, here's a video that's guided with just images on high strength:
-
+<br>
 <img src="https://github.com/banodoco/Dough/assets/34690994/cc88ca21-870d-4b96-b9cc-39698fc5fd2f" width="800">
 
-### While here's a more complex one, with low strength images driving it alongside a guidance video:
 
+<br>
+While here's a more complex one, with low strength images driving it alongside a guidance video:
+<br>
+<br>
 <img src="https://github.com/banodoco/Dough/assets/34690994/5c2edc07-8aa3-402f-b119-345db26df8b9" width="800">
-
-### And here's a more complex example combining high strength guidance with a guidance video strongly influencing the motion:
+<br>
+<br>
+And here's a more complex example combining high strength guidance with a guidance video strongly influencing the motion:
+<br>
+<br>
 
 <img src="https://github.com/banodoco/Dough/assets/34690994/e5d70cc3-03e2-450d-8bc7-b6d1a920af4a" width="800">
+<br>
+<br>
+
+We're obviously very biased think that it'll be possible to create extraordinarily beautiful things with this and we're excited to see what you make! Please share stuff you made in our [Discord](https://discord.com/invite/8Wx9dFu5tP).
 
 
+## Setup Instructions
 
-### We're obviously very biased think that it'll be possible to create extraordinarily beautiful things with this and we're excited to see what you make! Please share stuff you made in our [Discord](https://discord.com/invite/8Wx9dFu5tP).
+### Recommended Setup for Linux & Windows - Pinokio:
 
+Pinokio is a web browser for launching and managing AI apps. We recommend you use it for installing Dough.
 
-# Setup Instructions
+Instructions:
+
+1) Download [Pinokio Browser](https://pinokio.computer/)
+
+2) Click into Discover, search "Dough" select the option by "Banodoco" and press the download button
+
+3) Once it's downloaded, press the Install button. This will take a few minutes
+
+4) Once it's installed, press the Run button and it should launch
+
+### Other Setup Instructions:
 
 <details>
-  <summary><b>Setting up on Runpod (click to expand)</b></summary>
+  <summary><b>Setting up on Runpod</b></summary>
 
   
 1) We recommend setting up persistent storage for a quick setup and for your projects to persist. To get it going, click into “Storage”, select “New Network Volume”. 50GB should be more than enough to start.
@@ -90,7 +120,8 @@ Then go to this URL, and it should be running!
 </details>
 
 
-## Instructions for Linux:
+<details>
+  <summary><b>Manual installation instructions for Linux</b></summary>
 
 ### Install the app
 
@@ -113,8 +144,11 @@ you can run the app using
 ```bash
 source ./dough-env/bin/activate && ./scripts/entrypoint.sh
 ```
+</details>
 
-## Instructions for Windows:
+
+<details>
+  <summary><b>Manual installation instructions for Windows</b></summary>
 
 ### Open Powershell in Administrator mode
 
@@ -153,16 +187,12 @@ cd Dough
 ```bash
 . .\dough-env\Scripts\activate ; .\scripts\entrypoint.bat
 ```
+</details>
 
----
+<br>
 
-### Using personal ComfyUI instance
-You can provide the path to your ComfyUI instance in the "App Settings" section of Dough
+## Troubleshooting
 
-
-If you're having any issues, please share them in our [Discord](https://discord.com/invite/8Wx9dFu5tP).
-
-# Troubleshooting
 
 <details>
   <summary><b>Common problems (click to expand)</b></summary>
@@ -209,3 +239,14 @@ If you're having any issues, please share them in our [Discord](https://discord.
   Drop in our [Discord](https://discord.com/invite/8Wx9dFu5tP).
 </details>
 </details>
+
+<br>
+
+## Artworks created with Dough
+
+You can see a selection of artworks created with Dough [here](https://banodoco.ai/Dough#some-weird-beautiful-and-interesting-things-people-have-made-with-dough-and-steerable-motion-the-technology-behind-it).
+
+## Interested in joining a community of people who are pushing open AI art models to their technical and artistic limits?
+
+Drop in our [Discord](https://discord.com/invite/8Wx9dFu5tP).
+
