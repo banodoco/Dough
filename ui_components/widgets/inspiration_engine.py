@@ -2,6 +2,7 @@ import os
 import json
 import time
 
+from django.db import connection
 import replicate.model
 import streamlit as st
 import replicate
@@ -14,7 +15,7 @@ from ui_components.methods.common_methods import process_inference_output, save_
 from ui_components.methods.file_methods import generate_pil_image, zoom_and_crop
 from ui_components.models import InternalProjectObject, InternalSettingObject
 from ui_components.widgets.model_selector_element import model_selector_element
-from utils.common_utils import acquire_lock, release_lock
+from utils.common_utils import sqlite_atomic_transaction
 from utils.constants import MLQueryObject, T2IModel
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL
@@ -880,7 +881,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                                 key = project_uuid
                                 # TODO: make storing and retrieving meta data into a single method
-                                if acquire_lock(key):
+                                with sqlite_atomic_transaction():
                                     project: InternalProjectObject = data_repo.get_project_from_uuid(uuid=key)
                                     if project:
                                         meta_data = json.loads(project.meta_data) if project.meta_data else {}
@@ -888,7 +889,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         data_repo.update_project(
                                             uuid=project.uuid, meta_data=json.dumps(meta_data)
                                         )
-                                    release_lock(key)
 
                 st.rerun()
 
