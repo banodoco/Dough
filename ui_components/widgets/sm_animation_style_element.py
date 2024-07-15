@@ -138,7 +138,7 @@ def video_motion_settings(shot_uuid, img_list):
             min_value=0.0,
             max_value=1.0,
             step=0.05,
-            key="strength_of_adherence",
+            key="strength_of_adherence_value",
             value=st.session_state[f"strength_of_adherence_value_{shot_uuid}"],
         )
 
