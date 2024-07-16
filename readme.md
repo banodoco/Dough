@@ -1,4 +1,4 @@
-# Welcome to Dough v. 0.9.18 (beta)
+# Dough is an open-source art tool for steering video with precision
 
 **⬇️ Scroll down for Setup Instructions - Currently available on Linux & Windows computers with more than 12GB of VRAM, hosted version coming soon.**
 
@@ -20,14 +20,12 @@ And then animate these with granular settings for each frame and Motion LoRAs:
 
 ![animate (1)](https://github.com/user-attachments/assets/2ced74e1-88c7-4c49-a3f4-942bb00f1893)
 
-As an example of it in action, here's 4 images alongside a LoRA trained on a video driving the motion:
+As an example of it in action, here's 4 images steering, alongside a LoRA trained on a video:
 <br>
 <br>
 <img src="https://github.com/banodoco/Dough/assets/34690994/e5d70cc3-03e2-450d-8bc7-b6d1a920af4a" width="800">
-<br>
-<br>
 
-While here are four abstract images animated by each of the different workflows available inside Dough with no video guidance:
+While here are four abstract images animated by each of the different workflows available inside Dough:
 
 ![basic workflows](https://github.com/banodoco/steerable-motion/blob/main/demo/basic_workflows.gif)
 
