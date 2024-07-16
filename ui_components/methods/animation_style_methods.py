@@ -6,7 +6,7 @@ from backend.models import InternalFileObject
 from shared.constants import COMFY_BASE_PATH, InferenceParamType, ProjectMetaData
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, ShotMetaData
 from ui_components.models import InternalProjectObject, InternalShotObject
-from utils.common_utils import acquire_lock, release_lock
+from utils.common_utils import sqlite_atomic_transaction
 from utils.data_repo.data_repo import DataRepo
 import numpy as np
 import matplotlib.pyplot as plt
@@ -668,7 +668,7 @@ def update_session_state_with_animation_details(
 
     main_setting_data = {}
     main_setting_data[f"lora_data_{shot.uuid}"] = lora_data
-    main_setting_data[f"strength_of_adherence_value_{shot.uuid}"] = st.session_state["strength_of_adherence"]
+    main_setting_data[f"strength_of_adherence_value_{shot.uuid}"] = st.session_state["strength_of_adherence_value"]
     main_setting_data[f"type_of_motion_context_index_{shot.uuid}"] = st.session_state[
         "type_of_motion_context"
     ]
@@ -714,13 +714,12 @@ def update_active_shot(shot_uuid):
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
     key = shot.project.uuid
-    if acquire_lock(key):
+    with sqlite_atomic_transaction():
         project: InternalProjectObject = data_repo.get_project_from_uuid(uuid=key)
         if project:
             meta_data = json.loads(project.meta_data) if project.meta_data else {}
             meta_data[ProjectMetaData.ACTIVE_SHOT.value] = str(shot_uuid)
             data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
-        release_lock(key)
 
 
 # saving dynamic crafter generation details

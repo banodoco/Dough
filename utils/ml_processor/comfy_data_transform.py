@@ -772,11 +772,9 @@ class ComfyDataTransform:
             StabliseMotionOption.HIGH.value: {"normal": 0.3, "lcm": 0.6},
             StabliseMotionOption.VERY_HIGH.value: {"normal": 0.4, "lcm": 0.8},
         }
-        
+
         workflow["467"]["inputs"]["context_aware"] = "nearest_hint"
-        ad_mode = (
-            "lcm" if workflow["546"]["inputs"]["model_name"] == "AnimateLCM_sd15_t2v.ckpt" else "normal"
-        )
+        ad_mode = "lcm" if workflow["546"]["inputs"]["model_name"] == "AnimateLCM_sd15_t2v.ckpt" else "normal"
         workflow["467"]["inputs"]["sparse_nonhint_mult"] = stablise_motion_value_map[
             sm_data.get("stabilise_motion", StabliseMotionOption.NONE.value)
         ][ad_mode]
@@ -978,7 +976,7 @@ class ComfyDataTransform:
                 workflow[str(node_idx + 4)] = {
                     "inputs": {
                         "weight": composition_influence,
-                        "weight_type": "composition",
+                        "composition_boost": 0,
                         "combine_embeds": "concat",
                         "start_at": 0,
                         "end_at": 1,
@@ -987,8 +985,8 @@ class ComfyDataTransform:
                         "ipadapter": ["11", 1],
                         "image": [str(node_idx + 3), 0],
                     },
-                    "class_type": "IPAdapterAdvanced",
-                    "_meta": {"title": "IPAdapter Advanced"},
+                    "class_type": "IPAdapterPreciseComposition",
+                    "_meta": {"title": "IPAdapter Precise Composition"},
                 }
                 last_model_node = node_idx + 4
 
