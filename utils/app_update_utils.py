@@ -38,7 +38,6 @@ def check_and_pull_changes():
             else False
         )
 
-        st.info("Checking for updates. Please don't close the app.")
         current_version = get_local_version()
         remote_version = get_remote_version()
         if (
@@ -49,6 +48,8 @@ def check_and_pull_changes():
             and not st.session_state.get("update_in_progress", False)
         ):
             st.session_state["update_in_progress"] = True
+            st.info("Checking for updates. Please don't close the app.")
+
             update_thread = threading.Thread(target=pull_fresh_changes)
             update_thread.start()
             update_thread.join()
