@@ -18,7 +18,7 @@
 
 [node_version]
 "ComfyUI-Manager" = { "url" = "https://github.com/ltdrdata/ComfyUI-Manager", "commit_hash" = "61dff9dca6dc6a420bf2975326f54660cf081cd1"}
-"ComfyUI_IPAdapter_plus" = { "url" = "https://github.com/cubiq/ComfyUI_IPAdapter_plus", "commit_hash" = "8208e27bf10e9b5b36546dd64c4b820b168c2724"}
+"ComfyUI_IPAdapter_plus" = { "url" = "https://github.com/cubiq/ComfyUI_IPAdapter_plus", "commit_hash" = "13fedc634d1abf19d289fc7a7b5a74589465206c"}
 "comfyui-various" = { "url" = "https://github.com/jamesWalker55/comfyui-various", "commit_hash" = "ec58185387c75b74ee93d6f835ff480772dbc64d"}
 "comfy_PoP" = { "url" = "https://github.com/picturesonpictures/comfy_PoP", "commit_hash" = "4cb7bf7c55c484e50dddf6b881739b7a506b0946"}
 "ComfyUI-Frame-Interpolation" = { "url" = "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation", "commit_hash" = "1c4c4b4f9a99e7e6eb7c5a5f3fdc7c9dfd319357"}

@@ -138,7 +138,7 @@ def video_motion_settings(shot_uuid, img_list):
             min_value=0.0,
             max_value=1.0,
             step=0.05,
-            key="strength_of_adherence",
+            key="strength_of_adherence_value",
             value=st.session_state[f"strength_of_adherence_value_{shot_uuid}"],
         )
 
@@ -674,6 +674,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
         apply_updates(key_suffix, value, uuid, range_to_edit)
         del st.session_state["update_values"]  # Clear the update instruction after applying
 
+    cumulative_seconds = 0.0
     for i in range(0, len(img_list), items_per_row):
         prev_frame_settings = None
         with st.container():
@@ -685,7 +686,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
 
                 if img and img.location:
                     with grid[2 * j]:
-                        st.info(f"**Frame {idx + 1}**")
+                        st.info(f"**Frame {idx + 1} - {cumulative_seconds:.2f}s**")
                         st.image(img.location, use_column_width=True)
 
                 # Create a new grid for each row of images
@@ -853,6 +854,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 "Freedom between frames", "freedom_between_frames", idx, shot_uuid, img_list
                             )
                             freedoms_between_frames.append(freedom_between_frames)
+                            cumulative_seconds += distance_to_next_frame
 
             if (i < len(img_list) - 1) or (len(img_list) % items_per_row != 0):
                 st.markdown("***")

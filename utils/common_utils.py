@@ -3,11 +3,13 @@ import os
 import csv
 import subprocess
 import time
+from django.db import connection
 import psutil
 import socket
 import streamlit as st
 import json
 import platform
+from contextlib import contextmanager
 
 import toml
 from shared.constants import SERVER, CreativeProcessPage, ServerType
@@ -264,6 +266,20 @@ def refresh_app(maintain_state=False):
 def padded_integer(integer, pad_length=4):
     padded_string = str(integer).zfill(pad_length)
     return padded_string
+
+
+@contextmanager
+def sqlite_atomic_transaction():
+    cursor = connection.cursor()
+    try:
+        cursor.execute("BEGIN IMMEDIATE")
+        yield cursor
+        connection.commit()
+    except Exception as e:
+        connection.rollback()
+        raise e
+    finally:
+        cursor.close()
 
 
 def acquire_lock(key):

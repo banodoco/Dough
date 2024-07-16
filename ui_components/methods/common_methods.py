@@ -5,6 +5,7 @@ import sys
 from typing import List
 import os
 from PIL import Image, ImageDraw, ImageFilter
+from utils.common_utils import sqlite_atomic_transaction
 from utils.local_storage.local_storage import write_to_motion_lora_local_db
 from moviepy.editor import *
 import cv2
@@ -15,8 +16,7 @@ import time
 import uuid
 from io import BytesIO
 import numpy as np
-from django.db import transaction
-from utils.common_utils import acquire_lock, release_lock
+from django.db import connection
 from shared.constants import (
     COMFY_BASE_PATH,
     OFFLINE_MODE,
@@ -964,46 +964,43 @@ def check_project_meta_data(project_uuid):
     """
     data_repo = DataRepo()
 
-    key = project_uuid
-    if acquire_lock(key):
-        with transaction.atomic():
-            project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
-            timing_update_data = (
-                json.loads(project.meta_data).get(ProjectMetaData.DATA_UPDATE.value, None)
-                if project.meta_data
-                else None
-            )
-            if timing_update_data and len(timing_update_data):
-                for timing_uuid in timing_update_data:
-                    _ = data_repo.get_timing_from_uuid(timing_uuid, invalidate_cache=True)
+    with sqlite_atomic_transaction():
+        project: InternalProjectObject = data_repo.get_project_from_uuid(project_uuid)
+        timing_update_data = (
+            json.loads(project.meta_data).get(ProjectMetaData.DATA_UPDATE.value, None)
+            if project.meta_data
+            else None
+        )
+        if timing_update_data and len(timing_update_data):
+            for timing_uuid in timing_update_data:
+                _ = data_repo.get_timing_from_uuid(timing_uuid, invalidate_cache=True)
 
-            gallery_update_data = (
-                json.loads(project.meta_data).get(ProjectMetaData.GALLERY_UPDATE.value, False)
-                if project.meta_data
-                else False
-            )
-            if gallery_update_data:
-                pass
+        gallery_update_data = (
+            json.loads(project.meta_data).get(ProjectMetaData.GALLERY_UPDATE.value, False)
+            if project.meta_data
+            else False
+        )
+        if gallery_update_data:
+            pass
 
-            shot_update_data = (
-                json.loads(project.meta_data).get(ProjectMetaData.SHOT_VIDEO_UPDATE.value, [])
-                if project.meta_data
-                else []
-            )
-            if shot_update_data and len(shot_update_data):
-                for shot_uuid in shot_update_data:
-                    _ = data_repo.get_shot_list(shot_uuid, invalidate_cache=True)
+        shot_update_data = (
+            json.loads(project.meta_data).get(ProjectMetaData.SHOT_VIDEO_UPDATE.value, [])
+            if project.meta_data
+            else []
+        )
+        if shot_update_data and len(shot_update_data):
+            for shot_uuid in shot_update_data:
+                _ = data_repo.get_shot_list(shot_uuid, invalidate_cache=True)
 
-            # clearing update data from cache
-            blank_data_obj = {
-                ProjectMetaData.DATA_UPDATE.value: [],
-                ProjectMetaData.GALLERY_UPDATE.value: False,
-                ProjectMetaData.SHOT_VIDEO_UPDATE.value: [],
-            }
-            meta_data = json.loads(project.meta_data) if project.meta_data else {}
-            meta_data.update(blank_data_obj)
-            data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
-        release_lock(key)
+        # clearing update data from cache
+        blank_data_obj = {
+            ProjectMetaData.DATA_UPDATE.value: [],
+            ProjectMetaData.GALLERY_UPDATE.value: False,
+            ProjectMetaData.SHOT_VIDEO_UPDATE.value: [],
+        }
+        meta_data = json.loads(project.meta_data) if project.meta_data else {}
+        meta_data.update(blank_data_obj)
+        data_repo.update_project(uuid=project.uuid, meta_data=json.dumps(meta_data))
 
 
 def update_app_setting_keys():
