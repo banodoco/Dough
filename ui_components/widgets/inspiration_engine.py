@@ -58,7 +58,7 @@ def edit_prompts(edit_text, list_of_prompts):
     }
 
     output = replicate.run(
-        "meta/meta-llama-3-8b",
+        "meta/meta-llama-3-70b",
         input=query_data,
     )
 
@@ -108,7 +108,7 @@ def generate_prompts(
         "stop_sequences": " ",
     }
     output = replicate.run(
-        "meta/meta-llama-3-8b",
+        "meta/meta-llama-3-70b",
         input=query_data,
     )
 
