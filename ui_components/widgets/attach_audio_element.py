@@ -2,6 +2,7 @@ import streamlit as st
 from ui_components.methods.common_methods import save_audio_file
 from ui_components.models import InternalProjectObject, InternalSettingObject
 from utils.data_repo.data_repo import DataRepo
+from utils.state_refresh import refresh_app
 
 
 def attach_audio_element(project_uuid, expanded):
@@ -16,7 +17,7 @@ def attach_audio_element(project_uuid, expanded):
         if st.button("Upload and attach new audio"):
             if uploaded_file:
                 save_audio_file(uploaded_file, project_uuid)
-                st.rerun()
+                refresh_app()
             else:
                 st.warning("No file selected")
 

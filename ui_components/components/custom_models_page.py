@@ -173,4 +173,4 @@ from utils.data_repo.data_repo import DataRepo
 #     #             st.success(
 #     #                 f"Successfully uploaded - the model '{model_name}' is now available for use!")
 #     #             time.sleep(1.5)
-#     #             st.rerun()
+#     #             refresh_app()

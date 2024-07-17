@@ -9,6 +9,7 @@ import sentry_sdk
 from shared.logging.logging import AppLogger
 from utils.app_update_utils import apply_updates, check_and_pull_changes, load_save_checkpoint
 from utils.common_utils import is_process_active
+from utils.state_refresh import refresh_app
 
 from utils.constants import AUTH_TOKEN, RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT
 from utils.local_storage.url_storage import delete_url_param, get_url_param, set_url_param
@@ -73,7 +74,7 @@ def main():
             user, token, refresh_token = data_repo.google_user_login(**data)
             if user:
                 set_url_param(AUTH_TOKEN, str(token))
-                st.rerun()
+                refresh_app()
             else:
                 delete_url_param(AUTH_TOKEN)
                 st.error("Make sure you are added in the invite list and please login again")
@@ -95,7 +96,7 @@ def main():
                     check_and_pull_changes()  # enabling auto updates only for local version
                 else:
                     apply_updates()
-                    st.rerun()
+                    refresh_app()
             st.session_state["first_load"] = True
 
         start_runner()

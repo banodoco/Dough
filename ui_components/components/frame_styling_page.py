@@ -16,6 +16,7 @@ from ui_components.widgets.cropping_element import cropping_selector_element
 from ui_components.widgets.inpainting_element import inpainting_element
 from ui_components.widgets.variant_comparison_grid import variant_comparison_grid
 from utils import st_memory
+from utils.state_refresh import refresh_app
 
 from ui_components.constants import CreativeProcessType, WorkflowStageType
 from utils.constants import MLQueryObject
@@ -125,9 +126,11 @@ def frame_styling_page(shot_uuid: str):
                                 }
 
                                 process_inference_output(**inference_data)
-                        st.rerun()
+                        refresh_app()
             else:
-                st.error("You must first select the area to inpaint and save it by clicking the button below.")
+                st.error(
+                    "You must first select the area to inpaint and save it by clicking the button below."
+                )
 
         st.markdown("***")
 

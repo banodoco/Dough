@@ -21,6 +21,8 @@ from ui_components.methods.animation_style_methods import (
     update_session_state_with_animation_details,
     update_session_state_with_dc_details,
 )
+from utils import st_memory
+from utils.state_refresh import refresh_app
 from utils.data_repo.data_repo import DataRepo
 
 DEFAULT_SM_MODEL = "dreamshaper_8.safetensors"
@@ -66,7 +68,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
             overall_negative_prompt,
             type_of_motion_context,
             high_detail_mode,
-            stabilise_motion
+            stabilise_motion,
         ) = video_motion_settings(shot_uuid, img_list)
 
         type_of_frame_distribution = "dynamic"
@@ -201,7 +203,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 st.session_state[f"type_of_generation_index_{shot.uuid}"] = generation_types.index(
                     type_of_generation
                 )
-                st.rerun()
+                refresh_app()
 
         with footer2:
             st.info(
@@ -232,6 +234,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     new_key = key.replace("pil_img_", "") + "_uuid"
                     settings[new_key] = image.uuid
 
+                # print("******************* ", st.session_state.get(f"{shot_uuid}_preview_mode", False))
                 if st.session_state.get(f"{shot_uuid}_preview_mode", False):
                     preview_length = 3
                     img_list = img_list[:preview_length]
@@ -288,7 +291,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                         ),
                         0,
                     ),
-                    stabilise_motion=stabilise_motion
+                    stabilise_motion=stabilise_motion,
                 )
                 settings.update(shot_data=shot_data)
                 settings.update(type_of_generation=type_of_generation)
@@ -310,7 +313,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     else:
                         st.error("Please generate primary images")
                         time.sleep(0.7)
-                        st.rerun()
+                        refresh_app()
 
                 if f"{shot_uuid}_backlog_enabled" not in st.session_state:
                     st.session_state[f"{shot_uuid}_backlog_enabled"] = False
@@ -335,10 +338,12 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     else manual_save_inf_tag
                 )
                 toggle_generate_inference(position, **updated_additional_params)
-                st.rerun()
+                refresh_app()
 
-            preview_mode = st.checkbox(
-                "Preview mode", value=False, help="Generates a preview video only using the first 3 images"
+            preview_mode = st_memory.checkbox(
+                label="Preview mode",
+                key=f"{shot_uuid}_gen_preview_mode",
+                help="Generates a preview video only using the first 3 images",
             )
             btn1, btn2, _ = st.columns([1, 1, 1])
             additional_params = {
@@ -377,7 +382,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                             st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
 
                     st.success("All frames have been reset to default values.")
-                    st.rerun()
+                    refresh_app()
                 st.write("")
 
             with column2:
@@ -389,7 +394,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 ):
                     st.success("Settings saved successfully")
                     toggle_generate_inference(manual_save_inf_tag, **additional_params)
-                    st.rerun()
+                    refresh_app()
 
         # --------------- SIDEBAR ---------------------
         animation_sidebar(
@@ -483,7 +488,7 @@ def two_img_realistic_interpolation_page(shot_uuid, img_list: List[InternalFileO
 
         backlog_update = {f"{shot_uuid}_backlog_enabled": False}
         toggle_generate_inference(position, **backlog_update)
-        st.rerun()
+        refresh_app()
 
     # Buttons for adding to queue or backlog, assuming these are still relevant
     st.markdown("***")

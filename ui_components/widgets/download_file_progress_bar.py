@@ -6,6 +6,7 @@ import time
 import zipfile
 import requests
 import streamlit as st
+from utils.state_refresh import refresh_app
 
 
 def download_file_widget(url, filename, dest):
@@ -21,13 +22,13 @@ def download_file_widget(url, filename, dest):
             os.remove(fp)
             st.info("Partial downloads deleted")
             time.sleep(0.3)
-            st.rerun()
+            refresh_app()
 
     # checking if the file already exists
     if os.path.exists(os.path.join(dest, filename)):
         st.warning("File already present")
         time.sleep(1)
-        st.rerun()
+        refresh_app()
 
     # setting this file for deletion, incase it's not downloaded properly
     # if it is downloaded properly then it will be removed from here (all these steps because of streamlit!)
@@ -93,4 +94,4 @@ def download_file_widget(url, filename, dest):
             st.error("Unable to access model url")
             time.sleep(1)
 
-        st.rerun()
+        refresh_app()

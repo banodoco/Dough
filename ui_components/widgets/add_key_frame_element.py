@@ -3,7 +3,7 @@ from typing import Union
 import streamlit as st
 from shared.constants import AnimationStyleType
 from ui_components.models import InternalFileObject, InternalFrameTimingObject
-from utils.common_utils import refresh_app
+from utils.state_refresh import refresh_app
 from utils.data_repo.data_repo import DataRepo
 from ui_components.methods.file_methods import generate_pil_image, save_or_host_file
 from ui_components.methods.common_methods import add_image_variant, save_new_image
@@ -39,7 +39,7 @@ def add_key_frame_section(shot_uuid):
         else:
             st.error("Please generate new images or upload them")
             time.sleep(0.7)
-        st.rerun()
+        refresh_app()
 
 
 def display_selected_key_frame(selected_image_location, apply_zoom_effects):
@@ -86,7 +86,7 @@ def add_key_frame(
     # if len(shot.timing_list) >= project_settings.max_frames_per_shot:
     #     st.error(f'Only {project_settings.max_frames_per_shot} frames allowed per shot')
     #     time.sleep(0.3)
-    #     st.rerun()
+    #     refresh_app()
 
     # creating frame inside the shot at target_frame_position
     len_shot_timing_list = len(timing_list) if len(timing_list) > 0 else 0

@@ -10,6 +10,7 @@ from utils.common_utils import sqlite_atomic_transaction
 from utils.data_repo.data_repo import DataRepo
 import numpy as np
 import matplotlib.pyplot as plt
+from utils.state_refresh import refresh_app
 
 
 def get_generation_settings_from_log(log_uuid=None):
@@ -109,13 +110,13 @@ def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_
                     ):  # hackish sol, will fix later
                         st.session_state[f"structure_control_image_{shot_uuid}"] = None
 
-                st.rerun()
+                refresh_app()
             elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
                 st.session_state[f"type_of_animation_{shot.uuid}"] = 1
                 main_setting_data = shot_meta_data.get("main_setting_data", {})
                 for key in main_setting_data:
                     st.session_state[key] = main_setting_data[key]
-                st.rerun()
+                refresh_app()
         else:
             for idx, _ in enumerate(shot.timing_list):  # fix: check how the image list is being stored here
                 for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
@@ -634,7 +635,7 @@ def update_session_state_with_animation_details(
     structure_control_img_uuid=None,
     strength_of_structure_control_img=None,
     type_of_generation_index=0,
-    stabilise_motion=None
+    stabilise_motion=None,
 ):
     """
     for any generation session_state holds two kind of data objects.
@@ -649,7 +650,7 @@ def update_session_state_with_animation_details(
     in the shot (the last generation data is maintained in both the shot and the generation log)
     """
     from utils.constants import StabliseMotionOption
-    
+
     data_repo = DataRepo()
 
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
@@ -668,7 +669,9 @@ def update_session_state_with_animation_details(
 
     main_setting_data = {}
     main_setting_data[f"lora_data_{shot.uuid}"] = lora_data
-    main_setting_data[f"strength_of_adherence_value_{shot.uuid}"] = st.session_state["strength_of_adherence_value"]
+    main_setting_data[f"strength_of_adherence_value_{shot.uuid}"] = st.session_state[
+        "strength_of_adherence_value"
+    ]
     main_setting_data[f"type_of_motion_context_index_{shot.uuid}"] = st.session_state[
         "type_of_motion_context"
     ]

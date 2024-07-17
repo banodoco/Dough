@@ -3,6 +3,7 @@ import streamlit as st
 
 from ui_components.models import InternalFrameTimingObject
 from utils.data_repo.data_repo import DataRepo
+from utils.state_refresh import refresh_app
 
 
 def back_and_forward_buttons():
@@ -21,7 +22,7 @@ def back_and_forward_buttons():
                 st.session_state["current_frame_uuid"] = timing_list[
                     st.session_state["current_frame_index"] - 1
                 ].uuid
-                st.rerun()
+                refresh_app()
     with smallbutton1:
         # if it's not the first image
         if display_idx != 1:
@@ -31,7 +32,7 @@ def back_and_forward_buttons():
                 st.session_state["current_frame_uuid"] = timing_list[
                     st.session_state["current_frame_index"] - 1
                 ].uuid
-                st.rerun()
+                refresh_app()
 
     with smallbutton2:
         st.button(f"{display_idx} 📍", disabled=True)
@@ -44,7 +45,7 @@ def back_and_forward_buttons():
                 st.session_state["current_frame_uuid"] = timing_list[
                     st.session_state["current_frame_index"] - 1
                 ].uuid
-                st.rerun()
+                refresh_app()
     with smallbutton4:
         if display_idx <= len(timing_list) - 2:
             if st.button(f"{display_idx+2} ⏭️", key=f"Next Next Image for {display_idx}"):
@@ -53,4 +54,4 @@ def back_and_forward_buttons():
                 st.session_state["current_frame_uuid"] = timing_list[
                     st.session_state["current_frame_index"] - 1
                 ].uuid
-                st.rerun()
+                refresh_app()

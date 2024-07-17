@@ -27,6 +27,7 @@ from ui_components.widgets.shot_view import (
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
 from PIL import Image
+from utils.state_refresh import refresh_app
 
 
 def timeline_view(shot_uuid, stage, view="sidebar"):
@@ -47,53 +48,58 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
     # Pagination setup for sidebar view
     if view == "sidebar":
         shot_list = data_repo.get_shot_list(project_uuid)
-        
-        # Initialize selected images list in session state if not present
-        if 'selected_images' not in st.session_state:
-            st.session_state['selected_images'] = []
 
-        if len(st.session_state['selected_images']) == 0:    
+        # Initialize selected images list in session state if not present
+        if "selected_images" not in st.session_state:
+            st.session_state["selected_images"] = []
+
+        if len(st.session_state["selected_images"]) == 0:
             st.info("Select images on the right to add them to a shot or shortlist.")
         else:
             # Display selected images and provide action buttons
             h1, h2, h3 = st.columns([2, 1, 1])
             with h1:
-                if len(st.session_state['selected_images']) == 1:
+                if len(st.session_state["selected_images"]) == 1:
                     st.info(f"You have selected {len(st.session_state['selected_images'])} image.")
                 else:
                     st.info(f"You have selected {len(st.session_state['selected_images'])} images.")
             with h3:
-                if st.button('Clear all selected'):
-                    st.session_state['selected_images'] = []
-                    st.rerun()
+                if st.button("Clear all selected"):
+                    st.session_state["selected_images"] = []
+                    refresh_app()
             with h2:
-                if st.button('Add all to shortlist'):
-                    for uuid in st.session_state['selected_images']:                
-                        add_file_to_shortlist(uuid)                                                                                       
+                if st.button("Add all to shortlist"):
+                    for uuid in st.session_state["selected_images"]:
+                        add_file_to_shortlist(uuid)
                     time.sleep(0.3)
-                    st.session_state['selected_images'] = []  # Clear selected images after adding
-                    st.rerun()
+                    st.session_state["selected_images"] = []  # Clear selected images after adding
+                    refresh_app()
 
         add_new_shot_element(shot, data_repo)
-        
+
         st.markdown("***")
-        
+
         # Add search bar
         search_query = st_memory.text_input("Search shots:", key=f"shot_search_bar_{project_uuid}")
-        
+
         # Filter shots based on search query
         if search_query:
             shot_list_for_display = [shot for shot in shot_list if search_query.lower() in shot.name.lower()]
         else:
             shot_list_for_display = shot_list[::-1]  # Reverse the list if no search query
-        
+
         # Update shot_names after filtering
-        shot_names = [s.name for s in shot_list_for_display]        
+        shot_names = [s.name for s in shot_list_for_display]
         shot_names.append("**Create New Shot**")
-    
+
         total_pages = (len(shot_list_for_display) + items_per_row - 1) // items_per_row
         if total_pages > 1:
-            page = st_memory.radio("Select Page:", list(range(1, total_pages + 1)), horizontal=True,key=f"page_selector_{project_uuid}")
+            page = st_memory.radio(
+                "Select Page:",
+                list(range(1, total_pages + 1)),
+                horizontal=True,
+                key=f"page_selector_{project_uuid}",
+            )
         else:
             page = 1
 
@@ -145,18 +151,27 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
                     if shot.main_clip:
                         create_video_download_button(shot.main_clip.location, ui_key="main_clip")
             elif view == "sidebar":
-                if st.session_state['selected_images']:                    
-                    if st.button(f"Add {len(st.session_state['selected_images'])} selected images to this shot",use_container_width=True, type="primary", key=f"add_to_shot_{shot.uuid}"):
+                if st.session_state["selected_images"]:
+                    if st.button(
+                        f"Add {len(st.session_state['selected_images'])} selected images to this shot",
+                        use_container_width=True,
+                        type="primary",
+                        key=f"add_to_shot_{shot.uuid}",
+                    ):
                         shot_names = [s.name for s in shot_list]
                         shot_number = shot_names.index(shot.name)
-                        st.session_state["last_shot_number"] = shot_number                            
-                        for uuid in st.session_state['selected_images']:
+                        st.session_state["last_shot_number"] = shot_number
+                        for uuid in st.session_state["selected_images"]:
                             image = data_repo.get_file_from_uuid(uuid).location
                             if image:
-                                add_key_frame(image, shot.uuid, len(data_repo.get_timing_list_from_shot(shot.uuid)), refresh_state=False)
-                        st.session_state['selected_images'] = []  # Clear selected images after adding
-                        st.rerun()                
-
+                                add_key_frame(
+                                    image,
+                                    shot.uuid,
+                                    len(data_repo.get_timing_list_from_shot(shot.uuid)),
+                                    refresh_state=False,
+                                )
+                        st.session_state["selected_images"] = []  # Clear selected images after adding
+                        refresh_app()
 
         if (idx + 1) % items_per_row == 0 or idx == len(shot_list_for_display) - 1:
             st.markdown("***")
@@ -201,4 +216,4 @@ def add_new_shot_element(shot, data_repo, show_image_uploader=False):
                 add_key_frame(selected_image_location, new_shot.uuid, refresh_state=False)
                 progress_bar.progress((i + 1) / len(uploaded_images))
 
-        st.rerun()
+        refresh_app()

@@ -14,8 +14,8 @@ from ui_components.widgets.add_key_frame_element import add_key_frame
 from ui_components.widgets.inpainting_element import inpainting_image_input
 from ui_components.widgets.inspiration_engine import inspiration_engine_element
 from ui_components.widgets.model_selector_element import model_selector_element
-from utils.common_utils import refresh_app
 from utils.constants import MLQueryObject, T2IModel
+from utils.state_refresh import refresh_app
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import (
     COMFY_BASE_PATH,
@@ -191,7 +191,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                         ):
                             st.session_state[output_value_name] = st.session_state["uploaded_image"]
                             # st.session_state[f"uploaded_image_{output_value_name}"] += 1
-                            st.rerun()
+                            refresh_app()
 
                         return None
                     else:
@@ -214,7 +214,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
 
                             if st.button("Clear image", key=f"{output_value_name}_clear_button"):
                                 st.session_state[output_value_name] = None
-                                st.rerun()
+                                refresh_app()
 
                         return strength_of_image
 
@@ -241,7 +241,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
                                     st.session_state["input_image_2"],
                                     st.session_state["input_image_1"],
                                 )
-                                st.rerun()
+                                refresh_app()
 
         if type_of_generation != InputImageStyling.IPADAPTER_COMPOSITION.value:
             explorer_gen_model = model_selector_element()
@@ -555,7 +555,7 @@ def generate_images_element(position="explorer", project_uuid=None, timing_uuid=
             st.info("Check the Generation Log to the left for the status.")
             time.sleep(0.5)
             toggle_generate_inference(position)
-            st.rerun()
+            refresh_app()
 
         # ----------- generate btn --------------
         if prompt == "":
@@ -688,7 +688,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
 
         if not shortlist:
             st.caption(f"Items in view: {num_items_per_page*project_settings.total_gallery_pages}")
-            with h1:                
+            with h1:
                 page_number = st_memory.radio(
                     "Select page:",
                     options=range(1, project_settings.total_gallery_pages + 1),
@@ -745,11 +745,11 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     if not shortlist:
         if project_settings.total_gallery_pages != res_payload["total_pages"]:
             project_settings.total_gallery_pages = res_payload["total_pages"]
-            st.rerun()
+            refresh_app()
     else:
         if project_settings.total_shortlist_gallery_pages != res_payload["total_pages"]:
             project_settings.total_shortlist_gallery_pages = res_payload["total_pages"]
-            st.rerun()
+            refresh_app()
 
     if shortlist is False:
         _, fetch2, fetch3, _ = st.columns([0.25, 1, 1, 0.25])
@@ -785,7 +785,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                     if explorer_stats["temp_image_count"]:
                         st.success("New images fetched")
                         time.sleep(0.3)
-                    st.rerun()
+                    refresh_app()
 
     total_image_count = res_payload["count"]
     if gallery_image_list and len(gallery_image_list):
@@ -820,7 +820,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                     st.session_state["selected_images"].remove(gallery_image_list[i + j].uuid)
                                 else:
                                     st.session_state["selected_images"].append(gallery_image_list[i + j].uuid)
-                                st.rerun()
+                                refresh_app()
 
                             # -------- inference details --------------
                             if gallery_image_list[i + j].inference_log:
@@ -836,9 +836,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                         )
                                     model = json.loads(log.output_details)["model_name"].split("/")[-1]
                                     if "view_inference_details" in view:
-                                        with st.expander(
-                                            "Prompt:", expanded=open_detailed_view_for_all
-                                        ):
+                                        with st.expander("Prompt:", expanded=open_detailed_view_for_all):
                                             st.info(f"'{prompt}'")
 
                                 else:
@@ -854,7 +852,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                         with cols[j]:
                             st.image(gallery_image_list[i + j].location, use_column_width=True)
                             # ---------- add to shot btn ---------------
- 
+
                             if "add_to_this_shot" in view or "add_to_any_shot" in view:
                                 if "add_to_this_shot" in view:
                                     shot_name = shot.name
@@ -892,7 +890,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                             data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
 
                                             st.session_state["last_shot_number"] = len(shot_list)
-                                            st.rerun()
+                                            refresh_app()
 
                                     else:
                                         if st.button(
@@ -931,7 +929,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                         )
                                         st.success("Removed From Shortlist")
                                         time.sleep(0.3)
-                                        st.rerun()
+                                        refresh_app()
                                 else:
                                     if st.button(
                                         "Add to shortlist ➕",
@@ -955,9 +953,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                         )
                                     model = json.loads(log.output_details)["model_name"].split("/")[-1]
                                     if "view_inference_details" in view:
-                                        with st.expander(
-                                            "Prompt:", expanded=open_detailed_view_for_all
-                                        ):
+                                        with st.expander("Prompt:", expanded=open_detailed_view_for_all):
                                             st.info(f"'{prompt}'")
 
                                 else:
@@ -969,9 +965,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
     else:
         if shortlist:
             st.info("No images present. You can add images to the shortlist in the 'Inspiration Engine' tab.")
-        else:             
+        else:
             st.info(
                 "No images present. You can generate images by clicking in the 'Inspiration Engine' section."
             )
-            
-            
