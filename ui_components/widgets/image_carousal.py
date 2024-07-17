@@ -4,6 +4,7 @@ from st_clickable_images import clickable_images
 from ui_components.constants import WorkflowStageType
 from ui_components.models import InternalShotObject
 from utils.data_repo.data_repo import DataRepo
+from utils.state_refresh import refresh_app
 
 
 def display_image(timing_uuid, stage=None, clickable=False):
@@ -51,7 +52,7 @@ def display_image(timing_uuid, stage=None, clickable=False):
                     # st.session_state['frame_styling_view_type_index'] = 0
                     st.session_state["frame_styling_view_type"] = "Individual"
                     st.session_state["counter"] += 1
-                    st.rerun()
+                    refresh_app()
 
             elif clickable is False:
                 st.image(image, use_column_width=True)

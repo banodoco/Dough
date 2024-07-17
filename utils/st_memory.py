@@ -4,6 +4,8 @@ from shared.logging.logging import AppLogger
 from utils.data_repo.data_repo import DataRepo
 from streamlit_option_menu import option_menu
 
+from utils.state_refresh import refresh_app
+
 logger = AppLogger()
 
 
@@ -35,7 +37,7 @@ def radio(
 
     if options.index(selection) != st.session_state[key]:
         st.session_state[key] = options.index(selection)
-        st.rerun()
+        refresh_app()
 
     return selection
 
@@ -57,7 +59,7 @@ def selectbox(label, options, index=0, key=None, help=None, on_change=None, disa
 
     if options.index(selection) != st.session_state[key]:
         st.session_state[key] = options.index(selection)
-        st.rerun()
+        refresh_app()
 
     return selection
 
@@ -96,7 +98,7 @@ def number_input(
 
     if selection != st.session_state[key]:
         st.session_state[key] = selection
-        st.rerun()
+        refresh_app()
 
     return selection
 
@@ -136,7 +138,7 @@ def slider(
 
     if selection != st.session_state[key]:
         st.session_state[key] = selection
-        st.rerun()
+        refresh_app()
 
     return selection
 
@@ -172,7 +174,7 @@ def select_slider(
         if getattr(project_settings, key, default_value):
             data_repo = DataRepo()
             data_repo.update_project_setting(project_settings.project.uuid, key=value)
-        st.rerun()
+        refresh_app()
 
     return selection
 
@@ -196,7 +198,7 @@ def toggle(
 
     if selection != st.session_state[key]:
         st.session_state[key] = selection
-        st.rerun()
+        refresh_app()
 
     return selection
 
@@ -220,7 +222,7 @@ def checkbox(
 
     if selection != st.session_state[key]:
         st.session_state[key] = selection
-        st.rerun()
+        refresh_app()
 
     return selection
 
@@ -265,7 +267,7 @@ def menu(
 
     if options.index(selection) != st.session_state[key]:
         st.session_state[key] = options.index(selection)
-        st.rerun()
+        refresh_app()
 
     return selection
 
@@ -301,7 +303,7 @@ def text_area(
 
     if selection != st.session_state[key]:
         st.session_state[key] = selection
-        st.rerun()
+        refresh_app()
 
     return selection
 
@@ -335,6 +337,6 @@ def text_input(
 
     if selection != st.session_state[key]:
         st.session_state[key] = selection
-        st.rerun()
+        refresh_app()
 
     return selection

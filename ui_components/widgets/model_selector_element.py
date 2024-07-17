@@ -5,6 +5,8 @@ import streamlit as st
 from shared.constants import COMFY_BASE_PATH
 from ui_components.widgets.download_file_progress_bar import download_file_widget
 from utils.constants import T2IModel
+from utils.state_refresh import refresh_app
+
 
 # TODO: make all the file access methods in a single interface
 def list_dir_files(directory, depth=0):
@@ -21,7 +23,7 @@ def list_dir_files(directory, depth=0):
             if os.path.isfile(full_path):
                 all_items.append(rel_path)
             elif os.path.isdir(full_path):
-                all_items.append(rel_path + '/')
+                all_items.append(rel_path + "/")
                 if current_depth < depth:
                     explore(full_path, current_depth + 1)
 
@@ -59,9 +61,9 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
             ]
 
             if type == T2IModel.SDXL.value:
-                match_condition = lambda file: file #and "xl" in file.lower()
+                match_condition = lambda file: file  # and "xl" in file.lower()
             else:
-                match_condition = lambda file: file #and "sd3" in file.lower()
+                match_condition = lambda file: file  # and "sd3" in file.lower()
 
             model_files = [
                 file for file in model_files if match_condition(file) and file not in ignored_model_list
@@ -83,9 +85,12 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
                     index=current_model_index,
                     # on_change=update_model,
                 )
-                
-                st.info("Please only select SDXL based models") if type == T2IModel.SDXL.value \
+
+                (
+                    st.info("Please only select SDXL based models")
+                    if type == T2IModel.SDXL.value
                     else st.info("Please only select SD3 based models")
+                )
             else:
                 st.write("")
                 st.info(info_msg)
@@ -156,6 +161,6 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
                 extra_model_list[download_model]["filename"],
                 checkpoints_dir,
             )
-            st.rerun()
+            refresh_app()
 
     return explorer_gen_model

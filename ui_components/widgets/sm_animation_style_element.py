@@ -26,6 +26,7 @@ from ui_components.widgets.display_element import display_motion_lora
 from ui_components.methods.ml_methods import train_motion_lora
 from utils.constants import StabliseMotionOption
 from utils.data_repo.data_repo import DataRepo
+from utils.state_refresh import refresh_app
 from streamlit.elements.utils import _shown_default_value_warning
 
 _shown_default_value_warning = True
@@ -99,7 +100,7 @@ def video_shortlist_btn(video_uuid, type="add_to_shortlist"):
                 video_uuid,
                 tag=InternalFileTag.SHORTLISTED_VIDEO.value,
             )
-            st.rerun()
+            refresh_app()
     # remove from shortlist btn
     else:
         if st.button(
@@ -111,7 +112,7 @@ def video_shortlist_btn(video_uuid, type="add_to_shortlist"):
                 video_uuid,
                 tag="",
             )
-            st.rerun()
+            refresh_app()
 
 
 def video_motion_settings(shot_uuid, img_list):
@@ -260,7 +261,7 @@ def select_motion_lora_element(shot_uuid, model_files):
                     "No LoRAs found in the directory - go to Download LoRAs to download some, or drop them into: ComfyUI/models/animatediff_motion_lora"
                 )
                 if st.button("Check again", key="check_again"):
-                    st.rerun()
+                    refresh_app()
         else:
             # cleaning empty lora vals
             for idx, lora in enumerate(st.session_state[f"lora_data_{shot_uuid}"]):
@@ -326,7 +327,7 @@ def select_motion_lora_element(shot_uuid, model_files):
                     st.write("")
                     if st.button("Remove", key=f"remove_lora_{idx}"):
                         st.session_state[f"lora_data_{shot_uuid}"].pop(idx)
-                        st.rerun()
+                        refresh_app()
 
             if len(st.session_state[f"lora_data_{shot_uuid}"]) == 0:
                 text = "Add a LoRA"
@@ -342,7 +343,7 @@ def select_motion_lora_element(shot_uuid, model_files):
                             "filepath": lora_file_dest + "/" + files[0],
                         }
                     )
-                    st.rerun()
+                    refresh_app()
 
     # ---------------- DOWNLOAD LORA ---------------
     with tab2:
@@ -655,7 +656,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                     queue_updates(key_suffix, st.session_state[key], idx, uuid, range_to_edit)
                     st.session_state["last_frame_changed"] = None
                     st.session_state["last_value_set"] = None
-                    st.rerun()
+                    refresh_app()
 
     def update_last_changed(key, value):
         st.session_state["last_frame_changed"] = key
@@ -767,7 +768,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 if slider_value != st.session_state[value_key]:
                                     st.session_state[value_key] = slider_value
                                     update_last_changed(value_key, slider_value)
-                                    st.rerun()
+                                    refresh_app()
                                 return slider_value
 
                             def update_last_changed(key, value):

@@ -20,6 +20,7 @@ import json
 
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL, MODEL_FILTERS
+from utils.state_refresh import refresh_app
 
 
 def sidebar_logger(shot_uuid):
@@ -36,7 +37,7 @@ def sidebar_logger(shot_uuid):
         use_container_width=True,
         help="You can also press 'r' on your keyboard to refresh.",
     ):
-        st.rerun()
+        refresh_app()
     if z1.button(
         "Run backlog", help="This will run all the generations in the backlog.", use_container_width=True
     ):
@@ -58,11 +59,11 @@ def sidebar_logger(shot_uuid):
             if status:
                 st.success("Running backlog")
                 time.sleep(0.7)
-                st.rerun()
+                refresh_app()
         else:
             st.error("No backlogs")
             time.sleep(0.7)
-            st.rerun()
+            refresh_app()
 
     y1, y2 = st.columns([1, 1])
     with y1:
@@ -97,7 +98,11 @@ def sidebar_logger(shot_uuid):
             "Which model to show:", ["All"] + [m.display_name() for m in MODEL_FILTERS]
         )
     page_number = y2.number_input(
-        "Page number (out of {})".format(project_setting.total_log_pages), min_value=1, max_value=project_setting.total_log_pages, value=1, step=1
+        "Page number (out of {})".format(project_setting.total_log_pages),
+        min_value=1,
+        max_value=project_setting.total_log_pages,
+        value=1,
+        step=1,
     )
     items_per_page = 5
     # items_per_page = z2.slider("Items per page", min_value=1, max_value=20, value=5, step=1)
@@ -118,7 +123,7 @@ def sidebar_logger(shot_uuid):
 
     if project_setting.total_log_pages != total_page_count:
         project_setting.total_log_pages = total_page_count
-        st.rerun()
+        refresh_app()
     with z2:
         if total_page_count > 1:
             st.caption(f"Total page count: {total_page_count}")
@@ -202,7 +207,7 @@ def sidebar_logger(shot_uuid):
                             data_repo.update_file(log_file.uuid, tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value)
                             st.success("Added To Shortlist")
                             time.sleep(0.3)
-                            st.rerun()
+                            refresh_app()
                 """
 
                 if log.status in [
@@ -221,16 +226,18 @@ def sidebar_logger(shot_uuid):
                         # if cur_status not in [InferenceStatus.QUEUED.value, InferenceStatus.BACKLOG.value]:
                         #     st.error(err_msg)
                         #     time.sleep(0.7)
-                        #     st.rerun()
+                        #     refresh_app()
                         # else:
 
                         log = data_repo.get_inference_log_from_uuid(log.uuid)
                         if log.status == InferenceStatus.IN_PROGRESS.value:
                             setup_comfy_runner()
                             stop_generations([log])
+                        elif log.status in [InferenceStatus.QUEUED.value, InferenceStatus.BACKLOG.value]:
+                            data_repo.update_inference_log(log.uuid, status=InferenceStatus.CANCELED.value)
 
                         time.sleep(0.7)
-                        st.rerun()
+                        refresh_app()
 
                 if output_url and origin_data:
                     if inference_type == InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value:
@@ -248,7 +255,7 @@ def sidebar_logger(shot_uuid):
                         #         st.session_state['main_view_type'] = "Creative Process"
                         #         st.session_state['frame_styling_view_type_index'] = 0
                         #         st.session_state['frame_styling_view_type'] = "Explorer"
-                        #         st.rerun()
+                        #         refresh_app()
 
                     elif inference_type == InferenceType.FRAME_INTERPOLATION.value:
                         jump_to_shot_button(origin_data.get("shot_uuid", ""), log.uuid)
@@ -266,7 +273,7 @@ def sidebar_logger(shot_uuid):
                 }
                 all_log_list, total_count = data_repo.get_all_inference_log_list(**log_filter_data)
                 stop_generations(all_log_list)
-                st.rerun()
+                refresh_app()
         with b2:
             if st.button(label="Move all to backlog", use_container_width=True):
                 log_filter_data = {
@@ -279,7 +286,7 @@ def sidebar_logger(shot_uuid):
                 data_repo.update_inference_log_list(
                     [log.uuid for log in all_log_list], status=InferenceStatus.BACKLOG.value
                 )
-                st.rerun()
+                refresh_app()
 
 
 def video_inference_image_grid(origin_data):
@@ -313,4 +320,4 @@ def jump_to_shot_button(shot_uuid, log_uuid):
             st.session_state["page"] = CreativeProcessPage.ANIMATE_SHOT.value
             st.session_state["current_subpage"] = AppSubPage.ANIMATE_SHOT.value
             st.session_state["shot_uuid"] = shot_uuid
-            st.rerun()
+            refresh_app()

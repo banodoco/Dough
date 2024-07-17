@@ -21,7 +21,7 @@ from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL
 from utils.ml_processor.ml_interface import get_ml_client
 from utils import st_memory
-
+from utils.state_refresh import refresh_app
 
 # NOTE: since running locally is very slow (comfy startup, models loading, other gens in process..)
 # rn we are accessing the replicate API directly, will switch to some other local method in the future
@@ -252,7 +252,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             with h2:
                 if st.button("Remove all prompts"):
                     st.session_state["list_of_prompts"] = [""]
-                    st.rerun()
+                    refresh_app()
 
             h2_a, h2_b, h2_c, h1 = st.columns([0.5, 0.5, 0.5, 0.75])
             if isinstance(st.session_state["list_of_prompts"], str):
@@ -275,13 +275,13 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         # Add a new prompt below the current one when the "+" button is pressed
                         if st.button("➕", key=f"add_{index}", use_container_width=True):
                             st.session_state["list_of_prompts"].insert(index + 1, user_input)
-                            st.rerun()
+                            refresh_app()
                     with col2:
                         # Delete the current prompt when the "🗑️" button is pressed
                         if len(st.session_state["list_of_prompts"]) > 1:
                             if st.button("🗑️", key=f"delete_{index}", use_container_width=True):
                                 st.session_state["list_of_prompts"].pop(index)
-                                st.rerun()
+                                refresh_app()
                         else:
                             st.button(
                                 "🗑️",
@@ -293,7 +293,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             """
             if st.session_state["list_of_prompts"] != list_of_prompts:
                 st.session_state["list_of_prompts"] = list_of_prompts
-                st.rerun()
+                refresh_app()
             """
             number_of_prompts = len(st.session_state["list_of_prompts"])
 
@@ -308,11 +308,11 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     if st.session_state["prompt_generation_mode"] == generate_mode:
                         if st.button("Switch to edit prompt mode", use_container_width=True):
                             st.session_state["prompt_generation_mode"] = edit_mode
-                            st.rerun()
+                            refresh_app()
                     else:
                         if st.button("Switch to generate prompt mode", use_container_width=True):
                             st.session_state["prompt_generation_mode"] = generate_mode
-                            st.rerun()
+                            refresh_app()
 
                 app_secrets = data_repo.get_app_secrets_from_user_uuid()
                 if "replicate_key" in app_secrets and app_secrets["replicate_key"]:
@@ -342,7 +342,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                     if st.session_state["insp_text_prompt"] != generaton_text:
                         st.session_state["insp_text_prompt"] = generaton_text
-                        st.rerun()
+                        refresh_app()
 
                     subprompt1, subprompt2 = st.columns([2, 1])
                     with subprompt1:
@@ -356,7 +356,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                         if st.session_state["total_unique_prompt"] != total_unique_prompts:
                             st.session_state["total_unique_prompt"] = total_unique_prompts
-                            st.rerun()
+                            refresh_app()
 
                     with subprompt2:
                         creativity = st.slider(
@@ -371,7 +371,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                         if st.session_state["insp_creativity"] != creativity:
                             st.session_state["insp_creativity"] = creativity
-                            st.rerun()
+                            refresh_app()
 
                     total_unique_prompts = total_unique_prompts + 5
 
@@ -392,7 +392,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             # split the prompts by | and create a list
                             st.session_state["list_of_prompts"] = generated_prompts.split("|")
 
-                            st.rerun()
+                            refresh_app()
 
                 else:
                     edit_text = st.text_area(
@@ -403,7 +403,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                     if st.session_state["insp_edit_prompt"] != edit_text:
                         st.session_state["insp_edit_prompt"] = edit_text
-                        st.rerun()
+                        refresh_app()
 
                     if not check_replicate_key():
                         st.info(replicate_warning_message)
@@ -411,7 +411,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         if st.button("Edit Prompts", use_container_width=True):
                             generated_prompts = edit_prompts(edit_text, st.session_state["list_of_prompts"])
                             st.session_state["list_of_prompts"] = generated_prompts.split("|")
-                            st.rerun()
+                            refresh_app()
 
             i1, i2, _ = st.columns([1, 1, 0.5])
             with i1:
@@ -422,7 +422,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 )
                 if st.session_state["insp_additional_desc"] != additonal_description_text:
                     st.session_state["insp_additional_desc"] = additonal_description_text
-                    st.rerun()
+                    refresh_app()
 
             with i2:
                 negative_prompt = st.text_area(
@@ -433,7 +433,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                 if st.session_state["insp_additional_neg_desc"] != negative_prompt:
                     st.session_state["insp_additional_neg_desc"] = negative_prompt
-                    st.rerun()
+                    refresh_app()
 
             # ----------------- STYLE GUIDANCE ----------------------
             st.markdown("***")
@@ -449,7 +449,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
             if T2IModel.value_list().index(type_of_model) != st.session_state["insp_model_idx"]:
                 st.session_state["insp_model_idx"] = T2IModel.value_list().index(type_of_model)
-                st.rerun()
+                refresh_app()
 
             model1, model2, _ = st.columns([1.5, 1, 0.5])
             with model1:
@@ -469,7 +469,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                 if model != st.session_state["insp_selected_model"]:
                     st.session_state["insp_selected_model"] = model
-                    st.rerun()
+                    refresh_app()
 
             st.markdown("***")
             st.markdown("#### Style guidance")
@@ -496,7 +496,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                 if input_type_list.index(type_of_style_input) != st.session_state["insp_type_of_style"]:
                     st.session_state["insp_type_of_style"] = input_type_list.index(type_of_style_input)
-                    st.rerun()
+                    refresh_app()
 
                 with model1:
                     st.write("")
@@ -508,7 +508,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                     if st.session_state["insp_lightning_mode"] != lightning:
                         st.session_state["insp_lightning_mode"] = lightning
-                        st.rerun()
+                        refresh_app()
 
                 if "list_of_style_references" not in st.session_state:
                     st.session_state["list_of_style_references"] = []
@@ -553,7 +553,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                     if uploaded_images:  # If there are still images left, show a warning
                                         st.warning("You can only upload 3 style references.")
 
-                                    st.rerun()
+                                    refresh_app()
                             else:
                                 st.button(
                                     f"Add style reference",
@@ -650,7 +650,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         st.session_state["insp_style_influence"][
                                             slider_index
                                         ] = style_influence
-                                        st.rerun()
+                                        refresh_app()
 
                                     # Composition influence slider
                                     composition_influence = st.slider(
@@ -669,7 +669,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         st.session_state["insp_composition_influence"][
                                             slider_index
                                         ] = composition_influence
-                                        st.rerun()
+                                        refresh_app()
 
                                     # Vibe influence slider
                                     vibe_influence = st.slider(
@@ -686,7 +686,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         != vibe_influence
                                     ):
                                         st.session_state["insp_vibe_influence"][slider_index] = vibe_influence
-                                        st.rerun()
+                                        refresh_app()
                                     if type_of_style_input == "Upload Images":
                                         if st.button(
                                             f"Remove style reference",
@@ -695,7 +695,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         ):
                                             # Remove the image from the list
                                             st.session_state["list_of_style_references"].pop(i)
-                                            st.rerun()
+                                            refresh_app()
                                     # add up the 3 values and if together they're over 1.5, show a warning
 
                                     item_strengths = (style_influence, composition_influence, vibe_influence)
@@ -722,7 +722,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                 if st.session_state["insp_additional_style_text"] != additional_style_text:
                     st.session_state["insp_additional_style_text"] = additional_style_text
-                    st.rerun()
+                    refresh_app()
 
             # ---------------------- GENERATION SETTINGS --------------------------
             st.markdown("***")
@@ -746,7 +746,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                 if st.session_state["insp_img_per_prompt"] != images_per_prompt:
                     st.session_state["insp_img_per_prompt"] = images_per_prompt
-                    st.rerun()
+                    refresh_app()
 
             with prompt2:
                 if number_of_prompts == 1:
@@ -890,6 +890,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                             uuid=project.uuid, meta_data=json.dumps(meta_data)
                                         )
 
-                st.rerun()
+                refresh_app()
 
         st.write("")

@@ -31,6 +31,7 @@ from ui_components.methods.common_methods import (
 from ui_components.models import InternalProjectObject, InternalSettingObject
 from utils.ml_processor.constants import ML_MODEL
 from utils.ml_processor.ml_interface import get_ml_client
+from utils.state_refresh import refresh_app
 
 
 def inpainting_element(options_width, image, position="explorer"):
@@ -51,10 +52,12 @@ def inpainting_element(options_width, image, position="explorer"):
             st.image(st.session_state["current_mask"], width=project_settings.width)
             st.info("The bright white areas will be inpainted, the faded areas be kept.")
 
-            if st.button("Reset area to inpaint", use_container_width=True, key=f"clear_inpaint_mak_{position}"):
+            if st.button(
+                "Reset area to inpaint", use_container_width=True, key=f"clear_inpaint_mak_{position}"
+            ):
                 st.session_state["current_mask"] = ""
                 st.session_state["mask_to_use"] = ""
-                st.rerun()
+                refresh_app()
     else:
         with main_col_1:
             canvas_image = image if isinstance(image, Image.Image) else Image.open(image)
@@ -82,7 +85,7 @@ def inpainting_element(options_width, image, position="explorer"):
                     if st.button("Switch to move mode"):
                         st.session_state["mode"] = "move"
                         st.session_state["drawing_input"] = "Move shapes 🏋🏾‍♂️"
-                        st.rerun()
+                        refresh_app()
                     st.session_state["drawing_input"] = st.radio(
                         "Drawing tool:",
                         ("Draw lines ✏️", "Make squares □", "Make shapes 🪄"),
@@ -100,7 +103,7 @@ def inpainting_element(options_width, image, position="explorer"):
                         st.session_state["mode"] = "draw"
                         # Optionally reset to a default drawing tool
                         st.session_state["drawing_input"] = "Draw lines ✏️"
-                        st.rerun()
+                        refresh_app()
                     st.info("You can move the shapes around to adjust the mask.")
                 # Set drawing mode based on the current state
                 if st.session_state["drawing_input"] == "Move shapes 🏋🏾‍♂️":
@@ -145,7 +148,7 @@ def inpainting_element(options_width, image, position="explorer"):
             if position == "explorer":
                 if st.button("Pick new image", use_container_width=True):
                     st.session_state["uploaded_image"] = ""
-                    st.rerun()
+                    refresh_app()
         with main_col_2:
             if st.button("Save area to inpaint", use_container_width=True):
                 img_data = canvas_result.image_data
@@ -174,7 +177,7 @@ def inpainting_element(options_width, image, position="explorer"):
 
                 # Save the image with the mask overlayed on top of it to session state
                 st.session_state["current_mask"] = faded_mask_overlay
-                st.rerun()
+                refresh_app()
 
 
 def inpainting_image_input(project_uuid, position="explorer"):
@@ -248,7 +251,7 @@ def replace_with_image(stage, output_file, current_frame_uuid, promote=False):
         if promote:
             promote_image_variant(current_frame_uuid, number_of_image_variants - 1)
 
-    st.rerun()
+    refresh_app()
 
 
 def generate_mask(vertex_coords, canvas_width, canvas_height, upscale_factor=1):

@@ -1,5 +1,6 @@
 import time
 import streamlit as st
+from utils.state_refresh import refresh_app
 
 
 class BaseTheme:
@@ -7,10 +8,10 @@ class BaseTheme:
     def success_msg(msg):
         st.success(msg)
         time.sleep(0.5)
-        st.rerun()
+        refresh_app()
 
     @staticmethod
     def error_msg(msg):
         st.error(msg)
         time.sleep(0.5)
-        st.rerun()
+        refresh_app()

@@ -1,5 +1,6 @@
 from utils.data_repo.data_repo import DataRepo
 import streamlit as st
+from utils.state_refresh import refresh_app
 
 
 def welcome_page():
@@ -45,7 +46,7 @@ def welcome_page():
             if st.button("I'm ready!", key="welcome_cta", type="primary", use_container_width=True):
                 data_repo = DataRepo()
                 data_repo.update_app_setting(welcome_state=1)
-                st.rerun()
+                refresh_app()
 
         st.markdown("***")
 
@@ -80,7 +81,7 @@ def welcome_page():
                     if st.button("Continue to the app", key="welcome_cta"):
                         data_repo = DataRepo()
                         data_repo.update_app_setting(welcome_state=2)
-                        st.rerun()
+                        refresh_app()
                 else:
                     st.button(
                         "Continue to the app",

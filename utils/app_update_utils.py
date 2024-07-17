@@ -15,6 +15,7 @@ from streamlit_server_state import server_state_lock
 from utils.common_utils import get_toml_config
 from utils.constants import TomlConfig
 from utils.data_repo.data_repo import DataRepo
+from utils.state_refresh import refresh_app
 
 update_event = threading.Event()
 dough_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -64,7 +65,7 @@ def check_and_pull_changes():
             st.stop()
         else:
             st.session_state["first_load"] = True
-            st.rerun()
+            refresh_app()
 
 
 def pull_fresh_changes():

@@ -15,6 +15,7 @@ from utils.data_repo.data_repo import DataRepo
 from utils.encryption import generate_file_hash
 from utils.enum import ExtendedEnum
 from ui_components.widgets.base_theme import BaseTheme as theme
+from utils.state_refresh import refresh_app
 
 
 class ErrorLevel(ExtendedEnum):
@@ -55,13 +56,13 @@ def app_settings_page():
                 )
                 if credits != st.session_state["input_credits"]:
                     st.session_state["input_credits"] = credits
-                    st.rerun()
+                    refresh_app()
 
                 if st.button("Generate payment link"):
                     if credits < 10:
                         st.error("Minimum credit value should be atleast 10")
                         time.sleep(0.7)
-                        st.rerun()
+                        refresh_app()
                     else:
                         payment_link = data_repo.generate_payment_link(credits)
                         payment_link = f"""<a target='_self' href='{payment_link}'> PAYMENT LINK </a>"""
@@ -140,7 +141,7 @@ def custom_comfy_input_component():
                     value=updated_path,
                 )
             theme.success_msg("Successfully updated the ComfyUI path")
-            st.rerun()
+            refresh_app()
 
 
 def health_check_component():
@@ -331,7 +332,7 @@ def api_key_input_component():
             st.session_state["replicate_key"] = replicate_key
             st.success("API Key updated successfully.")
             time.sleep(0.7)
-            st.rerun()
+            refresh_app()
 
 
 def update_toggle():

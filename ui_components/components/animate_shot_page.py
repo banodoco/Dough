@@ -20,6 +20,7 @@ from utils.constants import AnimateShotMethod
 from utils.data_repo.data_repo import DataRepo
 from ui_components.widgets.sidebar_logger import sidebar_logger
 from utils.enum import ExtendedEnum
+from utils.state_refresh import refresh_app
 
 
 def animate_shot_page(shot_uuid: str, h2):
@@ -114,7 +115,7 @@ def video_rendering_page(shot_uuid, selected_variant):
                 )
 
             data_repo.bulk_create_timing(new_timing_data)
-            st.rerun()  # NOTE: video (and it's inference) is displayed first and then is updated here, that's why refreshing
+            refresh_app()  # NOTE: video (and it's inference) is displayed first and then is updated here, that's why refreshing
 
     img_list = data_repo.get_all_file_list(uuid__in=file_uuid_list, file_type=InternalFileType.IMAGE.value)[0]
 

@@ -12,6 +12,7 @@ from ui_components.methods.common_methods import (
     apply_image_transformations,
     fetch_image_by_stage,
 )
+from utils.state_refresh import refresh_app
 from ui_components.constants import WorkflowStageType
 from ui_components.methods.file_methods import generate_pil_image, save_or_host_file
 from ui_components.models import InternalProjectObject
@@ -102,7 +103,7 @@ def precision_cropping_element(stage, shot_uuid):
             st.success("Image saved successfully!")
 
             time.sleep(1)
-            st.rerun()
+            refresh_app()
 
 
 def manual_cropping_element(stage, timing_uuid):
@@ -140,7 +141,7 @@ def manual_cropping_element(stage, timing_uuid):
             or st.session_state["current_stage"] != stage
         ):
             get_working_image()
-            st.rerun()
+            refresh_app()
 
         options1, _, _, _ = st.columns([3, 1, 1, 1])
         with options1:
@@ -157,7 +158,7 @@ def manual_cropping_element(stage, timing_uuid):
                         -st.session_state["degree"], resample=Image.BICUBIC, expand=True
                     )
                     st.session_state["degrees_rotated_to"] = st.session_state["degree"]
-                    st.rerun()
+                    refresh_app()
 
             with sub_options_2:
                 st.write("")
@@ -166,7 +167,7 @@ def manual_cropping_element(stage, timing_uuid):
                     st.session_state["degree"] = 0
                     get_working_image()
                     st.session_state["degrees_rotated_to"] = 0
-                    st.rerun()
+                    refresh_app()
 
         project_settings: InternalProjectObject = data_repo.get_project_setting(timing.shot.project.uuid)
 
@@ -200,7 +201,7 @@ def manual_cropping_element(stage, timing_uuid):
                     )
                     st.success("Image saved successfully!")
                     time.sleep(0.5)
-                    st.rerun()
+                    refresh_app()
 
             with cropbtn2:
                 st.warning("Warning: This will overwrite the original image")
