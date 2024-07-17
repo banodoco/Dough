@@ -5,6 +5,7 @@ from ui_components.methods.common_methods import (
     create_frame_inside_shot,
     save_and_promote_image,
 )
+from utils.state_refresh import refresh_app
 from utils.common_utils import get_current_user_uuid, reset_project_state
 from utils.data_repo.data_repo import DataRepo
 import time
@@ -88,6 +89,6 @@ def new_project_page():
             st.session_state["app_settings"] = 0
             st.success("Project created successfully!")
             time.sleep(1)
-            st.rerun()
+            refresh_app()
 
     st.markdown("***")

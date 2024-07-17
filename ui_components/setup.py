@@ -14,6 +14,7 @@ from ui_components.components.new_project_page import new_project_page
 from ui_components.components.project_settings_page import project_settings_page
 from streamlit_option_menu import option_menu
 from utils.common_utils import set_default_values
+from utils.state_refresh import refresh_app
 
 from ui_components.models import InternalAppSettingObject
 from utils.common_utils import (
@@ -135,7 +136,7 @@ def setup_app_ui():
             )
             data_repo.update_app_setting(previous_project=st.session_state["project_uuid"])
 
-            st.rerun()
+            refresh_app()
 
         if st.session_state["project_uuid"] == "":
             st.info("No projects found - create one in the 'New Project' section")
@@ -209,7 +210,7 @@ def setup_app_ui():
                         st.session_state["selected_page_idx"] = creative_process_pages.index(
                             st.session_state["page"]
                         )
-                        st.rerun()
+                        refresh_app()
 
                     # 'page' state randomly resets therefore binding it to 'selected_page_idx'
                     st.session_state["page"] = creative_process_pages[st.session_state["selected_page_idx"]]

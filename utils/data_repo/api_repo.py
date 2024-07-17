@@ -15,6 +15,7 @@ from utils.common_decorators import log_time
 
 from utils.constants import AUTH_TOKEN
 from utils.local_storage.url_storage import delete_url_param, get_url_param
+from utils.state_refresh import refresh_app
 
 
 class APIRepo:
@@ -96,7 +97,7 @@ class APIRepo:
 
     def logout(self):
         delete_url_param(AUTH_TOKEN)
-        st.rerun()
+        refresh_app()
 
     ################### base http methods
     def _get_headers(self, content_type="application/json"):
@@ -495,7 +496,6 @@ class APIRepo:
     def generate_payment_link(self, amount):
         res = self.http_get(self.STRIPE_PAYMENT_URL, params={"total_amount": amount})
         return InternalResponse(res["payload"], "success", res["status"])
-
 
     # shot
     def get_shot_from_uuid(self, shot_uuid):

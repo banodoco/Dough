@@ -258,11 +258,6 @@ def is_process_active(custom_process_name, custom_process_port):
     return False
 
 
-def refresh_app(maintain_state=False):
-    # st.session_state['maintain_state'] = maintain_state
-    st.rerun()
-
-
 def padded_integer(integer, pad_length=4):
     padded_string = str(integer).zfill(pad_length)
     return padded_string

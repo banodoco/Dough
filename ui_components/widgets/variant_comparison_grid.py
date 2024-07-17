@@ -36,6 +36,7 @@ from ui_components.widgets.sm_animation_style_element import video_shortlist_btn
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow
+from utils.state_refresh import refresh_app
 
 
 # TODO: very inefficient operation.. add shot_id as a foreign in logs table for better search
@@ -55,9 +56,9 @@ def video_generation_counter(shot_uuid):
             inference_type == InferenceType.FRAME_INTERPOLATION.value
             and origin_data.get("shot_uuid", "") == shot_uuid
         ):
-            res.append(log)    
+            res.append(log)
     if len(res) > 0:
-        
+
         h1, h2 = st.columns([1, 1])
         with h1:
             if len(res) == 1:
@@ -66,7 +67,7 @@ def video_generation_counter(shot_uuid):
                 st.info(f"{len(res)} video generations pending for this shot.")
         with h2:
             if st.button("Refresh", key=f"refresh_{shot_uuid}", use_container_width=True):
-                st.rerun()
+                refresh_app()
 
 
 # TODO: very inefficient operation.. (maybe add source_entity_id ? as a foreign key)
@@ -99,7 +100,7 @@ def upscale_video_generation_counter(video_uuid):
                 st.info(f"{len(res)} upscale generations pending for this shot.")
         with h2:
             if st.button("Refresh", key=f"refresh_upscale_{video_uuid}", use_container_width=True):
-                st.rerun()
+                refresh_app()
 
 
 def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
@@ -172,7 +173,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
     else:
         st.markdown("***")
-        
+
         cols = st.columns(num_columns)
         current_variant = -2  # rand value that won't be filtered in additional_variants
         cur_col = 0
@@ -185,9 +186,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
             )
 
             with cols[cur_col]:
-           # st.info(f"###### Variant #{current_variant + 1}")
+                # st.info(f"###### Variant #{current_variant + 1}")
                 st.success("Main variant")
-               
 
                 st.image(variants[current_variant].location, use_column_width=True)
                 # image_variant_details(variants[current_variant])
@@ -219,7 +219,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                             # if stage == CreativeProcessType.MOTION.value:
                             #     promote_video_variant(shot.uuid, variants[variant_index].uuid)
                             promote_image_variant(timing.uuid, variant_index)
-                            st.rerun()
+                            refresh_app()
                     elif (
                         variants[variant_index].inference_log.generation_tag
                         != InferenceLogTag.UPSCALED_VIDEO.value
@@ -350,7 +350,7 @@ def uspcale_expander_element(
                         upscale_factor,
                         promote_to_main_variant,
                     )
-                st.rerun()
+                refresh_app()
 
 
 def is_upscaled_video(variant: InternalFileObject):
@@ -507,7 +507,7 @@ def variant_inference_detail_element(
                         )
                         st.success("Settings Loaded")
                         time.sleep(0.3)
-                        st.rerun()
+                        refresh_app()
 
                 with btn2:
                     if st.button(
@@ -521,7 +521,7 @@ def variant_inference_detail_element(
                         )
                         st.success("Images Loaded")
                         time.sleep(0.3)
-                        st.rerun()
+                        refresh_app()
 
     else:
         h1, h2 = st.columns([1, 1])
@@ -661,7 +661,7 @@ def fetch_inference_data(file: InternalFileObject):
 
 
 def add_variant_to_shortlist_element(file: InternalFileObject, project_uuid):
-    
+
     if st.button(
         "Add to shortlist ➕",
         key=f"shortlist_{file.uuid}",
@@ -696,5 +696,4 @@ def add_variant_to_shot_element(file: InternalFileObject, project_uuid):
                 refresh_state=False,
                 update_cur_frame_idx=False,
             )
-            st.rerun()
-
+            refresh_app()

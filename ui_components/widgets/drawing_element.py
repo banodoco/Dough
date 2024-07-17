@@ -9,6 +9,7 @@ from utils.data_repo.data_repo import DataRepo
 from ui_components.methods.common_methods import add_image_variant, extract_canny_lines, promote_image_variant
 from shared.constants import InternalFileType
 from ui_components.methods.file_methods import save_or_host_file
+from utils.state_refresh import refresh_app
 
 
 def drawing_element(shot_uuid):
@@ -101,7 +102,7 @@ def drawing_element(shot_uuid):
                     # data_repo.update_specific_timing(st.session_state['current_frame_uuid'], source_image_id=st.session_state['canny_image'])
                     st.session_state["reset_canvas"] = True
                     st.session_state["canny_image"] = None
-                    st.rerun()
+                    refresh_app()
 
     with canvas2:
         realtime_update = True
@@ -134,7 +135,7 @@ def drawing_element(shot_uuid):
             st.session_state["reset_canvas"] = False
             canvas_result = st_canvas()
             time.sleep(0.1)
-            st.rerun()
+            refresh_app()
 
         if canvas_result is not None:
             if canvas_result.json_data is not None and not canvas_result.json_data.get("objects"):
@@ -196,4 +197,4 @@ def drawing_element(shot_uuid):
                         st.success("Saved")
                         st.session_state["reset_canvas"] = True
                         time.sleep(1)
-                        st.rerun()
+                        refresh_app()

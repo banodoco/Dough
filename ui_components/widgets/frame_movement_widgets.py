@@ -8,10 +8,11 @@ from ui_components.methods.common_methods import (
     save_and_promote_image,
 )
 from ui_components.models import InternalFrameTimingObject
-from utils.common_utils import refresh_app
+from utils.state_refresh import refresh_app
 from utils.constants import ImageStage
 
 from utils.data_repo.data_repo import DataRepo
+from utils.state_refresh import refresh_app
 
 
 def change_frame_shot(timing_uuid, src):
@@ -34,7 +35,7 @@ def change_frame_shot(timing_uuid, src):
             data_repo.update_specific_timing(timing.uuid, shot_id=shot.uuid)
             st.success("Success")
             time.sleep(0.3)
-            st.rerun()
+            refresh_app()
 
 
 def move_frame(direction, timing_uuid):
@@ -96,7 +97,7 @@ def delete_frame_button(timing_uuid, show_label=False):
 
     if st.button(label, key=f"delete_frame_{timing_uuid}", help="Delete frame", use_container_width=True):
         delete_frame(timing_uuid)
-        st.rerun()
+        refresh_app()
 
 
 def delete_frame(timing_uuid):
@@ -144,16 +145,19 @@ def replace_image_widget(timing_uuid, stage, options=["Uploaded Frame", "Other F
                 if save_and_promote_image(uploaded_file, timing.shot.uuid, timing.uuid, stage):
                     st.success("Replaced")
                     time.sleep(1.5)
-                    st.rerun()
+                    refresh_app()
 
-'''
+
+"""
 TODO: 
 1. use timing_list to validate the range of display_number
 2. set shot_uuid from the timing_list in the session_state as well
-'''
+"""
+
+
 def jump_to_single_frame_view_button(display_number, timing_list, src, uuid=None):
     if st.button(f"Jump to #{display_number}", key=f"{src}_{uuid}", use_container_width=True):
         st.session_state["current_frame_sidebar_selector"] = display_number
         st.session_state["current_subpage"] = AppSubPage.KEYFRAME.value
         st.session_state["page"] = CreativeProcessPage.ADJUST_SHOT.value
-        st.rerun()
+        refresh_app()

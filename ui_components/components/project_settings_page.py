@@ -7,6 +7,7 @@ from PIL import Image
 
 from utils.common_utils import get_current_user_uuid
 from utils.data_repo.data_repo import DataRepo
+from utils.state_refresh import refresh_app
 
 
 def project_settings_page(project_uuid):
@@ -19,7 +20,7 @@ def project_settings_page(project_uuid):
         new_name = st.text_input("Enter new name:", project.name)
         if st.button("Save", key="project_name"):
             data_repo.update_project(uuid=project_uuid, name=new_name)
-            st.rerun()
+            refresh_app()
     project_settings = data_repo.get_project_setting(project_uuid)
 
     frame_sizes = ["512x512", "768x512", "512x768", "512x896", "896x512", "512x1024", "1024x512"]
@@ -44,7 +45,9 @@ def project_settings_page(project_uuid):
                 )
                 width, height = map(int, frame_size.split("x"))
             else:
-                st.info("This is an experimental feature. There might be some issues - particularly with image generation.")
+                st.info(
+                    "This is an experimental feature. There might be some issues - particularly with image generation."
+                )
                 width = st.text_input("Width", value=512)
                 height = st.text_input("Height", value=512)
                 try:
@@ -63,7 +66,7 @@ def project_settings_page(project_uuid):
                     time.sleep(0.3)
                     data_repo.update_project_setting(project_uuid, width=width)
                     data_repo.update_project_setting(project_uuid, height=height)
-                    st.rerun()
+                    refresh_app()
 
     st.write("")
     st.write("")
@@ -79,4 +82,4 @@ def project_settings_page(project_uuid):
             st.error("You can't delete the only available project")
 
         time.sleep(0.7)
-        st.rerun()
+        refresh_app()

@@ -3,6 +3,7 @@ import streamlit as st
 from utils.data_repo.data_repo import DataRepo
 from utils import st_memory
 from ui_components.methods.common_methods import add_new_shot
+from utils.state_refresh import refresh_app
 
 
 def frame_selector_widget(show_frame_selector=True):
@@ -27,7 +28,7 @@ def frame_selector_widget(show_frame_selector=True):
         if current_shot_name != "**Create New Shot**":
             if current_shot_name != st.session_state["shot_name"]:
                 st.session_state["shot_name"] = current_shot_name
-                st.rerun()
+                refresh_app()
 
         if current_shot_name == "**Create New Shot**":
             new_shot_name = st.text_input(
@@ -37,14 +38,14 @@ def frame_selector_widget(show_frame_selector=True):
                 new_shot = add_new_shot(project_uuid, name=new_shot_name)
                 st.session_state["shot_name"] = new_shot_name
                 st.session_state["shot_uuid"] = new_shot.uuid
-                st.rerun()
+                refresh_app()
 
     # find shot index based on shot name
     st.session_state["current_shot_index"] = shot_names.index(st.session_state["shot_name"]) + 1
 
     if st.session_state["shot_name"] != shot.name:
         st.session_state["shot_uuid"] = shot_list[shot_names.index(st.session_state["shot_name"])].uuid
-        st.rerun()
+        refresh_app()
 
     if not ("current_shot_index" in st.session_state and st.session_state["current_shot_index"]):
         st.session_state["current_shot_index"] = shot_names.index(st.session_state["shot_name"]) + 1
@@ -76,7 +77,7 @@ def frame_selector_widget(show_frame_selector=True):
             if frame_selection != "":
                 if st.button("Jump to shot view", use_container_width=True):
                     st.session_state["current_frame_sidebar_selector"] = 0
-                    st.rerun()
+                    refresh_app()
 
                 st.session_state["current_frame_index"] = int(frame_selection.split(" ")[-1])
                 update_current_frame_index(st.session_state["current_frame_index"])
@@ -101,7 +102,7 @@ def update_current_frame_index(index):
         st.session_state["frame_styling_view_type_index"] = 0
         st.session_state["frame_styling_view_type"] = "Generate View"
 
-        st.rerun()
+        refresh_app()
 
 
 def update_current_shot_index(index):
@@ -116,4 +117,4 @@ def update_current_shot_index(index):
         st.session_state["frame_styling_view_type_index"] = 0
         st.session_state["frame_styling_view_type"] = "Individual View"
 
-        st.rerun()
+        refresh_app()

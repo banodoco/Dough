@@ -4,6 +4,7 @@ from ui_components.constants import DefaultTimingStyleParams
 from utils.common_utils import get_current_user
 from shared.constants import SERVER, ServerType
 from utils.data_repo.data_repo import DataRepo
+from utils.state_refresh import refresh_app
 
 
 def query_logger_page():
@@ -29,7 +30,7 @@ def query_logger_page():
 
     if total_log_table_pages != total_page_count:
         st.session_state["total_log_table_pages"] = total_page_count
-        st.rerun()
+        refresh_app()
 
     data = {"Project": [], "Prompt": [], "Model": [], "Inference time (sec)": [], "Status": []}
 
