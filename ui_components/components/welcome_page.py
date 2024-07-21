@@ -1,6 +1,7 @@
 from utils.data_repo.data_repo import DataRepo
 import streamlit as st
 from utils.state_refresh import refresh_app
+import time
 
 
 def welcome_page():
@@ -8,7 +9,7 @@ def welcome_page():
     data_repo = DataRepo()
     app_setting = data_repo.get_app_setting_from_uuid()
 
-    if app_setting.welcome_state == 0:
+    if app_setting.welcome_state == -1:
         st.markdown("# :green[D]:red[o]:blue[u]:orange[g]:green[h] :red[□] :blue[□] :orange[□]")
 
         vid1, vid2 = st.columns([2, 1])
@@ -104,13 +105,13 @@ def welcome_page():
             )
             if st.button("I'm inspired!", key="welcome_cta", type="primary", use_container_width=True):
                 data_repo = DataRepo()
-                data_repo.update_app_setting(welcome_state=1)
+                data_repo.update_app_setting(welcome_state=0)
                 refresh_app()
 
         st.markdown("***")
 
-    elif app_setting.welcome_state == 1:
-        welcome1, welcome2 = st.columns([1, 2])
+    elif app_setting.welcome_state == 0:
+        welcome1, welcome2 = st.columns([1.5, 2])
         with welcome1:
             st.markdown("# :green[D]:red[o]:blue[u]:orange[g]:green[h] :red[□] :blue[□] :orange[□]")
             st.subheader("Here are 5 things you should know about Dough before getting started:")
@@ -135,14 +136,43 @@ def welcome_page():
             with read2:
                 if actually_read:
 
-                    if st.button("Continue to the app", key="welcome_cta"):
+                    if st.button("Continue", key="welcome_cta"):
                         data_repo = DataRepo()
-                        data_repo.update_app_setting(welcome_state=2)
+                        data_repo.update_app_setting(welcome_state=1)
                         refresh_app()
                 else:
                     st.button(
-                        "Continue to the app",
+                        "Continue",
                         key="welcome_cta",
                         disabled=True,
                         help="You need to confirm on the left that you've read the note",
                     )
+    elif app_setting.welcome_state == 1:
+        welcome1, _ = st.columns([1, 1])
+        with welcome1:
+            st.subheader("Pop-quiz time!")
+            st.info("##### Which of these is an unusual quirk of Dough's user experience?")
+            st.caption("Once you've answered correctly, you'll be redirected to the app:")
+            if st.button("It secretly mines cryptocurrency in the background", key="quiz1"):
+                st.error("No, but that's on the roadmap for 2.0.")
+                time.sleep(1)
+                refresh_app()
+            if st.button(
+                "It's part of an elaborate plot to take help open source AI art thrive", key="quiz4"
+            ):
+                st.error("Yeah, but that's not a quirk of the user experience.")
+                time.sleep(1)
+                refresh_app()
+            if st.button("You need to press 'r' for new generations to appear", key="quiz3"):
+                st.success("Correct! You're ready to start using Dough.")
+                time.sleep(2)
+                data_repo = DataRepo()
+                data_repo.update_app_setting(welcome_state=2)
+                refresh_app()
+            if st.button(
+                "It randomly alters your system clock so you miss meetings",
+                key="quiz2",
+            ):
+                st.error("We wll implement that if users time in app is too low.")
+                time.sleep(1)
+                refresh_app()
