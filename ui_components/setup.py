@@ -280,3 +280,8 @@ def setup_app_ui():
 
     else:
         st.info("You haven't added any prompts yet. Add an image to get started.")
+
+    with st.sidebar:
+        st.caption(
+            "Want to join [a community](https://discord.gg/acg8aNBTxd) that's pushing AI to its technical and artistic limits or help build a [next-generation artistic tool](https://banodoco.ai/Plan) and economic engine for the open source AI art ecosystem?"
+        )
