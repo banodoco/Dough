@@ -120,22 +120,20 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
 
         with grid[idx % items_per_row]:
             st.info(f"##### {shot.name}")
-            if shot.main_clip and shot.main_clip.location and view == "main":
-                individual_video_display_element(shot.main_clip)
-            else:
-                num_columns = 4  # Set to 4 images per row regardless of the number of images
 
-                if timing_list:
-                    grid_timing = st.columns(num_columns)
-                    for j, timing in enumerate(timing_list):
-                        with grid_timing[j % num_columns]:
-                            if timing.primary_image and timing.primary_image.location:
-                                st.image(timing.primary_image.location, use_column_width=True)
-                    for j in range(len(timing_list), num_columns):
-                        with grid_timing[j]:
-                            st.empty()
-                else:
-                    st.warning("No images in shot.")  # Warning if no images are present
+            num_columns = 4  # Set to 4 images per row regardless of the number of images
+
+            if timing_list:
+                grid_timing = st.columns(num_columns)
+                for j, timing in enumerate(timing_list):
+                    with grid_timing[j % num_columns]:
+                        if timing.primary_image and timing.primary_image.location:
+                            st.image(timing.primary_image.location, use_column_width=True)
+                for j in range(len(timing_list), num_columns):
+                    with grid_timing[j]:
+                        st.empty()
+            else:
+                st.warning("No images in shot.")  # Warning if no images are present
 
             switch1, switch2 = st.columns([1, 1])
             with switch1:
@@ -148,8 +146,7 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
                     move_shot_buttons(shot, "side")
                     delete_shot_button(shot.uuid)
                     duplicate_shot_button(shot.uuid, position="timeline_view")
-                    if shot.main_clip:
-                        create_video_download_button(shot.main_clip.location, ui_key="main_clip")
+
             elif view == "sidebar":
                 if st.session_state["selected_images"]:
                     if st.button(
