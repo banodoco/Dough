@@ -959,36 +959,50 @@ class ComfyDataTransform:
                 last_model_node = node_idx + 2
 
             if composition_influence > 0:
-                # ImageCropByRatioAndResize
+                # Load CLIP Vision
                 workflow[str(node_idx + 3)] = {
-                    "inputs": {
-                        "width_ratio_size": 512,
-                        "height_ratio_size": 512,
-                        "position": "center",
-                        "interpolation": "nearest",
-                        "image": [str(node_idx), 0],
-                    },
-                    "class_type": "ImageCropByRatioAndResize",
-                    "_meta": {"title": "ImageCropByRatioAndResize"},
+                    "inputs": {"clip_name": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"},
+                    "class_type": "CLIPVisionLoader",
+                    "_meta": {"title": "Load CLIP Vision"},
                 }
 
-                # IPAdapter Advanced (composition)
+                # IPAdapter Model Loader
                 workflow[str(node_idx + 4)] = {
+                    "inputs": {"ipadapter_file": "ip_plus_composition_sdxl.safetensors"},
+                    "class_type": "IPAdapterModelLoader",
+                    "_meta": {"title": "IPAdapter Model Loader"},
+                }
+
+                # Prep Image For ClipVision
+                workflow[str(node_idx + 5)] = {
+                    "inputs": {
+                        "interpolation": "LANCZOS",
+                        "crop_position": "pad",
+                        "sharpening": 0,
+                        "image": [str(node_idx), 0],
+                    },
+                    "class_type": "PrepImageForClipVision",
+                    "_meta": {"title": "Prep Image For ClipVision"},
+                }
+
+                # IPAdapter Advanced
+                workflow[str(node_idx + 6)] = {
                     "inputs": {
                         "weight": composition_influence,
-                        "composition_boost": 0,
+                        "weight_type": "linear",
                         "combine_embeds": "concat",
                         "start_at": 0,
                         "end_at": 1,
                         "embeds_scaling": "V only",
                         "model": [str(last_model_node), 0],
-                        "ipadapter": ["11", 1],
-                        "image": [str(node_idx + 3), 0],
+                        "ipadapter": [str(node_idx + 4), 0],
+                        "image": [str(node_idx + 5), 0],
+                        "clip_vision": [str(node_idx + 3), 0],
                     },
-                    "class_type": "IPAdapterPreciseComposition",
-                    "_meta": {"title": "IPAdapter Precise Composition"},
+                    "class_type": "IPAdapterAdvanced",
+                    "_meta": {"title": "IPAdapter Advanced"},
                 }
-                last_model_node = node_idx + 4
+                last_model_node = node_idx + 6
 
             if vibe_influence > 0:
                 # IPAdapter Noise (negative)
@@ -1080,6 +1094,11 @@ class ComfyDataTransform:
             {
                 "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
                 "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors",
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "ipadapter"),
+            },
+            {
+                "filename": "ip_plus_composition_sdxl.safetensors",
+                "url": "https://huggingface.co/ostris/ip-composition-adapter/resolve/main/ip_plus_composition_sdxl.safetensors",
                 "dest": os.path.join(COMFY_BASE_PATH, "models", "ipadapter"),
             },
         ]

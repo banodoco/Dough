@@ -24,9 +24,6 @@ def adjust_shot_page(shot_uuid: str, h2):
                 # if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
                 sidebar_logger(st.session_state["shot_uuid"])
 
-
-            
-
         st.markdown(
             f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['page']}] > :blue[{shot.name}]"
         )
@@ -36,8 +33,9 @@ def adjust_shot_page(shot_uuid: str, h2):
         with column1:
             st.markdown(f"### 🎬 '{shot.name}' frames")
             st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+            items_per_row = st_memory.slider("Items per row:", 1, 10, 3, key="items_per_row")
 
-        shot_keyframe_element(st.session_state["shot_uuid"], 4, column2, position="Individual")
+        shot_keyframe_element(st.session_state["shot_uuid"], items_per_row, column2, position="Individual")
 
     else:
         frame_styling_page(st.session_state["shot_uuid"])
