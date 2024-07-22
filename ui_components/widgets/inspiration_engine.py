@@ -641,7 +641,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         step=0.1,
                                         value=st.session_state["insp_style_influence"][slider_index],
                                         key=f"style_influence_{i}",
-                                        help=f"Style influence for image {i+1}",
+                                        help=f"How much the style of the image should influence the generated image.",
                                     )
                                     if (
                                         st.session_state["insp_style_influence"][slider_index]
@@ -660,7 +660,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         step=0.1,
                                         value=st.session_state["insp_composition_influence"][slider_index],
                                         key=f"composition_influence_{i}",
-                                        help=f"Composition influence for image {i+1}",
+                                        help=f"How much the composition of the image should influence the generated image.",
                                     )
                                     if (
                                         st.session_state["insp_composition_influence"][slider_index]
@@ -679,7 +679,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         step=0.1,
                                         value=st.session_state["insp_vibe_influence"][slider_index],
                                         key=f"vibe_influence_{i}",
-                                        help=f"Vibe influence for image {i+1}",
+                                        help=f"How much the vibe of the image should influence the generated image.",
                                     )
                                     if (
                                         st.session_state["insp_vibe_influence"][slider_index]
