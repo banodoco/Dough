@@ -772,7 +772,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             else:
                 button_status = False
                 help = ""
-
+            st.write(project_settings.height)
             st.markdown("***")
             if st.button("Generate images", type="primary", disabled=button_status, help=help):
 

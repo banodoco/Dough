@@ -85,7 +85,16 @@ def zoom_and_crop(file, width, height):
     # Resize the image
     resized_image = file.resize((new_width, new_height), Image.LANCZOS)
     
-    return resized_image
+    # Calculate coordinates for cropping
+    left = (resized_image.width - width) / 2
+    top = (resized_image.height - height) / 2
+    right = (resized_image.width + width) / 2
+    bottom = (resized_image.height + height) / 2
+    
+    # Crop the image
+    cropped_image = resized_image.crop((left, top, right, bottom))
+    
+    return cropped_image
 
 
 # resizes file dimensions to current project_settings
