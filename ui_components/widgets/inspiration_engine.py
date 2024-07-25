@@ -889,7 +889,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         data_repo.update_project(
                                             uuid=project.uuid, meta_data=json.dumps(meta_data)
                                         )
-
+                st.success("Images added to queue for processing!")
                 refresh_app()
 
         st.write("")

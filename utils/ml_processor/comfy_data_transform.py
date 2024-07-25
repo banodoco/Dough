@@ -234,27 +234,36 @@ class ComfyDataTransform:
         workflow["15"]["inputs"]["temperature"] = temperature
 
         return json.dumps(workflow), output_node_ids, [], []
-
+    
     @staticmethod
     def transform_sdxl_inpainting_workflow(query: MLQueryObject):
         data_repo = DataRepo()
         workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.SDXL_INPAINTING)
 
         # workflow params
-        # node 'get_img_size' automatically fetches the size
-        model = query.data["data"].get("model", "sd_xl_base_1.0.safetensors")
+        model = query.data["data"].get("model", "Juggernaut-XL_v9_v2.safetensors")
         positive_prompt, negative_prompt = query.prompt, query.negative_prompt
         steps, cfg = query.num_inference_steps, query.guidance_scale
         width, height = query.width, query.height
         width, height = determine_dimensions_for_sdxl(width, height)
 
         file = query.file_list[0]
-        # adding the combined image in query (and removing io buffers)
-        query.data = {"data": {"file_combined_img": file.uuid}}
+        
+        print(f"width: {width}, height: {height}")
+        # Resize the input image
+        resized_file = normalize_size_internal_file_obj(
+            file,
+            dim=[width, height],
+            create_new_file=True,
+        ) 
+
+        # Update the query with the resized image
+        query.data = {"data": {"file_combined_img": resized_file.uuid}}
+
         # updating params
         workflow["29"]["inputs"]["ckpt_name"] = model
         workflow["3"]["inputs"]["seed"] = random_seed()
-        workflow["20"]["inputs"]["image"] = file.filename
+        workflow["20"]["inputs"]["image"] = resized_file.filename
         workflow["3"]["inputs"]["steps"], workflow["3"]["inputs"]["cfg"] = steps, cfg
         workflow["34"]["inputs"]["text_g"] = workflow["34"]["inputs"]["text_l"] = positive_prompt
         workflow["37"]["inputs"]["text_g"] = workflow["37"]["inputs"]["text_l"] = negative_prompt
@@ -269,7 +278,14 @@ class ComfyDataTransform:
         workflow["59"]["inputs"]["width"] = width
         workflow["58"]["inputs"]["width"] = height
 
-        return json.dumps(workflow), output_node_ids, [], []
+        extra_model_list = [
+            {
+                "filename": "Juggernaut-XL_v9_v2.safetensors",
+                "url": "https://huggingface.co/RunDiffusion/Juggernaut-XL-v9/resolve/main/Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
+            }
+        ]
+        return json.dumps(workflow), output_node_ids, extra_model_list, []
 
     @staticmethod
     def transform_ipadaptor_plus_workflow(query: MLQueryObject):
@@ -1203,11 +1219,14 @@ def get_file_path_list(model: MLModel, query_obj: MLQueryObject):
         ComfyWorkflow.IP_ADAPTER_FACE.value,
         ComfyWorkflow.IP_ADAPTER_FACE_PLUS.value,
         ComfyWorkflow.IP_ADAPTER_PLUS.value,
+        ComfyWorkflow.CREATIVE_IMAGE_GEN.value,
     ]
 
     # resizing the files to dimensions that work well with SDXL
     new_file_map = {}  # maps old_file_name : new_resized_file_name
     if model.display_name() in models_using_sdxl:
+
+
         res = []
         for file in file_list:
             new_width, new_height = determine_dimensions_for_sdxl(query_obj.width, query_obj.height)

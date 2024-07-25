@@ -169,6 +169,7 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
                                 )
                         st.session_state["selected_images"] = []  # Clear selected images after adding
                         refresh_app()
+            st.markdown("***")
 
         if (idx + 1) % items_per_row == 0 or idx == len(shot_list_for_display) - 1:
             st.markdown("***")
