@@ -923,23 +923,25 @@ class ComfyDataTransform:
         # @Peter you can use this weight, passed from the frontend
         def add_nth_node(workflow, n, img_file, weight):
             style_influence, composition_influence, vibe_influence = map(float, weight[:3])
-
+    
             ipa_node_idx_list = []
             for k, v in workflow.items():
                 if v["class_type"] in ["IPAdapterMS", "IPAdapterAdvanced"]:
                     ipa_node_idx_list.append(int(k))
             ipa_node_idx_list.sort(reverse=True)
-
+    
             node_idx = 50 + n * 10
-
+    
             # Load Image
             workflow[str(node_idx)] = {
                 "inputs": {"image": img_file.filename, "upload": "image"},
                 "class_type": "LoadImage",
                 "_meta": {"title": "Load Image"},
             }
-
+    
             last_model_node = ipa_node_idx_list[0] if ipa_node_idx_list else 11
+            original_model_node = last_model_node  # Store the original model node
+
 
             if style_influence > 0:
                 # Prep Image For ClipVision
@@ -1054,7 +1056,7 @@ class ComfyDataTransform:
                         "start_at": 0,
                         "end_at": 1,
                         "embeds_scaling": "V only",
-                        "model": [str(last_model_node), 0],  # Changed this line
+                        "model": [str(original_model_node), 0],  # Use the original model node
                         "ipadapter": ["11", 1],
                         "image": [str(node_idx + 6), 0],
                         "image_negative": [str(node_idx + 5), 0],
@@ -1065,6 +1067,72 @@ class ComfyDataTransform:
                 last_model_node = node_idx + 7
 
             return int(last_model_node)
+
+        def add_reference_images(workflow, img_list, weight, **kwargs):
+
+            num_images = len(img_list)
+
+            last_node_index = 4
+
+            for i in range(num_images):
+                last_node_index = add_nth_node(workflow, i + 1, img_list[i], weight[i])
+                for k, v in kwargs.items():
+                    if k in workflow[str(last_node_index)]["inputs"]:
+                        workflow[str(last_node_index)]["inputs"][k] = v
+
+            workflow["3"]["inputs"]["model"] = [str(last_node_index), 0]
+
+            return workflow
+
+        workflow["3"]["inputs"]["seed"] = seed
+        workflow["5"]["inputs"]["width"] = width
+        workflow["5"]["inputs"]["height"] = height
+        workflow["4"]["inputs"]["ckpt_name"] = model
+        workflow["6"]["inputs"]["text"] = (
+            image_prompt + ", " + additional_description_text + ", " + additional_style_text
+        )
+
+        workflow["7"]["inputs"]["text"] = negative_prompt
+
+        if lightning:
+            workflow["3"]["inputs"]["cfg"] = 1.9
+            workflow["3"]["inputs"]["steps"] = 12
+            workflow["3"]["inputs"]["scheduler"] = "sgm_uniform"
+
+        img_list = query.file_list
+
+        workflow = add_reference_images(workflow, img_list, weight=style_strength)
+
+        extra_model_list = [
+            {
+                "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
+                "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/image_encoder/model.safetensors",
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "clip_vision"),
+            },
+            {
+                "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
+                "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors",
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "ipadapter"),
+            },
+            {
+                "filename": "ip_plus_composition_sdxl.safetensors",
+                "url": "https://huggingface.co/ostris/ip-composition-adapter/resolve/main/ip_plus_composition_sdxl.safetensors",
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "ipadapter"),
+            },
+        ]
+        if model == "Juggernaut-XL_v9_v2.safetensors":
+            extra_model_list.append(
+                {
+                    "filename": "Juggernaut-XL_v9_v2.safetensors",
+                    "url": "https://huggingface.co/RunDiffusion/Juggernaut-XL-v9/resolve/main/Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
+                    "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
+                }
+            )
+
+        # with open("workflow.json", "w") as f:
+        #     json.dump(workflow, f, indent=4)
+
+        return json.dumps(workflow), output_node_ids, extra_model_list, []
 
         def add_reference_images(workflow, img_list, weight, **kwargs):
 
@@ -1215,11 +1283,11 @@ def get_file_path_list(model: MLModel, query_obj: MLQueryObject):
         ComfyWorkflow.SDXL.value,
         ComfyWorkflow.SDXL_IMG2IMG.value,
         ComfyWorkflow.SDXL_CONTROLNET.value,
-        ComfyWorkflow.SDXL_INPAINTING.value,
+        # ComfyWorkflow.SDXL_INPAINTING.value,
         ComfyWorkflow.IP_ADAPTER_FACE.value,
         ComfyWorkflow.IP_ADAPTER_FACE_PLUS.value,
         ComfyWorkflow.IP_ADAPTER_PLUS.value,
-        ComfyWorkflow.CREATIVE_IMAGE_GEN.value,
+        # ComfyWorkflow.CREATIVE_IMAGE_GEN.value,
     ]
 
     # resizing the files to dimensions that work well with SDXL

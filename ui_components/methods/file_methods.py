@@ -68,6 +68,7 @@ def save_or_host_file(file, path, mime_type="image/png", dim=None):
 
 
 def zoom_and_crop(file, width, height):
+            
     if file.width == width and file.height == height:
         return file
     

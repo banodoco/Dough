@@ -415,13 +415,13 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
             i1, i2, _ = st.columns([1, 1, 0.5])
             with i1:
-                additonal_description_text = st.text_area(
+                additional_description_text = st.text_area(
                     "Additional description text:",
                     value=st.session_state["insp_additional_desc"],
                     help="This will be attached to each prompt.",
                 )
-                if st.session_state["insp_additional_desc"] != additonal_description_text:
-                    st.session_state["insp_additional_desc"] = additonal_description_text
+                if st.session_state["insp_additional_desc"] != additional_description_text:
+                    st.session_state["insp_additional_desc"] = additional_description_text
                     refresh_app()
 
             with i2:
@@ -537,9 +537,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             )
                             if uploaded_images:
                                 if len(uploaded_images) > 1:
-                                    text = "Add style references"
+                                    text = "Add reference images"
                                 else:
-                                    text = "Add style reference"
+                                    text = "Add reference image"
                                 if st.button(text, use_container_width=True):
                                     # Check if there are less than 3 images already in the list
                                     while (
@@ -626,8 +626,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                     if isinstance(uploaded_file, str) and uploaded_file.startswith("http"):
                                         st.image(uploaded_file)
                                     else:
-                                        display_img = Image.open(uploaded_file)
-                                        display_img = zoom_and_crop(display_img, 512, 512)
+                                        display_img = Image.open(uploaded_file)                                        
                                         st.image(display_img)
 
                                     # Determine which index to use for the sliders
@@ -772,7 +771,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             else:
                 button_status = False
                 help = ""
-            st.write(project_settings.height)
+            
             st.markdown("***")
             if st.button("Generate images", type="primary", disabled=button_status, help=help):
 
@@ -783,6 +782,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 for img in st.session_state["list_of_style_references"]:
                     input_image_file = save_new_image(img, project_uuid)
                     input_image_file_list.append(input_image_file)
+                    st.write(f"Input image file list: {input_image_file_list}")
 
                 # prompts_to_be_processed = [item for item in list_of_prompts.split("|") if item]
                 for _, image_prompt in enumerate(prompts_to_be_processed):
@@ -792,7 +792,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             # print("--------- generating sdxl")
                             data = {
                                 "shot_uuid": shot_uuid,
-                                "additonal_description_text": additonal_description_text,
+                                "additional_description_text": additional_description_text,
                                 "additional_style_text": additional_style_text,
                                 "sdxl_model": model,
                                 "lightning": lightning,
@@ -815,7 +815,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 num_inference_steps=30,
                                 strength=list_of_strengths,
                                 adapter_type=None,
-                                prompt=image_prompt,
+                                prompt=f"{image_prompt}, {additional_description_text}, {additional_style_text}",
                                 negative_prompt=negative_prompt,
                                 height=project_settings.height,
                                 width=project_settings.width,
@@ -841,7 +841,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 num_inference_steps=30,
                                 strength=5.0,
                                 adapter_type=None,
-                                prompt=f"{image_prompt}, {additonal_description_text}, {additional_style_text}",
+                                prompt=f"{image_prompt}, {additional_description_text}, {additional_style_text}",
                                 negative_prompt=negative_prompt,
                                 height=project_settings.height,
                                 width=project_settings.width,
