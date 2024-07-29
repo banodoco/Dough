@@ -88,6 +88,22 @@ def frame_styling_page(shot_uuid: str):
                             shot_uuid, st.session_state["mask_to_use"], st.session_state["editing_image"]
                         )
 
+                        # Download the image and save it to the current directory
+                        import requests
+                        import os
+
+                        if combined_file.hosted_url:
+                            response = requests.get(combined_file.hosted_url)
+                            if response.status_code == 200:
+                                with open(os.path.join(os.getcwd(), combined_file.name), "wb") as f:
+                                    f.write(response.content)
+                        elif combined_file.local_path:
+                            import shutil
+
+                            shutil.copy(
+                                combined_file.local_path, os.path.join(os.getcwd(), combined_file.name)
+                            )
+
                         for _ in range(how_many_images):  # Loop based on how_many_images
                             project_settings = data_repo.get_project_setting(shot.project.uuid)
                             query_obj = MLQueryObject(

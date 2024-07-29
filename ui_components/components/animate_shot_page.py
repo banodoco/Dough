@@ -10,7 +10,6 @@ from shared.constants import (
 )
 from ui_components.components.video_rendering_page import (
     sm_video_rendering_page,
-    two_img_realistic_interpolation_page,
 )
 from ui_components.models import InternalShotObject
 from ui_components.widgets.frame_selector import frame_selector_widget
@@ -140,7 +139,5 @@ def video_rendering_page(shot_uuid, selected_variant):
     type_of_animation = AnimateShotMethod.BATCH_CREATIVE_INTERPOLATION.value
     if type_of_animation == AnimateShotMethod.BATCH_CREATIVE_INTERPOLATION.value:
         sm_video_rendering_page(shot_uuid, img_list, headline3, headline4)
-    else:
-        two_img_realistic_interpolation_page(shot_uuid, img_list)
 
     st.markdown("***")

@@ -214,7 +214,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
         manual_save_inf_tag = "manual_save"
 
         st.write("")
-        animate_col_1, _, _ = st.columns([3, 1, 1])
+        animate_col_1, _, _ = st.columns([2, 1, 1])
         with animate_col_1:
             variant_count = 1
 
@@ -236,37 +236,55 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
 
                 # print("******************* ", st.session_state.get(f"{shot_uuid}_preview_mode", False))
                 if st.session_state.get(f"{shot_uuid}_preview_mode", False):
-                    preview_length = 3
-                    img_list = img_list[:preview_length]
-                    settings["motion_scales"] = ", ".join(
-                        settings["motion_scales"].split(", ")[:preview_length]
-                    )
-                    _t = ast.literal_eval(settings["dynamic_strength_values"])[:preview_length]
+                    start_frame, end_frame = st.session_state.get(f"frames_to_preview_{shot_uuid}", (1, 3))
+                    preview_length = end_frame - start_frame + 1
+
+                    
+                    img_list = img_list[start_frame-1:end_frame]
+                    # Calculate the offset based on the first number in dynamic_frame_distribution_values
+                    frame_offset = settings["dynamic_frame_distribution_values"][start_frame-1]
+
+                    # Adjust dynamic_strength_values
+                    _t = ast.literal_eval(settings["dynamic_strength_values"])[start_frame-1:end_frame]
                     settings["dynamic_strength_values"] = f"[{', '.join(repr(t) for t in _t)}]"
-                    settings["dynamic_frame_distribution_values"] = settings[
-                        "dynamic_frame_distribution_values"
-                    ][:preview_length]
+                    
+                    # Adjust dynamic_frame_distribution_values
+                    settings["dynamic_frame_distribution_values"] = [
+                        v - frame_offset for v in settings["dynamic_frame_distribution_values"][start_frame-1:end_frame]
+                    ]
+                    
+                    # Adjust dynamic_key_frame_influence_values
                     settings["dynamic_key_frame_influence_values"] = settings[
                         "dynamic_key_frame_influence_values"
-                    ][:preview_length]
-                    settings["individual_prompts"] = ", ".join(
-                        settings["individual_prompts"].split(", ")[:preview_length]
-                    )
-                    settings["individual_negative_prompts"] = ", ".join(
-                        settings["individual_negative_prompts"].split(", ")[:preview_length]
-                    )
+                    ][start_frame-1:end_frame]
+                    
+                    # Adjust individual prompts and negative prompts
+                    individual_prompts_dict = ast.literal_eval('{' + settings["individual_prompts"] + '}')
+                    individual_negative_prompts_dict = ast.literal_eval('{' + settings["individual_negative_prompts"] + '}')
+                    
+                    new_individual_prompts = {str(int(k) - frame_offset): v for k, v in individual_prompts_dict.items() if frame_offset <= int(k) < frame_offset + preview_length * 26}
+                    new_individual_negative_prompts = {str(int(k) - frame_offset): v for k, v in individual_negative_prompts_dict.items() if frame_offset <= int(k) < frame_offset + preview_length * 26}
+                    
+                    settings["individual_prompts"] = ', '.join(f'"{k}": "{v}"' for k, v in new_individual_prompts.items())
+                    settings["individual_negative_prompts"] = ', '.join(f'"{k}": "{v}"' for k, v in new_individual_negative_prompts.items())
 
-                    strength_of_frames = strength_of_frames[:preview_length]
-                    speeds_of_transitions = speeds_of_transitions[:preview_length]
-                    distances_to_next_frames = distances_to_next_frames[:preview_length]
-                    freedoms_between_frames = freedoms_between_frames[:preview_length]
-                    motions_during_frames = motions_during_frames[:preview_length]
-                    individual_prompts = individual_prompts[:preview_length]
-                    individual_negative_prompts = individual_negative_prompts[:preview_length]
+                    # Adjust other settings
+                    settings["strength_of_frames"] = strength_of_frames[start_frame-1:end_frame]
+                    settings["speeds_of_transitions"] = speeds_of_transitions[start_frame-1:end_frame]
+                    settings["distances_to_next_frames"] = distances_to_next_frames[start_frame-1:end_frame]
+                    settings["freedoms_between_frames"] = freedoms_between_frames[start_frame-1:end_frame]
+                    settings["motions_during_frames"] = motions_during_frames[start_frame-1:end_frame]
 
-                    settings["inference_type"] = (
-                        "preview"  # TODO: probably a wrong practice to send this in with the settings
-                    )
+                    # Update the local variables to match the settings
+                    strength_of_frames = settings["strength_of_frames"]
+                    speeds_of_transitions = settings["speeds_of_transitions"]
+                    distances_to_next_frames = settings["distances_to_next_frames"]
+                    freedoms_between_frames = settings["freedoms_between_frames"]
+                    motions_during_frames = settings["motions_during_frames"]
+                    individual_prompts = [v for v in new_individual_prompts.values()]
+                    individual_negative_prompts = [v for v in new_individual_negative_prompts.values()]
+                    
+                    settings["inference_type"] = "preview"
 
                 shot_data = update_session_state_with_animation_details(
                     shot_uuid,
@@ -344,7 +362,33 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 label="Preview mode",
                 key=f"{shot_uuid}_gen_preview_mode",
                 help="Generates a preview video only using the first 3 images",
+                value=False,
             )
+
+            if preview_mode:
+                # take a range of frames from the user
+                frames_to_preview = st_memory.slider(
+                    "Frames to preview",
+                    min_value=1,
+                    max_value=len(img_list),
+                    value=(1, min(3, len(img_list))),
+                    key=f"frames_to_preview_{shot_uuid}"
+                )
+                start_frame, end_frame = frames_to_preview
+                preview_frames = img_list[start_frame-1:end_frame]
+                
+                num_columns = min(3, len(preview_frames))
+                preview_columns = st.columns(num_columns)
+                
+                for i, frame in enumerate(preview_frames):
+                    with preview_columns[i % num_columns]:
+                        st.image(frame.location, use_column_width=True)
+
+                if len(preview_frames) == 1:
+                    st.error("You need at least 2 frames to preview")
+                
+
+    
             btn1, btn2, _ = st.columns([1, 1, 1])
             additional_params = {
                 f"{shot_uuid}_backlog_enabled": False,
