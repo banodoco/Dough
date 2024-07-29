@@ -68,24 +68,34 @@ def save_or_host_file(file, path, mime_type="image/png", dim=None):
 
 
 def zoom_and_crop(file, width, height):
+            
     if file.width == width and file.height == height:
         return file
-    # scaling
-    s_x = width / file.width
-    s_y = height / file.height
-    scale = max(s_x, s_y)
+    
+    # Calculate the scaling factors
+    scale_w = width / file.width
+    scale_h = height / file.height
+    
+    # Use the larger scaling factor to ensure the image fills the target dimensions
+    scale = max(scale_w, scale_h)
+    
+    # Calculate new dimensions
     new_width = int(file.width * scale)
     new_height = int(file.height * scale)
-    file = file.resize((new_width, new_height))
-
-    # cropping
-    left = (file.width - width) // 2
-    top = (file.height - height) // 2
-    right = (file.width + width) // 2
-    bottom = (file.height + height) // 2
-    file = file.crop((left, top, right, bottom))
-
-    return file
+    
+    # Resize the image
+    resized_image = file.resize((new_width, new_height), Image.LANCZOS)
+    
+    # Calculate coordinates for cropping
+    left = (resized_image.width - width) / 2
+    top = (resized_image.height - height) / 2
+    right = (resized_image.width + width) / 2
+    bottom = (resized_image.height + height) / 2
+    
+    # Crop the image
+    cropped_image = resized_image.crop((left, top, right, bottom))
+    
+    return cropped_image
 
 
 # resizes file dimensions to current project_settings

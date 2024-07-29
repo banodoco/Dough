@@ -517,17 +517,23 @@ def combine_mask_and_input_image(mask_path, input_image_path, overlap_color="tra
     mask_image = Image.open(mask_path) if not isinstance(mask_path, Image.Image) else mask_path
     input_image = input_image.convert("RGBA")
 
-    # input_image.save("input_image.png")
-    # mask_image.save("mask_image.png")
+    # Resize mask to match input_image dimensions if they differ
+    if mask_image.size != input_image.size:
+        mask_image = mask_image.resize(input_image.size, Image.LANCZOS)
+
+    # Convert mask to RGBA if it's not already
+    if mask_image.mode != 'RGBA':
+        mask_image = mask_image.convert('RGBA')
+
     is_white = lambda pixel, threshold=245: all(value > threshold for value in pixel[:3])
-    fill_color = (0.5, 0.5, 0.5, 1)  # default grey
+    fill_color = (128, 128, 128, 255)  # default grey
     if overlap_color == "transparent":
         fill_color = (0, 0, 0, 0)
     elif overlap_color == "grey":
-        fill_color = (0.5, 0.5, 0.5, 1)
+        fill_color = (128, 128, 128, 255)
 
-    for x in range(mask_image.width):
-        for y in range(mask_image.height):
+    for x in range(input_image.width):
+        for y in range(input_image.height):
             if is_white(mask_image.getpixel((x, y))):
                 input_image.putpixel((x, y), fill_color)
 

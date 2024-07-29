@@ -57,6 +57,7 @@ def get_model_params_from_query_obj(model, query_obj: MLQueryObject):
             ComfyWorkflow.IP_ADAPTER_FACE.value,
             ComfyWorkflow.IP_ADAPTER_FACE_PLUS.value,
             ComfyWorkflow.IP_ADAPTER_PLUS.value,
+            ComfyWorkflow.CREATIVE_IMAGE_GEN.value,
         ]
 
         # resizing image for sdxl

@@ -124,12 +124,12 @@ def sidebar_logger(shot_uuid):
     if project_setting.total_log_pages != total_page_count:
         project_setting.total_log_pages = total_page_count
         refresh_app()
-    with z2:
-        if total_page_count > 1:
-            st.caption(f"Total page count: {total_page_count}")
+
     # display_list = log_list[(page_number - 1) * items_per_page : page_number * items_per_page]
 
     if log_list and len(log_list):
+        with z2:        
+            st.warning(f"Processing #: {len(log_list)*total_page_count}")
         file_list = data_repo.get_file_list_from_log_uuid_list([log.uuid for log in log_list])
         log_file_dict = {}
         for file in file_list:
