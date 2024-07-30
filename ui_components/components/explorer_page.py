@@ -831,14 +831,15 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                     input_params = json.loads(log.input_params)
                                     prompt = input_params.get("prompt", None)
                                     if not prompt:
-                                        prompt = input_params.get("query_dict", {}).get(
-                                            "prompt", "Prompt not found"
-                                        )
+                                        query_dict = input_params.get("query_dict")
+                                        if isinstance(query_dict, dict):
+                                            prompt = query_dict.get("prompt", "Prompt not found")
+                                        else:
+                                            prompt = "Prompt not found"
                                     model = json.loads(log.output_details)["model_name"].split("/")[-1]
                                     if "view_inference_details" in view:
                                         with st.expander("Prompt:", expanded=open_detailed_view_for_all):
                                             st.info(f"'{prompt}'")
-
                                 else:
                                     st.warning("No inference data")
                             else:

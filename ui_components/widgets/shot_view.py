@@ -13,22 +13,16 @@ import pandas as pd
 import streamlit as st
 import uuid
 import random
-from shared.constants import AppSubPage, InferenceParamType, InternalFileTag, SortOrder
-from ui_components.constants import WorkflowStageType
-from ui_components.methods.file_methods import generate_pil_image, get_file_bytes_and_extension, get_file_size
-from streamlit_option_menu import option_menu
+from shared.constants import AppSubPage, InternalFileTag, SortOrder
+from ui_components.methods.file_methods import generate_pil_image, get_file_bytes_and_extension
+
 from shared.constants import InternalFileType
 from ui_components.models import InternalFrameTimingObject, InternalShotObject
 from ui_components.widgets.add_key_frame_element import add_key_frame, add_key_frame_section
-from ui_components.widgets.common_element import duplicate_shot_button
-from ui_components.methods.common_methods import apply_coord_transformations, apply_image_transformations
+
+from ui_components.methods.common_methods import apply_image_transformations
 from ui_components.widgets.frame_movement_widgets import (
-    change_frame_shot,
-    delete_frame_button,
     jump_to_single_frame_view_button,
-    move_frame_back_button,
-    move_frame_forward_button,
-    replace_image_widget,
     delete_frame,
 )
 from utils.state_refresh import refresh_app
@@ -790,33 +784,42 @@ def shot_animation_button(shot, show_label=False):
         st.session_state["shot_view_index"] = 0
         refresh_app()
 
-
 def update_shot_frames(shot_uuid):
-    """
-    Removes all the current frames present in the shot and adds new frames based on
-    the "shot_data_{shot_uuid}" key in the session_state
-    value of "shot_data_{shot_uuid}" is a pandas dataframe with image_location, uuid and idx columns
-    """
     data_repo = DataRepo()
     st.session_state[f"open_frame_changer_{shot_uuid}"] = False
-    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
-    data_repo.update_bulk_timing(
-        [timing.uuid for timing in timing_list], [{"is_disabled": True}] * len(timing_list)
-    )
-
+    
+    existing_timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
+    
+    existing_frames = {timing.primary_image.location: timing for timing in existing_timing_list}
+    
+    updated_frame_list = st.session_state[f"shot_data_{shot_uuid}"]
+    
     progress_bar = st.progress(0)
-    total_items = len(st.session_state[f"shot_data_{shot_uuid}"])
+    total_items = len(updated_frame_list)
     random_list_of_emojis = ["🎉", "🎊", "🎈", "🎁", "🎀", "🎆", "🎇", "🧨", "🪅"]
-
-    # Add frames again and update progress
-    for idx, (index, row) in enumerate(st.session_state[f"shot_data_{shot_uuid}"].iterrows()):
-        selected_image_location = row["image_location"]
-        add_key_frame(selected_image_location, shot_uuid, refresh_state=False)
-
-        # Update the progress bar
+    
+    processed_images = set()
+    
+    for idx, (index, row) in enumerate(updated_frame_list.iterrows()):
+        image_location = row["image_location"]
+        
+        if image_location in existing_frames and image_location not in processed_images:
+            existing_timing = existing_frames[image_location]
+            
+            if existing_timing.aux_frame_index != idx:
+                data_repo.update_specific_timing(existing_timing.uuid, aux_frame_index=idx)
+            
+            del existing_frames[image_location]
+            processed_images.add(image_location)
+        else:
+            add_key_frame(image_location, shot_uuid, target_frame_position=idx, refresh_state=False)
+        
         progress = (idx + 1) / total_items
         random_emoji = random.choice(random_list_of_emojis)
-        st.caption(f"Saving frame {idx + 1} of {total_items} {random_emoji}")
+        st.caption(f"Processing frame {idx + 1} of {total_items} {random_emoji}")
         progress_bar.progress(progress)
-
-    st.session_state[f"shot_data_{shot_uuid}"] = None
+    
+    for image_location, timing in existing_frames.items():
+        delete_frame(timing.uuid)
+    
+    st.session_state[f"shot_data_{shot_uuid}"] = None    

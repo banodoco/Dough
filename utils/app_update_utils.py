@@ -57,7 +57,7 @@ def check_and_pull_changes():
 
             st.success(
                 """
-                ## New changes have been fetched. Please stop the app from the terminal and then restart to apply the changes.         
+                #### New changes have been fetched. Please stop the app from the terminal and then restart to apply the changes.         
             """
             )
             save_checkpoint()

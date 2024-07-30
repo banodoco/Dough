@@ -756,7 +756,7 @@ class ComfyDataTransform:
 
         workflow["468"]["inputs"]["end_percent"] = sm_data.get("multipled_base_end_percent")
 
-        workflow["207"]["inputs"]["noise_seed"] = random_seed()
+        # workflow["207"]["inputs"]["noise_seed"] = random_seed()
 
         workflow["541"]["inputs"]["pre_text"] = sm_data.get("prompt")
         workflow["541"]["inputs"]["text"] = sm_data.get("individual_prompts")

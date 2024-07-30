@@ -781,8 +781,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 atleast_one_log_created = False
                 for img in st.session_state["list_of_style_references"]:
                     input_image_file = save_new_image(img, project_uuid)
-                    input_image_file_list.append(input_image_file)
-                    st.write(f"Input image file list: {input_image_file_list}")
+                    input_image_file_list.append(input_image_file)                    
 
                 # prompts_to_be_processed = [item for item in list_of_prompts.split("|") if item]
                 for _, image_prompt in enumerate(prompts_to_be_processed):

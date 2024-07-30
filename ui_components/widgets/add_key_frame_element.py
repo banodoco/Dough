@@ -81,13 +81,6 @@ def add_key_frame(
     data_repo = DataRepo()
     timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
 
-    # checking if the shot has reached the max frame limit
-    # project_settings = data_repo.get_project_setting(shot.project.uuid)
-    # if len(shot.timing_list) >= project_settings.max_frames_per_shot:
-    #     st.error(f'Only {project_settings.max_frames_per_shot} frames allowed per shot')
-    #     time.sleep(0.3)
-    #     refresh_app()
-
     # creating frame inside the shot at target_frame_position
     len_shot_timing_list = len(timing_list) if len(timing_list) > 0 else 0
     target_frame_position = len_shot_timing_list if target_frame_position is None else target_frame_position
@@ -106,7 +99,12 @@ def add_key_frame(
         "source_image_id": saved_image.uuid,
         "primary_image_id": saved_image.uuid,
     }
-    _: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
+    new_timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
+
+    if new_timing:
+        print(f"New timing created: {new_timing.uuid}, aux_frame_index: {new_timing.aux_frame_index}")
+    else:
+        print(f"Failed to create new timing for image: {saved_image.uuid}")
 
     if update_cur_frame_idx:
         timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
@@ -121,8 +119,9 @@ def add_key_frame(
                 st.session_state["current_frame_index"] - 1
             ].uuid
 
-        # st.session_state['current_subpage'] = AppSubPage.KEYFRAME.value
-        # st.session_state['section_index'] = 0
+        print(f"Updated session state: current_frame_index: {st.session_state['current_frame_index']}, current_frame_uuid: {st.session_state['current_frame_uuid']}")
 
     if refresh_state:
         refresh_app(maintain_state=True)
+
+    return new_timing

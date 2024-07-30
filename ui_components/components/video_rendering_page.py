@@ -285,32 +285,38 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     individual_negative_prompts = [v for v in new_individual_negative_prompts.values()]
                     
                     settings["inference_type"] = "preview"
+                    trigger_shot_update = False
+
+                else:
+                    trigger_shot_update = True
 
                 shot_data = update_session_state_with_animation_details(
-                    shot_uuid,
-                    img_list,
-                    strength_of_frames,
-                    distances_to_next_frames,
-                    speeds_of_transitions,
-                    freedoms_between_frames,
-                    motions_during_frames,
-                    individual_prompts,
-                    individual_negative_prompts,
-                    lora_data,
-                    DEFAULT_SM_MODEL,
-                    high_detail_mode,
-                    image.uuid if image else None,
-                    settings["strength_of_structure_control_image"],
-                    next(
-                        (
-                            index
-                            for index, workflow in enumerate(filtered_and_sorted_workflows)
-                            if workflow["name"] == type_of_generation
+                        shot_uuid,
+                        img_list,
+                        strength_of_frames,
+                        distances_to_next_frames,
+                        speeds_of_transitions,
+                        freedoms_between_frames,
+                        motions_during_frames,
+                        individual_prompts,
+                        individual_negative_prompts,
+                        lora_data,
+                        DEFAULT_SM_MODEL,
+                        high_detail_mode,
+                        image.uuid if image else None,
+                        settings["strength_of_structure_control_image"],
+                        next(
+                            (
+                                index
+                                for index, workflow in enumerate(filtered_and_sorted_workflows)
+                                if workflow["name"] == type_of_generation
+                            ),
+                            0,
                         ),
-                        0,
-                    ),
-                    stabilise_motion=stabilise_motion,
-                )
+                        stabilise_motion=stabilise_motion,
+                        trigger_shot_update=trigger_shot_update,
+                    )
+                
                 settings.update(shot_data=shot_data)
                 settings.update(type_of_generation=type_of_generation)
                 settings.update(filename_prefix="AD_")
@@ -368,7 +374,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
             if preview_mode:
                 # take a range of frames from the user
                 frames_to_preview = st_memory.slider(
-                    "Frames to preview",
+                    "Frames to preview:",
                     min_value=1,
                     max_value=len(img_list),
                     value=(1, min(3, len(img_list))),

@@ -636,6 +636,7 @@ def update_session_state_with_animation_details(
     strength_of_structure_control_img=None,
     type_of_generation_index=0,
     stabilise_motion=None,
+    trigger_shot_update=True,
 ):
     """
     for any generation session_state holds two kind of data objects.
@@ -705,10 +706,11 @@ def update_session_state_with_animation_details(
             {"timing_data": timing_data, "main_setting_data": main_setting_data}
         )
     }
-
-    meta_data.update(update_data)
-    data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
-    update_active_shot(shot_uuid)
+    if trigger_shot_update:
+        meta_data.update(update_data)
+        data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
+        update_active_shot(shot_uuid)
+    
     return update_data
 
 
