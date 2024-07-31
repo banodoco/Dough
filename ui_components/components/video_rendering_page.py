@@ -278,6 +278,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     settings["motions_during_frames"] = motions_during_frames[start_frame-1:end_frame]
 
                     # Update the local variables to match the settings
+                    '''
                     strength_of_frames = settings["strength_of_frames"]
                     speeds_of_transitions = settings["speeds_of_transitions"]
                     distances_to_next_frames = settings["distances_to_next_frames"]
@@ -285,7 +286,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     motions_during_frames = settings["motions_during_frames"]
                     individual_prompts = [v for v in new_individual_prompts.values()]
                     individual_negative_prompts = [v for v in new_individual_negative_prompts.values()]
-                    
+                    '''
                     settings["inference_type"] = "preview"
                     trigger_shot_update = False
 
@@ -295,13 +296,13 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 shot_data = update_session_state_with_animation_details(
                         shot_uuid,
                         img_list,
-                        strength_of_frames,
-                        distances_to_next_frames,
-                        speeds_of_transitions,
-                        freedoms_between_frames,
-                        motions_during_frames,
-                        individual_prompts,
-                        individual_negative_prompts,
+                        settings["strength_of_frames"],
+                        settings["distances_to_next_frames"],
+                        settings["speeds_of_transitions"],
+                        settings["freedoms_between_frames"],
+                        settings["motions_during_frames"],
+                        settings["individual_prompts"],
+                        settings["individual_negative_prompts"],
                         lora_data,
                         DEFAULT_SM_MODEL,
                         high_detail_mode,
@@ -383,7 +384,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     value=(1, min(3, len(img_list))),
                     key=f"frames_to_preview_{shot_uuid}"
                 )
-                start_frame, end_frame = frames_to_preview
+                start_frame, end_frame = st.session_state[f"frames_to_preview_{shot_uuid}"]
                 preview_frames = img_list[start_frame-1:end_frame]
                 
                 num_columns = min(3, len(preview_frames))
