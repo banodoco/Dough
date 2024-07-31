@@ -434,13 +434,15 @@ postfix_str = "_generate_inference"
 
 
 def toggle_generate_inference(position, **kwargs):
-
+    
     for k, v in kwargs.items():
         st.session_state[k] = v
     if position + postfix_str not in st.session_state:
         st.session_state[position + postfix_str] = True
     else:
         st.session_state[position + postfix_str] = not st.session_state[position + postfix_str]
+
+    
 
 
 def is_inference_enabled(position):
@@ -671,7 +673,7 @@ def update_session_state_with_animation_details(
     main_setting_data = {}
     main_setting_data[f"lora_data_{shot.uuid}"] = lora_data
     main_setting_data[f"strength_of_adherence_value_{shot.uuid}"] = st.session_state[
-        "strength_of_adherence_value"
+        f"strength_of_adherence_value_{shot.uuid}"
     ]
     main_setting_data[f"type_of_motion_context_index_{shot.uuid}"] = st.session_state[
         "type_of_motion_context"

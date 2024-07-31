@@ -219,6 +219,8 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
             variant_count = 1
 
             if is_inference_enabled(generate_vid_inf_tag) or is_inference_enabled(manual_save_inf_tag):
+
+                st.session_state['auto_refresh'] = False
                 # last keyframe position * 16
                 duration = float(dynamic_frame_distribution_values[-1] / 16)
                 data_repo.update_shot(uuid=shot_uuid, duration=duration)
@@ -362,6 +364,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     else manual_save_inf_tag
                 )
                 toggle_generate_inference(position, **updated_additional_params)
+                st.session_state['auto_refresh'] = True
                 refresh_app()
 
             preview_mode = st_memory.checkbox(

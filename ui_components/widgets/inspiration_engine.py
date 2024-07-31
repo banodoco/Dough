@@ -773,22 +773,22 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 help = ""
             
             st.markdown("***")
-            if st.button("Generate images", type="primary", disabled=button_status, help=help):
-
-                ml_client = get_ml_client()
-
+            
+            def generate_images(
+                ml_client, project_uuid, shot_uuid, timing_uuid, position, prompts_to_be_processed,
+                images_per_prompt, type_of_model, model, lightning, project_settings,
+                additional_description_text, additional_style_text, negative_prompt,
+                list_of_strengths, default_form_values
+            ):
                 input_image_file_list = []
                 atleast_one_log_created = False
                 for img in st.session_state["list_of_style_references"]:
                     input_image_file = save_new_image(img, project_uuid)
                     input_image_file_list.append(input_image_file)                    
 
-                # prompts_to_be_processed = [item for item in list_of_prompts.split("|") if item]
                 for _, image_prompt in enumerate(prompts_to_be_processed):
                     for _ in range(images_per_prompt):
-
                         if type_of_model == T2IModel.SDXL.value:
-                            # print("--------- generating sdxl")
                             data = {
                                 "shot_uuid": shot_uuid,
                                 "additional_description_text": additional_description_text,
@@ -828,9 +828,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 queue_inference=QUEUE_INFERENCE_QUERIES,
                             )
 
-                        # for sd3 model
                         else:
-                            # print("--------- generating sd3")
                             query_obj = MLQueryObject(
                                 timing_uuid=None,
                                 model_uuid=None,
@@ -870,7 +868,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                             process_inference_output(**inference_data)
 
-                            # saving state here (this ensures that generation was successfully created with the current settings)
                             if not atleast_one_log_created:
                                 atleast_one_log_created = True
                                 data_dict = {}
@@ -879,7 +876,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         data_dict[k] = st.session_state[k]
 
                                 key = project_uuid
-                                # TODO: make storing and retrieving meta data into a single method
                                 with sqlite_atomic_transaction():
                                     project: InternalProjectObject = data_repo.get_project_from_uuid(uuid=key)
                                     if project:
@@ -890,5 +886,20 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         )
                 st.success("Images added to queue for processing!")
                 refresh_app()
+
+            # In the part of the code where you create the button:
+            st.button(
+                "Generate images",
+                type="primary",
+                disabled=button_status,
+                help=help,
+                on_click=generate_images,
+                args=(
+                    get_ml_client(), project_uuid, shot_uuid, timing_uuid, position, prompts_to_be_processed,
+                    images_per_prompt, type_of_model, model, lightning, project_settings,
+                    additional_description_text, additional_style_text, negative_prompt,
+                    list_of_strengths, default_form_values
+                )
+            )
 
         st.write("")

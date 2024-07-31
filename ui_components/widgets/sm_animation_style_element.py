@@ -605,7 +605,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
         st.session_state[f"lora_data_{shot_uuid}"] = []
 
     if f"strength_of_adherence_value_{shot_uuid}" not in st.session_state:
-        st.session_state[f"strength_of_adherence_value_{shot_uuid}"] = 0.8
+        st.session_state[f"strength_of_adherence_value_{shot_uuid}"] = 0.2
 
     if f"type_of_motion_context_index_{shot_uuid}" not in st.session_state:
         st.session_state[f"type_of_motion_context_index_{shot_uuid}"] = 1

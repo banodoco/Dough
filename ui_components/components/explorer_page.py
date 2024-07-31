@@ -756,36 +756,40 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         # st.markdown("***")
         explorer_stats = data_repo.get_explorer_pending_stats(project_uuid=project_uuid)
 
-        if explorer_stats["temp_image_count"] + explorer_stats["pending_image_count"]:
+        if explorer_stats["temp_image_count"]:
             st.markdown("***")
-
+            
             with fetch2:
-                total_number_pending = (
-                    explorer_stats["temp_image_count"] + explorer_stats["pending_image_count"]
-                )
-                if total_number_pending:
-
-                    if explorer_stats["temp_image_count"] == 0 and explorer_stats["pending_image_count"] > 0:
-                        st.info(f"###### {explorer_stats['pending_image_count']} images pending generation")
-                        button_text = "Check for new images"
-                    elif (
-                        explorer_stats["temp_image_count"] > 0 and explorer_stats["pending_image_count"] == 0
-                    ):
-                        st.info(f"###### {explorer_stats['temp_image_count']} new images generated")
-                        button_text = "Pull new images"
-                    else:
-                        st.info(
-                            f"###### {explorer_stats['pending_image_count']} images pending generation and {explorer_stats['temp_image_count']} ready to be fetched"
-                        )
-                        button_text = "Check for/pull new images"
+                if explorer_stats['pending_image_count']:
+                    st.info(f"###### {explorer_stats['temp_image_count']} new image{'s' if explorer_stats['temp_image_count'] != 1 else ''} generated ({explorer_stats['pending_image_count']} pending)")
+                else:                    
+                    st.info(f"###### {explorer_stats['temp_image_count']} new image{'s' if explorer_stats['temp_image_count'] != 1 else ''} generated")
 
             with fetch3:
-                if st.button(f"{button_text}", key=f"check_for_new_images_", use_container_width=True):
+                def check_for_new_images(project_uuid, explorer_stats):
                     data_repo.update_temp_gallery_images(project_uuid)
                     if explorer_stats["temp_image_count"]:
                         st.success("New images fetched")
                         time.sleep(0.3)
                     refresh_app()
+
+                # In the part of the code where you create the button:
+                st.button(
+                    f"Pull new images",
+                    key=f"check_for_new_images_",
+                    use_container_width=True,
+                    on_click=lambda: check_for_new_images(project_uuid, explorer_stats),
+                    type="primary"
+                )
+        else: 
+            
+            _, display, _ = st.columns([0.5, 2, 0.5])
+            with display:                
+                if explorer_stats["pending_image_count"]:
+                    with display:
+                        st.info(f"###### {explorer_stats['pending_image_count']} images pending generation")
+
+            st.markdown("***")
 
     total_image_count = res_payload["count"]
     if gallery_image_list and len(gallery_image_list):
@@ -802,6 +806,12 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                     if i + j < len(gallery_image_list):
                         with cols[j]:
                             st.image(gallery_image_list[i + j].location, use_column_width=True)
+                            def toggle_image_selection(image_uuid):
+                                if image_uuid in st.session_state["selected_images"]:
+                                    st.session_state["selected_images"].remove(image_uuid)
+                                else:
+                                    st.session_state["selected_images"].append(image_uuid)
+                                refresh_app()
 
                             # Select/Deselect button
                             select_label = (
@@ -810,17 +820,14 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                 else "Select"
                             )
                             button_type = "primary" if select_label == "Deselect" else "secondary"
-                            if st.button(
+                            st.button(
                                 select_label,
                                 key=f"select_{gallery_image_list[i + j].uuid}",
                                 use_container_width=True,
                                 type=button_type,
-                            ):
-                                if gallery_image_list[i + j].uuid in st.session_state["selected_images"]:
-                                    st.session_state["selected_images"].remove(gallery_image_list[i + j].uuid)
-                                else:
-                                    st.session_state["selected_images"].append(gallery_image_list[i + j].uuid)
-                                refresh_app()
+                                on_click=toggle_image_selection,
+                                args=(gallery_image_list[i + j].uuid,)
+                            )
 
                             # -------- inference details --------------
                             if gallery_image_list[i + j].inference_log:

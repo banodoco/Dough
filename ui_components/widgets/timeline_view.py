@@ -149,12 +149,7 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
 
             elif view == "sidebar":
                 if st.session_state["selected_images"]:
-                    if st.button(
-                        f"Add {len(st.session_state['selected_images'])} selected images to this shot",
-                        use_container_width=True,
-                        type="primary",
-                        key=f"add_to_shot_{shot.uuid}",
-                    ):
+                    def add_selected_images_to_shot(shot, shot_list, data_repo):
                         shot_names = [s.name for s in shot_list]
                         shot_number = shot_names.index(shot.name)
                         st.session_state["last_shot_number"] = shot_number
@@ -169,6 +164,14 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
                                 )
                         st.session_state["selected_images"] = []  # Clear selected images after adding
                         refresh_app()
+                    st.button(
+                        f"Add {len(st.session_state['selected_images'])} selected images to this shot",
+                        use_container_width=True,
+                        type="primary",
+                        key=f"add_to_shot_{shot.uuid}",
+                        on_click=add_selected_images_to_shot,
+                        args=(shot, shot_list, data_repo)
+                    )
             st.markdown("***")
 
         if (idx + 1) % items_per_row == 0 or idx == len(shot_list_for_display) - 1:

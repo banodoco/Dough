@@ -33,7 +33,7 @@ def adjust_shot_page(shot_uuid: str, h2):
         with column1:
             st.markdown(f"### 🎬 '{shot.name}' frames")
             st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
-            items_per_row = st_memory.slider("Items per row:", 1, 10, 3, key="items_per_row")
+            items_per_row = st_memory.slider("Items per row:", 1, 10, 6, key="items_per_row")
 
         shot_keyframe_element(st.session_state["shot_uuid"], items_per_row, column2, position="Individual")
 
