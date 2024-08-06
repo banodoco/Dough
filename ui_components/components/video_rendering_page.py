@@ -67,6 +67,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
             overall_positive_prompt,
             overall_negative_prompt,
             type_of_motion_context,
+            allow_for_looping,
             high_detail_mode,
             stabilise_motion,
         ) = video_motion_settings(shot_uuid, img_list)
@@ -123,6 +124,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
             image_dimension=img_dimension,
             output_format="video/h264-mp4",
             prompt=overall_positive_prompt,
+            allow_for_looping=allow_for_looping,
             negative_prompt=overall_negative_prompt,
             interpolation_type=interpolation_style,
             stmfnet_multiplier=2,
@@ -278,15 +280,16 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     settings["motions_during_frames"] = motions_during_frames[start_frame-1:end_frame]
 
                     # Update the local variables to match the settings
-                    '''
+                    
                     strength_of_frames = settings["strength_of_frames"]
                     speeds_of_transitions = settings["speeds_of_transitions"]
                     distances_to_next_frames = settings["distances_to_next_frames"]
                     freedoms_between_frames = settings["freedoms_between_frames"]
                     motions_during_frames = settings["motions_during_frames"]
+                    
                     individual_prompts = [v for v in new_individual_prompts.values()]
                     individual_negative_prompts = [v for v in new_individual_negative_prompts.values()]
-                    '''
+                    
                     settings["inference_type"] = "preview"
                     trigger_shot_update = False
 
@@ -296,13 +299,13 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 shot_data = update_session_state_with_animation_details(
                         shot_uuid,
                         img_list,
-                        settings["strength_of_frames"],
-                        settings["distances_to_next_frames"],
-                        settings["speeds_of_transitions"],
-                        settings["freedoms_between_frames"],
-                        settings["motions_during_frames"],
-                        settings["individual_prompts"],
-                        settings["individual_negative_prompts"],
+                        strength_of_frames,
+                        distances_to_next_frames,
+                        speeds_of_transitions,
+                        freedoms_between_frames,
+                        motions_during_frames,
+                        individual_prompts,
+                        individual_negative_prompts,
                         lora_data,
                         DEFAULT_SM_MODEL,
                         high_detail_mode,

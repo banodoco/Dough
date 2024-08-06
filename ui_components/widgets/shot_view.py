@@ -62,7 +62,9 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
                     use_container_width=True,
                     type="primary",
                 ):
+                    st.session_state['auto_refresh'] = False
                     update_shot_frames(shot_uuid)
+                    st.session_state['auto_refresh'] = True
                     refresh_app()
 
             if f"shot_data_{shot_uuid}" not in st.session_state:

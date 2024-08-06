@@ -215,30 +215,27 @@ def sidebar_logger(shot_uuid):
                     InferenceStatus.BACKLOG.value,
                     InferenceStatus.IN_PROGRESS.value,
                 ]:
-                    if st.button(
-                        "Cancel", key=f"cancel_gen_{log.uuid}", use_container_width=True, help="Cancel"
-                    ):
+                    def cancel_generation(log_uuid):
                         err_msg = "Generation is either already cancelled or failed"
                         success_msg = "Generation cancelled"
-                        # fetching the current status as this could have been already started
-                        # log = data_repo.get_inference_log_from_uuid(log.uuid)
-                        # cur_status = log.status
-                        # if cur_status not in [InferenceStatus.QUEUED.value, InferenceStatus.BACKLOG.value]:
-                        #     st.error(err_msg)
-                        #     time.sleep(0.7)
-                        #     refresh_app()
-                        # else:
 
-                        log = data_repo.get_inference_log_from_uuid(log.uuid)
+                        log = data_repo.get_inference_log_from_uuid(log_uuid)
                         if log.status == InferenceStatus.IN_PROGRESS.value:
                             setup_comfy_runner()
                             stop_generations([log])
                         elif log.status in [InferenceStatus.QUEUED.value, InferenceStatus.BACKLOG.value]:
-                            data_repo.update_inference_log(log.uuid, status=InferenceStatus.CANCELED.value)
+                            data_repo.update_inference_log(log_uuid, status=InferenceStatus.CANCELED.value)
 
                         time.sleep(0.7)
                         refresh_app()
 
+                    st.button(
+                        "Cancel",
+                        key=f"cancel_gen_{log.uuid}",
+                        use_container_width=True,
+                        help="Cancel",
+                        on_click=lambda: cancel_generation(log.uuid)
+)
                 if output_url and origin_data:
                     if inference_type == InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value:
                         timing = data_repo.get_timing_from_uuid(origin_data.get("timing_uuid"))
@@ -264,7 +261,7 @@ def sidebar_logger(shot_uuid):
         st.markdown("***")
         b1, b2 = st.columns([1, 1])
         with b1:
-            if st.button(label="Cancel all", use_container_width=True):
+            def cancel_all_generations():
                 log_filter_data = {
                     "project_id": shot.project.uuid,
                     "page": 1,
@@ -274,8 +271,15 @@ def sidebar_logger(shot_uuid):
                 all_log_list, total_count = data_repo.get_all_inference_log_list(**log_filter_data)
                 stop_generations(all_log_list)
                 refresh_app()
+
+            st.button(
+                label="Cancel all",
+                use_container_width=True,
+                on_click=cancel_all_generations
+            )
+
         with b2:
-            if st.button(label="Move all to backlog", use_container_width=True):
+            def move_all_to_backlog():
                 log_filter_data = {
                     "project_id": shot.project.uuid,
                     "page": 1,
@@ -287,6 +291,12 @@ def sidebar_logger(shot_uuid):
                     [log.uuid for log in all_log_list], status=InferenceStatus.BACKLOG.value
                 )
                 refresh_app()
+
+            st.button(
+                label="Move all to backlog",
+                use_container_width=True,
+                on_click=move_all_to_backlog
+            )
 
 
 def video_inference_image_grid(origin_data):

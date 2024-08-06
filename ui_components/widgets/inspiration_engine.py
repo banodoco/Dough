@@ -222,7 +222,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 "insp_vibe_influence": [0.0, 0.0, 0.0],
                 "insp_additional_style_text": "",
                 "insp_img_per_prompt": 4,
-                "insp_test_mode": False,
+                "insp_test_mode": True,
                 "insp_lightning_mode": False,
                 "insp_selected_model": None,
             }
@@ -556,7 +556,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                     refresh_app()
                             else:
                                 st.button(
-                                    f"Add style reference",
+                                    f"Add image reference",
                                     use_container_width=True,
                                     disabled=True,
                                     help="You have no input images selected.",
@@ -688,7 +688,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         refresh_app()
                                     if type_of_style_input == "Upload Images":
                                         if st.button(
-                                            f"Remove style reference",
+                                            f"Remove image reference",
                                             use_container_width=True,
                                             key=f"remove_{i}",
                                         ):
@@ -726,13 +726,31 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             # ---------------------- GENERATION SETTINGS --------------------------
             st.markdown("***")
             st.markdown("#### Generation settings")
-            test_first_prompt = st.toggle(
-                "Only run first prompt",
-                value=st.session_state["insp_test_mode"],
+            h1, h2, _ = st.columns([0.35, 1, 0.6])
+            with h1:
+                run_all_prompts = st.toggle(
+                    "Run all prompts:",
+                    value=st.session_state["insp_test_mode"],
                 help="This will only generate images for the first prompt.",
             )
-            if test_first_prompt:
-                number_of_prompts = 1
+            if not run_all_prompts:
+                # range of prompts to test
+                with h2:   
+                    # if there's more than 1 prompt, show a slider
+                    if len(st.session_state['list_of_prompts']) > 1:
+                        prompts_to_test = st.multiselect(
+                            "Prompts to run:",
+                            options=list(range(1, len(st.session_state["list_of_prompts"]) + 1)),
+                            default=[1, 2],
+                            format_func=lambda x: f"{st.session_state['list_of_prompts'][x-1]}"
+                        )
+                        prompts_to_test = sorted(prompts_to_test)                        
+                        # make it the number of prompts in the range
+                        number_of_prompts = len(prompts_to_test)
+                    else:
+                        prompts_to_test = st.session_state["list_of_prompts"][0]
+                        number_of_prompts = 1
+
             prompt1, prompt2, prompt3 = st.columns([1.25, 1, 1])
             with prompt1:
                 images_per_prompt = st.slider(
@@ -757,10 +775,10 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         f"{number_of_prompts} prompts for {images_per_prompt} images per prompt makes a total of **{number_of_prompts*images_per_prompt} images**."
                     )
 
-            st.session_state["insp_test_mode"] = test_first_prompt
+            st.session_state["insp_test_mode"] = run_all_prompts
 
-            if test_first_prompt:
-                prompts_to_be_processed = [st.session_state["list_of_prompts"][0]]
+            if not run_all_prompts:
+                prompts_to_be_processed = prompts_to_test
             else:
                 prompts_to_be_processed = st.session_state["list_of_prompts"]
 

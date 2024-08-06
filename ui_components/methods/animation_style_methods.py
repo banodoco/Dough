@@ -673,8 +673,7 @@ def update_session_state_with_animation_details(
 
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
     meta_data = shot.meta_data_dict
-    timing_data = get_timing_data(
-        shot_uuid,
+    timing_data = get_timing_data(        
         img_list,
         strength_of_frames,
         distances_to_next_frames,

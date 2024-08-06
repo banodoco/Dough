@@ -456,7 +456,20 @@ class ComfyDataTransform:
                     json_data["545"]["inputs"]["motion_lora"][0] = "536"
 
             return json_data
-
+        
+        def allow_for_looping(workflow):
+            # Remove nodes 614, 615, 616, 687, and 354
+            nodes_to_remove = ['614', '615', '616', '687', '354']
+            for node in nodes_to_remove:
+                if node in workflow:
+                    del workflow[node]
+            
+            # Modify node 559 (FILM VFI) to connect directly to the KSampler output
+            if '559' in workflow:
+                workflow['559']['inputs']['frames'] = ['207', 5]
+            
+            return workflow
+        
         def convert_to_specific_workflow(json_data, type_of_generation, extra_models_list):
 
             if type_of_generation == "Slurshy Realistiche":
@@ -766,13 +779,7 @@ class ComfyDataTransform:
         workflow["543"]["inputs"]["max_frames"] = int(float(sm_data.get("max_frames")))
         workflow["543"]["inputs"]["text"] = sm_data.get("individual_negative_prompts")
 
-        # NOTE: will need to modify to work properly
-        # if sm_data.get("file_structure_control_img_uuid"):
-        #     workflow = update_structure_control_image(
-        #         workflow,
-        #         sm_data.get("file_structure_control_img_uuid"),
-        #         sm_data.get("strength_of_structure_control_image"),
-        #     )
+        
 
         workflow, extra_models_list = convert_to_specific_workflow(
             workflow,
@@ -796,6 +803,9 @@ class ComfyDataTransform:
         ][ad_mode]
 
         ignore_list = sm_data.get("lora_data", [])
+        
+        if sm_data.get("allow_for_looping", False):
+            workflow = allow_for_looping(workflow)
 
         return json.dumps(workflow), output_node_ids, extra_models_list, ignore_list
 

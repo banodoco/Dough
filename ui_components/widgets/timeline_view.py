@@ -198,7 +198,7 @@ def add_new_shot_element(shot, data_repo, show_image_uploader=False):
         uploaded_images = None
 
     if st.button("Add new shot", type="secondary", key=f"add_shot_btn_{shot.uuid}"):
-
+        st.session_state['auto_refresh'] = False
         new_shot = add_new_shot(shot.project.uuid)
         if new_shot_name != "":
             data_repo.update_shot(uuid=new_shot.uuid, name=new_shot_name)
@@ -216,5 +216,5 @@ def add_new_shot_element(shot, data_repo, show_image_uploader=False):
                 selected_image_location = selected_image_location or file_location
                 add_key_frame(selected_image_location, new_shot.uuid, refresh_state=False)
                 progress_bar.progress((i + 1) / len(uploaded_images))
-
+        st.session_state['auto_refresh'] = True
         refresh_app()

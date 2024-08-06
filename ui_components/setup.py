@@ -36,7 +36,7 @@ def setup_app_ui():
         st.session_state['auto_refresh'] = True        
 
     if st.session_state['auto_refresh']:
-        st_autorefresh(interval=5000, key="datarefresh")
+        st_autorefresh(interval=10000, key="datarefresh")
 
     data_repo = DataRepo()
 

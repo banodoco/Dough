@@ -26,6 +26,7 @@ def add_key_frame_section(shot_uuid):
     if st.button(
         f"Add key frame(s)", use_container_width=True, key=f"add_key_frame_btn_{shot_uuid}", type="primary"
     ):
+        st.session_state['auto_refresh'] = False
         if uploaded_images:
             progress_bar = st.progress(0)
             uploaded_images = sorted(uploaded_images, key=lambda x: x.name)
@@ -39,6 +40,7 @@ def add_key_frame_section(shot_uuid):
         else:
             st.error("Please generate new images or upload them")
             time.sleep(0.7)
+        st.session_state['auto_refresh'] = True
         refresh_app()
 
 
@@ -100,11 +102,6 @@ def add_key_frame(
         "primary_image_id": saved_image.uuid,
     }
     new_timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
-
-    if new_timing:
-        print(f"New timing created: {new_timing.uuid}, aux_frame_index: {new_timing.aux_frame_index}")
-    else:
-        print(f"Failed to create new timing for image: {saved_image.uuid}")
 
     if update_cur_frame_idx:
         timing_list = data_repo.get_timing_list_from_shot(shot_uuid)

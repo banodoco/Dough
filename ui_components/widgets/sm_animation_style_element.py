@@ -194,6 +194,17 @@ def video_motion_settings(shot_uuid, img_list):
                 st.session_state[f"stabilise_motion_{shot_uuid}"]
             )
 
+        loop1, loop2 = st.columns([1, 1])
+        with loop1:
+            allow_for_looping = st_memory.checkbox(
+                "Allow for looping",
+                key="allow_for_looping",
+                value=False
+            )
+        with loop2:
+            if allow_for_looping:
+                st.info("To get a perfect loop, you should add the first image as the last.")
+
         stabilise_motion = st.radio(
             label="Amount to constrain motion:",
             options=stabilise_motion_options,
@@ -202,6 +213,8 @@ def video_motion_settings(shot_uuid, img_list):
             label_visibility="visible",
             key="stabilise_motion",
         )
+
+
 
     if f"structure_control_image_{shot_uuid}" not in st.session_state:
         st.session_state[f"structure_control_image_{shot_uuid}"] = None
@@ -214,6 +227,7 @@ def video_motion_settings(shot_uuid, img_list):
         overall_positive_prompt,
         overall_negative_prompt,
         type_of_motion_context,
+        allow_for_looping,
         high_detail_mode,
         stabilise_motion,
     )
@@ -679,7 +693,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
     for i in range(0, len(img_list), items_per_row):
         prev_frame_settings = None
         with st.container():
-            grid = st.columns([2 if j % 2 == 0 else 1 for j in range(2 * items_per_row)])
+            grid = st.columns([2 if j % 2 == 0 else 2 for j in range(2 * items_per_row)])
 
             for j in range(items_per_row):
                 idx = i + j
@@ -748,6 +762,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 idx,
                                 uuid,
                                 help_text=None,
+                                img_list=img_list,
                             ):
                                 value_key = f"{key_suffix}_{uuid}_{idx}"
                                 widget_key = f"{key_suffix}_widget_{uuid}_{idx}"
@@ -755,7 +770,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 if value_key not in st.session_state:
                                     st.session_state[value_key] = default_value
 
-                                slider_value = st.slider(
+                                slider_value = st.number_input(
                                     label,
                                     min_value=min_value,
                                     max_value=max_value,
@@ -766,14 +781,21 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 )
 
                                 if slider_value != st.session_state[value_key]:
-                                    st.session_state[value_key] = slider_value
+                                    st.session_state[value_key] = slider_value                                    
                                     update_last_changed(value_key, slider_value)
+                                    if idx == 0:  # First frame
+                                        st.session_state[f'frames_to_preview_{shot_uuid}'] = (1, 2)
+                                    elif idx == len(img_list) - 1:  # Last frame
+                                        st.session_state[f'frames_to_preview_{shot_uuid}'] = (idx, idx + 1)
+                                    else:  # Middle frames
+                                        st.session_state[f'frames_to_preview_{shot_uuid}'] = (idx, idx + 2)
                                     refresh_app()
                                 return slider_value
 
                             def update_last_changed(key, value):
                                 st.session_state["last_frame_changed"] = key
                                 st.session_state["last_value_set"] = value
+                                
 
                             strength_of_frame = create_slider(
                                 label="Strength of frame:",
@@ -784,6 +806,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 default_value=st.session_state[f"strength_of_frame_{shot_uuid}_{idx}"],
                                 idx=idx,
                                 uuid=shot_uuid,
+                                img_list=img_list,
                             )
 
                             strength_of_frames.append(strength_of_frame)
@@ -800,6 +823,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 default_value=st.session_state[f"motion_during_frame_{shot_uuid}_{idx}"],
                                 idx=idx,
                                 uuid=shot_uuid,
+                                img_list=img_list,
                             )
 
                             motions_during_frames.append(motion_during_frame)
@@ -819,6 +843,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 default_value=st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"],
                                 idx=idx,
                                 uuid=shot_uuid,
+                                img_list=img_list,
                             )
                             distances_to_next_frames.append(distance_to_next_frame)
                             bulk_updater(
@@ -834,6 +859,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 default_value=st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"],
                                 idx=idx,
                                 uuid=shot_uuid,
+                                img_list=img_list,
                             )
 
                             bulk_updater(
@@ -849,6 +875,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 default_value=st.session_state[f"freedom_between_frames_{shot_uuid}_{idx}"],
                                 idx=idx,
                                 uuid=shot_uuid,
+                                img_list=img_list,
                             )
 
                             bulk_updater(
