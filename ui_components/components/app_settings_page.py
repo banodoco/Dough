@@ -144,10 +144,11 @@ def custom_comfy_input_component():
             refresh_app()
 
 
-def health_check_component():
+def health_check_component():    
     c1, c2 = st.columns([1, 1])
     with c1:
-        if st.button("Start check"):
+        def perform_health_check():
+            st.session_state["auto_refresh"] = False
             res = run_health_check()
             err_list = []
             for err in res:
@@ -160,6 +161,12 @@ def health_check_component():
                 st.table(data=err_list)
             else:
                 st.success("No errors found")
+            st.session_state["auto_refresh"] = True
+
+        st.button(
+            "Start check",
+            on_click=perform_health_check
+        )
     with c2:
         st.info(
             "This checks Dough for common issues like incorrect package installation, corrupt/missing files and invalid config"
