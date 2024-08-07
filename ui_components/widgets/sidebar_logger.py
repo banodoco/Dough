@@ -226,16 +226,14 @@ def sidebar_logger(shot_uuid):
                         elif log.status in [InferenceStatus.QUEUED.value, InferenceStatus.BACKLOG.value]:
                             data_repo.update_inference_log(log_uuid, status=InferenceStatus.CANCELED.value)
 
-                        time.sleep(0.7)
-                        refresh_app()
-
-                    st.button(
+                    if st.button(
                         "Cancel",
                         key=f"cancel_gen_{log.uuid}",
                         use_container_width=True,
                         help="Cancel",
                         on_click=lambda: cancel_generation(log.uuid)
-)
+                    ):
+                        refresh_app()
                 if output_url and origin_data:
                     if inference_type == InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value:
                         timing = data_repo.get_timing_from_uuid(origin_data.get("timing_uuid"))
@@ -289,14 +287,14 @@ def sidebar_logger(shot_uuid):
                 all_log_list, total_count = data_repo.get_all_inference_log_list(**log_filter_data)
                 data_repo.update_inference_log_list(
                     [log.uuid for log in all_log_list], status=InferenceStatus.BACKLOG.value
-                )
-                refresh_app()
+                )                
 
-            st.button(
+            if st.button(
                 label="Move all to backlog",
                 use_container_width=True,
                 on_click=move_all_to_backlog
-            )
+            ):
+                refresh_app()
 
 
 def video_inference_image_grid(origin_data):

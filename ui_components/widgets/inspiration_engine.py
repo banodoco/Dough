@@ -212,6 +212,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 "insp_text_prompt": default_generation_text,
                 "total_unique_prompt": 16,
                 "insp_creativity": 8,
+                "insp_how_to_display": 0,
                 "insp_edit_prompt": 8,
                 "insp_additional_desc": "",
                 "insp_additional_neg_desc": "",
@@ -375,6 +376,13 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                     total_unique_prompts = total_unique_prompts + 5
 
+                    how_to_display = st.selectbox(
+                        "How to display generated prompts:",
+                        ["Replace existing prompts", "Add to existing prompts", "Show separately"],
+                        index=st.session_state["insp_how_to_display"],
+                        help="Select how you want to display the generated prompts.",                        
+                    )
+
                     if not check_replicate_key():
                         st.info(replicate_warning_message)
                     else:
@@ -390,9 +398,37 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 type_of_inspiration=type_of_inspiration,
                             )
                             # split the prompts by | and create a list
-                            st.session_state["list_of_prompts"] = generated_prompts.split("|")
+                            if how_to_display == "Replace existing prompts":
+                                st.session_state["list_of_prompts"] = generated_prompts.split("|")
+                            elif how_to_display == "Add to existing prompts":
+                                st.session_state["list_of_prompts"] = st.session_state["list_of_prompts"] + generated_prompts.split("|")
+                            elif how_to_display == "Show separately":
+                                st.session_state['prompts_to_display_separately'] = generated_prompts
 
                             refresh_app()
+                    
+                    if 'prompts_to_display_separately' not in st.session_state:
+                        st.session_state['prompts_to_display_separately'] = ""
+
+                    if st.session_state['prompts_to_display_separately'] != "":                        
+                        st.write("Generated prompts:")
+                        st.caption(st.session_state['prompts_to_display_separately'])
+                        bottom1, bottom2, bottom3 = st.columns([1, 1, 1])
+                        with bottom1:
+                            if st.button("Remove"):
+                                st.session_state['prompts_to_display_separately'] = ""
+                                refresh_app()
+                        with bottom2:
+                            if st.button("Replace existing prompts"):
+                                st.session_state["list_of_prompts"] = st.session_state['prompts_to_display_separately'].split("|")
+                                st.session_state['prompts_to_display_separately'] = ""
+                                refresh_app()
+                        with bottom3:
+                            if st.button("Add to existing prompts"):
+                                st.session_state["list_of_prompts"] = st.session_state["list_of_prompts"] + st.session_state['prompts_to_display_separately'].split("|")
+                                st.session_state['prompts_to_display_separately'] = ""
+                                refresh_app()
+                                
 
                 else:
                     edit_text = st.text_area(
@@ -728,7 +764,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             st.markdown("#### Generation settings")
             h1, h2, _ = st.columns([0.35, 1, 0.6])
             with h1:
-                run_all_prompts = st.toggle(
+                run_all_prompts = st_memory.toggle(
                     "Run all prompts:",
                     value=st.session_state["insp_test_mode"],
                 help="This will only generate images for the first prompt.",
@@ -744,8 +780,11 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             default=[1, 2],
                             format_func=lambda x: f"{st.session_state['list_of_prompts'][x-1]}"
                         )
-                        prompts_to_test = sorted(prompts_to_test)                        
-                        # make it the number of prompts in the range
+                        
+                        # Convert selected indices to actual prompts
+                        prompts_to_test = [st.session_state['list_of_prompts'][i-1] for i in prompts_to_test]                                                
+                        
+                        # Number of prompts selected
                         number_of_prompts = len(prompts_to_test)
                     else:
                         prompts_to_test = st.session_state["list_of_prompts"][0]

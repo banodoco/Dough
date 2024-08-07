@@ -774,13 +774,14 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                     refresh_app()
 
                 # In the part of the code where you create the button:
-                st.button(
+                if st.button(
                     f"Pull new images",
                     key=f"check_for_new_images_",
                     use_container_width=True,
                     on_click=lambda: check_for_new_images(project_uuid, explorer_stats),
                     type="primary"
-                )
+                ):
+                    refresh_app()
         else: 
             
             _, display, _ = st.columns([0.5, 2, 0.5])
@@ -810,8 +811,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                 if image_uuid in st.session_state["selected_images"]:
                                     st.session_state["selected_images"].remove(image_uuid)
                                 else:
-                                    st.session_state["selected_images"].append(image_uuid)
-                                refresh_app()
+                                    st.session_state["selected_images"].append(image_uuid)                                
 
                             # Select/Deselect button
                             select_label = (
@@ -820,14 +820,15 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                 else "Select"
                             )
                             button_type = "primary" if select_label == "Deselect" else "secondary"
-                            st.button(
+                            if st.button(
                                 select_label,
                                 key=f"select_{gallery_image_list[i + j].uuid}",
                                 use_container_width=True,
                                 type=button_type,
                                 on_click=toggle_image_selection,
                                 args=(gallery_image_list[i + j].uuid,)
-                            )
+                            ): 
+                                refresh_app()
 
                             # -------- inference details --------------
                             if gallery_image_list[i + j].inference_log:
