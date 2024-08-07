@@ -63,7 +63,7 @@ def is_comfy_runner_present():
 # TODO: convert comfy_runner into a package for easy import
 def setup_comfy_runner():
     if is_comfy_runner_present():
-        update_comfy_runner_env(COMFY_BASE_PATH)
+        update_comfy_runner_env()
         return
 
     app_logger.log(LoggingType.INFO, "cloning comfy runner")
@@ -72,13 +72,53 @@ def setup_comfy_runner():
 
     # installing dependencies
     subprocess.run(["pip", "install", "-r", COMFY_RUNNER_PATH + "/requirements.txt"], check=True)
-    update_comfy_runner_env(COMFY_BASE_PATH)
+    update_comfy_runner_env()
 
 
-def update_comfy_runner_env(comfy_base_path):
+def find_comfy_runner():
+    # just keep going up the directory tree, till we find comfy_runner
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    
+    while True:
+        if os.path.exists(os.path.join(current_path, '.git')):
+            comfy_runner_path = os.path.join(current_path, 'comfy_runner')
+            if os.path.exists(comfy_runner_path):
+                return comfy_runner_path
+            else:
+                return None  # comfy_runner not found in the project root
+        
+        parent_path = os.path.dirname(current_path)
+        if parent_path == current_path:
+            return None
+        
+        current_path = parent_path
+
+def update_comfy_runner_env():
+    comfy_base_path = os.getenv("COMFY_MODELS_BASE_PATH", "ComfyUI")
+    comfy_runner_path = find_comfy_runner()
+    if not comfy_runner_path:
+        print("comfy_runner not present")
+        return
+    
     if comfy_base_path != "ComfyUI":
-        with open("comfy_runner/.env", "w", encoding="utf-8") as f:
-            f.write(f"COMFY_BASE_PATH={comfy_base_path}")
+        env_file_path = os.path.join(comfy_runner_path, ".env")
+        try:
+            os.makedirs(os.path.dirname(env_file_path), exist_ok=True)
+
+            with open(env_file_path, "w", encoding="utf-8") as f:
+                f.write(f"COMFY_RUNNER_MODELS_BASE_PATH={comfy_base_path}")
+            
+            with open(env_file_path, "r", encoding="utf-8") as f:
+                written_content = f.read()
+            
+            if written_content != f"COMFY_RUNNER_MODELS_BASE_PATH={comfy_base_path}":
+                print(f"File was written, but content doesn't match. Expected: {comfy_base_path}, Got: {written_content}")
+
+        except IOError as e:
+            print(f"IOError occurred while writing to {env_file_path}: {e}")
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
     else:
         with open("comfy_runner/.env", "w", encoding="utf-8") as f:
             f.write("")

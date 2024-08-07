@@ -105,7 +105,7 @@ def welcome_page():
             )
             if st.button("I'm inspired!", key="welcome_cta", type="primary", use_container_width=True):
                 data_repo = DataRepo()
-                data_repo.update_app_setting(welcome_state=0)
+                data_repo.update_app_setting(welcome_state=1)
                 refresh_app()
 
         st.markdown("***")
@@ -137,7 +137,7 @@ def welcome_page():
 
                     if st.button("Continue", key="welcome_cta"):
                         data_repo = DataRepo()
-                        data_repo.update_app_setting(welcome_state=1)
+                        data_repo.update_app_setting(welcome_state=2)
                         refresh_app()
                 else:
                     st.button(
