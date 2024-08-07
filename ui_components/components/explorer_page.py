@@ -768,10 +768,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             with fetch3:
                 def check_for_new_images(project_uuid, explorer_stats):
                     data_repo.update_temp_gallery_images(project_uuid)
-                    if explorer_stats["temp_image_count"]:
-                        st.success("New images fetched")
-                        time.sleep(0.3)
-                    refresh_app()
+              
 
                 # In the part of the code where you create the button:
                 if st.button(
@@ -781,6 +778,9 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                     on_click=lambda: check_for_new_images(project_uuid, explorer_stats),
                     type="primary"
                 ):
+                    if explorer_stats["temp_image_count"]:
+                        st.success("New images fetched")
+                        time.sleep(0.3)                    
                     refresh_app()
         else: 
             
