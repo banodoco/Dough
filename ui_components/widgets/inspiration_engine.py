@@ -941,11 +941,10 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         data_repo.update_project(
                                             uuid=project.uuid, meta_data=json.dumps(meta_data)
                                         )
-                st.success("Images added to queue for processing!")
-                refresh_app()
+          
 
             # In the part of the code where you create the button:
-            st.button(
+            if st.button(
                 "Generate images",
                 type="primary",
                 disabled=button_status,
@@ -957,6 +956,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     additional_description_text, additional_style_text, negative_prompt,
                     list_of_strengths, default_form_values
                 )
-            )
+            ):
+                st.success("Images added to queue for processing!")
+                refresh_app()
 
         st.write("")
