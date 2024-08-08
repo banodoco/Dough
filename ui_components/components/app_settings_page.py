@@ -16,7 +16,7 @@ from utils.encryption import generate_file_hash
 from utils.enum import ExtendedEnum
 from ui_components.widgets.base_theme import BaseTheme as theme
 from utils.state_refresh import refresh_app
-
+from streamlit_globalrefresh import st_globalrefresh
 
 class ErrorLevel(ExtendedEnum):
     SEVERE = "severe"  # breaking error
@@ -149,7 +149,9 @@ def health_check_component():
     with c1:
         if st.button("Start check"):
             st.session_state['auto_refresh'] = False
+            st_globalrefresh(action="set_lock", lock_state=True)
             res = run_health_check()
+            st_globalrefresh(action="set_lock", lock_state=False)
             err_list = []
             for err in res:
                 err_list.append(
