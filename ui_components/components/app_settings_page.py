@@ -5,7 +5,7 @@ import time
 from git import Repo
 import streamlit as st
 from dataclasses import dataclass, field
-from shared.constants import SERVER, ServerType
+from shared.constants import COMFY_BASE_PATH, SERVER, ServerType
 from ui_components.methods.file_methods import delete_from_env, load_from_env, save_to_env
 from utils.common_utils import get_current_user, get_toml_config, update_toml_config
 from ui_components.components.query_logger_page import query_logger_page
@@ -144,12 +144,24 @@ def custom_comfy_input_component():
             refresh_app()
 
 
-def health_check_component():    
+def health_check_component():
     c1, c2 = st.columns([1, 1])
     with c1:
+
         def perform_health_check():
             st.session_state["auto_refresh"] = False
             res = run_health_check()
+            st.session_state["error_data"] = res
+            st.session_state["auto_refresh"] = False
+
+        st.button(
+            "Run fresh checkup",
+            on_click=perform_health_check,
+            key="settings_health_check",
+        )
+
+        if "error_data" in st.session_state:
+            res = st.session_state["error_data"]
             err_list = []
             for err in res:
                 err_list.append(
@@ -161,12 +173,7 @@ def health_check_component():
                 st.table(data=err_list)
             else:
                 st.success("No errors found")
-            st.session_state["auto_refresh"] = True
 
-        st.button(
-            "Start check",
-            on_click=perform_health_check
-        )
     with c2:
         st.info(
             "This checks Dough for common issues like incorrect package installation, corrupt/missing files and invalid config"
@@ -184,7 +191,7 @@ def run_health_check():
     """
 
     def get_file_inside_comfy(filename):
-        folder_path = "ComfyUI/"
+        folder_path = COMFY_BASE_PATH
         file_path = None
         for root, dirs, files in os.walk(folder_path):
             for file in files:
@@ -194,17 +201,44 @@ def run_health_check():
         file_hash = None if not file_path else generate_file_hash(file_path)
         return file_path, file_hash
 
+    def extract_model_path(filepath):
+        filepath = "/".join(filepath.split("/")[1:-1]) + "/" if filepath else None
+        if not filepath:
+            return
+
+        models_index = filepath.find("models")
+        if models_index != -1:
+            return filepath[models_index:]
+        else:
+            return filepath
+
+    def paths_are_equal(path1, path2):
+        if not path1 or not path2:
+            return False
+
+        norm_path1 = os.path.normpath(path1)
+        norm_path2 = os.path.normpath(path2)
+
+        norm_path1 = norm_path1.lower()
+        norm_path2 = norm_path2.lower()
+
+        norm_path1 = norm_path1.strip(os.path.sep)
+        norm_path2 = norm_path2.strip(os.path.sep)
+
+        return norm_path1 == norm_path2
+
     error_list = []
 
-    st.write("Checking files... Don't refresh the page, this can take a couple of minutes")
+    # st.write("Checking files... Don't refresh the page, this can take a couple of minutes")
     file_hash_dict = get_toml_config(TomlConfig.FILE_HASH.value)
+    node_commit_dict = get_toml_config(TomlConfig.NODE_VERSION.value)
     for file, val in file_hash_dict.items():
         filepath, file_hash = get_file_inside_comfy(file)  # this will use the BASE_COMFY_PATH
-        filepath = "/".join(filepath.split("/")[1:-1]) + "/" if filepath else None
-        if filepath and val["location"] and filepath != val["location"]:
+        filepath = extract_model_path(filepath)
+        if filepath and val["location"] and not paths_are_equal(filepath, val["location"]):
             error_list.append(
                 ErrorPayload(
-                    error=f"{file} should be at {val['location']}",
+                    error=f"{file} is at {filepath}",
                     error_level=ErrorLevel.SEVERE.value,
                     resolution=f"Move {file} to {val['location']}",
                 )
@@ -219,8 +253,7 @@ def run_health_check():
                 )
             )
 
-    st.write("Checking nodes...")
-    node_commit_dict = get_toml_config(TomlConfig.NODE_VERSION.value)
+    # st.write("Checking nodes...")
     for node, val in node_commit_dict.items():
         node_path = os.path.join("ComfyUI", "custom_nodes", node)
         # TODO: replace this with a more robust hash check
@@ -248,7 +281,7 @@ def run_health_check():
                         )
                     )
 
-    st.write("Checking packages...")
+    # st.write("Checking packages...")
     python_version = sys.version.split()[0]
     if not str(python_version).startswith("3.10"):
         error_list.append(

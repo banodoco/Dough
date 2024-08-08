@@ -28,15 +28,12 @@ from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 from streamlit_autorefresh import st_autorefresh
 
-
-
 def setup_app_ui():
-
     if 'auto_refresh' not in st.session_state:
-        st.session_state['auto_refresh'] = True        
-
+        st.session_state['auto_refresh'] = True
+        
     if st.session_state['auto_refresh']:
-        st_autorefresh(interval=10000, key="datarefresh")
+        st_autorefresh(interval=5000, key="comp123")
 
     data_repo = DataRepo()
 
