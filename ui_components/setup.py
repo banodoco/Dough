@@ -34,6 +34,11 @@ def setup_app_ui():
     if "auto_refresh" not in st.session_state:
         st.session_state["auto_refresh"] = True
 
+    if st.session_state["auto_refresh"]:
+        st_autorefresh(
+            interval=5000,
+            key="autorefresh_widget",
+        )
 
     data_repo = DataRepo()
 

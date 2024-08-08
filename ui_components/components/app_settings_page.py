@@ -16,7 +16,6 @@ from utils.encryption import generate_file_hash
 from utils.enum import ExtendedEnum
 from ui_components.widgets.base_theme import BaseTheme as theme
 from utils.state_refresh import refresh_app
-from streamlit_globalrefresh import st_globalrefresh
 
 class ErrorLevel(ExtendedEnum):
     SEVERE = "severe"  # breaking error
