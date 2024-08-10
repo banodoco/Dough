@@ -152,13 +152,9 @@ def health_check_component():
             st.session_state["auto_refresh"] = False
             res = run_health_check()
             st.session_state["error_data"] = res
-            st.session_state["auto_refresh"] = False
+            st.session_state["auto_refresh"] = True
 
-        st.button(
-            "Run fresh checkup",
-            on_click=perform_health_check,
-            key="settings_health_check",
-        )
+        st.button("Run fresh checkup", on_click=perform_health_check, key="health_check_btn")
 
         if "error_data" in st.session_state:
             res = st.session_state["error_data"]
@@ -254,6 +250,7 @@ def run_health_check():
             )
 
     # st.write("Checking nodes...")
+    node_commit_dict = get_toml_config(TomlConfig.NODE_VERSION.value)
     for node, val in node_commit_dict.items():
         node_path = os.path.join("ComfyUI", "custom_nodes", node)
         # TODO: replace this with a more robust hash check

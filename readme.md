@@ -1,4 +1,4 @@
-# Welcome to Dough v. 0.9.18 (beta)
+# Dough is an open-source art tool for steering video with precision
 
 **⬇️ Scroll down for Setup Instructions - Currently available on Linux & Windows computers with more than 12GB of VRAM, hosted version coming soon.**
 
@@ -20,31 +20,20 @@ And then animate these with granular settings for each frame and Motion LoRAs:
 
 ![animate (1)](https://github.com/user-attachments/assets/2ced74e1-88c7-4c49-a3f4-942bb00f1893)
 
-
-<br>
-As an example, here's a video that's guided with just images on high strength:
-
-<br>
-<img src="https://github.com/banodoco/Dough/assets/34690994/cc88ca21-870d-4b96-b9cc-39698fc5fd2f" width="800">
-
-
-<br>
-While here's a more complex one, with low strength images driving it alongside a guidance video:
+As an example of it in action, here's 4 images steering, alongside a LoRA trained on a video:
 <br>
 <br>
-<img src="https://github.com/banodoco/Dough/assets/34690994/5c2edc07-8aa3-402f-b119-345db26df8b9" width="800">
-<br>
-<br>
-And here's a more complex example combining high strength guidance with a guidance video strongly influencing the motion:
-<br>
-<br>
-
 <img src="https://github.com/banodoco/Dough/assets/34690994/e5d70cc3-03e2-450d-8bc7-b6d1a920af4a" width="800">
-<br>
-<br>
+
+While here are four abstract images animated by each of the different workflows available inside Dough:
+
+![basic workflows](https://github.com/banodoco/steerable-motion/blob/main/demo/basic_workflows.gif)
 
 We're obviously very biased think that it'll be possible to create extraordinarily beautiful things with this and we're excited to see what you make! Please share stuff you made in our [Discord](https://discord.com/invite/8Wx9dFu5tP).
 
+## Artworks created with Dough
+
+You can see a selection of artworks created with Dough [here](https://banodoco.ai/Dough#some-weird-beautiful-and-interesting-things-people-have-made-with-dough-and-steerable-motion-the-technology-behind-it).
 
 ## Setup Instructions
 
@@ -233,10 +222,6 @@ cd Dough
   Drop in our [Discord](https://discord.com/invite/8Wx9dFu5tP).
 </details>
 </details>
-
-## Artworks created with Dough
-
-You can see a selection of artworks created with Dough [here](https://banodoco.ai/Dough#some-weird-beautiful-and-interesting-things-people-have-made-with-dough-and-steerable-motion-the-technology-behind-it).
 
 ## Interested in joining a community of people who are pushing open AI art models to their technical and artistic limits?
 

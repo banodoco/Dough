@@ -522,8 +522,8 @@ def combine_mask_and_input_image(mask_path, input_image_path, overlap_color="tra
         mask_image = mask_image.resize(input_image.size, Image.LANCZOS)
 
     # Convert mask to RGBA if it's not already
-    if mask_image.mode != 'RGBA':
-        mask_image = mask_image.convert('RGBA')
+    if mask_image.mode != "RGBA":
+        mask_image = mask_image.convert("RGBA")
 
     is_white = lambda pixel, threshold=245: all(value > threshold for value in pixel[:3])
     fill_color = (128, 128, 128, 255)  # default grey
@@ -1050,7 +1050,7 @@ def stop_gen(log):
         from comfy_runner.inf import ComfyRunner
 
         comfy_runner = ComfyRunner()
-        comfy_runner.stop_current_generation(log.uuid, 3)
+        comfy_runner.stop_current_generation(log.uuid, 1)
         print(f"Process stopped {log.uuid} ----------")
 
 
@@ -1060,6 +1060,7 @@ def worker(queue):
         if log is None:
             break
         stop_gen(log)
+
 
 def stop_generations_worker():
     queue = multiprocessing.Queue()
