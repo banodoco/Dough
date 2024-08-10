@@ -31,6 +31,35 @@ from streamlit.elements.utils import _shown_default_value_warning
 
 _shown_default_value_warning = True
 
+checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
+SD_MODEL_DICT = {
+    "realisticVisionV60B1_v51VAE.safetensors": {
+        "url": "https://civitai.com/api/download/models/130072",
+        "filename": "realisticVisionV60B1_v51VAE.safetensors",
+        "dest": checkpoints_dir,
+    },
+    "anything_v50.safetensors": {
+        "url": "https://civitai.com/api/download/models/30163",
+        "filename": "anything_v50.safetensors",
+        "dest": checkpoints_dir,
+    },
+    "dreamshaper_8.safetensors": {
+        "url": "https://civitai.com/api/download/models/128713",
+        "filename": "dreamshaper_8.safetensors",
+        "dest": checkpoints_dir,
+    },
+    "epicrealism_pureEvolutionV5.safetensors": {
+        "url": "https://civitai.com/api/download/models/134065",
+        "filename": "epicrealism_pureEvolutionV5.safetensors",
+        "dest": checkpoints_dir,
+    },
+    "majicmixRealistic_v6.safetensors": {
+        "url": "https://civitai.com/api/download/models/94640",
+        "filename": "majicmixRealistic_v6.safetensors",
+        "dest": checkpoints_dir,
+    },
+}
+
 
 def animation_sidebar(
     shot_uuid,
@@ -196,11 +225,7 @@ def video_motion_settings(shot_uuid, img_list):
 
         loop1, loop2 = st.columns([1, 1])
         with loop1:
-            allow_for_looping = st_memory.checkbox(
-                "Allow for looping",
-                key="allow_for_looping",
-                value=False
-            )
+            allow_for_looping = st_memory.checkbox("Allow for looping", key="allow_for_looping", value=False)
         with loop2:
             if allow_for_looping:
                 st.info("To get a perfect loop, you should add the first image as the last.")
@@ -213,8 +238,6 @@ def video_motion_settings(shot_uuid, img_list):
             label_visibility="visible",
             key="stabilise_motion",
         )
-
-
 
     if f"structure_control_image_{shot_uuid}" not in st.session_state:
         st.session_state[f"structure_control_image_{shot_uuid}"] = None
@@ -473,125 +496,103 @@ def select_motion_lora_element(shot_uuid, model_files):
 
 def select_sd_model_element(shot_uuid, default_model):
     st.markdown("##### Style model")
-    tab1, tab2 = st.tabs(["Choose Model", "Download Models"])
+    # tab1, tab2 = st.tabs(["Choose Model", "Download Models"])
 
     checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
     all_files = list_dir_files(checkpoints_dir, depth=1)
-    if len(all_files) == 0:
-        model_files = [default_model]
+    # if len(all_files) == 0:
+    #     model_files = [default_model]
 
-    else:
-        model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
-        ignored_model_list = ["dynamicrafter_512_interp_v1.ckpt"]
-        model_files = [file for file in model_files if file not in ignored_model_list]
+    # else:
+    model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
+    ignored_model_list = ["dynamicrafter_512_interp_v1.ckpt"]
+    model_files = [file for file in model_files if file not in ignored_model_list]
 
-    sd_model_dict = {
-        "Realistic_Vision_V5.1.safetensors": {
-            "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/Realistic_Vision_V5.1.safetensors.tar",
-            "filename": "Realistic_Vision_V5.1.safetensors.tar",
-        },
-        "Anything V3 FP16 Pruned": {
-            "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/anything-v3-fp16-pruned.safetensors.tar",
-            "filename": "anything-v3-fp16-pruned.safetensors.tar",
-        },
-        "Deliberate V2": {
-            "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/Deliberate_v2.safetensors.tar",
-            "filename": "Deliberate_v2.safetensors.tar",
-        },
-        "Dreamshaper 8": {
-            "url": "https://weights.replicate.delivery/default/comfy-ui/checkpoints/dreamshaper_8.safetensors.tar",
-            "filename": "dreamshaper_8.safetensors.tar",
-        },
-        "epicrealism_pureEvolutionV5": {
-            "url": "https://civitai.com/api/download/models/134065",
-            "filename": "epicrealism_pureEvolutionv5.safetensors",
-        },
-        "majicmixRealistic_v6": {
-            "url": "https://civitai.com/api/download/models/94640",
-            "filename": "majicmixRealistic_v6.safetensors",
-        },
-    }
+    model_files += [v["filename"] for v in SD_MODEL_DICT.values()]
+    model_files = list(set(model_files))
 
     cur_model = st.session_state[f"ckpt_{shot_uuid}"]
     current_model_index = model_files.index(cur_model) if (cur_model and cur_model in model_files) else 0
 
     # ---------------- SELECT CKPT --------------
-    with tab1:
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            sd_model = ""
+    # with tab1:
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        sd_model = ""
 
-            def update_model():
-                global sd_model
-                sd_model = checkpoints_dir + "/" + st.session_state["sd_model_video"]
+        def update_model():
+            global sd_model
+            sd_model = checkpoints_dir + "/" + st.session_state["sd_model_video"]
 
-            if model_files and len(model_files):
-                sd_model = st.selectbox(
-                    label="Styling model:",
-                    options=model_files,
-                    key="sd_model_video",
-                    index=current_model_index,
-                    on_change=update_model,
-                )
-            else:
-                st.write("")
-                st.info("Default model Dreamshaper 8 would be selected")
-                sd_model = default_model
+        if model_files and len(model_files):
+            sd_model = st.selectbox(
+                label="Styling model:",
+                options=model_files,
+                key="sd_model_video",
+                index=current_model_index,
+                on_change=update_model,
+            )
+        else:
+            st.write("")
+            st.info("Default model Dreamshaper 8 would be selected")
+            sd_model = default_model
 
-        with col2:
-            if len(all_files) == 0:
-                st.write("")
-                st.info("This is the default model - to download more, go to the Download Models tab.")
-            else:
-                st.write("")
-                st.info("Please only select SD1.5 based models")
-                # st.info("To download more models, go to the Download Models tab.")
+    with col2:
+        if len(all_files) == 0:
+            st.write("")
+            st.info("This is the default model - to download more, go to the Download Models tab.")
+        else:
+            st.write("")
+            st.info(
+                "Please only select SD1.5 based models. E.g. dreamshaper_8, Deliberate_v2, realistic_vision_v51, majicmix, epicrealism etc.."
+            )
+            # st.info("To download more models, go to the Download Models tab.")
 
     # ---------------- ADD CKPT ---------------
-    with tab2:
-        where_to_get_model = st.radio(
-            "Where would you like to get the model from?",
-            options=["Our list", "Upload a model", "From a URL"],
-            key="where_to_get_model",
-        )
+    # with tab2:
+    #     where_to_get_model = st.radio(
+    #         "Where would you like to get the model from?",
+    #         options=["Our list", "Upload a model", "From a URL"],
+    #         key="where_to_get_model",
+    #     )
 
-        if where_to_get_model == "Our list":
-            model_name_selected = st.selectbox(
-                "Which model would you like to download?",
-                options=list(sd_model_dict.keys()),
-                key="model_to_download",
-            )
+    #     if where_to_get_model == "Our list":
+    #         model_name_selected = st.selectbox(
+    #             "Which model would you like to download?",
+    #             options=list(sd_model_dict.keys()),
+    #             key="model_to_download",
+    #         )
 
-            if st.button("Download Model", key="download_model"):
-                download_file_widget(
-                    sd_model_dict[model_name_selected]["url"],
-                    sd_model_dict[model_name_selected]["filename"],
-                    checkpoints_dir,
-                )
+    #         if st.button("Download Model", key="download_model"):
+    #             download_file_widget(
+    #                 sd_model_dict[model_name_selected]["url"],
+    #                 sd_model_dict[model_name_selected]["filename"],
+    #                 checkpoints_dir,
+    #             )
 
-        elif where_to_get_model == "Upload a model":
-            st.info("It's simpler to just drop this into the ComfyUI/models/checkpoints directory.")
+    #     elif where_to_get_model == "Upload a model":
+    #         st.info("It's simpler to just drop this into the ComfyUI/models/checkpoints directory.")
 
-        elif where_to_get_model == "From a URL":
-            text1, text2 = st.columns([1, 1])
-            with text1:
-                text_input = st.text_input("Enter the URL of the model", key="text_input")
-            with text2:
-                st.info(
-                    "Make sure to get the download url of the model. \n\n For example, from Civit, this should look like this: https://civitai.com/api/download/models/179446. \n\n While from Hugging Face, it should look like this: https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors"
-                )
+    #     elif where_to_get_model == "From a URL":
+    #         text1, text2 = st.columns([1, 1])
+    #         with text1:
+    #             text_input = st.text_input("Enter the URL of the model", key="text_input")
+    #         with text2:
+    #             st.info(
+    #                 "Make sure to get the download url of the model. \n\n For example, from Civit, this should look like this: https://civitai.com/api/download/models/179446. \n\n While from Hugging Face, it should look like this: https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors"
+    #             )
 
-            if st.button("Download Model", key="download_model_url"):
-                with st.spinner("Downloading model..."):
-                    save_directory = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
-                    os.makedirs(save_directory, exist_ok=True)
-                    response = requests.get(text_input)
-                    if response.status_code == 200:
-                        with open(os.path.join(save_directory, text_input.split("/")[-1]), "wb") as f:
-                            f.write(response.content)
-                        st.success(f"Downloaded model to {save_directory}")
-                    else:
-                        st.error("Failed to download model")
+    #         if st.button("Download Model", key="download_model_url"):
+    #             with st.spinner("Downloading model..."):
+    #                 save_directory = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
+    #                 os.makedirs(save_directory, exist_ok=True)
+    #                 response = requests.get(text_input)
+    #                 if response.status_code == 200:
+    #                     with open(os.path.join(save_directory, text_input.split("/")[-1]), "wb") as f:
+    #                         f.write(response.content)
+    #                     st.success(f"Downloaded model to {save_directory}")
+    #                 else:
+    #                     st.error("Failed to download model")
 
     return (
         sd_model,
@@ -781,21 +782,20 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 )
 
                                 if slider_value != st.session_state[value_key]:
-                                    st.session_state[value_key] = slider_value                                    
+                                    st.session_state[value_key] = slider_value
                                     update_last_changed(value_key, slider_value)
                                     if idx == 0:  # First frame
-                                        st.session_state[f'frames_to_preview_{shot_uuid}'] = (1, 2)
+                                        st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, 2)
                                     elif idx == len(img_list) - 1:  # Last frame
-                                        st.session_state[f'frames_to_preview_{shot_uuid}'] = (idx, idx + 1)
+                                        st.session_state[f"frames_to_preview_{shot_uuid}"] = (idx, idx + 1)
                                     else:  # Middle frames
-                                        st.session_state[f'frames_to_preview_{shot_uuid}'] = (idx, idx + 2)
+                                        st.session_state[f"frames_to_preview_{shot_uuid}"] = (idx, idx + 2)
                                     refresh_app()
                                 return slider_value
 
                             def update_last_changed(key, value):
                                 st.session_state["last_frame_changed"] = key
                                 st.session_state["last_value_set"] = value
-                                
 
                             strength_of_frame = create_slider(
                                 label="Strength of frame:",

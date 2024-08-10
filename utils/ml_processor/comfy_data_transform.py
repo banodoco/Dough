@@ -14,6 +14,8 @@ from ui_components.methods.file_methods import (
     zip_images,
     determine_dimensions_for_sdxl,
 )
+from ui_components.widgets.model_selector_element import SD3_MODEL_DOWNLOAD_LIST, SDXL_MODEL_DOWNLOAD_LIST
+from ui_components.widgets.sm_animation_style_element import SD_MODEL_DICT
 from utils.common_utils import padded_integer
 from utils.constants import MLQueryObject, StabliseMotionOption
 from utils.data_repo.data_repo import DataRepo
@@ -108,7 +110,7 @@ class ComfyDataTransform:
         workflow["10"]["inputs"]["noise_seed"] = seed
         workflow["10"]["inputs"]["noise_seed"] = seed
 
-        workflow["4"]["inputs"]["ckpt_name"] = model
+        workflow["4"]["inputs"]["ckpt_name"] = model["filename"]
 
         workflow["5"]["inputs"]["width"], workflow["5"]["inputs"]["height"] = width, height
         workflow["6"]["inputs"]["text"] = workflow["15"]["inputs"]["text"] = positive_prompt
@@ -234,7 +236,7 @@ class ComfyDataTransform:
         workflow["15"]["inputs"]["temperature"] = temperature
 
         return json.dumps(workflow), output_node_ids, [], []
-    
+
     @staticmethod
     def transform_sdxl_inpainting_workflow(query: MLQueryObject):
         data_repo = DataRepo()
@@ -248,14 +250,14 @@ class ComfyDataTransform:
         width, height = determine_dimensions_for_sdxl(width, height)
 
         file = query.file_list[0]
-        
+
         print(f"width: {width}, height: {height}")
         # Resize the input image
         resized_file = normalize_size_internal_file_obj(
             file,
             dim=[width, height],
             create_new_file=True,
-        ) 
+        )
 
         # Update the query with the resized image
         query.data = {"data": {"file_combined_img": resized_file.uuid}}
@@ -456,20 +458,20 @@ class ComfyDataTransform:
                     json_data["545"]["inputs"]["motion_lora"][0] = "536"
 
             return json_data
-        
+
         def allow_for_looping(workflow):
             # Remove nodes 614, 615, 616, 687, and 354
-            nodes_to_remove = ['614', '615', '616', '687', '354']
+            nodes_to_remove = ["614", "615", "616", "687", "354"]
             for node in nodes_to_remove:
                 if node in workflow:
                     del workflow[node]
-            
+
             # Modify node 559 (FILM VFI) to connect directly to the KSampler output
-            if '559' in workflow:
-                workflow['559']['inputs']['frames'] = ['207', 5]
-            
+            if "559" in workflow:
+                workflow["559"]["inputs"]["frames"] = ["207", 5]
+
             return workflow
-        
+
         def convert_to_specific_workflow(json_data, type_of_generation, extra_models_list):
 
             if type_of_generation == "Slurshy Realistiche":
@@ -779,13 +781,15 @@ class ComfyDataTransform:
         workflow["543"]["inputs"]["max_frames"] = int(float(sm_data.get("max_frames")))
         workflow["543"]["inputs"]["text"] = sm_data.get("individual_negative_prompts")
 
-        
-
         workflow, extra_models_list = convert_to_specific_workflow(
             workflow,
             sm_data.get("type_of_generation", "Fast With A Price"),
             extra_models_list,
         )
+
+        for v in SD_MODEL_DICT.values():
+            if v["filename"] == ckpt:
+                extra_models_list.append(v)
 
         # maps stablise motion values <-> sparse nonhint multiplier (for normal and lcm models)
         stablise_motion_value_map = {
@@ -803,7 +807,7 @@ class ComfyDataTransform:
         ][ad_mode]
 
         ignore_list = sm_data.get("lora_data", [])
-        
+
         if sm_data.get("allow_for_looping", False):
             workflow = allow_for_looping(workflow)
 
@@ -901,14 +905,10 @@ class ComfyDataTransform:
 
         # adding download link if it's the default model
         extra_model_list = []
-        if model == "sd3_medium_incl_clips.safetensors":
-            extra_model_list = [
-                {
-                    "url": "https://huggingface.co/lone682/sd3/resolve/main/sd3_medium_incl_clips_t5xxlfp8.safetensors?download=true",
-                    "filename": "sd3_medium_incl_clips.safetensors",
-                    "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
-                }
-            ]
+        combined_models = {**SDXL_MODEL_DOWNLOAD_LIST, **SD3_MODEL_DOWNLOAD_LIST}
+        for v in combined_models.values():
+            if v["filename"] == model:
+                extra_model_list.append(v)
 
         return json.dumps(workflow), output_node_ids, extra_model_list, []
 
@@ -927,31 +927,31 @@ class ComfyDataTransform:
         additional_description_text = query_data.get("additional_description_text", "")
         additional_style_text = query_data.get("additional_style_text", "")
         model = query_data.get("sdxl_model", "sd_xl_base_1.0.safetensors")
+
         seed = random_seed()
         style_strength = query.strength
 
         # @Peter you can use this weight, passed from the frontend
         def add_nth_node(workflow, n, img_file, weight):
             style_influence, composition_influence, vibe_influence = map(float, weight[:3])
-    
+
             ipa_node_idx_list = []
             for k, v in workflow.items():
                 if v["class_type"] in ["IPAdapterMS", "IPAdapterAdvanced"]:
                     ipa_node_idx_list.append(int(k))
             ipa_node_idx_list.sort(reverse=True)
-    
+
             node_idx = 50 + n * 10
-    
+
             # Load Image
             workflow[str(node_idx)] = {
                 "inputs": {"image": img_file.filename, "upload": "image"},
                 "class_type": "LoadImage",
                 "_meta": {"title": "Load Image"},
             }
-    
+
             last_model_node = ipa_node_idx_list[0] if ipa_node_idx_list else 11
             original_model_node = last_model_node  # Store the original model node
-
 
             if style_influence > 0:
                 # Prep Image For ClipVision
@@ -1113,71 +1113,11 @@ class ComfyDataTransform:
 
         workflow = add_reference_images(workflow, img_list, weight=style_strength)
 
-        extra_model_list = [
-            {
-                "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
-                "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/image_encoder/model.safetensors",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "clip_vision"),
-            },
-            {
-                "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
-                "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "ipadapter"),
-            },
-            {
-                "filename": "ip_plus_composition_sdxl.safetensors",
-                "url": "https://huggingface.co/ostris/ip-composition-adapter/resolve/main/ip_plus_composition_sdxl.safetensors",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "ipadapter"),
-            },
-        ]
-        if model == "Juggernaut-XL_v9_v2.safetensors":
-            extra_model_list.append(
-                {
-                    "filename": "Juggernaut-XL_v9_v2.safetensors",
-                    "url": "https://huggingface.co/RunDiffusion/Juggernaut-XL-v9/resolve/main/Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
-                    "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
-                }
-            )
-
-        # with open("workflow.json", "w") as f:
-        #     json.dump(workflow, f, indent=4)
-
-        return json.dumps(workflow), output_node_ids, extra_model_list, []
-
-        def add_reference_images(workflow, img_list, weight, **kwargs):
-
-            num_images = len(img_list)
-
-            last_node_index = 4
-
-            for i in range(num_images):
-                last_node_index = add_nth_node(workflow, i + 1, img_list[i], weight[i])
-                for k, v in kwargs.items():
-                    if k in workflow[str(last_node_index)]["inputs"]:
-                        workflow[str(last_node_index)]["inputs"][k] = v
-
-            workflow["3"]["inputs"]["model"] = [str(last_node_index), 0]
-
-            return workflow
-
-        workflow["3"]["inputs"]["seed"] = seed
-        workflow["5"]["inputs"]["width"] = width
-        workflow["5"]["inputs"]["height"] = height
-        workflow["4"]["inputs"]["ckpt_name"] = model
-        workflow["6"]["inputs"]["text"] = (
-            image_prompt + ", " + additional_description_text + ", " + additional_style_text
-        )
-
-        workflow["7"]["inputs"]["text"] = negative_prompt
-
-        if lightning:
-            workflow["3"]["inputs"]["cfg"] = 1.9
-            workflow["3"]["inputs"]["steps"] = 12
-            workflow["3"]["inputs"]["scheduler"] = "sgm_uniform"
-
-        img_list = query.file_list
-
-        workflow = add_reference_images(workflow, img_list, weight=style_strength)
+        combined_models = {**SDXL_MODEL_DOWNLOAD_LIST, **SD3_MODEL_DOWNLOAD_LIST}
+        model_details = None
+        for v in combined_models.values():
+            if v["filename"] == model:
+                model_details = v
 
         extra_model_list = [
             {
@@ -1196,17 +1136,9 @@ class ComfyDataTransform:
                 "dest": os.path.join(COMFY_BASE_PATH, "models", "ipadapter"),
             },
         ]
-        if model == "Juggernaut-XL_v9_v2.safetensors":
-            extra_model_list.append(
-                {
-                    "filename": "Juggernaut-XL_v9_v2.safetensors",
-                    "url": "https://huggingface.co/RunDiffusion/Juggernaut-XL-v9/resolve/main/Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
-                    "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
-                }
-            )
 
-        # with open("workflow.json", "w") as f:
-        #     json.dump(workflow, f, indent=4)
+        if model_details:
+            extra_model_list.append(model_details)
 
         return json.dumps(workflow), output_node_ids, extra_model_list, []
 
@@ -1303,7 +1235,6 @@ def get_file_path_list(model: MLModel, query_obj: MLQueryObject):
     # resizing the files to dimensions that work well with SDXL
     new_file_map = {}  # maps old_file_name : new_resized_file_name
     if model.display_name() in models_using_sdxl:
-
 
         res = []
         for file in file_list:

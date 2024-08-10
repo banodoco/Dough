@@ -380,7 +380,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         "How to display generated prompts:",
                         ["Replace existing prompts", "Add to existing prompts", "Show separately"],
                         index=st.session_state["insp_how_to_display"],
-                        help="Select how you want to display the generated prompts.",                        
+                        help="Select how you want to display the generated prompts.",
                     )
 
                     if not check_replicate_key():
@@ -401,34 +401,39 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             if how_to_display == "Replace existing prompts":
                                 st.session_state["list_of_prompts"] = generated_prompts.split("|")
                             elif how_to_display == "Add to existing prompts":
-                                st.session_state["list_of_prompts"] = st.session_state["list_of_prompts"] + generated_prompts.split("|")
+                                st.session_state["list_of_prompts"] = st.session_state[
+                                    "list_of_prompts"
+                                ] + generated_prompts.split("|")
                             elif how_to_display == "Show separately":
-                                st.session_state['prompts_to_display_separately'] = generated_prompts
+                                st.session_state["prompts_to_display_separately"] = generated_prompts
 
                             refresh_app()
-                    
-                    if 'prompts_to_display_separately' not in st.session_state:
-                        st.session_state['prompts_to_display_separately'] = ""
 
-                    if st.session_state['prompts_to_display_separately'] != "":                        
+                    if "prompts_to_display_separately" not in st.session_state:
+                        st.session_state["prompts_to_display_separately"] = ""
+
+                    if st.session_state["prompts_to_display_separately"] != "":
                         st.write("Generated prompts:")
-                        st.caption(st.session_state['prompts_to_display_separately'])
+                        st.caption(st.session_state["prompts_to_display_separately"])
                         bottom1, bottom2, bottom3 = st.columns([1, 1, 1])
                         with bottom1:
                             if st.button("Remove"):
-                                st.session_state['prompts_to_display_separately'] = ""
+                                st.session_state["prompts_to_display_separately"] = ""
                                 refresh_app()
                         with bottom2:
                             if st.button("Replace existing prompts"):
-                                st.session_state["list_of_prompts"] = st.session_state['prompts_to_display_separately'].split("|")
-                                st.session_state['prompts_to_display_separately'] = ""
+                                st.session_state["list_of_prompts"] = st.session_state[
+                                    "prompts_to_display_separately"
+                                ].split("|")
+                                st.session_state["prompts_to_display_separately"] = ""
                                 refresh_app()
                         with bottom3:
                             if st.button("Add to existing prompts"):
-                                st.session_state["list_of_prompts"] = st.session_state["list_of_prompts"] + st.session_state['prompts_to_display_separately'].split("|")
-                                st.session_state['prompts_to_display_separately'] = ""
+                                st.session_state["list_of_prompts"] = st.session_state[
+                                    "list_of_prompts"
+                                ] + st.session_state["prompts_to_display_separately"].split("|")
+                                st.session_state["prompts_to_display_separately"] = ""
                                 refresh_app()
-                                
 
                 else:
                     edit_text = st.text_area(
@@ -487,6 +492,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 st.session_state["insp_model_idx"] = T2IModel.value_list().index(type_of_model)
                 refresh_app()
 
+            lightning = False
+            list_of_strengths = []
             model1, model2, _ = st.columns([1.5, 1, 0.5])
             with model1:
                 if type_of_model == T2IModel.SDXL.value:
@@ -503,6 +510,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         selected_model=st.session_state["insp_selected_model"],
                     )
 
+                """
+                model - {url, filename, desc}
+                """
                 if model != st.session_state["insp_selected_model"]:
                     st.session_state["insp_selected_model"] = model
                     refresh_app()
@@ -648,7 +658,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         st.session_state[key] = [st.session_state[key]] * 3
 
                 # Determine if we should use the first value for all sliders
-                list_of_strengths = []
                 if type_of_style_input != "None":
                     use_first_value = len(st.session_state["list_of_style_references"]) == 1
 
@@ -662,7 +671,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                     if isinstance(uploaded_file, str) and uploaded_file.startswith("http"):
                                         st.image(uploaded_file)
                                     else:
-                                        display_img = Image.open(uploaded_file)                                        
+                                        display_img = Image.open(uploaded_file)
                                         st.image(display_img)
 
                                     # Determine which index to use for the sliders
@@ -767,23 +776,25 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 run_all_prompts = st_memory.toggle(
                     "Run all prompts:",
                     value=st.session_state["insp_test_mode"],
-                help="This will only generate images for the first prompt.",
-            )
+                    help="This will only generate images for the first prompt.",
+                )
             if not run_all_prompts:
                 # range of prompts to test
-                with h2:   
+                with h2:
                     # if there's more than 1 prompt, show a slider
-                    if len(st.session_state['list_of_prompts']) > 1:
+                    if len(st.session_state["list_of_prompts"]) > 1:
                         prompts_to_test = st.multiselect(
                             "Prompts to run:",
                             options=list(range(1, len(st.session_state["list_of_prompts"]) + 1)),
                             default=[1, 2],
-                            format_func=lambda x: f"{st.session_state['list_of_prompts'][x-1]}"
+                            format_func=lambda x: f"{st.session_state['list_of_prompts'][x-1]}",
                         )
-                        
+
                         # Convert selected indices to actual prompts
-                        prompts_to_test = [st.session_state['list_of_prompts'][i-1] for i in prompts_to_test]                                                
-                        
+                        prompts_to_test = [
+                            st.session_state["list_of_prompts"][i - 1] for i in prompts_to_test
+                        ]
+
                         # Number of prompts selected
                         number_of_prompts = len(prompts_to_test)
                     else:
@@ -828,20 +839,32 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             else:
                 button_status = False
                 help = ""
-            
+
             st.markdown("***")
-            
+
             def generate_images(
-                ml_client, project_uuid, shot_uuid, timing_uuid, position, prompts_to_be_processed,
-                images_per_prompt, type_of_model, model, lightning, project_settings,
-                additional_description_text, additional_style_text, negative_prompt,
-                list_of_strengths, default_form_values
+                ml_client,
+                project_uuid,
+                shot_uuid,
+                timing_uuid,
+                position,
+                prompts_to_be_processed,
+                images_per_prompt,
+                type_of_model,
+                model,
+                lightning,
+                project_settings,
+                additional_description_text,
+                additional_style_text,
+                negative_prompt,
+                list_of_strengths,
+                default_form_values,
             ):
                 input_image_file_list = []
                 atleast_one_log_created = False
-                for img in st.session_state["list_of_style_references"]:
+                for img in st.session_state.get("list_of_style_references", []):
                     input_image_file = save_new_image(img, project_uuid)
-                    input_image_file_list.append(input_image_file)                    
+                    input_image_file_list.append(input_image_file)
 
                 for _, image_prompt in enumerate(prompts_to_be_processed):
                     for _ in range(images_per_prompt):
@@ -941,7 +964,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         data_repo.update_project(
                                             uuid=project.uuid, meta_data=json.dumps(meta_data)
                                         )
-          
 
             # In the part of the code where you create the button:
             if st.button(
@@ -951,11 +973,23 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 help=help,
                 on_click=generate_images,
                 args=(
-                    get_ml_client(), project_uuid, shot_uuid, timing_uuid, position, prompts_to_be_processed,
-                    images_per_prompt, type_of_model, model, lightning, project_settings,
-                    additional_description_text, additional_style_text, negative_prompt,
-                    list_of_strengths, default_form_values
-                )
+                    get_ml_client(),
+                    project_uuid,
+                    shot_uuid,
+                    timing_uuid,
+                    position,
+                    prompts_to_be_processed,
+                    images_per_prompt,
+                    type_of_model,
+                    model,
+                    lightning,
+                    project_settings,
+                    additional_description_text,
+                    additional_style_text,
+                    negative_prompt,
+                    list_of_strengths,
+                    default_form_values,
+                ),
             ):
                 st.success("Images added to queue for processing!")
                 refresh_app()
