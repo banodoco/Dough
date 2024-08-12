@@ -121,7 +121,7 @@ def update_comfy_runner():
                 update_git_repo(comfy_runner_dir)
         except Exception as e:
             print(f"Error occured: {str(e)}")
-            
+
         try:
             subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
             print(f"ComfyRunner requirements installed successfully")
@@ -168,6 +168,17 @@ def update_dough():
 
 def update_comfy_ui():
     global update_event
+
+    # update ComfyUI itself
+    if os.path.exists(comfy_ui_dir):
+        print("Updating ComfyUI...")
+        try:
+            update_git_repo(comfy_ui_dir)
+            print("ComfyUI update successful")
+        except Exception as e:
+            print(f"Error updating ComfyUI: {str(e)}")
+
+    # update custom nodes
     custom_nodes_dir = os.path.join(comfy_ui_dir, "custom_nodes")
     node_commit_dict = get_toml_config(TomlConfig.NODE_VERSION.value)
 

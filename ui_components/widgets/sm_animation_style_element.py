@@ -511,6 +511,11 @@ def select_sd_model_element(shot_uuid, default_model):
     model_files += [v["filename"] for v in SD_MODEL_DICT.values()]
     model_files = list(set(model_files))
 
+    # setting default
+    if "dreamshaper_8.safetensors" in model_files:
+        model_files.remove("dreamshaper_8.safetensors")
+        model_files.insert(0, "dreamshaper_8.safetensors")
+
     cur_model = st.session_state[f"ckpt_{shot_uuid}"]
     current_model_index = model_files.index(cur_model) if (cur_model and cur_model in model_files) else 0
 
@@ -540,7 +545,7 @@ def select_sd_model_element(shot_uuid, default_model):
     with col2:
         if len(all_files) == 0:
             st.write("")
-            st.info("This is the default model - to download more, go to the Download Models tab.")
+            st.info("These models will be auto-downloaded during the generation")
         else:
             st.write("")
             st.info(

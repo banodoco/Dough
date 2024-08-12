@@ -18,19 +18,19 @@
 
 [node_version]
 "ComfyUI-Manager" = { "url" = "https://github.com/ltdrdata/ComfyUI-Manager", "commit_hash" = "61dff9dca6dc6a420bf2975326f54660cf081cd1"}
-"ComfyUI_IPAdapter_plus" = { "url" = "https://github.com/cubiq/ComfyUI_IPAdapter_plus", "commit_hash" = "13fedc634d1abf19d289fc7a7b5a74589465206c"}
-"comfyui-various" = { "url" = "https://github.com/jamesWalker55/comfyui-various", "commit_hash" = "ec58185387c75b74ee93d6f835ff480772dbc64d"}
-"comfy_PoP" = { "url" = "https://github.com/picturesonpictures/comfy_PoP", "commit_hash" = "4cb7bf7c55c484e50dddf6b881739b7a506b0946"}
-"ComfyUI-Frame-Interpolation" = { "url" = "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation", "commit_hash" = "1c4c4b4f9a99e7e6eb7c5a5f3fdc7c9dfd319357"}
-"efficiency-nodes-comfyui" = { "url" = "https://github.com/jags111/efficiency-nodes-comfyui", "commit_hash" = "a5422d6599971881b5fc80d0496ca3a8b6108267"}
-"ComfyUI_FizzNodes" = { "url" = "https://github.com/FizzleDorf/ComfyUI_FizzNodes", "commit_hash" = "3db5b71e2ff4f7016ce91c860c6e794fa41f174d"}
-"ComfyUI-Advanced-ControlNet" = { "url" = "https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet", "commit_hash" = "f6adc32937413b46ee0b489d03eb539e6999d7e1"}
-"ComfyUI-AnimateDiff-Evolved" = { "url" = "https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved", "commit_hash" = "e2313c42fdadf2b6d9cf019c9695c419ac482548"}
-"ComfyUI-VideoHelperSuite" = { "url" = "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite", "commit_hash" = "08dc3d63a76942c0bdfd8492a50d1585e5252149"}
-"ComfyUI_essentials" = { "url" = "https://github.com/cubiq/ComfyUI_essentials", "commit_hash" = "b0cfa1bfb4f27fdf41d021b27d7ac930e704b0e7"}
-"steerable-motion" = { "url" = "https://github.com/banodoco/steerable-motion", "commit_hash" = "d747e46b215d84407578fd2a6ed26763185d00c1"}
-"ComfyUI_tinyterraNodes" = { "url" = "https://github.com/TinyTerra/ComfyUI_tinyterraNodes", "commit_hash" = "d094cd15da030b1153f2aeaf27f718e21280d8a8"}
+"ComfyUI_IPAdapter_plus" = { "url" = "https://github.com/cubiq/ComfyUI_IPAdapter_plus", "commit_hash" = "ce9b62165b89fbf8dd3be61057d62a5f8bc29e19"}
+"comfyui-various" = { "url" = "https://github.com/jamesWalker55/comfyui-various", "commit_hash" = "d0724ccec3dd20e8f07332a68a60332affe9963a"}
+"comfy_PoP" = { "url" = "https://github.com/picturesonpictures/comfy_PoP", "commit_hash" = "db66c9777c6ab45f9c7056f1d8f365b0d4f2b339"}
+"ComfyUI-Frame-Interpolation" = { "url" = "https://github.com/Fannovel16/ComfyUI-Frame-Interpolation", "commit_hash" = "483dfe64465369e077d351ed2f1acbf7dc046864"}
+"efficiency-nodes-comfyui" = { "url" = "https://github.com/jags111/efficiency-nodes-comfyui", "commit_hash" = "b471390b88c9ac8a87c34ad9d882a520296b6fd8"}
+"ComfyUI_FizzNodes" = { "url" = "https://github.com/FizzleDorf/ComfyUI_FizzNodes", "commit_hash" = "0e30c12400064de068ab599b045b430e3c0ff3cf"}
+"ComfyUI-Advanced-ControlNet" = { "url" = "https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet", "commit_hash" = "68e5cd41e43cf0ec0a052167ef2c1c1bfb3aac7d"}
+"ComfyUI-AnimateDiff-Evolved" = { "url" = "https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved", "commit_hash" = "925511d139c0ea3b09363358fc877010808336cb"}
+"ComfyUI-VideoHelperSuite" = { "url" = "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite", "commit_hash" = "6bffe8b90f4464f76f1606bd93b94f1ac8d38041"}
+"ComfyUI_essentials" = { "url" = "https://github.com/cubiq/ComfyUI_essentials", "commit_hash" = "a94f25989f66b0b9cffcac3af33bae850ee3b1af"}
+"steerable-motion" = { "url" = "https://github.com/banodoco/steerable-motion", "commit_hash" = "b95e9eed09741bd3f0fc3933ab45d09f6f055aae"}
+"ComfyUI_tinyterraNodes" = { "url" = "https://github.com/TinyTerra/ComfyUI_tinyterraNodes", "commit_hash" = "d2dbe5d98bba6940c85364bfc7796e0432d35874"}
 
 
 [comfy]
-commit_hash = "ac151ac1698624bc4e321addb8c126069aced4b0"
+commit_hash = "ad76574cb8b28ee498f3dceafc9d00b56f12f992"
