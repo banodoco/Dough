@@ -845,7 +845,8 @@ class ComfyDataTransform:
         if sm_data.get("allow_for_looping", False):
             workflow = allow_for_looping(workflow)
 
-
+        with open("workflow.json", "w") as f:
+            json.dump(workflow, f, indent=4)
 
         return json.dumps(workflow), output_node_ids, extra_models_list, ignore_list
 
