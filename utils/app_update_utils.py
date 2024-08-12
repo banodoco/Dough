@@ -121,6 +121,12 @@ def update_comfy_runner():
                 update_git_repo(comfy_runner_dir)
         except Exception as e:
             print(f"Error occured: {str(e)}")
+            
+        try:
+            subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
+            print(f"ComfyRunner requirements installed successfully")
+        except subprocess.CalledProcessError as e:
+            print(f"Error installing requirements for ComfyRunner: {str(e)}")
 
         print("Comfy runner updated")
         move_to_root()
