@@ -35,7 +35,7 @@ def setup_app_ui():
 
     if st.session_state["auto_refresh"]:
         st_autorefresh(
-            interval=5000,
+            interval=10000,
             key="autorefresh_widget",
         )
 
