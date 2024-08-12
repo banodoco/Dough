@@ -55,16 +55,19 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
             save1, save2 = st.columns([1, 1])
             with save1:
                 st.warning("You're in frame moving mode. You must press 'Save' to save changes.")
+                def save_frame_changes():
+                    st.session_state['auto_refresh'] = False
+                    update_shot_frames(shot_uuid)
+                    st.session_state['auto_refresh'] = True                    
+
                 if st.button(
                     "Save",
                     key=f"save_move_frame_{shot.uuid}",
                     help="Save the changes made in 'move frame' mode",
                     use_container_width=True,
                     type="primary",
-                ):
-                    st.session_state['auto_refresh'] = False
-                    update_shot_frames(shot_uuid)
-                    st.session_state['auto_refresh'] = True
+                    on_click=save_frame_changes,
+                ):                                                            
                     refresh_app()
 
             if f"shot_data_{shot_uuid}" not in st.session_state:
