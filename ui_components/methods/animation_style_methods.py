@@ -433,7 +433,7 @@ def get_keyframe_positions(
 postfix_str = "_generate_inference"
 
 
-def toggle_generate_inference(position, **kwargs):
+def toggle_generate_inference(position, **kwargs):    
     
     for k, v in kwargs.items():
         st.session_state[k] = v

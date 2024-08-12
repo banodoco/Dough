@@ -183,7 +183,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 step=1,
                 value=20
             )
-            
+
             type_of_generation = st.radio(
                 "Workflow variant:",
                 options=generation_types,
@@ -458,9 +458,8 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     key="save_current_settings",
                     use_container_width=True,
                     help="Settings will also be saved when you generate the animation.",
-                ):
-                    st.success("Settings saved successfully")
-                    toggle_generate_inference(manual_save_inf_tag, **additional_params)
+                    on_click=lambda: toggle_generate_inference(manual_save_inf_tag, **additional_params)
+                ):                                        
                     refresh_app()
 
         # --------------- SIDEBAR ---------------------
