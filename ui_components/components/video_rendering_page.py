@@ -181,7 +181,9 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 min_value=5,
                 max_value=30,
                 step=1,
+                value=20
             )
+            
             type_of_generation = st.radio(
                 "Workflow variant:",
                 options=generation_types,

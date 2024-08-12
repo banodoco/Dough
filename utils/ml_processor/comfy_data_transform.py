@@ -805,6 +805,8 @@ class ComfyDataTransform:
 
         # workflow["207"]["inputs"]["noise_seed"] = random_seed()
 
+        workflow["207"]["inputs"]["steps"] = sm_data.get("number_of_generation_steps")
+
         workflow["541"]["inputs"]["pre_text"] = sm_data.get("prompt")
         workflow["541"]["inputs"]["text"] = sm_data.get("individual_prompts")
         workflow["541"]["inputs"]["max_frames"] = int(float(sm_data.get("max_frames")))
@@ -842,6 +844,10 @@ class ComfyDataTransform:
 
         if sm_data.get("allow_for_looping", False):
             workflow = allow_for_looping(workflow)
+
+        # download workflow json
+        with open("workflow.json", "w") as f:
+            json.dump(workflow, f, indent=4)
 
         return json.dumps(workflow), output_node_ids, extra_models_list, ignore_list
 
