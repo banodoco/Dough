@@ -24,7 +24,14 @@ import json
 
 
 MODEL_PATH_DICT = {
-    ComfyWorkflow.SDXL: {"workflow_path": "comfy_workflows/sdxl_workflow_api.json", "output_node_id": [19]},
+    ComfyWorkflow.SDXL: {
+        "workflow_path": "comfy_workflows/sdxl_workflow_api.json",
+        "output_node_id": [19],
+    },
+    ComfyWorkflow.FLUX: {
+        "workflow_path": "comfy_workflows/flux_schnell_workflow_api.json",
+        "output_node_id": [9],
+    },
     ComfyWorkflow.SDXL_IMG2IMG: {
         "workflow_path": "comfy_workflows/sdxl_img2img_workflow_api.json",
         "output_node_id": [31],
@@ -93,6 +100,31 @@ class ComfyDataTransform:
         with open(json_file_path, "r", encoding="utf-8") as f:
             json_data = json.load(f)
             return json_data, MODEL_PATH_DICT[model]["output_node_id"]
+
+    @staticmethod
+    def transform_flux_workflow(query: MLQueryObject):
+        workflow, output_node_ids = ComfyDataTransform.get_workflow_json(ComfyWorkflow.FLUX)
+
+        # workflow params (not all values are plugged in rn)
+        model = query.data["data"].get("sdxl_model", None)
+        positive_prompt, negative_prompt = query.prompt, query.negative_prompt
+        steps, cfg = query.num_inference_steps, query.guidance_scale
+
+        # updating params
+        workflow["6"]["inputs"]["text"] = positive_prompt
+        if negative_prompt:
+            workflow["33"]["inputs"]["text"] = negative_prompt
+        workflow["31"]["inputs"]["seed"] = random_seed()
+
+        extra_model_list = [
+            {
+                "filename": "flux1-schnell-fp8.safetensors",
+                "url": "https://huggingface.co/Comfy-Org/flux1-schnell/resolve/main/flux1-schnell-fp8.safetensors?download=true",
+                "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
+            }
+        ]
+
+        return json.dumps(workflow), output_node_ids, extra_model_list, []
 
     @staticmethod
     def transform_sdxl_workflow(query: MLQueryObject):
@@ -1145,6 +1177,7 @@ class ComfyDataTransform:
 
 # NOTE: only populating with models currently in use
 MODEL_WORKFLOW_MAP = {
+    ML_MODEL.flux.workflow_name: ComfyDataTransform.transform_flux_workflow,
     ML_MODEL.sdxl.workflow_name: ComfyDataTransform.transform_sdxl_workflow,
     ML_MODEL.sdxl_controlnet.workflow_name: ComfyDataTransform.transform_sdxl_controlnet_workflow,
     ML_MODEL.sdxl_controlnet_openpose.workflow_name: ComfyDataTransform.transform_sdxl_controlnet_openpose_workflow,

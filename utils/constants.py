@@ -28,6 +28,7 @@ class ImageStage(ExtendedEnum):
 class T2IModel(ExtendedEnum):
     SDXL = "SDXL"
     SD3 = "SD3"
+    FLUX = "FLUX"
 
 
 class AnimateShotMethod(ExtendedEnum):  # remove this and have a common nomenclature throughout

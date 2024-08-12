@@ -510,6 +510,11 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         selected_model=st.session_state["insp_selected_model"],
                     )
 
+                elif type_of_model == T2IModel.FLUX.value:
+                    model = "flux1-schnell-fp8.safetensors"
+
+                    st.info("Flux Schell FP8 will be selected by default. It requires atleast 17GB VRAM.")
+
                 """
                 model - {url, filename, desc}
                 """
@@ -520,13 +525,14 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             st.markdown("***")
             st.markdown("#### Style guidance")
 
+            type_of_style_input = None
             if type_of_model == T2IModel.SD3.value:
                 sd3, _ = st.columns([1, 1])
                 with sd3:
                     st.info("Style references aren't yet supported for SD3.")
                 style_influence = 4.5  # this will actually go into cfg
-                type_of_style_input = None
-            else:
+
+            elif type_of_model == T2IModel.SDXL.value:
                 input_type_list = [
                     "Choose From List",
                     "Upload Images",
@@ -908,7 +914,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 queue_inference=QUEUE_INFERENCE_QUERIES,
                             )
 
-                        else:
+                        elif type_of_model == T2IModel.SD3.value:
                             query_obj = MLQueryObject(
                                 timing_uuid=None,
                                 model_uuid=None,
@@ -927,6 +933,29 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                             output, log = ml_client.predict_model_output_standardized(
                                 ML_MODEL.sd3_local,
+                                query_obj,
+                                queue_inference=QUEUE_INFERENCE_QUERIES,
+                            )
+
+                        elif type_of_model == T2IModel.FLUX.value:
+                            query_obj = MLQueryObject(
+                                timing_uuid=None,
+                                model_uuid=None,
+                                image_uuid=None,
+                                guidance_scale=5,
+                                seed=-1,
+                                num_inference_steps=30,
+                                strength=5.0,
+                                adapter_type=None,
+                                prompt=f"{image_prompt}, {additional_description_text}, {additional_style_text}",
+                                negative_prompt=negative_prompt,
+                                height=project_settings.height,
+                                width=project_settings.width,
+                                data={"shift": 3.0, "model": model},  # default value
+                            )
+
+                            output, log = ml_client.predict_model_output_standardized(
+                                ML_MODEL.flux,
                                 query_obj,
                                 queue_inference=QUEUE_INFERENCE_QUERIES,
                             )
