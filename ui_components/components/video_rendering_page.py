@@ -175,6 +175,13 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
 
         footer1, footer2 = st.columns([1.5, 1])
         with footer1:
+            number_of_generation_steps = st_memory.number_input(
+                "Number of generation steps:",                
+                key=f"number_of_generation_steps_{shot.uuid}",
+                min_value=5,
+                max_value=30,
+                step=1,
+            )
             type_of_generation = st.radio(
                 "Workflow variant:",
                 options=generation_types,
@@ -324,6 +331,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     )
                 
                 settings.update(shot_data=shot_data)
+                settings.update(number_of_generation_steps=number_of_generation_steps)
                 settings.update(type_of_generation=type_of_generation)
                 settings.update(filename_prefix="AD_")
 
