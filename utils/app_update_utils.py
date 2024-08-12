@@ -126,7 +126,7 @@ def update_comfy_runner():
         try:
             subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
             print(f"ComfyRunner requirements installed successfully")
-        except subprocess.CalledProcessError as e:
+        except Exception as e:
             print(f"Error installing requirements for ComfyRunner: {str(e)}")
 
         print("Comfy runner updated")
@@ -149,7 +149,7 @@ def update_dough():
     try:
         subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
         print(f"Dough requirements installed successfully")
-    except subprocess.CalledProcessError as e:
+    except Exception as e:
         print(f"Error installing requirements for Dough: {str(e)}")
 
     # updating env file
@@ -212,7 +212,7 @@ def update_comfy_ui():
                         if requirements_files:
                             with open(requirements_file, "rb") as f:
                                 new_hash = hashlib.sha256(f.read()).hexdigest()
-                    except subprocess.CalledProcessError as e:
+                    except Exception as e:
                         print(f"Error updating {folder}: {e}")
 
                     if old_hash and new_hash and old_hash != new_hash:
@@ -221,7 +221,7 @@ def update_comfy_ui():
                                 [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True
                             )
                             print(f"{folder} requirements installed successfully")
-                        except subprocess.CalledProcessError as e:
+                        except Exception as e:
                             print(f"Error installing requirements for {folder}: {str(e)}")
                 except Exception as e:
                     # handling weird/novel errors (not the proper way to do this though)
