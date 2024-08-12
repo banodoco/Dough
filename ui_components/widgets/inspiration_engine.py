@@ -804,7 +804,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         # Number of prompts selected
                         number_of_prompts = len(prompts_to_test)
                     else:
-                        prompts_to_test = st.session_state["list_of_prompts"][0]
+                        prompts_to_test = [st.session_state["list_of_prompts"][0]]  # Wrap in a list
                         number_of_prompts = 1
 
             prompt1, prompt2, prompt3 = st.columns([1.25, 1, 1])
