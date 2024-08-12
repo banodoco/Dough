@@ -188,41 +188,45 @@ def update_comfy_ui():
             folder_path = os.path.join(custom_nodes_dir, folder)
             if os.path.isdir(folder_path) and os.path.exists(os.path.join(folder_path, ".git")):
                 print(f"Updating {folder}")
-                os.chdir(folder_path)
-
-                old_hash, new_hash = None, None
-                requirements_files = glob.glob("requirements*.txt")
-                if requirements_files:
-                    requirements_file = requirements_files[0]
-                    try:
-                        with open(requirements_file, "rb") as f:
-                            old_hash = hashlib.sha256(f.read()).hexdigest()
-                    except FileNotFoundError:
-                        print(f"Requirements file not found for {folder}")
-
-                # moving to a stable commit version for this node and installing
-                # deps only if they have changed
                 try:
-                    commit_hash = node_commit_dict.get(folder, {}).get("commit_hash", None)
-                    update_git_repo(folder_path, commit_hash)
-                    print(f"{folder} update successful")
+                    os.chdir(folder_path)
 
+                    old_hash, new_hash = None, None
+                    requirements_files = glob.glob("requirements*.txt")
                     if requirements_files:
-                        with open(requirements_file, "rb") as f:
-                            new_hash = hashlib.sha256(f.read()).hexdigest()
-                except subprocess.CalledProcessError as e:
-                    print(f"Error updating {folder}: {e}")
+                        requirements_file = requirements_files[0]
+                        try:
+                            with open(requirements_file, "rb") as f:
+                                old_hash = hashlib.sha256(f.read()).hexdigest()
+                        except FileNotFoundError:
+                            print(f"Requirements file not found for {folder}")
 
-                if old_hash and new_hash and old_hash != new_hash:
+                    # moving to a stable commit version for this node and installing
+                    # deps only if they have changed
                     try:
-                        subprocess.run(
-                            [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True
-                        )
-                        print(f"{folder} requirements installed successfully")
-                    except subprocess.CalledProcessError as e:
-                        print(f"Error installing requirements for {folder}: {str(e)}")
+                        commit_hash = node_commit_dict.get(folder, {}).get("commit_hash", None)
+                        update_git_repo(folder_path, commit_hash)
+                        print(f"{folder} update successful")
 
-                os.chdir(initial_dir)
+                        if requirements_files:
+                            with open(requirements_file, "rb") as f:
+                                new_hash = hashlib.sha256(f.read()).hexdigest()
+                    except subprocess.CalledProcessError as e:
+                        print(f"Error updating {folder}: {e}")
+
+                    if old_hash and new_hash and old_hash != new_hash:
+                        try:
+                            subprocess.run(
+                                [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True
+                            )
+                            print(f"{folder} requirements installed successfully")
+                        except subprocess.CalledProcessError as e:
+                            print(f"Error installing requirements for {folder}: {str(e)}")
+                except Exception as e:
+                    # handling weird/novel errors (not the proper way to do this though)
+                    print(f"Unable to properly update {folder} , error: ", str(e))
+                finally:
+                    os.chdir(initial_dir)
 
     move_to_root()
 

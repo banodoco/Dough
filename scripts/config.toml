@@ -25,7 +25,7 @@
 "efficiency-nodes-comfyui" = { "url" = "https://github.com/jags111/efficiency-nodes-comfyui", "commit_hash" = "b471390b88c9ac8a87c34ad9d882a520296b6fd8"}
 "ComfyUI_FizzNodes" = { "url" = "https://github.com/FizzleDorf/ComfyUI_FizzNodes", "commit_hash" = "0e30c12400064de068ab599b045b430e3c0ff3cf"}
 "ComfyUI-Advanced-ControlNet" = { "url" = "https://github.com/Kosinkadink/ComfyUI-Advanced-ControlNet", "commit_hash" = "68e5cd41e43cf0ec0a052167ef2c1c1bfb3aac7d"}
-"ComfyUI-AnimateDiff-Evolved" = { "url" = "https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved", "commit_hash" = "925511d139c0ea3b09363358fc877010808336cb"}
+"ComfyUI-AnimateDiff-Evolved" = { "url" = "https://github.com/Kosinkadink/ComfyUI-AnimateDiff-Evolved", "commit_hash" = "8f7ee51ceda2e1f590cc64284e0c92ea4b252eed"}
 "ComfyUI-VideoHelperSuite" = { "url" = "https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite", "commit_hash" = "6bffe8b90f4464f76f1606bd93b94f1ac8d38041"}
 "ComfyUI_essentials" = { "url" = "https://github.com/cubiq/ComfyUI_essentials", "commit_hash" = "a94f25989f66b0b9cffcac3af33bae850ee3b1af"}
 "steerable-motion" = { "url" = "https://github.com/banodoco/steerable-motion", "commit_hash" = "b95e9eed09741bd3f0fc3933ab45d09f6f055aae"}
