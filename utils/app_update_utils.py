@@ -116,6 +116,7 @@ def update_comfy_runner():
                 shutil.rmtree(comfy_runner_dir)
                 move_to_root()
                 Repo.clone_from("https://github.com/piyushK52/comfy_runner", "./comfy_runner")
+                os.chdir(comfy_runner_dir)
             # updating if it's already on the main branch
             else:
                 update_git_repo(comfy_runner_dir)
