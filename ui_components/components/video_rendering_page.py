@@ -173,7 +173,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
 
         generation_types = [workflow["name"] for workflow in filtered_and_sorted_workflows]
 
-        footer1, footer2 = st.columns([1.5, 1])
+        footer1, footer2 = st.columns([1, 1])
         with footer1:
             number_of_generation_steps = st_memory.number_input(
                 "Number of generation steps:",                
@@ -216,10 +216,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 )
                 refresh_app()
 
-        with footer2:
-            st.info(
-                f"Each has a unique type of motion and adherence. You can an example of each of them in action [here](https://youtu.be/zu1IbdavW_4)."
-            )
+       
 
         generate_vid_inf_tag = "generate_vid"
         manual_save_inf_tag = "manual_save"
@@ -381,6 +378,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 st.session_state['auto_refresh'] = True
                 refresh_app()
 
+            '''
             preview_mode = st_memory.checkbox(
                 label="Preview mode",
                 key=f"{shot_uuid}_gen_preview_mode",
@@ -409,13 +407,13 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
 
                 if len(preview_frames) == 1:
                     st.error("You need at least 2 frames to preview")
-                
+            ''' 
 
     
             btn1, btn2, _ = st.columns([1, 1, 1])
             additional_params = {
                 f"{shot_uuid}_backlog_enabled": False,
-                f"{shot_uuid}_preview_mode": preview_mode,
+                f"{shot_uuid}_preview_mode": st.session_state[f"{shot_uuid}_preview_mode"],
             }
 
             with btn1:
@@ -442,7 +440,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     type="secondary",
                 )
 
-            with column1:
+            with column2:
                 if st.button("Reset to default", use_container_width=True, key="reset_to_default"):
                     for idx, _ in enumerate(img_list):
                         for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
@@ -452,15 +450,16 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     refresh_app()
                 st.write("")
 
-            with column2:
-                if st.button(
+            if not st.session_state.get(f"{shot_uuid}_preview_mode", False):    
+                with column1:
+                    if st.button(
                     "Save current settings",
                     key="save_current_settings",
                     use_container_width=True,
                     help="Settings will also be saved when you generate the animation.",
                     on_click=lambda: toggle_generate_inference(manual_save_inf_tag, **additional_params)
-                ):                                        
-                    refresh_app()
+                    ):                                        
+                        refresh_app()
 
         # --------------- SIDEBAR ---------------------
         animation_sidebar(
