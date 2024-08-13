@@ -695,6 +695,48 @@ def individual_frame_settings_element(shot_uuid, img_list):
         apply_updates(key_suffix, value, uuid, range_to_edit)
         del st.session_state["update_values"]  # Clear the update instruction after applying
 
+    h1, h2, h3 = st.columns([1, 2, 1])
+    with h1:
+        preview_mode = st_memory.checkbox(
+            label="Preview mode",
+            key=f"{shot_uuid}_preview_mode",
+            help="Generates a preview video only using the first 3 images",
+            value=False,
+        )
+    
+    with h3:
+        
+        type_of_selector = st_memory.radio(
+            "Type of selector:",
+            options=["Slider", "Number select"],
+            key=f"{shot_uuid}_preview_mode_type",
+            horizontal=True
+        )
+
+        if type_of_selector == "Slider":
+            st.session_state[f"type_of_selector"] = "slider"
+        else:
+            st.session_state[f"type_of_selector"] = "number_input"
+
+    if preview_mode:
+        # take a range of frames from the user
+
+        current_preview_range = st.session_state.get(f"frames_to_preview_{shot_uuid}", (1, min(3, len(img_list))))
+
+        frames_to_preview = st_memory.slider(
+            "Frames to preview:",
+            min_value=1,
+            max_value=len(img_list),
+            value=current_preview_range,
+            key=f"frames_to_preview_{shot_uuid}"
+        )
+        start_frame, end_frame = frames_to_preview
+        img_list = img_list[start_frame-1:end_frame]
+        
+        if len(img_list) <= 1:
+            st.error("You need at least 2 frames to preview")
+        
+
     cumulative_seconds = 0.0
     for i in range(0, len(img_list), items_per_row):
         prev_frame_settings = None
@@ -775,26 +817,30 @@ def individual_frame_settings_element(shot_uuid, img_list):
 
                                 if value_key not in st.session_state:
                                     st.session_state[value_key] = default_value
-
-                                slider_value = st.number_input(
-                                    label,
+                                if st.session_state[f"type_of_selector"] == "number_input":
+                                    slider_value = st.number_input(
+                                        label,
                                     min_value=min_value,
                                     max_value=max_value,
                                     step=step,
                                     key=widget_key,
                                     value=st.session_state[value_key],
-                                    help=help_text,
-                                )
+                                        help=help_text,
+                                    )
+                                else:
+                                    slider_value = st.slider(
+                                        label,
+                                        min_value=min_value,
+                                        max_value=max_value,
+                                        step=step,
+                                        key=widget_key,
+                                        value=st.session_state[value_key],
+                                    )
 
                                 if slider_value != st.session_state[value_key]:
                                     st.session_state[value_key] = slider_value
                                     update_last_changed(value_key, slider_value)
-                                    if idx == 0:  # First frame
-                                        st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, 2)
-                                    elif idx == len(img_list) - 1:  # Last frame
-                                        st.session_state[f"frames_to_preview_{shot_uuid}"] = (idx, idx + 1)
-                                    else:  # Middle frames
-                                        st.session_state[f"frames_to_preview_{shot_uuid}"] = (idx, idx + 2)
+
                                     refresh_app()
                                 return slider_value
 
