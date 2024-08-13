@@ -746,11 +746,16 @@ def individual_frame_settings_element(shot_uuid, img_list):
             for j in range(items_per_row):
                 idx = i + j
                 img = img_list[idx] if idx < len(img_list) else None
-
+                
                 if img and img.location:
                     with grid[2 * j]:
                         st.info(f"**Frame {idx + 1} - {cumulative_seconds:.2f}s**")
                         st.image(img.location, use_column_width=True)
+                        if st.session_state[f"{shot_uuid}_preview_mode"] != True:
+                            if st.button("Start preview here", key=f"start_preview_{shot_uuid}_{idx}"):
+                                st.session_state[f"{shot_uuid}_preview_mode"] = True
+                                st.session_state[f"frames_to_preview_{shot_uuid}"] = (idx + 1, min(idx + 3, len(img_list)))
+                                refresh_app()
 
                 # Create a new grid for each row of images
                 if img and img.location:
