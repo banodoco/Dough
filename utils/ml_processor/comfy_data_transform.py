@@ -847,8 +847,8 @@ class ComfyDataTransform:
 
         workflow["207"]["inputs"]["steps"] = sm_data.get("number_of_generation_steps")
 
-        with open("workflow.json", "w") as f:
-            json.dump(workflow, f, indent=4)
+        # with open("workflow.json", "w") as f:
+        #     json.dump(workflow, f, indent=4)
 
         return json.dumps(workflow), output_node_ids, extra_models_list, ignore_list
 
