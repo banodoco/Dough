@@ -22,6 +22,7 @@ from ui_components.methods.animation_style_methods import (
     update_session_state_with_dc_details,
 )
 from utils import st_memory
+from utils.common_decorators import update_refresh_lock
 from utils.state_refresh import refresh_app
 from utils.data_repo.data_repo import DataRepo
 
@@ -176,13 +177,13 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
         footer1, footer2 = st.columns([1, 1])
         with footer1:
             number_of_generation_steps = st_memory.number_input(
-                "Number of generation steps:",                
+                "Number of generation steps:",
                 key=f"number_of_generation_steps_{shot.uuid}",
                 min_value=5,
                 max_value=30,
                 step=1,
                 value=20,
-                help="You can dial this down to get a faster video. But beware, the quality will be lower."
+                help="You can dial this down to get a faster video. But beware, the quality will be lower.",
             )
 
             type_of_generation = st.radio(
@@ -217,8 +218,6 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 )
                 refresh_app()
 
-       
-
         generate_vid_inf_tag = "generate_vid"
         manual_save_inf_tag = "manual_save"
 
@@ -229,7 +228,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
 
             if is_inference_enabled(generate_vid_inf_tag) or is_inference_enabled(manual_save_inf_tag):
 
-                st.session_state['auto_refresh'] = False
+                update_refresh_lock(True)
                 # last keyframe position * 16
                 duration = float(dynamic_frame_distribution_values[-1] / 16)
                 data_repo.update_shot(uuid=shot_uuid, duration=duration)
@@ -248,41 +247,40 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 # print("******************* ", st.session_state.get(f"{shot_uuid}_preview_mode", False))
                 if st.session_state.get(f"{shot_uuid}_preview_mode", False):
                     start_frame, end_frame = st.session_state.get(f"frames_to_preview_{shot_uuid}", (1, 3))
-                    img_list = img_list[start_frame-1:end_frame]
+                    img_list = img_list[start_frame - 1 : end_frame]
                     settings["inference_type"] = "preview"
                     trigger_shot_update = False
 
                 else:
                     trigger_shot_update = True
 
-
                 shot_data = update_session_state_with_animation_details(
-                        shot_uuid,
-                        img_list,
-                        strength_of_frames,
-                        distances_to_next_frames,
-                        speeds_of_transitions,
-                        freedoms_between_frames,
-                        motions_during_frames,
-                        individual_prompts,
-                        individual_negative_prompts,
-                        lora_data,
-                        DEFAULT_SM_MODEL,
-                        high_detail_mode,
-                        image.uuid if image else None,
-                        settings["strength_of_structure_control_image"],
-                        next(
-                            (
-                                index
-                                for index, workflow in enumerate(filtered_and_sorted_workflows)
-                                if workflow["name"] == type_of_generation
-                            ),
-                            0,
+                    shot_uuid,
+                    img_list,
+                    strength_of_frames,
+                    distances_to_next_frames,
+                    speeds_of_transitions,
+                    freedoms_between_frames,
+                    motions_during_frames,
+                    individual_prompts,
+                    individual_negative_prompts,
+                    lora_data,
+                    DEFAULT_SM_MODEL,
+                    high_detail_mode,
+                    image.uuid if image else None,
+                    settings["strength_of_structure_control_image"],
+                    next(
+                        (
+                            index
+                            for index, workflow in enumerate(filtered_and_sorted_workflows)
+                            if workflow["name"] == type_of_generation
                         ),
-                        stabilise_motion=stabilise_motion,
-                        trigger_shot_update=trigger_shot_update,
-                    )
-                
+                        0,
+                    ),
+                    stabilise_motion=stabilise_motion,
+                    trigger_shot_update=trigger_shot_update,
+                )
+
                 settings.update(shot_data=shot_data)
                 settings.update(number_of_generation_steps=number_of_generation_steps)
                 settings.update(type_of_generation=type_of_generation)
@@ -321,7 +319,6 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 updated_additional_params = {
                     f"{shot_uuid}_backlog_enabled": False,
                     f"{shot_uuid}_preview_mode": st.session_state[f"{shot_uuid}_preview_mode"],
-                    
                 }
 
                 position = (
@@ -330,12 +327,9 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     else manual_save_inf_tag
                 )
                 toggle_generate_inference(position, **updated_additional_params)
-                st.session_state['auto_refresh'] = True
+                update_refresh_lock(False)
                 refresh_app()
 
-
-
-    
             btn1, btn2, _ = st.columns([1, 1, 1])
             additional_params = {
                 f"{shot_uuid}_backlog_enabled": False,
@@ -376,15 +370,15 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     refresh_app()
                 st.write("")
 
-            if not st.session_state.get(f"{shot_uuid}_preview_mode", False):    
+            if not st.session_state.get(f"{shot_uuid}_preview_mode", False):
                 with column1:
                     if st.button(
-                    "Save current settings",
-                    key="save_current_settings",
-                    use_container_width=True,
-                    help="Settings will also be saved when you generate the animation.",
-                    on_click=lambda: toggle_generate_inference(manual_save_inf_tag, **additional_params)
-                    ):                                        
+                        "Save current settings",
+                        key="save_current_settings",
+                        use_container_width=True,
+                        help="Settings will also be saved when you generate the animation.",
+                        on_click=lambda: toggle_generate_inference(manual_save_inf_tag, **additional_params),
+                    ):
                         refresh_app()
 
         # --------------- SIDEBAR ---------------------

@@ -41,4 +41,5 @@ psutil==5.9.8
 black==24.4.2
 onnxruntime==1.18.1
 opencv-contrib-python==4.10.0.84
-streamlit-autorefresh
+portalocker==2.10.1
+Flask==3.0.3
