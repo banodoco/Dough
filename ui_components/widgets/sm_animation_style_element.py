@@ -574,18 +574,11 @@ def select_sd_model_element(shot_uuid, default_model):
             # from streamlit_globalrefresh import st_globalrefresh
 
             if st.button("Download Model", key="download_model"):
-                update_refresh_lock(True)
                 download_file_widget(
                     SD_MODEL_DICT[model_name_selected]["url"],
                     SD_MODEL_DICT[model_name_selected]["filename"],
                     checkpoints_dir,
                 )
-                # st.write("started")
-                # for i in range(50):
-                #     st.write(i)
-                #     print(i)
-                #     time.sleep(1)
-                update_refresh_lock(False)
 
         elif where_to_get_model == "Upload a model":
             st.info("It's simpler to just drop this into the ComfyUI/models/checkpoints directory.")
