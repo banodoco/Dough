@@ -605,6 +605,8 @@ def select_sd_model_element(shot_uuid, default_model):
     )
 
 
+
+
 def individual_frame_settings_element(shot_uuid, img_list):
     st.write("")
     items_per_row = 3
@@ -645,39 +647,38 @@ def individual_frame_settings_element(shot_uuid, img_list):
     # loading settings of the last shot (if this shot is being loaded for the first time)
     if f"strength_of_frame_{shot_uuid}_0" not in st.session_state:
         load_shot_settings(shot_uuid)
-
-    # ------------- Timing Frame and their settings -------------------
+    
 
     def bulk_updater(label, key_suffix, idx, uuid, img_list):
         key = f"{key_suffix}_{uuid}_{idx}"
-        # st.write(key)
-        # st.write(st.session_state[key])
-        # st.write(st.session_state[f"last_frame_changed"])
         if "last_frame_changed" in st.session_state and st.session_state["last_frame_changed"] == key:
             with st.expander(f"Set all '{label}' to {st.session_state['last_value_set']}", expanded=True):
-                range_to_edit = (1, len(img_list))
-                """
-                st.slider(
-                    f"Range to update:",
-                    min_value=1,
-                    max_value=len(img_list),
-                    value=(1, len(img_list)),
-                    key="range_to_edit",
-                    help="Select the range of frames you want to update.",
-                )
-                """
+                preview_mode = st.session_state.get(f"{uuid}_preview_mode", False)
+                if preview_mode:
+                    frames_to_preview = st.session_state.get(f"frames_to_preview_{uuid}", (1, min(3, len(img_list))))
+                    start_frame, end_frame = frames_to_preview
+                    range_to_edit = (start_frame - 1, end_frame)  # Adjust for 0-based indexing
+                    update_text = f"Update frames {start_frame} to {end_frame}"
+                else:
+                    range_to_edit = (0, len(img_list))
+                    update_text = "Update all frames"
+
                 if st.button(
-                    f"Update",
-                    key=f"button",
+                    update_text,
+                    key=f"button_{key_suffix}_{uuid}_{idx}",
                     use_container_width=True,
                     type="primary",
-                    help=f"This will set all the '{label}'.",
+                    help=f"This will set the '{label}' for the specified range.",
                 ):
-                    queue_updates(key_suffix, st.session_state[key], idx, uuid, range_to_edit)
+                    value_to_set = st.session_state[key]
+                    start, end = range_to_edit
+                    for i in range(start, end):
+                        st.session_state[f"{key_suffix}_{uuid}_{i}"] = value_to_set
+                    
                     st.session_state["last_frame_changed"] = None
                     st.session_state["last_value_set"] = None
-                    refresh_app()
-
+                    st.rerun()
+                    
     def update_last_changed(key, value):
         st.session_state["last_frame_changed"] = key
         st.session_state["last_value_set"] = value
@@ -686,15 +687,11 @@ def individual_frame_settings_element(shot_uuid, img_list):
         st.session_state["update_values"] = (key_suffix, value, uuid, range_to_edit)
 
     def apply_updates(key_suffix, value, uuid, range_to_edit):
-        for k in list(st.session_state.keys()):
-            if f"{key_suffix}_{uuid}" in k:
-                st.session_state[k] = value
-
-    if "update_values" in st.session_state:
-        key_suffix, value, uuid, range_to_edit = st.session_state["update_values"]
-        apply_updates(key_suffix, value, uuid, range_to_edit)
-        del st.session_state["update_values"]  # Clear the update instruction after applying
-
+        start_frame, end_frame = range_to_edit
+        for i in range(start_frame - 1, end_frame):
+            key = f"{key_suffix}_{uuid}_{i}"
+            if key in st.session_state:
+                st.session_state[key] = value
     h1, h2, h3 = st.columns([1, 2, 1])
     with h1:
         preview_mode = st_memory.checkbox(
@@ -705,7 +702,6 @@ def individual_frame_settings_element(shot_uuid, img_list):
         )
     
     with h3:
-        
         type_of_selector = st_memory.radio(
             "Type of selector:",
             options=["Slider", "Number select"],
@@ -719,10 +715,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
             st.session_state[f"type_of_selector"] = "number_input"
 
     if preview_mode:
-        # take a range of frames from the user
-
         current_preview_range = st.session_state.get(f"frames_to_preview_{shot_uuid}", (1, min(3, len(img_list))))
-
         frames_to_preview = st_memory.slider(
             "Frames to preview:",
             min_value=1,
@@ -731,30 +724,34 @@ def individual_frame_settings_element(shot_uuid, img_list):
             key=f"frames_to_preview_{shot_uuid}"
         )
         start_frame, end_frame = frames_to_preview
-        img_list = img_list[start_frame-1:end_frame]
+        preview_img_list = img_list[start_frame-1:end_frame]
         
-        if len(img_list) <= 1:
+        if len(preview_img_list) <= 1:
             st.error("You need at least 2 frames to preview")
-        
+            st.stop()
+    else:
+        preview_img_list = img_list
+        start_frame = 1
 
     cumulative_seconds = 0.0
-    for i in range(0, len(img_list), items_per_row):
+    for i in range(0, len(preview_img_list), items_per_row):
         prev_frame_settings = None
         with st.container():
             grid = st.columns([2 if j % 2 == 0 else 2 for j in range(2 * items_per_row)])
 
             for j in range(items_per_row):
                 idx = i + j
-                img = img_list[idx] if idx < len(img_list) else None
+                real_idx = idx + (start_frame - 1) if preview_mode else idx
+                img = preview_img_list[idx] if idx < len(preview_img_list) else None
                 
                 if img and img.location:
                     with grid[2 * j]:
-                        st.info(f"**Frame {idx + 1} - {cumulative_seconds:.2f}s**")
+                        st.info(f"**Frame {real_idx + 1} - {cumulative_seconds:.2f}s**")
                         st.image(img.location, use_column_width=True)
-                        if st.session_state[f"{shot_uuid}_preview_mode"] != True:
-                            if st.button("Start preview here", key=f"start_preview_{shot_uuid}_{idx}"):
+                        if not preview_mode:
+                            if st.button("Start preview here", key=f"start_preview_{shot_uuid}_{real_idx}",use_container_width=True):
                                 st.session_state[f"{shot_uuid}_preview_mode"] = True
-                                st.session_state[f"frames_to_preview_{shot_uuid}"] = (idx + 1, min(idx + 3, len(img_list)))
+                                st.session_state[f"frames_to_preview_{shot_uuid}"] = (real_idx + 1, min(real_idx + 3, len(img_list)))
                                 refresh_app()
 
                 # Create a new grid for each row of images
@@ -765,12 +762,12 @@ def individual_frame_settings_element(shot_uuid, img_list):
 
                     with cols2[j]:
                         # setting default values for frames (if they are newly added or settings is not present in the session_state)
-                        if f"distance_to_next_frame_{shot_uuid}_{idx}" not in st.session_state:
+                        if f"distance_to_next_frame_{shot_uuid}_{real_idx}" not in st.session_state:
                             # for newly created frames we apply prev frame settings if available
                             settings_to_apply = prev_frame_settings or DEFAULT_SHOT_MOTION_VALUES
                             cur_settings = {}
                             for k, v in settings_to_apply.items():
-                                st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+                                st.session_state[f"{k}_{shot_uuid}_{real_idx}"] = v
                                 cur_settings[f"{k}"] = v
 
                             prev_frame_settings = cur_settings
@@ -778,7 +775,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                         else:
                             cur_settings = {}
                             for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
-                                t_key = f"{k}_{shot_uuid}_{idx}"
+                                t_key = f"{k}_{shot_uuid}_{real_idx}"
                                 cur_settings[k] = (
                                     v if t_key not in st.session_state else st.session_state[t_key]
                                 )
@@ -789,16 +786,16 @@ def individual_frame_settings_element(shot_uuid, img_list):
                         with sub1:
                             individual_prompt = st.text_input(
                                 "Frame prompt:",
-                                key=f"individual_prompt_widget_{idx}_{img.uuid}",
-                                value=st.session_state[f"individual_prompt_{shot_uuid}_{idx}"],
+                                key=f"individual_prompt_widget_{real_idx}_{img.uuid}",
+                                value=st.session_state[f"individual_prompt_{shot_uuid}_{real_idx}"],
                                 help="This wll bias the video towards the words you enter for this segment.",
                             )
                             individual_prompts.append(individual_prompt)
                         with sub2:
                             individual_negative_prompt = st.text_input(
                                 "Frame negative prompt:",
-                                key=f"negative_prompt_widget_{idx}_{img.uuid}",
-                                value=st.session_state[f"individual_negative_prompt_{shot_uuid}_{idx}"],
+                                key=f"negative_prompt_widget_{real_idx}_{img.uuid}",
+                                value=st.session_state[f"individual_negative_prompt_{shot_uuid}_{real_idx}"],
                                 help="This will bias the video away from the words you enter for this segment.",
                             )
                             individual_negative_prompts.append(individual_negative_prompt)
@@ -825,11 +822,11 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 if st.session_state[f"type_of_selector"] == "number_input":
                                     slider_value = st.number_input(
                                         label,
-                                    min_value=min_value,
-                                    max_value=max_value,
-                                    step=step,
-                                    key=widget_key,
-                                    value=st.session_state[value_key],
+                                        min_value=min_value,
+                                        max_value=max_value,
+                                        step=step,
+                                        key=widget_key,
+                                        value=st.session_state[value_key],
                                         help=help_text,
                                     )
                                 else:
@@ -859,15 +856,15 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 max_value=1.0,
                                 step=0.05,
                                 key_suffix="strength_of_frame",
-                                default_value=st.session_state[f"strength_of_frame_{shot_uuid}_{idx}"],
-                                idx=idx,
+                                default_value=st.session_state[f"strength_of_frame_{shot_uuid}_{real_idx}"],
+                                idx=real_idx,
                                 uuid=shot_uuid,
                                 img_list=img_list,
                             )
 
                             strength_of_frames.append(strength_of_frame)
 
-                            bulk_updater("Strength of frames", "strength_of_frame", idx, shot_uuid, img_list)
+                            bulk_updater("Strength of frames", "strength_of_frame", real_idx, shot_uuid, img_list)
 
                         with advanced2:
                             motion_during_frame = create_slider(
@@ -876,8 +873,8 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 max_value=1.5,
                                 step=0.05,
                                 key_suffix="motion_during_frame",
-                                default_value=st.session_state[f"motion_during_frame_{shot_uuid}_{idx}"],
-                                idx=idx,
+                                default_value=st.session_state[f"motion_during_frame_{shot_uuid}_{real_idx}"],
+                                idx=real_idx,
                                 uuid=shot_uuid,
                                 img_list=img_list,
                             )
@@ -885,25 +882,25 @@ def individual_frame_settings_element(shot_uuid, img_list):
                             motions_during_frames.append(motion_during_frame)
 
                             bulk_updater(
-                                "Motion during frames", "motion_during_frame", idx, shot_uuid, img_list
+                                "Motion during frames", "motion_during_frame", real_idx, shot_uuid, img_list
                             )
 
                     with grid[2 * j + 1]:
-                        if idx < len(img_list) - 1:
+                        if idx < len(preview_img_list) - 1:
                             distance_to_next_frame = create_slider(
                                 label="Seconds to next frame:",
                                 min_value=0.25,
                                 max_value=12.00,
                                 step=0.25,
                                 key_suffix="distance_to_next_frame",
-                                default_value=st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"],
-                                idx=idx,
+                                default_value=st.session_state[f"distance_to_next_frame_{shot_uuid}_{real_idx}"],
+                                idx=real_idx,
                                 uuid=shot_uuid,
                                 img_list=img_list,
                             )
                             distances_to_next_frames.append(distance_to_next_frame)
                             bulk_updater(
-                                "Distance to next frames", "distance_to_next_frame", idx, shot_uuid, img_list
+                                "Distance to next frames", "distance_to_next_frame", real_idx, shot_uuid, img_list
                             )
 
                             speed_of_transition = create_slider(
@@ -912,14 +909,14 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 max_value=0.75,
                                 step=0.05,
                                 key_suffix="speed_of_transition",
-                                default_value=st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"],
-                                idx=idx,
+                                default_value=st.session_state[f"speed_of_transition_{shot_uuid}_{real_idx}"],
+                                idx=real_idx,
                                 uuid=shot_uuid,
                                 img_list=img_list,
                             )
 
                             bulk_updater(
-                                "Speed of transitions", "speed_of_transition", idx, shot_uuid, img_list
+                                "Speed of transitions", "speed_of_transition", real_idx, shot_uuid, img_list
                             )
                             speeds_of_transitions.append(speed_of_transition)
                             freedom_between_frames = create_slider(
@@ -928,19 +925,19 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 max_value=1.0,
                                 step=0.05,
                                 key_suffix="freedom_between_frames",
-                                default_value=st.session_state[f"freedom_between_frames_{shot_uuid}_{idx}"],
-                                idx=idx,
+                                default_value=st.session_state[f"freedom_between_frames_{shot_uuid}_{real_idx}"],
+                                idx=real_idx,
                                 uuid=shot_uuid,
                                 img_list=img_list,
                             )
 
                             bulk_updater(
-                                "Freedom between frames", "freedom_between_frames", idx, shot_uuid, img_list
+                                "Freedom between frames", "freedom_between_frames", real_idx, shot_uuid, img_list
                             )
                             freedoms_between_frames.append(freedom_between_frames)
                             cumulative_seconds += distance_to_next_frame
 
-            if (i < len(img_list) - 1) or (len(img_list) % items_per_row != 0):
+            if (i < len(preview_img_list) - 1) or (len(preview_img_list) % items_per_row != 0):
                 st.markdown("***")
 
     return (

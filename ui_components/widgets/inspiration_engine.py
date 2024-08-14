@@ -1,7 +1,7 @@
 import os
 import json
 import time
-
+import math
 from django.db import connection
 import replicate.model
 import streamlit as st
@@ -141,6 +141,8 @@ def generate_prompts(
     
     # Remove any double bars that might have been created
     combined_prompts = combined_prompts.replace("||", "|")
+
+    st.session_state["prompts_to_display_separately"] = combined_prompts
     
     return combined_prompts
 
@@ -344,17 +346,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                 replicate_warning_message = "We currently use Replicate for LLM queries for simplicity. This costs $0.00025/run. You can add a key in App Settings."
                 if st.session_state["prompt_generation_mode"] == generate_mode:
-                    type_of_inspiration = st_memory.selectbox(
-                        "Type of prompts to generate:",
-                        [
-                            "Generate shot sequences",
-                            "Generate style variants",
-                            "Variants on concept",
-                            "Based on lyrics or text",
-                            "Freeform",
-                        ],
-                        help="Select the type of inspiration to use for image generation.",
-                    )
+
                     generation_text = st_memory.text_area(
                         "Text to generate prompts:",                        
                         height=100,
@@ -407,28 +399,32 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     if not check_replicate_key():
                         st.info(replicate_warning_message)
                     else:
+
+    
+
                         if st.button(
                             "Generate prompts",
                             use_container_width=True,
                             help="This will overwrite the existing prompts.",
-                        ):
-                            generated_prompts = generate_prompts(
+                            on_click=generate_prompts(
                                 generation_text,
                                 generation_examples,
                                 total_unique_prompts,
                                 temperature=temperature,                                
                             )
-
-                            st.session_state["prompts_to_display_separately"] = generated_prompts
-
+                        ):                                             
                             refresh_app()
 
                     if "prompts_to_display_separately" not in st.session_state:
                         st.session_state["prompts_to_display_separately"] = ""
 
                     if st.session_state["prompts_to_display_separately"] != "":
-                        st.write("Generated prompts:")
-                        st.caption(st.session_state["prompts_to_display_separately"])
+                        height = math.ceil(len(st.session_state["prompts_to_display_separately"])/2)
+                        st.text_area(
+                            "Generated prompts:",
+                            value=st.session_state["prompts_to_display_separately"],
+                            height=height                            
+                        )
                         bottom1, bottom2, bottom3 = st.columns([1, 1, 1])
                         with bottom1:
                             if st.button("Remove"):
@@ -601,32 +597,30 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 type=["jpg", "jpeg", "png", "webp"],
                                 accept_multiple_files=True,
                             )
-                            if uploaded_images:
-                                if len(uploaded_images) > 1:
-                                    text = "Add reference images"
-                                else:
-                                    text = "Add reference image"
-                                if st.button(text, use_container_width=True):
-                                    # Check if there are less than 3 images already in the list
-                                    while (
-                                        len(st.session_state["list_of_style_references"]) < 3
-                                        and uploaded_images
-                                    ):
-                                        st.session_state["list_of_style_references"].append(
-                                            uploaded_images.pop(0)
-                                        )
-
-                                    if uploaded_images:  # If there are still images left, show a warning
-                                        st.warning("You can only upload 3 style references.")
-
-                                    refresh_app()
+                            
+                            if len(uploaded_images) > 1:
+                                text = "Add reference images"
                             else:
-                                st.button(
-                                    f"Add image reference",
-                                    use_container_width=True,
-                                    disabled=True,
-                                    help="You have no input images selected.",
-                                )
+                                text = "Add reference image"
+
+                            def add_image_reference():
+        
+
+                                # Check if there are less than 3 images already in the list
+                                while (
+                                    len(st.session_state["list_of_style_references"]) < 3
+                                    and uploaded_images
+                                ):
+                                    st.session_state["list_of_style_references"].append(
+                                        uploaded_images.pop(0)
+                                    )
+
+                                if uploaded_images:  # If there are still images left, show a warning
+                                    st.warning("You can only upload 3 style references.")
+                                
+                            if st.button("Add image reference", use_container_width=True, on_click=add_image_reference):
+                                refresh_app()
+                 
 
                 elif type_of_style_input == "Choose From List":
 
@@ -698,6 +692,11 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                     slider_index = 0 if use_first_value else i
 
                                     # Style influence slider
+                                    # Ensure the session state lists have enough elements
+                                    for key in ["insp_style_influence", "insp_composition_influence", "insp_vibe_influence"]:
+                                        if slider_index >= len(st.session_state[key]):
+                                            st.session_state[key].extend([0.5] * (slider_index + 1 - len(st.session_state[key])))
+
                                     style_influence = st.slider(
                                         f"Style influence:",
                                         min_value=0.0,
@@ -707,13 +706,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         key=f"style_influence_{i}",
                                         help=f"How much the style of the image should influence the generated image.",
                                     )
-                                    if (
-                                        st.session_state["insp_style_influence"][slider_index]
-                                        != style_influence
-                                    ):
-                                        st.session_state["insp_style_influence"][
-                                            slider_index
-                                        ] = style_influence
+                                    if st.session_state["insp_style_influence"][slider_index] != style_influence:
+                                        st.session_state["insp_style_influence"][slider_index] = style_influence
                                         refresh_app()
 
                                     # Composition influence slider
@@ -726,13 +720,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         key=f"composition_influence_{i}",
                                         help=f"How much the composition of the image should influence the generated image.",
                                     )
-                                    if (
-                                        st.session_state["insp_composition_influence"][slider_index]
-                                        != composition_influence
-                                    ):
-                                        st.session_state["insp_composition_influence"][
-                                            slider_index
-                                        ] = composition_influence
+                                    if st.session_state["insp_composition_influence"][slider_index] != composition_influence:
+                                        st.session_state["insp_composition_influence"][slider_index] = composition_influence
                                         refresh_app()
 
                                     # Vibe influence slider
@@ -745,28 +734,33 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         key=f"vibe_influence_{i}",
                                         help=f"How much the vibe of the image should influence the generated image.",
                                     )
-                                    if (
-                                        st.session_state["insp_vibe_influence"][slider_index]
-                                        != vibe_influence
-                                    ):
+                                    if st.session_state["insp_vibe_influence"][slider_index] != vibe_influence:
                                         st.session_state["insp_vibe_influence"][slider_index] = vibe_influence
                                         refresh_app()
+
                                     if type_of_style_input == "Upload Images":
+
+                                        def remove_image_reference(i):
+                                            # Check if the index is valid before removing
+                                            if i < len(st.session_state["list_of_style_references"]):
+                                                # Remove the image from the list
+                                                st.session_state["list_of_style_references"].pop(i)
+
+                                                for key in ["insp_style_influence", "insp_composition_influence", "insp_vibe_influence"]:
+                                                    if i < len(st.session_state[key]):
+                                                        st.session_state[key].pop(i)
                                         if st.button(
                                             f"Remove image reference",
                                             use_container_width=True,
                                             key=f"remove_{i}",
-                                        ):
-                                            # Remove the image from the list
-                                            st.session_state["list_of_style_references"].pop(i)
+                                            on_click=remove_image_reference(i),
+                                        ):                                   
                                             refresh_app()
-                                    # add up the 3 values and if together they're over 1.5, show a warning
 
+                                    # add up the 3 values and if together they're over 1.5, show a warning
                                     item_strengths = (style_influence, composition_influence, vibe_influence)
                                     list_of_strengths.append(item_strengths)
-                                    total_influences += sum(
-                                        1 for strength in item_strengths if strength > 0.0
-                                    )
+                                    total_influences += sum(1 for strength in item_strengths if strength > 0.0)
 
                                 else:
                                     st.error("Uploaded file does not support file-like operations.")
