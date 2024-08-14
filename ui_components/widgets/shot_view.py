@@ -25,6 +25,7 @@ from ui_components.widgets.frame_movement_widgets import (
     jump_to_single_frame_view_button,
     delete_frame,
 )
+from utils.common_decorators import with_refresh_lock
 from utils.state_refresh import refresh_app
 from utils.data_repo.data_repo import DataRepo
 from ui_components.methods.file_methods import save_or_host_file
@@ -56,19 +57,18 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
             with save1:
                 st.warning("You're in frame moving mode. You must press 'Save' to save changes.")
 
+                @with_refresh_lock
                 def save_frame_changes():
-                    st.session_state['auto_refresh'] = False
                     update_shot_frames(shot_uuid)
-                    st.session_state['auto_refresh'] = True                    
 
                 if st.button(
                     "Save",
                     key=f"save_move_frame_{shot.uuid}",
                     help="Save the changes made in 'move frame' mode",
                     use_container_width=True,
-                    type="primary",
-                    on_click=save_frame_changes,
-                ):                                                            
+                    type="primary"
+                ):
+                    save_frame_changes()
                     refresh_app()
 
             if f"shot_data_{shot_uuid}" not in st.session_state:
@@ -790,42 +790,43 @@ def shot_animation_button(shot, show_label=False):
         st.session_state["shot_view_index"] = 0
         refresh_app()
 
+
 def update_shot_frames(shot_uuid):
     data_repo = DataRepo()
     st.session_state[f"open_frame_changer_{shot_uuid}"] = False
-    
+
     existing_timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
-    
+
     existing_frames = {timing.primary_image.location: timing for timing in existing_timing_list}
-    
+
     updated_frame_list = st.session_state[f"shot_data_{shot_uuid}"]
-    
+
     progress_bar = st.progress(0)
     total_items = len(updated_frame_list)
     random_list_of_emojis = ["🎉", "🎊", "🎈", "🎁", "🎀", "🎆", "🎇", "🧨", "🪅"]
-    
+
     processed_images = set()
-    
+
     for idx, (index, row) in enumerate(updated_frame_list.iterrows()):
         image_location = row["image_location"]
-        
+
         if image_location in existing_frames and image_location not in processed_images:
             existing_timing = existing_frames[image_location]
-            
+
             if existing_timing.aux_frame_index != idx:
                 data_repo.update_specific_timing(existing_timing.uuid, aux_frame_index=idx)
-            
+
             del existing_frames[image_location]
             processed_images.add(image_location)
         else:
             add_key_frame(image_location, shot_uuid, target_frame_position=idx, refresh_state=False)
-        
+
         progress = (idx + 1) / total_items
         random_emoji = random.choice(random_list_of_emojis)
         st.caption(f"Processing frame {idx + 1} of {total_items} {random_emoji}")
         progress_bar.progress(progress)
-    
+
     for image_location, timing in existing_frames.items():
         delete_frame(timing.uuid)
-    
-    st.session_state[f"shot_data_{shot_uuid}"] = None    
+
+    st.session_state[f"shot_data_{shot_uuid}"] = None

@@ -8,14 +8,21 @@ from shared.constants import HOSTED_BACKGROUND_RUNNER_MODE, OFFLINE_MODE, SERVER
 import sentry_sdk
 from shared.logging.logging import AppLogger
 from utils.app_update_utils import apply_updates, check_and_pull_changes, load_save_checkpoint
-from utils.common_utils import is_process_active
+from utils.common_decorators import update_refresh_lock
+from utils.common_utils import is_process_active, refresh_process_active
 from utils.state_refresh import refresh_app
 
-from utils.constants import AUTH_TOKEN, RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT
+from utils.constants import (
+    AUTH_TOKEN,
+    REFRESH_PROCESS_NAME,
+    REFRESH_PROCESS_PORT,
+    RUNNER_PROCESS_NAME,
+    RUNNER_PROCESS_PORT,
+)
 from utils.local_storage.url_storage import delete_url_param, get_url_param, set_url_param
 from utils.third_party_auth.google.google_auth import get_google_auth_url
 from streamlit_server_state import server_state_lock
-
+from utils.refresh_target import SAVE_STATE
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
 django.setup()
@@ -59,8 +66,29 @@ def start_runner():
             pass
 
 
+def start_project_refresh():
+    if SERVER != ServerType.DEVELOPMENT.value:
+        return
+
+    with server_state_lock["refresh_app"]:
+        app_logger = AppLogger()
+
+        if not refresh_process_active(REFRESH_PROCESS_PORT):
+            python_executable = sys.executable
+            _ = subprocess.Popen([python_executable, "auto_refresh.py"])
+            max_retries = 6
+            while not refresh_process_active(REFRESH_PROCESS_PORT) and max_retries:
+                time.sleep(1)
+                max_retries -= 1
+            app_logger.info("Auto refresh enabled")
+        else:
+            # app_logger.debug("Process already running")
+            pass
+
+
 def main():
     st.set_page_config(page_title="Dough", layout="wide", page_icon="🎨")
+    update_refresh_lock(False)
 
     auth_details = get_url_param(AUTH_TOKEN)
     if (not auth_details or auth_details == "None") and SERVER != ServerType.DEVELOPMENT.value:
@@ -100,6 +128,7 @@ def main():
             st.session_state["first_load"] = True
 
         start_runner()
+        start_project_refresh()
         project_init()
 
         from ui_components.setup import setup_app_ui

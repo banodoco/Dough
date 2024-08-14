@@ -8,8 +8,14 @@ import streamlit as st
 
 AUTH_TOKEN = "auth_details"
 REFRESH_AUTH_TOKEN = "refresh_auth_details"
+
 RUNNER_PROCESS_NAME = "banodoco_runner"
 RUNNER_PROCESS_PORT = 12345
+
+REFRESH_PROCESS_NAME = "app_refresher"
+REFRESH_PROCESS_PORT = 5123
+REFRESH_TARGET_FILE = "utils/refresh_target.py"  # file used to update the save state
+REFRESH_LOCK_FILE = "refresh_lock.json"
 
 
 class TomlConfig(ExtendedEnum):
