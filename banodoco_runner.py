@@ -38,7 +38,7 @@ from ui_components.methods.file_methods import (
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ComfyWorkflow, replicate_status_map
 
-from utils.constants import RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT, AUTH_TOKEN, REFRESH_AUTH_TOKEN
+from utils.constants import REFRESH_PROCESS_PORT, RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT, AUTH_TOKEN, REFRESH_AUTH_TOKEN
 from utils.ml_processor.gpu.utils import is_comfy_runner_present, predict_gpu_output, setup_comfy_runner
 from utils.ml_processor.sai.utils import predict_sai_output
 
@@ -168,9 +168,18 @@ def is_app_running():
         print("server not running")
         return False
 
+def refresh_dough():
+    url = f"http://localhost:{REFRESH_PROCESS_PORT}/refresh"
+    response = requests.post(url)
+
+    if response.status_code == 200:
+        return True
+    else:
+        print(f"Request failed with status code: {response.status_code}")
+        return False
 
 def update_cache_dict(
-    inference_type, log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list
+    inference_type, log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list,
 ):
     if inference_type in [
         InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
@@ -188,6 +197,7 @@ def update_cache_dict(
             shot_update_list[str(log.project.uuid)] = []
         shot_update_list[str(log.project.uuid)].append(shot_uuid)
 
+    refresh_dough()
 
 def find_process_by_port(port):
     pid = None

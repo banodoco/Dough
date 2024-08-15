@@ -4,8 +4,10 @@ import csv
 import subprocess
 import time
 from django.db import connection
+import portalocker
 import psutil
 import socket
+import requests
 import streamlit as st
 import json
 import platform
@@ -256,6 +258,23 @@ def is_process_active(custom_process_name, custom_process_port):
 
     # If the process is not found or an error occurs, assume it's not active
     return False
+
+
+def refresh_process_active(port):
+    url = f"http://localhost:{port}/health"
+    timeout = 5
+
+    try:
+        response = requests.get(url, timeout=timeout)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("status") == "healthy":
+                return True
+        print(f"Unexpected response: {response.text}")
+        return False
+    except requests.RequestException as e:
+        # print(f"Failed to connect to Flask app: {str(e)}")
+        return False
 
 
 def padded_integer(integer, pad_length=4):
