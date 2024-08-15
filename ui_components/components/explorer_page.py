@@ -733,7 +733,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         open_detailed_view_for_all = False
         num_items_per_page = 8
         num_columns = 2
-
+    if 'main_gallery' not in st.session_state:
+        st.session_state['main_gallery'] = 1
     gallery_image_filter_data = {
         "file_type": InternalFileType.IMAGE.value,
         "tag": (
