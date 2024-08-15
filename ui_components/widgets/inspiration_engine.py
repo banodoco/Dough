@@ -141,6 +141,9 @@ def generate_prompts(
     
     # Remove any double bars that might have been created
     combined_prompts = combined_prompts.replace("||", "|")
+
+    # remove leading and trailing bars
+    combined_prompts = combined_prompts.strip("|")
     
     return combined_prompts
 
@@ -344,17 +347,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                 replicate_warning_message = "We currently use Replicate for LLM queries for simplicity. This costs $0.00025/run. You can add a key in App Settings."
                 if st.session_state["prompt_generation_mode"] == generate_mode:
-                    type_of_inspiration = st_memory.selectbox(
-                        "Type of prompts to generate:",
-                        [
-                            "Generate shot sequences",
-                            "Generate style variants",
-                            "Variants on concept",
-                            "Based on lyrics or text",
-                            "Freeform",
-                        ],
-                        help="Select the type of inspiration to use for image generation.",
-                    )
+   
                     generation_text = st_memory.text_area(
                         "Text to generate prompts:",                        
                         height=100,
@@ -608,14 +601,15 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                     text = "Add reference image"
                                 if st.button(text, use_container_width=True):
                                     # Check if there are less than 3 images already in the list
-                                    while (
-                                        len(st.session_state["list_of_style_references"]) < 3
-                                        and uploaded_images
-                                    ):
-                                        st.session_state["list_of_style_references"].append(
-                                            uploaded_images.pop(0)
-                                        )
-
+                                    while len(st.session_state["list_of_style_references"]) < 3 and uploaded_images:
+                                        new_image = uploaded_images.pop(0)
+                                        new_index = len(st.session_state["list_of_style_references"])
+                                        st.session_state["list_of_style_references"].append(new_image)
+                                        
+                                        # Only add new values if they don't exist
+                                        for key in ["insp_style_influence", "insp_composition_influence", "insp_vibe_influence"]:
+                                            if len(st.session_state[key]) <= new_index:
+                                                st.session_state[key].append(0.7)  # Default value
                                     if uploaded_images:  # If there are still images left, show a warning
                                         st.warning("You can only upload 3 style references.")
 

@@ -745,6 +745,17 @@ def individual_frame_settings_element(shot_uuid, img_list):
             if st.button("Close preview mode", key=f"close_preview_mode_{shot_uuid}"):
                 st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, len(img_list))
                 refresh_app()
+
+            if st.button("Shift forward", key=f"shift_forward_{shot_uuid}"):
+                new_start = min(frames_to_preview[0] + 2, len(img_list) - 2)
+                new_end = min(frames_to_preview[1] + 2, len(img_list))
+                st.session_state[f"frames_to_preview_{shot_uuid}"] = (new_start, new_end)
+                refresh_app()
+    else:
+        with h1:
+            if st.button("Open preview mode", key=f"open_preview_mode_{shot_uuid}"):
+                st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, 3)
+                refresh_app()
         
     
     

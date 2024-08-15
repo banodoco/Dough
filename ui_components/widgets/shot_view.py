@@ -182,6 +182,8 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
                     view=["add_and_remove_from_shortlist", "add_to_any_shot"],
                 )
 
+
+
     if open_frame_changer:
 
         edit_shot_view(shot_uuid, items_per_row)
@@ -310,9 +312,9 @@ def edit_shot_view(shot_uuid, items_per_row):
                                         refresh_app()
                             if st.session_state[f"list_to_move_{shot_uuid}"]:
                                 if len(st.session_state[f"list_to_move_{shot_uuid}"]) == 1:
-                                    text = f"Move {len(st.session_state[f'list_to_move_{shot_uuid}'])} selected image here"
+                                    text = f"Move {len(st.session_state[f'list_to_move_{shot_uuid}'])} here"
                                 else:
-                                    text = f"Move {len(st.session_state[f'list_to_move_{shot_uuid}'])} selected images here"
+                                    text = f"Move {len(st.session_state[f'list_to_move_{shot_uuid}'])} here"
                                 if st.button(
                                     text,
                                     key=f"move_selected_{shot_uuid}_{idx}",
@@ -514,23 +516,23 @@ def individual_frame_zoom_edit_view(shot_uuid, idx):
             col1, col2 = st.columns(2)
             
             with col1:
-                new_zoom = st.number_input("Zoom (%)", value=st.session_state["zoom_level_input"], step=1, key=f"zoom_number_{idx}")
+                new_zoom = st.number_input("Zoom", value=st.session_state["zoom_level_input"], step=1, key=f"zoom_number_{idx}")
                 if new_zoom != st.session_state["zoom_level_input"]:
                     st.session_state["zoom_level_input"] = new_zoom
                     refresh_app()
                 
-                new_y_shift = st.number_input("Vertical Shift (px)", value=st.session_state["y_shift"], step=1, key=f"y_shift_number_{idx}")
+                new_y_shift = st.number_input("Vertical", value=st.session_state["y_shift"], step=1, key=f"y_shift_number_{idx}")
                 if new_y_shift != st.session_state["y_shift"]:
                     st.session_state["y_shift"] = new_y_shift
                     refresh_app()
             
             with col2:
-                new_x_shift = st.number_input("Horizontal Shift (px)", value=st.session_state["x_shift"], step=1, key=f"x_shift_number_{idx}")
+                new_x_shift = st.number_input("Horizontal", value=st.session_state["x_shift"], step=1, key=f"x_shift_number_{idx}")
                 if new_x_shift != st.session_state["x_shift"]:
                     st.session_state["x_shift"] = new_x_shift
                     refresh_app()
                 
-                new_rotation = st.number_input("Rotation (degrees)", value=st.session_state["rotation_angle_input"], step=1, key=f"rotation_number_{idx}")
+                new_rotation = st.number_input("Rotation", value=st.session_state["rotation_angle_input"], step=1, key=f"rotation_number_{idx}")
                 if new_rotation != st.session_state["rotation_angle_input"]:
                     st.session_state["rotation_angle_input"] = new_rotation
                     refresh_app()
