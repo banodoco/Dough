@@ -1,6 +1,6 @@
 #!/bin/bash
 
-COMMAND="streamlit run app.py --runner.fastReruns false --server.port 5500"
+COMMAND="streamlit run app.py --runner.fastReruns false --server.runOnSave true --server.port 5500"
 
 compare_versions() {
     IFS='.' read -r -a ver1 << EOF

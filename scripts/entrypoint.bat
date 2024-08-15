@@ -1,6 +1,6 @@
 @echo off
 
-set COMMAND=streamlit run app.py --runner.fastReruns false --server.port 5500
+set COMMAND=streamlit run app.py --runner.fastReruns false --server.runOnSave true --server.port 5500
 goto :loop
 
 :compare_versions

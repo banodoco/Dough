@@ -32,7 +32,7 @@ def timeline_view_page(shot_uuid: str, h2):
             
             st.write("")
 
-            with st.expander("📋 Shortlist", expanded=True):
+            with st.expander("📋 Shortlist", expanded=False):
                 if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
                     gallery_image_view(
                         shot.project.uuid,
