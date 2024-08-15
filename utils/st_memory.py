@@ -134,7 +134,6 @@ def slider(
         on_change=on_change,
         disabled=disabled,
         label_visibility=label_visibility,
-        key=f"{key}_value",
     )
 
     if selection != st.session_state[key]:

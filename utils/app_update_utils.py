@@ -169,17 +169,6 @@ def update_dough():
 
 def update_comfy_ui():
     global update_event
-
-    # update ComfyUI itself
-    if os.path.exists(comfy_ui_dir):
-        print("Updating ComfyUI...")
-        try:
-            update_git_repo(comfy_ui_dir)
-            print("ComfyUI update successful")
-        except Exception as e:
-            print(f"Error updating ComfyUI: {str(e)}")
-
-    # update custom nodes
     custom_nodes_dir = os.path.join(comfy_ui_dir, "custom_nodes")
     node_commit_dict = get_toml_config(TomlConfig.NODE_VERSION.value)
 
@@ -189,46 +178,41 @@ def update_comfy_ui():
             folder_path = os.path.join(custom_nodes_dir, folder)
             if os.path.isdir(folder_path) and os.path.exists(os.path.join(folder_path, ".git")):
                 print(f"Updating {folder}")
-                try:
-                    os.chdir(folder_path)
+                os.chdir(folder_path)
 
-                    old_hash, new_hash = None, None
-                    requirements_files = glob.glob("requirements*.txt")
-                    if requirements_files:
-
-                        requirements_file = requirements_files[0]
-                        try:
-                            with open(requirements_file, "rb") as f:
-                                old_hash = hashlib.sha256(f.read()).hexdigest()
-                        except FileNotFoundError:
-                            print(f"Requirements file not found for {folder}")
-
-                    # moving to a stable commit version for this node and installing
-                    # deps only if they have changed
+                old_hash, new_hash = None, None
+                requirements_files = glob.glob("requirements*.txt")
+                if requirements_files:
+                    requirements_file = requirements_files[0]
                     try:
-                        commit_hash = node_commit_dict.get(folder, {}).get("commit_hash", None)
-                        update_git_repo(folder_path, commit_hash)
-                        print(f"{folder} update successful")
+                        with open(requirements_file, "rb") as f:
+                            old_hash = hashlib.sha256(f.read()).hexdigest()
+                    except FileNotFoundError:
+                        print(f"Requirements file not found for {folder}")
 
-                        if requirements_files:
-                            with open(requirements_file, "rb") as f:
-                                new_hash = hashlib.sha256(f.read()).hexdigest()
-                    except Exception as e:
-                        print(f"Error updating {folder}: {e}")
+                # moving to a stable commit version for this node and installing
+                # deps only if they have changed
+                try:
+                    commit_hash = node_commit_dict.get(folder, {}).get("commit_hash", None)
+                    update_git_repo(folder_path, commit_hash)
+                    print(f"{folder} update successful")
 
-                    if old_hash and new_hash and old_hash != new_hash:
-                        try:
-                            subprocess.run(
-                                [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True
-                            )
-                            print(f"{folder} requirements installed successfully")
-                        except Exception as e:
-                            print(f"Error installing requirements for {folder}: {str(e)}")
+                    if requirements_files:
+                        with open(requirements_file, "rb") as f:
+                            new_hash = hashlib.sha256(f.read()).hexdigest()
                 except Exception as e:
-                    # handling weird/novel errors (not the proper way to do this though)
-                    print(f"Unable to properly update {folder} , error: ", str(e))
-                finally:
-                    os.chdir(initial_dir)
+                    print(f"Error updating {folder}: {e}")
+
+                if old_hash and new_hash and old_hash != new_hash:
+                    try:
+                        subprocess.run(
+                            [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True
+                        )
+                        print(f"{folder} requirements installed successfully")
+                    except Exception as e:
+                        print(f"Error installing requirements for {folder}: {str(e)}")
+
+                os.chdir(initial_dir)
 
     move_to_root()
 

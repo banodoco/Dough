@@ -1,8 +1,4 @@
-from functools import wraps
-import json
-import os
 import time
-import portalocker
 import streamlit as st
 from streamlit import runtime
 
@@ -98,29 +94,3 @@ def session_state_attributes(default_value_cls):
         return cls
 
     return decorator
-
-
-def with_refresh_lock(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        update_refresh_lock(True)
-        try:
-            return func(*args, **kwargs)
-        except Exception as e:
-            print("Error occured while processing ", str(e))
-        finally:
-            update_refresh_lock(False)
-
-    return wrapper
-
-
-def update_refresh_lock(status=False):
-    from utils.constants import REFRESH_LOCK_FILE
-
-    status = "locked" if status else "unlocked"
-    lock_file = REFRESH_LOCK_FILE
-    with portalocker.Lock(lock_file, "w") as lock_file_handle:
-        json.dump(
-            {"status": status, "last_action_time": time.time(), "process_id": os.getpid()},
-            lock_file_handle,
-        )

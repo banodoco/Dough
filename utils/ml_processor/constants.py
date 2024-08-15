@@ -20,7 +20,6 @@ class ComfyWorkflow(ExtendedEnum):
     DYNAMICRAFTER = "dynamicrafter"
     CREATIVE_IMAGE_GEN = "creative_image_gen"
     SD3 = "sd3"
-    FLUX = "flux"
 
 
 @dataclass
@@ -234,8 +233,9 @@ class ML_MODEL:
     creative_image_gen = MLModel(
         ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.CREATIVE_IMAGE_GEN
     )
-    sd3_local = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.SD3)
-    flux = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.FLUX)
+    sd3_local = MLModel(
+        ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.SD3
+    )
 
     @staticmethod
     def get_model_by_db_obj(model_db_obj):

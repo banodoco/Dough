@@ -3,7 +3,6 @@ from typing import Union
 import streamlit as st
 from shared.constants import AnimationStyleType
 from ui_components.models import InternalFileObject, InternalFrameTimingObject
-from utils.common_decorators import update_refresh_lock
 from utils.state_refresh import refresh_app
 from utils.data_repo.data_repo import DataRepo
 from ui_components.methods.file_methods import generate_pil_image, save_or_host_file
@@ -25,12 +24,9 @@ def add_key_frame_section(shot_uuid):
     )
 
     if st.button(
-        f"Add key frame(s)",
-        use_container_width=True,
-        key=f"add_key_frame_btn_{shot_uuid}",
-        type="primary",
+        f"Add key frame(s)", use_container_width=True, key=f"add_key_frame_btn_{shot_uuid}", type="primary"
     ):
-        update_refresh_lock(True)
+        st.session_state['auto_refresh'] = False
         if uploaded_images:
             progress_bar = st.progress(0)
             uploaded_images = sorted(uploaded_images, key=lambda x: x.name)
@@ -44,7 +40,7 @@ def add_key_frame_section(shot_uuid):
         else:
             st.error("Please generate new images or upload them")
             time.sleep(0.7)
-        update_refresh_lock(False)
+        st.session_state['auto_refresh'] = True
         refresh_app()
 
 
@@ -120,9 +116,7 @@ def add_key_frame(
                 st.session_state["current_frame_index"] - 1
             ].uuid
 
-        print(
-            f"Updated session state: current_frame_index: {st.session_state['current_frame_index']}, current_frame_uuid: {st.session_state['current_frame_uuid']}"
-        )
+        print(f"Updated session state: current_frame_index: {st.session_state['current_frame_index']}, current_frame_uuid: {st.session_state['current_frame_uuid']}")
 
     if refresh_state:
         refresh_app(maintain_state=True)

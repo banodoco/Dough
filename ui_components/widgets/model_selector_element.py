@@ -77,7 +77,7 @@ def list_dir_files(directory, depth=0):
 
 
 def model_selector_element(type=T2IModel.SDXL.value, position="explorer", selected_model=None):
-    tab1, tab2 = st.tabs(["Choose Model", "Download Models"])
+    # tab1, tab2 = st.tabs(["Choose Model", "Download Models"])
     default_model = (
         "sd_xl_base_1.0.safetensors"
         if type == T2IModel.SDXL.value
@@ -90,98 +90,92 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
         else "Default base SD3 medium will be selected."
     )
 
-    with tab1:
-        col1, col2 = st.columns([1, 0.25])
-        with col1:
-            explorer_gen_model = ""
+    # with tab1:
+    col1, col2 = st.columns([1, 0.25])
+    with col1:
+        explorer_gen_model = ""
 
-            # TODO: make a common interface for accessing different types of files
-            # read the metadata of the models and sort them into sd/sd3/sdxl categories during startup
-            all_files = list_dir_files(checkpoints_dir, 1)
-            default_model_list = (
-                [v["filename"] for v in SDXL_MODEL_DOWNLOAD_LIST.values()]
-                if type == T2IModel.SDXL.value
-                else [v["filename"] for v in SD3_MODEL_DOWNLOAD_LIST.values()]
-            )
-            # all_files += default_model_list
-            all_files = list(set(all_files))
-            ignored_model_list = [
-                "dynamicrafter_512_interp_v1.ckpt",
-                "sd_xl_refiner_1.0.safetensors",
-                "sd_xl_refiner_1.0_0.9vae.safetensors",
-            ]
-            model_files = [
-                file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")
-            ]
-
-            if type == T2IModel.SDXL.value:
-                match_condition = lambda file: file  # and "xl" in file.lower()
-            else:
-                match_condition = lambda file: file  # and "sd3" in file.lower()
-
-            model_files = [
-                file for file in model_files if match_condition(file) and file not in ignored_model_list
-            ]
-
-            # if len(model_files) == 0:
-            #     model_files = [default_model]
-
-            cur_model = selected_model if (selected_model and selected_model in model_files) else None
-            current_model_index = (
-                model_files.index(cur_model) if (cur_model and cur_model in model_files) else 0
-            )
-
-            if model_files and len(model_files):
-                explorer_gen_model = st.selectbox(
-                    label="Styling model:",
-                    options=model_files,
-                    key=f"{position}_{type}_explorer_gen_model_video",
-                    index=current_model_index,
-                    # on_change=update_model,
-                )
-
-                (
-                    st.info("Please only select SDXL based models. Default models will be auto-downloaded.")
-                    if type == T2IModel.SDXL.value
-                    else st.info(
-                        "Please only select SD3 based models. Default models will be auto-downloaded."
-                    )
-                )
-            else:
-                st.write("")
-                st.info(info_msg)
-                explorer_gen_model = default_model
-
-    with tab2:
-        # NOTE: makes sure to add 'xl' in these filenames because that is the only filter rn for sdxl models (will update in the future)
-
-        extra_model_list = (
-            SDXL_MODEL_DOWNLOAD_LIST if type == T2IModel.SDXL.value else SD3_MODEL_DOWNLOAD_LIST
+        # TODO: make a common interface for accessing different types of files
+        # read the metadata of the models and sort them into sd/sd3/sdxl categories during startup
+        all_files = list_dir_files(checkpoints_dir, 1)
+        default_model_list = (
+            [v["filename"] for v in SDXL_MODEL_DOWNLOAD_LIST.values()]
+            if type == T2IModel.SDXL.value
+            else [v["filename"] for v in SD3_MODEL_DOWNLOAD_LIST.values()]
         )
+        all_files += default_model_list
+        all_files = list(set(all_files))
+        ignored_model_list = [
+            "dynamicrafter_512_interp_v1.ckpt",
+            "sd_xl_refiner_1.0.safetensors",
+            "sd_xl_refiner_1.0_0.9vae.safetensors",
+        ]
+        model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
 
-        select_col1, select_col2 = st.columns([1, 1])
-        with select_col1:
-            download_model = st.selectbox(
-                label="Download model:",
-                options=extra_model_list.keys(),
-                key=f"{position}_{type}_explorer_gen_model_download",
-                index=0,
+        if type == T2IModel.SDXL.value:
+            match_condition = lambda file: file  # and "xl" in file.lower()
+        else:
+            match_condition = lambda file: file  # and "sd3" in file.lower()
+
+        model_files = [
+            file for file in model_files if match_condition(file) and file not in ignored_model_list
+        ]
+
+        # if len(model_files) == 0:
+        #     model_files = [default_model]
+
+        cur_model = selected_model if (selected_model and selected_model in model_files) else None
+        current_model_index = model_files.index(cur_model) if (cur_model and cur_model in model_files) else 0
+
+        if model_files and len(model_files):
+            explorer_gen_model = st.selectbox(
+                label="Styling model:",
+                options=model_files,
+                key=f"{position}_{type}_explorer_gen_model_video",
+                index=current_model_index,
                 # on_change=update_model,
             )
 
-        if extra_model_list[download_model]["desc"]:
-            with select_col2:
-                st.write("")
-                st.info(
-                    extra_model_list[download_model]["desc"],
-                )
-
-        if st.button("Download"):
-            download_file_widget(
-                extra_model_list[download_model]["url"],
-                extra_model_list[download_model]["filename"],
-                checkpoints_dir,
+            (
+                st.info("Please only select SDXL based models. Default models will be auto-downloaded.")
+                if type == T2IModel.SDXL.value
+                else st.info("Please only select SD3 based models. Default models will be auto-downloaded.")
             )
-            refresh_app()
+        else:
+            st.write("")
+            st.info(info_msg)
+            explorer_gen_model = default_model
+
+    # with tab2:
+    #     # NOTE: makes sure to add 'xl' in these filenames because that is the only filter rn for sdxl models (will update in the future)
+
+    #     extra_model_list = (
+    #         sdxl_model_download_list if type == T2IModel.SDXL.value else sd3_model_download_list
+    #     )
+
+    #     select_col1, select_col2 = st.columns([1, 1])
+    #     with select_col1:
+    #         download_model = st.selectbox(
+    #             label="Download model:",
+    #             options=extra_model_list.keys(),
+    #             key=f"{position}_{type}_explorer_gen_model_download",
+    #             index=0,
+    #             # on_change=update_model,
+    #         )
+
+    #     if extra_model_list[download_model]["desc"]:
+    #         with select_col2:
+    #             st.write("")
+    #             st.info(
+    #                 extra_model_list[download_model]["desc"],
+    #             )
+
+    #     if st.button("Download"):
+    #         download_file_widget(
+    #             extra_model_list[download_model]["url"],
+    #             extra_model_list[download_model]["filename"],
+    #             checkpoints_dir,
+    #         )
+    #         refresh_app()
 
     return explorer_gen_model
