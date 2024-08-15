@@ -701,13 +701,6 @@ def individual_frame_settings_element(shot_uuid, img_list):
         del st.session_state["update_values"]  # Clear the update instruction after applying
 
     h1, h2, h3 = st.columns([1, 2, 1])
-    with h1:
-        preview_mode = st_memory.checkbox(
-            label="Preview mode",
-            key=f"{shot_uuid}_preview_mode",
-            help="Generates a preview video only using the first 3 images",
-            value=False,
-        )
 
     with h3:
 
@@ -723,25 +716,43 @@ def individual_frame_settings_element(shot_uuid, img_list):
         else:
             st.session_state[f"type_of_selector"] = "number_input"
 
-    if preview_mode:
-        # take a range of frames from the user
+    
+    # take a range of frames from the user
+    
+    current_preview_range = st.session_state.get(
+        f"frames_to_preview_{shot_uuid}", (1, len(img_list))
+    )    
+    # Check if the current preview range is not from the beginning to the end
 
-        current_preview_range = st.session_state.get(
-            f"frames_to_preview_{shot_uuid}", (1, min(3, len(img_list)))
-        )
+    frames_to_preview = st_memory.slider(
+        "Frames to preview:",
+        min_value=1,
+        max_value=len(img_list),
+        value=current_preview_range,
+        key=f"frames_to_preview_{shot_uuid}",
+    )
 
-        frames_to_preview = st_memory.slider(
-            "Frames to preview:",
-            min_value=1,
-            max_value=len(img_list),
-            value=current_preview_range,
-            key=f"frames_to_preview_{shot_uuid}",
-        )
-        start_frame, end_frame = frames_to_preview
-        img_list = img_list[start_frame - 1 : end_frame]
+    if frames_to_preview != (1, len(img_list)):
+        st.session_state[f"{shot_uuid}_preview_mode"] = True
+    else:
+        st.session_state[f"{shot_uuid}_preview_mode"] = False
 
-        if len(img_list) <= 1:
-            st.error("You need at least 2 frames to preview")
+
+    if st.session_state[f"{shot_uuid}_preview_mode"] == True:
+        
+        with h1:
+                
+            if st.button("Close preview mode", key=f"close_preview_mode_{shot_uuid}"):
+                st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, len(img_list))
+                refresh_app()
+        
+    
+    
+    start_frame, end_frame = frames_to_preview
+    img_list = img_list[start_frame - 1 : end_frame]
+
+    if len(img_list) <= 1:
+        st.error("You need at least 2 frames to preview")
 
     cumulative_seconds = 0.0
     for i in range(0, len(img_list), items_per_row):

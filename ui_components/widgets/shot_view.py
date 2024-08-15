@@ -414,10 +414,9 @@ def individual_frame_zoom_edit_view(shot_uuid, idx):
     shot = data_repo.get_shot_from_uuid(shot_uuid)
     project_uuid = shot.project.uuid
 
-    header1, header2 = st.columns([1.5, 1])
-    with header1:
-        if f"open_zoom_{shot_uuid}_{idx}" not in st.session_state:
-            st.session_state[f"open_zoom_{shot_uuid}_{idx}"] = False
+ 
+    if f"open_zoom_{shot_uuid}_{idx}" not in st.session_state:
+        st.session_state[f"open_zoom_{shot_uuid}_{idx}"] = False
 
     if st.session_state["zoom_to_open"] == idx:
 
@@ -432,56 +431,7 @@ def individual_frame_zoom_edit_view(shot_uuid, idx):
             st.session_state["y_shift"] = 0
             st.session_state["flip_vertically"] = False
             st.session_state["flip_horizontally"] = False
-
-        h1, h2, h3, h4 = st.columns([1, 1, 1, 1])
-
-        with h1:
-            # zoom in with emoji button that increases zoom level by 10
-            if st.button("➕", key=f"zoom_in_{idx}", help="Zoom in by 10%", use_container_width=True):
-                st.session_state["zoom_level_input"] += 10
-            # zoom out with emoji button that decreases zoom level by 10
-            if st.button("➖", key=f"zoom_out_{idx}", help="Zoom out by 10%", use_container_width=True):
-                st.session_state["zoom_level_input"] -= 10
-
-        with h2:
-            # shift up with emoji button that decreases y shift by 10
-            if st.button("⬆️", key=f"shift_up_{idx}", help="Shift up by 10px", use_container_width=True):
-                st.session_state["y_shift"] += 10
-
-            # shift down with emoji button that increases y shift by 10
-            if st.button("⬇️", key=f"shift_down_{idx}", help="Shift down by 10px", use_container_width=True):
-                st.session_state["y_shift"] -= 10
-
-        with h3:
-            # shift left with emoji button that decreases x shift by 10
-            if st.button("⬅️", key=f"shift_left_{idx}", help="Shift left by 10px", use_container_width=True):
-                st.session_state["x_shift"] -= 10
-            # rotate left with emoji button that decreases rotation angle by 90
-            if st.button("↩️", key=f"rotate_left_{idx}", help="Rotate left by 5°", use_container_width=True):
-                st.session_state["rotation_angle_input"] -= 5
-
-        with h4:
-            # shift right with emoji button that increases x shift by 10
-            if st.button("➡️", key=f"shift_right_{idx}", help="Shift right by 10px", use_container_width=True):
-                st.session_state["x_shift"] += 10
-
-                # rotate right with emoji button that increases rotation angle by 90
-            if st.button("↪️", key=f"rotate_right_{idx}", help="Rotate right by 5°", use_container_width=True):
-                st.session_state["rotation_angle_input"] += 5
-
-        i1, i2 = st.columns([1, 1])
-        with i1:
-            if st.button("↕️", key=f"flip_vertically_{idx}", help="Flip vertically", use_container_width=True):
-
-                st.session_state["flip_vertically"] = not st.session_state["flip_vertically"]
-
-        with i2:
-            if st.button(
-                "↔️", key=f"flip_horizontally_{idx}", help="Flip horizontally", use_container_width=True
-            ):
-                st.session_state["flip_horizontally"] = not st.session_state["flip_horizontally"]
-
-        st.caption("Output Image:")
+                
 
         output_image = apply_image_transformations(
             input_image,
@@ -494,6 +444,112 @@ def individual_frame_zoom_edit_view(shot_uuid, idx):
         )
 
         st.image(output_image, use_column_width=True)
+
+        if 'type_of_zoom_input' not in st.session_state:
+            st.session_state['type_of_zoom_input'] = 'buttons'
+        '''
+        if st.session_state['type_of_zoom_input'] == 'buttons':
+            if st.button('Switch to numbers', key=f'switch_to_numbers_{idx}', use_container_width=True):
+                st.session_state['type_of_zoom_input'] = 'numbers'
+                refresh_app()
+        elif st.session_state['type_of_zoom_input'] == 'numbers':
+            if st.button('Switch to buttons', key=f'switch_to_buttons_{idx}', use_container_width=True):
+                st.session_state['type_of_zoom_input'] = 'buttons'
+                refresh_app()
+        '''
+        if st.session_state['type_of_zoom_input'] == 'buttons':
+            
+            if st.button('Use numbers', key=f'switch_to_numbers_{idx}', use_container_width=True):
+                st.session_state['type_of_zoom_input'] = 'numbers'
+                refresh_app()
+
+            h1, h2, h3, h4 = st.columns([1, 1, 1, 1])
+
+            with h1:
+                # zoom in with emoji button that increases zoom level by 10
+                if st.button("➕", key=f"zoom_in_{idx}", help="Zoom in by 10%", use_container_width=True):
+                    st.session_state["zoom_level_input"] += 10
+                    refresh_app()
+                # zoom out with emoji button that decreases zoom level by 10
+                if st.button("➖", key=f"zoom_out_{idx}", help="Zoom out by 10%", use_container_width=True):
+                    st.session_state["zoom_level_input"] -= 10
+                    refresh_app()
+
+            with h2:
+                # shift up with emoji button that decreases y shift by 10
+                if st.button("⬆️", key=f"shift_up_{idx}", help="Shift up by 10px", use_container_width=True):
+                    st.session_state["y_shift"] += 10
+                    refresh_app()
+
+                # shift down with emoji button that increases y shift by 10
+                if st.button("⬇️", key=f"shift_down_{idx}", help="Shift down by 10px", use_container_width=True):
+                    st.session_state["y_shift"] -= 10
+                    refresh_app()
+
+            with h3:
+                # shift left with emoji button that decreases x shift by 10
+                if st.button("⬅️", key=f"shift_left_{idx}", help="Shift left by 10px", use_container_width=True):
+                    st.session_state["x_shift"] -= 10
+                    refresh_app()
+                # rotate left with emoji button that decreases rotation angle by 90
+                if st.button("↩️", key=f"rotate_left_{idx}", help="Rotate left by 5°", use_container_width=True):
+                    st.session_state["rotation_angle_input"] -= 5
+                    refresh_app()
+
+            with h4:
+                # shift right with emoji button that increases x shift by 10
+                if st.button("➡️", key=f"shift_right_{idx}", help="Shift right by 10px", use_container_width=True):
+                    st.session_state["x_shift"] += 10
+                    refresh_app()
+
+                    # rotate right with emoji button that increases rotation angle by 90
+                if st.button("↪️", key=f"rotate_right_{idx}", help="Rotate right by 5°", use_container_width=True):
+                    st.session_state["rotation_angle_input"] += 5
+                    refresh_app()
+        elif st.session_state['type_of_zoom_input'] == 'numbers':
+            if st.button('Use buttons', key=f'switch_to_buttons_{idx}', use_container_width=True):
+                st.session_state['type_of_zoom_input'] = 'buttons'
+                refresh_app()
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                new_zoom = st.number_input("Zoom (%)", value=st.session_state["zoom_level_input"], step=1, key=f"zoom_number_{idx}")
+                if new_zoom != st.session_state["zoom_level_input"]:
+                    st.session_state["zoom_level_input"] = new_zoom
+                    refresh_app()
+                
+                new_y_shift = st.number_input("Vertical Shift (px)", value=st.session_state["y_shift"], step=1, key=f"y_shift_number_{idx}")
+                if new_y_shift != st.session_state["y_shift"]:
+                    st.session_state["y_shift"] = new_y_shift
+                    refresh_app()
+            
+            with col2:
+                new_x_shift = st.number_input("Horizontal Shift (px)", value=st.session_state["x_shift"], step=1, key=f"x_shift_number_{idx}")
+                if new_x_shift != st.session_state["x_shift"]:
+                    st.session_state["x_shift"] = new_x_shift
+                    refresh_app()
+                
+                new_rotation = st.number_input("Rotation (degrees)", value=st.session_state["rotation_angle_input"], step=1, key=f"rotation_number_{idx}")
+                if new_rotation != st.session_state["rotation_angle_input"]:
+                    st.session_state["rotation_angle_input"] = new_rotation
+                    refresh_app()
+
+        i1, i2 = st.columns([1, 1])
+        with i1:
+            if st.button("↕️", key=f"flip_vertically_{idx}", help="Flip vertically", use_container_width=True):
+                    
+                st.session_state["flip_vertically"] = not st.session_state["flip_vertically"]
+                refresh_app()
+
+        with i2:
+            if st.button(
+                "↔️", key=f"flip_horizontally_{idx}", help="Flip horizontally", use_container_width=True
+            ):
+                st.session_state["flip_horizontally"] = not st.session_state["flip_horizontally"]
+                refresh_app()
+
+
         if st.button(
             "Save",
             key=f"save_zoom_{idx}",
