@@ -420,8 +420,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         st.session_state["prompts_to_display_separately"] = ""
 
                     if st.session_state["prompts_to_display_separately"] != "":
-                        st.write("Generated prompts:")
-                        st.caption(st.session_state["prompts_to_display_separately"])
+                        height = len(st.session_state["prompts_to_display_separately"])
+                        st.text_area(label="Generated prompts:", value=st.session_state["prompts_to_display_separately"], height=height)
                         bottom1, bottom2, bottom3 = st.columns([1, 1, 1])
                         with bottom1:
                             if st.button("Remove"):

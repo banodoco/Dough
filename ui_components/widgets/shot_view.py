@@ -174,7 +174,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
 
         st.write("")
 
-        with st.expander("📋 Shortlist", expanded=True):
+        with st.expander("📋 Shortlist", expanded=False):
             if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
                 gallery_image_view(
                     shot.project.uuid,
