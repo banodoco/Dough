@@ -78,37 +78,24 @@ def edit_prompts(edit_text, list_of_prompts):
 
 
 def generate_prompts(
-    overall_request,
-    initial_examples,
+    prompt,
     total_unique_prompts,
     temperature=0.8,
     presence_penalty=1.15,
     top_p=0.9,
     length_penalty=1,
+    type_of_inspiration="Generate shot sequences",
 ):
-    # Combine different types of examples with varying lengths
-    mixed_examples = f"""
-    Overall prompt: Story about Leonard Cohen's big day at the beach
-    Number of items: 8
-    Responses: Leonard Cohen waking up early|Leonard Cohen packing beach essentials|Leonard Cohen driving to the beach|Leonard Cohen setting up beach umbrella|Leonard Cohen swimming in the ocean|Leonard Cohen writing lyrics in the sand|Leonard Cohen watching the sunset|Leonard Cohen falling asleep under the stars
-    ---
-    Overall prompt: Moody and atmospheric styles
-    Number of items: 15
-    Responses: Film noir alley with flickering streetlight|Misty lake at dawn|Abandoned amusement park at twilight|Candlelit cathedral interior|Foggy London street with gas lamps|Rainy cafe window with blurred figures|Moonlit graveyard with ancient tombstones|Dimly lit jazz club with smoky air|Stormy sea with lighthouse in distance|Shadowy forest with twisted trees|Desolate desert highway at night|Crumbling castle on a misty hilltop|Neon-lit Chinatown in the rain|Dusty attic with cobweb-covered relics|Snow-covered mountain peak at dusk
-    ---
-    Overall prompt: Evolution of communication
-    Number of items: 10
-    Responses: Cave paintings depicting hunt scenes|Ancient Egyptian hieroglyphs on papyrus|Medieval monk transcribing manuscript|Gutenberg printing press in action|Telegraph operator sending Morse code|Rotary phone on vintage desk|First television broadcast|Early computer with punch cards|Smartphone displaying social media feed|Futuristic holographic video call
-    ---
-    Overall prompt: Bohemian Rhapsody by Queen
-    Number of items: 12
-    Responses: Silhouette of a man confessing to his mother|Dramatic courtroom scene with figure pleading case|Tears falling on a letter of apology|Person staring at reflection, questioning reality|Thunderbolts and lightning illuminating a dark sky|Devils and angels fighting over a soul|Operatic figures dramatically posed on a stage|Wind blowing through an empty room, symbolizing goodbye|Galileo's telescope pointed at the night sky|Crowd headbanging to rock music|Broken shards of mirror reflecting fractured identity|Lone figure walking away, leaving the past behind
-    ---
-    Overall prompt: {overall_request}
-    Number of items: {total_unique_prompts}
-    Responses: {initial_examples}"""
-
-    prompt = mixed_examples
+    if type_of_inspiration == "Generate shot sequences":
+        prompt = f"Given an overall prompt, complete a series of sub-prompts each containing a concise story:\n\nOverall prompt:Story about Leonard Cohen's big day at the beach.\nNumber of items: 12\nSub-prompts:Leonard Cohen looking lying in bed|Leonard Cohen brushing teeth|Leonard Cohen smiling happily|Leonard Cohen driving in car, morning|Leonard Cohen going for a swim at beach|Leonard Cohen sitting on beach towel|Leonard Cohen building sandcastle|Leonard Cohen eating sandwich|Leonard Cohen walking along beach|Leonard Cohen getting out of water at seaside|Leonard Cohen driving home, dark outside|Leonard Cohen lying in bed smiling|close of of Leonard Cohen asleep in bed\n---\nOverall prompt: Visualizing the first day of spring\nNumber of items: 24\nSub-prompts:Frost melting off grass|Sun rising over dewy meadow|Sparrows chirping in tree|Puddles drying up|Bees flying out of hive|Flowers blooming in garden bed|Robin landing on branch|Steam rising from cup of coffee|Morning light creeping through curtains|Wind rustling through leaves|Crocus bulbs pushing through soil|Buds swelling on branches|Birds singing in chorus|Sun shining through rain-soaked pavement|Droplets clinging to spider's web|Green shoots bursting forth from roots|Garden hose dripping water|Fog burning off lake|Light filtering through stained glass window|Hummingbird sipping nectar from flower|Warm breeze rustling through wheat field|Birch trees donning new green coat|Solar eclipse casting shadow on path|Birds returning to their nests\n---\nOverall prompt: A robot's first day experiencing human emotions\nNumber of items: 20\nSub-prompts:Robot powering on, LED eyes flickering to life|Robot analyzing its new emotion chip with curiosity|Robot experiencing confusion at morning rush hour traffic|Robot feeling excitement at seeing a colorful butterfly|Robot attempting to smile at a passing child|Robot experiencing frustration while trying to tie shoelaces|Robot feeling pride after successfully making toast|Robot experiencing fear during a thunderstorm|Robot feeling empathy for a crying baby|Robot experiencing joy while petting a dog|Robot feeling embarrassment after spilling coffee|Robot experiencing anger at a malfunctioning device|Robot feeling love while watching a sunset|Robot experiencing sadness at a wilting flower|Robot feeling surprise at receiving a gift|Robot experiencing jealousy seeing other robots|Robot feeling contentment while stargazing|Robot experiencing guilt after accidentally breaking a vase|Robot feeling hope while planting a seed|Robot powering down, LED eyes dimming with newfound peace\n---\nOverall prompt:{prompt}\nNumber of items: {total_unique_prompts}\nSub-prompts:"
+    elif type_of_inspiration == "Generate style variants":
+        prompt = f"Given a high-level description of a style or mood, generate a series of specific visual styles that fit within that category:\n\nHigh-level style: Moody and atmospheric\nNumber of items: 12\nStyle variants:Film noir with deep shadows|Misty watercolor landscapes|Low-key photography with dramatic lighting|Gloomy cyberpunk cityscapes|Dark and stormy oil paintings|Melancholic black and white portraits|Foggy forest scenes in muted tones|Rainy night street photography|Somber abstract expressionism|Eerie surrealist dreamscapes|Brooding gothic architecture|Haunting minimalist compositions\n---\nHigh-level style: Vibrant and energetic\nNumber of items: 24\nStyle variants:Bold pop art with primary colors|Explosive abstract expressionism|Neon-lit urban nightscapes|Colorful fauvist landscapes|Dynamic action photography|Psychedelic digital art|Vivid anime-inspired illustrations|Bright and cheerful cartoon styles|Energetic street art and graffiti|Saturated tropical scene paintings|Lively impressionist brushstrokes|Colorful geometric patterns|Vibrant watercolor splashes|Neon glitch art|Exuberant expressionist portraits|Bright and playful pixel art|Lush and colorful jungle scenes|Energetic motion blur photography|Vivid stained glass designs|Colorful abstract digital fractals|Bright and cheerful vector illustrations|Vibrant low-poly 3D renderings|Energetic sports action shots|Colorful and whimsical doodle art\n---\nHigh-level style: Futuristic and high-tech\nNumber of items: 12\nStyle variants:Holographic user interface designs|Sleek minimalist product renderings|Glowing circuit board patterns|Futuristic cityscape concept art|Augmented reality overlay effects|Sci-fi inspired character designs|Abstract data visualization art|Nanotech-inspired microscopic views|Cybernetic implant schematics|Quantum computing conceptual illustrations|Robotic assembly line animations|Space colony habitat designs\n---\nHigh-level style:{prompt}\nNumber of items: {total_unique_prompts}\nStyle variants:"
+    elif type_of_inspiration == "Variants on concept":
+        prompt = f"Given a basic concept, generate a series of diverse image descriptions that represent different interpretations or scenarios of that concept:\n\nBasic concept: Different perspectives of an oak tree\nNumber of items: 12\nVariants:Oak tree from above, aerial view|Oak tree in winter, bare branches against snow|Close-up of oak tree bark texture|Oak tree silhouette at sunset|Oak tree roots exposed on eroded hillside|Oak tree full of autumn leaves|Wide-angle view of oak tree in open field|Oak tree struck by lightning, split trunk|Oak tree canopy from below, looking up|Oak tree reflected in still pond|Oak tree with person standing at base for scale|Oak tree in spring, new leaves budding\n---\nBasic concept: Different types of smiles\nNumber of items: 24\nVariants:Cheeky grin with dimples|Subtle smirk, one corner of mouth raised|Beaming smile, teeth showing|Shy smile, lips closed|Lopsided smile|Mischievous smile with raised eyebrow|Forced smile for a photo|Genuine laugh-induced smile|Crooked smile|Toothless smile of a baby|Nervous smile before public speaking|Sly smile with a secret|Warm, welcoming smile|Proud smile of achievement|Flirtatious smile with eye contact|Relieved smile after good news|Excited child's gap-toothed smile|Serene smile during meditation|Embarrassed smile with blushing|Confident smile before a challenge|Sad smile hiding pain|Playful smile with tongue sticking out slightly|Grateful smile receiving a gift|Loving smile between partners\n---\nBasic concept: The concept of time\nNumber of items: 18\nVariants:Ancient sundial casting shadow|Hourglass with sand trickling through|Vintage pocket watch with ornate hands|Digital clock display on smartphone|Melting clock inspired by Salvador Dali|Time-lapse of blooming flower|Wrinkles forming on aging face|Tree rings showing years of growth|Decaying ruins of ancient civilization|Futuristic holographic time display|Child and elderly person holding hands|Swinging pendulum of grandfather clock|Calendar pages flipping rapidly|Long exposure of star trails in night sky|Before and after images of city skyline|Time capsule being unearthed|Stopwatch frozen at finish line moment|Wristwatch submerged in water, still ticking\n---\nBasic concept:{prompt}\nNumber of items: {total_unique_prompts}\nVariants:"
+    elif type_of_inspiration == "Based on lyrics or text":
+        prompt = f"Given a set of poetic lyrics or text, generatDe a series of diverse image descriptions that capture the essence and imagery of the words:\n\nLyrics: Suzanne by Leonard Cohen\nNumber of items: 20\nVariants:Woman leading a man to a riverside at dusk|Boats passing on a moonlit river|Tea cups and orange peels on a weathered wooden table|Silhouette of a woman with wild, flowing hair against a sunset|Man with a contemplative expression watching boats on a river|Woman's hand touching a man's face gently|Two figures walking along a misty riverbank|Close-up of a woman's eyes reflecting rippling water|Man and woman sitting by a river, surrounded by Chinese lanterns|Sailor standing on the bow of a ship, looking at the horizon|Lonely wooden tower overlooking a vast sea|Figure walking on water with outstretched arms|Drowning man reaching towards a light in the sky|Broken sailboat washed up on a rocky shore|Sun pouring like honey over a harbor statue|Woman pointing out beauty amidst urban decay|Child reaching out from a field of flowers|Heroes emerging from tangled seaweed|Woman holding a mirror reflecting a serene river scene|Two silhouettes walking hand in hand into a fog-covered distance\n---\nLyrics: Roll the Dice by Charles Bukowski\nNumber of items: 20\nVariants:Determined face of a person at a crossroads|Silhouette of a lone figure walking away from a group|Empty refrigerator with a single light bulb|Person huddled on a park bench under newspapers|Hands gripping prison bars, a sliver of light visible|Figure standing tall amidst a jeering crowd|Solitary individual on a mountaintop at sunrise|Person typing furiously on a typewriter, surrounded by crumpled papers|Weathered hands holding a fragile seedling|Runner breaking through a finish line tape, exhausted but triumphant|Silhouette of a person standing at the edge of a cliff|Night sky filled with brilliant stars and a campfire below|Person laughing joyously while riding a bicycle downhill|Boxer rising from the canvas, bloodied but unbowed|Tightrope walker mid-step between two peaks|Artist covered in paint splatters, standing before a massive canvas|Marathoner collapsing across the finish line|Climber reaching for the summit of a mountain|Face with eyes closed in blissful meditation|Vibrant fireworks exploding in a night sky\n---\nLyrics:{prompt}\nNumber of items: {total_unique_prompts}\nVariants:"
+    elif type_of_inspiration == "Freeform":
+        prompt = f"Given any type of prompt or question, generate a series of diverse and creative responses. These can be image descriptions, story sequences, style variants, concept interpretations, or responses inspired by text. Adapt your output to the nature of the input:\n\nPrompt: Story about Leonard Cohen's big day at the beach\nNumber of items: 12\nResponses:Leonard Cohen lying in bed|Leonard Cohen brushing teeth|Leonard Cohen smiling happily|Leonard Cohen driving in car, morning|Leonard Cohen going for a swim at beach|Leonard Cohen sitting on beach towel|Leonard Cohen building sandcastle|Leonard Cohen eating sandwich|Leonard Cohen walking along beach|Leonard Cohen getting out of water at seaside|Leonard Cohen driving home, dark outside|Leonard Cohen lying in bed smiling\n---\nPrompt: Moody and atmospheric\nNumber of items: 12\nResponses:Film noir with deep shadows|Misty watercolor landscapes|Low-key photography with dramatic lighting|Gloomy cyberpunk cityscapes|Dark and stormy oil paintings|Melancholic black and white portraits|Foggy forest scenes in muted tones|Rainy night street photography|Somber abstract expressionism|Eerie surrealist dreamscapes|Brooding gothic architecture|Haunting minimalist compositions\n---\nPrompt: Different types of smiles\nNumber of items: 12\nResponses:Cheeky grin with dimples|Subtle smirk, one corner of mouth raised|Beaming smile, teeth showing|Shy smile, lips closed|Lopsided smile|Mischievous smile with raised eyebrow|Forced smile for a photo|Genuine laugh-induced smile|Crooked smile|Toothless smile of a baby|Nervous smile before public speaking|Sly smile with a secret\n---\nPrompt: Suzanne by Leonard Cohen\nNumber of items: 12\nResponses:Woman leading a man to a riverside at dusk|Boats passing on a moonlit river|Tea cups and orange peels on a weathered wooden table|Silhouette of a woman with wild, flowing hair against a sunset|Man with a contemplative expression watching boats on a river|Woman's hand touching a man's face gently|Two figures walking along a misty riverbank|Close-up of a woman's eyes reflecting rippling water|Man and woman sitting by a river, surrounded by Chinese lanterns|Sailor standing on the bow of a ship, looking at the horizon|Lonely wooden tower overlooking a vast sea|Figure walking on water with outstretched arms\n---\nPrompt:{prompt}\nNumber of items: {total_unique_prompts}\nResponses:"
 
     query_data = {
         "top_p": top_p,
@@ -125,27 +112,17 @@ def generate_prompts(
         input=query_data,
     )
 
-    proper_output = ""
+    proper_output = ""  # Initialize an empty string to accumulate outputs
     for item in output:
         if isinstance(item, dict) and "output" in item:
-            proper_output += item["output"]
+            proper_output += item["output"]  # Concatenate each output to the proper_output string
         else:
-            proper_output += str(item)
-    
+            proper_output += str(item)  # Handle cases where item is not a dictionary
     list_of_prompts = proper_output.strip()
     list_of_prompts = list_of_prompts.lstrip("\n")
-    list_of_prompts = list_of_prompts.split("\n")[0]
-    
-    # Combine initial examples with generated prompts
-    combined_prompts = initial_examples + "|" + list_of_prompts
-    
-    # Remove any double bars that might have been created
-    combined_prompts = combined_prompts.replace("||", "|")
-
-    # remove leading and trailing bars
-    combined_prompts = combined_prompts.strip("|")
-    
-    return combined_prompts
+    # Proper output should be only before the first \n
+    list_of_prompts = proper_output.split("\n")[0]
+    return list_of_prompts
 
 
 def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None, timing_uuid=None):
@@ -233,7 +210,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 "list_of_prompts": default_prompt_list,
                 "prompt_generation_mode": generate_mode,
                 "insp_text_prompt": default_generation_text,
-                "insp_examples": "empty barren desert|tiny seeding visible in growing out of desert sand",
                 "total_unique_prompt": 16,
                 "insp_creativity": 8,
                 "insp_how_to_display": 0,
@@ -347,23 +323,26 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                 replicate_warning_message = "We currently use Replicate for LLM queries for simplicity. This costs $0.00025/run. You can add a key in App Settings."
                 if st.session_state["prompt_generation_mode"] == generate_mode:
-   
-                    generation_text = st_memory.text_area(
-                        "Text to generate prompts:",                        
-                        height=100,
+                    type_of_inspiration = st_memory.selectbox(
+                        "Type of prompts to generate:",
+                        [
+                            "Generate shot sequences",
+                            "Generate style variants",
+                            "Variants on concept",
+                            "Based on lyrics or text",
+                            "Freeform",
+                        ],
+                        help="Select the type of inspiration to use for image generation.",
+                    )
+                    generaton_text = st.text_area(
+                        "Text to generate prompts:",
+                        value=st.session_state["insp_text_prompt"],
+                        height=300,
                         help="This will be used to generate prompts and will overwrite the existing prompts.",
-                        key="insp_text_prompt",
                     )
 
-                    generation_examples = st_memory.text_area(
-                        "Examples separated by |:",                        
-                        height=100,
-                        help="This will be used to generate prompts and will overwrite the existing prompts.",
-                        key="insp_examples",
-                    )
-
-                    if st.session_state["insp_text_prompt"] != generation_text:
-                        st.session_state["insp_text_prompt"] = generation_text
+                    if st.session_state["insp_text_prompt"] != generaton_text:
+                        st.session_state["insp_text_prompt"] = generaton_text
                         refresh_app()
 
                     subprompt1, subprompt2 = st.columns([2, 1])
@@ -397,6 +376,13 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                     total_unique_prompts = total_unique_prompts + 5
 
+                    how_to_display = st.selectbox(
+                        "How to display generated prompts:",
+                        ["Replace existing prompts", "Add to existing prompts", "Show separately"],
+                        index=st.session_state["insp_how_to_display"],
+                        help="Select how you want to display the generated prompts.",
+                    )
+
                     if not check_replicate_key():
                         st.info(replicate_warning_message)
                     else:
@@ -406,13 +392,20 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             help="This will overwrite the existing prompts.",
                         ):
                             generated_prompts = generate_prompts(
-                                generation_text,
-                                generation_examples,
+                                generaton_text,
                                 total_unique_prompts,
-                                temperature=temperature,                                
+                                temperature=temperature,
+                                type_of_inspiration=type_of_inspiration,
                             )
-
-                            st.session_state["prompts_to_display_separately"] = generated_prompts
+                            # split the prompts by | and create a list
+                            if how_to_display == "Replace existing prompts":
+                                st.session_state["list_of_prompts"] = generated_prompts.split("|")
+                            elif how_to_display == "Add to existing prompts":
+                                st.session_state["list_of_prompts"] = st.session_state[
+                                    "list_of_prompts"
+                                ] + generated_prompts.split("|")
+                            elif how_to_display == "Show separately":
+                                st.session_state["prompts_to_display_separately"] = generated_prompts
 
                             refresh_app()
 
@@ -420,8 +413,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         st.session_state["prompts_to_display_separately"] = ""
 
                     if st.session_state["prompts_to_display_separately"] != "":
-                        height = len(st.session_state["prompts_to_display_separately"])
-                        st.text_area(label="Generated prompts:", value=st.session_state["prompts_to_display_separately"], height=height)
+                        st.write("Generated prompts:")
+                        st.caption(st.session_state["prompts_to_display_separately"])
                         bottom1, bottom2, bottom3 = st.columns([1, 1, 1])
                         with bottom1:
                             if st.button("Remove"):
@@ -517,11 +510,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         selected_model=st.session_state["insp_selected_model"],
                     )
 
-                elif type_of_model == T2IModel.FLUX.value:
-                    model = "flux1-schnell-fp8.safetensors"
-
-                    st.info("Flux Schell FP8 will be selected by default. It requires atleast 17GB VRAM.")
-
                 """
                 model - {url, filename, desc}
                 """
@@ -532,14 +520,13 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             st.markdown("***")
             st.markdown("#### Style guidance")
 
-            type_of_style_input = None
             if type_of_model == T2IModel.SD3.value:
                 sd3, _ = st.columns([1, 1])
                 with sd3:
                     st.info("Style references aren't yet supported for SD3.")
                 style_influence = 4.5  # this will actually go into cfg
-
-            elif type_of_model == T2IModel.SDXL.value:
+                type_of_style_input = None
+            else:
                 input_type_list = [
                     "Choose From List",
                     "Upload Images",
@@ -601,15 +588,14 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                     text = "Add reference image"
                                 if st.button(text, use_container_width=True):
                                     # Check if there are less than 3 images already in the list
-                                    while len(st.session_state["list_of_style_references"]) < 3 and uploaded_images:
-                                        new_image = uploaded_images.pop(0)
-                                        new_index = len(st.session_state["list_of_style_references"])
-                                        st.session_state["list_of_style_references"].append(new_image)
-                                        
-                                        # Only add new values if they don't exist
-                                        for key in ["insp_style_influence", "insp_composition_influence", "insp_vibe_influence"]:
-                                            if len(st.session_state[key]) <= new_index:
-                                                st.session_state[key].append(0.7)  # Default value
+                                    while (
+                                        len(st.session_state["list_of_style_references"]) < 3
+                                        and uploaded_images
+                                    ):
+                                        st.session_state["list_of_style_references"].append(
+                                            uploaded_images.pop(0)
+                                        )
+
                                     if uploaded_images:  # If there are still images left, show a warning
                                         st.warning("You can only upload 3 style references.")
 
@@ -922,7 +908,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 queue_inference=QUEUE_INFERENCE_QUERIES,
                             )
 
-                        elif type_of_model == T2IModel.SD3.value:
+                        else:
                             query_obj = MLQueryObject(
                                 timing_uuid=None,
                                 model_uuid=None,
@@ -941,29 +927,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                             output, log = ml_client.predict_model_output_standardized(
                                 ML_MODEL.sd3_local,
-                                query_obj,
-                                queue_inference=QUEUE_INFERENCE_QUERIES,
-                            )
-
-                        elif type_of_model == T2IModel.FLUX.value:
-                            query_obj = MLQueryObject(
-                                timing_uuid=None,
-                                model_uuid=None,
-                                image_uuid=None,
-                                guidance_scale=5,
-                                seed=-1,
-                                num_inference_steps=30,
-                                strength=5.0,
-                                adapter_type=None,
-                                prompt=f"{image_prompt}, {additional_description_text}, {additional_style_text}",
-                                negative_prompt=negative_prompt,
-                                height=project_settings.height,
-                                width=project_settings.width,
-                                data={"shift": 3.0, "model": model},  # default value
-                            )
-
-                            output, log = ml_client.predict_model_output_standardized(
-                                ML_MODEL.flux,
                                 query_obj,
                                 queue_inference=QUEUE_INFERENCE_QUERIES,
                             )

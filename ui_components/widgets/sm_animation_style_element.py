@@ -1,4 +1,3 @@
-import time
 import uuid
 import os
 import requests
@@ -25,12 +24,10 @@ from ui_components.methods.file_methods import (
 )
 from ui_components.widgets.display_element import display_motion_lora
 from ui_components.methods.ml_methods import train_motion_lora
-from utils.common_decorators import update_refresh_lock
 from utils.constants import StabliseMotionOption
 from utils.data_repo.data_repo import DataRepo
 from utils.state_refresh import refresh_app
 from streamlit.elements.utils import _shown_default_value_warning
-
 
 _shown_default_value_warning = True
 
@@ -499,110 +496,103 @@ def select_motion_lora_element(shot_uuid, model_files):
 
 def select_sd_model_element(shot_uuid, default_model):
     st.markdown("##### Style model")
-    tab1, tab2 = st.tabs(["Choose Model", "Download Models"])
+    # tab1, tab2 = st.tabs(["Choose Model", "Download Models"])
 
     checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
     all_files = list_dir_files(checkpoints_dir, depth=1)
-    if len(all_files) == 0:
-        model_files = [default_model]
+    # if len(all_files) == 0:
+    #     model_files = [default_model]
 
-    else:
-        model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
-        ignored_model_list = ["dynamicrafter_512_interp_v1.ckpt"]
-        model_files = [file for file in model_files if file not in ignored_model_list]
+    # else:
+    model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
+    ignored_model_list = ["dynamicrafter_512_interp_v1.ckpt"]
+    model_files = [file for file in model_files if file not in ignored_model_list]
 
-        # model_files += [v["filename"] for v in SD_MODEL_DICT.values()]
-        model_files = list(set(model_files))
-
-    # setting default
-    if "dreamshaper_8.safetensors" in model_files:
-        model_files.remove("dreamshaper_8.safetensors")
-        model_files.insert(0, "dreamshaper_8.safetensors")
+    model_files += [v["filename"] for v in SD_MODEL_DICT.values()]
+    model_files = list(set(model_files))
 
     cur_model = st.session_state[f"ckpt_{shot_uuid}"]
     current_model_index = model_files.index(cur_model) if (cur_model and cur_model in model_files) else 0
 
     # ---------------- SELECT CKPT --------------
-    with tab1:
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            sd_model = ""
+    # with tab1:
+    col1, col2 = st.columns([1, 1])
+    with col1:
+        sd_model = ""
 
-            def update_model():
-                global sd_model
-                sd_model = checkpoints_dir + "/" + st.session_state["sd_model_video"]
+        def update_model():
+            global sd_model
+            sd_model = checkpoints_dir + "/" + st.session_state["sd_model_video"]
 
-            if model_files and len(model_files):
-                sd_model = st.selectbox(
-                    label="Styling model:",
-                    options=model_files,
-                    key="sd_model_video",
-                    index=current_model_index,
-                    on_change=update_model,
-                )
-            else:
-                st.write("")
-                st.info("Default model Dreamshaper 8 would be selected")
-                sd_model = default_model
+        if model_files and len(model_files):
+            sd_model = st.selectbox(
+                label="Styling model:",
+                options=model_files,
+                key="sd_model_video",
+                index=current_model_index,
+                on_change=update_model,
+            )
+        else:
+            st.write("")
+            st.info("Default model Dreamshaper 8 would be selected")
+            sd_model = default_model
 
-        with col2:
-            if len(all_files) == 0:
-                st.write("")
-                st.info("These models will be auto-downloaded during the generation")
-            else:
-                st.write("")
-                st.info(
-                    "Please only select SD1.5 based models. E.g. dreamshaper_8, Deliberate_v2, realistic_vision_v51, majicmix, epicrealism etc.."
-                )
-                st.info("To download more models, go to the Download Models tab.")
+    with col2:
+        if len(all_files) == 0:
+            st.write("")
+            st.info("This is the default model - to download more, go to the Download Models tab.")
+        else:
+            st.write("")
+            st.info(
+                "Please only select SD1.5 based models. E.g. dreamshaper_8, Deliberate_v2, realistic_vision_v51, majicmix, epicrealism etc.."
+            )
+            # st.info("To download more models, go to the Download Models tab.")
 
     # ---------------- ADD CKPT ---------------
-    with tab2:
-        where_to_get_model = st.radio(
-            "Where would you like to get the model from?",
-            options=["Our list", "Upload a model", "From a URL"],
-            key="where_to_get_model",
-        )
+    # with tab2:
+    #     where_to_get_model = st.radio(
+    #         "Where would you like to get the model from?",
+    #         options=["Our list", "Upload a model", "From a URL"],
+    #         key="where_to_get_model",
+    #     )
 
-        if where_to_get_model == "Our list":
-            model_name_selected = st.selectbox(
-                "Which model would you like to download?",
-                options=list(SD_MODEL_DICT.keys()),
-                key="model_to_download",
-            )
+    #     if where_to_get_model == "Our list":
+    #         model_name_selected = st.selectbox(
+    #             "Which model would you like to download?",
+    #             options=list(sd_model_dict.keys()),
+    #             key="model_to_download",
+    #         )
 
-            # from streamlit_globalrefresh import st_globalrefresh
+    #         if st.button("Download Model", key="download_model"):
+    #             download_file_widget(
+    #                 sd_model_dict[model_name_selected]["url"],
+    #                 sd_model_dict[model_name_selected]["filename"],
+    #                 checkpoints_dir,
+    #             )
 
-            if st.button("Download Model", key="download_model"):
-                download_file_widget(
-                    SD_MODEL_DICT[model_name_selected]["url"],
-                    SD_MODEL_DICT[model_name_selected]["filename"],
-                    checkpoints_dir,
-                )
+    #     elif where_to_get_model == "Upload a model":
+    #         st.info("It's simpler to just drop this into the ComfyUI/models/checkpoints directory.")
 
-        elif where_to_get_model == "Upload a model":
-            st.info("It's simpler to just drop this into the ComfyUI/models/checkpoints directory.")
+    #     elif where_to_get_model == "From a URL":
+    #         text1, text2 = st.columns([1, 1])
+    #         with text1:
+    #             text_input = st.text_input("Enter the URL of the model", key="text_input")
+    #         with text2:
+    #             st.info(
+    #                 "Make sure to get the download url of the model. \n\n For example, from Civit, this should look like this: https://civitai.com/api/download/models/179446. \n\n While from Hugging Face, it should look like this: https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors"
+    #             )
 
-        elif where_to_get_model == "From a URL":
-            text1, text2 = st.columns([1, 1])
-            with text1:
-                text_input = st.text_input("Enter the URL of the model", key="text_input")
-            with text2:
-                st.info(
-                    "Make sure to get the download url of the model. \n\n For example, from Civit, this should look like this: https://civitai.com/api/download/models/179446. \n\n While from Hugging Face, it should look like this: https://huggingface.co/Kijai/animatediff_motion_director_loras/resolve/main/1000_jeep_driving_r32_temporal_unet.safetensors"
-                )
-
-            if st.button("Download Model", key="download_model_url"):
-                with st.spinner("Downloading model..."):
-                    save_directory = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
-                    os.makedirs(save_directory, exist_ok=True)
-                    response = requests.get(text_input)
-                    if response.status_code == 200:
-                        with open(os.path.join(save_directory, text_input.split("/")[-1]), "wb") as f:
-                            f.write(response.content)
-                        st.success(f"Downloaded model to {save_directory}")
-                    else:
-                        st.error("Failed to download model")
+    #         if st.button("Download Model", key="download_model_url"):
+    #             with st.spinner("Downloading model..."):
+    #                 save_directory = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
+    #                 os.makedirs(save_directory, exist_ok=True)
+    #                 response = requests.get(text_input)
+    #                 if response.status_code == 200:
+    #                     with open(os.path.join(save_directory, text_input.split("/")[-1]), "wb") as f:
+    #                         f.write(response.content)
+    #                     st.success(f"Downloaded model to {save_directory}")
+    #                 else:
+    #                     st.error("Failed to download model")
 
     return (
         sd_model,
@@ -700,71 +690,6 @@ def individual_frame_settings_element(shot_uuid, img_list):
         apply_updates(key_suffix, value, uuid, range_to_edit)
         del st.session_state["update_values"]  # Clear the update instruction after applying
 
-    h1, h2, h3 = st.columns([1, 2, 1])
-
-    with h3:
-
-        type_of_selector = st_memory.radio(
-            "Type of selector:",
-            options=["Slider", "Number select"],
-            key=f"{shot_uuid}_preview_mode_type",
-            horizontal=True,
-        )
-
-        if type_of_selector == "Slider":
-            st.session_state[f"type_of_selector"] = "slider"
-        else:
-            st.session_state[f"type_of_selector"] = "number_input"
-
-    
-    # take a range of frames from the user
-    
-    current_preview_range = st.session_state.get(
-        f"frames_to_preview_{shot_uuid}", (1, len(img_list))
-    )    
-    # Check if the current preview range is not from the beginning to the end
-
-    frames_to_preview = st_memory.slider(
-        "Frames to preview:",
-        min_value=1,
-        max_value=len(img_list),
-        value=current_preview_range,
-        key=f"frames_to_preview_{shot_uuid}",
-    )
-
-    if frames_to_preview != (1, len(img_list)):
-        st.session_state[f"{shot_uuid}_preview_mode"] = True
-    else:
-        st.session_state[f"{shot_uuid}_preview_mode"] = False
-
-
-    if st.session_state[f"{shot_uuid}_preview_mode"] == True:
-        
-        with h1:
-                
-            if st.button("Close preview mode", key=f"close_preview_mode_{shot_uuid}"):
-                st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, len(img_list))
-                refresh_app()
-
-            if st.button("Shift forward", key=f"shift_forward_{shot_uuid}"):
-                new_start = min(frames_to_preview[0] + 2, len(img_list) - 2)
-                new_end = min(frames_to_preview[1] + 2, len(img_list))
-                st.session_state[f"frames_to_preview_{shot_uuid}"] = (new_start, new_end)
-                refresh_app()
-    else:
-        with h1:
-            if st.button("Open preview mode", key=f"open_preview_mode_{shot_uuid}"):
-                st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, 3)
-                refresh_app()
-        
-    
-    
-    start_frame, end_frame = frames_to_preview
-    img_list = img_list[start_frame - 1 : end_frame]
-
-    if len(img_list) <= 1:
-        st.error("You need at least 2 frames to preview")
-
     cumulative_seconds = 0.0
     for i in range(0, len(img_list), items_per_row):
         prev_frame_settings = None
@@ -779,14 +704,6 @@ def individual_frame_settings_element(shot_uuid, img_list):
                     with grid[2 * j]:
                         st.info(f"**Frame {idx + 1} - {cumulative_seconds:.2f}s**")
                         st.image(img.location, use_column_width=True)
-                        if st.session_state[f"{shot_uuid}_preview_mode"] != True:
-                            if st.button("Start preview here", key=f"start_preview_{shot_uuid}_{idx}"):
-                                st.session_state[f"{shot_uuid}_preview_mode"] = True
-                                st.session_state[f"frames_to_preview_{shot_uuid}"] = (
-                                    idx + 1,
-                                    min(idx + 3, len(img_list)),
-                                )
-                                refresh_app()
 
                 # Create a new grid for each row of images
                 if img and img.location:
@@ -853,30 +770,26 @@ def individual_frame_settings_element(shot_uuid, img_list):
 
                                 if value_key not in st.session_state:
                                     st.session_state[value_key] = default_value
-                                if st.session_state[f"type_of_selector"] == "number_input":
-                                    slider_value = st.number_input(
-                                        label,
-                                        min_value=min_value,
-                                        max_value=max_value,
-                                        step=step,
-                                        key=widget_key,
-                                        value=st.session_state[value_key],
-                                        help=help_text,
-                                    )
-                                else:
-                                    slider_value = st.slider(
-                                        label,
-                                        min_value=min_value,
-                                        max_value=max_value,
-                                        step=step,
-                                        key=widget_key,
-                                        value=st.session_state[value_key],
-                                    )
+
+                                slider_value = st.number_input(
+                                    label,
+                                    min_value=min_value,
+                                    max_value=max_value,
+                                    step=step,
+                                    key=widget_key,
+                                    value=st.session_state[value_key],
+                                    help=help_text,
+                                )
 
                                 if slider_value != st.session_state[value_key]:
                                     st.session_state[value_key] = slider_value
                                     update_last_changed(value_key, slider_value)
-
+                                    if idx == 0:  # First frame
+                                        st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, 2)
+                                    elif idx == len(img_list) - 1:  # Last frame
+                                        st.session_state[f"frames_to_preview_{shot_uuid}"] = (idx, idx + 1)
+                                    else:  # Middle frames
+                                        st.session_state[f"frames_to_preview_{shot_uuid}"] = (idx, idx + 2)
                                     refresh_app()
                                 return slider_value
 
