@@ -41,9 +41,6 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
     with st.container():
 
         # ----------- HEADER OPTIONS -------------
-        header_col_1, _, header_col_3, header_col_4 = st.columns(
-            [1.0, 1.5, 1.0, 1.0]
-        )  # btns defined at the bottom of the UI
 
         # ----------- INDIVIDUAL FRAME SETTINGS -----------
         (
