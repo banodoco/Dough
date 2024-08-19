@@ -121,7 +121,7 @@ def generate_prompts(
         "stop_sequences": " ",
     }
     output = replicate.run(
-        "meta/meta-llama-3-70b",
+        "meta/meta-llama-3-70b-instruct",
         input=query_data,
     )
 

@@ -716,9 +716,10 @@ def individual_frame_settings_element(shot_uuid, img_list):
         f"frames_to_preview_{shot_uuid}", (1, len(img_list))
     )    
     # Check if the current preview range is not from the beginning to the end
-
-    frames_to_preview = st_memory.slider(
-        "Frames to preview:",
+    preview1,preview2,preview3 = st.columns([1,6,1])
+    with preview2:
+        frames_to_preview = st_memory.slider(
+            "Frames to preview:",
         min_value=1,
         max_value=len(img_list),
         value=current_preview_range,
@@ -731,24 +732,44 @@ def individual_frame_settings_element(shot_uuid, img_list):
         st.session_state[f"{shot_uuid}_preview_mode"] = False
 
 
-    if st.session_state[f"{shot_uuid}_preview_mode"] == True:
+    
         
-        with h1:
-                
-            if st.button("Close preview mode", key=f"close_preview_mode_{shot_uuid}"):
-                st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, len(img_list))
+    def close_preview_mode(shot_uuid,img_list):
+        st.write("Closing preview mode")
+        time.sleep(1)
+        st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, len(img_list))
+        st.session_state[f"{shot_uuid}_preview_mode"] = False
+
+    def open_preview_mode(shot_uuid):
+        st.write("Opening preview mode")
+        time.sleep(1)
+        st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, 3)
+        st.session_state[f"{shot_uuid}_preview_mode"] = True
+
+    if st.session_state.get(f"{shot_uuid}_preview_mode", False):
+        with preview1:
+            st.write("")
+            if st.button("Close preview mode", key=f"close_preview_mode_{shot_uuid}", on_click=close_preview_mode, args=(shot_uuid, img_list)):                
                 refresh_app()
 
+        with preview3:
+            st.write("")
             if st.button("Shift forward", key=f"shift_forward_{shot_uuid}"):
+                frames_to_preview = st.session_state[f"frames_to_preview_{shot_uuid}"]
                 new_start = min(frames_to_preview[0] + 2, len(img_list) - 2)
                 new_end = min(frames_to_preview[1] + 2, len(img_list))
                 st.session_state[f"frames_to_preview_{shot_uuid}"] = (new_start, new_end)
                 refresh_app()
     else:
-        with h1:
-            if st.button("Open preview mode", key=f"open_preview_mode_{shot_uuid}"):
-                st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, 3)
+        with preview1:
+            st.write("")
+            if st.button("Open preview mode", key=f"open_preview_mode_{shot_uuid}", on_click=open_preview_mode, args=(shot_uuid,)):
+                st.write("Opening preview mode")
                 refresh_app()
+
+        with preview3:
+            st.write("")
+            st.info("Showing all")
         
     
     
@@ -915,7 +936,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                             distance_to_next_frame = create_slider(
                                 label="Seconds to next frame:",
                                 min_value=0.25,
-                                max_value=12.00,
+                                max_value=12.00 if st.session_state[f"type_of_selector"] == "slider" else 600.00,
                                 step=0.25,
                                 key_suffix="distance_to_next_frame",
                                 default_value=st.session_state[f"distance_to_next_frame_{shot_uuid}_{img.uuid}"],
