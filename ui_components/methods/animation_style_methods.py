@@ -30,28 +30,13 @@ def get_generation_settings_from_log(log_uuid=None):
     return shot_meta_data, data_type
 
 
-def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_values=True):
+def load_shot_settings(shot_uuid, img_list, log_uuid=None, load_images=True, load_setting_values=True):
+
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
 
-    """
-    NOTE: every shot's meta_data has the latest copy of the settings (whatever is the most recent gen)
-    apart from this, every generation log also has it's own copy of settings (for that particular gen)
-    by default shot's settings is applied whenever a new generation is to be created, but if a user
-    clicks "load settings" on a particular gen then it's settings are loaded from it's generation log
-    """
-
-    """
-    NOTE: the logic has been updated and instead of picking the default values from the given shot (shot_uuid)
-    the values would be picked from the active_shot, present inside project's meta_data. older code may still
-    be present at some places.
-    """
-
-    # loading settings of the last generation (saved in the shot)
-    # in case no log_uuid is provided
     if not log_uuid:
         shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
-        # if the current shot is newly created and has no meta data
         if not shot_meta_data:
             project_meta_data = json.loads(shot.project.meta_data) if shot.project.meta_data else {}
             active_shot_uuid = project_meta_data.get(ProjectMetaData.ACTIVE_SHOT.value, None)
@@ -60,68 +45,62 @@ def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_
                 if active_shot:
                     shot_meta_data = active_shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
                 else:
-                    # if shot was deleted then setting the first shot as the active shot
                     shot_list: List[InternalShotObject] = data_repo.get_shot_list(shot.project.uuid)
                     shot_meta_data = shot_list[0].meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
                     update_active_shot(shot_list[0].uuid)
-
         else:
             update_active_shot(shot.uuid)
 
         shot_meta_data = json.loads(shot_meta_data) if shot_meta_data else {}
         data_type = None
         st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
-
-    # loading settings from that particular log
     else:
         shot_meta_data, data_type = get_generation_settings_from_log(log_uuid)
         if load_images:
             st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = log_uuid
 
+    loaded_data = {}
+
     if load_setting_values:
         if shot_meta_data:
             if not data_type or data_type == ShotMetaData.MOTION_DATA.value:
                 st.session_state[f"type_of_animation_{shot.uuid}"] = 0
-                # ------------------ updating timing data
                 timing_data = shot_meta_data.get("timing_data", [])
-                for idx, _ in enumerate(
-                    shot.timing_list
-                ):  # fix: check how the image list is being stored here and use that instead
-                    # setting default parameters (fetching data from the shot if it's present)
-                    if timing_data and len(timing_data) >= idx + 1:
+                for idx, img in enumerate(img_list):
+                    motion_data = {}
+                    if timing_data and len(timing_data) >= len(img_list):
                         motion_data = timing_data[idx]
-
                     for k, v in motion_data.items():
-                        st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+                        st.session_state[f"{k}_{shot_uuid}_{img.uuid}"] = v
+                        loaded_data[f"{k}_{shot_uuid}_{img.uuid}"] = v
 
-                # --------------------- updating other settings main settings
                 main_setting_data = shot_meta_data.get("main_setting_data", {})
                 for key in main_setting_data:
-                    # if data is being loaded from a different shot then key will have to be updated
-                    # from "lora_data_{other_shot_uuid}" to "lora_data_{this_shot_data}"
                     if str(shot_uuid) not in key:
                         new_key = key.rsplit("_", 1)[0] + "_" + str(shot_uuid)
                     else:
                         new_key = key
 
                     st.session_state[new_key] = main_setting_data[key]
-                    if (
-                        key == f"structure_control_image_uuid_{shot_uuid}" and not main_setting_data[key]
-                    ):  # hackish sol, will fix later
+                    loaded_data[new_key] = main_setting_data[key]
+                    if key == f"structure_control_image_uuid_{shot_uuid}" and not main_setting_data[key]:
                         st.session_state[f"structure_control_image_{shot_uuid}"] = None
+                        loaded_data[f"structure_control_image_{shot_uuid}"] = None
+                # refresh_app()
 
-                refresh_app()
             elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
                 st.session_state[f"type_of_animation_{shot.uuid}"] = 1
                 main_setting_data = shot_meta_data.get("main_setting_data", {})
                 for key in main_setting_data:
                     st.session_state[key] = main_setting_data[key]
+                    loaded_data[key] = main_setting_data[key]
                 refresh_app()
         else:
-            for idx, _ in enumerate(shot.timing_list):  # fix: check how the image list is being stored here
+            for img in img_list:
                 for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
-                    st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
-
+                    st.session_state[f"{k}_{shot_uuid}_{img.uuid}"] = v
+                    loaded_data[f"{k}_{shot_uuid}_{img.uuid}"] = v
+    
 
 def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):
     adjusted_frame_numbers = [frame + buffer for frame in frame_numbers]
@@ -623,15 +602,15 @@ def update_timing_data(
         individual_prompts,
         individual_negative_prompts,
     )
-    
-    for idx, data in enumerate(timing_data):
-        st.session_state[f"strength_of_frame_{shot_uuid}_{idx}"] = data["strength_of_frame"]
-        st.session_state[f"individual_prompt_{shot_uuid}_{idx}"] = data["individual_prompt"]
-        st.session_state[f"individual_negative_prompt_{shot_uuid}_{idx}"] = data["individual_negative_prompt"]
-        st.session_state[f"motion_during_frame_{shot_uuid}_{idx}"] = data["motion_during_frame"]
-        st.session_state[f"distance_to_next_frame_{shot_uuid}_{idx}"] = data["distance_to_next_frame"]
-        st.session_state[f"speed_of_transition_{shot_uuid}_{idx}"] = data["speed_of_transition"]
-        st.session_state[f"freedom_between_frames_{shot_uuid}_{idx}"] = data["freedom_between_frames"]
+
+    for img, data in zip(img_list, timing_data):
+        st.session_state[f"strength_of_frame_{shot_uuid}_{img.uuid}"] = data["strength_of_frame"]
+        st.session_state[f"individual_prompt_{shot_uuid}_{img.uuid}"] = data["individual_prompt"]
+        st.session_state[f"individual_negative_prompt_{shot_uuid}_{img.uuid}"] = data["individual_negative_prompt"]
+        st.session_state[f"motion_during_frame_{shot_uuid}_{img.uuid}"] = data["motion_during_frame"]
+        st.session_state[f"distance_to_next_frame_{shot_uuid}_{img.uuid}"] = data["distance_to_next_frame"]
+        st.session_state[f"speed_of_transition_{shot_uuid}_{img.uuid}"] = data["speed_of_transition"]
+        st.session_state[f"freedom_between_frames_{shot_uuid}_{img.uuid}"] = data["freedom_between_frames"]
 
     return timing_data
 

@@ -647,8 +647,8 @@ def individual_frame_settings_element(shot_uuid, img_list):
         st.session_state[f"amount_of_motion_{shot_uuid}"] = 1.25
 
     # loading settings of the last shot (if this shot is being loaded for the first time)
-    if f"strength_of_frame_{shot_uuid}_0" not in st.session_state:
-        load_shot_settings(shot_uuid)
+    if f"strength_of_frame_{shot_uuid}_{img_list[0].uuid}" not in st.session_state:
+        load_shot_settings(shot_uuid, img_list)
 
     # ------------- Timing Frame and their settings -------------------
 
@@ -774,12 +774,15 @@ def individual_frame_settings_element(shot_uuid, img_list):
                         st.image(img.location, use_column_width=True)
 
                         if st.session_state[f"{shot_uuid}_preview_mode"] != True:
-                            if st.button("Start preview here", key=f"start_preview_{shot_uuid}_{img.uuid}", use_container_width=True):
+                            
+                            def start_preview(shot_uuid, idx, img_list):
                                 st.session_state[f"{shot_uuid}_preview_mode"] = True
                                 st.session_state[f"frames_to_preview_{shot_uuid}"] = (
                                     idx + 1,
                                     min(idx + 3, len(img_list)),
                                 )
+
+                            if st.button("Start preview here", key=f"start_preview_{shot_uuid}_{img.uuid}", use_container_width=True, on_click=start_preview, args=(shot_uuid, idx, img_list)):
                                 refresh_app()
 
                     # Create a new grid for each row of images
@@ -865,6 +868,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                     st.session_state[value_key] = slider_value
                                     update_last_changed(value_key, slider_value)
                                     refresh_app()
+
                                 return slider_value
 
                             def update_last_changed(key, value):
@@ -919,6 +923,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 uuid=shot_uuid,
                                 img_list=img_list,
                             )
+
                             distances_to_next_frames.append(distance_to_next_frame)
                             bulk_updater(
                                 "Distance to next frames", "distance_to_next_frame", img.uuid, shot_uuid, img_list
