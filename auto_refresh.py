@@ -20,7 +20,7 @@ refresh_queue = Queue()
 refresh_thread = None
 
 last_refreshed_on = 0
-REFRESH_BUFFER_TIME = 5  # seconds before making consecutive refreshes
+REFRESH_BUFFER_TIME = 7.5  # seconds before making consecutive refreshes
 
 
 def check_lock():

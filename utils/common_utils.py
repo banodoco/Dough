@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 import os
 import csv
@@ -332,3 +333,9 @@ def update_toml_config(toml_dict, toml_file="config.toml"):
     with open(toml_config_path, "wb") as f:
         toml_content = toml.dumps(toml_dict)
         f.write(toml_content.encode())
+
+
+# 2024-08-19T17:02:37.593405 --> 5:02 PM 19/8
+convert_timestamp_1 = lambda timestamp: datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%f").strftime(
+    "%I:%M %p %d/%m"
+)

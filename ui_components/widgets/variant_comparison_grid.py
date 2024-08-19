@@ -37,6 +37,7 @@ from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow
 from utils.state_refresh import refresh_app
+from utils.common_utils import convert_timestamp_1
 
 
 # TODO: very inefficient operation.. add shot_id as a foreign in logs table for better search
@@ -492,6 +493,8 @@ def variant_inference_detail_element(
                             v = v[:-1]  # removing the last ele in these cases
                         v = ", ".join(str(e) for e in v)
                     st.write(f"**{k}**: {v}")
+
+                st.write(f"**Created On**: ", convert_timestamp_1(variant.created_on))
 
                 btn1, btn2 = st.columns([1, 1])
                 with btn1:
