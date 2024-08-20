@@ -740,6 +740,12 @@ def individual_frame_settings_element(shot_uuid, img_list):
     def open_preview_mode(shot_uuid):
         st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, 3)
         st.session_state[f"{shot_uuid}_preview_mode"] = True
+    
+    def shift_preview_window(shot_uuid, total_number_of_frames):
+        frames_to_preview = st.session_state[f"frames_to_preview_{shot_uuid}"]
+        new_start = min(frames_to_preview[0] + 2, total_number_of_frames - 2)
+        new_end = min(frames_to_preview[1] + 2, total_number_of_frames)
+        st.session_state[f"frames_to_preview_{shot_uuid}"] = (new_start, new_end)        
 
     if st.session_state.get(f"{shot_uuid}_preview_mode", False):
         with preview1:
@@ -749,11 +755,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
 
         with preview3:
             st.write("")
-            if st.button("Shift forward", key=f"shift_forward_{shot_uuid}"):
-                frames_to_preview = st.session_state[f"frames_to_preview_{shot_uuid}"]
-                new_start = min(frames_to_preview[0] + 2, len(img_list) - 2)
-                new_end = min(frames_to_preview[1] + 2, len(img_list))
-                st.session_state[f"frames_to_preview_{shot_uuid}"] = (new_start, new_end)
+            if st.button("Shift forward", key=f"shift_forward_{shot_uuid}", on_click=shift_preview_window, args=(shot_uuid, total_number_of_frames)):
                 refresh_app()
     else:
         with preview1:
@@ -987,18 +989,30 @@ def individual_frame_settings_element(shot_uuid, img_list):
                             freedoms_between_frames.append(freedom_between_frames)
                             cumulative_seconds += distance_to_next_frame
 
-            if (i < len(img_list) - 1) or (len(img_list) % items_per_row != 0):
+
+            if i + items_per_row >= len(img_list):
 
                 if st.session_state.get(f"{shot_uuid}_preview_mode", False):
                     st.markdown("***")
-                    btn1, btn2 = st.columns([1,4])
+                    btn1, btn2, btn3 = st.columns([1,1,3])
                     with btn1:
-                        number_shown = len(img_list)
-                        st.success(f"Preview mode is on - {number_shown} out of {total_number_of_frames} frames shown.")                    
+                        
+                        st.success(f"Preview mode is on - showing frames {frames_to_preview[0]} to {frames_to_preview[1]} out of {total_number_of_frames}.")
                         if st.button("Close preview mode", key=f"close_preview_mode_2_{shot_uuid}", on_click=close_preview_mode, args=(shot_uuid, total_number_of_frames), use_container_width=True):                
                             refresh_app()
-  
-                st.markdown("***")
+                    with btn2:
+                        if st.button("Shift preview window", key=f"shift_preview_window_{shot_uuid}", on_click=shift_preview_window, args=(shot_uuid, total_number_of_frames)):
+                            refresh_app()                    
+                        def extend_preview_window(shot_uuid, total_number_of_frames):
+                            frames_to_preview = st.session_state[f"frames_to_preview_{shot_uuid}"]
+                            new_end = min(frames_to_preview[1] + 2, total_number_of_frames)
+                            st.session_state[f"frames_to_preview_{shot_uuid}"] = (frames_to_preview[0], new_end)                            
+                        if st.button("Extend preview window", key=f"extend_preview_window_{shot_uuid}", on_click=extend_preview_window, args=(shot_uuid, total_number_of_frames)):
+                            refresh_app()
+                    
+            if (i < len(img_list) - 1) or (len(img_list) % items_per_row != 0):
+                st.markdown("***")     
+                  
 
     return (
         strength_of_frames,
