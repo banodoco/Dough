@@ -245,6 +245,7 @@ def edit_shot_view(shot_uuid, items_per_row):
                             if row["image_location"]:
 
                                 st.image(row["image_location"], use_column_width=True)
+                                
                             else:
                                 st.warning("No primary image present.")
 

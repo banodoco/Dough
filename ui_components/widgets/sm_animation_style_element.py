@@ -731,25 +731,20 @@ def individual_frame_settings_element(shot_uuid, img_list):
     else:
         st.session_state[f"{shot_uuid}_preview_mode"] = False
 
-
-    
+    total_number_of_frames = len(img_list)
         
-    def close_preview_mode(shot_uuid,img_list):
-        st.write("Closing preview mode")
-        time.sleep(1)
-        st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, len(img_list))
+    def close_preview_mode(shot_uuid, total_number_of_frames):                
+        st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, total_number_of_frames)
         st.session_state[f"{shot_uuid}_preview_mode"] = False
 
     def open_preview_mode(shot_uuid):
-        st.write("Opening preview mode")
-        time.sleep(1)
         st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, 3)
         st.session_state[f"{shot_uuid}_preview_mode"] = True
 
     if st.session_state.get(f"{shot_uuid}_preview_mode", False):
         with preview1:
             st.write("")
-            if st.button("Close preview mode", key=f"close_preview_mode_{shot_uuid}", on_click=close_preview_mode, args=(shot_uuid, img_list)):                
+            if st.button("Close preview mode", key=f"close_preview_mode_{shot_uuid}", on_click=close_preview_mode, args=(shot_uuid, total_number_of_frames)):                
                 refresh_app()
 
         with preview3:
@@ -791,19 +786,20 @@ def individual_frame_settings_element(shot_uuid, img_list):
 
                 if img and img.location:
                     with grid[2 * j]:
-                        st.info(f"**Frame {idx + 1} - {cumulative_seconds:.2f}s**")
+                        actual_frame_number = start_frame + idx
+                        st.info(f"**Frame {actual_frame_number} - {cumulative_seconds:.2f}s**")
                         st.image(img.location, use_column_width=True)
 
                         if st.session_state[f"{shot_uuid}_preview_mode"] != True:
                             
-                            def start_preview(shot_uuid, idx, img_list):
+                            def start_preview(shot_uuid, idx,total_number_of_frames):
                                 st.session_state[f"{shot_uuid}_preview_mode"] = True
                                 st.session_state[f"frames_to_preview_{shot_uuid}"] = (
                                     idx + 1,
-                                    min(idx + 3, len(img_list)),
+                                    min(idx + 3, total_number_of_frames),
                                 )
 
-                            if st.button("Start preview here", key=f"start_preview_{shot_uuid}_{img.uuid}", use_container_width=True, on_click=start_preview, args=(shot_uuid, idx, img_list)):
+                            if st.button("Start preview here", key=f"start_preview_{shot_uuid}_{img.uuid}", use_container_width=True, on_click=start_preview, args=(shot_uuid, idx,total_number_of_frames)):
                                 refresh_app()
 
                     # Create a new grid for each row of images
@@ -835,7 +831,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 "Frame prompt:",
                                 key=f"individual_prompt_widget_{img.uuid}",
                                 value=st.session_state[f"individual_prompt_{shot_uuid}_{img.uuid}"],
-                                help="This wll bias the video towards the words you enter for this segment.",
+                                help="This wll bias the video towards the words you enter for this segment. Lowering the strength will increase the impact of the prompt.",
                             )
                             individual_prompts.append(individual_prompt)
                         with sub2:
@@ -859,6 +855,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 uuid,
                                 help_text=None,
                                 img_list=img_list,
+                                help=None,
                             ):
                                 value_key = f"{key_suffix}_{uuid}_{img_uuid}"
                                 widget_key = f"{key_suffix}_widget_{uuid}_{img_uuid}"
@@ -873,7 +870,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                         step=step,
                                         key=widget_key,
                                         value=st.session_state[value_key],
-                                        help=help_text,
+                                        help=help,
                                     )
                                 else:
                                     slider_value = st.slider(
@@ -883,6 +880,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                         step=step,
                                         key=widget_key,
                                         value=st.session_state[value_key],
+                                        help=help,
                                     )
 
                                 if slider_value != st.session_state[value_key]:
@@ -906,6 +904,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 img_uuid=img.uuid,
                                 uuid=shot_uuid,
                                 img_list=img_list,
+                                help="How strongly the frame will influence the animation at its peak."
                             )
 
                             strength_of_frames.append(strength_of_frame)
@@ -923,6 +922,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 img_uuid=img.uuid,
                                 uuid=shot_uuid,
                                 img_list=img_list,
+                                help="How much the frame will move during this frame's influence."
                             )
 
                             motions_during_frames.append(motion_during_frame)
@@ -943,6 +943,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 img_uuid=img.uuid,
                                 uuid=shot_uuid,
                                 img_list=img_list,
+                                help="How long until the peak of the next frame.To set the time to more than 12 seconds, you can use the number input."
                             )
 
                             distances_to_next_frames.append(distance_to_next_frame)
@@ -960,6 +961,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 img_uuid=img.uuid,
                                 uuid=shot_uuid,
                                 img_list=img_list,
+                                help="How fast the transition from this frame to the next. Lower values will cause the frames to blend together more."
                             )
 
                             bulk_updater(
@@ -976,6 +978,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 img_uuid=img.uuid,
                                 uuid=shot_uuid,
                                 img_list=img_list,
+                                help="How much the animation can run free between frames. Lower values will constrain the animation to the frames."
                             )
 
                             bulk_updater(
@@ -985,6 +988,16 @@ def individual_frame_settings_element(shot_uuid, img_list):
                             cumulative_seconds += distance_to_next_frame
 
             if (i < len(img_list) - 1) or (len(img_list) % items_per_row != 0):
+
+                if st.session_state.get(f"{shot_uuid}_preview_mode", False):
+                    st.markdown("***")
+                    btn1, btn2 = st.columns([1,4])
+                    with btn1:
+                        number_shown = len(img_list)
+                        st.success(f"Preview mode is on - {number_shown} out of {total_number_of_frames} frames shown.")                    
+                        if st.button("Close preview mode", key=f"close_preview_mode_2_{shot_uuid}", on_click=close_preview_mode, args=(shot_uuid, total_number_of_frames), use_container_width=True):                
+                            refresh_app()
+  
                 st.markdown("***")
 
     return (
