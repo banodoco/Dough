@@ -339,3 +339,26 @@ def update_toml_config(toml_dict, toml_file="config.toml"):
 convert_timestamp_1 = lambda timestamp: datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%S.%f").strftime(
     "%I:%M %p %d/%m"
 )
+
+
+def convert_timestamp_to_relative(timestamp_str):
+    now = datetime.now()
+    # Convert the timestamp string to a datetime object
+    try:
+        # Assuming the timestamp is in ISO format. Adjust the format if it's different.
+        timestamp = datetime.fromisoformat(timestamp_str)
+    except ValueError:
+        # If the conversion fails, return a default message
+        return "Unknown time"
+
+    diff = now - timestamp
+    if diff.days > 0:
+        return f"{diff.days} days ago"
+    elif diff.seconds >= 3600:
+        hours = diff.seconds // 3600
+        return f"{hours} hrs ago"
+    elif diff.seconds >= 60:
+        minutes = diff.seconds // 60
+        return f"{minutes} mins ago"
+    else:
+        return "Just now"

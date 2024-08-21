@@ -361,7 +361,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 if st.button("Reset to default", use_container_width=True, key="reset_to_default"):
                     for idx, _ in enumerate(img_list):
                         for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
-                            st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+                            st.session_state[f"{k}_{shot_uuid}_{img_list[idx].uuid}"] = v
 
                     st.success("All frames have been reset to default values.")
                     refresh_app()

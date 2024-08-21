@@ -37,7 +37,7 @@ from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow
 from utils.state_refresh import refresh_app
-from utils.common_utils import convert_timestamp_1
+from utils.common_utils import convert_timestamp_1, convert_timestamp_to_relative
 
 
 # TODO: very inefficient operation.. add shot_id as a foreign in logs table for better search
@@ -93,15 +93,12 @@ def upscale_video_generation_counter(video_uuid):
                 res.append(log)
 
     if len(res) > 0:
-        h1, h2 = st.columns([1, 1])
+        h1, h2 = st.columns([1, 2])
         with h1:
             if len(res) == 1:
                 st.info(f"{len(res)} upscale generation pending for this shot.")
             else:
                 st.info(f"{len(res)} upscale generations pending for this shot.")
-        with h2:
-            if st.button("Refresh", key=f"refresh_upscale_{video_uuid}", use_container_width=True):
-                refresh_app()
 
 
 def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
@@ -150,6 +147,10 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         with col1:
             st.markdown(f"### 🎞️ '{shot.name}' options")
             st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+            show_previews = st.checkbox("Show previews", value=True, key=f"show_previews_{shot_uuid}")
+
+        if not show_previews:
+            variants = [v for v in variants if v.inference_log.generation_tag != "preview"]
 
         upscale_in_progress_arr = get_video_upscale_dict(shot.project.uuid)
 
@@ -165,7 +166,14 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
     page = 1
 
     if num_pages > 1:
-        page = col3.radio("Page:", options=list(range(1, num_pages + 1)), horizontal=True)
+        if num_pages > 10:
+            page = col3.number_input(
+                f"Page (out of {num_pages}):", min_value=1, max_value=num_pages, value=1, step=1
+            )
+        else:
+            page = col3.radio(
+                f"Page (out of {num_pages}):", options=list(range(1, num_pages + 1)), horizontal=True
+            )
     if stage == CreativeProcessType.MOTION.value:
         video_generation_counter(shot_uuid)
     if not len(variants):
@@ -202,14 +210,13 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
 
         for i, variant_index in enumerate(page_indices):
             with cols[cur_col]:
-                h1, h2 = st.columns([1, 1.75])
+                h1, h2, h3 = st.columns([1, 1, 1])
                 with h1:
                     if variants[variant_index].tag == InternalFileTag.SHORTLISTED_VIDEO.value:
                         st.success(f"###### Variant #{variant_index + 1}")
                     else:
                         st.info(f"###### Variant #{variant_index + 1}")
                 with h2:
-
                     if stage != CreativeProcessType.MOTION.value:
                         if st.button(
                             f"Promote variant #{variant_index + 1}",
@@ -229,7 +236,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                             video_shortlist_btn(variants[variant_index].uuid, type="rempve_from_shortlist")
                         else:
                             video_shortlist_btn(variants[variant_index].uuid)
-
+                with h3:
+                    st.warning(convert_timestamp_to_relative(variants[variant_index].created_on))
                 is_upscaled_variant = is_upscaled_video(variants[variant_index])
                 if stage == CreativeProcessType.MOTION.value:
                     if variants[variant_index]:

@@ -30,10 +30,11 @@ def get_generation_settings_from_log(log_uuid=None):
     return shot_meta_data, data_type
 
 
-def load_shot_settings(shot_uuid, img_list, log_uuid=None, load_images=True, load_setting_values=True):
-
+def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_values=True):
     data_repo = DataRepo()
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
+    timing_list = shot.timing_list
+    img_list = [timing.primary_image for timing in timing_list if timing.primary_image]
 
     if not log_uuid:
         shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
@@ -66,15 +67,18 @@ def load_shot_settings(shot_uuid, img_list, log_uuid=None, load_images=True, loa
             if not data_type or data_type == ShotMetaData.MOTION_DATA.value:
                 st.session_state[f"type_of_animation_{shot.uuid}"] = 0
                 timing_data = shot_meta_data.get("timing_data", [])
+
                 for idx, img in enumerate(img_list):
                     motion_data = {}
-                    if timing_data and len(timing_data) >= len(img_list):
+                    if timing_data and len(timing_data) > idx:
                         motion_data = timing_data[idx]
+
                     for k, v in motion_data.items():
                         st.session_state[f"{k}_{shot_uuid}_{img.uuid}"] = v
                         loaded_data[f"{k}_{shot_uuid}_{img.uuid}"] = v
 
                 main_setting_data = shot_meta_data.get("main_setting_data", {})
+
                 for key in main_setting_data:
                     if str(shot_uuid) not in key:
                         new_key = key.rsplit("_", 1)[0] + "_" + str(shot_uuid)
@@ -83,10 +87,10 @@ def load_shot_settings(shot_uuid, img_list, log_uuid=None, load_images=True, loa
 
                     st.session_state[new_key] = main_setting_data[key]
                     loaded_data[new_key] = main_setting_data[key]
+
                     if key == f"structure_control_image_uuid_{shot_uuid}" and not main_setting_data[key]:
                         st.session_state[f"structure_control_image_{shot_uuid}"] = None
                         loaded_data[f"structure_control_image_{shot_uuid}"] = None
-                # refresh_app()
 
             elif data_type == ShotMetaData.DYNAMICRAFTER_DATA.value:
                 st.session_state[f"type_of_animation_{shot.uuid}"] = 1
@@ -96,11 +100,11 @@ def load_shot_settings(shot_uuid, img_list, log_uuid=None, load_images=True, loa
                     loaded_data[key] = main_setting_data[key]
                 refresh_app()
         else:
-            for img in img_list:
+            for idx, img in enumerate(img_list):
                 for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
                     st.session_state[f"{k}_{shot_uuid}_{img.uuid}"] = v
                     loaded_data[f"{k}_{shot_uuid}_{img.uuid}"] = v
-    
+
 
 def format_frame_prompts_with_buffer(frame_numbers, individual_prompts, buffer):
     adjusted_frame_numbers = [frame + buffer for frame in frame_numbers]
@@ -412,16 +416,14 @@ def get_keyframe_positions(
 postfix_str = "_generate_inference"
 
 
-def toggle_generate_inference(position, **kwargs):    
-    
+def toggle_generate_inference(position, **kwargs):
+
     for k, v in kwargs.items():
         st.session_state[k] = v
     if position + postfix_str not in st.session_state:
         st.session_state[position + postfix_str] = True
     else:
         st.session_state[position + postfix_str] = not st.session_state[position + postfix_str]
-
-    
 
 
 def is_inference_enabled(position):
@@ -581,6 +583,7 @@ def get_timing_data(
 
     return timing_data
 
+
 def update_timing_data(
     shot_uuid,
     img_list,
@@ -606,7 +609,9 @@ def update_timing_data(
     for img, data in zip(img_list, timing_data):
         st.session_state[f"strength_of_frame_{shot_uuid}_{img.uuid}"] = data["strength_of_frame"]
         st.session_state[f"individual_prompt_{shot_uuid}_{img.uuid}"] = data["individual_prompt"]
-        st.session_state[f"individual_negative_prompt_{shot_uuid}_{img.uuid}"] = data["individual_negative_prompt"]
+        st.session_state[f"individual_negative_prompt_{shot_uuid}_{img.uuid}"] = data[
+            "individual_negative_prompt"
+        ]
         st.session_state[f"motion_during_frame_{shot_uuid}_{img.uuid}"] = data["motion_during_frame"]
         st.session_state[f"distance_to_next_frame_{shot_uuid}_{img.uuid}"] = data["distance_to_next_frame"]
         st.session_state[f"speed_of_transition_{shot_uuid}_{img.uuid}"] = data["speed_of_transition"]
@@ -652,7 +657,7 @@ def update_session_state_with_animation_details(
 
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
     meta_data = shot.meta_data_dict
-    timing_data = get_timing_data(        
+    timing_data = get_timing_data(
         img_list,
         strength_of_frames,
         distances_to_next_frames,
@@ -705,8 +710,18 @@ def update_session_state_with_animation_details(
         meta_data.update(update_data)
         data_repo.update_shot(**{"uuid": shot_uuid, "meta_data": json.dumps(meta_data)})
         update_active_shot(shot_uuid)
-        update_timing_data(shot_uuid, img_list, strength_of_frames, distances_to_next_frames, speeds_of_transitions, freedoms_between_frames, motions_during_frames, individual_prompts, individual_negative_prompts)
-    
+        update_timing_data(
+            shot_uuid,
+            img_list,
+            strength_of_frames,
+            distances_to_next_frames,
+            speeds_of_transitions,
+            freedoms_between_frames,
+            motions_during_frames,
+            individual_prompts,
+            individual_negative_prompts,
+        )
+
     return update_data
 
 
