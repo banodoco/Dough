@@ -353,12 +353,12 @@ def convert_timestamp_to_relative(timestamp_str):
 
     diff = now - timestamp
     if diff.days > 0:
-        return f"{diff.days} days ago"
+        return f"{diff.days} day{'s' if diff.days > 1 else ''} ago"
     elif diff.seconds >= 3600:
         hours = diff.seconds // 3600
-        return f"{hours} hrs ago"
+        return f"{hours} hr{'s' if hours > 1 else ''} ago"
     elif diff.seconds >= 60:
         minutes = diff.seconds // 60
-        return f"{minutes} mins ago"
+        return f"{minutes} min{'s' if minutes > 1 else ''} ago"
     else:
         return "Just now"

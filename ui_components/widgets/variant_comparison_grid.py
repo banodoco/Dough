@@ -147,7 +147,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
         with col1:
             st.markdown(f"### 🎞️ '{shot.name}' options")
             st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
-            show_previews = st.checkbox("Show previews", value=True, key=f"show_previews_{shot_uuid}")
+            show_previews = st_memory.checkbox("Show previews", value=True, key=f"show_previews_{shot_uuid}")
 
         if not show_previews:
             variants = [v for v in variants if v.inference_log.generation_tag != "preview"]
