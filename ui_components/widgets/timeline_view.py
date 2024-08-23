@@ -122,16 +122,30 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
             st.info(f"##### {shot.name}")
 
             num_columns = 4  # Set to 4 images per row regardless of the number of images
-
             if timing_list:
-                grid_timing = st.columns(num_columns)
-                for j, timing in enumerate(timing_list):
-                    with grid_timing[j % num_columns]:
+                max_images = 11
+                rows = 3
+                cols = 4
+                grid_timing = [st.columns(cols) for _ in range(rows)]
+                for i in range(min(max_images, len(timing_list))):
+                    row = i // cols
+                    col = i % cols
+                    with grid_timing[row][col]:
+                        timing = timing_list[i]
                         if timing.primary_image and timing.primary_image.location:
                             st.image(timing.primary_image.location, use_column_width=True)
-                for j in range(len(timing_list), num_columns):
-                    with grid_timing[j]:
+
+                # Fill empty slots with empty containers
+                for i in range(len(timing_list), max_images):
+                    row = i // cols
+                    col = i % cols
+                    with grid_timing[row][col]:
                         st.empty()
+
+                # Add "+ more" info on the last row if there are more images
+                if len(timing_list) > max_images:
+                    with grid_timing[2][3]:  # Last column of the last row
+                        st.info(f"\+ {len(timing_list) - max_images}", icon=None)
             else:
                 st.warning("No images in shot.")  # Warning if no images are present
 
@@ -149,6 +163,7 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
 
             elif view == "sidebar":
                 if st.session_state["selected_images"]:
+
                     def add_selected_images_to_shot(shot, shot_list, data_repo):
                         shot_names = [s.name for s in shot_list]
                         shot_number = shot_names.index(shot.name)
@@ -164,13 +179,14 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
                                 )
                         st.session_state["selected_images"] = []  # Clear selected images after adding
                         refresh_app()
+
                     st.button(
                         f"Add {len(st.session_state['selected_images'])} selected images to this shot",
                         use_container_width=True,
                         type="primary",
                         key=f"add_to_shot_{shot.uuid}",
                         on_click=add_selected_images_to_shot,
-                        args=(shot, shot_list, data_repo)
+                        args=(shot, shot_list, data_repo),
                     )
             st.markdown("***")
 
@@ -198,7 +214,7 @@ def add_new_shot_element(shot, data_repo, show_image_uploader=False):
         uploaded_images = None
 
     if st.button("Add new shot", type="secondary", key=f"add_shot_btn_{shot.uuid}"):
-        st.session_state['auto_refresh'] = False
+        st.session_state["auto_refresh"] = False
         new_shot = add_new_shot(shot.project.uuid)
         if new_shot_name != "":
             data_repo.update_shot(uuid=new_shot.uuid, name=new_shot_name)
@@ -216,5 +232,5 @@ def add_new_shot_element(shot, data_repo, show_image_uploader=False):
                 selected_image_location = selected_image_location or file_location
                 add_key_frame(selected_image_location, new_shot.uuid, refresh_state=False)
                 progress_bar.progress((i + 1) / len(uploaded_images))
-        st.session_state['auto_refresh'] = True
+        st.session_state["auto_refresh"] = True
         refresh_app()

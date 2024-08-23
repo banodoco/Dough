@@ -60,15 +60,12 @@ def video_generation_counter(shot_uuid):
             res.append(log)
     if len(res) > 0:
 
-        h1, h2 = st.columns([1, 1])
+        h1, _ = st.columns([1, 2])
         with h1:
             if len(res) == 1:
                 st.info(f"{len(res)} video generation pending for this shot.")
             else:
                 st.info(f"{len(res)} video generations pending for this shot.")
-        with h2:
-            if st.button("Refresh", key=f"refresh_{shot_uuid}", use_container_width=True):
-                refresh_app()
 
 
 # TODO: very inefficient operation.. (maybe add source_entity_id ? as a foreign key)
