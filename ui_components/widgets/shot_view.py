@@ -43,6 +43,17 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
 
     timing_list: List[InternalFrameTimingObject] = shot.timing_list
 
+    if st.button("Download images"):
+        with st.spinner("Preparing images for download..."):
+            zip_data = download_all_images(shot_uuid)
+
+        st.download_button(
+            label="Download ZIP file",
+            data=zip_data,
+            file_name=f"{shot.name}_images.zip",
+            mime="application/zip",
+        )
+
     def manage_frame_movement(shot_uuid, timing_list):
         open_frame_changer = st_memory.toggle(
             "Open Frame Changer™ mode",
@@ -736,7 +747,6 @@ def download_all_images(shot_uuid):
         for file in os.listdir(shot.uuid):
             zipf.write(os.path.join(shot.uuid, file), arcname=file)
 
-    # Read the zip file in binary mode
     with open(f"{shot.uuid}.zip", "rb") as file:
         data = file.read()
 

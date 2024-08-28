@@ -686,7 +686,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                 min_value=8,
                 max_value=256,
                 value=16,
-                key="num_items_per_page_explorer",
+                key="num_items_per_page_explorer_shortlist",
                 step=2,
             )
 

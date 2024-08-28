@@ -292,8 +292,18 @@ def setup_app_ui():
                     i = st.session_state["sidebar_variant"].index(variant) + 1
                     st.write(f"Selected variant #{i}")
                     st.video(variant.local_path)
-                    if st.button("Remove", use_container_width=True):
+
+                    def remove_sidebar_variant(variant):
                         st.session_state["sidebar_variant"].remove(variant)
+
+                    if st.button(
+                        "Remove",
+                        use_container_width=True,
+                        key=f"remove_sidebar_variant_{variant.uuid}",
+                        on_click=remove_sidebar_variant,
+                        args=(variant,),
+                    ):
+                        refresh_app()
         st.caption(
             "Want to join [a community](https://discord.gg/acg8aNBTxd) that's pushing AI to its technical and artistic limits or help build a [next-generation artistic tool](https://banodoco.ai/Plan) and economic engine for the open source AI art ecosystem?"
         )
