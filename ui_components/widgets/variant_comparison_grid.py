@@ -531,6 +531,25 @@ def variant_inference_detail_element(
                         time.sleep(0.3)
                         refresh_app()
 
+                if "sidebar_variant" not in st.session_state:
+                    st.session_state["sidebar_variant"] = []
+
+                if st.button(
+                    "View in sidebar", key=f"view_in_sidebar_{variant.uuid}", use_container_width=True
+                ):
+                    st.session_state["sidebar_variant"].append(variant)
+                    refresh_app()
+
+                if variant in st.session_state["sidebar_variant"]:
+
+                    if st.button(
+                        "Remove from sidebar",
+                        key=f"remove_from_sidebar_{variant.uuid}",
+                        use_container_width=True,
+                    ):
+                        st.session_state["sidebar_variant"].remove(variant)
+                        refresh_app()
+
     else:
         h1, h2 = st.columns([1, 1])
         with h1:

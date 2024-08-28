@@ -125,6 +125,6 @@ def add_key_frame(
         )
 
     if refresh_state:
-        refresh_app(maintain_state=True)
+        refresh_app()
 
     return new_timing

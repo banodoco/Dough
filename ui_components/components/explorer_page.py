@@ -679,8 +679,17 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                     key="num_items_per_page_explorer",
                     step=8,
                 )
+
         else:
-            num_items_per_page = 4
+            num_items_per_page = st_memory.number_input(
+                "Items per page:",
+                min_value=8,
+                max_value=256,
+                value=16,
+                key="num_items_per_page_explorer",
+                step=2,
+            )
+
             num_columns = 2
 
         # selecting specific shot for adding to the filter
@@ -716,7 +725,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         else:
             with h1:
                 project_setting = data_repo.get_project_setting(project_uuid)
-                page_number = k1.radio(
+                page_number = st_memory.radio(
                     "Select page",
                     options=range(1, project_setting.total_shortlist_gallery_pages + 1),
                     horizontal=True,
@@ -735,8 +744,16 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         open_detailed_view_for_all = False
         num_items_per_page = 8
         num_columns = 2
-    if "main_gallery" not in st.session_state:
-        st.session_state["main_gallery"] = 1
+
+    if shortlist:
+        if "shortlist_gallery" not in st.session_state:
+            st.session_state["shortlist_gallery"] = 1
+        page_key = "shortlist_gallery"
+    else:
+        if "main_gallery" not in st.session_state:
+            st.session_state["main_gallery"] = 1
+        page_key = "main_gallery"
+    """
     gallery_image_filter_data = {
         "file_type": InternalFileType.IMAGE.value,
         "tag": (
@@ -745,7 +762,21 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             else InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value
         ),
         "project_id": project_uuid,
-        "page": st.session_state["main_gallery"] or 1,
+        "page": st.session_state[page_key],  # Use the correct key here
+        "data_per_page": num_items_per_page,
+        "sort_order": SortOrder.DESCENDING.value,
+    }
+
+    """
+    gallery_image_filter_data = {
+        "file_type": InternalFileType.IMAGE.value,
+        "tag": (
+            InternalFileTag.GALLERY_IMAGE.value
+            if not shortlist
+            else InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value
+        ),
+        "project_id": project_uuid,
+        "page": st.session_state[page_key] or 1,
         "data_per_page": num_items_per_page,
         "sort_order": SortOrder.DESCENDING.value,
     }
@@ -945,7 +976,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                             # removing this from the gallery view
                                             data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
                                             st.session_state[f"open_frame_changer_{shot_uuid}"] = False
-                                            refresh_app(maintain_state=True)
+                                            refresh_app()
 
                             # else:
                             #     st.error("The image is truncated and cannot be displayed.")

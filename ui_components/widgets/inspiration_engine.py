@@ -131,20 +131,20 @@ def generate_prompts(
             proper_output += item["output"]
         else:
             proper_output += str(item)
-    
+
     list_of_prompts = proper_output.strip()
     list_of_prompts = list_of_prompts.lstrip("\n")
     list_of_prompts = list_of_prompts.split("\n")[0]
-    
+
     # Combine initial examples with generated prompts
     combined_prompts = initial_examples + "|" + list_of_prompts
-    
+
     # Remove any double bars that might have been created
     combined_prompts = combined_prompts.replace("||", "|")
 
     # remove leading and trailing bars
     combined_prompts = combined_prompts.strip("|")
-    
+
     return combined_prompts
 
 
@@ -347,16 +347,16 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                 replicate_warning_message = "We currently use Replicate for LLM queries for simplicity. This costs $0.00025/run. You can add a key in App Settings."
                 if st.session_state["prompt_generation_mode"] == generate_mode:
-   
+
                     generation_text = st_memory.text_area(
-                        "Text to generate prompts:",                        
+                        "Text to generate prompts:",
                         height=100,
                         help="This will be used to generate prompts and will overwrite the existing prompts.",
                         key="insp_text_prompt",
                     )
 
                     generation_examples = st_memory.text_area(
-                        "Examples separated by |:",                        
+                        "Examples separated by |:",
                         height=100,
                         help="This will be used to generate prompts and will overwrite the existing prompts.",
                         key="insp_examples",
@@ -399,21 +399,30 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                     if not check_replicate_key():
                         st.info(replicate_warning_message)
+
                     else:
-                        if st.button(
-                            "Generate prompts",
-                            use_container_width=True,
-                            help="This will overwrite the existing prompts.",
+
+                        def trigger_generate_prompts_button(
+                            generation_text,
+                            generation_examples,
+                            total_unique_prompts,
+                            temperature,
                         ):
                             generated_prompts = generate_prompts(
                                 generation_text,
                                 generation_examples,
                                 total_unique_prompts,
-                                temperature=temperature,                                
+                                temperature=temperature,
                             )
-
                             st.session_state["prompts_to_display_separately"] = generated_prompts
 
+                        if st.button(
+                            "Generate prompts",
+                            use_container_width=True,
+                            help="This will overwrite the existing prompts.",
+                            on_click=trigger_generate_prompts_button,
+                            args=(generation_text, generation_examples, total_unique_prompts, temperature),
+                        ):
                             refresh_app()
 
                     if "prompts_to_display_separately" not in st.session_state:
@@ -421,18 +430,27 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
                     if st.session_state["prompts_to_display_separately"] != "":
                         height = len(st.session_state["prompts_to_display_separately"])
-                        st.text_area(label="Generated prompts:", value=st.session_state["prompts_to_display_separately"], height=height)
+                        st.text_area(
+                            label="Generated prompts:",
+                            value=st.session_state["prompts_to_display_separately"],
+                            height=height,
+                        )
                         bottom1, bottom2, bottom3 = st.columns([1, 1, 1])
                         with bottom1:
                             if st.button("Remove"):
                                 st.session_state["prompts_to_display_separately"] = ""
                                 refresh_app()
                         with bottom2:
-                            if st.button("Replace existing prompts"):
+
+                            def trigger_replace_existing_prompts_button():
                                 st.session_state["list_of_prompts"] = st.session_state[
                                     "prompts_to_display_separately"
                                 ].split("|")
                                 st.session_state["prompts_to_display_separately"] = ""
+
+                            if st.button(
+                                "Replace existing prompts", on_click=trigger_replace_existing_prompts_button
+                            ):
                                 refresh_app()
                         with bottom3:
                             if st.button("Add to existing prompts"):
@@ -601,13 +619,20 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                     text = "Add reference image"
                                 if st.button(text, use_container_width=True):
                                     # Check if there are less than 3 images already in the list
-                                    while len(st.session_state["list_of_style_references"]) < 3 and uploaded_images:
+                                    while (
+                                        len(st.session_state["list_of_style_references"]) < 3
+                                        and uploaded_images
+                                    ):
                                         new_image = uploaded_images.pop(0)
                                         new_index = len(st.session_state["list_of_style_references"])
                                         st.session_state["list_of_style_references"].append(new_image)
-                                        
+
                                         # Only add new values if they don't exist
-                                        for key in ["insp_style_influence", "insp_composition_influence", "insp_vibe_influence"]:
+                                        for key in [
+                                            "insp_style_influence",
+                                            "insp_composition_influence",
+                                            "insp_vibe_influence",
+                                        ]:
                                             if len(st.session_state[key]) <= new_index:
                                                 st.session_state[key].append(0.7)  # Default value
                                     if uploaded_images:  # If there are still images left, show a warning
