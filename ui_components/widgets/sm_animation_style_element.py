@@ -125,9 +125,7 @@ def video_shortlist_btn(video_uuid, type="add_to_shortlist"):
     data_repo = DataRepo()
     # add to shortlist
     if type == "add_to_shortlist":
-        if st.button(
-            "Add to upscaling shortlist", key=f"{video_uuid}_shortlist_btn", use_container_width=True
-        ):
+        if st.button("Add to shortlist", key=f"{video_uuid}_shortlist_btn", use_container_width=True):
             data_repo.update_file(
                 video_uuid,
                 tag=InternalFileTag.SHORTLISTED_VIDEO.value,
@@ -136,7 +134,7 @@ def video_shortlist_btn(video_uuid, type="add_to_shortlist"):
     # remove from shortlist btn
     else:
         if st.button(
-            "Remove from upscaling shortlist",
+            "Remove from shortlist",
             key=f"{video_uuid}_remove_shortlist_btn",
             use_container_width=True,
         ):
@@ -195,6 +193,8 @@ def video_motion_settings(shot_uuid, img_list):
             key="overall_negative_prompt",
             value=st.session_state[f"negative_prompt_video_{shot_uuid}"],
         )
+
+    styling_lora_data = select_styling_lora_element(shot_uuid)
 
     st.markdown("***")
     st.markdown("##### Overall motion settings")
@@ -256,7 +256,122 @@ def video_motion_settings(shot_uuid, img_list):
         allow_for_looping,
         high_detail_mode,
         stabilise_motion,
+        styling_lora_data,
     )
+
+
+def select_styling_lora_element(shot_uuid):
+    data_repo = DataRepo()
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+
+    st.write("Styling LoRAs")
+    tab1, tab2 = st.tabs(["Apply LoRAs", "Download LoRAs"])
+
+    lora_data = []
+    lora_file_dest = os.path.join(COMFY_BASE_PATH, "models", "loras")
+
+    if f"normal_lora_data_{shot_uuid}" not in st.session_state:
+        st.session_state[f"normal_lora_data_{shot_uuid}"] = []
+
+    # ---------------- APPLY LORA -----------------
+    with tab1:
+        files = get_files_in_a_directory(lora_file_dest, ["safetensors", "ckpt"])
+
+        if len(files) == 0:
+
+            lora1, _ = st.columns([1.5, 1])
+            with lora1:
+                st.info(
+                    "No LoRAs found in the directory - go to Download LoRAs to add some, or drop them into: ComfyUI/models/loras"
+                )
+                if st.button("Check again", key="check_again_lora"):
+                    refresh_app()
+        else:
+            # Initialize normal_lora_data in session state if it doesn't exist
+
+            # Display existing LoRAs
+            for idx, lora in enumerate(st.session_state[f"normal_lora_data_{shot_uuid}"]):
+                h1, h2, h3 = st.columns([1, 1, 0.5])
+                with h1:
+                    default_index = files.index(lora["filename"]) if lora["filename"] in files else 0
+                    lora_file = st.selectbox(
+                        "Select LoRA:",
+                        options=files,
+                        key=f"normal_lora_{idx}",
+                        index=default_index,
+                    )
+
+                with h2:
+                    strength = st.slider(
+                        "Strength:",
+                        min_value=0.0,
+                        max_value=1.0,
+                        value=lora["lora_strength"],
+                        step=0.01,
+                        key=f"strength_of_normal_lora_{idx}",
+                    )
+
+                with h3:
+                    st.write("")
+                    st.write("")
+                    if st.button("Remove", key=f"remove_normal_lora_{idx}"):
+                        st.session_state[f"normal_lora_data_{shot_uuid}"].pop(idx)
+                        refresh_app()
+
+                # Update lora data if changed
+                if lora_file != lora["filename"] or strength != lora["lora_strength"]:
+                    st.session_state[f"normal_lora_data_{shot_uuid}"][idx] = {
+                        "filename": lora_file,
+                        "lora_strength": strength,
+                        "filepath": os.path.join(lora_file_dest, lora_file),
+                    }
+                    st.rerun()
+
+            # Add new LoRA button
+            if st.button("Add another LoRA", key="add_normal_lora"):
+                if files:
+                    st.session_state[f"normal_lora_data_{shot_uuid}"].append(
+                        {
+                            "filename": files[0],
+                            "lora_strength": 0.5,
+                            "filepath": os.path.join(lora_file_dest, files[0]),
+                        }
+                    )
+                    refresh_app()
+
+    # ---------------- DOWNLOAD LORA ---------------
+    with tab2:
+        lora_url = st.text_input("Enter the URL of the LoRA to download:", key="normal_lora_download_url")
+        if st.button("Download LoRA", key="download_normal_lora"):
+            if lora_url:
+                with st.spinner("Downloading LoRA..."):
+                    try:
+                        response = requests.get(lora_url)
+                        if response.status_code == 200:
+                            filename = lora_url.split("/")[-1]
+                            save_path = os.path.join(lora_file_dest, filename)
+                            with open(save_path, "wb") as f:
+                                f.write(response.content)
+                            st.success(f"Downloaded LoRA to {save_path}")
+                            refresh_app()
+                        else:
+                            st.error("Failed to download LoRA. Please check the URL and try again.")
+                    except Exception as e:
+                        st.error(f"An error occurred while downloading the LoRA: {str(e)}")
+            else:
+                st.warning("Please enter a URL to download the LoRA.")
+
+    # Prepare lora_data to return
+    for lora in st.session_state[f"normal_lora_data_{shot_uuid}"]:
+        lora_data.append(
+            {
+                "filename": lora["filename"],
+                "lora_strength": lora["lora_strength"],
+                "filepath": lora["filepath"],
+            }
+        )
+
+    return lora_data
 
 
 def select_motion_lora_element(shot_uuid, model_files):
@@ -295,9 +410,9 @@ def select_motion_lora_element(shot_uuid, model_files):
 
         # Iterate through each current LoRA in session state
         if len(files) == 0:
-            lora1, lora2 = st.columns([1.5, 1])
+            lora1, _ = st.columns([1.5, 1])
             with lora1:
-                st.error(
+                st.info(
                     "No LoRAs found in the directory - go to Download LoRAs to download some, or drop them into: ComfyUI/models/animatediff_motion_lora"
                 )
                 if st.button("Check again", key="check_again"):
@@ -743,6 +858,15 @@ def individual_frame_settings_element(shot_uuid, img_list):
         st.session_state[f"frames_to_preview_{shot_uuid}"] = (new_start, new_end)
 
     if st.session_state.get(f"{shot_uuid}_preview_mode", False):
+
+        def extend_preview_window(shot_uuid, total_number_of_frames, extend_by=3):
+            frames_to_preview = st.session_state[f"frames_to_preview_{shot_uuid}"]
+            new_end = min(frames_to_preview[1] + extend_by, total_number_of_frames)
+            st.session_state[f"frames_to_preview_{shot_uuid}"] = (
+                frames_to_preview[0],
+                new_end,
+            )
+
         with preview1:
             st.write("")
             if st.button(
@@ -804,10 +928,7 @@ def individual_frame_settings_element(shot_uuid, img_list):
 
                             def start_preview(shot_uuid, idx, total_number_of_frames):
                                 st.session_state[f"{shot_uuid}_preview_mode"] = True
-                                st.session_state[f"frames_to_preview_{shot_uuid}"] = (
-                                    idx + 1,
-                                    min(idx + 3, total_number_of_frames),
-                                )
+                                st.session_state[f"frames_to_preview_{shot_uuid}"] = (idx + 1, len(img_list))
 
                             if st.button(
                                 "Start preview here",
@@ -817,6 +938,42 @@ def individual_frame_settings_element(shot_uuid, img_list):
                                 args=(shot_uuid, idx, total_number_of_frames),
                             ):
                                 refresh_app()
+                        else:
+                            preview_start, preview_end = st.session_state[f"frames_to_preview_{shot_uuid}"]
+                            if actual_frame_number > preview_start and actual_frame_number < preview_end:
+
+                                def end_preview(preview_start, shot_uuid, idx):
+                                    st.session_state[f"frames_to_preview_{shot_uuid}"] = (
+                                        preview_start,
+                                        idx,
+                                    )
+
+                                if st.button(
+                                    "End preview here",
+                                    key=f"end_preview_{shot_uuid}_{img.uuid}",
+                                    use_container_width=True,
+                                    on_click=end_preview,
+                                    args=(preview_start, shot_uuid, actual_frame_number),
+                                ):
+                                    refresh_app()
+                            elif actual_frame_number == preview_end:
+                                btn1, btn2 = st.columns([1, 1])
+                                with btn1:
+                                    if st.button(
+                                        "+1 to preview",
+                                        use_container_width=True,
+                                        on_click=extend_preview_window,
+                                        args=(shot_uuid, total_number_of_frames, 1),
+                                    ):
+                                        refresh_app()
+                                with btn2:
+                                    if st.button(
+                                        "+3 to preview",
+                                        use_container_width=True,
+                                        on_click=extend_preview_window,
+                                        args=(shot_uuid, total_number_of_frames, 3),
+                                    ):
+                                        refresh_app()
 
                     # Create a new grid for each row of images
                     if j == 0:
@@ -1047,16 +1204,16 @@ def individual_frame_settings_element(shot_uuid, img_list):
                         ):
                             refresh_app()
 
-                        def extend_preview_window(shot_uuid, total_number_of_frames):
+                        def extend_preview_window(shot_uuid, total_number_of_frames, extend_by=3):
                             frames_to_preview = st.session_state[f"frames_to_preview_{shot_uuid}"]
-                            new_end = min(frames_to_preview[1] + 3, total_number_of_frames)
+                            new_end = min(frames_to_preview[1] + extend_by, total_number_of_frames)
                             st.session_state[f"frames_to_preview_{shot_uuid}"] = (
                                 frames_to_preview[0],
                                 new_end,
                             )
 
                         if st.button(
-                            "Extend preview window",
+                            "+3 preview window",
                             key=f"extend_preview_window_{shot_uuid}",
                             on_click=extend_preview_window,
                             args=(shot_uuid, total_number_of_frames),

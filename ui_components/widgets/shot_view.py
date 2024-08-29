@@ -118,6 +118,20 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
             st.session_state[f"shot_data_{shot_uuid}"] = None
 
         if open_frame_changer:
+            with save2:
+                current_frame_count = len(st.session_state[f"shot_data_{shot_uuid}"])
+                bulk_select_frames = st.slider(
+                    "Select frames:",
+                    min_value=1,
+                    max_value=current_frame_count,
+                    value=[1, min(3, current_frame_count)],
+                    step=1,
+                )
+                if st.button("Select frames"):
+                    st.session_state[f"list_to_move_{shot.uuid}"] = list(
+                        range(bulk_select_frames[0] - 1, bulk_select_frames[1])
+                    )
+                    refresh_app()
 
             if st.session_state[f"list_to_move_{shot.uuid}"] != []:
 
@@ -136,6 +150,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
                     refresh_app()
 
                 with save2:
+
                     if st.session_state[f"list_to_move_{shot.uuid}"] == []:
                         st.write("")
                         st.info("No frames selected to move. Select them below.")

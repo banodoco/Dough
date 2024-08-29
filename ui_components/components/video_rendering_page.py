@@ -57,7 +57,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
         sd_model, model_files = select_sd_model_element(shot_uuid, DEFAULT_SM_MODEL)
 
         # ----------- SELECT MOTION LORA ------------
-        lora_data = select_motion_lora_element(shot_uuid, model_files)
+        motion_lora_data = select_motion_lora_element(shot_uuid, model_files)
 
         # ----------- OTHER SETTINGS ------------
         (
@@ -68,6 +68,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
             allow_for_looping,
             high_detail_mode,
             stabilise_motion,
+            styling_lora_data,
         ) = video_motion_settings(shot_uuid, img_list)
 
         type_of_frame_distribution = "dynamic"
@@ -150,7 +151,8 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
             animation_stype=AnimationStyleType.CREATIVE_INTERPOLATION.value,
             max_frames=str(dynamic_frame_distribution_values[-1]),
             stabilise_motion=stabilise_motion,
-            lora_data=lora_data,
+            motion_lora_data=motion_lora_data,
+            styling_lora_data=styling_lora_data,
             shot_data=shot_meta_data,
             pil_img_structure_control_image=st.session_state[
                 f"structure_control_image_{shot.uuid}"

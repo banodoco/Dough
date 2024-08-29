@@ -458,7 +458,36 @@ class ComfyDataTransform:
 
             return json
 
-        def update_json_with_loras(json_data, loras):
+        def update_json_with_styling_loras(json_data, loras):
+            start_id = max(int(key) for key in json_data.keys()) + 1
+            new_ids = []
+
+            # Add LoRAs
+            for lora in loras:
+                new_id = str(start_id)
+                json_data[new_id] = {
+                    "inputs": {
+                        "lora_name": lora["filename"],
+                        "strength_model": lora["lora_strength"],
+                        "model": ["547", 0],  # Initially connect to ADE_UseEvolvedSampling
+                    },
+                    "class_type": "LoraLoaderModelOnly",
+                    "_meta": {"title": "Load Styling LoRA"},
+                }
+
+                if new_ids:
+                    json_data[new_ids[-1]]["inputs"]["model"] = [new_id, 0]
+
+                new_ids.append(new_id)
+                start_id += 1
+
+            # Update KSampler to use the last LoRA node if there are any new LoRAs
+            if new_ids:
+                json_data["207"]["inputs"]["model"] = [new_ids[-1], 0]
+
+            return json_data
+
+        def update_json_with_motion_loras(json_data, loras):
             start_id = 536
             new_ids = []
 
@@ -756,7 +785,8 @@ class ComfyDataTransform:
         if filename_prefix:
             workflow["281"]["inputs"]["filename_prefix"] = filename_prefix
 
-        workflow = update_json_with_loras(workflow, sm_data.get("lora_data"))
+        workflow = update_json_with_motion_loras(workflow, sm_data.get("motion_lora_data"))
+        workflow = update_json_with_styling_loras(workflow, sm_data.get("styling_lora_data"))
 
         workflow["464"]["inputs"]["height"] = sm_data.get("height")
         workflow["464"]["inputs"]["width"] = sm_data.get("width")
@@ -838,7 +868,7 @@ class ComfyDataTransform:
             sm_data.get("stabilise_motion", StabliseMotionOption.NONE.value)
         ][ad_mode]
 
-        ignore_list = sm_data.get("lora_data", [])
+        ignore_list = sm_data.get("motion_lora_data", [])
 
         if sm_data.get("allow_for_looping", False):
             workflow = allow_for_looping(workflow)

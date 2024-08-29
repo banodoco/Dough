@@ -123,29 +123,35 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
 
             num_columns = 4  # Set to 4 images per row regardless of the number of images
             if timing_list:
-                max_images = 11
-                rows = 3
-                cols = 4
-                grid_timing = [st.columns(cols) for _ in range(rows)]
-                for i in range(min(max_images, len(timing_list))):
-                    row = i // cols
-                    col = i % cols
-                    with grid_timing[row][col]:
-                        timing = timing_list[i]
-                        if timing.primary_image and timing.primary_image.location:
-                            st.image(timing.primary_image.location, use_column_width=True)
+                if view == "sidebar":
+                    rows = (len(timing_list) + num_columns - 1) // num_columns  # Calculate needed rows
+                    cols = num_columns
+                    grid_timing = [st.columns(cols) for _ in range(rows)]
+                    for i, timing in enumerate(timing_list):
+                        row = i // cols
+                        col = i % cols
+                        with grid_timing[row][col]:
+                            if timing.primary_image and timing.primary_image.location:
+                                st.image(timing.primary_image.location, use_column_width=True)
+                else:  # main view
+                    max_images = 11  # Reduced by 1 to make room for the "+" indicator
+                    rows = 3
+                    cols = 4
+                    grid_timing = [st.columns(cols) for _ in range(rows)]
+                    for i in range(min(max_images, len(timing_list))):
+                        row = i // cols
+                        col = i % cols
+                        with grid_timing[row][col]:
+                            timing = timing_list[i]
+                            if timing.primary_image and timing.primary_image.location:
+                                st.image(timing.primary_image.location, use_column_width=True)
 
-                # Fill empty slots with empty containers
-                for i in range(len(timing_list), max_images):
-                    row = i // cols
-                    col = i % cols
-                    with grid_timing[row][col]:
-                        st.empty()
-
-                # Add "+ more" info on the last row if there are more images
-                if len(timing_list) > max_images:
-                    with grid_timing[2][3]:  # Last column of the last row
-                        st.info(f"\+ {len(timing_list) - max_images}", icon=None)
+                    # Add "+ more" info on the last column of the last row
+                    with grid_timing[-1][-1]:  # Last column of the last row
+                        if len(timing_list) > max_images:
+                            st.info(f"\+ {len(timing_list) - max_images}", icon=None)
+                        elif len(timing_list) == max_images:
+                            st.info("+", icon=None)
             else:
                 st.warning("No images in shot.")  # Warning if no images are present
 
