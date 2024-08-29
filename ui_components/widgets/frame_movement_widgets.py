@@ -72,7 +72,7 @@ def move_frame_back_button(timing_uuid, orientation):
         arrow, key=f"move_frame_back_{timing_uuid}", help="Move frame back", use_container_width=True
     ):
         move_frame(direction, timing_uuid)
-        refresh_app(maintain_state=True)
+        refresh_app()
 
 
 def move_frame_forward_button(timing_uuid, orientation):
@@ -86,7 +86,7 @@ def move_frame_forward_button(timing_uuid, orientation):
         arrow, key=f"move_frame_forward_{timing_uuid}", help="Move frame forward", use_container_width=True
     ):
         move_frame(direction, timing_uuid)
-        refresh_app(maintain_state=True)
+        refresh_app()
 
 
 def delete_frame_button(timing_uuid, show_label=False):

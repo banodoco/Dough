@@ -282,6 +282,28 @@ def setup_app_ui():
         st.info("You haven't added any prompts yet. Add an image to get started.")
 
     with st.sidebar:
+
+        if "sidebar_variant" not in st.session_state:
+            st.session_state["sidebar_variant"] = []
+
+        if st.session_state["sidebar_variant"]:
+            with st.expander("Selected videos:", expanded=True):
+                for variant in st.session_state["sidebar_variant"]:
+                    i = st.session_state["sidebar_variant"].index(variant) + 1
+                    st.write(f"Selected variant #{i}")
+                    st.video(variant.local_path)
+
+                    def remove_sidebar_variant(variant):
+                        st.session_state["sidebar_variant"].remove(variant)
+
+                    if st.button(
+                        "Remove",
+                        use_container_width=True,
+                        key=f"remove_sidebar_variant_{variant.uuid}",
+                        on_click=remove_sidebar_variant,
+                        args=(variant,),
+                    ):
+                        refresh_app()
         st.caption(
             "Want to join [a community](https://discord.gg/acg8aNBTxd) that's pushing AI to its technical and artistic limits or help build a [next-generation artistic tool](https://banodoco.ai/Plan) and economic engine for the open source AI art ecosystem?"
         )

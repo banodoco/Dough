@@ -679,33 +679,44 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                     key="num_items_per_page_explorer",
                     step=8,
                 )
+
         else:
-            num_items_per_page = 4
+            num_items_per_page = st_memory.number_input(
+                "Items per page:",
+                min_value=8,
+                max_value=256,
+                value=16,
+                key="num_items_per_page_explorer_shortlist",
+                step=2,
+            )
+
             num_columns = 2
 
         # selecting specific shot for adding to the filter
         shot_uuid_list = []
 
         if not shortlist:
-            st.caption(f"Items in view: {num_items_per_page*project_settings.total_gallery_pages}")
             with h1:
                 if project_settings.total_gallery_pages > 10:
                     page_number = st_memory.number_input(
                         "Select page:",
                         min_value=1,
-                        max_value=project_settings.total_gallery_pages,
+                        max_value=max(1, project_settings.total_gallery_pages),
                         value=1,
                         step=1,
                         key="main_gallery",
                     )
-                else:
+                elif project_settings.total_gallery_pages > 1:
                     page_number = st_memory.radio(
                         "Select page:",
                         options=range(1, project_settings.total_gallery_pages + 1),
                         horizontal=True,
                         key="main_gallery",
                     )
-                st.markdown(f"#### Page {page_number} of {project_settings.total_gallery_pages}")
+                else:
+                    page_number = 1
+
+                st.markdown(f"#### Page {page_number} of {max(1, project_settings.total_gallery_pages)}")
             with h4:
                 st.write("")
                 if "view_inference_details" in view:
@@ -714,7 +725,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         else:
             with h1:
                 project_setting = data_repo.get_project_setting(project_uuid)
-                page_number = k1.radio(
+                page_number = st_memory.radio(
                     "Select page",
                     options=range(1, project_setting.total_shortlist_gallery_pages + 1),
                     horizontal=True,
@@ -733,8 +744,16 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         open_detailed_view_for_all = False
         num_items_per_page = 8
         num_columns = 2
-    if 'main_gallery' not in st.session_state:
-        st.session_state['main_gallery'] = 1
+
+    if shortlist:
+        if "shortlist_gallery" not in st.session_state:
+            st.session_state["shortlist_gallery"] = 1
+        page_key = "shortlist_gallery"
+    else:
+        if "main_gallery" not in st.session_state:
+            st.session_state["main_gallery"] = 1
+        page_key = "main_gallery"
+    """
     gallery_image_filter_data = {
         "file_type": InternalFileType.IMAGE.value,
         "tag": (
@@ -743,7 +762,21 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             else InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value
         ),
         "project_id": project_uuid,
-        "page": st.session_state["main_gallery"] or 1,
+        "page": st.session_state[page_key],  # Use the correct key here
+        "data_per_page": num_items_per_page,
+        "sort_order": SortOrder.DESCENDING.value,
+    }
+
+    """
+    gallery_image_filter_data = {
+        "file_type": InternalFileType.IMAGE.value,
+        "tag": (
+            InternalFileTag.GALLERY_IMAGE.value
+            if not shortlist
+            else InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value
+        ),
+        "project_id": project_uuid,
+        "page": st.session_state[page_key] or 1,
         "data_per_page": num_items_per_page,
         "sort_order": SortOrder.DESCENDING.value,
     }
@@ -752,15 +785,21 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         gallery_image_filter_data["shot_uuid_list"] = shot_uuid_list
 
     gallery_image_list, res_payload = data_repo.get_all_file_list(**gallery_image_filter_data)
+    total_pages = res_payload.get("total_pages", res_payload.get("total_log_pages", 1))
+    total_image_count = res_payload.get("count", 0)
 
     if not shortlist:
-        if project_settings.total_gallery_pages != res_payload["total_pages"]:
-            project_settings.total_gallery_pages = res_payload["total_pages"]
+        if project_settings.total_gallery_pages != total_pages:
+            project_settings.total_gallery_pages = total_pages
             refresh_app()
     else:
-        if project_settings.total_shortlist_gallery_pages != res_payload["total_pages"]:
-            project_settings.total_shortlist_gallery_pages = res_payload["total_pages"]
+        if project_settings.total_shortlist_gallery_pages != total_pages:
+            project_settings.total_shortlist_gallery_pages = total_pages
             refresh_app()
+
+    if gallery_image_list and len(gallery_image_list):
+        start_index = 0
+        end_index = min(start_index + num_items_per_page, total_image_count)
 
     if shortlist is False:
         _, fetch2, fetch3, _ = st.columns([0.25, 1, 1, 0.25])
@@ -769,17 +808,21 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
 
         if explorer_stats["temp_image_count"]:
             st.markdown("***")
-            
+
             with fetch2:
-                if explorer_stats['pending_image_count']:
-                    st.info(f"###### {explorer_stats['temp_image_count']} new image{'s' if explorer_stats['temp_image_count'] != 1 else ''} generated ({explorer_stats['pending_image_count']} pending)")
-                else:                    
-                    st.info(f"###### {explorer_stats['temp_image_count']} new image{'s' if explorer_stats['temp_image_count'] != 1 else ''} generated")
+                if explorer_stats["pending_image_count"]:
+                    st.info(
+                        f"###### {explorer_stats['temp_image_count']} new image{'s' if explorer_stats['temp_image_count'] != 1 else ''} generated ({explorer_stats['pending_image_count']} pending)"
+                    )
+                else:
+                    st.info(
+                        f"###### {explorer_stats['temp_image_count']} new image{'s' if explorer_stats['temp_image_count'] != 1 else ''} generated"
+                    )
 
             with fetch3:
+
                 def check_for_new_images(project_uuid, explorer_stats):
                     data_repo.update_temp_gallery_images(project_uuid)
-              
 
                 # In the part of the code where you create the button:
                 if st.button(
@@ -787,16 +830,16 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                     key=f"check_for_new_images_",
                     use_container_width=True,
                     on_click=lambda: check_for_new_images(project_uuid, explorer_stats),
-                    type="primary"
+                    type="primary",
                 ):
                     if explorer_stats["temp_image_count"]:
                         st.success("New images fetched")
-                        time.sleep(0.3)                    
+                        time.sleep(0.3)
                     refresh_app()
-        else: 
-            
+        else:
+
             _, display, _ = st.columns([0.5, 2, 0.5])
-            with display:                
+            with display:
                 if explorer_stats["pending_image_count"]:
                     with display:
                         st.info(f"###### {explorer_stats['pending_image_count']} images pending generation")
@@ -818,11 +861,12 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                     if i + j < len(gallery_image_list):
                         with cols[j]:
                             st.image(gallery_image_list[i + j].location, use_column_width=True)
+
                             def toggle_image_selection(image_uuid):
                                 if image_uuid in st.session_state["selected_images"]:
                                     st.session_state["selected_images"].remove(image_uuid)
                                 else:
-                                    st.session_state["selected_images"].append(image_uuid)                                
+                                    st.session_state["selected_images"].append(image_uuid)
 
                             # Select/Deselect button
                             select_label = (
@@ -837,8 +881,8 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                 use_container_width=True,
                                 type=button_type,
                                 on_click=toggle_image_selection,
-                                args=(gallery_image_list[i + j].uuid,)
-                            ): 
+                                args=(gallery_image_list[i + j].uuid,),
+                            ):
                                 refresh_app()
 
                             # -------- inference details --------------
@@ -932,7 +976,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                             # removing this from the gallery view
                                             data_repo.update_file(gallery_image_list[i + j].uuid, tag="")
                                             st.session_state[f"open_frame_changer_{shot_uuid}"] = False
-                                            refresh_app(maintain_state=True)
+                                            refresh_app()
 
                             # else:
                             #     st.error("The image is truncated and cannot be displayed.")

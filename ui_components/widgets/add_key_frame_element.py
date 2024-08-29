@@ -33,7 +33,7 @@ def add_key_frame_section(shot_uuid):
         update_refresh_lock(True)
         if uploaded_images:
             progress_bar = st.progress(0)
-            uploaded_images = sorted(uploaded_images, key=lambda x: x.name)
+            # Remove sorting to maintain upload order
             for i, uploaded_image in enumerate(uploaded_images):
                 image = Image.open(uploaded_image)
                 file_location = f"videos/{shot.uuid}/assets/frames/base/{uploaded_image.name}"
@@ -125,6 +125,6 @@ def add_key_frame(
         )
 
     if refresh_state:
-        refresh_app(maintain_state=True)
+        refresh_app()
 
     return new_timing
