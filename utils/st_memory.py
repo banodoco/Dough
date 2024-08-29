@@ -341,3 +341,48 @@ def text_input(
         refresh_app()
 
     return selection
+
+
+def multiselect(
+    label,
+    options,
+    default,
+    format_func=None,
+    key=None,
+    help=None,
+    on_change=None,
+    disabled=False,
+    label_visibility="visible",
+):
+    # Generate a unique key if none is provided
+    if key is None:
+        key = f"multiselect_{label}"
+
+    # Initialize session state if it doesn't exist
+    if key not in st.session_state:
+        st.session_state[key] = default
+
+    # Ensure that the session state contains valid options
+    valid_session_state = [v for v in st.session_state[key] if v in options]
+
+    selection = st.multiselect(
+        label=label,
+        options=options,
+        default=valid_session_state,
+        format_func=format_func,
+        help=help,
+        on_change=on_change,
+        disabled=disabled,
+        label_visibility=label_visibility,
+        key=f"{key}_widget",
+    )
+
+    # Update session state if selection has changed
+    if set(selection) != set(st.session_state[key]):
+        st.session_state[key] = selection
+        if on_change:
+            on_change()
+        else:
+            st.rerun()
+
+    return selection

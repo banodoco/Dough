@@ -822,11 +822,12 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 with h2:
                     # if there's more than 1 prompt, show a slider
                     if len(st.session_state["list_of_prompts"]) > 1:
-                        prompts_to_test = st.multiselect(
+                        prompts_to_test = st_memory.multiselect(
                             "Prompts to run:",
                             options=list(range(1, len(st.session_state["list_of_prompts"]) + 1)),
                             default=[1, 2],
                             format_func=lambda x: f"{st.session_state['list_of_prompts'][x-1]}",
+                            key="prompts_to_test",  # Add this line to provide a unique key
                         )
 
                         # Convert selected indices to actual prompts

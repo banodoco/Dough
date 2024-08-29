@@ -264,7 +264,7 @@ def select_styling_lora_element(shot_uuid):
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
 
-    st.write("Styling LoRAs")
+    st.caption("Styling LoRAs")
     tab1, tab2 = st.tabs(["Apply LoRAs", "Download LoRAs"])
 
     lora_data = []
@@ -314,8 +314,13 @@ def select_styling_lora_element(shot_uuid):
                 with h3:
                     st.write("")
                     st.write("")
-                    if st.button("Remove", key=f"remove_normal_lora_{idx}"):
+
+                    def remove_lora(idx):
                         st.session_state[f"normal_lora_data_{shot_uuid}"].pop(idx)
+
+                    if st.button(
+                        "Remove", key=f"remove_normal_lora_{idx}", on_click=remove_lora, args=(idx,)
+                    ):
                         refresh_app()
 
                 # Update lora data if changed
@@ -328,7 +333,7 @@ def select_styling_lora_element(shot_uuid):
                     st.rerun()
 
             # Add new LoRA button
-            if st.button("Add another LoRA", key="add_normal_lora"):
+            def add_lora(files, lora_file_dest):
                 if files:
                     st.session_state[f"normal_lora_data_{shot_uuid}"].append(
                         {
@@ -337,7 +342,14 @@ def select_styling_lora_element(shot_uuid):
                             "filepath": os.path.join(lora_file_dest, files[0]),
                         }
                     )
-                    refresh_app()
+
+            if len(st.session_state[f"normal_lora_data_{shot_uuid}"]) == 0:
+                text = "Add a LoRA"
+            else:
+                text = "Add another LoRA"
+
+            if st.button(text, key="add_normal_lora", on_click=add_lora, args=(files, lora_file_dest)):
+                refresh_app()
 
     # ---------------- DOWNLOAD LORA ---------------
     with tab2:
@@ -348,7 +360,15 @@ def select_styling_lora_element(shot_uuid):
                     try:
                         response = requests.get(lora_url)
                         if response.status_code == 200:
-                            filename = lora_url.split("/")[-1]
+                            content_disposition = response.headers.get("Content-Disposition")
+                            if content_disposition:
+                                filename = content_disposition.split("filename=")[1].strip('"')
+                            else:
+                                filename = lora_url.split("/")[-1]
+
+                            # Remove query parameters from filename
+                            filename = filename.split("?")[0]
+
                             save_path = os.path.join(lora_file_dest, filename)
                             with open(save_path, "wb") as f:
                                 f.write(response.content)
@@ -480,8 +500,11 @@ def select_motion_lora_element(shot_uuid, model_files):
 
                 with h7:
                     st.write("")
-                    if st.button("Remove", key=f"remove_lora_{idx}"):
+
+                    def remove_lora(idx):
                         st.session_state[f"lora_data_{shot_uuid}"].pop(idx)
+
+                    if st.button("Remove", key=f"remove_lora_{idx}", on_click=remove_lora, args=(idx,)):
                         refresh_app()
 
             if len(st.session_state[f"lora_data_{shot_uuid}"]) == 0:
@@ -489,7 +512,7 @@ def select_motion_lora_element(shot_uuid, model_files):
             else:
                 text = "Add another LoRA"
 
-            if st.button(text, key="add_motion_guidance"):
+            def add_lora(files, lora_file_dest):
                 if files and len(files):
                     st.session_state[f"lora_data_{shot_uuid}"].append(
                         {
@@ -498,7 +521,9 @@ def select_motion_lora_element(shot_uuid, model_files):
                             "filepath": lora_file_dest + "/" + files[0],
                         }
                     )
-                    refresh_app()
+
+            if st.button(text, key="add_motion_guidance", on_click=add_lora, args=(files, lora_file_dest)):
+                refresh_app()
 
     # ---------------- DOWNLOAD LORA ---------------
     with tab2:
@@ -928,7 +953,10 @@ def individual_frame_settings_element(shot_uuid, img_list):
 
                             def start_preview(shot_uuid, idx, total_number_of_frames):
                                 st.session_state[f"{shot_uuid}_preview_mode"] = True
-                                st.session_state[f"frames_to_preview_{shot_uuid}"] = (idx + 1, len(img_list))
+                                if idx == 0:
+                                    st.session_state[f"frames_to_preview_{shot_uuid}"] = (idx + 1, len(img_list) - 1)
+                                else:
+                                    st.session_state[f"frames_to_preview_{shot_uuid}"] = (idx + 1, len(img_list))
 
                             if st.button(
                                 "Start preview here",

@@ -180,7 +180,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 key=f"number_of_generation_steps_{shot.uuid}",
                 min_value=5,
                 max_value=30,
-                step=1,
+                step=5,
                 value=20,
                 help="You can dial this down to get a faster video. But beware, the quality will be lower.",
             )
@@ -263,7 +263,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     motions_during_frames,
                     individual_prompts,
                     individual_negative_prompts,
-                    lora_data,
+                    styling_lora_data,
                     DEFAULT_SM_MODEL,
                     high_detail_mode,
                     image.uuid if image else None,
