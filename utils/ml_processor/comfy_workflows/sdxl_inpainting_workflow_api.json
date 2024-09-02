@@ -87,7 +87,8 @@
   },
   "30": {
     "inputs": {
-      "unet_name": "inpainting_diffusion_pytorch_model.fp16.safetensors"
+      "unet_name": "inpainting_diffusion_pytorch_model.fp16.safetensors",
+      "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
     "_meta": {
