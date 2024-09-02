@@ -699,7 +699,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                         key="main_gallery",
                     )
                 else:
-                    page_number = st_memory.radio(
+                    page_number = st.radio(
                         "Select page:",
                         options=range(1, project_settings.total_gallery_pages + 1),
                         horizontal=True,
