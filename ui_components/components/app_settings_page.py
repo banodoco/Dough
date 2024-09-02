@@ -7,6 +7,7 @@ import streamlit as st
 from dataclasses import dataclass, field
 from shared.constants import COMFY_BASE_PATH, SERVER, ServerType
 from ui_components.methods.file_methods import delete_from_env, load_from_env, save_to_env
+from utils.common_decorators import with_refresh_lock
 from utils.common_utils import get_current_user, get_toml_config, update_toml_config
 from ui_components.components.query_logger_page import query_logger_page
 
@@ -148,13 +149,13 @@ def health_check_component():
     c1, c2 = st.columns([1, 1])
     with c1:
 
+        @with_refresh_lock
         def perform_health_check():
-            st.session_state["auto_refresh"] = False
             res = run_health_check()
             st.session_state["error_data"] = res
-            st.session_state["auto_refresh"] = True
 
-        st.button("Run fresh checkup", on_click=perform_health_check, key="health_check_btn")
+        if st.button("Run fresh checkup", key="health_check_btn"):
+            perform_health_check()
 
         if "error_data" in st.session_state:
             res = st.session_state["error_data"]
@@ -225,7 +226,7 @@ def run_health_check():
 
     error_list = []
 
-    # st.write("Checking files... Don't refresh the page, this can take a couple of minutes")
+    st.write("Checking files... Don't refresh the page, this can take a couple of minutes")
     file_hash_dict = get_toml_config(TomlConfig.FILE_HASH.value)
     node_commit_dict = get_toml_config(TomlConfig.NODE_VERSION.value)
     for file, val in file_hash_dict.items():
@@ -249,7 +250,7 @@ def run_health_check():
                 )
             )
 
-    # st.write("Checking nodes...")
+    st.write("Checking nodes...")
     node_commit_dict = get_toml_config(TomlConfig.NODE_VERSION.value)
     for node, val in node_commit_dict.items():
         node_path = os.path.join("ComfyUI", "custom_nodes", node)
@@ -278,7 +279,7 @@ def run_health_check():
                         )
                     )
 
-    # st.write("Checking packages...")
+    st.write("Checking packages...")
     python_version = sys.version.split()[0]
     if not str(python_version).startswith("3.10"):
         error_list.append(

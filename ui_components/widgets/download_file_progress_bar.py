@@ -6,9 +6,11 @@ import time
 import zipfile
 import requests
 import streamlit as st
+from utils.common_decorators import with_refresh_lock
 from utils.state_refresh import refresh_app
 
 
+@with_refresh_lock
 def download_file_widget(url, filename, dest):
     save_directory = dest
     zip_filename = filename

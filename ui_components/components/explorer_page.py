@@ -689,12 +689,22 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
         if not shortlist:
             st.caption(f"Items in view: {num_items_per_page*project_settings.total_gallery_pages}")
             with h1:
-                page_number = st_memory.radio(
-                    "Select page:",
-                    options=range(1, project_settings.total_gallery_pages + 1),
-                    horizontal=True,
-                    key="main_gallery",
-                )
+                if project_settings.total_gallery_pages > 10:
+                    page_number = st_memory.number_input(
+                        "Select page:",
+                        min_value=1,
+                        max_value=project_settings.total_gallery_pages,
+                        value=1,
+                        step=1,
+                        key="main_gallery",
+                    )
+                else:
+                    page_number = st_memory.radio(
+                        "Select page:",
+                        options=range(1, project_settings.total_gallery_pages + 1),
+                        horizontal=True,
+                        key="main_gallery",
+                    )
                 st.markdown(f"#### Page {page_number} of {project_settings.total_gallery_pages}")
             with h4:
                 st.write("")
@@ -733,7 +743,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
             else InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value
         ),
         "project_id": project_uuid,
-        "page": page_number or 1,
+        "page": st.session_state["main_gallery"] or 1,
         "data_per_page": num_items_per_page,
         "sort_order": SortOrder.DESCENDING.value,
     }
