@@ -19,6 +19,9 @@ lock_file = REFRESH_LOCK_FILE
 refresh_queue = Queue()
 refresh_thread = None
 
+last_refreshed_on = 0
+REFRESH_BUFFER_TIME = 10  # seconds before making consecutive refreshes
+
 
 def check_lock():
     if not os.path.exists(lock_file):
@@ -37,7 +40,13 @@ def refresh():
         # print("process locked.. sleeping")
         time.sleep(2)
 
+    global last_refreshed_on
+    while int(time.time()) - last_refreshed_on < REFRESH_BUFFER_TIME:
+        # print(f"waiting {REFRESH_BUFFER_TIME} secs before the next refresh")
+        time.sleep(2)
+
     print("Refreshing...")
+    last_refreshed_on = int(time.time())
     with portalocker.Lock(target_file, "w") as f:
         f.write(f"SAVE_STATE = {random.randint(1, 1000)}")
     return True

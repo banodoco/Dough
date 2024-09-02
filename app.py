@@ -88,6 +88,16 @@ def start_project_refresh():
 
 def main():
     st.set_page_config(page_title="Dough", layout="wide", page_icon="🎨")
+    st.markdown(
+        r"""
+    <style>
+    .stDeployButton {
+            visibility: hidden;
+        }
+    </style>
+    """,
+        unsafe_allow_html=True,
+    )
     update_refresh_lock(False)
 
     auth_details = get_url_param(AUTH_TOKEN)

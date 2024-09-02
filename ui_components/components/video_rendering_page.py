@@ -41,9 +41,6 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
     with st.container():
 
         # ----------- HEADER OPTIONS -------------
-        header_col_1, _, header_col_3, header_col_4 = st.columns(
-            [1.0, 1.5, 1.0, 1.0]
-        )  # btns defined at the bottom of the UI
 
         # ----------- INDIVIDUAL FRAME SETTINGS -----------
         (
@@ -60,7 +57,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
         sd_model, model_files = select_sd_model_element(shot_uuid, DEFAULT_SM_MODEL)
 
         # ----------- SELECT MOTION LORA ------------
-        lora_data = select_motion_lora_element(shot_uuid, model_files)
+        motion_lora_data = select_motion_lora_element(shot_uuid, model_files)
 
         # ----------- OTHER SETTINGS ------------
         (
@@ -71,6 +68,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
             allow_for_looping,
             high_detail_mode,
             stabilise_motion,
+            styling_lora_data,
         ) = video_motion_settings(shot_uuid, img_list)
 
         type_of_frame_distribution = "dynamic"
@@ -153,7 +151,8 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
             animation_stype=AnimationStyleType.CREATIVE_INTERPOLATION.value,
             max_frames=str(dynamic_frame_distribution_values[-1]),
             stabilise_motion=stabilise_motion,
-            lora_data=lora_data,
+            motion_lora_data=motion_lora_data,
+            styling_lora_data=styling_lora_data,
             shot_data=shot_meta_data,
             pil_img_structure_control_image=st.session_state[
                 f"structure_control_image_{shot.uuid}"
@@ -181,7 +180,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 key=f"number_of_generation_steps_{shot.uuid}",
                 min_value=5,
                 max_value=30,
-                step=1,
+                step=5,
                 value=20,
                 help="You can dial this down to get a faster video. But beware, the quality will be lower.",
             )
@@ -264,7 +263,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                     motions_during_frames,
                     individual_prompts,
                     individual_negative_prompts,
-                    lora_data,
+                    styling_lora_data,
                     DEFAULT_SM_MODEL,
                     high_detail_mode,
                     image.uuid if image else None,
@@ -364,7 +363,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
                 if st.button("Reset to default", use_container_width=True, key="reset_to_default"):
                     for idx, _ in enumerate(img_list):
                         for k, v in DEFAULT_SHOT_MOTION_VALUES.items():
-                            st.session_state[f"{k}_{shot_uuid}_{idx}"] = v
+                            st.session_state[f"{k}_{shot_uuid}_{img_list[idx].uuid}"] = v
 
                     st.success("All frames have been reset to default values.")
                     refresh_app()

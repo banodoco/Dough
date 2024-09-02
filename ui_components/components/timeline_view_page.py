@@ -29,19 +29,16 @@ def timeline_view_page(shot_uuid: str, h2):
             with st.expander("🔍 Generation log", expanded=True):
                 # if st_memory.toggle("Open", value=True, key="generaton_log_toggle"):
                 sidebar_logger(st.session_state["shot_uuid"])
-            
+
             st.write("")
 
-            with st.expander("📋 Shortlist", expanded=False):
+            with st.expander("📋 Shortlist", expanded=True):
                 if st_memory.toggle("Open", value=True, key="explorer_shortlist_toggle"):
                     gallery_image_view(
                         shot.project.uuid,
                         shortlist=True,
                         view=["add_and_remove_from_shortlist", "add_to_any_shot"],
                     )
-                
-
-            
 
         st.markdown(f"#### :green[{st.session_state['main_view_type']}] > :red[{st.session_state['page']}]")
         st.markdown("***")
