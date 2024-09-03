@@ -34,3 +34,7 @@
 
 [comfy]
 commit_hash = "ad76574cb8b28ee498f3dceafc9d00b56f12f992"
+
+
+[strict_pkg_versions]
+"numpy" = "1.24.4"

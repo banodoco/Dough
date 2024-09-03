@@ -23,6 +23,7 @@ class TomlConfig(ExtendedEnum):
     NODE_VERSION = "node_version"
     COMFY_VERSION = "comfy"
     GENERAL_SETTINGS = "general_settings"
+    PKG_VERSIONS = "strict_pkg_versions"
 
 
 class ImageStage(ExtendedEnum):

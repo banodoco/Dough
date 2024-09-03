@@ -35,6 +35,7 @@ def predict_gpu_output(
 
     comfy_commit_hash = get_toml_config(TomlConfig.COMFY_VERSION.value)["commit_hash"]
     node_commit_dict = get_toml_config(TomlConfig.NODE_VERSION.value)
+    pkg_versions = get_toml_config(TomlConfig.PKG_VERSIONS.value)
     extra_node_urls = []
     for k, v in node_commit_dict.items():
         v["title"] = k
@@ -51,6 +52,7 @@ def predict_gpu_output(
         client_id=log_tag,
         extra_node_urls=extra_node_urls,
         comfy_commit_hash=comfy_commit_hash,
+        strict_dep_list=pkg_versions
     )
 
     return output["file_paths"]  # ignoring text output for now {"file_paths": [], "text_content": []}
