@@ -36,8 +36,24 @@ def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_
     timing_list = shot.timing_list
     img_list = [timing.primary_image for timing in timing_list if timing.primary_image]
 
+    """
+    NOTE: every shot's meta_data has the latest copy of the settings (whatever is the most recent gen)
+    apart from this, every generation log also has it's own copy of settings (for that particular gen)
+    by default shot's settings is applied whenever a new generation is to be created, but if a user
+    clicks "load settings" on a particular gen then it's settings are loaded from it's generation log
+    """
+
+    """
+    NOTE: the logic has been updated and instead of picking the default values from the given shot (shot_uuid)
+    the values would be picked from the active_shot, present inside project's meta_data. older code may still
+    be present at some places.
+    """
+
+    # loading settings of the last generation (saved in the shot)
+    # in case no log_uuid is provided
     if not log_uuid:
         shot_meta_data = shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
+        # if the current shot is newly created and has no meta data
         if not shot_meta_data:
             project_meta_data = json.loads(shot.project.meta_data) if shot.project.meta_data else {}
             active_shot_uuid = project_meta_data.get(ProjectMetaData.ACTIVE_SHOT.value, None)
@@ -46,6 +62,7 @@ def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_
                 if active_shot:
                     shot_meta_data = active_shot.meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
                 else:
+                    # if shot was deleted then setting the first shot as the active shot
                     shot_list: List[InternalShotObject] = data_repo.get_shot_list(shot.project.uuid)
                     shot_meta_data = shot_list[0].meta_data_dict.get(ShotMetaData.MOTION_DATA.value, None)
                     update_active_shot(shot_list[0].uuid)
@@ -55,6 +72,8 @@ def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_
         shot_meta_data = json.loads(shot_meta_data) if shot_meta_data else {}
         data_type = None
         st.session_state[f"{shot_uuid}_selected_variant_log_uuid"] = None
+
+    # loading settings from that particular log
     else:
         shot_meta_data, data_type = get_generation_settings_from_log(log_uuid)
         if load_images:
@@ -66,9 +85,13 @@ def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_
         if shot_meta_data:
             if not data_type or data_type == ShotMetaData.MOTION_DATA.value:
                 st.session_state[f"type_of_animation_{shot.uuid}"] = 0
+
+                # ------------------ updating timing data
                 timing_data = shot_meta_data.get("timing_data", [])
 
                 for idx, img in enumerate(img_list):
+                    # setting default parameters (fetching data from the shot if it's present)
+
                     motion_data = {}
                     if timing_data and len(timing_data) > idx:
                         motion_data = timing_data[idx]
@@ -77,9 +100,11 @@ def load_shot_settings(shot_uuid, log_uuid=None, load_images=True, load_setting_
                         st.session_state[f"{k}_{shot_uuid}_{img.uuid}"] = v
                         loaded_data[f"{k}_{shot_uuid}_{img.uuid}"] = v
 
+                # --------------------- updating other settings main settings
                 main_setting_data = shot_meta_data.get("main_setting_data", {})
-
                 for key in main_setting_data:
+                    # if data is being loaded from a different shot then key will have to be updated
+                    # from "lora_data_{other_shot_uuid}" to "lora_data_{this_shot_data}"
                     if str(shot_uuid) not in key:
                         new_key = key.rsplit("_", 1)[0] + "_" + str(shot_uuid)
                     else:
