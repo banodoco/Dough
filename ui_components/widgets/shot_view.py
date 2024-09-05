@@ -697,13 +697,13 @@ def copy_temp_frame(df, position_to_copy):
     # Create a new row without copying the entire DataFrame
     new_row = df.iloc[position_to_copy].to_dict()
     new_row["uuid"] = f"Copy_of_{new_row['uuid']}"
-    new_row["position"] = position_to_copy + 1  # This will be the new position
+    new_row["position"] = position_to_copy + 1
 
     # Insert the new row efficiently
     df = df.append(new_row, ignore_index=True)
 
     # Update positions efficiently
-    df.loc[(df["position"] > position_to_copy) & (df.index != df.index[-1]), "position"] += 1
+    df.loc[df["position"] >= new_row["position"], "position"] += 1
 
     # Sort by position without creating a new DataFrame
     df.sort_values("position", inplace=True)
