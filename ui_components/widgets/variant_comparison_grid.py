@@ -421,8 +421,11 @@ def variant_inference_detail_element(
         with st.expander("Settings", expanded=open_generaton_details):
             shot_meta_data, data_type = get_generation_settings_from_log(variant.inference_log.uuid)
             if shot_meta_data and shot_meta_data.get("main_setting_data", None):
+
                 # ---------- main settings data ------------------
                 for k, v in shot_meta_data.get("main_setting_data", {}).items():
+                    st.info(k)
+                    st.info(v)
                     # Custom title formatting based on the key
                     if k.startswith("strength_of_adherence_value"):
                         title = "**Strength of adherence:**"
@@ -438,7 +441,8 @@ def variant_inference_detail_element(
                         title = f"**{k.split(str(shot.uuid))[0][:-1]}:**"
 
                     # Check if the key starts with 'lora_data'
-                    if k.startswith("lora_data"):
+                    if "lora_data" in k:
+                        st.write("")
                         if isinstance(v, list) and len(v) > 0:
                             lora_items = [
                                 f"- {item.get('filename', 'No filename')} - {item.get('lora_strength', 'No strength')} strength"

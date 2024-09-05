@@ -276,48 +276,68 @@ def edit_shot_view(shot_uuid, items_per_row):
                             btn1, btn2, btn3, btn4, btn5 = st.columns([1, 1, 1, 1, 3.5])
 
                             with btn1:
+
+                                def move_frame_back(idx, shot_uuid):
+                                    st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frame(
+                                        st.session_state[f"shot_data_{shot_uuid}"], idx, "backward"
+                                    )
+
                                 if st.button(
                                     "⬅️",
                                     key=f"move_frame_back_{idx}",
                                     help="Move frame back",
                                     use_container_width=True,
+                                    on_click=move_frame_back,
+                                    args=(idx, shot_uuid),
                                 ):
-                                    st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frame(
-                                        st.session_state[f"shot_data_{shot_uuid}"], idx, "backward"
-                                    )
                                     refresh_app()
                             with btn2:
+
+                                def move_frame_forward(idx, shot_uuid):
+                                    st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frame(
+                                        st.session_state[f"shot_data_{shot_uuid}"], idx, "forward"
+                                    )
+
                                 if st.button(
                                     "➡️",
                                     key=f"move_frame_forward_{idx}",
                                     help="Move frame forward",
                                     use_container_width=True,
+                                    on_click=move_frame_forward,
+                                    args=(idx, shot_uuid),
                                 ):
-                                    st.session_state[f"shot_data_{shot_uuid}"] = move_temp_frame(
-                                        st.session_state[f"shot_data_{shot_uuid}"], idx, "forward"
-                                    )
                                     refresh_app()
                             with btn3:
+
+                                def copy_frame(idx, shot_uuid):
+                                    st.session_state[f"shot_data_{shot_uuid}"] = copy_temp_frame(
+                                        st.session_state[f"shot_data_{shot_uuid}"], idx
+                                    )
+
                                 if st.button(
                                     "🔁",
                                     key=f"copy_frame_{idx}",
                                     help="Duplicate frame",
                                     use_container_width=True,
+                                    on_click=copy_frame,
+                                    args=(idx, shot_uuid),
                                 ):
-                                    st.session_state[f"shot_data_{shot_uuid}"] = copy_temp_frame(
-                                        st.session_state[f"shot_data_{shot_uuid}"], idx
-                                    )
                                     refresh_app()
                             with btn4:
+
+                                def delete_frame(idx, shot_uuid):
+                                    st.session_state[f"shot_data_{shot_uuid}"] = delete_temp_frame(
+                                        st.session_state[f"shot_data_{shot_uuid}"], idx
+                                    )
+
                                 if st.button(
                                     "❌",
                                     key=f"delete_frame_{idx}",
                                     help="Delete frame",
                                     use_container_width=True,
+                                    on_click=delete_frame,
+                                    args=(idx, shot_uuid),
                                 ):
-                                    st.session_state[f"shot_data_{shot_uuid}"] = delete_temp_frame(
-                                        st.session_state[f"shot_data_{shot_uuid}"], idx
-                                    )
                                     refresh_app()
                             with btn5:
                                 if idx not in st.session_state[f"list_to_move_{shot_uuid}"]:
@@ -652,25 +672,44 @@ def move_temp_frames_to_positions(df, current_positions, new_start_position):
 
 def move_temp_frame(df, current_position, direction):
     if direction == "forward" and current_position < len(df) - 1:
-        df.loc[current_position, "position"], df.loc[current_position + 1, "position"] = (
-            df.loc[current_position + 1, "position"],
-            df.loc[current_position, "position"],
-        )
+        swap_position = current_position + 1
     elif direction == "backward" and current_position > 0:
-        df.loc[current_position, "position"], df.loc[current_position - 1, "position"] = (
-            df.loc[current_position - 1, "position"],
-            df.loc[current_position, "position"],
-        )
-    return df.sort_values("position").reset_index(drop=True)
+        swap_position = current_position - 1
+    else:
+        return df  # No movement needed
+
+    # Swap positions directly
+    df.loc[current_position, "position"], df.loc[swap_position, "position"] = (
+        df.loc[swap_position, "position"],
+        df.loc[current_position, "position"],
+    )
+
+    # Swap the rows directly instead of sorting
+    df.iloc[current_position], df.iloc[swap_position] = (
+        df.iloc[swap_position].copy(),
+        df.iloc[current_position].copy(),
+    )
+
+    return df
 
 
 def copy_temp_frame(df, position_to_copy):
-    new_row = df.loc[position_to_copy].copy()
+    # Create a new row without copying the entire DataFrame
+    new_row = df.iloc[position_to_copy].to_dict()
     new_row["uuid"] = f"Copy_of_{new_row['uuid']}"
-    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-    # make the position current frame + 1 and all the frames after it + 1
-    df.loc[position_to_copy + 1 :, "position"] = df.loc[position_to_copy + 1 :, "position"] + 1
-    return df.sort_values("position").reset_index(drop=True)
+    new_row["position"] = position_to_copy + 1  # This will be the new position
+
+    # Insert the new row efficiently
+    df = df.append(new_row, ignore_index=True)
+
+    # Update positions efficiently
+    df.loc[(df["position"] > position_to_copy) & (df.index != df.index[-1]), "position"] += 1
+
+    # Sort by position without creating a new DataFrame
+    df.sort_values("position", inplace=True)
+    df.reset_index(drop=True, inplace=True)
+
+    return df
 
 
 def delete_temp_frame(df, position_to_delete):

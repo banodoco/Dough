@@ -292,9 +292,10 @@
    },
    "541":{
       "inputs":{
-         "text":"\"4\": \"\", \"28\": \"\", \"60\": \"\"",
+         "text":"\"4\": \"fdsfsdafdsa\", \"28\": \"\", \"60\": \"\"",
          "max_frames":56,
-         "current_frame":0,
+         "start_frame":0,
+         "end_frame": 0,
          "print_output":false,
          "pre_text":"",
          "app_text":"",
@@ -307,7 +308,7 @@
             1
          ]
       },
-      "class_type":"PromptSchedule",
+      "class_type":"BatchPromptSchedule",
       "_meta":{
          "title":"Positive Prompt"
       }
@@ -316,7 +317,8 @@
       "inputs":{
          "text":"\"4\": \"fdsfsdafdsa\", \"28\": \"\", \"60\": \"\"",
          "max_frames":56,
-         "current_frame":0,
+         "start_frame":0,
+         "end_frame": 0,
          "print_output":false,
          "pre_text":"",
          "app_text":"",
@@ -329,9 +331,9 @@
             1
          ]
       },
-      "class_type":"PromptSchedule",
+      "class_type":"BatchPromptSchedule",
       "_meta":{
-         "title":"Negative Prompt"
+         "title":"Batch Prompt Schedule 📅🅕🅝"
       }
    },
    "544":{

@@ -518,6 +518,10 @@ class ComfyDataTransform:
                     # If "motion_lora" is already present, just update the first value
                     json_data["545"]["inputs"]["motion_lora"][0] = "536"
 
+            # Set use_motion to false in node 467 if there are any motion loras
+            if "467" in json_data and len(new_ids) > 0:
+                json_data["467"]["inputs"]["use_motion"] = False
+
             return json_data
 
         def allow_for_looping(workflow):
@@ -838,9 +842,11 @@ class ComfyDataTransform:
         workflow["541"]["inputs"]["pre_text"] = sm_data.get("prompt")
         workflow["541"]["inputs"]["text"] = sm_data.get("individual_prompts")
         workflow["541"]["inputs"]["max_frames"] = int(float(sm_data.get("max_frames")))
+        workflow["541"]["inputs"]["end_frame"] = int(float(sm_data.get("max_frames")))
 
         workflow["543"]["inputs"]["pre_text"] = sm_data.get("negative_prompt")
         workflow["543"]["inputs"]["max_frames"] = int(float(sm_data.get("max_frames")))
+        workflow["543"]["inputs"]["end_frame"] = int(float(sm_data.get("max_frames")))
         workflow["543"]["inputs"]["text"] = sm_data.get("individual_negative_prompts")
 
         workflow, extra_models_list = convert_to_specific_workflow(
