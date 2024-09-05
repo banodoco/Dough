@@ -694,20 +694,17 @@ def move_temp_frame(df, current_position, direction):
 
 
 def copy_temp_frame(df, position_to_copy):
-    # Create a new row without copying the entire DataFrame
     new_row = df.iloc[position_to_copy].to_dict()
     new_row["uuid"] = f"Copy_of_{new_row['uuid']}"
     new_row["position"] = position_to_copy + 1
 
-    # Insert the new row efficiently
-    df = df.append(new_row, ignore_index=True)
+    # Insert the new row at the correct position
+    df = pd.concat(
+        [df.iloc[: position_to_copy + 1], pd.DataFrame([new_row]), df.iloc[position_to_copy + 1 :]]
+    ).reset_index(drop=True)
 
-    # Update positions efficiently
-    df.loc[df["position"] >= new_row["position"], "position"] += 1
-
-    # Sort by position without creating a new DataFrame
-    df.sort_values("position", inplace=True)
-    df.reset_index(drop=True, inplace=True)
+    # Update positions
+    df["position"] = range(len(df))
 
     return df
 
@@ -945,6 +942,9 @@ def update_shot_frames(shot_uuid):
     random_list_of_emojis = ["🎉", "🎊", "🎈", "🎁", "🎀", "🎆", "🎇", "🧨", "🪅"]
 
     processed_images = set()
+    timing_updates = []
+    frames_to_add = []
+    frames_to_delete = []
 
     for idx, (index, row) in enumerate(updated_frame_list.iterrows()):
         image_location = row["image_location"]
@@ -953,19 +953,32 @@ def update_shot_frames(shot_uuid):
             existing_timing = existing_frames[image_location]
 
             if existing_timing.aux_frame_index != idx:
-                data_repo.update_specific_timing(existing_timing.uuid, aux_frame_index=idx)
+                timing_updates.append((existing_timing.uuid, idx))
 
             del existing_frames[image_location]
             processed_images.add(image_location)
         else:
-            add_key_frame(image_location, shot_uuid, target_frame_position=idx, refresh_state=False)
+            frames_to_add.append((image_location, shot_uuid, idx))
 
         progress = (idx + 1) / total_items
         random_emoji = random.choice(random_list_of_emojis)
         st.caption(f"Processing frame {idx + 1} of {total_items} {random_emoji}")
         progress_bar.progress(progress)
 
-    for image_location, timing in existing_frames.items():
+    frames_to_delete = list(existing_frames.values())
+
+    # Perform bulk updates
+    if timing_updates:
+        data_repo.bulk_update_timing_aux_frame_indices(timing_updates)
+
+    # Add new frames
+    for image_location, shot_uuid, target_frame_position in frames_to_add:
+        add_key_frame(
+            image_location, shot_uuid, target_frame_position=target_frame_position, refresh_state=False
+        )
+
+    # Delete removed frames
+    for timing in frames_to_delete:
         delete_frame(timing.uuid)
 
     st.session_state[f"shot_data_{shot_uuid}"] = None

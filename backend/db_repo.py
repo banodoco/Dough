@@ -6,6 +6,7 @@ import os
 import sys
 from shared.logging.constants import LoggingType
 from django.core.paginator import Paginator
+from django.db import transaction
 
 from shared.logging.logging import AppLogger
 from utils.common_decorators import measure_execution_time
@@ -109,6 +110,12 @@ class DBRepo:
                 pass
 
             self._initialized = True
+
+    def bulk_update_timing_aux_frame_indices(self, timing_updates):
+        with transaction.atomic():
+            for uuid, aux_frame_index in timing_updates:
+                Timing.objects.filter(uuid=uuid, is_disabled=False).update(aux_frame_index=aux_frame_index)
+        return InternalResponse({}, "Timings updated successfully", True)
 
     # user operations
     def create_user(self, **kwargs):

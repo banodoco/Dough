@@ -223,6 +223,10 @@ class DataRepo:
         model = res.data["data"] if res.status else None
         return InternalAIModelObject(**model) if model else None
 
+    def bulk_update_timing_aux_frame_indices(self, timing_updates):
+        res = self.db_repo.bulk_update_timing_aux_frame_indices(timing_updates)
+        return res.status
+
     def get_ai_model_from_name(self, name, user_id):
         res = self.db_repo.get_ai_model_from_name(name, user_id)
         model = res.data["data"] if res.status else None
