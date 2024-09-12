@@ -45,6 +45,7 @@ from ui_components.models import (
     InternalFrameTimingObject,
     InternalProjectObject,
     InternalSettingObject,
+    InternalUserObject,
 )
 from utils.data_repo.data_repo import DataRepo
 from shared.constants import AnimationStyleType

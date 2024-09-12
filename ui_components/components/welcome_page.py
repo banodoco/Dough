@@ -1,3 +1,4 @@
+from utils.common_utils import get_toml_config, update_toml_config
 from utils.data_repo.data_repo import DataRepo
 import streamlit as st
 from utils.state_refresh import refresh_app
@@ -128,17 +129,32 @@ def welcome_page():
 
             st.write("")
 
+            choices = [
+                "GPU - I have an RTX enabled GPU and want to run generations locally",
+                "API - (Paid) Use Dough's hosted service to run the generations",
+            ]
+            gpu_inference = st.radio(
+                "Inference Type",
+                choices,
+                key="inference_type_welcome",
+                index=0,
+                horizontal=False,
+            )
+
             read1, read2, _ = st.columns([1, 1, 1])
             with read1:
-
                 actually_read = st.checkbox("I actually read that", key="actually_read")
+
             with read2:
                 if actually_read:
-
                     if st.button("Continue", key="welcome_cta"):
                         data_repo = DataRepo()
                         data_repo.update_app_setting(welcome_state=2)
+                        current_app_settings = get_toml_config(toml_file="app_settings.toml")
+                        current_app_settings["gpu_inference"] = True if gpu_inference == choices[0] else False
+                        update_toml_config(current_app_settings, toml_file="app_settings.toml")
                         refresh_app()
+
                 else:
                     st.button(
                         "Continue",

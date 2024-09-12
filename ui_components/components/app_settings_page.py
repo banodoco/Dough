@@ -5,10 +5,17 @@ import time
 from git import Repo
 import streamlit as st
 from dataclasses import dataclass, field
-from shared.constants import COMFY_BASE_PATH, SERVER, ServerType
+from shared.constants import COMFY_BASE_PATH, GPU_INFERENCE_ENABLED, SERVER, ServerType
 from ui_components.methods.file_methods import delete_from_env, load_from_env, save_to_env
+from utils import st_memory
 from utils.common_decorators import with_refresh_lock
-from utils.common_utils import get_current_user, get_toml_config, update_toml_config
+from utils.common_utils import (
+    get_auth_token,
+    get_current_user,
+    get_toml_config,
+    set_auth_token,
+    update_toml_config,
+)
 from ui_components.components.query_logger_page import query_logger_page
 
 from utils.constants import TomlConfig
@@ -39,7 +46,28 @@ def app_settings_page():
     with open("scripts/app_version.txt", "r") as file:
         app_version = file.read()
 
-    st.markdown("#### App Settings" + ("" if not app_version else f" (v{app_version})"))
+    col1, _, col2 = st.columns([1, 3, 1])
+
+    with col1:
+        st.markdown("#### App Settings" + ("" if not app_version else f" (v{app_version})"))
+    with col2:
+        token, _ = get_auth_token()
+        if not GPU_INFERENCE_ENABLED:
+            with st.expander("Login Info", expanded=True):
+                if token:
+                    st.success("LOGGED IN")
+                    current_user = data_repo.get_first_active_user()
+                    st.write("**Name**: ", current_user.name)
+                    st.write("**Email**: ", current_user.email)
+
+                    if st.button("Logout", key="user_logout_btn"):
+                        set_auth_token("", "", user={"name": "", "email": ""})
+                        refresh_app()
+                else:
+                    st.warning("NOT LOGGED IN")
+                    if st.button("Login"):
+                        pass
+
     st.markdown("***")
 
     if SERVER != ServerType.DEVELOPMENT.value:
@@ -85,14 +113,38 @@ def app_settings_page():
     with st.expander("Custom ComfyUI Path", expanded=True):
         custom_comfy_input_component()
 
-    with st.expander("API Keys", expanded=False):
-        api_key_input_component()
-
     with st.expander("Health Check", expanded=False):
         health_check_component()
 
+    with st.expander("Inference Type", expanded=False):
+        inference_type_selection_component()
+
     with st.expander("Inference Logs", expanded=False):
         query_logger_page()
+
+
+def inference_type_selection_component():
+    c1, c2 = st.columns([1, 3])
+
+    with c1:
+        inference_type = st_memory.selectbox(
+            "Choose inference type",
+            ["GPU", "API"],
+            key="inference_type",
+            help="Select GPU if you have a RTX enabled graphics card and can run generations locally, or else use the paid API mode",
+        )
+
+    with c2:
+        st.write("")
+        st.info("Please stop the app and restart after updating this value")
+
+    if st.button("Update", key="inference_type_update_btn"):
+        st.write("updated")
+        gpu_inference = True if inference_type == "GPU" else False
+        current_app_settings = get_toml_config(toml_file="app_settings.toml")
+        current_app_settings["gpu_inference"] = gpu_inference
+        update_toml_config(current_app_settings, toml_file="app_settings.toml")
+        refresh_app()
 
 
 def custom_comfy_input_component():

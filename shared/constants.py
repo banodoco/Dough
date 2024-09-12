@@ -1,8 +1,37 @@
 import os
+import toml
 from utils.enum import ExtendedEnum
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+# TODO: this maybe an inefficient operation.. improve this?
+def get_toml_app_settings(key=None):
+    default_settings_dict = {"automatic_update": True, "gpu_inference": True}
+    toml_file = "app_settings.toml"
+    toml_config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts", toml_file))
+
+    toml_data = {}
+    with open(toml_config_path, "r") as f:
+        toml_data = toml.load(f)
+
+    if key and key in toml_data:
+        return toml_data[key]
+
+    for k, v in default_settings_dict.items():
+        if k not in toml_data:
+            toml_data[k] = v
+
+    return toml_data
+
+
+def update_toml_app_settings(toml_dict, toml_file="config.toml"):
+    toml_config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts", toml_file))
+
+    with open(toml_config_path, "wb") as f:
+        toml_content = toml.dumps(toml_dict)
+        f.write(toml_content.encode())
 
 
 ##################### enums #####################
@@ -181,13 +210,16 @@ AWS_SECRET_KEY = os.getenv("AWS_SECRET_KEY", "")
 AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY", "")
 OFFLINE_MODE = os.getenv("OFFLINE_MODE", False)  # for picking up secrets and file storage
 COMFY_BASE_PATH = os.getenv("COMFY_MODELS_BASE_PATH", "ComfyUI") or "ComfyUI"
+SERVER_URL = os.getenv("SERVER_URL", "https://api.banodoco.ai")
 
 LOCAL_DATABASE_NAME = "banodoco_local.db"
 ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY", "J2684nBgNUYa_K0a6oBr5H8MpSRW0EJ52Qmq7jExE-w=")
 
 QUEUE_INFERENCE_QUERIES = True
 HOSTED_BACKGROUND_RUNNER_MODE = os.getenv("HOSTED_BACKGROUND_RUNNER_MODE", False)
-GPU_INFERENCE_ENABLED = False if os.getenv("GPU_INFERENCE_ENABLED", False) in [False, "False"] else True
+
+toml_app_settings = get_toml_app_settings()
+GPU_INFERENCE_ENABLED = toml_app_settings.get("gpu_inference", True)
 
 if OFFLINE_MODE:
     SECRET_ACCESS_TOKEN = os.getenv("SECRET_ACCESS_TOKEN", None)

@@ -4,12 +4,26 @@ from moviepy.editor import *
 import subprocess
 import os
 import django
-from shared.constants import HOSTED_BACKGROUND_RUNNER_MODE, OFFLINE_MODE, SERVER, ServerType
 import sentry_sdk
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
+django.setup()
+st.session_state["django_init"] = True
+
+from shared.constants import (
+    GPU_INFERENCE_ENABLED,
+    HOSTED_BACKGROUND_RUNNER_MODE,
+    OFFLINE_MODE,
+    SERVER,
+    ServerType,
+)
+
 from shared.logging.logging import AppLogger
+from ui_components.components.user_login_page import user_login_ui
+from ui_components.models import InternalUserObject
 from utils.app_update_utils import apply_updates, check_and_pull_changes, load_save_checkpoint
 from utils.common_decorators import update_refresh_lock
-from utils.common_utils import is_process_active, refresh_process_active
+from utils.common_utils import get_auth_token, is_process_active, refresh_process_active
 from utils.state_refresh import refresh_app
 
 from utils.constants import (
@@ -19,31 +33,10 @@ from utils.constants import (
     RUNNER_PROCESS_NAME,
     RUNNER_PROCESS_PORT,
 )
-from utils.local_storage.url_storage import delete_url_param, get_url_param, set_url_param
-from utils.third_party_auth.google.google_auth import get_google_auth_url
 from streamlit_server_state import server_state_lock
 from utils.refresh_target import SAVE_STATE
-
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
-django.setup()
-st.session_state["django_init"] = True
-
 from banodoco_settings import project_init
 from utils.data_repo.data_repo import DataRepo
-
-
-if OFFLINE_MODE:
-    SENTRY_DSN = os.getenv("SENTRY_DSN", "")
-    SENTRY_ENV = os.getenv("SENTRY_ENV", "")
-else:
-    import boto3
-
-    ssm = boto3.client("ssm", region_name="ap-south-1")
-
-    SENTRY_ENV = ssm.get_parameter(Name="/banodoco-fe/sentry/environment")["Parameter"]["Value"]
-    SENTRY_DSN = ssm.get_parameter(Name="/banodoco-fe/sentry/dsn")["Parameter"]["Value"]
-
-sentry_sdk.init(environment=SENTRY_ENV, dsn=SENTRY_DSN, traces_sample_rate=0)
 
 
 def start_runner():
@@ -100,58 +93,41 @@ def main():
     )
     update_refresh_lock(False)
 
-    auth_details = get_url_param(AUTH_TOKEN)
-    if (not auth_details or auth_details == "None") and SERVER != ServerType.DEVELOPMENT.value:
-        params = st.experimental_get_query_params()
-
-        if params and "code" in params:
-            st.markdown("#### Logging you in, please wait...")
-            # st.write(params['code'])
-            data = {"id_token": params["code"][0]}
-            data_repo = DataRepo()
-            user, token, refresh_token = data_repo.google_user_login(**data)
-            if user:
-                set_url_param(AUTH_TOKEN, str(token))
-                refresh_app()
+    # if it's the first time,
+    if "first_load" not in st.session_state:
+        if not is_process_active(RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT):
+            if not load_save_checkpoint():
+                check_and_pull_changes()  # enabling auto updates only for local version
             else:
-                delete_url_param(AUTH_TOKEN)
-                st.error("Make sure you are added in the invite list and please login again")
-                st.text("Join our discord to request access")
-                discord_url = "<a target='_self' href='https://discord.gg/zGgpH9JEw4'> Banodoco Discord </a>"
-                st.markdown(discord_url, unsafe_allow_html=True)
+                apply_updates()
+                refresh_app()
+        st.session_state["first_load"] = True
+
+    start_runner()
+    start_project_refresh()
+    project_init()
+
+    from ui_components.setup import setup_app_ui
+    from ui_components.components.welcome_page import welcome_page
+
+    data_repo = DataRepo()
+    app_setting = data_repo.get_app_setting_from_uuid()
+    if app_setting.welcome_state == 2:
+        # api/online inference mode
+        if not GPU_INFERENCE_ENABLED:
+            token, _ = get_auth_token()
+            if not token:
+                # user not logged in
+                user_login_ui()
+            else:
+                setup_app_ui()
         else:
-            st.markdown("# :green[D]:red[o]:blue[u]:orange[g]:green[h] :red[□] :blue[□] :orange[□]")
-            st.markdown("#### Login with Google to proceed")
-
-            auth_url = get_google_auth_url()
-            st.markdown(auth_url, unsafe_allow_html=True)
-
-    else:
-        # if it's the first time,
-        if "first_load" not in st.session_state:
-            if not is_process_active(RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT):
-                if not load_save_checkpoint():
-                    check_and_pull_changes()  # enabling auto updates only for local version
-                else:
-                    apply_updates()
-                    refresh_app()
-            st.session_state["first_load"] = True
-
-        start_runner()
-        start_project_refresh()
-        project_init()
-
-        from ui_components.setup import setup_app_ui
-        from ui_components.components.welcome_page import welcome_page
-
-        data_repo = DataRepo()
-        app_setting = data_repo.get_app_setting_from_uuid()
-        if app_setting.welcome_state == 2:
+            # gpu/offline inference mode
             setup_app_ui()
-        else:
-            welcome_page()
+    else:
+        welcome_page()
 
-        st.session_state["maintain_state"] = False
+    st.session_state["maintain_state"] = False
 
 
 if __name__ == "__main__":

@@ -14,7 +14,6 @@ from shared.constants import (
 from utils.common_decorators import log_time
 
 from utils.constants import AUTH_TOKEN
-from utils.local_storage.url_storage import delete_url_param, get_url_param
 from utils.state_refresh import refresh_app
 
 
@@ -96,12 +95,13 @@ class APIRepo:
         self.SHOT_DUPLICATE_URL = "/v1/data/shot/duplicate"
 
     def logout(self):
-        delete_url_param(AUTH_TOKEN)
+        # delete_url_param(AUTH_TOKEN)
         refresh_app()
 
     ################### base http methods
     def _get_headers(self, content_type="application/json"):
-        auth_token = get_url_param(AUTH_TOKEN)
+        # auth_token = get_url_param(AUTH_TOKEN)
+        auth_token = None
         if not auth_token and SERVER != ServerType.DEVELOPMENT.value:
             if HOSTED_BACKGROUND_RUNNER_MODE in [False, "False"]:
                 self.logout()

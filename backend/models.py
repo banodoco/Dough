@@ -481,8 +481,8 @@ class Timing(BaseModel):
 class AppSetting(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
     replicate_key = models.CharField(max_length=255, default="", blank=True)
-    aws_secret_access_key = models.CharField(max_length=255, default="", blank=True)
-    aws_access_key = models.CharField(max_length=255, default="", blank=True)
+    aws_secret_access_key = models.CharField(max_length=1024, default="", blank=True)
+    aws_access_key = models.CharField(max_length=1024, default="", blank=True)
     stability_key = models.CharField(max_length=255, default="", blank=True)
     previous_project = models.CharField(
         max_length=255, default="", blank=True
@@ -498,6 +498,7 @@ class AppSetting(BaseModel):
         super(AppSetting, self).__init__(*args, **kwargs)
         self.old_replicate_key = self.replicate_key
         self.old_aws_access_key = self.aws_access_key
+        self.old_aws_secret_access_key = self.aws_secret_access_key
         self.old_stability_key = self.stability_key
 
     def save(self, *args, **kwargs):
@@ -506,12 +507,17 @@ class AppSetting(BaseModel):
         encryptor = Encryptor()
 
         new_access_key = not self.id or (self.old_aws_access_key != self.aws_access_key)
+        new_secret_access_key = not self.id or (self.old_aws_secret_access_key != self.aws_secret_access_key)
         new_replicate_key = not self.id or (self.old_replicate_key != self.replicate_key)
         new_stability_key = not self.id or (self.old_stability_key != self.stability_key)
 
         if new_access_key and self.aws_access_key:
             encrypted_access_key = encryptor.encrypt(self.aws_access_key)
             self.aws_access_key = encrypted_access_key
+
+        if new_secret_access_key and self.aws_secret_access_key:
+            encrypted_secret_access_key = encryptor.encrypt(self.aws_secret_access_key)
+            self.aws_secret_access_key = encrypted_secret_access_key
 
         if new_replicate_key and self.replicate_key:
             encrypted_replicate_key = encryptor.encrypt(self.replicate_key)

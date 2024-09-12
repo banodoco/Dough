@@ -1,1 +1,2 @@
 automatic_update = true
+gpu_inference = true

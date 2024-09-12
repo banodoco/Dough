@@ -1,5 +1,8 @@
+import datetime
+import time
+import jwt
 import requests
-from shared.constants import InternalResponse
+from shared.constants import SERVER_URL, InternalResponse
 import urllib.parse
 
 
@@ -40,3 +43,47 @@ def get_file_type(url):
     except Exception as e:
         print("Error:", e)
         return "unknown"
+
+
+def generate_fresh_token(refresh_token):
+    if not refresh_token:
+        return None, None
+
+    url = f"{SERVER_URL}/v1/authentication/refresh"
+
+    payload = {}
+    headers = {"Authorization": f"Bearer {refresh_token}"}
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+    if response.status_code == 200:
+        data = response.json()
+        return data["payload"]["token"], data["payload"]["refresh_token"]
+
+    return None, None
+
+
+def validate_token(token, refresh_token):
+    # returns a fresh token if the old one has expired
+    # returns None if the token has expired or can't be renewed
+    if not token:
+        return None, None
+
+    try:
+        decoded_token = jwt.decode(token, options={"verify_signature": False})
+        exp = decoded_token.get("exp")
+
+        if exp is None:
+            return token, refresh_token
+
+        now = time.time()
+        if exp > now:
+            return token, refresh_token
+        else:
+            return generate_fresh_token(refresh_token)
+
+    except jwt.ExpiredSignatureError:
+        print("expired token, trying to refresh...")
+        return generate_fresh_token(refresh_token)
+    except Exception as e:
+        print("error validating the jwt: ", str(e))
+        return None, None
