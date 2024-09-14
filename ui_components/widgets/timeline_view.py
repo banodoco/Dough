@@ -57,22 +57,22 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
             st.info("Select images on the right to add them to a shot or shortlist.")
         else:
             # Display selected images and provide action buttons
-            h1, h2, h3 = st.columns([2, 1, 1])
+            h1, h2 = st.columns([2, 2])
             with h1:
                 if len(st.session_state["selected_images"]) == 1:
                     st.info(f"You have selected {len(st.session_state['selected_images'])} image.")
                 else:
                     st.info(f"You have selected {len(st.session_state['selected_images'])} images.")
-            with h3:
-                if st.button("Clear all selected"):
-                    st.session_state["selected_images"] = []
-                    refresh_app()
+
             with h2:
                 if st.button("Add all to shortlist"):
                     for uuid in st.session_state["selected_images"]:
                         add_file_to_shortlist(uuid)
                     time.sleep(0.3)
                     st.session_state["selected_images"] = []  # Clear selected images after adding
+                    refresh_app()
+                if st.button("Clear all selected"):
+                    st.session_state["selected_images"] = []
                     refresh_app()
 
         add_new_shot_element(shot, data_repo)
@@ -151,7 +151,8 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
                         if len(timing_list) > max_images:
                             st.info(f"\+ {len(timing_list) - max_images}", icon=None)
                         elif len(timing_list) == max_images:
-                            st.info("+", icon=None)
+                            # Don't show anything if there are exactly 11 items
+                            pass
             else:
                 st.warning("No images in shot.")  # Warning if no images are present
 
@@ -182,12 +183,13 @@ def timeline_view(shot_uuid, stage, view="sidebar"):
                                     shot.uuid,
                                     len(data_repo.get_timing_list_from_shot(shot.uuid)),
                                     refresh_state=False,
+                                    update_local_only=True,
                                 )
                         st.session_state["selected_images"] = []  # Clear selected images after adding
                         refresh_app()
 
                     st.button(
-                        f"Add {len(st.session_state['selected_images'])} selected images to this shot",
+                        f"Add {len(st.session_state['selected_images'])} selected {'image' if len(st.session_state['selected_images']) == 1 else 'images'} to this shot",
                         use_container_width=True,
                         type="primary",
                         key=f"add_to_shot_{shot.uuid}",

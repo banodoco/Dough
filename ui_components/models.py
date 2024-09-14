@@ -186,6 +186,7 @@ class InternalFrameTimingObject:
         self.notes = kwargs["notes"] if "notes" in kwargs and kwargs["notes"] else ""
         self.clip_duration = kwargs["clip_duration"] if key_present("clip_duration", kwargs) else 0
         self.aux_frame_index = kwargs["aux_frame_index"] if "aux_frame_index" in kwargs else 0
+        self.pending_save_to_db = kwargs["pending_save_to_db"] if "pending_save_to_db" in kwargs else False
 
     @property
     def alternative_images_list(self):

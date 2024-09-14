@@ -29,13 +29,14 @@ def adjust_shot_page(shot_uuid: str, h2):
         )
         st.markdown("***")
 
-        column1, column2 = st.columns([2, 1.35])
+        column1, column2, column3, column4 = st.columns([1, 1.35, 1, 1])
         with column1:
             st.markdown(f"### 🎬 '{shot.name}' frames")
             st.write("##### _\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_")
+        with column2:
             items_per_row = st_memory.slider("Items per row:", 1, 10, 6, key="items_per_row")
 
-        shot_keyframe_element(st.session_state["shot_uuid"], items_per_row, column2, position="Individual")
+        shot_keyframe_element(st.session_state["shot_uuid"], items_per_row, column4, position="Individual")
 
     else:
         frame_styling_page(st.session_state["shot_uuid"])

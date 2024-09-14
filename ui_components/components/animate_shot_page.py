@@ -20,12 +20,75 @@ from utils.data_repo.data_repo import DataRepo
 from ui_components.widgets.sidebar_logger import sidebar_logger
 from utils.enum import ExtendedEnum
 from utils.state_refresh import refresh_app
+from ui_components.models import InternalFrameTimingObject, InternalFileObject
+import uuid
+from datetime import datetime
 
 
 def animate_shot_page(shot_uuid: str, h2):
+    def move_frame(shot, moving_position, target_position):
+        if 0 <= moving_position < len(shot.timing_list) and 0 <= target_position < len(shot.timing_list):
+            frame = shot.timing_list.pop(moving_position)
+            shot.timing_list.insert(target_position, frame)
+
+            # Update aux_frame_index for all frames
+            for i, timing in enumerate(shot.timing_list):
+                timing.aux_frame_index = i
+
+            return True
+        return False
+
+    from ui_components.models import InternalFrameTimingObject, InternalFileObject
+    import uuid
+    from datetime import datetime
+
+    def add_new_frame(shot, local_path, index, file_uuid=None):
+        data_repo = DataRepo()
+
+        project = shot.project
+
+        if file_uuid is None or file_uuid == "":
+            # Create a new file using the existing create_file function
+            new_file = data_repo.create_file(
+                uuid=str(uuid.uuid4()),
+                name=local_path.split("/")[-1],
+                local_path=local_path,
+                type="image",
+                created_on=datetime.now().isoformat(),
+                project=project,  # Assuming project UUID is sufficient
+                shot_uuid=shot.uuid,  # Adding shot_uuid as it might be needed
+            )
+
+            print("new_file")
+            print(new_file)
+            if not new_file:
+                return False
+
+            file_uuid = new_file.uuid
+
+        # Create a new timing using the existing create_timing function
+        timing_data = {
+            "shot_id": shot.uuid,
+            "aux_frame_index": index,
+            "primary_image": new_file,  # Directly use the InternalFileObject
+            "primary_image.location": new_file.local_path,
+        }
+        new_timing = data_repo.create_timing(**timing_data)
+
+        print("new_timing")
+        print(new_timing)
+
+        if new_timing:
+            return True
+        else:
+            # If timing creation failed and we created a new file, we should delete it
+            if file_uuid is None:
+                data_repo.delete_file_from_uuid(file_uuid)
+            return False
+
     data_repo = DataRepo()
     shot = data_repo.get_shot_from_uuid(shot_uuid)
-    st.session_state["project_uuid"] = str(shot.project.uuid)
+    project = data_repo.get_project_from_uuid(shot.project.uuid)
 
     with st.sidebar:
         frame_selector_widget(show_frame_selector=False)

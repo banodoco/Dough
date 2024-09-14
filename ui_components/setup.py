@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 import os
 from moviepy.editor import *
 from shared.constants import SERVER, AppSubPage, CreativeProcessPage, ServerType
@@ -130,13 +131,45 @@ def setup_app_ui():
         if st.session_state["index_of_project_name"] != next(
             (i for i, p in enumerate(project_list) if p.uuid == st.session_state["project_uuid"]), None
         ):
+            # Remove existing shot data from session state
+            keys_to_remove = [key for key in st.session_state.keys() if key.startswith("shot_data_")]
+            for key in keys_to_remove:
+                del st.session_state[key]
+
+            # Get the shot list for the new project
+            shot_list = data_repo.get_shot_list(st.session_state["project_uuid"])
+
+            # Load new shot data into session state
+            for shot in shot_list:
+                timing_list = data_repo.get_timing_list_from_shot(shot.uuid)
+                shot_data = [
+                    {
+                        "uuid": timing.uuid,
+                        "image_uuid": (
+                            timing.primary_image.uuid
+                            if timing.primary_image and timing.primary_image.uuid
+                            else None
+                        ),
+                        "image_location": (
+                            timing.primary_image.location
+                            if timing.primary_image and timing.primary_image.location
+                            else None
+                        ),
+                        "position": idx,
+                    }
+                    for idx, timing in enumerate(timing_list)
+                ]
+                st.session_state[f"shot_data_{shot.uuid}"] = pd.DataFrame(shot_data)
+                st.write(f"shot_data_{shot.uuid}")
+                st.write(st.session_state[f"shot_data_{shot.uuid}"])
+
             st.success("Project changed!")
             st.session_state["index_of_project_name"] = next(
                 (i for i, p in enumerate(project_list) if p.uuid == st.session_state["project_uuid"]), None
             )
             data_repo.update_app_setting(previous_project=st.session_state["project_uuid"])
 
-            refresh_app()
+            # refresh_app()
 
         if st.session_state["project_uuid"] == "":
             st.info("No projects found - create one in the 'New Project' section")

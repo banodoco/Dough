@@ -972,6 +972,7 @@ def gallery_image_view(project_uuid, shortlist=False, view=["main"], shot=None, 
                                                 len(data_repo.get_timing_list_from_shot(shot_uuid)),
                                                 refresh_state=False,
                                                 update_cur_frame_idx=False,
+                                                update_local_only=True,
                                             )
                                             # removing this from the gallery view
                                             data_repo.update_file(gallery_image_list[i + j].uuid, tag="")

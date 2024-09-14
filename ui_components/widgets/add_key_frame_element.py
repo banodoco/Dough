@@ -1,7 +1,9 @@
 import time
 from typing import Union
 import streamlit as st
-from shared.constants import AnimationStyleType
+import datetime
+from uuid import uuid4
+from backend.serializers.dao import CreateTimingDao
 from ui_components.models import InternalFileObject, InternalFrameTimingObject
 from utils.common_decorators import update_refresh_lock
 from utils.state_refresh import refresh_app
@@ -80,12 +82,14 @@ def add_key_frame(
     target_frame_position=None,
     refresh_state=True,
     update_cur_frame_idx=True,
+    update_local_only=False,
 ):
     """
     either a pil image or a internalfileobject can be passed to this method, for adding it inside a shot
     """
     data_repo = DataRepo()
-    timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
+    shot = data_repo.get_shot_from_uuid(shot_uuid)
+    timing_list = shot.timing_list
 
     # creating frame inside the shot at target_frame_position
     len_shot_timing_list = len(timing_list) if len(timing_list) > 0 else 0
@@ -95,20 +99,66 @@ def add_key_frame(
     if isinstance(selected_image, InternalFileObject):
         saved_image = selected_image
     else:
-        shot = data_repo.get_shot_from_uuid(shot_uuid)
         saved_image = save_new_image(selected_image, shot.project.uuid)
 
     timing_data = {
         "shot_id": shot_uuid,
-        "animation_style": AnimationStyleType.CREATIVE_INTERPOLATION.value,
         "aux_frame_index": target_aux_frame_index,
         "source_image_id": saved_image.uuid,
         "primary_image_id": saved_image.uuid,
     }
-    new_timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
+
+    if update_local_only:
+        attributes = CreateTimingDao(data=timing_data)
+        if not attributes.is_valid():
+            raise ValueError(attributes.errors)
+
+        timing_uuid = str(uuid4())
+
+        # Convert UUIDs to dictionaries containing file object data
+        if "source_image_id" in timing_data:
+            source_image = data_repo.get_file_from_uuid(timing_data["source_image_id"])
+            if source_image:
+                source_image_dict = source_image.__dict__.copy()
+                if source_image.project:
+                    source_image_dict["project"] = source_image.project.__dict__
+                timing_data["source_image"] = source_image_dict
+            del timing_data["source_image_id"]
+
+        if "primary_image_id" in timing_data:
+            primary_image = data_repo.get_file_from_uuid(timing_data["primary_image_id"])
+            if primary_image:
+                primary_image_dict = primary_image.__dict__.copy()
+                if primary_image.project:
+                    primary_image_dict["project"] = primary_image.project.__dict__
+                timing_data["primary_image"] = primary_image_dict
+            del timing_data["primary_image_id"]
+
+        # Add other fields
+        timing_data["uuid"] = timing_uuid
+        timing_data["created_on"] = datetime.datetime.now()
+        timing_data["updated_on"] = datetime.datetime.now()
+        timing_data["pending_save_to_db"] = True
+        # Create the InternalFrameTimingObject
+        new_timing = InternalFrameTimingObject(**timing_data)
+
+        # Insert the new timing into the shot's timing list
+        shot.timing_list.insert(target_aux_frame_index, new_timing)
+
+        # if the last value is len timing_list - 1, then update it to len timing_list - this is to not put people in preview mode if they're not alaredy in it
+        if (
+            st.session_state.get(f"frames_to_preview_{shot_uuid}", (1, len(shot.timing_list) - 1))[1]
+            == len(shot.timing_list) - 1
+        ):
+            st.session_state[f"frames_to_preview_{shot_uuid}"] = (1, len(shot.timing_list))
+
+        # Update aux_frame_index for all frames after the inserted one
+        for i in range(target_aux_frame_index + 1, len(shot.timing_list)):
+            shot.timing_list[i].aux_frame_index = i
+    else:
+        new_timing: InternalFrameTimingObject = data_repo.create_timing(**timing_data)
 
     if update_cur_frame_idx:
-        timing_list = data_repo.get_timing_list_from_shot(shot_uuid)
         # this part of code updates current_frame_index when a new keyframe is added
         if len(timing_list) <= 1:
             st.session_state["current_frame_index"] = 1

@@ -156,7 +156,7 @@ TODO:
 
 
 def jump_to_single_frame_view_button(display_number, timing_list, src, uuid=None):
-    if st.button(f"Jump to #{display_number}", key=f"{src}_{uuid}", use_container_width=True):
+    if st.button(f"🗳️", key=f"{src}_{uuid}", use_container_width=True, help=f"Jump to frame {display_number}"):
         st.session_state["current_frame_sidebar_selector"] = display_number
         st.session_state["current_subpage"] = AppSubPage.KEYFRAME.value
         st.session_state["page"] = CreativeProcessPage.ADJUST_SHOT.value
