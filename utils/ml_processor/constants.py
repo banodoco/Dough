@@ -51,10 +51,6 @@ class ComfyRunnerModel:
 
 
 class ML_MODEL:
-    sdxl_inpainting = MLModel(
-        "lucataco/sdxl-inpainting",
-        "f03c01943bacdee38d6a5d216586bf9bfbfd799350aed263aa32980efc173f0b",
-    )
     clones_lora_training = MLModel(
         "cloneofsimo/lora-training",
         "b2a308762e36ac48d16bfadc03a65493fe6e799f429f7941639a6acec5b276cc",
@@ -236,6 +232,7 @@ class ML_MODEL:
     )
     sd3_local = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.SD3)
     flux = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.FLUX)
+    sdxl_inpainting = MLModel(ComfyRunnerModel.name, ComfyRunnerModel.version, ComfyWorkflow.SDXL_INPAINTING)
 
     @staticmethod
     def get_model_by_db_obj(model_db_obj):

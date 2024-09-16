@@ -9,6 +9,7 @@ import os
 from PIL import Image
 from shared.constants import (
     COMFY_BASE_PATH,
+    GPU_INFERENCE_ENABLED,
     FileTransformationType,
     InferenceLogTag,
     InferenceParamType,
@@ -32,7 +33,7 @@ from ui_components.models import (
     InternalShotObject,
 )
 from ui_components.widgets.add_key_frame_element import add_key_frame
-from ui_components.widgets.sm_animation_style_element import video_shortlist_btn
+from ui_components.widgets.sm_animation_style_element import SD_MODEL_DICT, video_shortlist_btn
 from utils import st_memory
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow
@@ -654,8 +655,12 @@ def prepare_values(inf_data, timing_list):
 
 
 def upscale_settings(ui_key):
-    checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
-    all_files = os.listdir(checkpoints_dir)
+    if GPU_INFERENCE_ENABLED:
+        checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
+        all_files = os.listdir(checkpoints_dir)
+    else:
+        all_files = list(SD_MODEL_DICT.keys())
+
     if len(all_files) == 0:
         st.info("No models found in the checkpoints directory")
         styling_model = "None"
@@ -670,10 +675,6 @@ def upscale_settings(ui_key):
     upscale_by = st.slider(
         "Upscale by:", min_value=1.25, max_value=3.0, step=0.05, key=f"upscale_by_{ui_key}", value=1.5
     )
-
-    # set_upscaled_to_main_variant = st.checkbox(
-    #     "Set upscaled to main variant", key=f"set_upscaled_to_main_variant_{ui_key}", value=True
-    # )
 
     return styling_model, upscale_by, True
 

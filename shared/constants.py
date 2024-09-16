@@ -3,7 +3,7 @@ import toml
 from utils.enum import ExtendedEnum
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 
 # TODO: this maybe an inefficient operation.. improve this?
@@ -155,6 +155,7 @@ class InferenceParamType(ExtendedEnum):
     FILE_RELATION_DATA = (
         "file_relation"  # file relationship data such as what parent a particular file was upscaled from
     )
+    API_INFERENCE_DATA = "api_inference"  # banodoco's hosted service
 
 
 class ProjectMetaData(ExtendedEnum):

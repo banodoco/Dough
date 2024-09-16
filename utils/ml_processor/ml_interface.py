@@ -4,10 +4,10 @@ from shared.constants import GPU_INFERENCE_ENABLED
 
 
 def get_ml_client():
-    from utils.ml_processor.replicate.replicate import ReplicateProcessor
+    from utils.ml_processor.sai.api import APIProcessor
     from utils.ml_processor.gpu.gpu import GPUProcessor
 
-    return ReplicateProcessor() if not GPU_INFERENCE_ENABLED else GPUProcessor()
+    return APIProcessor() if not GPU_INFERENCE_ENABLED else GPUProcessor()
 
 
 class MachineLearningProcessor(ABC):

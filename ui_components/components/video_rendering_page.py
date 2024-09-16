@@ -2,7 +2,12 @@ from typing import List
 import time
 import ast
 import streamlit as st
-from shared.constants import AnimationStyleType, AnimationToolType, STEERABLE_MOTION_WORKFLOWS
+from shared.constants import (
+    GPU_INFERENCE_ENABLED,
+    AnimationStyleType,
+    AnimationToolType,
+    STEERABLE_MOTION_WORKFLOWS,
+)
 import time
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES
 from ui_components.methods.ml_methods import generate_sm_video
@@ -57,7 +62,10 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
         sd_model, model_files = select_sd_model_element(shot_uuid, DEFAULT_SM_MODEL)
 
         # ----------- SELECT MOTION LORA ------------
-        motion_lora_data = select_motion_lora_element(shot_uuid, model_files)
+        if GPU_INFERENCE_ENABLED:
+            motion_lora_data = select_motion_lora_element(shot_uuid, model_files)
+        else:
+            motion_lora_data = []
 
         # ----------- OTHER SETTINGS ------------
         (

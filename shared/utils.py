@@ -62,7 +62,25 @@ def generate_fresh_token(refresh_token):
     return None, None
 
 
-def validate_token(token, refresh_token):
+def validate_token_through_db(token, refresh_token):
+    url = f"{SERVER_URL}/v1/user/op"
+
+    payload = {}
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = requests.request("GET", url, headers=headers, data=payload)
+    if response.status_code == 200:
+        data = response.json()
+        return token, refresh_token
+    else:
+        return generate_fresh_token(refresh_token)
+
+
+def validate_token(
+    token,
+    refresh_token,
+    validate_through_db=False,
+):
     # returns a fresh token if the old one has expired
     # returns None if the token has expired or can't be renewed
     if not token:
@@ -77,7 +95,10 @@ def validate_token(token, refresh_token):
 
         now = time.time()
         if exp > now:
-            return token, refresh_token
+            if not validate_through_db:
+                return token, refresh_token
+            else:
+                return validate_token_through_db(token, refresh_token)
         else:
             return generate_fresh_token(refresh_token)
 

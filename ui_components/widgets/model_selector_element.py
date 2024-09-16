@@ -2,7 +2,7 @@ import os
 import time
 import streamlit as st
 
-from shared.constants import COMFY_BASE_PATH
+from shared.constants import COMFY_BASE_PATH, GPU_INFERENCE_ENABLED
 from ui_components.widgets.download_file_progress_bar import download_file_widget
 from utils.constants import T2IModel
 from utils.state_refresh import refresh_app
@@ -76,7 +76,55 @@ def list_dir_files(directory, depth=0):
     return sorted(all_items)
 
 
-def model_selector_element(type=T2IModel.SDXL.value, position="explorer", selected_model=None):
+def model_selector_online_element(type=T2IModel.SDXL.value, position="explorer", selected_model=None):
+    default_model = (
+        "sd_xl_base_1.0.safetensors"
+        if type == T2IModel.SDXL.value
+        else "sd3_medium_incl_clips_t5xxlfp16.safetensors"
+    )
+
+    info_msg = (
+        "SDXL base will be selected as default. This tends to work best with style transfer."
+        if type == T2IModel.SDXL.value
+        else "Default base SD3 medium will be selected."
+    )
+
+    col1, col2 = st.columns([1, 0.25])
+    with col1:
+        explorer_gen_model = ""
+
+        default_model_list = (
+            [v["filename"] for v in SDXL_MODEL_DOWNLOAD_LIST.values()]
+            if type == T2IModel.SDXL.value
+            else [v["filename"] for v in SD3_MODEL_DOWNLOAD_LIST.values()]
+        )
+        model_files = [
+            file for file in default_model_list if file.endswith(".safetensors") or file.endswith(".ckpt")
+        ]
+
+        cur_model = selected_model if (selected_model and selected_model in model_files) else None
+        current_model_index = model_files.index(cur_model) if (cur_model and cur_model in model_files) else 0
+
+        if model_files and len(model_files):
+            explorer_gen_model = st.selectbox(
+                label="Styling model:",
+                options=model_files,
+                key=f"{position}_{type}_explorer_gen_model_video",
+                index=current_model_index,
+                # on_change=update_model,
+            )
+
+            st.session_state["insp_lightning_mode"] = "lightning" in explorer_gen_model
+
+        else:
+            st.write("")
+            st.info(info_msg)
+            explorer_gen_model = default_model
+
+        return explorer_gen_model
+
+
+def model_selector_offline_element(type=T2IModel.SDXL.value, position="explorer", selected_model=None):
     tab1, tab2 = st.tabs(["Choose Model", "Download Models"])
     default_model = (
         "sd_xl_base_1.0.safetensors"
@@ -140,6 +188,17 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
                     # on_change=update_model,
                 )
 
+                st.write("")
+                lightning = st.checkbox(
+                    "Lightning Model",
+                    help="Generate images faster with less quality.",
+                    value=st.session_state["insp_lightning_mode"],
+                )
+
+                if st.session_state["insp_lightning_mode"] != lightning:
+                    st.session_state["insp_lightning_mode"] = lightning
+                    refresh_app()
+
                 (
                     st.info("Please only select SDXL based models. Default models will be auto-downloaded.")
                     if type == T2IModel.SDXL.value
@@ -185,3 +244,14 @@ def model_selector_element(type=T2IModel.SDXL.value, position="explorer", select
             refresh_app()
 
     return explorer_gen_model
+
+
+def model_selector_element(type=T2IModel.SDXL.value, position="explorer", selected_model=None):
+    if GPU_INFERENCE_ENABLED:
+        return model_selector_offline_element(
+            type=T2IModel.SDXL.value, position="explorer", selected_model=None
+        )
+    else:
+        return model_selector_online_element(
+            type=T2IModel.SDXL.value, position="explorer", selected_model=None
+        )

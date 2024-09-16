@@ -1,3 +1,4 @@
+import ast
 import json
 import os
 import shutil
@@ -19,6 +20,7 @@ from shared.constants import (
     COMFY_PORT,
     LOCAL_DATABASE_NAME,
     OFFLINE_MODE,
+    SERVER_URL,
     InferenceParamType,
     InferenceStatus,
     InferenceType,
@@ -28,7 +30,7 @@ from shared.constants import (
 from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
 from shared.utils import get_file_type
-from utils.common_utils import sqlite_atomic_transaction
+from utils.common_utils import get_toml_config, sqlite_atomic_transaction
 from ui_components.methods.file_methods import (
     get_file_bytes_and_extension,
     load_from_env,
@@ -38,7 +40,14 @@ from ui_components.methods.file_methods import (
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ComfyWorkflow, replicate_status_map
 
-from utils.constants import REFRESH_PROCESS_PORT, RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT, AUTH_TOKEN, REFRESH_AUTH_TOKEN
+from utils.constants import (
+    REFRESH_PROCESS_PORT,
+    RUNNER_PROCESS_NAME,
+    RUNNER_PROCESS_PORT,
+    AUTH_TOKEN,
+    REFRESH_AUTH_TOKEN,
+    TomlConfig,
+)
 from utils.ml_processor.gpu.utils import is_comfy_runner_present, predict_gpu_output, setup_comfy_runner
 from utils.ml_processor.sai.utils import predict_sai_output
 
@@ -168,6 +177,7 @@ def is_app_running():
         print("server not running")
         return False
 
+
 def refresh_dough():
     url = f"http://localhost:{REFRESH_PROCESS_PORT}/refresh"
     response = requests.post(url)
@@ -178,8 +188,15 @@ def refresh_dough():
         print(f"Request failed with status code: {response.status_code}")
         return False
 
+
 def update_cache_dict(
-    inference_type, log, timing_uuid, shot_uuid, timing_update_list, shot_update_list, gallery_update_list,
+    inference_type,
+    log,
+    timing_uuid,
+    shot_uuid,
+    timing_update_list,
+    shot_update_list,
+    gallery_update_list,
 ):
     if inference_type in [
         InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
@@ -198,6 +215,7 @@ def update_cache_dict(
         shot_update_list[str(log.project.uuid)].append(shot_uuid)
 
     refresh_dough()
+
 
 def find_process_by_port(port):
     pid = None
@@ -286,6 +304,7 @@ def check_and_update_db():
         status__in=[InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value], is_disabled=False
     ).all()
 
+    time.sleep(1)
     for log in log_list:
         # these items will updated in the cache when the app refreshes the next time
         timing_update_list = {}  # {project_id: [timing_uuids]}
@@ -294,6 +313,7 @@ def check_and_update_db():
 
         input_params = json.loads(log.input_params)
         replicate_data = input_params.get(InferenceParamType.REPLICATE_INFERENCE.value, None)
+        api_data = input_params.get(InferenceParamType.API_INFERENCE_DATA.value, None)
         local_gpu_data = input_params.get(InferenceParamType.GPU_INFERENCE.value, None)
         sai_data = input_params.get(InferenceParamType.SAI_INFERENCE.value, None)
         if replicate_data:
@@ -388,6 +408,128 @@ def check_and_update_db():
                 if response:
                     app_logger.log(LoggingType.DEBUG, f"Error: {response.content}")
                     sentry_sdk.capture_exception(response.content)
+        elif api_data:
+            backend_url = f"{SERVER_URL}/v1/inference/log"
+            queued_log_uuid = None
+            app_setting: AppSetting = AppSetting.objects.filter(is_disabled=False).first()
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {app_setting.aws_access_key_decrypted}",
+            }
+            if log.output_details != "":
+                if (
+                    "log_uuid" in json.loads(log.output_details)
+                    and json.loads(log.output_details)["log_uuid"]
+                ):
+                    queued_log_uuid = json.loads(log.output_details)["log_uuid"]
+
+            if queued_log_uuid:
+                # generation is already sent to the backend, just check for it's status
+                try:
+                    params = {"uuid": queued_log_uuid}
+                    response = requests.get(backend_url, headers=headers, params=params)
+                    if response.status_code == 200:
+                        response = response.json()
+                        if not response["status"]:
+                            log.status = InferenceStatus.FAILED.value
+                            cur_output_details = json.loads(log.output_details)
+                            cur_output_details["fail_details"] = response["message"]
+                            log.output_details = json.dumps(cur_output_details)
+                            log.save()
+                        else:
+                            db_status = response["payload"]["data"]["status"]
+                            if db_status in InferenceStatus.value_list():
+                                log.status = db_status
+                                log.save()
+                            else:
+                                print("invalid log status")
+
+                        if log.status in [
+                            InferenceStatus.COMPLETED.value,
+                            InferenceStatus.FAILED.value,
+                        ]:
+                            origin_data = json.loads(log.input_params).get(
+                                InferenceParamType.ORIGIN_DATA.value, {}
+                            )
+
+                            if log.status == InferenceStatus.COMPLETED.value:
+                                api_output = response["payload"]["data"]["output_details"]
+                                if api_output and isinstance(api_output, str):
+                                    api_output = ast.literal_eval(api_output)
+                                origin_data["output"] = api_output[0] if len(api_output) == 1 else api_output
+                                origin_data["log_uuid"] = log.uuid
+                                print("processing inference output")
+
+                                from ui_components.methods.common_methods import process_inference_output
+
+                                process_inference_output(**origin_data)
+                                log.total_inference_time = response["payload"]["data"]["total_inference_time"]
+                                log.save()
+
+                            timing_uuid, shot_uuid = origin_data.get("timing_uuid", None), origin_data.get(
+                                "shot_uuid", None
+                            )
+                            update_cache_dict(
+                                origin_data.get("inference_type", ""),
+                                log,
+                                timing_uuid,
+                                shot_uuid,
+                                timing_update_list,
+                                shot_update_list,
+                                gallery_update_list,
+                            )
+
+                    else:
+                        print("log request failed: ", response.content)
+                        refresh_dough()
+                except Exception as e:
+                    print("unable to update the output: ", str(e))
+                    refresh_dough()
+            else:
+                # this is not yet put into the backend
+                input_params = json.loads(log.input_params)
+                input_params = input_params[InferenceParamType.API_INFERENCE_DATA.value]
+                input_params = json.loads(input_params)
+                comfy_commit_hash = get_toml_config(TomlConfig.COMFY_VERSION.value)["commit_hash"]
+                node_commit_dict = get_toml_config(TomlConfig.NODE_VERSION.value)
+                pkg_versions = get_toml_config(TomlConfig.PKG_VERSIONS.value)
+                extra_node_urls = []
+                for k, v in node_commit_dict.items():
+                    v["title"] = k
+                    extra_node_urls.append(v)
+
+                input_params["extra_node_urls"] = extra_node_urls
+                input_params["comfy_commit_hash"] = (comfy_commit_hash,)
+                input_params["strict_dep_list"] = pkg_versions
+
+                payload = json.dumps(
+                    {
+                        "input_params": input_params,
+                    }
+                )
+                try:
+                    response = requests.post(backend_url, headers=headers, data=payload)
+                    if response.status_code == 200:
+                        response = response.json()
+                        if not response["status"]:
+                            log.status = InferenceStatus.FAILED.value
+                            cur_output_details = json.loads(log.output_details)
+                            cur_output_details["fail_details"] = response["message"]
+                            log.output_details = json.dumps(cur_output_details)
+                        else:
+                            output_uuid = response["payload"]["data"]["uuid"]
+                            cur_output_details = json.loads(log.output_details)
+                            cur_output_details["log_uuid"] = output_uuid
+                            log.output_details = json.dumps(cur_output_details)
+                        log.save()
+                        refresh_dough()
+                    else:
+                        print("log request failed: ", response.content)
+                        refresh_dough()
+                except Exception as e:
+                    print("unable to queue generation ", str(e))
+                    refresh_dough()
+
         elif local_gpu_data:
             data = json.loads(local_gpu_data)
             try:

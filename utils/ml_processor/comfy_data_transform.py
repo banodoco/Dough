@@ -1237,7 +1237,8 @@ def get_model_workflow_from_query(model: MLModel, query_obj: MLQueryObject) -> s
         app_logger.log(LoggingType.ERROR, f"model {model.workflow_name} not supported for local inference")
         raise ValueError(f"Model {model.workflow_name} not supported for local inference")
 
-    return MODEL_WORKFLOW_MAP[model.workflow_name](query_obj)
+    res = MODEL_WORKFLOW_MAP[model.workflow_name](query_obj)
+    return (model.workflow_name.value,) + res
 
 
 def get_workflow_json_url(workflow_json):

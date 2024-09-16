@@ -360,7 +360,7 @@ def convert_timestamp_to_relative(timestamp_str):
         return "Just now"
 
 
-def get_auth_token():
+def get_auth_token(validate_through_db=False):
     data_repo = DataRepo()
 
     auth_token, refresh_auth_token = None, None
@@ -379,8 +379,11 @@ def get_auth_token():
             return None, None
 
         auth_token, refresh_auth_token = app_secrets["aws_access_key"], app_secrets["aws_secret_key"]
+        validate_through_db = (
+            True  # if loading in the session state for the first time, then we validate against the db
+        )
 
-    auth_token, refresh_auth_token = validate_token(auth_token, refresh_auth_token)
+    auth_token, refresh_auth_token = validate_token(auth_token, refresh_auth_token, validate_through_db)
     if auth_token:
         # updating session state
         st.session_state["auth_token"] = auth_token

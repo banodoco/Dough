@@ -10,7 +10,7 @@ from PIL import Image
 import requests
 from io import BytesIO
 
-from shared.constants import QUEUE_INFERENCE_QUERIES, InferenceType, ProjectMetaData
+from shared.constants import GPU_INFERENCE_ENABLED, QUEUE_INFERENCE_QUERIES, InferenceType, ProjectMetaData
 from ui_components.methods.common_methods import process_inference_output, save_new_image
 from ui_components.methods.file_methods import generate_pil_image, zoom_and_crop
 from ui_components.models import InternalProjectObject, InternalSettingObject
@@ -269,7 +269,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     st.session_state[k] = v
 
             # ---------------- PROMPT GUIDANCE ---------------------
-            h1, h2, _ = st.columns([1, 1, 0.25])
+            h1, h2, _ = st.columns([2, 1, 0.05]) if GPU_INFERENCE_ENABLED else st.columns([1, 1, 0.25])
             with h1:
                 st.markdown("#### Prompt guidance")
 
@@ -279,7 +279,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     st.session_state["list_of_prompts"] = [""]
                     refresh_app()
 
-            h2_a, h2_b, h2_c, h1 = st.columns([0.5, 0.5, 0.5, 0.75])
+            h2_a, h2_b, h2_c, h1 = (
+                st.columns([1, 1, 1, 0.01]) if GPU_INFERENCE_ENABLED else st.columns([0.5, 0.5, 0.5, 0.75])
+            )
             if isinstance(st.session_state["list_of_prompts"], str):
                 st.session_state["list_of_prompts"] = st.session_state["list_of_prompts"].split("|")
 
@@ -315,92 +317,76 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 disabled=True,
                                 help="You can't delete the last prompt.",
                             )
-            """
-            if st.session_state["list_of_prompts"] != list_of_prompts:
-                st.session_state["list_of_prompts"] = list_of_prompts
-                refresh_app()
-            """
+
             number_of_prompts = len(st.session_state["list_of_prompts"])
 
-            with h1:
-                i1, i2 = st.columns([1, 1])
-                with i1:
+            if not GPU_INFERENCE_ENABLED:
+                with h1:
+                    i1, i2 = st.columns([1, 1])
+                    with i1:
+                        if st.session_state["prompt_generation_mode"] == generate_mode:
+                            st.success("Generate prompts")
+                        else:
+                            st.warning("Edit prompts")
+                    with i2:
+                        if st.session_state["prompt_generation_mode"] == generate_mode:
+                            if st.button("Switch to edit prompt mode", use_container_width=True):
+                                st.session_state["prompt_generation_mode"] = edit_mode
+                                refresh_app()
+                        else:
+                            if st.button("Switch to generate prompt mode", use_container_width=True):
+                                st.session_state["prompt_generation_mode"] = generate_mode
+                                refresh_app()
+
                     if st.session_state["prompt_generation_mode"] == generate_mode:
-                        st.success("Generate prompts")
-                    else:
-                        st.warning("Edit prompts")
-                with i2:
-                    if st.session_state["prompt_generation_mode"] == generate_mode:
-                        if st.button("Switch to edit prompt mode", use_container_width=True):
-                            st.session_state["prompt_generation_mode"] = edit_mode
-                            refresh_app()
-                    else:
-                        if st.button("Switch to generate prompt mode", use_container_width=True):
-                            st.session_state["prompt_generation_mode"] = generate_mode
-                            refresh_app()
-
-                app_secrets = data_repo.get_app_secrets_from_user_uuid()
-                if "replicate_key" in app_secrets and app_secrets["replicate_key"]:
-                    st.session_state["replicate_key"] = app_secrets["replicate_key"]
-                else:
-                    st.session_state["replicate_key"] = ""
-
-                replicate_warning_message = "We currently use Replicate for LLM queries for simplicity. This costs $0.00025/run. You can add a key in App Settings."
-                if st.session_state["prompt_generation_mode"] == generate_mode:
-
-                    generation_text = st_memory.text_area(
-                        "Text to generate prompts:",
-                        height=100,
-                        help="This will be used to generate prompts and will overwrite the existing prompts.",
-                        key="insp_text_prompt",
-                    )
-
-                    generation_examples = st_memory.text_area(
-                        "Examples separated by |:",
-                        height=100,
-                        help="This will be used to generate prompts and will overwrite the existing prompts.",
-                        key="insp_examples",
-                    )
-
-                    if st.session_state["insp_text_prompt"] != generation_text:
-                        st.session_state["insp_text_prompt"] = generation_text
-                        refresh_app()
-
-                    subprompt1, subprompt2 = st.columns([2, 1])
-                    with subprompt1:
-                        total_unique_prompts = st.slider(
-                            "Roughly, how many unique prompts:",
-                            min_value=4,
-                            max_value=32,
-                            step=4,
-                            value=st.session_state["total_unique_prompt"],
+                        generation_text = st_memory.text_area(
+                            "Text to generate prompts:",
+                            height=100,
+                            help="This will be used to generate prompts and will overwrite the existing prompts.",
+                            key="insp_text_prompt",
                         )
 
-                        if st.session_state["total_unique_prompt"] != total_unique_prompts:
-                            st.session_state["total_unique_prompt"] = total_unique_prompts
-                            refresh_app()
-
-                    with subprompt2:
-                        creativity = st.slider(
-                            "Creativity:",
-                            min_value=0,
-                            max_value=11,
-                            step=1,
-                            value=st.session_state["insp_creativity"],
-                            help="😏",
+                        generation_examples = st_memory.text_area(
+                            "Examples separated by |:",
+                            height=100,
+                            help="This will be used to generate prompts and will overwrite the existing prompts.",
+                            key="insp_examples",
                         )
-                        temperature = creativity / 10
 
-                        if st.session_state["insp_creativity"] != creativity:
-                            st.session_state["insp_creativity"] = creativity
+                        if st.session_state["insp_text_prompt"] != generation_text:
+                            st.session_state["insp_text_prompt"] = generation_text
                             refresh_app()
 
-                    total_unique_prompts = total_unique_prompts + 5
+                        subprompt1, subprompt2 = st.columns([2, 1])
+                        with subprompt1:
+                            total_unique_prompts = st.slider(
+                                "Roughly, how many unique prompts:",
+                                min_value=4,
+                                max_value=32,
+                                step=4,
+                                value=st.session_state["total_unique_prompt"],
+                            )
 
-                    if not check_replicate_key():
-                        st.info(replicate_warning_message)
+                            if st.session_state["total_unique_prompt"] != total_unique_prompts:
+                                st.session_state["total_unique_prompt"] = total_unique_prompts
+                                refresh_app()
 
-                    else:
+                        with subprompt2:
+                            creativity = st.slider(
+                                "Creativity:",
+                                min_value=0,
+                                max_value=11,
+                                step=1,
+                                value=st.session_state["insp_creativity"],
+                                help="😏",
+                            )
+                            temperature = creativity / 10
+
+                            if st.session_state["insp_creativity"] != creativity:
+                                st.session_state["insp_creativity"] = creativity
+                                refresh_app()
+
+                        total_unique_prompts = total_unique_prompts + 5
 
                         def trigger_generate_prompts_button(
                             generation_text,
@@ -425,59 +411,62 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                         ):
                             refresh_app()
 
-                    if "prompts_to_display_separately" not in st.session_state:
-                        st.session_state["prompts_to_display_separately"] = ""
+                        if "prompts_to_display_separately" not in st.session_state:
+                            st.session_state["prompts_to_display_separately"] = ""
 
-                    if st.session_state["prompts_to_display_separately"] != "":
-                        height = len(st.session_state["prompts_to_display_separately"])
-                        st.text_area(
-                            label="Generated prompts:",
-                            value=st.session_state["prompts_to_display_separately"],
-                            height=height,
-                        )
-                        bottom1, bottom2, bottom3 = st.columns([1, 1, 1])
-                        with bottom1:
-                            if st.button("Remove"):
-                                st.session_state["prompts_to_display_separately"] = ""
-                                refresh_app()
-                        with bottom2:
+                        if st.session_state["prompts_to_display_separately"] != "":
+                            height = len(st.session_state["prompts_to_display_separately"])
+                            st.text_area(
+                                label="Generated prompts:",
+                                value=st.session_state["prompts_to_display_separately"],
+                                height=height,
+                            )
+                            bottom1, bottom2, bottom3 = st.columns([1, 1, 1])
+                            with bottom1:
+                                if st.button("Remove"):
+                                    st.session_state["prompts_to_display_separately"] = ""
+                                    refresh_app()
+                            with bottom2:
 
-                            def trigger_replace_existing_prompts_button():
-                                st.session_state["list_of_prompts"] = st.session_state[
-                                    "prompts_to_display_separately"
-                                ].split("|")
-                                st.session_state["prompts_to_display_separately"] = ""
+                                def trigger_replace_existing_prompts_button():
+                                    st.session_state["list_of_prompts"] = st.session_state[
+                                        "prompts_to_display_separately"
+                                    ].split("|")
+                                    st.session_state["prompts_to_display_separately"] = ""
 
-                            if st.button(
-                                "Replace existing prompts", on_click=trigger_replace_existing_prompts_button
-                            ):
-                                refresh_app()
-                        with bottom3:
-                            if st.button("Add to existing prompts"):
-                                st.session_state["list_of_prompts"] = st.session_state[
-                                    "list_of_prompts"
-                                ] + st.session_state["prompts_to_display_separately"].split("|")
-                                st.session_state["prompts_to_display_separately"] = ""
-                                refresh_app()
+                                if st.button(
+                                    "Replace existing prompts",
+                                    on_click=trigger_replace_existing_prompts_button,
+                                ):
+                                    refresh_app()
+                            with bottom3:
+                                if st.button("Add to existing prompts"):
+                                    st.session_state["list_of_prompts"] = st.session_state[
+                                        "list_of_prompts"
+                                    ] + st.session_state["prompts_to_display_separately"].split("|")
+                                    st.session_state["prompts_to_display_separately"] = ""
+                                    refresh_app()
 
-                else:
-                    edit_text = st.text_area(
-                        "Text to edit prompts:",
-                        value=st.session_state["insp_edit_prompt"],
-                        height=100,
-                    )
-
-                    if st.session_state["insp_edit_prompt"] != edit_text:
-                        st.session_state["insp_edit_prompt"] = edit_text
-                        refresh_app()
-
-                    if not check_replicate_key():
-                        st.info(replicate_warning_message)
                     else:
-                        if st.button("Edit Prompts", use_container_width=True):
-                            generated_prompts = edit_prompts(edit_text, st.session_state["list_of_prompts"])
-                            st.session_state["list_of_prompts"] = generated_prompts.split("|")
+                        edit_text = st.text_area(
+                            "Text to edit prompts:",
+                            value=st.session_state["insp_edit_prompt"],
+                            height=100,
+                        )
+
+                        if st.session_state["insp_edit_prompt"] != edit_text:
+                            st.session_state["insp_edit_prompt"] = edit_text
                             refresh_app()
+
+                        if not check_replicate_key():
+                            st.info(replicate_warning_message)
+                        else:
+                            if st.button("Edit Prompts", use_container_width=True):
+                                generated_prompts = edit_prompts(
+                                    edit_text, st.session_state["list_of_prompts"]
+                                )
+                                st.session_state["list_of_prompts"] = generated_prompts.split("|")
+                                refresh_app()
 
             i1, i2, _ = st.columns([1, 1, 0.5])
             with i1:
@@ -505,16 +494,19 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             st.markdown("***")
             st.markdown("#### Model selection")
 
+            model_type_options = (
+                T2IModel.value_list() if GPU_INFERENCE_ENABLED else [T2IModel.SDXL.value, T2IModel.FLUX.value]
+            )
             type_of_model = st.radio(
                 "Type of model:",
-                T2IModel.value_list(),
+                model_type_options,
                 index=st.session_state["insp_model_idx"],
                 help="Select the type of model to use for image generation. We strongly recommend SDXL because it allows you to guide the style with more precision.",
                 horizontal=True,
             )
 
-            if T2IModel.value_list().index(type_of_model) != st.session_state["insp_model_idx"]:
-                st.session_state["insp_model_idx"] = T2IModel.value_list().index(type_of_model)
+            if model_type_options.index(type_of_model) != st.session_state["insp_model_idx"]:
+                st.session_state["insp_model_idx"] = model_type_options.index(type_of_model)
                 refresh_app()
 
             lightning = False
@@ -538,7 +530,12 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 elif type_of_model == T2IModel.FLUX.value:
                     model = "flux1-schnell-fp8.safetensors"
 
-                    st.info("Flux Schell FP8 will be selected by default. It requires atleast 17GB VRAM.")
+                    info_msg = "Flux Schell FP8 will be selected by default. " + (
+                        "It requires atleast 17GB VRAM." if GPU_INFERENCE_ENABLED else ""
+                    )
+                    st.info(info_msg)
+
+                lightning = st.session_state.get("insp_lightning_mode", False)
 
                 """
                 model - {url, filename, desc}
@@ -574,18 +571,6 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 if input_type_list.index(type_of_style_input) != st.session_state["insp_type_of_style"]:
                     st.session_state["insp_type_of_style"] = input_type_list.index(type_of_style_input)
                     refresh_app()
-
-                with model1:
-                    st.write("")
-                    lightning = st.checkbox(
-                        "Lightning Model",
-                        help="Generate images faster with less quality.",
-                        value=st.session_state["insp_lightning_mode"],
-                    )
-
-                    if st.session_state["insp_lightning_mode"] != lightning:
-                        st.session_state["insp_lightning_mode"] = lightning
-                        refresh_app()
 
                 if "list_of_style_references" not in st.session_state:
                     st.session_state["list_of_style_references"] = []

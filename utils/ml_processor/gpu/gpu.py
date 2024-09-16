@@ -25,6 +25,7 @@ class GPUProcessor(MachineLearningProcessor):
         backlog=False,
     ):
         (
+            workflow_type,
             workflow_json,
             output_node_ids,
             extra_model_list,

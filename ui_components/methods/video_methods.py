@@ -21,6 +21,7 @@ from moviepy.editor import (
 from pydub import AudioSegment
 
 from shared.constants import (
+    GPU_INFERENCE_ENABLED,
     QUEUE_INFERENCE_QUERIES,
     FileTransformationType,
     InferenceLogTag,
@@ -49,16 +50,24 @@ def upscale_video(file_uuid, styling_model, upscale_factor, promote_to_main_vari
     shot_meta_data, data_type = get_generation_settings_from_log(video_file.inference_log.uuid)
 
     # hacky fix to prevent conflicting opencv versions
-    try:
-        pkg_resources.require("opencv-python-headless==4.8.0.74")
-    except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
+    if GPU_INFERENCE_ENABLED:
         try:
-            subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", "opencv-python-headless==4.8.0.74", "ffmpeg-python"]
-            )
-            print("Packages installed successfully.")
-        except subprocess.CalledProcessError as e:
-            print(f"Error installing packages: {e}")
+            pkg_resources.require("opencv-python-headless==4.8.0.74")
+        except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
+            try:
+                subprocess.check_call(
+                    [
+                        sys.executable,
+                        "-m",
+                        "pip",
+                        "install",
+                        "opencv-python-headless==4.8.0.74",
+                        "ffmpeg-python",
+                    ]
+                )
+                print("Packages installed successfully.")
+            except subprocess.CalledProcessError as e:
+                print(f"Error installing packages: {e}")
 
     query_obj = MLQueryObject(
         timing_uuid=None,
