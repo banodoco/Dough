@@ -26,8 +26,6 @@ from ui_components.models import (
 )
 from utils.cache.cache_methods import cache_data
 
-from utils.data_repo.api_repo import APIRepo
-
 
 @cache_data
 class DataRepo:
@@ -42,13 +40,9 @@ class DataRepo:
 
     def __init__(self):
         if not self._initialized:
-            if SERVER == ServerType.DEVELOPMENT.value:
-                from backend.db_repo import DBRepo
+            from backend.db_repo import DBRepo
 
-                self.db_repo = DBRepo()
-            else:
-                self.db_repo = APIRepo()
-
+            self.db_repo = DBRepo()
             self._initialized = True
 
     def refresh_auth_token(self, refresh_token):

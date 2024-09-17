@@ -1,13 +1,14 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import mimetypes
+import os
 from urllib.parse import urlparse
-
+import streamlit as st
 import requests
 from shared.constants import SERVER_URL, InferenceParamType
 from ui_components.methods.data_logger import log_model_inference
-from utils.common_utils import get_auth_token
 from utils.constants import MLQueryObject
+from utils.data_repo.api_repo import APIRepo
 from utils.ml_processor.comfy_data_transform import get_file_path_list, get_model_workflow_from_query
 from utils.ml_processor.constants import MLModel
 from utils.ml_processor.ml_interface import MachineLearningProcessor
@@ -15,9 +16,11 @@ import time
 
 
 class APIProcessor(MachineLearningProcessor):
+    JSON_FILE_PATH = "upload_data.json"
+
     def __init__(self):
-        self.auth_token = None
         super().__init__()
+        self.api_repo = APIRepo()
 
     def predict_model_output_standardized(
         self,
@@ -26,13 +29,6 @@ class APIProcessor(MachineLearningProcessor):
         queue_inference=False,
         backlog=False,
     ):
-
-        token, _ = get_auth_token(validate_through_db=True)
-        if not token:
-            print("Unable to queue generation, no auth token found")
-            return None
-
-        self.auth_token = token
 
         (
             workflow_type,
@@ -129,13 +125,51 @@ class APIProcessor(MachineLearningProcessor):
                 else:
                     print(f"Failed to upload {local_path}: {error}")
 
+        for k, v in results.items():
+            self._set_upload_data(k, v)
+
         return results
 
+    JSON_FILE_PATH = "upload_data.json"
+
+    def _get_upload_data(self, file_path):
+        timeout = 5 * 60  # data will be discarded after 5 mins
+        if os.path.exists(self.JSON_FILE_PATH):
+            with open(self.JSON_FILE_PATH, "r") as f:
+                uploaded_file_data = json.load(f)
+
+            if file_path in uploaded_file_data:
+                upload_data = uploaded_file_data[file_path]
+                if upload_data and time.time() - upload_data["created_on"] <= timeout:
+                    return upload_data["file_url"]
+
+        return None
+
+    def _set_upload_data(self, file_path, public_url):
+        if os.path.exists(self.JSON_FILE_PATH):
+            with open(self.JSON_FILE_PATH, "r") as f:
+                uploaded_file_data = json.load(f)
+        else:
+            uploaded_file_data = {}
+
+        uploaded_file_data[file_path] = {
+            "file_url": public_url,
+            "created_on": time.time(),
+        }
+
+        with open(self.JSON_FILE_PATH, "w") as f:
+            json.dump(uploaded_file_data, f)
+
     def _upload_file_to_s3(self, file_path):
+        file_url = self._get_upload_data(file_path)
+        if file_url:
+            print("---- file url already present, returning right away")
+            return file_path, file_url, True, ""
+
         local_file_path = file_path
         content_type = self._get_content_type(file_path)
         file_expiration = 172800
-        signed_url, public_url = self._get_signed_url(
+        signed_url, public_url = self.api_repo.get_signed_url(
             {
                 "file_path": file_path,
                 "content_type": content_type,
@@ -166,21 +200,6 @@ class APIProcessor(MachineLearningProcessor):
                     )
         except Exception as e:
             return local_file_path, None, False, str(e)
-
-    def _get_signed_url(self, file_info):
-        backend_url = f"{SERVER_URL}/v1/user/file"
-        try:
-            response = requests.post(
-                backend_url, json=file_info, headers={"Authorization": f"Bearer {self.auth_token}"}
-            )
-            if response.status_code == 200:
-                data = response.json()
-                return data["payload"]["data"]["signed_url"], data["payload"]["data"]["public_url"]
-            else:
-                raise Exception("unable to fetch url: ", response.content)
-        except requests.RequestException as e:
-            print(f"Failed to get signed URL for {file_info}: {str(e)}")
-            return None, None
 
     def _get_content_type(self, file_path):
         content_type, _ = mimetypes.guess_type(file_path)

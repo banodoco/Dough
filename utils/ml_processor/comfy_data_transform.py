@@ -1235,6 +1235,7 @@ MODEL_WORKFLOW_MAP = {
 def get_model_workflow_from_query(model: MLModel, query_obj: MLQueryObject) -> str:
     if model.workflow_name not in MODEL_WORKFLOW_MAP:
         app_logger.log(LoggingType.ERROR, f"model {model.workflow_name} not supported for local inference")
+        print("available models: ", MODEL_WORKFLOW_MAP.keys())
         raise ValueError(f"Model {model.workflow_name} not supported for local inference")
 
     res = MODEL_WORKFLOW_MAP[model.workflow_name](query_obj)

@@ -6,6 +6,8 @@ import os
 import django
 import sentry_sdk
 
+from utils.data_repo.api_repo import APIRepo
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "django_settings")
 django.setup()
 st.session_state["django_init"] = True
@@ -23,7 +25,7 @@ from ui_components.components.user_login_page import user_login_ui
 from ui_components.models import InternalUserObject
 from utils.app_update_utils import apply_updates, check_and_pull_changes, load_save_checkpoint
 from utils.common_decorators import update_refresh_lock
-from utils.common_utils import get_auth_token, is_process_active, refresh_process_active
+from utils.common_utils import is_process_active, refresh_process_active
 from utils.state_refresh import refresh_app
 
 from utils.constants import (
@@ -111,12 +113,13 @@ def main():
     from ui_components.components.welcome_page import welcome_page
 
     data_repo = DataRepo()
+    api_repo = APIRepo()
+
     app_setting = data_repo.get_app_setting_from_uuid()
     if app_setting.welcome_state == 2:
         # api/online inference mode
         if not GPU_INFERENCE_ENABLED:
-            token, _ = get_auth_token()
-            if not token:
+            if not api_repo.is_user_logged_in():
                 # user not logged in
                 user_login_ui()
             else:

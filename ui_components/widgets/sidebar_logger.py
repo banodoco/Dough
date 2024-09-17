@@ -1,11 +1,12 @@
 import time
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
-from ui_components.methods.common_methods import stop_generations
+from ui_components.methods.common_methods import stop_gen, stop_generations
 from utils.ml_processor.gpu.utils import COMFY_RUNNER_PATH, setup_comfy_runner
 import streamlit as st
 
 from shared.constants import (
+    GPU_INFERENCE_ENABLED,
     AppSubPage,
     CreativeProcessPage,
     InferenceParamType,
@@ -128,8 +129,15 @@ def sidebar_logger(shot_uuid):
     # display_list = log_list[(page_number - 1) * items_per_page : page_number * items_per_page]
 
     if log_list and len(log_list):
-        with z2:        
-            st.warning(f"Processing #: {len(log_list)*total_page_count}")
+        with z2:
+            filter = {
+                "project_id": shot.project.uuid,
+                "page": 1,
+                "data_per_page": 1000,
+                "status_list": [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
+            }
+            inprogress_log_list, _ = data_repo.get_all_inference_log_list(**filter)
+            st.warning(f"Processing #: {len(inprogress_log_list)}")
         file_list = data_repo.get_file_list_from_log_uuid_list([log.uuid for log in log_list])
         log_file_dict = {}
         for file in file_list:
@@ -215,23 +223,17 @@ def sidebar_logger(shot_uuid):
                     InferenceStatus.BACKLOG.value,
                     InferenceStatus.IN_PROGRESS.value,
                 ]:
-                    def cancel_generation(log_uuid):
-                        err_msg = "Generation is either already cancelled or failed"
-                        success_msg = "Generation cancelled"
 
+                    def cancel_generation(log_uuid):
                         log = data_repo.get_inference_log_from_uuid(log_uuid)
-                        if log.status == InferenceStatus.IN_PROGRESS.value:
-                            setup_comfy_runner()
-                            stop_generations([log])
-                        elif log.status in [InferenceStatus.QUEUED.value, InferenceStatus.BACKLOG.value]:
-                            data_repo.update_inference_log(log_uuid, status=InferenceStatus.CANCELED.value)
+                        stop_gen(log)
 
                     if st.button(
                         "Cancel",
                         key=f"cancel_gen_{log.uuid}",
                         use_container_width=True,
                         help="Cancel",
-                        on_click=lambda: cancel_generation(log.uuid)
+                        on_click=lambda: cancel_generation(log.uuid),
                     ):
                         refresh_app()
                 if output_url and origin_data:
@@ -259,6 +261,7 @@ def sidebar_logger(shot_uuid):
         st.markdown("***")
         b1, b2 = st.columns([1, 1])
         with b1:
+
             def cancel_all_generations():
                 log_filter_data = {
                     "project_id": shot.project.uuid,
@@ -270,13 +273,10 @@ def sidebar_logger(shot_uuid):
                 stop_generations(all_log_list)
                 refresh_app()
 
-            st.button(
-                label="Cancel all",
-                use_container_width=True,
-                on_click=cancel_all_generations
-            )
+            st.button(label="Cancel all", use_container_width=True, on_click=cancel_all_generations)
 
         with b2:
+
             def move_all_to_backlog():
                 log_filter_data = {
                     "project_id": shot.project.uuid,
@@ -287,13 +287,9 @@ def sidebar_logger(shot_uuid):
                 all_log_list, total_count = data_repo.get_all_inference_log_list(**log_filter_data)
                 data_repo.update_inference_log_list(
                     [log.uuid for log in all_log_list], status=InferenceStatus.BACKLOG.value
-                )                
+                )
 
-            if st.button(
-                label="Move all to backlog",
-                use_container_width=True,
-                on_click=move_all_to_backlog
-            ):
+            if st.button(label="Move all to backlog", use_container_width=True, on_click=move_all_to_backlog):
                 refresh_app()
 
 

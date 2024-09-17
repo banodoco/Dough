@@ -106,6 +106,7 @@ class InferenceLog(BaseModel):
     status = models.CharField(max_length=255, default="")  # success, failed, in_progress, queued
     generation_source = models.CharField(max_length=255, default="", blank=True)  # the source of generation
     generation_tag = models.CharField(max_length=255, default="", blank=True)  # review, temp, upscaled etc..
+    credits_used = models.FloatField(default=0)
 
     class Meta:
         app_label = "backend"

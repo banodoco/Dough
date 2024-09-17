@@ -10,13 +10,21 @@ from PIL import Image
 import requests
 from io import BytesIO
 
-from shared.constants import GPU_INFERENCE_ENABLED, QUEUE_INFERENCE_QUERIES, InferenceType, ProjectMetaData
+from shared.constants import (
+    GPU_INFERENCE_ENABLED,
+    QUEUE_INFERENCE_QUERIES,
+    SERVER_URL,
+    InferenceStatus,
+    InferenceType,
+    ProjectMetaData,
+)
 from ui_components.methods.common_methods import process_inference_output, save_new_image
 from ui_components.methods.file_methods import generate_pil_image, zoom_and_crop
 from ui_components.models import InternalProjectObject, InternalSettingObject
 from ui_components.widgets.model_selector_element import model_selector_element
 from utils.common_utils import sqlite_atomic_transaction
 from utils.constants import MLQueryObject, T2IModel
+from utils.data_repo.api_repo import APIRepo
 from utils.data_repo.data_repo import DataRepo
 from utils.ml_processor.constants import ML_MODEL
 from utils.ml_processor.ml_interface import get_ml_client
@@ -108,6 +116,11 @@ def generate_prompts(
     Number of items: {total_unique_prompts}
     Responses: {initial_examples}"""
 
+    if GPU_INFERENCE_ENABLED:
+        return ""
+
+    api_repo = APIRepo()
+
     prompt = mixed_examples
 
     query_data = {
@@ -120,10 +133,13 @@ def generate_prompts(
         "presence_penalty": presence_penalty,
         "stop_sequences": " ",
     }
-    output = replicate.run(
-        "meta/meta-llama-3-70b-instruct",
-        input=query_data,
-    )
+
+    data = {"input_params": {"workflow_type": "llama3_prompt", "third_party_query": {"payload": query_data}}}
+    inf_log = api_repo.create_log(data)
+    output = inf_log.output_details
+
+    if not output:
+        return output
 
     proper_output = ""
     for item in output:
@@ -419,7 +435,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             st.text_area(
                                 label="Generated prompts:",
                                 value=st.session_state["prompts_to_display_separately"],
-                                height=height,
+                                height=400,
                             )
                             bottom1, bottom2, bottom3 = st.columns([1, 1, 1])
                             with bottom1:

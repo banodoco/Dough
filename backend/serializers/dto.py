@@ -69,12 +69,13 @@ class InferenceLogDto(serializers.ModelSerializer):
             "input_params",
             "output_details",
             "total_inference_time",
+            "credits_used",
             "created_on",
             "updated_on",
             "status",
             "model_name",
             "generation_source",
-            "generation_tag"
+            "generation_tag",
         )
 
 

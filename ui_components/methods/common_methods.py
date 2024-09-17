@@ -6,6 +6,7 @@ from typing import List
 import os
 from PIL import Image, ImageDraw, ImageFilter
 from utils.common_utils import sqlite_atomic_transaction
+from utils.data_repo.api_repo import APIRepo
 from utils.local_storage.local_storage import write_to_motion_lora_local_db
 from moviepy.editor import *
 import cv2
@@ -16,11 +17,9 @@ import time
 import uuid
 from io import BytesIO
 import numpy as np
-from django.db import connection
 from shared.constants import (
     COMFY_BASE_PATH,
-    OFFLINE_MODE,
-    SERVER,
+    GPU_INFERENCE_ENABLED,
     InferenceStatus,
     InferenceType,
     InternalFileTag,
@@ -1039,20 +1038,37 @@ def random_seed():
 
 # setting up multiprocessing queue for log termination
 # NOTE: for some reason concurrent future is not working properly with streamlit (it's not able to pickle methods on state refresh)
+# TODO: make backend calls into a proper interface
 def stop_gen(log):
+    print("------- cancelling the online generation:")
     data_repo = DataRepo()
 
-    in_progress = log.status == InferenceStatus.IN_PROGRESS.value
-    data_repo.update_inference_log(uuid=log.uuid, status=InferenceStatus.CANCELED.value)
-    print(f"DB update {log.uuid} ----------")
+    queued_id = log.queued_generation_uuid
+    if queued_id:
+        print("------ queue id found: ", queued_id)
+        api_repo = APIRepo()
+        try:
+            data = api_repo.update_log_status(log_uuid=queued_id, status=InferenceStatus.CANCELED.value)
+            print("cancellation status: ", data["payload"]["status"])
+            if data["payload"]["status"]:
+                data_repo.update_inference_log(uuid=log.uuid, status=InferenceStatus.CANCELED.value)
+            else:
+                print("unable to cancel: ", data["payload"]["message"])
+        except Exception as e:
+            print("unable to get cancellation status: ", str(e))
 
-    if in_progress:
+    else:
+        data_repo.update_inference_log(uuid=log.uuid, status=InferenceStatus.CANCELED.value)
+
+    if log.status == InferenceStatus.IN_PROGRESS.value and GPU_INFERENCE_ENABLED:
         sys.path.append(str(os.getcwd()) + COMFY_RUNNER_PATH[1:])
         from comfy_runner.inf import ComfyRunner
 
         comfy_runner = ComfyRunner()
         comfy_runner.stop_current_generation(log.uuid, 1)
         print(f"Process stopped {log.uuid} ----------")
+
+    return
 
 
 def worker(queue):

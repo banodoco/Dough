@@ -353,6 +353,17 @@ class InferenceLogObject:
             kwargs["generation_source"] if key_present("generation_source", kwargs) else ""
         )
         self.generation_tag = kwargs["generation_tag"] if key_present("generation_tag", kwargs) else ""
+        self.credits_used = kwargs["credits_used"] if key_present("credits_used", kwargs) else 0
+
+    @property
+    def queued_generation_uuid(self):
+        # return the uuid of the generation queued in the backend
+        queued_log_uuid = None
+        if self.output_details != "":
+            if "log_uuid" in json.loads(self.output_details) and json.loads(self.output_details)["log_uuid"]:
+                queued_log_uuid = json.loads(self.output_details)["log_uuid"]
+
+        return queued_log_uuid
 
 
 def key_present(key, dict):

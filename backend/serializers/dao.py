@@ -70,6 +70,7 @@ class CreateInferenceLogDao(serializers.Serializer):
     input_params = serializers.CharField(required=False)
     output_details = serializers.CharField(required=False)
     total_inference_time = serializers.CharField(required=False)
+    credits_used = serializers.CharField(required=False)
     status = serializers.CharField(required=False, default="")
     model_name = serializers.CharField(max_length=512, allow_blank=True, required=False, default="")
     generation_source = serializers.CharField(max_length=512, allow_blank=True, required=False, default="")

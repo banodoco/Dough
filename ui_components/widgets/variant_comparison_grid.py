@@ -248,7 +248,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                         if str(variants[variant_index].uuid) in upscale_in_progress_arr
                         else []
                     )
-                    video_tag_element(variants[variant_index], additional_tags)
+                    displayed_tags = video_tag_element(variants[variant_index], additional_tags)
 
                     variant_inference_detail_element(
                         variants[variant_index],
@@ -258,7 +258,8 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                         open_generaton_details=open_generaton_details,
                     )
 
-                    uspcale_expander_element([variants[variant_index].uuid])
+                    if GPU_INFERENCE_ENABLED or "Upscaled Video" not in displayed_tags:
+                        uspcale_expander_element([variants[variant_index].uuid])
                     create_video_download_button(variants[variant_index].location, ui_key="var_details")
 
                 else:
@@ -315,15 +316,22 @@ def get_video_upscale_dict(project_uuid):
 
 
 def video_tag_element(video_file: InternalFileObject, additional_tags=[]):
+    displayed_tags = []
     # additional_tags can also be provided, these are mostly generated in runtimes
     if additional_tags and len(additional_tags):
         for tag in additional_tags:
             st.info(tag)
+            displayed_tags.append(tag)
 
     # there are two tags, one on video_file (mainly used for shortlisting/filtering)
     # the other is on the log, used to mark the process of generation (upscale/preview etc..)
     if video_file.inference_log.generation_tag:
-        st.info(" ".join(video_file.inference_log.generation_tag.split("_")).title())
+        t = " ".join(video_file.inference_log.generation_tag.split("_")).title()
+        st.info(t)
+        displayed_tags.append(t)
+
+    displayed_tags = list(set(displayed_tags))
+    return displayed_tags
 
 
 def uspcale_expander_element(
@@ -672,9 +680,12 @@ def upscale_settings(ui_key):
         # model_files.insert(0, "None")  # Add "None" option at the beginning
         styling_model = st.selectbox("Styling model", model_files, key=f"styling_model_{ui_key}")
 
-    upscale_by = st.slider(
-        "Upscale by:", min_value=1.25, max_value=3.0, step=0.05, key=f"upscale_by_{ui_key}", value=1.5
-    )
+    if GPU_INFERENCE_ENABLED:
+        upscale_by = st.slider(
+            "Upscale by:", min_value=1.25, max_value=3.0, step=0.05, key=f"upscale_by_{ui_key}", value=1.5
+        )
+    else:
+        upscale_by = 1.5
 
     return styling_model, upscale_by, True
 

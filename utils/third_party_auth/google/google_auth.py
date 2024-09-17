@@ -50,7 +50,6 @@ class GoogleAuthProvider(AuthProvider):
             if not data["status"]:
                 return None, None, None
 
-            print("response found: ", data)
             user = {"name": data["payload"]["user"]["name"], "email": data["payload"]["user"]["email"]}
             return data["payload"]["token"], data["payload"]["refresh_token"], user
         else:

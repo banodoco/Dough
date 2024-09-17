@@ -29,7 +29,7 @@ from shared.constants import (
 )
 from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
-from shared.utils import get_file_type
+from shared.utils import get_file_type, validate_token
 from utils.common_utils import get_toml_config, sqlite_atomic_transaction
 from ui_components.methods.file_methods import (
     get_file_bytes_and_extension,
@@ -275,6 +275,26 @@ def update_project_meta_data(timing_update_list, gallery_update_list, shot_updat
                 _ = Project.objects.filter(uuid=project_uuid).update(meta_data=json.dumps(cur_meta_data))
 
 
+def get_auth_token():
+    """
+    if the runner finds an invalid token, it sets it to blank in the db. the main app checks
+    the db every 5 min, so either after 5 mins or whenever the user hard refreshes the app, the
+    login screen will appear.
+    """
+    from backend.models import AppSetting
+
+    app_setting: AppSetting = AppSetting.objects.filter(is_disabled=False).first()
+    auth_token, _ = validate_token(
+        app_setting.aws_access_key_decrypted, app_setting.aws_secret_access_key_decrypted
+    )
+    if app_setting.aws_access_key_decrypted != "":
+        app_setting.aws_access_key = ""
+        app_setting.aws_secret_access_key_decrypted = ""
+        app_setting.save()
+
+    return auth_token
+
+
 def check_and_update_db():
     # print("updating logs")
     from backend.models import InferenceLog, AppSetting, User
@@ -294,12 +314,6 @@ def check_and_update_db():
     if not user:
         return
 
-    app_setting = AppSetting.objects.filter(user_id=user.id, is_disabled=False).first()
-    replicate_key = app_setting.replicate_key_decrypted
-    # if not replicate_key:
-    #     app_logger.log(LoggingType.ERROR, "Replicate key not found")
-    #     return
-
     log_list = InferenceLog.objects.filter(
         status__in=[InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value], is_disabled=False
     ).all()
@@ -318,7 +332,8 @@ def check_and_update_db():
         sai_data = input_params.get(InferenceParamType.SAI_INFERENCE.value, None)
         if replicate_data:
             prediction_id = replicate_data["prediction_id"]
-
+            app_setting = AppSetting.objects.filter(user_id=user.id, is_disabled=False).first()
+            replicate_key = app_setting.replicate_key_decrypted
             url = "https://api.replicate.com/v1/predictions/" + prediction_id
             headers = {"Authorization": f"Token {replicate_key}"}
 
@@ -411,10 +426,14 @@ def check_and_update_db():
         elif api_data:
             backend_url = f"{SERVER_URL}/v1/inference/log"
             queued_log_uuid = None
-            app_setting: AppSetting = AppSetting.objects.filter(is_disabled=False).first()
+            auth_token = get_auth_token()
+            if not auth_token:
+                print("----- invalid auth, please refresh the app to login again")
+                continue
+
             headers = {
                 "Content-Type": "application/json",
-                "Authorization": f"Bearer {app_setting.aws_access_key_decrypted}",
+                "Authorization": f"Bearer {auth_token}",
             }
             if log.output_details != "":
                 if (
@@ -464,6 +483,7 @@ def check_and_update_db():
 
                                 process_inference_output(**origin_data)
                                 log.total_inference_time = response["payload"]["data"]["total_inference_time"]
+                                log.credits_used = response["payload"]["data"]["total_credits_used"]
                                 log.save()
 
                             timing_uuid, shot_uuid = origin_data.get("timing_uuid", None), origin_data.get(

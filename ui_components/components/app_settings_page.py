@@ -10,15 +10,14 @@ from ui_components.methods.file_methods import delete_from_env, load_from_env, s
 from utils import st_memory
 from utils.common_decorators import with_refresh_lock
 from utils.common_utils import (
-    get_auth_token,
     get_current_user,
     get_toml_config,
-    set_auth_token,
     update_toml_config,
 )
 from ui_components.components.query_logger_page import query_logger_page
 
 from utils.constants import TomlConfig
+from utils.data_repo.api_repo import APIRepo
 from utils.data_repo.data_repo import DataRepo
 from utils.encryption import generate_file_hash
 from utils.enum import ExtendedEnum
@@ -41,6 +40,7 @@ class ErrorPayload:
 
 def app_settings_page():
     data_repo = DataRepo()
+    api_repo = APIRepo()
 
     app_version = None
     with open("scripts/app_version.txt", "r") as file:
@@ -51,22 +51,15 @@ def app_settings_page():
     with col1:
         st.markdown("#### App Settings" + ("" if not app_version else f" (v{app_version})"))
     with col2:
-        token, _ = get_auth_token()
         if not GPU_INFERENCE_ENABLED:
             with st.expander("Login Info", expanded=True):
-                if token:
-                    st.success("LOGGED IN")
-                    current_user = data_repo.get_first_active_user()
-                    st.write("**Name**: ", current_user.name)
-                    st.write("**Email**: ", current_user.email)
+                st.success("LOGGED IN")
+                current_user = data_repo.get_first_active_user()
+                st.write("**Name**: ", current_user.name)
+                st.write("**Email**: ", current_user.email)
 
-                    if st.button("Logout", key="user_logout_btn"):
-                        set_auth_token("", "", user={"name": "", "email": ""})
-                        refresh_app()
-                else:
-                    st.warning("NOT LOGGED IN")
-                    if st.button("Login"):
-                        pass
+                if st.button("Logout", key="user_logout_btn"):
+                    api_repo.logout()
 
     st.markdown("***")
 
