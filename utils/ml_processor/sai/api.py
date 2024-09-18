@@ -21,6 +21,8 @@ class APIProcessor(MachineLearningProcessor):
     def __init__(self):
         super().__init__()
         self.api_repo = APIRepo()
+        # not a good practice but had to decouple get_signed_url method as it uses streamlit state, which is not accessible inside threadpool
+        self.auth_token, _ = self.api_repo._get_auth_token()
 
     def predict_model_output_standardized(
         self,
@@ -32,7 +34,8 @@ class APIProcessor(MachineLearningProcessor):
         credits_remaining = self.api_repo.get_user_credits()
         if credits_remaining <= 0:
             st.error("Insufficient credits")
-            return
+            time.sleep(0.5)
+            return None, None
 
         (
             workflow_type,
@@ -164,16 +167,26 @@ class APIProcessor(MachineLearningProcessor):
         with open(self.JSON_FILE_PATH, "w") as f:
             json.dump(uploaded_file_data, f)
 
+    def _get_signed_url(self, file_info):
+        try:
+            headers = {"Authorization": f"Bearer {self.auth_token}"}
+            response = requests.post(f"{SERVER_URL}/v1/user/file", json=file_info, headers=headers)
+            response = response.json()
+            return response["payload"]["data"]["signed_url"], response["payload"]["data"]["public_url"]
+        except requests.RequestException as e:
+            print(f"Failed to get signed URL for {file_info}: {str(e)}")
+            return None, None
+
     def _upload_file_to_s3(self, file_path):
         file_url = self._get_upload_data(file_path)
         if file_url:
-            print("---- file url already present, returning right away")
+            # print("---- file url already present, returning right away")
             return file_path, file_url, True, ""
 
         local_file_path = file_path
         content_type = self._get_content_type(file_path)
         file_expiration = 172800  # 2 days
-        signed_url, public_url = self.api_repo.get_signed_url(
+        signed_url, public_url = self._get_signed_url(
             {
                 "file_path": file_path,
                 "content_type": content_type,

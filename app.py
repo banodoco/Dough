@@ -13,11 +13,12 @@ django.setup()
 st.session_state["django_init"] = True
 
 from shared.constants import (
-    GPU_INFERENCE_ENABLED,
+    GPU_INFERENCE_ENABLED_KEY,
     HOSTED_BACKGROUND_RUNNER_MODE,
     OFFLINE_MODE,
     SERVER,
     ServerType,
+    ConfigManager
 )
 
 from shared.logging.logging import AppLogger
@@ -114,11 +115,13 @@ def main():
 
     data_repo = DataRepo()
     api_repo = APIRepo()
-
+    config_manager = ConfigManager()
+    gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
+    
     app_setting = data_repo.get_app_setting_from_uuid()
     if app_setting.welcome_state == 2:
         # api/online inference mode
-        if not GPU_INFERENCE_ENABLED:
+        if not gpu_enabled:
             if not api_repo.is_user_logged_in():
                 # user not logged in
                 user_login_ui()

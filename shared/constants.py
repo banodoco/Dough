@@ -1,4 +1,5 @@
 import os
+from typing import Any
 import toml
 from utils.enum import ExtendedEnum
 from dotenv import load_dotenv
@@ -6,33 +7,53 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 
 
-# TODO: this maybe an inefficient operation.. improve this?
-def get_toml_app_settings(key=None):
-    default_settings_dict = {"automatic_update": True, "gpu_inference": True}
-    toml_file = "app_settings.toml"
-    toml_config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts", toml_file))
+class ConfigManager:
+    _instance = None
 
-    toml_data = {}
-    with open(toml_config_path, "r") as f:
-        toml_data = toml.load(f)
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(ConfigManager, cls).__new__(cls)
+            cls._instance.config = {}
+            cls._instance.toml_file = "app_settings.toml"
+            cls._instance.load_from_toml()
+        return cls._instance
+    
+    def _get_toml_app_settings(self, key=None):
+        default_settings_dict = {"automatic_update": True, "gpu_inference": True}
+        toml_config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts", self.toml_file))
 
-    if key and key in toml_data:
-        return toml_data[key]
+        toml_data = {}
+        with open(toml_config_path, "r") as f:
+            toml_data = toml.load(f)
 
-    for k, v in default_settings_dict.items():
-        if k not in toml_data:
-            toml_data[k] = v
+        if key and key in toml_data:
+            return toml_data[key]
 
-    return toml_data
+        for k, v in default_settings_dict.items():
+            if k not in toml_data:
+                toml_data[k] = v
 
+        return toml_data
+    
+    def _update_toml_app_settings(self):
+        toml_dict = self.config
+        toml_config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts", self.toml_file))
 
-def update_toml_app_settings(toml_dict, toml_file="config.toml"):
-    toml_config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts", toml_file))
+        with open(toml_config_path, "wb") as f:
+            toml_content = toml.dumps(toml_dict)
+            f.write(toml_content.encode())
 
-    with open(toml_config_path, "wb") as f:
-        toml_content = toml.dumps(toml_dict)
-        f.write(toml_content.encode())
+    def load_from_toml(self):
+        self.config = self._get_toml_app_settings()
 
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.config.get(key, default)
+
+    def set(self, key: str, value: Any):
+        self.config[key] = value
+        self._update_toml_app_settings()
+
+singleton_config_manager = ConfigManager()
 
 ##################### enums #####################
 class ServerType(ExtendedEnum):
@@ -219,8 +240,9 @@ ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY", "J2684nBgNUYa_K0a6oBr5H8MpSRW0EJ52Q
 QUEUE_INFERENCE_QUERIES = True
 HOSTED_BACKGROUND_RUNNER_MODE = os.getenv("HOSTED_BACKGROUND_RUNNER_MODE", False)
 
-toml_app_settings = get_toml_app_settings()
-GPU_INFERENCE_ENABLED = toml_app_settings.get("gpu_inference", True)
+GPU_INFERENCE_ENABLED_KEY = "gpu_inference"
+AUTOMATIC_UPDATE_KEY = "automatic_update"
+
 
 if OFFLINE_MODE:
     SECRET_ACCESS_TOKEN = os.getenv("SECRET_ACCESS_TOKEN", None)

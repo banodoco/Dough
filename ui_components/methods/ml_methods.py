@@ -138,16 +138,17 @@ def generate_sm_video(shot_uuid, settings={}, variant_count=1, backlog=False, im
 
     if res:
         for output, log in res:
-            inference_data = {
-                "inference_type": InferenceType.FRAME_INTERPOLATION.value,
-                "output": output,
-                "log_uuid": log.uuid,
-                "settings": settings,
-                "shot_uuid": str(shot_uuid),
-                "inference_tag": settings.get("inference_type", ""),
-            }
+            if output or log:
+                inference_data = {
+                    "inference_type": InferenceType.FRAME_INTERPOLATION.value,
+                    "output": output,
+                    "log_uuid": log.uuid,
+                    "settings": settings,
+                    "shot_uuid": str(shot_uuid),
+                    "inference_tag": settings.get("inference_type", ""),
+                }
 
-            process_inference_output(**inference_data)
+                process_inference_output(**inference_data)
     else:
         theme.error_msg("Failed to create interpolated clip")
 

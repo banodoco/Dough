@@ -45,7 +45,7 @@ def refresh():
         # print(f"waiting {REFRESH_BUFFER_TIME} secs before the next refresh")
         time.sleep(2)
 
-    print("Refreshing...")
+    # print("Refreshing...")
     last_refreshed_on = int(time.time())
     with portalocker.Lock(target_file, "w") as f:
         f.write(f"SAVE_STATE = {random.randint(1, 1000)}")

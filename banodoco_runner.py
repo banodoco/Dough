@@ -198,21 +198,22 @@ def update_cache_dict(
     shot_update_list,
     gallery_update_list,
 ):
-    if inference_type in [
-        InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
-        InferenceType.FRAME_INPAINTING.value,
-    ]:
-        if str(log.project.uuid) not in timing_update_list:
-            timing_update_list[str(log.project.uuid)] = []
-        timing_update_list[str(log.project.uuid)].append(timing_uuid)
+    if timing_uuid or shot_uuid:
+        if inference_type in [
+            InferenceType.FRAME_TIMING_IMAGE_INFERENCE.value,
+            InferenceType.FRAME_INPAINTING.value,
+        ]:
+            if str(log.project.uuid) not in timing_update_list:
+                timing_update_list[str(log.project.uuid)] = []
+            timing_update_list[str(log.project.uuid)].append(timing_uuid)
 
-    elif inference_type == InferenceType.GALLERY_IMAGE_GENERATION.value:
-        gallery_update_list[str(log.project.uuid)] = True
+        elif inference_type == InferenceType.GALLERY_IMAGE_GENERATION.value:
+            gallery_update_list[str(log.project.uuid)] = True
 
-    elif inference_type == InferenceType.FRAME_INTERPOLATION.value:
-        if str(log.project.uuid) not in shot_update_list:
-            shot_update_list[str(log.project.uuid)] = []
-        shot_update_list[str(log.project.uuid)].append(shot_uuid)
+        elif inference_type == InferenceType.FRAME_INTERPOLATION.value:
+            if str(log.project.uuid) not in shot_update_list:
+                shot_update_list[str(log.project.uuid)] = []
+            shot_update_list[str(log.project.uuid)].append(shot_uuid)
 
     refresh_dough()
 
@@ -284,12 +285,21 @@ def get_auth_token():
     from backend.models import AppSetting
 
     app_setting: AppSetting = AppSetting.objects.filter(is_disabled=False).first()
-    auth_token, _ = validate_token(
-        app_setting.aws_access_key_decrypted, app_setting.aws_secret_access_key_decrypted
+    auth_token, refresh_token = validate_token(
+        app_setting.aws_access_key_decrypted,
+        app_setting.aws_secret_access_key_decrypted,
     )
-    if app_setting.aws_access_key_decrypted != "":
+
+    if auth_token and refresh_token:
+        app_setting.aws_access_key = auth_token
+        app_setting.aws_secret_access_key = refresh_token
+        app_setting.save()
+
+    elif app_setting.aws_access_key_decrypted != "":
+        # if the auth token is not already cleared and we are unable to get the fresh token
+        # then we clear the current db token
         app_setting.aws_access_key = ""
-        app_setting.aws_secret_access_key_decrypted = ""
+        app_setting.aws_secret_access_key = ""
         app_setting.save()
 
     return auth_token
@@ -387,7 +397,7 @@ def check_and_update_db():
                             try:
                                 origin_data["output"] = output_details["output"]
                                 origin_data["log_uuid"] = log.uuid
-                                print("processing inference output")
+                                # print("processing inference output")
                                 process_inference_output(**origin_data)
                                 timing_uuid, shot_uuid = origin_data.get(
                                     "timing_uuid", None
@@ -449,6 +459,7 @@ def check_and_update_db():
                     response = requests.get(backend_url, headers=headers, params=params)
                     if response.status_code == 200:
                         response = response.json()
+                        old_status = log.status
                         if not response["status"]:
                             log.status = InferenceStatus.FAILED.value
                             cur_output_details = json.loads(log.output_details)
@@ -463,6 +474,8 @@ def check_and_update_db():
                             else:
                                 print("invalid log status")
 
+                        origin_data = {}
+                        timing_uuid, shot_uuid = None, None
                         if log.status in [
                             InferenceStatus.COMPLETED.value,
                             InferenceStatus.FAILED.value,
@@ -489,6 +502,8 @@ def check_and_update_db():
                             timing_uuid, shot_uuid = origin_data.get("timing_uuid", None), origin_data.get(
                                 "shot_uuid", None
                             )
+
+                        if old_status != log.status:
                             update_cache_dict(
                                 origin_data.get("inference_type", ""),
                                 log,
@@ -498,7 +513,6 @@ def check_and_update_db():
                                 shot_update_list,
                                 gallery_update_list,
                             )
-
                     else:
                         print("log request failed: ", response.content)
                         refresh_dough()

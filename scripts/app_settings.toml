@@ -1,2 +1,2 @@
-automatic_update = true
+automatic_update = false
 gpu_inference = false

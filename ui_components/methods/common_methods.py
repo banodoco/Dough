@@ -19,12 +19,13 @@ from io import BytesIO
 import numpy as np
 from shared.constants import (
     COMFY_BASE_PATH,
-    GPU_INFERENCE_ENABLED,
+    GPU_INFERENCE_ENABLED_KEY,
     InferenceStatus,
     InferenceType,
     InternalFileTag,
     InternalFileType,
     ProjectMetaData,
+    ConfigManager,
 )
 from pydub import AudioSegment
 from backend.models import InternalFileObject
@@ -1042,6 +1043,8 @@ def random_seed():
 def stop_gen(log):
     print("------- cancelling the online generation:")
     data_repo = DataRepo()
+    config_manager = ConfigManager()
+    gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
 
     queued_id = log.queued_generation_uuid
     if queued_id:
@@ -1049,18 +1052,18 @@ def stop_gen(log):
         api_repo = APIRepo()
         try:
             data = api_repo.update_log_status(log_uuid=queued_id, status=InferenceStatus.CANCELED.value)
-            print("cancellation status: ", data["payload"]["status"])
-            if data["payload"]["status"]:
+            print("cancellation status: ", data["status"])
+            if data["status"]:
                 data_repo.update_inference_log(uuid=log.uuid, status=InferenceStatus.CANCELED.value)
             else:
-                print("unable to cancel: ", data["payload"]["message"])
+                print("unable to cancel: ", data["message"])
         except Exception as e:
             print("unable to get cancellation status: ", str(e))
 
     else:
         data_repo.update_inference_log(uuid=log.uuid, status=InferenceStatus.CANCELED.value)
 
-    if log.status == InferenceStatus.IN_PROGRESS.value and GPU_INFERENCE_ENABLED:
+    if log.status == InferenceStatus.IN_PROGRESS.value and gpu_enabled:
         sys.path.append(str(os.getcwd()) + COMFY_RUNNER_PATH[1:])
         from comfy_runner.inf import ComfyRunner
 

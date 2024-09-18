@@ -239,14 +239,6 @@ class APIRepo:
     def get_cur_user(self):
         return self.http_get(self.USER_OP_URL)
 
-    def get_signed_url(self, file_info):
-        try:
-            response = self.http_post(self.FILE_URL, data=file_info)
-            return response["payload"]["data"]["signed_url"], response["payload"]["data"]["public_url"]
-        except requests.RequestException as e:
-            print(f"Failed to get signed URL for {file_info}: {str(e)}")
-            return None, None
-
     def get_user_credits(self):
         """
         this is a soft check on the credit (as it uses a cached value). the final
@@ -262,7 +254,7 @@ class APIRepo:
             credits_remaining = st.session_state["user_credit_data"]["balance"]
         else:
             response = self.get_cur_user()
-            credits_remaining = response.get("payload", {}).get("data", 0).get("total_credits", 0)
+            credits_remaining = response.get("payload", {}).get("data", {}).get("total_credits", 0)
             st.session_state["user_credit_data"] = {
                 "balance": credits_remaining,
                 "created_on": time.time(),

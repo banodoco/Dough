@@ -34,7 +34,6 @@ class GoogleAuthProvider(AuthProvider):
 
         if response.status_code == 200:
             data = response.json()
-            print(data)
             auth_url = data["payload"]["data"]["url"]
             return f"""<a target='_self' href='{auth_url}'> Google login -> </a>"""
         else:

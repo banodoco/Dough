@@ -21,12 +21,13 @@ from moviepy.editor import (
 from pydub import AudioSegment
 
 from shared.constants import (
-    GPU_INFERENCE_ENABLED,
+    GPU_INFERENCE_ENABLED_KEY,
     QUEUE_INFERENCE_QUERIES,
     FileTransformationType,
     InferenceLogTag,
     InferenceType,
     InternalFileTag,
+    ConfigManager
 )
 from shared.file_upload.s3 import is_s3_image_url
 from ui_components.constants import ShotMetaData
@@ -46,11 +47,13 @@ def upscale_video(file_uuid, styling_model, upscale_factor, promote_to_main_vari
     from shared.constants import QUEUE_INFERENCE_QUERIES
 
     data_repo = DataRepo()
+    config_manager = ConfigManager()
+    gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
     video_file: InternalFileObject = data_repo.get_file_from_uuid(uuid=file_uuid)
     shot_meta_data, data_type = get_generation_settings_from_log(video_file.inference_log.uuid)
 
     # hacky fix to prevent conflicting opencv versions
-    if GPU_INFERENCE_ENABLED:
+    if gpu_enabled:
         try:
             pkg_resources.require("opencv-python-headless==4.8.0.74")
         except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):

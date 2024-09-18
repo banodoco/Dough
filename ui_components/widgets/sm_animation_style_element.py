@@ -6,7 +6,7 @@ import random
 import string
 from ui_components.widgets.model_selector_element import list_dir_files
 import streamlit as st
-from shared.constants import COMFY_BASE_PATH, GPU_INFERENCE_ENABLED, InternalFileTag, InternalFileType
+from shared.constants import COMFY_BASE_PATH, GPU_INFERENCE_ENABLED_KEY, InternalFileTag, InternalFileType, ConfigManager
 from ui_components.widgets.download_file_progress_bar import download_file_widget
 from utils import st_memory
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES
@@ -33,7 +33,8 @@ from streamlit.elements.utils import _shown_default_value_warning
 
 
 _shown_default_value_warning = True
-
+config_manager = ConfigManager()
+gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
 checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
 SD_MODEL_DICT = {
     "realisticVisionV60B1_v51VAE.safetensors": {
@@ -194,7 +195,7 @@ def video_motion_settings(shot_uuid, img_list):
             value=st.session_state[f"negative_prompt_video_{shot_uuid}"],
         )
 
-    if GPU_INFERENCE_ENABLED:
+    if gpu_enabled:
         styling_lora_data = select_styling_lora_element(shot_uuid)
     else:
         styling_lora_data = []
@@ -701,7 +702,7 @@ def select_online_sd_model_element(shot_uuid, default_model):
 
 
 def select_sd_model_element(shot_uuid, default_model):
-    if GPU_INFERENCE_ENABLED:
+    if gpu_enabled:
         return select_sd_model_offline_element(shot_uuid, default_model)
     else:
         return select_sd_model_online_element(shot_uuid, default_model)

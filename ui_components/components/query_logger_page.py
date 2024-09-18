@@ -4,7 +4,7 @@ import requests
 import streamlit as st
 from ui_components.constants import DefaultTimingStyleParams
 from utils.common_utils import get_current_user
-from shared.constants import ServerType
+from shared.constants import ServerType, ConfigManager, GPU_INFERENCE_ENABLED_KEY
 from utils.data_repo.api_repo import APIRepo
 from utils.data_repo.data_repo import DataRepo
 from utils.state_refresh import refresh_app
@@ -15,39 +15,42 @@ def query_logger_page():
 
     data_repo = DataRepo()
     api_repo = APIRepo()
+    config_manager = ConfigManager()
+    gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
 
-    credits_remaining = api_repo.get_user_credits()
+    if not gpu_enabled:
+        credits_remaining = api_repo.get_user_credits()
 
-    c01, c02, _ = st.columns([1, 1, 2])
+        c01, c02, _ = st.columns([1, 1, 2])
 
-    credits_remaining = round(credits_remaining, 3)
-    with c01:
-        st.write(f"### Credit Balance: {credits_remaining}")
+        credits_remaining = round(credits_remaining, 3)
+        with c01:
+            st.write(f"### Credit Balance: {credits_remaining}")
 
-    with c02:
-        if st.button("Refresh Credits"):
-            st.session_state["user_credit_data"] = None
-            refresh_app()
+        with c02:
+            if st.button("Refresh Credits"):
+                st.session_state["user_credit_data"] = None
+                refresh_app()
 
-    c1, c2, _ = st.columns([1, 1, 3])
-    with c1:
-        credits_to_buy = st.number_input(
-            label="Credits to Buy (10 credits = $1)",
-            key="credit_btn",
-            min_value=50,
-            step=20,
-        )
+        c1, c2, _ = st.columns([1, 1, 3])
+        with c1:
+            credits_to_buy = st.number_input(
+                label="Credits to Buy (10 credits = $1)",
+                key="credit_btn",
+                min_value=50,
+                step=20,
+            )
 
-    with c2:
-        st.write("")
-        st.write("")
-        if st.button("Generate payment link"):
-            payment_link = api_repo.generate_payment_link(int(credits_to_buy // 10))
-            if payment_link:
-                st.write("Please click on the link below to make the payment")
-                st.write(payment_link)
-            else:
-                st.write("error occured during payment link generation, pls try again")
+        with c2:
+            st.write("")
+            st.write("")
+            if st.button("Generate payment link"):
+                payment_link = api_repo.generate_payment_link(int(credits_to_buy // 10))
+                if payment_link:
+                    st.write("Please click on the link below to make the payment")
+                    st.write(payment_link)
+                else:
+                    st.write("error occured during payment link generation, pls try again")
 
     b1, b2 = st.columns([1, 0.2])
 

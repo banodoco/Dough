@@ -3,10 +3,11 @@ import time
 import ast
 import streamlit as st
 from shared.constants import (
-    GPU_INFERENCE_ENABLED,
+    GPU_INFERENCE_ENABLED_KEY,
     AnimationStyleType,
     AnimationToolType,
     STEERABLE_MOTION_WORKFLOWS,
+    ConfigManager
 )
 import time
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES
@@ -36,6 +37,8 @@ DEFAULT_SM_MODEL = "dreamshaper_8.safetensors"
 
 def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], column1, column2):
     data_repo = DataRepo()
+    config_manager = ConfigManager()
+    gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
     shot: InternalShotObject = data_repo.get_shot_from_uuid(shot_uuid)
 
     settings = {
@@ -62,7 +65,7 @@ def sm_video_rendering_page(shot_uuid, img_list: List[InternalFileObject], colum
         sd_model, model_files = select_sd_model_element(shot_uuid, DEFAULT_SM_MODEL)
 
         # ----------- SELECT MOTION LORA ------------
-        if GPU_INFERENCE_ENABLED:
+        if gpu_enabled:
             motion_lora_data = select_motion_lora_element(shot_uuid, model_files)
         else:
             motion_lora_data = []

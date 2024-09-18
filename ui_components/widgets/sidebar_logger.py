@@ -6,7 +6,7 @@ from utils.ml_processor.gpu.utils import COMFY_RUNNER_PATH, setup_comfy_runner
 import streamlit as st
 
 from shared.constants import (
-    GPU_INFERENCE_ENABLED,
+    GPU_INFERENCE_ENABLED_KEY,
     AppSubPage,
     CreativeProcessPage,
     InferenceParamType,
@@ -137,7 +137,8 @@ def sidebar_logger(shot_uuid):
                 "status_list": [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
             }
             inprogress_log_list, _ = data_repo.get_all_inference_log_list(**filter)
-            st.warning(f"Processing #: {len(inprogress_log_list)}")
+            if inprogress_log_list and isinstance(inprogress_log_list, list):
+                st.warning(f"Processing #: {len(inprogress_log_list)}")
         file_list = data_repo.get_file_list_from_log_uuid_list([log.uuid for log in log_list])
         log_file_dict = {}
         for file in file_list:

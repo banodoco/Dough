@@ -9,7 +9,7 @@ import os
 from PIL import Image
 from shared.constants import (
     COMFY_BASE_PATH,
-    GPU_INFERENCE_ENABLED,
+    GPU_INFERENCE_ENABLED_KEY,
     FileTransformationType,
     InferenceLogTag,
     InferenceParamType,
@@ -18,6 +18,7 @@ from shared.constants import (
     InferenceStatus,
     InferenceType,
     STEERABLE_MOTION_WORKFLOWS,
+    ConfigManager
 )
 from ui_components.constants import CreativeProcessType, ShotMetaData
 from ui_components.methods.animation_style_methods import get_generation_settings_from_log, load_shot_settings
@@ -40,6 +41,10 @@ from utils.ml_processor.constants import ML_MODEL, ComfyWorkflow
 from utils.state_refresh import refresh_app
 from utils.common_utils import convert_timestamp_1, convert_timestamp_to_relative
 
+
+
+config_manager = ConfigManager()
+gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
 
 # TODO: very inefficient operation.. add shot_id as a foreign in logs table for better search
 def video_generation_counter(shot_uuid):
@@ -258,7 +263,7 @@ def variant_comparison_grid(ele_uuid, stage=CreativeProcessType.MOTION.value):
                         open_generaton_details=open_generaton_details,
                     )
 
-                    if GPU_INFERENCE_ENABLED or "Upscaled Video" not in displayed_tags:
+                    if gpu_enabled or "Upscaled Video" not in displayed_tags:
                         uspcale_expander_element([variants[variant_index].uuid])
                     create_video_download_button(variants[variant_index].location, ui_key="var_details")
 
@@ -663,7 +668,7 @@ def prepare_values(inf_data, timing_list):
 
 
 def upscale_settings(ui_key):
-    if GPU_INFERENCE_ENABLED:
+    if gpu_enabled:
         checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
         all_files = os.listdir(checkpoints_dir)
     else:
@@ -680,7 +685,7 @@ def upscale_settings(ui_key):
         # model_files.insert(0, "None")  # Add "None" option at the beginning
         styling_model = st.selectbox("Styling model", model_files, key=f"styling_model_{ui_key}")
 
-    if GPU_INFERENCE_ENABLED:
+    if gpu_enabled:
         upscale_by = st.slider(
             "Upscale by:", min_value=1.25, max_value=3.0, step=0.05, key=f"upscale_by_{ui_key}", value=1.5
         )

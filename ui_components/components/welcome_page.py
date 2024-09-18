@@ -1,6 +1,7 @@
 from utils.common_utils import get_toml_config, update_toml_config
 from utils.data_repo.data_repo import DataRepo
 import streamlit as st
+from shared.constants import ConfigManager, GPU_INFERENCE_ENABLED_KEY
 from utils.state_refresh import refresh_app
 import time
 
@@ -149,10 +150,11 @@ def welcome_page():
                 if actually_read:
                     if st.button("Continue", key="welcome_cta"):
                         data_repo = DataRepo()
+                        config_manager = ConfigManager()
+                        
+                        config_manager.set(GPU_INFERENCE_ENABLED_KEY, gpu_inference == choices[0])
                         data_repo.update_app_setting(welcome_state=2)
-                        current_app_settings = get_toml_config(toml_file="app_settings.toml")
-                        current_app_settings["gpu_inference"] = True if gpu_inference == choices[0] else False
-                        update_toml_config(current_app_settings, toml_file="app_settings.toml")
+                        
                         refresh_app()
 
                 else:

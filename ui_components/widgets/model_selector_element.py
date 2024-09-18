@@ -2,12 +2,14 @@ import os
 import time
 import streamlit as st
 
-from shared.constants import COMFY_BASE_PATH, GPU_INFERENCE_ENABLED
+from shared.constants import COMFY_BASE_PATH, GPU_INFERENCE_ENABLED_KEY, ConfigManager
 from ui_components.widgets.download_file_progress_bar import download_file_widget
 from utils.constants import T2IModel
 from utils.state_refresh import refresh_app
 
 
+config_manager = ConfigManager()
+gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
 checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
 
 SDXL_MODEL_DOWNLOAD_LIST = {
@@ -247,7 +249,7 @@ def model_selector_offline_element(type=T2IModel.SDXL.value, position="explorer"
 
 
 def model_selector_element(type=T2IModel.SDXL.value, position="explorer", selected_model=None):
-    if GPU_INFERENCE_ENABLED:
+    if gpu_enabled:
         return model_selector_offline_element(
             type=T2IModel.SDXL.value, position="explorer", selected_model=None
         )

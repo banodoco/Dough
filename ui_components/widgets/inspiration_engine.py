@@ -11,12 +11,13 @@ import requests
 from io import BytesIO
 
 from shared.constants import (
-    GPU_INFERENCE_ENABLED,
+    GPU_INFERENCE_ENABLED_KEY,
     QUEUE_INFERENCE_QUERIES,
     SERVER_URL,
     InferenceStatus,
     InferenceType,
     ProjectMetaData,
+    ConfigManager
 )
 from ui_components.methods.common_methods import process_inference_output, save_new_image
 from ui_components.methods.file_methods import generate_pil_image, zoom_and_crop
@@ -34,6 +35,8 @@ from utils.state_refresh import refresh_app
 # NOTE: since running locally is very slow (comfy startup, models loading, other gens in process..)
 # rn we are accessing the replicate API directly, will switch to some other local method in the future
 
+config_manager = ConfigManager()
+gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
 
 def check_replicate_key():
     data_repo = DataRepo()
@@ -116,7 +119,7 @@ def generate_prompts(
     Number of items: {total_unique_prompts}
     Responses: {initial_examples}"""
 
-    if GPU_INFERENCE_ENABLED:
+    if gpu_enabled:
         return ""
 
     api_repo = APIRepo()
@@ -288,7 +291,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     st.session_state[k] = v
 
             # ---------------- PROMPT GUIDANCE ---------------------
-            h1, h2, _ = st.columns([2, 1, 0.05]) if GPU_INFERENCE_ENABLED else st.columns([1, 1, 0.25])
+            h1, h2, _ = st.columns([2, 1, 0.05]) if gpu_enabled else st.columns([1, 1, 0.25])
             with h1:
                 st.markdown("#### Prompt guidance")
 
@@ -299,7 +302,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     refresh_app()
 
             h2_a, h2_b, h2_c, h1 = (
-                st.columns([1, 1, 1, 0.01]) if GPU_INFERENCE_ENABLED else st.columns([0.5, 0.5, 0.5, 0.75])
+                st.columns([1, 1, 1, 0.01]) if gpu_enabled else st.columns([0.5, 0.5, 0.5, 0.75])
             )
             if isinstance(st.session_state["list_of_prompts"], str):
                 st.session_state["list_of_prompts"] = st.session_state["list_of_prompts"].split("|")
@@ -339,7 +342,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
 
             number_of_prompts = len(st.session_state["list_of_prompts"])
 
-            if not GPU_INFERENCE_ENABLED:
+            if not gpu_enabled:
                 with h1:
                     i1, i2 = st.columns([1, 1])
                     with i1:
@@ -514,7 +517,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
             st.markdown("#### Model selection")
 
             model_type_options = (
-                T2IModel.value_list() if GPU_INFERENCE_ENABLED else [T2IModel.SDXL.value, T2IModel.FLUX.value]
+                T2IModel.value_list() if gpu_enabled else [T2IModel.SDXL.value, T2IModel.FLUX.value]
             )
             type_of_model = st.radio(
                 "Type of model:",
@@ -550,7 +553,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                     model = "flux1-schnell-fp8.safetensors"
 
                     info_msg = "Flux Schell FP8 will be selected by default. " + (
-                        "It requires atleast 17GB VRAM." if GPU_INFERENCE_ENABLED else ""
+                        "It requires atleast 17GB VRAM." if gpu_enabled else ""
                     )
                     st.info(info_msg)
 
