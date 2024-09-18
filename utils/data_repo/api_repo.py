@@ -18,7 +18,6 @@ from shared.utils import validate_token
 from ui_components.models import InternalUserObject
 from utils.common_decorators import log_time
 
-from utils.constants import AUTH_TOKEN
 from utils.data_repo.data_repo import DataRepo
 from utils.state_refresh import refresh_app
 from utils.third_party_auth.google.google_auth import get_auth_provider
@@ -26,7 +25,17 @@ from utils.third_party_auth.google.google_auth import get_auth_provider
 
 # APIRepo connects to the hosted backend of Banodoco
 class APIRepo:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(APIRepo, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
     def __init__(self):
+        if self._initialized:
+            return
         self._load_base_url()
         self._setup_urls()
 
@@ -45,8 +54,7 @@ class APIRepo:
         self.USER_OP_URL = "/v1/user/op"
 
         # payment
-        self.ORDER_OP_URL = "/v1/payment/order"
-        self.ORDER_LIST_URL = "/v1/payment/order/list"
+        self.PAYMENT_OP_URL = "/v1/payment/stripe-link"
 
         # inference log
         self.LOG_URL = "/v1/inference/log"
@@ -192,6 +200,11 @@ class APIRepo:
         return self.http_put(self.LOG_URL, data)
 
     def create_log(self, log_data, model_name="llama3"):
+        credits_remaining = self.get_user_credits()
+        if not credits_remaining:
+            st.error("Insufficient credits")
+            return
+
         # this also creates log in the local database
         # this should only be used when the results return immediately
         res = self.http_post(self.LOG_URL, log_data)
@@ -215,7 +228,7 @@ class APIRepo:
                 if status == InferenceStatus.COMPLETED.value
                 else InferenceStatus.FAILED.value
             ),
-            "model_name": "LLama3",
+            "model_name": model_name,
             "generation_source": "",
             "generation_tag": "",
         }
@@ -233,3 +246,30 @@ class APIRepo:
         except requests.RequestException as e:
             print(f"Failed to get signed URL for {file_info}: {str(e)}")
             return None, None
+
+    def get_user_credits(self):
+        """
+        this is a soft check on the credit (as it uses a cached value). the final
+        check is done when the task is picked for processing, the db has the updated value at that time
+        """
+        credits_remaining = 0
+        credit_data_timeout = 2 * 60  # 2 mins
+        if (
+            "user_credit_data" in st.session_state
+            and st.session_state["user_credit_data"]
+            and time.time() - st.session_state["user_credit_data"]["created_on"] <= credit_data_timeout
+        ):
+            credits_remaining = st.session_state["user_credit_data"]["balance"]
+        else:
+            response = self.get_cur_user()
+            credits_remaining = response.get("payload", {}).get("data", 0).get("total_credits", 0)
+            st.session_state["user_credit_data"] = {
+                "balance": credits_remaining,
+                "created_on": time.time(),
+            }
+
+        return credits_remaining
+
+    def generate_payment_link(self, amount):
+        res = self.http_get(self.PAYMENT_OP_URL, params={"total_amount": amount})
+        return res["payload"]["data"] if res["status"] else ""

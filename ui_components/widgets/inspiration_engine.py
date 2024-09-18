@@ -136,6 +136,9 @@ def generate_prompts(
 
     data = {"input_params": {"workflow_type": "llama3_prompt", "third_party_query": {"payload": query_data}}}
     inf_log = api_repo.create_log(data)
+    if not inf_log:
+        return ""
+
     output = inf_log.output_details
 
     if not output:

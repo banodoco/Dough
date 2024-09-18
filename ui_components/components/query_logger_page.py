@@ -16,21 +16,7 @@ def query_logger_page():
     data_repo = DataRepo()
     api_repo = APIRepo()
 
-    credits_remaining = 0
-    credit_data_timeout = 2 * 60  # 2 mins
-    if (
-        "user_credit_data" in st.session_state
-        and st.session_state["user_credit_data"]
-        and time.time() - st.session_state["user_credit_data"]["created_on"] <= credit_data_timeout
-    ):
-        credits_remaining = st.session_state["user_credit_data"]["balance"]
-    else:
-        response = api_repo.get_cur_user()
-        credits_remaining = response.get("payload", {}).get("data", 0).get("total_credits", 0)
-        st.session_state["user_credit_data"] = {
-            "balance": credits_remaining,
-            "created_on": time.time(),
-        }
+    credits_remaining = api_repo.get_user_credits()
 
     c01, c02, _ = st.columns([1, 1, 2])
 
@@ -46,18 +32,22 @@ def query_logger_page():
     c1, c2, _ = st.columns([1, 1, 3])
     with c1:
         credits_to_buy = st.number_input(
-            label="Credits to Buy",
+            label="Credits to Buy (10 credits = $1)",
             key="credit_btn",
-            min_value=1,
-            step=1,
+            min_value=50,
+            step=20,
         )
 
     with c2:
         st.write("")
         st.write("")
         if st.button("Generate payment link"):
-            st.write("Please click on the link below to make the payment")
-            st.write("www.google.com")
+            payment_link = api_repo.generate_payment_link(int(credits_to_buy // 10))
+            if payment_link:
+                st.write("Please click on the link below to make the payment")
+                st.write(payment_link)
+            else:
+                st.write("error occured during payment link generation, pls try again")
 
     b1, b2 = st.columns([1, 0.2])
 

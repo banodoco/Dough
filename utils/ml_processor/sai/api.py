@@ -29,6 +29,10 @@ class APIProcessor(MachineLearningProcessor):
         queue_inference=False,
         backlog=False,
     ):
+        credits_remaining = self.api_repo.get_user_credits()
+        if credits_remaining <= 0:
+            st.error("Insufficient credits")
+            return
 
         (
             workflow_type,
@@ -168,7 +172,7 @@ class APIProcessor(MachineLearningProcessor):
 
         local_file_path = file_path
         content_type = self._get_content_type(file_path)
-        file_expiration = 172800
+        file_expiration = 172800  # 2 days
         signed_url, public_url = self.api_repo.get_signed_url(
             {
                 "file_path": file_path,
