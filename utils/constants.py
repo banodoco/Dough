@@ -10,7 +10,7 @@ AUTH_TOKEN = "auth_details"
 REFRESH_AUTH_TOKEN = "refresh_auth_details"
 
 RUNNER_PROCESS_NAME = "banodoco_runner"
-RUNNER_PROCESS_PORT = 12345
+RUNNER_PROCESS_IDENTIFIER = "bndc_runner_123"
 
 REFRESH_PROCESS_NAME = "app_refresher"
 REFRESH_PROCESS_PORT = 5123

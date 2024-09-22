@@ -14,6 +14,7 @@ from shared.constants import SERVER, CreativeProcessPage, ServerType
 from shared.utils import validate_token
 from ui_components.models import InternalUserObject
 from utils.cache.cache import CacheKey, StCache
+from utils.constants import RUNNER_PROCESS_IDENTIFIER
 from utils.data_repo.data_repo import DataRepo
 from ui_components.constants import DefaultProjectSettingParams
 
@@ -235,11 +236,13 @@ def is_process_active(custom_process_name, custom_process_port):
     try:
         if platform.system() == "Windows":
             try:
-                client_socket = socket.create_connection(("localhost", custom_process_port))
-                client_socket.close()
-                res = True
+                with socket.create_connection(("localhost", custom_process_port), timeout=1) as sock:
+                    sock.sendall(b"IDENTIFY\n")
+                    response = sock.recv(1024).decode().strip()
+                    res = response == RUNNER_PROCESS_IDENTIFIER
                 # print("----------------- process is active")
-            except ConnectionRefusedError:
+            except Exception as e:
+                # print("process conn error: ", str(e))
                 res = False
                 # print("----------------- process is NOT active")
         else:

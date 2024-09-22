@@ -18,7 +18,7 @@ from shared.constants import (
     OFFLINE_MODE,
     SERVER,
     ServerType,
-    ConfigManager
+    ConfigManager,
 )
 
 from shared.logging.logging import AppLogger
@@ -30,16 +30,17 @@ from utils.common_utils import is_process_active, refresh_process_active
 from utils.state_refresh import refresh_app
 
 from utils.constants import (
-    AUTH_TOKEN,
-    REFRESH_PROCESS_NAME,
     REFRESH_PROCESS_PORT,
     RUNNER_PROCESS_NAME,
-    RUNNER_PROCESS_PORT,
 )
 from streamlit_server_state import server_state_lock
 from utils.refresh_target import SAVE_STATE
 from banodoco_settings import project_init
 from utils.data_repo.data_repo import DataRepo
+
+
+config_manager = ConfigManager()
+RUNNER_PROCESS_PORT = config_manager.get("runner_process_port")
 
 
 def start_runner():
@@ -57,6 +58,12 @@ def start_runner():
             while not is_process_active(RUNNER_PROCESS_NAME, RUNNER_PROCESS_PORT) and max_retries:
                 time.sleep(0.1)
                 max_retries -= 1
+
+            # refreshing the app if the runner port has changed
+            old_port = RUNNER_PROCESS_PORT
+            new_port = config_manager.get("runner_process_port", fresh_pull=True)
+            if old_port != new_port:
+                st.rerun()
         else:
             # app_logger.debug("Runner already running")
             pass
@@ -78,7 +85,7 @@ def start_project_refresh():
                 max_retries -= 1
             app_logger.info("Auto refresh enabled")
         else:
-            # app_logger.debug("Process already running")
+            # app_logger.debug("refresh process already running")
             pass
 
 
@@ -117,7 +124,7 @@ def main():
     api_repo = APIRepo()
     config_manager = ConfigManager()
     gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
-    
+
     app_setting = data_repo.get_app_setting_from_uuid()
     if app_setting.welcome_state == 2:
         # api/online inference mode

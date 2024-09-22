@@ -4,6 +4,7 @@ import os
 import shutil
 import signal
 import sys
+import threading
 import time
 import uuid
 from django.db import connection
@@ -21,6 +22,7 @@ from shared.constants import (
     LOCAL_DATABASE_NAME,
     OFFLINE_MODE,
     SERVER_URL,
+    ConfigManager,
     InferenceParamType,
     InferenceStatus,
     InferenceType,
@@ -42,8 +44,8 @@ from utils.ml_processor.constants import ComfyWorkflow, replicate_status_map
 
 from utils.constants import (
     REFRESH_PROCESS_PORT,
+    RUNNER_PROCESS_IDENTIFIER,
     RUNNER_PROCESS_NAME,
-    RUNNER_PROCESS_PORT,
     AUTH_TOKEN,
     REFRESH_AUTH_TOKEN,
     TomlConfig,
@@ -92,18 +94,43 @@ if platform.system() == "Windows":
 signal.signal(signal.SIGTERM, handle_termination)
 
 
+def handle_identify_requests(server_socket):
+    while True:
+        client_sock, _ = server_socket.accept()
+        threading.Thread(target=handle_client, args=(client_sock,)).start()
+
+
+def handle_client(client_socket):
+    data = client_socket.recv(1024).decode().strip()
+    if data == "IDENTIFY":
+        client_socket.sendall(RUNNER_PROCESS_IDENTIFIER.encode() + b"\n")
+
+
 def main():
     if SERVER != "development" and HOSTED_BACKGROUND_RUNNER_MODE in [False, "False"]:
         return
 
     retries = MAX_APP_RETRY_CHECK
+    config_manager = ConfigManager()
+    RUNNER_PROCESS_PORT = config_manager.get("runner_process_port")
 
     # in case of windows opening a dummy socket (to signal that the process has started)
     if platform.system() == "Windows" and OFFLINE_MODE:
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server_socket.bind(("localhost", RUNNER_PROCESS_PORT))
+        try:
+            server_socket.bind(("localhost", RUNNER_PROCESS_PORT))
+        except:
+            app_logger.warning(f"Port {RUNNER_PROCESS_PORT} already in use, trying a different one..")
+            server_socket.bind(("localhost", 0))
+
+        assigned_port = server_socket.getsockname()[1]
+        if assigned_port and assigned_port != RUNNER_PROCESS_PORT:
+            app_logger.debug(f"Runner bound to {assigned_port}")
+            config_manager.set("runner_process_port", assigned_port)
+
         server_socket.listen(100)  # hacky fix
+        threading.Thread(target=handle_identify_requests, args=(server_socket,), daemon=True).start()
 
     print("runner running")
     while True:

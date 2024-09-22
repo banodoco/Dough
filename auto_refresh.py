@@ -1,13 +1,17 @@
 import os
+import platform
+import signal
 import sys
 import portalocker
 import json
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 import logging
 import threading
 import time
 import random
 from queue import Queue
+
+import requests
 
 from utils.constants import REFRESH_LOCK_FILE, REFRESH_PROCESS_PORT, REFRESH_TARGET_FILE
 
@@ -21,6 +25,20 @@ refresh_thread = None
 
 last_refreshed_on = 0
 REFRESH_BUFFER_TIME = 10  # seconds before making consecutive refreshes
+TERMINATE_SCRIPT = False
+
+
+def handle_termination(signal, frame):
+    print("Received termination signal - auto refresh. Cleaning up...")
+    global TERMINATE_SCRIPT
+    TERMINATE_SCRIPT = True
+    os._exit(1)
+
+
+if platform.system() == "Windows":
+    signal.signal(signal.SIGINT, handle_termination)
+
+signal.signal(signal.SIGTERM, handle_termination)
 
 
 def check_lock():
@@ -53,7 +71,7 @@ def refresh():
 
 
 def refresh_worker():
-    while True:
+    while not TERMINATE_SCRIPT:
         refresh_queue.get()
         refresh()
 
@@ -94,8 +112,24 @@ def main():
     refresh_thread.daemon = True
     refresh_thread.start()
 
+    try:
+        while not TERMINATE_SCRIPT:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Keyboard interrupt received. Shutting down...")
+        handle_termination(signal.SIGINT, None)
+
+    print("Waiting for threads to finish...")
     # running the main thread as long as the flask server is active
-    flask_thread.join()
+    flask_thread.join(timeout=5)
+    refresh_thread.join(timeout=5)
+
+    if not (flask_thread.is_alive() and refresh_thread.is_alive()):
+        print("Auto refresh terminated.")
+    else:
+        print("threads didn't shutdown")
+        print("refresh thread active: ", refresh_thread.is_alive())
+        print("flask thread active: ", flask_thread.is_alive())
 
 
 if __name__ == "__main__":

@@ -17,10 +17,13 @@ class ConfigManager:
             cls._instance.toml_file = "app_settings.toml"
             cls._instance.load_from_toml()
         return cls._instance
-    
+
     def _get_toml_app_settings(self, key=None):
+        # print("----- fresh toml load")
         default_settings_dict = {"automatic_update": True, "gpu_inference": True}
-        toml_config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts", self.toml_file))
+        toml_config_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "scripts", self.toml_file)
+        )
 
         toml_data = {}
         with open(toml_config_path, "r") as f:
@@ -34,10 +37,12 @@ class ConfigManager:
                 toml_data[k] = v
 
         return toml_data
-    
+
     def _update_toml_app_settings(self):
         toml_dict = self.config
-        toml_config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "scripts", self.toml_file))
+        toml_config_path = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "scripts", self.toml_file)
+        )
 
         with open(toml_config_path, "wb") as f:
             toml_content = toml.dumps(toml_dict)
@@ -46,14 +51,18 @@ class ConfigManager:
     def load_from_toml(self):
         self.config = self._get_toml_app_settings()
 
-    def get(self, key: str, default: Any = None) -> Any:
+    def get(self, key: str, default: Any = None, fresh_pull=False) -> Any:
+        if fresh_pull:
+            self.load_from_toml()
         return self.config.get(key, default)
 
     def set(self, key: str, value: Any):
         self.config[key] = value
         self._update_toml_app_settings()
 
+
 singleton_config_manager = ConfigManager()
+
 
 ##################### enums #####################
 class ServerType(ExtendedEnum):
