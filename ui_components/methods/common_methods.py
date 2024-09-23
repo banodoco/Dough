@@ -1046,7 +1046,7 @@ def stop_gen(log):
     config_manager = ConfigManager()
     gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
 
-    queued_id = log.queued_generation_uuid
+    queued_id = log["queued_generation_uuid"]
     if queued_id:
         print("------ queue id found: ", queued_id)
         api_repo = APIRepo()
@@ -1054,22 +1054,23 @@ def stop_gen(log):
             data = api_repo.update_log_status(log_uuid=queued_id, status=InferenceStatus.CANCELED.value)
             print("cancellation status: ", data["status"])
             if data["status"]:
-                data_repo.update_inference_log(uuid=log.uuid, status=InferenceStatus.CANCELED.value)
+                data_repo.update_inference_log(uuid=log["uuid"], status=InferenceStatus.CANCELED.value)
             else:
                 print("unable to cancel: ", data["message"])
         except Exception as e:
             print("unable to get cancellation status: ", str(e))
 
     else:
-        data_repo.update_inference_log(uuid=log.uuid, status=InferenceStatus.CANCELED.value)
+        data_repo.update_inference_log(uuid=log["uuid"], status=InferenceStatus.CANCELED.value)
 
-    if log.status == InferenceStatus.IN_PROGRESS.value and gpu_enabled:
+    if log["status"] == InferenceStatus.IN_PROGRESS.value and gpu_enabled:
         sys.path.append(str(os.getcwd()) + COMFY_RUNNER_PATH[1:])
         from comfy_runner.inf import ComfyRunner
 
         comfy_runner = ComfyRunner()
-        comfy_runner.stop_current_generation(log.uuid, 1)
-        print(f"Process stopped {log.uuid} ----------")
+        comfy_runner.stop_current_generation(log["uuid"], 1)
+        log_uuid = log["uuid"]
+        print(f"Process stopped {log_uuid} ----------")
 
     return
 
@@ -1098,7 +1099,12 @@ def stop_generations(logs: List[InferenceLogObject]):
 
     for log in logs:
         if log.status in [InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value]:
-            queue.put(log)
+            log_data = {
+                "uuid": log.uuid,
+                "queued_generation_uuid": log.queued_generation_uuid,
+                "status": log.status,
+            }
+            queue.put(log_data)
 
     for _ in range(len(workers)):
         queue.put(None)

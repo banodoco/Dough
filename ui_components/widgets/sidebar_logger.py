@@ -2,6 +2,7 @@ import time
 from shared.logging.constants import LoggingType
 from shared.logging.logging import AppLogger
 from ui_components.methods.common_methods import stop_gen, stop_generations
+from utils.common_decorators import with_refresh_lock
 from utils.ml_processor.gpu.utils import COMFY_RUNNER_PATH, setup_comfy_runner
 import streamlit as st
 
@@ -133,7 +134,7 @@ def sidebar_logger(shot_uuid):
             filter = {
                 "project_id": shot.project.uuid,
                 "page": 1,
-                "data_per_page": 1000,
+                "data_per_page": 10000,
                 "status_list": [InferenceStatus.QUEUED.value, InferenceStatus.IN_PROGRESS.value],
             }
             inprogress_log_list, _ = data_repo.get_all_inference_log_list(**filter)
@@ -263,16 +264,17 @@ def sidebar_logger(shot_uuid):
         b1, b2 = st.columns([1, 1])
         with b1:
 
+            @with_refresh_lock
             def cancel_all_generations():
                 log_filter_data = {
                     "project_id": shot.project.uuid,
                     "page": 1,
-                    "data_per_page": 1000,
+                    "data_per_page": 10000,
                     "status_list": [InferenceStatus.IN_PROGRESS.value, InferenceStatus.QUEUED.value],
                 }
                 all_log_list, total_count = data_repo.get_all_inference_log_list(**log_filter_data)
                 stop_generations(all_log_list)
-                refresh_app()
+                # refresh_app()
 
             st.button(label="Cancel all", use_container_width=True, on_click=cancel_all_generations)
 
