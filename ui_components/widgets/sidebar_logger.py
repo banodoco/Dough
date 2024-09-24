@@ -228,7 +228,12 @@ def sidebar_logger(shot_uuid):
 
                     def cancel_generation(log_uuid):
                         log = data_repo.get_inference_log_from_uuid(log_uuid)
-                        stop_gen(log)
+                        log_data = {
+                            "uuid": log.uuid,
+                            "queued_generation_uuid": log.queued_generation_uuid,
+                            "status": log.status,
+                        }
+                        stop_gen(log_data)
 
                     if st.button(
                         "Cancel",
