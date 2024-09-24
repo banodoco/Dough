@@ -18,7 +18,7 @@ from shared.constants import (
     InferenceStatus,
     InferenceType,
     STEERABLE_MOTION_WORKFLOWS,
-    ConfigManager
+    ConfigManager,
 )
 from ui_components.constants import CreativeProcessType, ShotMetaData
 from ui_components.methods.animation_style_methods import get_generation_settings_from_log, load_shot_settings
@@ -42,9 +42,9 @@ from utils.state_refresh import refresh_app
 from utils.common_utils import convert_timestamp_1, convert_timestamp_to_relative
 
 
-
 config_manager = ConfigManager()
 gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
+
 
 # TODO: very inefficient operation.. add shot_id as a foreign in logs table for better search
 def video_generation_counter(shot_uuid):
@@ -58,6 +58,8 @@ def video_generation_counter(shot_uuid):
     res = []
     for log in log_list:
         origin_data = json.loads(log.input_params).get(InferenceParamType.ORIGIN_DATA.value, None)
+        if not origin_data:
+            continue
         inference_type = origin_data.get("inference_type", "")
         if (
             inference_type == InferenceType.FRAME_INTERPOLATION.value
