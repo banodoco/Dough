@@ -3,7 +3,7 @@ import random
 import tempfile
 import uuid
 from backend.models import InternalFileObject
-from shared.constants import COMFY_BASE_PATH, InternalFileType
+from shared.constants import COMFY_BASE_PATH, GPU_INFERENCE_ENABLED_KEY, ConfigManager, InternalFileType
 from shared.logging.constants import LoggingType
 from shared.logging.logging import app_logger
 from ui_components.methods.common_methods import combine_mask_and_input_image, random_seed
@@ -91,6 +91,18 @@ MODEL_PATH_DICT = {
 }
 
 
+def get_consistent_path_os(base_path, *args):
+    # for online queries we require linux-like paths
+    # TODO: fix comfy runner to automatically solve paths in linux-like format
+    config_manager = ConfigManager()
+    gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
+    return (
+        os.path.normpath(os.path.join(base_path, *args)).replace(os.sep, "/")
+        if not gpu_enabled
+        else base_path
+    )
+
+
 # these methods return the workflow along with the output node class name
 class ComfyDataTransform:
     @staticmethod
@@ -120,7 +132,7 @@ class ComfyDataTransform:
             {
                 "filename": "flux1-schnell-fp8.safetensors",
                 "url": "https://huggingface.co/Comfy-Org/flux1-schnell/resolve/main/flux1-schnell-fp8.safetensors?download=true",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
+                "dest": get_consistent_path_os(os.path.join(COMFY_BASE_PATH, "models", "checkpoints")),
             }
         ]
 
@@ -316,7 +328,7 @@ class ComfyDataTransform:
             {
                 "filename": "Juggernaut-XL_v9_v2.safetensors",
                 "url": "https://huggingface.co/RunDiffusion/Juggernaut-XL-v9/resolve/main/Juggernaut-XL_v9_RunDiffusionPhoto_v2.safetensors",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "checkpoints"),
+                "dest": get_consistent_path_os(os.path.join(COMFY_BASE_PATH, "models", "checkpoints")),
             }
         ]
         return json.dumps(workflow), output_node_ids, extra_model_list, []
@@ -602,14 +614,16 @@ class ComfyDataTransform:
                     {
                         "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
                         "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
-                        "dest": os.path.join(COMFY_BASE_PATH, "models", "loras"),
+                        "dest": get_consistent_path_os(os.path.join(COMFY_BASE_PATH, "models", "loras")),
                     }
                 )
                 extra_models_list.append(
                     {
                         "filename": "AnimateLCM_sd15_t2v.ckpt",
                         "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v.ckpt",
-                        "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models"),
+                        "dest": get_consistent_path_os(
+                            os.path.join(COMFY_BASE_PATH, "models", "animatediff_models")
+                        ),
                     }
                 )
 
@@ -670,14 +684,16 @@ class ComfyDataTransform:
                     {
                         "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
                         "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
-                        "dest": os.path.join(COMFY_BASE_PATH, "models", "loras"),
+                        "dest": get_consistent_path_os(os.path.join(COMFY_BASE_PATH, "models", "loras")),
                     }
                 )
                 extra_models_list.append(
                     {
                         "filename": "AnimateLCM_sd15_t2v.ckpt",
                         "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v.ckpt",
-                        "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models"),
+                        "dest": get_consistent_path_os(
+                            os.path.join(COMFY_BASE_PATH, "models", "animatediff_models")
+                        ),
                     }
                 )
 
@@ -764,14 +780,16 @@ class ComfyDataTransform:
                     {
                         "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
                         "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
-                        "dest": os.path.join(COMFY_BASE_PATH, "models", "loras"),
+                        "dest": get_consistent_path_os(os.path.join(COMFY_BASE_PATH, "models", "loras")),
                     }
                 )
                 extra_models_list.append(
                     {
                         "filename": "AnimateLCM_sd15_t2v.ckpt",
                         "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v.ckpt",
-                        "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models"),
+                        "dest": get_consistent_path_os(
+                            os.path.join(COMFY_BASE_PATH, "models", "animatediff_models")
+                        ),
                     }
                 )
 
@@ -851,6 +869,7 @@ class ComfyDataTransform:
 
         for v in SD_MODEL_DICT.values():
             if v["filename"] == ckpt:
+                v["dest"] = get_consistent_path_os(v["dest"])
                 extra_models_list.append(v)
 
         # maps stablise motion values <-> sparse nonhint multiplier (for normal and lcm models)
@@ -898,17 +917,17 @@ class ComfyDataTransform:
             {
                 "filename": "AnimateLCM_sd15_t2v_lora.safetensors",
                 "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v_lora.safetensors?download=true",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "loras"),
+                "dest": get_consistent_path_os(os.path.join(COMFY_BASE_PATH, "models", "loras")),
             },
             {
                 "filename": "AnimateLCM_sd15_t2v.ckpt",
                 "url": "https://huggingface.co/wangfuyun/AnimateLCM/resolve/main/AnimateLCM_sd15_t2v.ckpt?download=true",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models"),
+                "dest": get_consistent_path_os(os.path.join(COMFY_BASE_PATH, "models", "animatediff_models")),
             },
             {
                 "filename": "4x_RealisticRescaler_100000_G.pth",
                 "url": "https://huggingface.co/holwech/realistic-rescaler-real-esrgan/resolve/main/4x_RealisticRescaler_100000_G.pth?download=true",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "upscale_models"),
+                "dest": get_consistent_path_os(os.path.join(COMFY_BASE_PATH, "models", "upscale_models")),
             },
         ]
 
@@ -936,12 +955,12 @@ class ComfyDataTransform:
             {
                 "filename": "v3_sd15_mm.ckpt",
                 "url": "https://huggingface.co/guoyww/animatediff/resolve/main/v3_sd15_mm.ckpt?download=true",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "animatediff_models"),
+                "dest": get_consistent_path_os(os.path.join(COMFY_BASE_PATH, "models", "animatediff_models")),
             },
             {
                 "filename": "v3_sd15_adapter.ckpt",
                 "url": "https://huggingface.co/guoyww/animatediff/resolve/main/v3_sd15_adapter.ckpt?download=true",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "loras"),
+                "dest": get_consistent_path_os(os.path.join(COMFY_BASE_PATH, "models", "loras")),
             },
         ]
 
@@ -1184,25 +1203,28 @@ class ComfyDataTransform:
         model_details = None
         for v in combined_models.values():
             if v["filename"] == model:
+                v["dest"] = get_consistent_path_os(v["dest"])
                 model_details = v
 
         extra_model_list = [
             {
                 "filename": "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors",
                 "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/models/image_encoder/model.safetensors",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "clip_vision"),
+                "dest": get_consistent_path_os(os.path.join(COMFY_BASE_PATH, "models", "clip_vision")),
             },
             {
                 "filename": "ip-adapter-plus_sdxl_vit-h.safetensors",
                 "url": "https://huggingface.co/h94/IP-Adapter/resolve/main/sdxl_models/ip-adapter-plus_sdxl_vit-h.safetensors",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "ipadapter"),
+                "dest": get_consistent_path_os(os.path.join(COMFY_BASE_PATH, "models", "ipadapter")),
             },
             {
                 "filename": "ip_plus_composition_sdxl.safetensors",
                 "url": "https://huggingface.co/ostris/ip-composition-adapter/resolve/main/ip_plus_composition_sdxl.safetensors",
-                "dest": os.path.join(COMFY_BASE_PATH, "models", "ipadapter"),
+                "dest": get_consistent_path_os(os.path.join(COMFY_BASE_PATH, "models", "ipadapter")),
             },
         ]
+
+        
 
         if model_details:
             extra_model_list.append(model_details)
