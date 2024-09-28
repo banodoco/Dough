@@ -7,6 +7,7 @@ import streamlit as st
 import requests
 from shared.constants import SERVER_URL, InferenceParamType
 from ui_components.methods.data_logger import log_model_inference
+from ui_components.methods.file_methods import compress_image
 from utils.constants import MLQueryObject
 from utils.data_repo.api_repo import APIRepo
 from utils.ml_processor.comfy_data_transform import get_file_path_list, get_model_workflow_from_query
@@ -183,6 +184,7 @@ class APIProcessor(MachineLearningProcessor):
             # print("---- file url already present, returning right away")
             return file_path, file_url, True, ""
 
+        # local_file_path = compress_image(file_path)
         local_file_path = file_path
         content_type = self._get_content_type(file_path)
         file_expiration = 172800  # 2 days

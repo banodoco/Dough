@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import uuid
 
 from django.db import connection
 import replicate.model
@@ -17,7 +18,7 @@ from shared.constants import (
     InferenceStatus,
     InferenceType,
     ProjectMetaData,
-    ConfigManager
+    ConfigManager,
 )
 from ui_components.methods.common_methods import process_inference_output, save_new_image
 from ui_components.methods.file_methods import generate_pil_image, zoom_and_crop
@@ -37,6 +38,7 @@ from utils.state_refresh import refresh_app
 
 config_manager = ConfigManager()
 gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
+
 
 def check_replicate_key():
     data_repo = DataRepo()
@@ -481,7 +483,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                             refresh_app()
 
                         if not check_replicate_key():
-                            st.info(replicate_warning_message)
+                            st.info("")
                         else:
                             if st.button("Edit Prompts", use_container_width=True):
                                 generated_prompts = edit_prompts(
@@ -600,6 +602,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 if type_of_style_input == "Upload Images":
                     preview_1, preview_2, preview_3 = st.columns([1, 1, 1])
 
+                    load_style_images()
+                    st.session_state["list_of_style_references"] = st.session_state["style_img_list"]
                     if len(st.session_state["list_of_style_references"]) < 3:
                         h1, h2 = st.columns([1, 1.5])
                         if len(st.session_state["list_of_style_references"]) == 0:
@@ -620,12 +624,8 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                 accept_multiple_files=True,
                             )
                             if uploaded_images:
-                                if len(uploaded_images) > 1:
-                                    text = "Add reference images"
-                                else:
-                                    text = "Add reference image"
+                                text = "Add reference image" + ("s" if len(uploaded_images) > 1 else "")
                                 if st.button(text, use_container_width=True):
-                                    # Check if there are less than 3 images already in the list
                                     while (
                                         len(st.session_state["list_of_style_references"]) < 3
                                         and uploaded_images
@@ -633,6 +633,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         new_image = uploaded_images.pop(0)
                                         new_index = len(st.session_state["list_of_style_references"])
                                         st.session_state["list_of_style_references"].append(new_image)
+                                        update_style_image()
 
                                         # Only add new values if they don't exist
                                         for key in [
@@ -641,8 +642,9 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                             "insp_vibe_influence",
                                         ]:
                                             if len(st.session_state[key]) <= new_index:
-                                                st.session_state[key].append(0.7)  # Default value
-                                    if uploaded_images:  # If there are still images left, show a warning
+                                                st.session_state[key].append(0.7)
+
+                                    if uploaded_images:
                                         st.warning("You can only upload 3 style references.")
 
                                     refresh_app()
@@ -785,6 +787,7 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                                         ):
                                             # Remove the image from the list
                                             st.session_state["list_of_style_references"].pop(i)
+                                            update_style_image()
                                             refresh_app()
                                     # add up the 3 values and if together they're over 1.5, show a warning
 
@@ -1065,3 +1068,49 @@ def inspiration_engine_element(project_uuid, position="explorer", shot_uuid=None
                 refresh_app()
 
         st.write("")
+
+
+style_img_path = "videos/temp/style_img/"
+
+
+def update_style_image():
+    if not os.path.exists(style_img_path):
+        os.makedirs(style_img_path)
+
+    for item in os.listdir(style_img_path):
+        item_path = os.path.join(style_img_path, item)
+
+        if os.path.isfile(item_path) or os.path.islink(item_path):
+            os.unlink(item_path)
+
+    for idx, img in enumerate(st.session_state.get("list_of_style_references", [])):
+        uid = f"{idx + 1}.png"
+        fp = os.path.join(style_img_path, uid)
+        try:
+            img = generate_pil_image(img)
+            img.save(fp)
+        except:
+            pass
+
+    load_style_images()
+    refresh_app()
+
+
+def load_style_images():
+    if not os.path.exists(style_img_path):
+        os.makedirs(style_img_path)
+
+    if st.session_state.get("style_img_list", None):
+        return
+
+    pil_images = []
+    for filename in os.listdir(style_img_path):
+        if filename.endswith(".DS_Store"):
+            continue
+
+        file_path = os.path.join(style_img_path, filename)
+        pil_images.append(file_path)
+
+    st.session_state["style_img_list"] = []
+    for img in pil_images:
+        st.session_state["style_img_list"].append(img)

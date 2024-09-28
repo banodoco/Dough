@@ -19,7 +19,6 @@ import uuid
 from moviepy.editor import VideoFileClip
 from dotenv import set_key, get_key
 import requests
-import streamlit as st
 from shared.constants import SERVER, InternalFileTag, InternalFileType, ServerType
 from ui_components.models import InternalFileObject
 from utils.data_repo.data_repo import DataRepo
@@ -27,6 +26,7 @@ from utils.data_repo.data_repo import DataRepo
 
 # depending on the environment it will either save or host the PIL image object
 def save_or_host_file(file, path, mime_type="image/png", dim=None):
+    import streamlit as st
     data_repo = DataRepo()
     uploaded_url = None
     file_type, file_ext = mime_type.split("/")
@@ -528,3 +528,48 @@ def add_file_to_shortlist(file_uuid, project_uuid=None):
         duplicate_file.uuid,
         tag=InternalFileTag.SHORTLISTED_GALLERY_IMAGE.value,
     )
+
+
+def compress_image(file_path, max_size_kb=1024, min_quality=60, max_quality=95, step=5):
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
+
+    with Image.open(file_path) as img:
+        if img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        original_size_kb = os.path.getsize(file_path) / 1024
+        if original_size_kb <= max_size_kb:
+            print(f"File is already smaller than {max_size_kb}KB. No compression needed.")
+            return file_path
+        
+        low, high = min_quality, max_quality
+        best_quality = max_quality
+        best_buffer = None
+        
+        while low <= high:
+            mid = (low + high) // 2
+            buffer = io.BytesIO()
+            img.save(buffer, format='JPEG', quality=mid, optimize=True)
+            size = buffer.tell() / 1024  # Size in KB
+            
+            if size <= max_size_kb:
+                best_quality = mid
+                best_buffer = buffer
+                low = mid + step
+            else:
+                high = mid - step
+        
+        if best_buffer is None:
+            print("Could not compress the image to the desired size. Saving with minimum quality.")
+            best_quality = min_quality
+            best_buffer = io.BytesIO()
+            img.save(best_buffer, format='JPEG', quality=best_quality, optimize=True)
+        
+        best_buffer.seek(0)
+        with open(file_path, 'wb') as f:
+            f.write(best_buffer.getvalue())
+        
+        final_size_kb = os.path.getsize(file_path) / 1024
+        
+        return file_path
