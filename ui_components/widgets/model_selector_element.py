@@ -153,7 +153,7 @@ def model_selector_offline_element(type=T2IModel.SDXL.value, position="explorer"
                 if type == T2IModel.SDXL.value
                 else [v["filename"] for v in SD3_MODEL_DOWNLOAD_LIST.values()]
             )
-            # all_files += default_model_list
+            all_files += default_model_list
             all_files = list(set(all_files))
             ignored_model_list = [
                 "dynamicrafter_512_interp_v1.ckpt",
@@ -190,16 +190,17 @@ def model_selector_offline_element(type=T2IModel.SDXL.value, position="explorer"
                     # on_change=update_model,
                 )
 
-                st.write("")
-                lightning = st.checkbox(
-                    "Lightning Model",
-                    help="Generate images faster with less quality.",
-                    value=st.session_state["insp_lightning_mode"],
-                )
+                if type == T2IModel.SDXL.value:
+                    st.write("")
+                    lightning = st.checkbox(
+                        "Lightning Model",
+                        help="Generate images faster with less quality.",
+                        value=st.session_state["insp_lightning_mode"],
+                    )
 
-                if st.session_state["insp_lightning_mode"] != lightning:
-                    st.session_state["insp_lightning_mode"] = lightning
-                    refresh_app()
+                    if st.session_state["insp_lightning_mode"] != lightning:
+                        st.session_state["insp_lightning_mode"] = lightning
+                        refresh_app()
 
                 (
                     st.info("Please only select SDXL based models. Default models will be auto-downloaded.")
@@ -251,9 +252,9 @@ def model_selector_offline_element(type=T2IModel.SDXL.value, position="explorer"
 def model_selector_element(type=T2IModel.SDXL.value, position="explorer", selected_model=None):
     if gpu_enabled:
         return model_selector_offline_element(
-            type=T2IModel.SDXL.value, position="explorer", selected_model=None
+            type=type, position="explorer", selected_model=None
         )
     else:
         return model_selector_online_element(
-            type=T2IModel.SDXL.value, position="explorer", selected_model=None
+            type=type, position="explorer", selected_model=None
         )
