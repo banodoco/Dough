@@ -195,6 +195,7 @@ def update_comfy_ui():
                     old_hash, new_hash = None, None
                     requirements_files = glob.glob("requirements*.txt")
                     if requirements_files:
+
                         requirements_file = requirements_files[0]
                         try:
                             with open(requirements_file, "rb") as f:

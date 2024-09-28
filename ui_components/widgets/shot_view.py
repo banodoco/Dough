@@ -80,6 +80,7 @@ def shot_keyframe_element(shot_uuid, items_per_row, column=None, position="Shots
                     type="primary",
                 ):
                     save_frame_changes()
+
                     refresh_app()
 
             if f"shot_data_{shot_uuid}" not in st.session_state:
