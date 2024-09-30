@@ -438,6 +438,7 @@ class DBRepo:
         ).count()
         pending_image_count = InferenceLog.objects.filter(
             status__in=log_status_list,
+            project_id=project.id,
             generation_source__in=generation_source_list,
             is_disabled=False,
         ).count()

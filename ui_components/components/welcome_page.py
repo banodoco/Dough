@@ -131,8 +131,8 @@ def welcome_page():
             st.write("")
 
             choices = [
-                "GPU - I have an RTX enabled GPU and want to run generations locally",
                 "API - (Paid) Use Dough's hosted service to run the generations",
+                "GPU - I have an RTX enabled GPU and want to run generations locally",
             ]
             gpu_inference = st.radio(
                 "Inference Type",
@@ -152,10 +152,14 @@ def welcome_page():
                         data_repo = DataRepo()
                         config_manager = ConfigManager()
                         
-                        config_manager.set(GPU_INFERENCE_ENABLED_KEY, gpu_inference == choices[0])
+                        config_manager.set(GPU_INFERENCE_ENABLED_KEY, gpu_inference == choices[1])
                         data_repo.update_app_setting(welcome_state=2)
                         
-                        refresh_app()
+                        # if they select GPU then pinging them to restart
+                        if gpu_inference == choices[1]:
+                            st.info("Please stop the app and restart for the changes to take place")
+                        else:
+                            refresh_app()
 
                 else:
                     st.button(
