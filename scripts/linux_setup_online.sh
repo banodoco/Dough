@@ -13,7 +13,7 @@ if [ ! -d "$project_dir" ] && [ "$(basename "$current_dir")" != "Dough" ]; then
     cd "$project_dir"
 
     # Create virtual environment
-    python3 -m venv "dough-env"
+    python3.10 -m venv "dough-env"
     
     # Install system dependencies
     if command -v sudo &> /dev/null; then
