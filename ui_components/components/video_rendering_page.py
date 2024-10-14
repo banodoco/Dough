@@ -7,7 +7,7 @@ from shared.constants import (
     AnimationStyleType,
     AnimationToolType,
     STEERABLE_MOTION_WORKFLOWS,
-    ConfigManager
+    ConfigManager,
 )
 import time
 from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES

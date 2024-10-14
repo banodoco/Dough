@@ -6,10 +6,16 @@ import random
 import string
 from ui_components.widgets.model_selector_element import list_dir_files
 import streamlit as st
-from shared.constants import COMFY_BASE_PATH, GPU_INFERENCE_ENABLED_KEY, InternalFileTag, InternalFileType, ConfigManager
+from shared.constants import (
+    COMFY_BASE_PATH,
+    GPU_INFERENCE_ENABLED_KEY,
+    InternalFileTag,
+    InternalFileType,
+    ConfigManager,
+)
 from ui_components.widgets.download_file_progress_bar import download_file_widget
 from utils import st_memory
-from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES
+from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, SD_MODEL_DICT
 from ui_components.methods.animation_style_methods import (
     calculate_weights,
     extract_influence_values,
@@ -35,34 +41,6 @@ from streamlit.elements.utils import _shown_default_value_warning
 _shown_default_value_warning = True
 config_manager = ConfigManager()
 gpu_enabled = config_manager.get(GPU_INFERENCE_ENABLED_KEY, False)
-checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
-SD_MODEL_DICT = {
-    "realisticVisionV60B1_v51VAE.safetensors": {
-        "url": "https://civitai.com/api/download/models/130072",
-        "filename": "realisticVisionV60B1_v51VAE.safetensors",
-        "dest": checkpoints_dir,
-    },
-    "anything_v50.safetensors": {
-        "url": "https://civitai.com/api/download/models/30163",
-        "filename": "anything_v50.safetensors",
-        "dest": checkpoints_dir,
-    },
-    "dreamshaper_8.safetensors": {
-        "url": "https://civitai.com/api/download/models/128713",
-        "filename": "dreamshaper_8.safetensors",
-        "dest": checkpoints_dir,
-    },
-    "epicrealism_pureEvolutionV5.safetensors": {
-        "url": "https://civitai.com/api/download/models/134065",
-        "filename": "epicrealism_pureEvolutionV5.safetensors",
-        "dest": checkpoints_dir,
-    },
-    "majicmixRealistic_v6.safetensors": {
-        "url": "https://civitai.com/api/download/models/94640",
-        "filename": "majicmixRealistic_v6.safetensors",
-        "dest": checkpoints_dir,
-    },
-}
 
 
 def animation_sidebar(
@@ -642,65 +620,6 @@ def select_motion_lora_element(shot_uuid, model_files):
     return lora_data
 
 
-# TODO: fix all the code mess, some GPU inference checks are in the video rendering page and some are here
-# unify them
-def select_online_sd_model_element(shot_uuid, default_model):
-    st.markdown("##### Style model")
-    tab1, tab2 = st.tabs(["Choose Model", "Download Models"])
-
-    checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
-    all_files = list_dir_files(checkpoints_dir, depth=1)
-    if len(all_files) == 0:
-        model_files = [default_model]
-
-    else:
-        model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
-        ignored_model_list = ["dynamicrafter_512_interp_v1.ckpt"]
-        model_files = [file for file in model_files if file not in ignored_model_list]
-
-        # model_files += [v["filename"] for v in SD_MODEL_DICT.values()]
-        model_files = list(set(model_files))
-
-    # setting default
-    if "dreamshaper_8.safetensors" in model_files:
-        model_files.remove("dreamshaper_8.safetensors")
-        model_files.insert(0, "dreamshaper_8.safetensors")
-
-    cur_model = st.session_state[f"ckpt_{shot_uuid}"]
-    current_model_index = model_files.index(cur_model) if (cur_model and cur_model in model_files) else 0
-
-    # ---------------- SELECT CKPT --------------
-    with tab1:
-        col1, col2 = st.columns([1, 1])
-        with col1:
-            sd_model = ""
-
-            def update_model():
-                global sd_model
-                sd_model = checkpoints_dir + "/" + st.session_state["sd_model_video"]
-
-            if model_files and len(model_files):
-                sd_model = st.selectbox(
-                    label="Styling model:",
-                    options=model_files,
-                    key="sd_model_video",
-                    index=current_model_index,
-                    on_change=update_model,
-                )
-            else:
-                st.write("")
-                st.info("Default model Dreamshaper 8 would be selected")
-                sd_model = default_model
-
-        with col2:
-            if len(all_files) == 0:
-                st.write("")
-                st.info("These models will be auto-downloaded during the generation")
-            else:
-                st.write("")
-                st.info("Please only select SD1.5-based models.")
-
-
 def select_sd_model_element(shot_uuid, default_model):
     if gpu_enabled:
         return select_sd_model_offline_element(shot_uuid, default_model)
@@ -715,17 +634,12 @@ def select_sd_model_online_element(shot_uuid, default_model):
     cur_model = st.session_state[f"ckpt_{shot_uuid}"]
     current_model_index = model_files.index(cur_model) if (cur_model and cur_model in model_files) else 0
 
-    def update_model():
-        global sd_model
-        sd_model = checkpoints_dir + "/" + st.session_state["sd_model_video"]
-
     if model_files and len(model_files):
         sd_model = st.selectbox(
             label="Styling model:",
             options=model_files,
             key="sd_model_video",
             index=current_model_index,
-            on_change=update_model,
         )
     else:
         st.write("")
