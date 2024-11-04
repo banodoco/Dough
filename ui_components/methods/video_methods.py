@@ -27,7 +27,7 @@ from shared.constants import (
     InferenceLogTag,
     InferenceType,
     InternalFileTag,
-    ConfigManager
+    ConfigManager,
 )
 from shared.file_upload.s3 import is_s3_image_url
 from ui_components.constants import ShotMetaData
@@ -64,6 +64,8 @@ def upscale_video(file_uuid, styling_model, upscale_factor, promote_to_main_vari
                         "-m",
                         "pip",
                         "install",
+                        "--no-cache-dir",
+                        "--force-reinstall",
                         "opencv-python-headless==4.8.0.74",
                         "ffmpeg-python",
                     ]

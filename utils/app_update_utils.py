@@ -124,7 +124,19 @@ def update_comfy_runner():
             print(f"Error occured: {str(e)}")
 
         try:
-            subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "pip",
+                    "install",
+                    "--no-cache-dir",
+                    "--force-reinstall",
+                    "-r",
+                    "requirements.txt",
+                ],
+                check=True,
+            )
             print(f"ComfyRunner requirements installed successfully")
         except Exception as e:
             print(f"Error installing requirements for ComfyRunner: {str(e)}")
@@ -147,7 +159,19 @@ def update_dough():
 
     # installing requirements
     try:
-        subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True)
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "--no-cache-dir",
+                "--force-reinstall",
+                "-r",
+                "requirements.txt",
+            ],
+            check=True,
+        )
         print(f"Dough requirements installed successfully")
     except Exception as e:
         print(f"Error installing requirements for Dough: {str(e)}")
@@ -219,7 +243,17 @@ def update_comfy_ui():
                     if old_hash and new_hash and old_hash != new_hash:
                         try:
                             subprocess.run(
-                                [sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], check=True
+                                [
+                                    sys.executable,
+                                    "-m",
+                                    "pip",
+                                    "install",
+                                    "--no-cache-dir",
+                                    "--force-reinstall",
+                                    "-r",
+                                    "requirements.txt",
+                                ],
+                                check=True,
                             )
                             print(f"{folder} requirements installed successfully")
                         except Exception as e:
