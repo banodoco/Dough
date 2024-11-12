@@ -4,7 +4,7 @@ from typing import List
 import streamlit as st
 from backend.models import InternalFileObject
 from shared.constants import COMFY_BASE_PATH, InferenceParamType, ProjectMetaData
-from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, ShotMetaData
+from ui_components.constants import DEFAULT_SHOT_MOTION_VALUES, SD_MODEL_DICT, ShotMetaData
 from ui_components.models import InternalProjectObject, InternalShotObject
 from utils.common_utils import sqlite_atomic_transaction
 from utils.data_repo.data_repo import DataRepo
@@ -716,13 +716,19 @@ def update_session_state_with_animation_details(
     model_files = [file for file in all_files if file.endswith(".safetensors") or file.endswith(".ckpt")]
     model_files = [file for file in model_files if "xl" not in file]
 
-    if "sd_model_video" in st.session_state and len(model_files):
-        idx = (
-            model_files.index(st.session_state["sd_model_video"])
-            if st.session_state["sd_model_video"] in model_files
-            else 0
-        )
-        main_setting_data[f"ckpt_{shot.uuid}"] = model_files[idx]
+    if "sd_model_video" in st.session_state:
+        if not len(model_files):
+            # for online models using the supported model list
+            model_files = list(SD_MODEL_DICT.keys())
+
+        if len(model_files):
+            idx = (
+                model_files.index(st.session_state["sd_model_video"])
+                if st.session_state["sd_model_video"] in model_files
+                else 0
+            )
+            main_setting_data[f"ckpt_{shot.uuid}"] = model_files[idx]
+
     else:
         main_setting_data[f"ckpt_{shot.uuid}"] = default_model
 
@@ -746,6 +752,7 @@ def update_session_state_with_animation_details(
             individual_prompts,
             individual_negative_prompts,
         )
+        load_shot_settings(shot_uuid)
 
     return update_data
 

@@ -116,11 +116,6 @@ Local GPU mode
 curl -sSL https://raw.githubusercontent.com/banodoco/Dough/green-head/scripts/linux_setup.sh | bash
 ```
 
-Hosted inference mode
-```bash
-curl -sSL https://raw.githubusercontent.com/banodoco/Dough/green-head/scripts/linux_setup_online.sh | bash
-```
-
 ### Enter the folder
 
 In terminal, run:
@@ -165,12 +160,6 @@ cd ~\Documents
 Local GPU mode
 ```bash
 iwr -useb "https://raw.githubusercontent.com/banodoco/Dough/green-head/scripts/windows_setup.bat" -OutFile "script.bat"
-Start-Process "cmd.exe" -ArgumentList "/c script.bat"
-```
-
-Hosted inference mode
-```bash
-iwr -useb "https://raw.githubusercontent.com/banodoco/Dough/green-head/scripts/windows_setup_online.bat" -OutFile "script.bat"
 Start-Process "cmd.exe" -ArgumentList "/c script.bat"
 ```
 

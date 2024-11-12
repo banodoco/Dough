@@ -1,4 +1,5 @@
-from shared.constants import AnimationStyleType, AnimationToolType
+import os
+from shared.constants import COMFY_BASE_PATH, AnimationStyleType, AnimationToolType
 from utils.constants import ImageStage
 from utils.enum import ExtendedEnum
 
@@ -91,3 +92,32 @@ SECOND_MASK_FILE = "second_mask_file"
 
 AUDIO_FILE_PATH = "videos/temp/audio.mp3"
 AUDIO_FILE = "audio_file"
+
+checkpoints_dir = os.path.join(COMFY_BASE_PATH, "models", "checkpoints")
+SD_MODEL_DICT = {
+    "realisticVisionV60B1_v51VAE.safetensors": {
+        "url": "https://civitai.com/api/download/models/130072",
+        "filename": "realisticVisionV60B1_v51VAE.safetensors",
+        "dest": checkpoints_dir,
+    },
+    "anything_v50.safetensors": {
+        "url": "https://civitai.com/api/download/models/30163",
+        "filename": "anything_v50.safetensors",
+        "dest": checkpoints_dir,
+    },
+    "dreamshaper_8.safetensors": {
+        "url": "https://civitai.com/api/download/models/128713",
+        "filename": "dreamshaper_8.safetensors",
+        "dest": checkpoints_dir,
+    },
+    "epicrealism_pureEvolutionV5.safetensors": {
+        "url": "https://civitai.com/api/download/models/134065",
+        "filename": "epicrealism_pureEvolutionV5.safetensors",
+        "dest": checkpoints_dir,
+    },
+    "majicmixRealistic_v6.safetensors": {
+        "url": "https://civitai.com/api/download/models/94640",
+        "filename": "majicmixRealistic_v6.safetensors",
+        "dest": checkpoints_dir,
+    },
+}

@@ -1,26 +1,82 @@
 from django.db import models
 import uuid
+from uuid import UUID
 import json
 import requests
 from django.db.models import F
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from django.db.models.signals import pre_save
+from django.dispatch import receiver
 import urllib
 
 from shared.constants import SERVER, FileTransformationType, InferenceParamType, InferenceStatus, ServerType
 from shared.file_upload.s3 import generate_s3_url, is_s3_image_url
 
 
-class BaseModel(models.Model):
+class UUIDManager(models.Manager):
+    def _clean_uuid_fields(self, **kwargs):
+        """Convert string UUIDs to UUID objects"""
+        cleaned = kwargs.copy()
+
+        uuid_fields = [field.name for field in self.model._meta.fields if isinstance(field, models.UUIDField)]
+
+        for field in uuid_fields:
+            if field in cleaned and cleaned[field] is not None:
+                try:
+                    cleaned[field] = str(cleaned[field])
+                except (ValueError, AttributeError):
+                    raise ValidationError(f"Invalid UUID for field {field}: {cleaned[field]}")
+
+        return cleaned
+
+    def create(self, **kwargs):
+        cleaned_kwargs = self._clean_uuid_fields(**kwargs)
+        return super().create(**cleaned_kwargs)
+
+    def filter(self, **kwargs):
+        cleaned_kwargs = self._clean_uuid_fields(**kwargs)
+        return super().filter(**cleaned_kwargs)
+
+    def update(self, **kwargs):
+        cleaned_kwargs = self._clean_uuid_fields(**kwargs)
+        return super().update(**cleaned_kwargs)
+
+    def get(self, **kwargs):
+        cleaned_kwargs = self._clean_uuid_fields(**kwargs)
+        return super().get(**cleaned_kwargs)
+
+
+class UUIDModelMixin:
+    def clean_uuid_fields(self):
+        for field in self._meta.fields:
+            if isinstance(field, models.UUIDField):
+                value = getattr(self, field.name)
+                if value is not None:
+                    try:
+                        setattr(self, field.name, str(value))
+                    except (ValueError, AttributeError):
+                        raise ValidationError(f"Invalid UUID for field {field.name}: {value}")
+
+
+class BaseModel(UUIDModelMixin, models.Model):
     uuid = models.UUIDField(default=uuid.uuid4)
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
     is_disabled = models.BooleanField(default=False)
 
+    objects = UUIDManager()
+
     class Meta:
         app_label = "backend"
         abstract = True
+
+
+@receiver(pre_save)
+def clean_uuids_before_save(sender, instance, **kwargs):
+    if isinstance(instance, BaseModel):
+        instance.clean_uuid_fields()
 
 
 class Lock(BaseModel):
