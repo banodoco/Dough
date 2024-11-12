@@ -130,17 +130,17 @@ def welcome_page():
 
             st.write("")
 
-            choices = [
-                "API - (Paid) Use Dough's hosted service to run the generations",
-                "GPU - I have an RTX enabled GPU and want to run generations locally",
-            ]
-            gpu_inference = st.radio(
-                "Inference Type",
-                choices,
-                key="inference_type_welcome",
-                index=0,
-                horizontal=False,
-            )
+            # choices = [
+            #     "API - (Paid) Use Dough's hosted service to run the generations",
+            #     "GPU - I have an RTX enabled GPU and want to run generations locally",
+            # ]
+            # gpu_inference = st.radio(
+            #     "Inference Type",
+            #     choices,
+            #     key="inference_type_welcome",
+            #     index=0,
+            #     horizontal=False,
+            # )
 
             read1, read2, _ = st.columns([1, 1, 1])
             with read1:
@@ -149,17 +149,17 @@ def welcome_page():
             with read2:
                 if actually_read:
                     if st.button("Continue", key="welcome_cta"):
-                        data_repo = DataRepo()
-                        config_manager = ConfigManager()
+                        # data_repo = DataRepo()
+                        # config_manager = ConfigManager()
                         
-                        config_manager.set(GPU_INFERENCE_ENABLED_KEY, gpu_inference == choices[1])
+                        # config_manager.set(GPU_INFERENCE_ENABLED_KEY, gpu_inference == choices[1])
                         data_repo.update_app_setting(welcome_state=2)
                         
-                        # if they select GPU then pinging them to restart
-                        if gpu_inference == choices[1]:
-                            st.info("Please stop the app and restart for the changes to take place")
-                        else:
-                            refresh_app()
+                        # # if they select GPU then pinging them to restart
+                        # if gpu_inference == choices[1]:
+                        #     st.info("Please stop the app and restart for the changes to take place")
+                        # else:
+                        refresh_app()
 
                 else:
                     st.button(
